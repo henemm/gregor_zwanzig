@@ -151,12 +151,15 @@ def _sms_ort(sms: str, name: str) -> str:
 
 #: Folge der Vergleichstabelle der Mail bei "nie eingestellt" (alle Zeilen in
 #: Register-Folge, CV2), von Hand: Telegram-Beschriftung je Sprache.
+#: #3237: EINE Zeilenfolge der Tabelle (Spec #3122 Teil A Nr. 8) -- die Zeile
+#: ``temperature`` traegt Hoechst- und Tiefstwert, "Temp min" steht deshalb in
+#: Mail UND Telegram direkt hinter "Temp max" (bewusste Aenderung).
 MAIL_FOLGE = {
-    "de": ["Temp max", "Wind", "Regen", "Regenwahrscheinlichkeit", "Gewitter", "Sonne",
-           "Wolken", "UV max", "Sicht min", "Schneehöhe", "Neuschnee", "Temp min", "Böen",
+    "de": ["Temp max", "Temp min", "Wind", "Regen", "Regenwahrscheinlichkeit", "Gewitter",
+           "Sonne", "Wolken", "UV max", "Sicht min", "Schneehöhe", "Neuschnee", "Böen",
            "Nullgradgrenze", "Windrichtung"],
-    "en": ["Temp max", "Wind", "Rain", "Rain probability", "Thunderstorm", "Sun",
-           "Clouds", "UV max", "Visibility min", "Snow depth", "Fresh snow", "Temp min",
+    "en": ["Temp max", "Temp min", "Wind", "Rain", "Rain probability", "Thunderstorm",
+           "Sun", "Clouds", "UV max", "Visibility min", "Snow depth", "Fresh snow",
            "Gusts", "Freezing level", "Wind direction"],
 }
 
@@ -185,11 +188,14 @@ def test_bl4_nie_eingestellt_telegram_folgt_mail(mit, lang):
         # Sicherheitsrelevante Zeilen fehlen nicht mehr, Folge wie die Mail.
         bekannt = [b for b in alle if b in MAIL_FOLGE[lang]]
         assert bekannt == [b for b in MAIL_FOLGE[lang] if b in bekannt], alle
-        for pflicht in (MAIL_FOLGE[lang][2], MAIL_FOLGE[lang][4], MAIL_FOLGE[lang][12]):
+        # Regen, Gewitter, Boeen (sicherheitsrelevant).
+        for pflicht in (MAIL_FOLGE[lang][3], MAIL_FOLGE[lang][5], MAIL_FOLGE[lang][12]):
             assert pflicht in alle, f"B-L4: {pflicht} fehlt: {alle}"
-        # Nichts gewaehlt -> kein "ohne Wert"-Zaehler (die Mail zeigt auch keinen).
-        assert "ohne Wert" not in text(snap, "telegram"), text(snap, "telegram")
-        assert "without data" not in text(snap, "telegram")
+        # #3237: entfallen ist "nichts gewaehlt -> kein 'ohne Wert'-Zaehler" --
+        # das war allein der Altpfad ohne Tabelle (Kanal-Liste ``None`` = kein
+        # Filter). Ohne ``rows`` gilt jetzt die Tabelle aus der Grundauswahl,
+        # jede Zeile ist dort angehakt, der Zaehler folgt derselben Regel wie
+        # bei jedem Abo mit Tabelle (Prod: alle Abos tragen ``rows``).
         plain = snap.sendungen("email")[-1]["plain_text_body"]
         mail_gewitter = "Gewitter" if lang == "de" else "Thunder"
         assert mail_gewitter in plain, "Vorbedingung: Mail zeigt die Gewitter-Zeile"
@@ -278,7 +284,10 @@ def _ampel_preset(gelb: int, orange: int, rot: int, *, ausblick: bool = True) ->
     ]}
     p["display_config"]["ampel"] = {"template": "allgemein", "metrics": {
         "gust": {"upper": {"yellow": gelb, "orange": orange, "red": rot}}}}
-    return p
+    # #3237: die Telegram-Einstellung steht in der Tabelle (Altfeld wirkt nicht).
+    from tests.helpers.tabelle_aus_wunsch import orte_wunsch_als_tabelle
+
+    return orte_wunsch_als_tabelle(p)
 
 
 def _boeen_zelle(tg: str) -> str:

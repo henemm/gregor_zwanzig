@@ -109,6 +109,12 @@ def preset(layouts=None, **top) -> dict:
     p["send_telegram"] = p["send_sms"] = p["send_premium_sms"] = True
     p["alert_channels"] = {"email": True, "telegram": False, "sms": False, "premium_sms": False}
     p.update(top)
+    if layouts is not None:
+        # #3237: dieselbe Kanal-Einstellung in der Tabelle "Was steht wo" (das
+        # Altfeld ``channel_layouts`` wirkt nicht mehr, es bleibt Beschreibung).
+        from tests.helpers.tabelle_aus_wunsch import orte_wunsch_als_tabelle
+
+        p = orte_wunsch_als_tabelle(p)
     return p
 
 
@@ -339,12 +345,16 @@ def test_k8_telegram_roh_einfach_je_zeile(mit, einfach):
 AUSBLICK = ["gust", "temperature", "wind"]
 
 
-def _ausblick_preset(**top) -> dict:
+def _ausblick_preset(*, leer: bool = False, **top) -> dict:
+    """Ausblick Boeen (Einfach), Temperatur, Wind (Roh); ``leer``: bewusst
+    leere Ausblick-Liste. #3237: die Einstellung steht in der Tabelle."""
+    from tests.helpers.tabelle_aus_wunsch import orte_wunsch_als_tabelle
+
     p = preset(**top)
-    p["display_config"]["outlook_metrics"] = list(AUSBLICK)
+    p["display_config"]["outlook_metrics"] = [] if leer else list(AUSBLICK)
     p["display_config"]["outlook_metric_formats"] = {"gust": True, "temperature": False,
                                                      "wind": False}
-    return p
+    return orte_wunsch_als_tabelle(p)
 
 
 def _ausblick_zeilen(block: list[str], lang: str) -> list[str]:
@@ -377,8 +387,7 @@ def test_k7_ausblick_im_orte_telegram_renderer(mit, lang):
 
     from app.loader import load_all_locations
 
-    leer = _ausblick_preset()
-    leer["display_config"]["outlook_metrics"] = []
+    leer = _ausblick_preset(leer=True)
     faelle = ((_ausblick_preset(), True), (_ausblick_preset(outlook_enabled=False), False),
               (leer, False))
     for p, soll in faelle:
@@ -403,8 +412,7 @@ def test_k7_ausblick_im_orte_telegram_renderer(mit, lang):
 
 
 def _ausblick_faelle() -> tuple:
-    leer = _ausblick_preset()
-    leer["display_config"]["outlook_metrics"] = []
+    leer = _ausblick_preset(leer=True)
     return ((_ausblick_preset(), True), (_ausblick_preset(outlook_enabled=False), False),
             (leer, False))
 

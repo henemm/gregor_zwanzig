@@ -37,11 +37,12 @@ _REPORT_TYPE = "evening"
 # strukturell wirkungslos, jetzt RENDER_NEUTRAL (siehe Spec v1.1).
 _RENDER_EFFECTIVE_EXPECTED = {
     "email_format",
-    "show_outlook",
+    # #3237: ``show_outlook`` und ``multi_day_trend_reports`` sind Altfelder
+    # (RENDER_NEUTRAL) -- der Ausblick folgt allein der Tabelle "Was steht wo"
+    # (Spec #3237 Schritt 5, AC-6).
     "show_stage_stats",
     "show_stability",
     "show_compact_summary",
-    "multi_day_trend_reports",
     "show_yesterday_comparison",
     # Herkunft Issue #1361 / ADR-0035 (S1b, gemeinsames Tagesfenster Trip +
     # Vergleich): das konfigurierte Tagesfenster erreicht den Render-Pfad
@@ -293,7 +294,7 @@ class TestFieldClassification:
 
     def test_expected_effective_set(self):
         """Die render-wirksamen Felder entsprechen der freigegebenen Spec
-        (7 aus Spec v1.1 + das Tagesfenster-Paar aus #1361/ADR-0035)."""
+        (5 aus Spec v1.1 -- seit #3237 ohne die Ausblick-Altfelder -- + das Tagesfenster-Paar aus #1361/ADR-0035)."""
         from src.services.report_config_resolver import RENDER_EFFECTIVE_FIELDS
         assert set(RENDER_EFFECTIVE_FIELDS) == _RENDER_EFFECTIVE_EXPECTED
 

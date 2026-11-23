@@ -31,7 +31,7 @@ func TestCreateTripHandler(t *testing.T) {
 
 	body := `{"id":"new-trip","name":"New Trip","stages":[{"id":"S1","name":"Day 1","date":"2026-05-01","waypoints":[{"id":"W1","name":"Start","lat":47.0,"lon":11.0,"elevation_m":500}]}]}`
 
-	h := CreateTripHandler(s)
+	h := CreateTripHandler(s, "")
 	req := httptest.NewRequest("POST", "/api/trips", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -63,7 +63,7 @@ func TestPostTrip_AcceptsPauseStage(t *testing.T) {
 		`{"id":"S2","name":"Pause","date":"","waypoints":[]}` +
 		`]}`
 
-	h := CreateTripHandler(s)
+	h := CreateTripHandler(s, "")
 	req := httptest.NewRequest("POST", "/api/trips", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -97,7 +97,7 @@ func TestCreateTripHandlerInvalid(t *testing.T) {
 
 	body := `{"id":"no-name","stages":[]}`
 
-	h := CreateTripHandler(s)
+	h := CreateTripHandler(s, "")
 	req := httptest.NewRequest("POST", "/api/trips", strings.NewReader(body))
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
@@ -112,7 +112,7 @@ func TestCreateTripHandlerZeroCoords(t *testing.T) {
 
 	body := `{"id":"zero","name":"Zero","stages":[{"id":"S1","name":"D1","date":"2026-05-01","waypoints":[{"id":"W1","name":"P","lat":0,"lon":0,"elevation_m":0}]}]}`
 
-	h := CreateTripHandler(s)
+	h := CreateTripHandler(s, "")
 	req := httptest.NewRequest("POST", "/api/trips", strings.NewReader(body))
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)

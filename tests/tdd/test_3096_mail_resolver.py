@@ -38,6 +38,17 @@ NEUN_VORGABE_DP = (
     "t2m_c", "wind_chill_c", "wind10m_kmh", "gust_kmh", "precip_1h_mm",
     "uv_index", "thunder_level", "pop_pct", "visibility_m",
 )
+#: #3237 (Spec #3122 Nr. 8, EINE Zeilenfolge): ohne Tabelle gilt die
+#: Grundauswahl-Tabelle; die neun Vorgabespalten stehen in deren Zeilenfolge
+#: (Folge der Uebersicht), nicht mehr in der eigenen Stundenverlauf-Folge.
+NEUN_VORGABE_TABELLENFOLGE = (
+    "temperature", "wind", "precipitation", "rain_probability", "thunder",
+    "uv_index", "visibility", "gust", "wind_chill",
+)
+NEUN_VORGABE_TABELLENFOLGE_DP = (
+    "t2m_c", "wind10m_kmh", "precip_1h_mm", "pop_pct", "thunder_level",
+    "uv_index", "visibility_m", "gust_kmh", "wind_chill_c",
+)
 
 
 # ---------------------------------------------------------------------------
@@ -54,7 +65,12 @@ def _trip_dc(global_ids, email_ids=None, trip_id="t3096") -> UnifiedWeatherDispl
         metrics=[_mc(m, i) for i, m in enumerate(global_ids)],
     )
     if email_ids is not None:
+        # #3237: die E-Mail-Liste steht in der Tabelle "Was steht wo"; das
+        # Altfeld bleibt als Beschreibung stehen und wirkt nicht.
+        from tests.helpers.tabelle_aus_wunsch import tabelle
+
         dc.per_channel_layouts = {"email": [_mc(m, i) for i, m in enumerate(email_ids)]}
+        dc.placements = tabelle(dc, "trip", listen={"email": list(email_ids)})
     return dc
 
 
@@ -189,32 +205,44 @@ def test_ac6_zwei_nutzer_je_eigene_spaltenfolge(reihenfolge):
 GRUNDAUSWAHL_OHNE_STUNDE = [{"metric_id": "wind_direction", "aggregation": "avg"}]
 
 
-@pytest.mark.parametrize("dc", [{}, {"active_metrics": GRUNDAUSWAHL_OHNE_STUNDE}],
-                         ids=["ohne_grundauswahl", "grundauswahl_ohne_stundengroesse"])
-def test_orte_resolver_hourly_nie_none(dc):
-    """AC-3: Resolver liefert fuer Orte die konkrete Vorgabeliste statt None."""
+#: #3237: eine Grundauswahl ohne Stundengroesse hat keinen Stundenverlauf --
+#: die Tabelle kennt keinen Rueckfall auf die Vorgabe (ADR-0124, "Leer bleibt
+#: leer"); der fruehere Rueckfall war Altpfad (Schnitt-Rueckfall).
+_HOURLY_SOLL = {"ohne_grundauswahl": NEUN_VORGABE_TABELLENFOLGE,
+                "grundauswahl_ohne_stundengroesse": ()}
+_HOURLY_SOLL_DP = {"ohne_grundauswahl": NEUN_VORGABE_TABELLENFOLGE_DP,
+                   "grundauswahl_ohne_stundengroesse": ()}
+
+
+@pytest.mark.parametrize("fall,dc", [("ohne_grundauswahl", {}), (
+    "grundauswahl_ohne_stundengroesse", {"active_metrics": GRUNDAUSWAHL_OHNE_STUNDE})],
+    ids=["ohne_grundauswahl", "grundauswahl_ohne_stundengroesse"])
+def test_orte_resolver_hourly_nie_none(fall, dc):
+    """AC-3: Resolver liefert fuer Orte die konkrete Liste statt None."""
     from services.channel_list_resolver import resolve_channel_lists
 
     hourly = resolve_channel_lists(dc, "compare").hourly
     assert hourly is not None, "Orte-hourly ist None (Vorgabe im Renderer statt im Resolver)"
-    assert tuple(z.metric_id for z in hourly) == NEUN_VORGABE
+    assert tuple(z.metric_id for z in hourly) == _HOURLY_SOLL[fall]
 
 
-@pytest.mark.parametrize("dc", [{}, {"active_metrics": GRUNDAUSWAHL_OHNE_STUNDE}],
-                         ids=["ohne_grundauswahl", "grundauswahl_ohne_stundengroesse"])
-def test_orte_render_options_hourly_nie_none(dc):
+@pytest.mark.parametrize("fall,dc", [("ohne_grundauswahl", {}), (
+    "grundauswahl_ohne_stundengroesse", {"active_metrics": GRUNDAUSWAHL_OHNE_STUNDE})],
+    ids=["ohne_grundauswahl", "grundauswahl_ohne_stundengroesse"])
+def test_orte_render_options_hourly_nie_none(fall, dc):
     """AC-3/AC-5: Versand- und Vorschaukette bekommen die konkrete Liste."""
     from services.report_config_resolver import resolve_compare_render_options
 
     opt = resolve_compare_render_options({"id": "p3096", "display_config": dc})
     assert opt.hourly_metrics is not None, "Renderer bekaeme None"
-    assert tuple(opt.hourly_metrics) == NEUN_VORGABE_DP
+    assert tuple(opt.hourly_metrics) == _HOURLY_SOLL_DP[fall]
 
 
 @pytest.mark.parametrize("fmt", ["html", "klartext"])
 def test_orte_mail_ohne_einstellung_neun_vorgabespalten(fmt):
     """AC-3 (Regression am Mail-Ergebnis): Altbestand ohne Grundauswahl zeigt
-    im Stundenverlauf genau die neun Vorgabespalten in Vorgabefolge."""
+    im Stundenverlauf genau die neun Vorgabespalten, seit #3237 in der EINEN
+    Zeilenfolge der Tabelle (Spec #3122 Nr. 8)."""
     from tests.helpers.einstellung_gleich_mail_orte import (
         html_stundenverlauf, kennungen, klartext_stundenverlauf, preset_dict, sende_orte_mail,
     )
@@ -223,7 +251,7 @@ def test_orte_mail_ohne_einstellung_neun_vorgabespalten(fmt):
     je_ort = html_stundenverlauf(mail.html) if fmt == "html" else klartext_stundenverlauf(mail.plain)
     assert je_ort, f"{fmt}: kein Stundenverlauf"
     for ort, koepfe in je_ort.items():
-        assert tuple(kennungen(koepfe)) == NEUN_VORGABE, f"{fmt} {ort}: {koepfe}"
+        assert tuple(kennungen(koepfe)) == NEUN_VORGABE_TABELLENFOLGE, f"{fmt} {ort}: {koepfe}"
 
 
 def test_orte_render_mit_konkreter_liste_gleich_vorgabe():

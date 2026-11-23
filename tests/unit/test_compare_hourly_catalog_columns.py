@@ -169,8 +169,12 @@ def test_newly_selectable_metric_appears_in_html_and_plaintext_with_same_values(
     Gespeichert wird die Katalog-ID (``humidity``) — nach dieser Scheibe ist
     das das Format, das die Bedienflaeche liefert.
     """
-    preset = {"id": "p-humid", "display_config": {
-        "hourly_metrics": ["temperature", "humidity"]}}
+    # #3237: die Auswahl steht in der Tabelle "Was steht wo" (Katalog-IDs);
+    # ``hourly_metrics`` bleibt als Beschreibung stehen und wirkt nicht.
+    from tests.helpers.tabelle_aus_wunsch import orte_wunsch_als_tabelle
+
+    preset = orte_wunsch_als_tabelle({"id": "p-humid", "display_config": {
+        "hourly_metrics": ["temperature", "humidity"]}})
     options = resolve_compare_render_options(preset)
 
     html, plain = render_compare_email(

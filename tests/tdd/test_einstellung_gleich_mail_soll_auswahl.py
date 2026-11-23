@@ -544,32 +544,27 @@ def test_f002_orte_windrichtung_hourly_an_keine_eigene_stundenspalte(soll):
 # --------------------------------------------------------------------------- #
 # AC-13: Altbestand ohne Tabelle unveraendert
 # --------------------------------------------------------------------------- #
-def test_ac13_altbestand_ohne_tabelle_unveraendert_zur_gesicherten_ausgabe(soll):
-    """AC-13 -- Regressionsschutz, schon gruen. GIVEN die Altbestands-Abos ohne
-    Tabelle aus #3218 (Fixtures plus Trip-Varianten)
+# #3237 (AC-8): der Altbestand ohne Tabelle folgt der Grundauswahl-Tabelle,
+# nicht mehr den Altfeldern. Die frueheren AC-13-Faelle ("bytegleich zur
+# Vorher-Ausgabe aus den Altfeldern", "Trip folgt weiter Altfeldern") hielten
+# genau den entfernten Altpfad fest; der ganze Altbestand ist jetzt in
+# ``test_einstellung_gleich_mail_soll_placements.py::test_ac10_altbestand_ohne_
+# tabelle_folgt_der_grundauswahl_tabelle`` bewacht, der Einzelfall unten.
+def test_ac13_trip_ohne_tabelle_altfelder_wirken_nicht(soll):
+    """#3237 (AC-8). GIVEN Trip ohne Tabelle mit ``channel_layouts.email`` =
+    Niederschlag, Temp und ``outlook_metrics`` = Wind
     WHEN das Soll abgeleitet wird
-    THEN ist es bytegleich zur gesicherten Vorher-Ausgabe."""
-    from tests.tdd.test_einstellung_gleich_mail_soll_placements import (
-        GOLDEN_VORHER, soll_ohne_tabelle,
-    )
-
-    vorher = GOLDEN_VORHER.read_text(encoding="utf-8")
-    jetzt = json.dumps(soll_ohne_tabelle(soll), ensure_ascii=False, sort_keys=True, indent=1)
-    assert jetzt == vorher
-
-
-def test_ac13_trip_ohne_tabelle_folgt_weiter_altfeldern(soll):
-    """AC-13 -- Regressionsschutz, schon gruen. GIVEN Trip ohne Tabelle mit
-    ``channel_layouts.email`` = Niederschlag, Temp und ``outlook_metrics`` = Wind
-    WHEN das Soll abgeleitet wird
-    THEN E-Mail und Ausblick folgen den Altfeldern (sortiert nach bucket/order)."""
-    trip = _trip([_eintrag("temperature", 0), _eintrag("wind", 1), _eintrag("precipitation", 2)],
+    THEN E-Mail und Ausblick folgen der Grundauswahl (Temp, Wind, Rain in
+    bucket/order-Folge), genau wie ohne die Altfelder."""
+    metriken = [_eintrag("temperature", 0), _eintrag("wind", 1), _eintrag("precipitation", 2)]
+    trip = _trip(metriken,
                  channel_layouts={"email": [{"metric_id": "precipitation"},
                                             {"metric_id": "temperature"}]},
                  outlook_metrics=["wind"])
     s = soll.trip_soll(trip, "evening")
-    assert s["stunden"] == ["Rain", "Temp"], s["stunden"]
-    assert _ausblick_html(s) == ["Wind"], s["ausblick"]
+    assert s["stunden"] == ["Temp", "Wind", "Rain"], s["stunden"]
+    assert _ausblick_html(s) == ["Temp", "Wind", "Rain"], s["ausblick"]
+    assert s == soll.trip_soll(_trip(metriken), "evening")
 
 
 # --------------------------------------------------------------------------- #

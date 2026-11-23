@@ -152,7 +152,7 @@ func TestBriefingLock_HandlerStellen_WartenAufBriefingSperre(t *testing.T) {
 					t.Fatalf("GET ohne Rumpf/ETag: %s", w.Body.String())
 				}
 			}},
-		{"trip.go_Create", "t-neu", func(t *testing.T, s *store.Store) {}, CreateTripHandler,
+		{"trip.go_Create", "t-neu", func(t *testing.T, s *store.Store) {}, ohneKern(CreateTripHandler),
 			"POST", "/api/trips", "/api/trips",
 			`{"id":"t-neu","name":"Neu","stages":[{"id":"S1","name":"D1","date":"2026-05-01","waypoints":[{"id":"W1","name":"P","lat":47.0,"lon":11.0,"elevation_m":500}]}]}`, 201,
 			func(t *testing.T, s *store.Store, w *httptest.ResponseRecorder) {
@@ -249,7 +249,7 @@ func TestBriefingLock_HandlerStellen_WartenAufBriefingSperre(t *testing.T) {
 func TestBriefingLock_CreateComparePreset_LegtSperrdateiAn(t *testing.T) {
 	const u = "u1"
 	s := store.New(t.TempDir(), u)
-	w := p2158Do(CreateComparePresetHandler(s), "POST", "/api/compare/presets", "/api/compare/presets",
+	w := p2158Do(CreateComparePresetHandler(s, ""), "POST", "/api/compare/presets", "/api/compare/presets",
 		comparePresetPutBody("Neu"), u)
 	if w.Code != 201 {
 		t.Fatalf("POST: %d (%s)", w.Code, w.Body.String())

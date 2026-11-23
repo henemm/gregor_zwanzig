@@ -94,9 +94,9 @@
 			abo,
 			saveController,
 			enqueueHubWrite,
-			uebernehmen: (a) => {
+			uebernehmen: (a, gesendet) => {
 				uebernahme[context](a);
-				karte?.nachFremdemSpeichern();
+				karte?.nachFremdemSpeichern(gesendet);
 			},
 			placements: () => karte?.placementsZumMitspeichern(),
 			neuGeladen,

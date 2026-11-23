@@ -143,6 +143,10 @@ def trip(*, outlook_metrics, enabled_ids=None, telegram_layout_ids=None,
         dc = mit_outlook_metrics(dc, outlook_metrics)
     if outlook_metric_formats is not None:
         dc = mit_outlook_metric_formats(dc, outlook_metric_formats)
+    # #3237: Telegram-Liste und Ausblick wirken nur ueber die Tabelle.
+    from tests.helpers.tabelle_aus_wunsch import trip_modell_als_tabelle
+
+    dc = trip_modell_als_tabelle(dc)
 
     t = Trip(id=trip_id, name="Karnischer Höhenweg", stages=stages,
              display_config=dc, official_warnings=None)

@@ -18,7 +18,6 @@ from app.models import (
     ForecastDataPoint,
     ForecastMeta,
     GPXPoint,
-    MetricConfig,
     NormalizedTimeseries,
     Provider,
     SegmentWeatherData,
@@ -228,17 +227,23 @@ def test_telegram_layout_is_not_disturbed():
 # --- AC-6 -----------------------------------------------------------------
 
 def test_channel_layout_keeps_selection_and_applies_order():
-    """AC-6: Bei kanal-eigenen Listen aendert sich nur die Reihenfolge."""
+    """AC-6: Bei kanal-eigenen Listen aendert sich nur die Auswahl, die
+    Reihenfolge ist die eingestellte.
+
+    #3237: die E-Mail-Liste wirkt nur ueber die Tabelle "Was steht wo" (Haken
+    an der Stelle E-Mail); die Reihenfolge ist die EINE Zeilenfolge der
+    Grundauswahl (Spec #3122 Nr. 8) -- eine eigene Folge je Kanal gibt es
+    nicht mehr."""
+    from tests.helpers.tabelle_aus_wunsch import trip_modell_als_tabelle
+
     config = build_default_display_config()
+    active = [mc.metric_id for mc in config.metrics if mc.enabled]
+    _place(config, ["wind", "gust", "temperature"]
+           + [m for m in active if m not in {"wind", "gust", "temperature"}])
     # Array-Reihenfolge (temperature, wind, gust) weicht bewusst von den
     # Positionen ab -- sonst waere der Test auch ohne Sortierung gruen.
-    config.per_channel_layouts = {
-        "email": [
-            MetricConfig(metric_id="temperature", enabled=True, bucket="primary", order=2),
-            MetricConfig(metric_id="wind", enabled=True, bucket="primary", order=0),
-            MetricConfig(metric_id="gust", enabled=True, bucket="primary", order=1),
-        ],
-    }
+    config.per_channel_layouts = {"email": ["temperature", "wind", "gust"]}
+    config = trip_modell_als_tabelle(config)
 
     columns = _mail_columns(config)
 
@@ -247,28 +252,10 @@ def test_channel_layout_keeps_selection_and_applies_order():
     )
 
 
-def test_per_report_layout_applies_order():
-    """AC-6, hoechste Kaskadenebene: auch der Pro-Report-Override sortiert.
-
-    Ohne diesen Test bliebe Ebene 1 (`per_report_layouts`, #434) unsortiert,
-    ohne dass ein Test rot wird -- aufgedeckt durch die Mutations-Gegenprobe.
-    """
-    config = build_default_display_config()
-    config.per_report_layouts = {
-        "morning": {
-            "email": [
-                MetricConfig(metric_id="temperature", enabled=True, bucket="primary", order=2),
-                MetricConfig(metric_id="wind", enabled=True, bucket="primary", order=0),
-                MetricConfig(metric_id="gust", enabled=True, bucket="primary", order=1),
-            ],
-        },
-    }
-
-    columns = _mail_columns(config)
-
-    assert columns == [_label_of("wind"), _label_of("gust"), _label_of("temperature")], (
-        f"Pro-Report-Liste ignoriert die eingestellte Position -- Mail zeigt {columns}"
-    )
+# #3237: ``test_per_report_layout_applies_order`` ist entfallen. Er bewachte
+# die Pro-Report-Kaskadenebene ``per_report_layouts`` (#434) des Altpfads; die
+# Tabelle "Was steht wo" kennt keine eigene Liste je Bericht und nur EINE
+# Zeilenfolge (Spec #3122 Nr. 8). Die Folge bewachen AC-1/AC-2/AC-6 oben.
 
 
 def test_unknown_bucket_never_jumps_ahead_of_primary():

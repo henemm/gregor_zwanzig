@@ -138,7 +138,7 @@ func TestCreateTripHandler_ClampsInvalidDayWindowPairOnWrite(t *testing.T) {
 		`"waypoints":[{"id":"W1","name":"P","lat":47.0,"lon":11.0,"elevation_m":500}]}],` +
 		`"report_config":{"enabled":true,"day_window_start_hour":20,"day_window_end_hour":20}}`
 
-	h := CreateTripHandler(s)
+	h := CreateTripHandler(s, "")
 	req := httptest.NewRequest("POST", "/api/trips", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -168,7 +168,7 @@ func TestCreateTripHandler_KeepsValidWrapDayWindowPairOnWrite(t *testing.T) {
 		`"waypoints":[{"id":"W1","name":"P","lat":47.0,"lon":11.0,"elevation_m":500}]}],` +
 		`"report_config":{"enabled":true,"day_window_start_hour":20,"day_window_end_hour":10}}`
 
-	h := CreateTripHandler(s)
+	h := CreateTripHandler(s, "")
 	req := httptest.NewRequest("POST", "/api/trips", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()

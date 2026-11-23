@@ -34,8 +34,15 @@ def _name(lang: str) -> str:
 
 
 def _mit_reports(daten: dict, reports: list[str]) -> dict:
+    """Ausblick in den Briefings ``reports``. #3237: allein die Tabelle
+    (``placements.outlook_reports``) steuert; ``multi_day_trend_reports``
+    bleibt als Beschreibung stehen und wirkt nicht."""
+    from tests.helpers.tabelle_aus_wunsch import tabelle
+
     neu = copy.deepcopy(daten)
     neu["report_config"]["multi_day_trend_reports"] = reports
+    dc = neu["display_config"]
+    dc["placements"] = tabelle(copy.deepcopy(dc), "trip", outlook_reports=reports)
     return neu
 
 
@@ -171,8 +178,12 @@ def test_orte_briefing_argument_und_zieltag(monkeypatch, tmp_path):
     ausgewiesen scheitert sie."""
     preset = _orte_preset()
     preset["evening_enabled"] = True
-    eml = _orte_eml(monkeypatch, preset, versatz=0)
-    konfig = _orte_konfig(tmp_path, _mit_marke(preset, ["morning"]), "beide")
+    # #3237: ohne Tabelle gilt die Vorbelegung (beide Slots an -> nur abends,
+    # ADR-0124 Nr. 3); "Ausblick nur morgens" steht deshalb in der Tabelle --
+    # dieselbe Einstellung fuer Versand und Soll.
+    morgens = _mit_marke(preset, ["morning"])
+    eml = _orte_eml(monkeypatch, morgens, versatz=0)
+    konfig = _orte_konfig(tmp_path, morgens, "beide")
     code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig)
     assert code == 0, aus
     code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig, "--briefing", "evening")

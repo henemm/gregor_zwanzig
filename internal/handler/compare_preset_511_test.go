@@ -30,7 +30,7 @@ func TestCreateComparePreset_WeeklyInvalidWeekday(t *testing.T) {
 	// GIVEN: Create-Request für weekly-Preset mit weekday=7 (ungültig, muss 0-6 sein)
 	s := newTestStore(t)
 	r := chi.NewRouter()
-	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 
 	body := validPresetBody()
 	body["schedule"] = "weekly"
@@ -63,7 +63,7 @@ func TestCreateComparePreset_WeeklyInvalidWeekdayNegative(t *testing.T) {
 	// GIVEN: Create-Request für weekly-Preset mit weekday=-1 (ungültig)
 	s := newTestStore(t)
 	r := chi.NewRouter()
-	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 
 	body := validPresetBody()
 	body["schedule"] = "weekly"
@@ -88,7 +88,7 @@ func TestCreateComparePreset_WeeklyValidWeekday(t *testing.T) {
 	// GIVEN: Create-Request für weekly-Preset mit weekday=4 (Freitag, gültig)
 	s := newTestStore(t)
 	r := chi.NewRouter()
-	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 
 	body := validPresetBody()
 	body["schedule"] = "weekly"
@@ -127,7 +127,7 @@ func TestUpdateComparePreset_WeeklyInvalidWeekday(t *testing.T) {
 	// GIVEN: Existierendes Preset, Update-Request mit weekday=8 (ungültig)
 	s := newTestStore(t)
 	r := chi.NewRouter()
-	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 	r.Put("/api/compare/presets/{id}", UpdateComparePresetHandler(s))
 
 	// Erst erstellen

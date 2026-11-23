@@ -115,6 +115,7 @@ Created: 29 Oct 2026 05:00 (CET)
 --------------------------------------------------
 Innsbruck
    Temperature Maximum: 14°C
+   Temperature Minimum: 4°C
    Wind: 12 km/h
    Precipitation: 0.6 mm
    Rain probability: 20%
@@ -125,7 +126,6 @@ Innsbruck
    Visibility: 9.0 km
    Snow depth: -
    Fresh snow: -
-   Temperature Minimum: 4°C
    Wind gusts: 25 km/h
    Freezing level: -
    Wind direction: -
@@ -142,6 +142,7 @@ Innsbruck
 
 Stubai
    Temperature Maximum: 14°C
+   Temperature Minimum: 4°C
    Wind: 12 km/h
    Precipitation: 0.6 mm
    Rain probability: 20%
@@ -152,7 +153,6 @@ Stubai
    Visibility: 9.0 km
    Snow depth: -
    Fresh snow: -
-   Temperature Minimum: 4°C
    Wind gusts: 25 km/h
    Freezing level: -
    Wind direction: -
@@ -169,6 +169,7 @@ Stubai
 
 Zillertal
    Temperature Maximum: 14°C
+   Temperature Minimum: 4°C
    Wind: 12 km/h
    Precipitation: 0.6 mm
    Rain probability: 20%
@@ -179,7 +180,6 @@ Zillertal
    Visibility: 9.0 km
    Snow depth: -
    Fresh snow: -
-   Temperature Minimum: 4°C
    Wind gusts: 25 km/h
    Freezing level: -
    Wind direction: -
@@ -211,14 +211,17 @@ LOCATIONS — Tirol
 Date: 29 Oct 2026
 
 Innsbruck
-   Temp max 14°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h · Clouds 40%
-   UV max 2 · Visibility min 9.0 km · Temp min 4°C · Gusts 25 km/h
+   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h
+   Clouds 40% · UV max 2 · Visibility min 9.0 km · Gusts 25 km/h
+   … +14 selected weather values without data at this location
 Stubai
-   Temp max 14°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h · Clouds 40%
-   UV max 2 · Visibility min 9.0 km · Temp min 4°C · Gusts 25 km/h
+   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h
+   Clouds 40% · UV max 2 · Visibility min 9.0 km · Gusts 25 km/h
+   … +14 selected weather values without data at this location
 Zillertal
-   Temp max 14°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h · Clouds 40%
-   UV max 2 · Visibility min 9.0 km · Temp min 4°C · Gusts 25 km/h
+   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h
+   Clouds 40% · UV max 2 · Visibility min 9.0 km · Gusts 25 km/h
+   … +14 selected weather values without data at this location
 ----- vergleich.sms -----
 O1 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- G- FZ? O2 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- G- FZ? O3 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- G- FZ?
 ----- vergleich_nachgeholt.betreff -----
@@ -251,14 +254,17 @@ LOCATIONS — Tirol
 Date: 29 Oct 2026
 
 Innsbruck
-   Temp max 14°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h · Clouds 40%
-   UV max 2 · Visibility min 9.0 km · Temp min 4°C · Gusts 25 km/h
+   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h
+   Clouds 40% · UV max 2 · Visibility min 9.0 km · Gusts 25 km/h
+   … +14 selected weather values without data at this location
 Stubai
-   Temp max 14°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h · Clouds 40%
-   UV max 2 · Visibility min 9.0 km · Temp min 4°C · Gusts 25 km/h
+   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h
+   Clouds 40% · UV max 2 · Visibility min 9.0 km · Gusts 25 km/h
+   … +14 selected weather values without data at this location
 Zillertal
-   Temp max 14°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h · Clouds 40%
-   UV max 2 · Visibility min 9.0 km · Temp min 4°C · Gusts 25 km/h
+   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h
+   Clouds 40% · UV max 2 · Visibility min 9.0 km · Gusts 25 km/h
+   … +14 selected weather values without data at this location
 ----- vorschau.sms -----
 O1 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- G- FZ? O2 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- G- FZ? O3 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- G- FZ?
 ----- alarm.gesendet -----

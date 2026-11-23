@@ -26,11 +26,16 @@ from tests.helpers.einstellung_gleich_mail_orte import sende_orte_mail
 
 def test_f005_resolver_ignoriert_nicht_boolesche_werte():
     from services.channel_list_resolver import resolve_channel_lists
+    from tests.helpers.tabelle_aus_wunsch import orte_wunsch_als_tabelle
 
-    dc = _preset(["wind", "gust", "precipitation", "temperature"],
-                 {"wind": "true", "gust": 1, "precipitation": True, "temperature": None})["display_config"]
+    # #3237: der Stundenverlauf-Wunsch wirkt nur ueber die Tabelle.
+    dc = orte_wunsch_als_tabelle(_preset(
+        ["wind", "gust", "precipitation", "temperature"],
+        {"wind": "true", "gust": 1, "precipitation": True, "temperature": None}))["display_config"]
     formate = {z.metric_id: z.format for z in resolve_channel_lists(dc, "compare").hourly}
-    assert formate == {"wind": None, "gust": None, "precipitation": "simplified",
+    # #3237: "nicht Einfach" steht in der Tabelle ausdruecklich als ``raw``
+    # (Orte-Stundenverlauf Roh; frueher ``None`` = Flaechen-Standard Roh).
+    assert formate == {"wind": "raw", "gust": "raw", "precipitation": "simplified",
                        "temperature": None}, formate
 
 

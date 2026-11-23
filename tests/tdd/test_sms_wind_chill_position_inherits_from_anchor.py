@@ -33,6 +33,12 @@ SMS-Kanal-Reihenfolge-Editor im Frontend tatsaechlich tut.
 
 Keine Mocks, kein Netz -- reine Datenmodell-Objekte + echter Ladepfad +
 Renderer-Aufruf (CLAUDE.md Test-Politik, Schicht "Kern").
+
+#3237: die Kanal-Kaskade (``per_channel_layouts``) ist entfernt; die
+SMS-Reihenfolge steht in der Tabelle "Was steht wo" (``placements.rows``,
+nur Elterngroessen). Wirkort der Positionsvererbung ist jetzt die
+Tabellen-Aufloesung (``placements._ordered_rows``: Kind-Zeile direkt hinter
+der Eltern-Zeile) -- weiter ueber den echten Ladepfad ``load_trip()``.
 """
 from __future__ import annotations
 
@@ -52,12 +58,18 @@ from tests.tdd.test_sms_user_metric_order import _token_index
 
 
 def _write_trip(root: Path, trip_id: str, metrics: list[dict],
-                 channel_layouts: dict | None = None) -> None:
-    """Gespeicherter Trip im echten Dateiformat (briefings/<id>.json)."""
+                 sms_folge: list[str] | None = None) -> None:
+    """Gespeicherter Trip im echten Dateiformat (briefings/<id>.json).
+
+    #3237: die SMS-Reihenfolge steht in der Tabelle "Was steht wo"
+    (``placements.rows``) -- wie der Editor sie speichert, NUR mit den
+    Elterngroessen, nie mit den Kind-IDs. Die Kind-Zeilen ergaenzt der
+    Produktcode (``placements._ordered_rows``) hinter ihrer Eltern-Zeile."""
     display_config: dict = {"trip_id": trip_id, "metrics": metrics,
                              "show_night_block": True, "night_interval_hours": 2}
-    if channel_layouts is not None:
-        display_config["channel_layouts"] = channel_layouts
+    if sms_folge is not None:
+        display_config["placements"] = {
+            "version": 1, "rows": [{"metric_id": m} for m in sms_folge]}
     path = root / "users" / "default" / "briefings" / f"{trip_id}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({
@@ -69,14 +81,15 @@ def _write_trip(root: Path, trip_id: str, metrics: list[dict],
 def _render_sms(root: Path, trip_id: str) -> tuple[str, str]:
     """Laedt den Trip real und rendert das Abend-Briefing.
 
-    Returns (cascade_source, sms_text) -- die Kaskaden-Quelle ist die
-    Vorbedingung jedes Tests (muss "per_channel" sein, sonst wird die zu
-    pruefende Kaskade gar nicht durchlaufen, Spec-Pruefhinweis analog AC-13
-    in test_temp_tagesrichtung_bestandsableitung.py)."""
+    Returns (quelle, sms_text) -- die Quelle ist die Vorbedingung jedes
+    Tests: ``"placements"`` = gespeicherte Tabelle, ``"grundauswahl"`` = keine
+    Tabelle (#3237, Vertrag wie ``metrics-for-channel``)."""
+    from services.placements import read_placements
+
     trip = load_trip(trip_id, data_dir=root, user_id="default")
     assert trip is not None, f"Trip {trip_id!r} nicht geladen"
     dc = trip.display_config
-    source = dc.cascade_source_for_channel("sms", "evening")
+    source = "placements" if read_placements(dc.placements) is not None else "grundauswahl"
     report = TripReportFormatter().format_email(
         [F.segment()], trip_name="I1947", report_type="evening",
         night_weather=F.night_weather(), display_config=dc,
@@ -102,12 +115,12 @@ def test_wind_chill_family_inherits_parent_position_from_sms_channel_layout(tmp_
         {"metric_id": "wind", "enabled": True, "bucket": "primary", "order": 1},
         {"metric_id": "precipitation", "enabled": True, "bucket": "primary", "order": 2},
     ]
-    _write_trip(tmp_path, "wc-anchor", metrics, channel_layouts={"sms": metrics})
+    _write_trip(tmp_path, "wc-anchor", metrics,
+                sms_folge=["wind_chill", "wind", "precipitation"])
 
     source, sms = _render_sms(tmp_path, "wc-anchor")
-    assert source == "per_channel", (
-        f"Vorbedingung: Kanal-Layout-Ebene muss antworten, sonst wird die "
-        f"Kaskade gar nicht geprueft (source={source!r})"
+    assert source == "placements", (
+        f"Vorbedingung: die gespeicherte Tabelle muss antworten (source={source!r})"
     )
     i_w, i_r = _token_index(sms, "W"), _token_index(sms, "R")
     felt_syms = [s for s in ("FL", "FD", "FN") if _has(sms, s)]
@@ -142,10 +155,11 @@ def test_temperature_family_inherits_parent_position_from_sms_channel_layout(tmp
         {"metric_id": "wind", "enabled": True, "bucket": "primary", "order": 1},
         {"metric_id": "precipitation", "enabled": True, "bucket": "primary", "order": 2},
     ]
-    _write_trip(tmp_path, "temp-anchor", metrics, channel_layouts={"sms": metrics})
+    _write_trip(tmp_path, "temp-anchor", metrics,
+                sms_folge=["temperature", "wind", "precipitation"])
 
     source, sms = _render_sms(tmp_path, "temp-anchor")
-    assert source == "per_channel", f"Vorbedingung verletzt (source={source!r})"
+    assert source == "placements", f"Vorbedingung verletzt (source={source!r})"
     i_w, i_r = _token_index(sms, "W"), _token_index(sms, "R")
     temp_syms = [s for s in ("N", "L", "D") if _has(sms, s)]
     assert temp_syms, f"Vorbedingung: mind. ein Temperatur-Symbol muss stehen: {sms!r}"
@@ -191,7 +205,7 @@ def test_unrelated_trip_without_derived_families_follows_global_order(tmp_path):
     _write_trip(tmp_path, "unrelated", metrics)
 
     source, sms = _render_sms(tmp_path, "unrelated")
-    assert source == "global", f"Vorbedingung verletzt (source={source!r})"
+    assert source == "grundauswahl", f"Vorbedingung verletzt (source={source!r})"
     # Issue #2792 S1c-4b (E1, AC-19 e): Hervorhebung ab Gelb der Ampel
     # „allgemein" -- die Einsatzwerte W12/G22/R0.5 liegen darunter (frueher
     # W12@4(45@10) G22@4(70@10) R0.5@5(8.4@11)); Reihenfolge W,G,R unveraendert.

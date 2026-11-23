@@ -43,7 +43,13 @@ _PCT = 70
 
 def _variante(email_einfach: bool, telegram_einfach: bool) -> dict:
     """golden_b mit ``cloud_total`` im E-Mail- und im Telegram-Layout in der
-    gewuenschten Wahl (``use_friendly_format``; ``format_mode`` bleibt unbelegt)."""
+    gewuenschten Wahl (``use_friendly_format``; ``format_mode`` bleibt unbelegt).
+
+    #3237: Roh/Einfach je Stelle wirkt nur ueber die Tabelle "Was steht wo";
+    die Layouts werden als ``placements`` ausgedrueckt (``trip_wunsch_als_tabelle``)
+    und bleiben als Beschreibung fuer das Orakel stehen."""
+    from tests.helpers.tabelle_aus_wunsch import trip_wunsch_als_tabelle
+
     d = golden_dict("golden_b")
     layouts = d["display_config"]["channel_layouts"]
     for kanal, einfach in (("email", email_einfach), ("telegram", telegram_einfach)):
@@ -51,7 +57,7 @@ def _variante(email_einfach: bool, telegram_einfach: bool) -> dict:
         assert eintrag["enabled"] is True, f"Testaufbau: cloud_total muss im {kanal}-Layout aktiv sein"
         eintrag.pop("format_mode", None)
         eintrag["use_friendly_format"] = einfach
-    return d
+    return trip_wunsch_als_tabelle(d)
 
 
 def _zellen(monkeypatch, email_einfach: bool, telegram_einfach: bool):

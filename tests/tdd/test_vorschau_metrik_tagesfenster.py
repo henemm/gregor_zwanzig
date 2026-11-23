@@ -331,43 +331,11 @@ def test_ac6_ohne_traegerliste_erscheint_die_stufe_ohne_herkunft():
     )
 
 
-def test_ac7_trip_ohne_grundauswahl_bleibt_altpfad_unberuehrt():
-    """⚠️ AC-7 NACHGEZOGEN durch #1848 A3.
-
-    Bis dahin lautete die Bedingung "OHNE gesetzte SPALTENAUSWAHL": ein
-    fehlendes ``outlook_metrics`` liess den Metrik-Zweig ruhen und der feste
-    Zweig blieb in Kraft. Genau das kehrt A3 um -- "nie eingestellt" heisst
-    seither "nichts abgewaehlt", der Ausblick erbt die Grundauswahl (AC-3
-    der A3-Spec). Der feste Zweig bleibt fuer den verbliebenen Fall
-    zustaendig: KEINE Grundauswahl, also kein Maximum (ADR-0050 D4).
-
-    Given einen Trip ohne Grundauswahl / When eine Zeile gebaut wird / Then
-    bleibt der Row-Dict OHNE 'cells' -- der Altpfad (feste sieben Spalten
-    inkl. Nachtangabe/Ampelfarben) bleibt in Kraft.
-    """
-    dc = display_config(leere_grundauswahl=True)  # kein Maximum (D4)
-    row = build_outlook_row(
-        AC2_SUMMARY, AC2_POINTS, "Mo", _UTC,
-        trip_display_config=dc, report_type="evening",
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route", ampel=AMPEL_ALLGEMEIN,
-    )
-    assert "cells" not in row, (
-        f"Row {row!r} traegt 'cells', obwohl keine Grundauswahl gesetzt "
-        "ist -- ohne Maximum darf der Metrik-Zweig nicht greifen (AC-7, D4)."
-    )
-
-    # Gegenprobe: MIT Grundauswahl greift er sehr wohl -- sonst waere die
-    # Zusicherung oben auch dann gruen, wenn der Metrik-Zweig gar nicht mehr
-    # erreichbar ist.
-    row_mit = build_outlook_row(
-        AC2_SUMMARY, AC2_POINTS, "Mo", _UTC,
-        trip_display_config=display_config(), report_type="evening",
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route", ampel=AMPEL_ALLGEMEIN,
-    )
-    assert row_mit.get("cells"), (
-        "Gegenprobe gescheitert: mit Grundauswahl muss der Metrik-Zweig "
-        "greifen (#1848 A3, AC-3) -- sonst bewacht der Test oben nichts."
-    )
+# #3237: ``test_ac7_trip_ohne_grundauswahl_bleibt_altpfad_unberuehrt`` ist
+# entfallen -- der feste Sieben-Spalten-Zweig fuer einen Trip ganz ohne
+# Grundauswahl (ADR-0050 D4, "kein Maximum = nicht schneiden") war ein
+# Rueckfall des Altpfads. Die Tabelle "Was steht wo" kennt keinen Rueckfall
+# (ADR-0124): ohne Grundauswahl gibt es keine Ausblick-Zeile.
 
 
 def test_ac8_helfer_baut_trip_zeilen_ueber_die_trip_konvention():

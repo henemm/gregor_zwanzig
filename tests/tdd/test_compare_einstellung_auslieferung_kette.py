@@ -106,9 +106,14 @@ def _lauf(mit, vorlage: dict, tier: str = "premium", *, optins: bool = True,
           telegram: bool = True, sms: bool = True, vorher=None) -> Lauf:
     """EIN Nutzer, EIN Briefing-Lauf ueber den echten Einstieg. ``vorher(uid)``
     darf den Nutzer praeparieren (z.B. Tageszaehler)."""
+    from tests.helpers.tabelle_aus_wunsch import orte_wunsch_als_tabelle
+
     uid = nutzer_anlegen(tier)
     orte_anlegen(uid)
     p = _optins(copy.deepcopy(vorlage)) if optins else copy.deepcopy(vorlage)
+    # #3237: die Einstellung des Falls steht in der Tabelle "Was steht wo";
+    # die Altfelder bleiben als Beschreibung fuer das Orakel stehen und wirken nicht.
+    p = orte_wunsch_als_tabelle(p)
     pfad = preset_ablegen(uid, p)
     if vorher:
         vorher(uid)
@@ -134,8 +139,12 @@ def _ist(snap: Kanalmitschrift, kanal: str) -> dict[str, list[str]]:
 
 
 def _inhalt_pruefen(lauf: Lauf, kanaele=ALLE_MIT_TEXT, *, email: bool = True) -> None:
-    """Vorbedingung, dann je Kanal: erwartete Metrik-Menge (und ausser E-Mail die
-    Reihenfolge) je Ort aus rohem JSON + Register."""
+    """Vorbedingung, dann je Kanal: erwartete Metrik-Menge je Ort aus rohem
+    JSON + Register; ausser E-Mail auch die Reihenfolge, gemessen an der EINEN
+    Zeilenfolge (#3237, Spec #3122 Teil A Nr. 8): jeder Kanal zeigt seine
+    Groessen in derselben relativen Folge wie Telegram bzw. SMS -- eine eigene
+    Folge je Kanal gibt es nicht mehr (die Folge selbst pruefen die Tests von
+    Hand)."""
     compare_vorbedingung_pruefen(lauf.snap, tuple(kanaele))
     for kanal in kanaele:
         if kanal == "email" and not email:
@@ -156,10 +165,23 @@ def _inhalt_pruefen(lauf: Lauf, kanaele=ALLE_MIT_TEXT, *, email: bool = True) ->
                     f"(Nutzer {lauf.uid}, Preset {lauf.roh['id']})"
                 )
             else:
-                assert ist.get(ort) == soll, (
-                    f"{kanal}/{ort}: erwartet {soll} (Reihenfolge der Kanal-Liste), gesendet "
+                assert sorted(ist.get(ort) or []) == sorted(soll), (
+                    f"{kanal}/{ort}: erwartet {soll} (Auswahl der Kanal-Liste), gesendet "
                     f"{ist.get(ort)} (Nutzer {lauf.uid}, Preset {lauf.roh['id']})\n{_text(lauf.snap, kanal)}"
                 )
+    _eine_zeilenfolge(lauf, [k for k in kanaele if k != "email"])
+
+
+def _eine_zeilenfolge(lauf: Lauf, kanaele) -> None:
+    """#3237: je zwei Kanaele stehen gemeinsame Groessen in derselben Folge."""
+    for ort in ORTSNAMEN:
+        listen = {k: _ist(lauf.snap, k).get(ort) or [] for k in kanaele}
+        for k1 in listen:
+            for k2 in listen:
+                gemeinsam = set(listen[k1]) & set(listen[k2])
+                assert [m for m in listen[k1] if m in gemeinsam] == [
+                    m for m in listen[k2] if m in gemeinsam], (
+                    f"{ort}: {k1} {listen[k1]} und {k2} {listen[k2]} folgen nicht EINER Zeilenfolge")
 
 
 def _zwei_nutzer(mit, vorlage: dict, **kw) -> tuple[Lauf, Lauf]:
@@ -263,7 +285,9 @@ def test_reihenfolge_der_kanal_liste_bestimmt_zellen_und_kappung(mit):
         _inhalt_pruefen(lauf)
         assert _ist(lauf.snap, "telegram")["Innsbruck"] == [
             "sunny_hours_h", "cloud_avg_pct", "gust_max_kmh", "wind_max_kmh", "temp_max_c"]
-        assert _ist(lauf.snap, "sms")["Innsbruck"] == ["gust_max_kmh", "temp_max_c", "sunny_hours_h"]
+        # #3237: EINE Zeilenfolge (Spec #3122 Teil A Nr. 8) -- die SMS waehlt
+        # weiter Boeen, Temperatur, Sonne, in der Folge der Tabelle.
+        assert _ist(lauf.snap, "sms")["Innsbruck"] == ["sunny_hours_h", "gust_max_kmh", "temp_max_c"]
 
     for lauf in _zwei_nutzer(mit, fixture_dict("kanal_ueberlauf")):
         _inhalt_pruefen(lauf, ("telegram",))
@@ -271,6 +295,10 @@ def test_reihenfolge_der_kanal_liste_bestimmt_zellen_und_kappung(mit):
         assert len(zellen) == 10 and verdraengt == 0
         tg = _text(lauf.snap, "telegram")
         ist, hinweis = compare_parse_telegram(tg, ORTSNAMEN)
+        # #3237: eine Tabellenzeile je Katalog-Groesse -- Temperatur steht als
+        # EINE Zeile (Hoechst- vor Tiefstwert) an der Stelle der Liste.
+        assert zellen[-2:] == ["temp_min_c", "temp_max_c"], "Vorbedingung: Liste endet mit min, max"
+        zellen = zellen[:-2] + ["temp_max_c", "temp_min_c"]
         for ort in ORTSNAMEN:
             assert ist[ort] == zellen, f"Telegram/{ort}: alle Groessen der Kanal-Liste in Listenfolge"
         assert hinweis is None, "kein Kappungshinweis mehr (AC-24)"
@@ -281,8 +309,11 @@ def test_reihenfolge_der_kanal_liste_bestimmt_zellen_und_kappung(mit):
 
 
 def test_kanalauswahl_aendert_den_stundenverlauf_nicht(mit):
-    """AC-5: E-Mail-Auswahl ohne Wind -> Wind fehlt in der Uebersicht, steht aber im
-    Stundenverlauf (folgt allein ``hourly_metrics``)."""
+    """AC-5: E-Mail-Auswahl ohne Wind -> Wind fehlt in der Uebersicht; der
+    Stundenverlauf zeigt seine eigene Auswahl (Temperatur, keine Boeen).
+    #3237 (Spec #3122 Teil A Nr. 3 und "Bewusste Aenderungen der Ausgabe"):
+    eine Stundenverlauf-Metrik, die nicht in der E-Mail steht, entfaellt dort
+    -- Wind fehlt deshalb auch im Stundenverlauf (frueher: stand dort)."""
     for lauf in _zwei_nutzer(mit, fixture_dict("stundenverlauf")):
         _inhalt_pruefen(lauf, ("email",))
         assert "wind_max_kmh" not in _ist(lauf.snap, "email")["Innsbruck"]
@@ -290,7 +321,8 @@ def test_kanalauswahl_aendert_den_stundenverlauf_nicht(mit):
         assert "STUNDENVERLAUF" in text, "Stundenverlauf muss vorhanden sein (hourly_enabled an)"
         stunden = text.split("STUNDENVERLAUF", 1)[1]
         zeilen = [z for z in stunden.splitlines() if re.match(r"^\s+\d\d:00\s", z)]
-        assert zeilen and all(re.search(r"Wind \d+", z) and re.search(r"Temp \d+", z) for z in zeilen), stunden[:400]
+        assert zeilen and all(re.search(r"Temp \d+", z) for z in zeilen), stunden[:400]
+        assert not any(re.search(r"Wind \d+", z) for z in zeilen), "Wind nicht in der E-Mail"
         assert not any("Gust" in z for z in zeilen), "Boeen stehen nicht in hourly_metrics"
         assert lauf.snap.sendungen("email")[-1]["compare_hourly_enabled"] is True
 

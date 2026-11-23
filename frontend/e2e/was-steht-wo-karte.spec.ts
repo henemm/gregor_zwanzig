@@ -439,15 +439,23 @@ test.describe('Karte „Was steht wo“', () => {
 	});
 
 	// „Gespeicherte Tabelle“ heißt: placements.rows liegt vor (wie read_placements im Kern).
-	// Die Ausblick-Marke der Orte-Anlage (#3155, placements ohne rows) ist keine Tabelle.
+	// Seit #3237 trägt jedes neue Abo ab Anlage die Tabelle; den Altbestand ohne Tabelle (AC-3) stellt der
+	// Test über den Tabellen-PUT her (placements ohne rows, Ausblick-Liste bleibt).
 	const hatTabelle = (dc: Json | undefined): boolean =>
 		Array.isArray(((dc ?? {}) as { placements?: { rows?: unknown } }).placements?.rows);
+	async function ohneTabelle(request: APIRequestContext, abo: Abo): Promise<void> {
+		const p = (await stand(request, abo.kind, abo.id)).display_config.placements as Json;
+		const r = await request.put(tabellenUrl(abo.kind, abo.id), { data: { version: 1, outlook_reports: p.outlook_reports ?? [] } });
+		expect(r.status(), 'Messaufbau: Tabelle entfernt (Altbestand)').toBe(200);
+		expect(hatTabelle((await stand(request, abo.kind, abo.id)).display_config), 'Messaufbau: ohne gespeicherte Tabelle').toBe(false);
+	}
 
 	for (const fall of [FAELLE[0], FAELLE[1]]) {
 		test(`WS-6 (${fall.name}): „−“ und „+“ schreiben die Tabelle mit; ohne gespeicherte Tabelle legt „−“ keine an`, async ({ page }) => {
 			await page.setViewportSize(DESKTOP);
 			const abo = await seed(page.request, fall);
 			try {
+				await ohneTabelle(page.request, abo);
 				const reiter = await oeffneWetter(page, abo.kind, abo.id);
 				let karte = reiter.getByTestId('was-steht-wo');
 				await expect(karte.getByTestId('was-steht-wo-tabelle')).toBeVisible({ timeout: 20_000 });
@@ -667,6 +675,9 @@ test.describe('Karte „Was steht wo“', () => {
 		const en = zweit.seite;
 		try {
 			// Mandantentrennung: die Tabelle des Admins ist für ihn weder lesbar noch schreibbar.
+			// #3237: die Admin-Tabelle ist ab Anlage gespeichert; „unberührt“ heißt gleicher Inhalt wie vorher.
+			const adminVorher = await tabelle(page.request, admin);
+			expect(adminVorher.stored, 'Messaufbau: Admin-Tabelle seit der Anlage gespeichert').toBe(true);
 			expect((await en.request.get(tabellenUrl('vergleich', admin.id))).status()).toBe(404);
 			expect((await en.request.put(tabellenUrl('vergleich', admin.id), { data: { version: 1, rows: [] } })).status()).toBe(404);
 
@@ -689,7 +700,7 @@ test.describe('Karte „Was steht wo“', () => {
 			await haken(karte, m, 'outlook').tap();
 			await gespeichert;
 			expect(rowVon((await tabelle(en.request, eigen)).placements, m)?.places?.outlook).toBe(false);
-			expect((await tabelle(page.request, admin)).stored, 'Abo des Admins unberührt').toBe(false);
+			expect((await tabelle(page.request, admin)).placements, 'Abo des Admins unberührt').toEqual(adminVorher.placements);
 			await karte.getByTestId('was-steht-wo-legende-auf').tap();
 			expect(kontrastBericht('Karte en 390 px', kontrastVerstoesse(await messeKontrast(karte)))).toEqual([]);
 			await eigen.aufraeumen();
@@ -857,8 +868,12 @@ test.describe('Karte „Was steht wo“', () => {
 				const fremdVorher = altStand(fremd.kind, await stand(zweit.seite.request, fremd.kind, fremd.id));
 				expect(vorher, 'Messaufbau: Altfelder gespeichert').toMatchObject(abo.kind === 'route' ? { report_config: { multi_day_trend_reports: ['morning'] } } : { outlook_enabled: false });
 				// #3155: Orte-Anlage mit outlook_enabled false schreibt die Marke „aus“ (leere Liste, ADR-0124 Nr. 6).
-				if (abo.kind === 'vergleich')
-					expect(vorher.display_config.placements, 'Anlage-Marke bei outlook_enabled false').toEqual({ version: 1, outlook_reports: [] });
+				// #3237 (AC-2): dazu die volle Tabelle aus der Grundauswahl.
+				if (abo.kind === 'vergleich') {
+					const anlage = vorher.display_config.placements as Json;
+					expect(anlage.outlook_reports, 'Anlage-Marke bei outlook_enabled false').toEqual([]);
+					expect((anlage.rows as Json[] | undefined)?.length ?? 0, 'Anlage: volle Tabelle').toBeGreaterThan(0);
+				}
 				expect((await page.request.get(tabellenUrl(fremd.kind, fremd.id))).status(), 'fremdes Abo nicht lesbar').toBe(404);
 
 				// Reiter Zustellung: ein Schalter außerhalb des Übergangsblocks; bei Orten zusätzlich die Pausieren-Karte im Block.
@@ -896,7 +911,7 @@ test.describe('Karte „Was steht wo“', () => {
 
 // ── #3155 (Scheibe B4): eine steuernde Stelle, ein Name ─────────────────────────────────────────
 // Spec docs/specs/modules/feat_3155_ein_name_ausblick.md AC-7, AC-8, AC-11. Die Orte-Anlage legt die
-// Vorbelegung des 3-Tages-Ausblicks als Marke an (placements ohne rows, nur outlook_reports); die Karte
+// Vorbelegung des 3-Tages-Ausblicks an (seit #3237 mit voller Tabelle aus der Grundauswahl); die Karte
 // zeigt sie. Der Reiter Wetter kennt die Karte „Mehrtages-Trend“, ihre Haken und alte Namen nicht mehr.
 test.describe('Karte „Was steht wo“ — #3155 Vorbelegung und ein Name', () => {
 	for (const [name, slots, soll] of [
@@ -910,7 +925,10 @@ test.describe('Karte „Was steht wo“ — #3155 Vorbelegung und ein Name', () 
 			const abo = await seed(page.request, FAELLE[1], { oben: { ...slots, morning_time: '07:00:00', evening_time: '18:00:00' } });
 			try {
 				const gespeichert = await stand(page.request, 'vergleich', abo.id);
-				expect(gespeichert.display_config.placements, 'Anlage-Marke ohne rows').toEqual({ version: 1, outlook_reports: [...soll.reports] });
+				// #3237 (AC-2): die Anlage schreibt die volle Tabelle aus der Grundauswahl, Ausblick nach der Regel vorbelegt.
+				const anlage = gespeichert.display_config.placements as Json;
+				expect(anlage.outlook_reports, 'Anlage: Ausblick nach der Regel vorbelegt').toEqual([...soll.reports]);
+				expect((anlage.rows as Json[] | undefined)?.length ?? 0, 'Anlage: volle Tabelle aus der Grundauswahl').toBeGreaterThan(0);
 				expect((await tabelle(page.request, abo)).outlook_reports, 'Tabellen-Antwort').toEqual([...soll.reports]);
 				const karte = await oeffneKarte(page, abo);
 				await expect(karte.getByTestId('was-steht-wo-ausblick-morning')).toHaveAttribute('aria-checked', soll.morning);

@@ -389,62 +389,6 @@ class TestTrendRendering:
             },
         ]
 
-    @staticmethod
-    def _dc_ohne_grundauswahl():
-        """Eine ``display_config`` OHNE Grundauswahl (ADR-0050 D4).
-
-        #1848 A3: der Ausblick erbt die Grundauswahl und rendert dann ueber
-        den konfigurierbaren Zweig -- der liest seine Zellentexte aus
-        ``stage["cells"]``, die ``build_outlook_row()`` vorrechnet. Die
-        hand-gebauten Zeilen von ``_make_trend_data_v4()`` tragen die nicht;
-        gegen sie gerendert saehe der konfigurierbare Zweig ueberall "–" und
-        dieser Test pruefte ein Vakuum.
-
-        Diese Klasse prueft den FESTEN Zweig (Tag/N/D/R/PR/Wind/Boeen/Gew),
-        und der bleibt fuer genau diesen Fall in Kraft: ``metrics == []``
-        heisst "kein Maximum definiert", also kein Schnitt und kein Erben
-        (D4, ``allowed_metric_ids_for_report_type()``). Damit steht hier
-        ausdruecklich, welcher der beiden Zweige geprueft wird -- vorher hing
-        das an einem Default.
-        """
-        from app.metric_catalog import build_default_display_config
-
-        dc = build_default_display_config()
-        dc.metrics = []
-        return dc
-
-    def _make_trend_data_v4(self) -> list[dict]:
-        """Trend-Zeilen im echten #911-Spaltenformat (Commits 9f14fd39/2205639e) --
-        das Format, das _build_stage_trend() (trip_report_scheduler.py) heute
-        tatsaechlich erzeugt: weekday/name/temp_lo/temp_hi/precip_mm/wind_dir/
-        wind_kmh/thunder/note statt des entfallenen v3.0 stage_name/summary."""
-        return [
-            {
-                "weekday": "Mi",
-                "date": date(2026, 2, 18),
-                "name": "Tag 3: von Soller nach Tossals Verds",
-                "temp_lo": 6,
-                "temp_hi": 14,
-                "precip_mm": 1.5,
-                "wind_dir": "NW",
-                "wind_kmh": 25,
-                "thunder": "NONE",
-                "note": None,
-            },
-            {
-                "weekday": "Do",
-                "date": date(2026, 2, 19),
-                "name": "Tag 4: von Tossals Verds nach Lluc",
-                "temp_lo": 4,
-                "temp_hi": 16,
-                "precip_mm": 0.0,
-                "wind_dir": "W",
-                "wind_kmh": 10,
-                "thunder": "NONE",
-                "note": None,
-            },
-        ]
-
     def _make_last_segment(self) -> SegmentWeatherData:
         """Minimal last segment for formatter."""
         seg = TripSegment(
@@ -475,55 +419,12 @@ class TestTrendRendering:
             assert "cloud_emoji" not in row, "v3.0 removes cloud_emoji"
             assert "warning" not in row, "v3.0 removes warning"
 
-    def test_trend_rendering_html_two_lines(self):
-        """v4.0 (#911): HTML-Ausblick ist eine OutlookTable (Tag/N/D/R/PR/Wind/
-        Boeen/Gew/ACC-Spalten) statt des entfallenen v3.0-2-Zeilen-Layouts --
-        Etappennamen erscheinen dort nicht mehr, nur Wochentag + Kennzahlen
-        (Commits 9f14fd39/2205639e)."""
-        from output.renderers.trip_report import TripReportFormatter
-
-        formatter = TripReportFormatter()
-        trend = self._make_trend_data_v4()
-        last_seg = self._make_last_segment()
-
-        report = formatter.format_email(
-            segments=[last_seg],
-            trip_name="GR221 Mallorca",
-            report_type="evening",
-            multi_day_trend=trend,
-            display_config=self._dc_ohne_grundauswahl(),
-        )
-
-        # AC-9 (#911): Eyebrow "3-Tages-Ausblick" über der OutlookTable
-        assert "Ausblick" in report.email_html
-        # Wochentag- und Temperatur-Spalten (N=Tagestief, D=Tag-Hoch)
-        assert "Mi" in report.email_html
-        assert "6°" in report.email_html
-        assert "14°" in report.email_html
-
-    def test_trend_rendering_plain_two_lines(self):
-        """v4.0 (#911): Plain-Text-Block '3-Tages-Ausblick' zeigt weiterhin den
-        Etappennamen + Temperatur-/Niederschlags-Tokens (format_trend_tokens()),
-        nur das darunterliegende Datenmodell wechselte von stage_name/summary
-        auf name/temp_lo/temp_hi (Commits 9f14fd39/2205639e)."""
-        from output.renderers.trip_report import TripReportFormatter
-
-        formatter = TripReportFormatter()
-        trend = self._make_trend_data_v4()
-        last_seg = self._make_last_segment()
-
-        report = formatter.format_email(
-            segments=[last_seg],
-            trip_name="GR221 Mallorca",
-            report_type="evening",
-            multi_day_trend=trend,
-            display_config=self._dc_ohne_grundauswahl(),
-        )
-
-        assert "3-Tages-Ausblick" in report.email_plain
-        assert "Tossals Verds" in report.email_plain
-        # #1848 A1 AC-9: Schraegstrich statt Halbgeviertstrich (SMS-Trenner).
-        assert "6/14°C" in report.email_plain
+    # #3237: ``test_trend_rendering_{html,plain}_two_lines`` sind entfallen
+    # (samt ``_dc_ohne_grundauswahl``/``_make_trend_data_v4``). Sie prueften den
+    # FESTEN Ausblick-Zweig (Tag/N/D/R/PR/Wind/Boeen/Gew), den nur eine
+    # ``display_config`` ganz ohne Grundauswahl erreichte (ADR-0050 D4) -- ein
+    # Rueckfall des Altpfads. Die Tabelle "Was steht wo" kennt keinen
+    # Rueckfall (ADR-0124): ohne Grundauswahl keine Zeile, kein Ausblick.
 
     def test_trend_no_future_stages(self):
         """No trend block when multi_day_trend is None.

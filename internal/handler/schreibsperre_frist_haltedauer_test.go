@@ -43,7 +43,7 @@ func p2158Stellen() []sperrStelle {
 	newTripBody := `{"id":"t-neu","name":"Neu","stages":[{"id":"S1","name":"D1","date":"2026-05-01","waypoints":[{"id":"W1","name":"P","lat":47.0,"lon":11.0,"elevation_m":500}]}]}`
 	return []sperrStelle{
 		{"trip.go_Get", "t1", seedT, TripHandler, "GET", "/api/trips/{id}", "/api/trips/t1", "", 200},
-		{"trip.go_Create", "t-neu", none, CreateTripHandler, "POST", "/api/trips", "/api/trips", newTripBody, 201},
+		{"trip.go_Create", "t-neu", none, ohneKern(CreateTripHandler), "POST", "/api/trips", "/api/trips", newTripBody, 201},
 		{"trip.go_Update", "t1", seedT, UpdateTripHandler, "PUT", "/api/trips/{id}", "/api/trips/t1", `{"name":"Neu"}`, 200},
 		{"trip.go_State", "t1", seedT, UpdateTripStateHandler, "PATCH", "/api/trips/{id}/state", "/api/trips/t1/state", `{"paused":true}`, 200},
 		{"trip.go_ConfirmWaypoint", "t1", seedT, ConfirmWaypointHandler, "PATCH", "/api/trips/{id}/waypoints/{waypointId}/confirm", "/api/trips/t1/waypoints/W1/confirm", `{"confirmed":true}`, 200},
@@ -129,7 +129,7 @@ func TestSchreibsperre_CreateComparePreset_SperrfehlerBrichtAb(t *testing.T) {
 	if err := os.WriteFile(s.WithUser(u).BriefingsDir(), []byte("x"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	w := p2158Do(CreateComparePresetHandler(s), "POST", "/api/compare/presets", "/api/compare/presets",
+	w := p2158Do(CreateComparePresetHandler(s, ""), "POST", "/api/compare/presets", "/api/compare/presets",
 		comparePresetPutBody("Neu"), u)
 	if w.Code != 500 {
 		t.Fatalf("erwartet 500, bekam %d (%s)", w.Code, w.Body.String())
@@ -202,7 +202,7 @@ func TestSchreibsperre_HaltedauerCompareCreate_BisZurAntwortBelegt(t *testing.T)
 	const u = "u1"
 	s := store.New(t.TempDir(), u)
 	p := &p2158Sonde{ResponseRecorder: httptest.NewRecorder(), dir: s.WithUser(u).BriefingsDir(), t: t}
-	p2158DoW(p, CreateComparePresetHandler(s), "POST", "/api/compare/presets", "/api/compare/presets", comparePresetPutBody("Neu"), u)
+	p2158DoW(p, CreateComparePresetHandler(s, ""), "POST", "/api/compare/presets", "/api/compare/presets", comparePresetPutBody("Neu"), u)
 	if p.Code != 201 || p.schreib == 0 {
 		t.Fatalf("POST: %d, Schreibvorgaenge=%d (%s)", p.Code, p.schreib, p.Body.String())
 	}

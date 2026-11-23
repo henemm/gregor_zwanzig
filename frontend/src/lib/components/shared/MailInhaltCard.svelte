@@ -27,6 +27,7 @@
 	// nie; ein Wert, der erst danach erscheint, ist einen Wimpernschlag falsch.
 	const start = ladeMailZustand(untrack(() => (reportConfig ?? {}) as ReportConfig));
 	let email_format = $state<'full' | 'compact'>(start.email_format);
+	// #3237 F002: Altfeld ohne Wirkung, kein Haken mehr -- nur unveraendert durchgereicht.
 	let show_outlook = $state(start.show_outlook);
 	let show_stage_stats = $state(start.show_stage_stats);
 	let show_yesterday_comparison = $state(start.show_yesterday_comparison);
@@ -127,14 +128,19 @@
 	<div class="space-y-1" style={email_format === 'compact' ? 'opacity:0.45;pointer-events:none' : ''}>
 		<div data-testid="report-content-modules-body" class="space-y-2 pl-2">
 			<div class="text-sm">
+				<!-- #3237 (Adversary F002, AC-4/AC-6): der Haken "Grosswetterlage" liest und
+				     schreibt `show_stability` -- allein dieses Feld schaltet sie im Kern
+				     (report_config_resolver). `show_outlook` ist Altfeld ohne Wirkung und wird
+				     hier nur unveraendert durchgereicht (Read-Modify-Write, Entfernung #3277).
+				     Testid bleibt `report-show-outlook` (stabile Bedien-Kennung der E2E-Tests). -->
 				<span data-testid="report-show-outlook" class="inline-flex items-center gap-2">
 					<Checkbox
-						checked={show_outlook}
+						checked={show_stability}
 						disabled={email_format === 'compact'}
-						onchange={(e) => { show_outlook = (e.target as HTMLInputElement).checked; }}
-					>{BAUSTEINE.show_outlook.label}</Checkbox>
+						onchange={(e) => { show_stability = (e.target as HTMLInputElement).checked; }}
+					>{BAUSTEINE.show_stability.label}</Checkbox>
 				</span>
-				<p class="pl-6 text-xs text-muted-foreground mt-0.5">{BAUSTEINE.show_outlook.description}</p>
+				<p class="pl-6 text-xs text-muted-foreground mt-0.5">{BAUSTEINE.show_stability.description}</p>
 			</div>
 			<div class="text-sm">
 				<span data-testid="report-show-stage-stats" class="inline-flex items-center gap-2">

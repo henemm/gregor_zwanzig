@@ -504,12 +504,19 @@ def _ac8_sms(einfach: bool) -> str:
           "channel_layouts": {"sms": [
               {"metric_id": "gust"}, {"metric_id": "cloud_total", "use_friendly_format": einfach},
               {"metric_id": "temperature", "enabled": False}, {"metric_id": "wind"}]}}
+    # #3237: die SMS-Einstellung steht in der Tabelle (Altfeld wirkt nicht).
+    from tests.helpers.tabelle_aus_wunsch import orte_wunsch_als_tabelle
+
+    dc = orte_wunsch_als_tabelle({"display_config": dc})["display_config"]
     return _sms(_kontext(_vergleich(orte), dc))
 
 
 def test_ac8_listenfolge_abwahl_und_einfach():
+    """Folge und Abwahl der SMS-Liste wirken. #3237 (Spec #3122 Teil A Nr. 4,
+    bewusste Aenderung): die SMS hat keine Formwahl, ein Einfach-Wunsch bleibt
+    ohne Wirkung -- die Orte-SMS zeigt die Bewoelkung fest als Zahl."""
     sms = _ac8_sms(einfach=True)
-    assert sms == "O1 G- CT:SCT@13 W-", sms
+    assert sms == "O1 G- CT70@13 W-", sms
 
 
 def test_ac8_roh_zeigt_die_zahl():

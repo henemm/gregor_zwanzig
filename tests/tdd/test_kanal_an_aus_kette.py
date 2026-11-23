@@ -34,14 +34,18 @@ tragen bewusst kein "test"/"tdd" (Herkunftssperre #2406).
 RED heute: ``send_due_reports`` kennt nur den Gesamtschalter ``enabled``; die
 Per-Slot-Schalter werden nicht gelesen (AC-1, AC-2, AC-4, AC-6 und die
 AC-3-Faelle mit Per-Slot-Schluesseln). Alles uebrige ist Charakterisierung
-und startet GRUEN (AC-3-Altdaten, AC-7..AC-15, AC-17).
+und startet GRUEN (AC-3-Altdaten, AC-7..AC-15).
+
+#3237: AC-17 (``channel_layouts_per_report`` gewinnt am Abend, der Morgen folgt
+``channel_layouts``, Schnitt gegen das globale Maximum) ist entfallen -- es
+beschrieb die entfernte Kanal-Kaskade. Auswahl und Folge je Kanal kommen allein
+aus der Tabelle "Was steht wo" und gelten fuer beide Briefings (ADR-0124).
 """
 from __future__ import annotations
 
 import copy
 import json
 import logging
-import re
 import sys
 from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
@@ -57,11 +61,7 @@ from app.loader import get_briefings_dir, get_data_dir, load_all_trips  # noqa: 
 from services.briefing_slots import _STATE_FILENAME  # noqa: E402
 from services.trip_report_scheduler import TripReportSchedulerService  # noqa: E402
 from tests.helpers.einstellung_auslieferung_orakel import (  # noqa: E402
-    _COL_LABEL_TO_ID,
-    AUSNAHMEN,
     erreichbare_kanaele,
-    erwartete_kaskade,
-    parse_kanal,
     roh_wert_der_metrik,
 )
 from tests.helpers.ortstag import ortstag  # noqa: E402
@@ -998,106 +998,3 @@ def test_globale_sms_schwelle_wirkt_in_allen_drei_sms_texten(mit, stundenwert_01
                 f"Schwelle {_regen_metrik(d).get('sms_threshold')!r} -> Regen-Token in "
                 f"allen drei Texten erwartet; tatsaechlich: {werte} ({_kurz(mit)})"
             )
-
-
-_TAG_RE = re.compile(r"<[^>]+>")
-
-
-def _ids_je_kanal(mit: Kanalmitschrift) -> dict[str, list[str]]:
-    """metric_ids in TEXT-Reihenfolge je Kanal, aus dem tatsaechlich gesendeten
-    Text. Der HTML-Teil wird hier robust gelesen (erste ``<thead>`` der Mail):
-    ``parse_email_html`` des Orakels nimmt starr die zweite ``<table>`` an --
-    das passt zum Golden-Render, nicht zum Layout der Scheduler-Mail."""
-    ids = {k: parse_kanal(mit, k)[0]
-           for k in ("email_plain", "sms", "premium_sms", "telegram_kurzform")}
-    html = mit.sendungen("email")[0]["body"]
-    kopf = re.search(r"<thead>(.*?)</thead>", html, re.DOTALL)
-    assert kopf, "Vorbedingung: die volle Mail traegt eine Stundentabelle mit <thead>"
-    labels = [_TAG_RE.sub("", t).strip()
-              for t in re.findall(r"<th[^>]*>(.*?)</th>", kopf.group(1), re.DOTALL)]
-    ids["email_html"] = [_COL_LABEL_TO_ID[l] for l in labels if l in _COL_LABEL_TO_ID]
-    return ids
-
-
-def _kaskaden_abweichungen(golden: dict, mit: Kanalmitschrift, slot: str) -> set:
-    """(metric_id, kanal, dimension) je Abweichung zwischen gesendetem Text und
-    ``erwartete_kaskade`` (rohes JSON) -- abzueglich der im Register
-    ``AUSNAHMEN`` bekannten, dokumentierten Produktabweichungen (S1)."""
-    ist = _ids_je_kanal(mit)
-    rot = set()
-    for kanal, ist_ids in ist.items():
-        soll_ids = [m for m, _ in erwartete_kaskade(golden, kanal, slot)]
-        zellen = {(m, kanal, "erscheint") for m in set(soll_ids) ^ set(ist_ids)}
-        gemeinsam_soll = [m for m in soll_ids if m in ist_ids]
-        gemeinsam_ist = [m for m in ist_ids if m in soll_ids]
-        zellen |= {(m, kanal, "reihenfolge") for m in gemeinsam_soll
-                   if gemeinsam_soll.index(m) != gemeinsam_ist.index(m)}
-        rot |= {
-            (m, k, dim) for m, k, dim in zellen
-            if not any(e.kanal == k and e.dimension == dim and e.metrik in (m, "*")
-                       for e in AUSNAHMEN)
-        }
-    return rot
-
-
-
-# ═══════════════════════════ AC-17 ═══════════════════════════════════════════
-
-
-def test_per_report_layout_gewinnt_am_abend_morgen_folgt_per_channel(mit):
-    """AC-17: ``channel_layouts_per_report`` gewinnt bis in den Text.
-
-    Golden D (beide Slots an): Abend hat ein ``per_report``-Layout fuer E-Mail und
-    SMS mit anderer Auswahl/Reihenfolge als ``channel_layouts``, der Morgen hat
-    keins. Abend-Briefing: E-Mail, SMS, Premium-SMS und Kurzform zeigen die
-    ``per_report``-Auswahl und -Reihenfolge; Morgen-Briefing: ``per_channel``.
-    ``per_report`` darf das globale Maximum nicht erweitern (Schnitt) -- Fall 2:
-    ``gust`` global abgewaehlt, im Abend-``per_report``-SMS aber gewaehlt.
-    Erwartung aus ``erwartete_kaskade`` (rohes JSON). Heute GRUEN.
-    """
-    def _laufen(d: dict, slot: str, stunde: int):
-        uid = frisches_profil()
-        _trip_schreiben(uid, d["report_config"], basis=d)
-        mit.leeren()
-        _lauf(uid, _jetzt(stunde))
-        assert _slots(mit) == [slot], f"Vorbedingung: nur der {slot}-Slot laeuft: {_kurz(mit)}"
-
-    golden = _golden_beide_an(email_format="full")
-    # Aufbau-Kontrolle: die beiden Kaskaden-Quellen unterscheiden sich wirklich.
-    for kanal in ("sms", "email_plain"):
-        assert erwartete_kaskade(golden, kanal, "evening") != erwartete_kaskade(golden, kanal, "morning"), (
-            f"Aufbau: per_report (Abend) und per_channel (Morgen) muessen sich fuer "
-            f"{kanal} unterscheiden"
-        )
-
-    for slot, stunde in (("evening", 20), ("morning", 6)):
-        _laufen(golden, slot, stunde)
-        rot = _kaskaden_abweichungen(golden, mit, slot)
-        assert not rot, (
-            f"AC-17 [{slot}]: Auswahl/Reihenfolge weichen von der Kaskade "
-            f"per_report > per_channel > global ab (metrik, kanal, dimension): "
-            f"{sorted(rot)}"
-        )
-        soll_sms = [m for m, _ in erwartete_kaskade(golden, "sms", slot)]
-        ist_sms = parse_kanal(mit, "sms")[0]
-        assert ist_sms == soll_sms, (
-            f"AC-17 [{slot}]: SMS zeigt {ist_sms}, erwartet {soll_sms}"
-        )
-
-    # Schnitt gegen das globale Maximum: gust global aus, per_report-SMS will gust.
-    schnitt = _golden_beide_an(email_format="full")
-    next(m for m in schnitt["display_config"]["metrics"] if m["metric_id"] == "gust")["enabled"] = False
-    per_report_sms = schnitt["display_config"]["channel_layouts_per_report"]["evening"]["sms"]
-    assert any(m["metric_id"] == "gust" and m["enabled"] for m in per_report_sms), (
-        "Aufbau: das Abend-per_report-SMS-Layout waehlt gust"
-    )
-    _laufen(schnitt, "evening", 20)
-    ist_sms = parse_kanal(mit, "sms")[0]
-    assert "gust" not in ist_sms, (
-        f"AC-17 Schnitt: gust ist global abgewaehlt, per_report darf das Maximum "
-        f"nicht erweitern, die SMS zeigt {ist_sms}"
-    )
-    assert set(ist_sms) == {m for m, _ in erwartete_kaskade(schnitt, "sms", "evening")}, (
-        f"AC-17 Schnitt: SMS zeigt {ist_sms}, erwartet "
-        f"{[m for m, _ in erwartete_kaskade(schnitt, 'sms', 'evening')]}"
-    )

@@ -97,6 +97,15 @@ def render_reich(lang: str | None = None, *, dc=None, profile=None,
     dann im eigenen Zweig statt im Ausblick-Block."""
     kw = {} if lang is None else {"lang": lang}
     dc = dc or build_default_display_config()
+    if ausblick:
+        # #3237: ob der Ausblick im Morgen-Briefing steht, sagt allein die
+        # Tabelle (``outlook_reports``); das reiche Szenario traegt ihn dort.
+        import dataclasses
+
+        from services.placements import placements_aus_grundauswahl
+
+        tabelle = {**placements_aus_grundauswahl(dc, "trip"), "outlook_reports": ["morning"]}
+        dc = dataclasses.replace(dc, placements=tabelle)
     report = TripReportFormatter().format_email(
         [_segment()], trip_name, "morning", display_config=dc,
         night_weather=_nacht(), multi_day_trend=_trend() if ausblick else None,

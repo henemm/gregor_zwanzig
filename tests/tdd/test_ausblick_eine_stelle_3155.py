@@ -95,14 +95,10 @@ def test_altpfad_show_outlook_aus_ausfuehrlich_kein_ausblick_in_beiden_briefings
     assert _gate(data) == {"morning": False, "evening": False}
 
 
-def test_altpfad_show_outlook_aus_steuert_weiter_die_grosswetterlage():
-    """AC-5: ``show_outlook`` bleibt als Schalter der Grosswetterlage erhalten
-    (die Optionen tragen ihn unveraendert an die Renderer)."""
-    from services.report_config_resolver import resolve_report_render_options
-
-    t = _geladen(_trip({"show_outlook": False}))
-    for rt in BRIEFINGS:
-        assert resolve_report_render_options(t.report_config, t.display_config, rt).show_outlook is False
+# #3237: ``test_altpfad_show_outlook_aus_steuert_weiter_die_grosswetterlage``
+# ist entfallen. ``show_outlook`` ist Altfeld und wirkt mit der Tabelle nicht
+# mehr (Spec #3237 Schritt 5): ``resolve_report_render_options`` setzt
+# ``show_outlook`` immer an; das Feld entfaellt in #3277.
 
 
 @pytest.mark.parametrize("reports", [["evening"], ["morning"], ["morning", "evening"]])
@@ -137,7 +133,9 @@ def test_bestand_mit_show_outlook_an_unveraendert(reports, fmt):
 
 _BESTAND_TRIPS = {
     "show_outlook_aus": ({"show_outlook": False, "multi_day_trend_reports": ["morning", "evening"]}, {}),
-    "metriken_leer": ({"multi_day_trend_reports": ["morning", "evening"]}, {"outlook_metrics": []}),
+    # #3237: Fall ``metriken_leer`` (``outlook_metrics: []``) entfallen -- die
+    # Bedeutung "leere Liste = Ausblick aus" ist abgeloest (ADR-0124 Nr. 6);
+    # ausgeschaltet wird der Ausblick ueber "Ausblick erscheint im".
     "beide": ({"multi_day_trend_reports": ["morning", "evening"]}, {}),
     "nur_abend": ({"multi_day_trend_reports": ["evening"]}, {}),
     "kompakt_show_outlook_aus": ({"show_outlook": False, "email_format": "compact",
@@ -229,13 +227,28 @@ def test_orte_marke_laesst_altpfad_auswahl_und_formate_unveraendert():
     assert _karte_orte(mit_marke)["stored"] is False
 
 
-def test_orte_bestand_ohne_marke_unveraendert():
-    """AC-13 (Spec Nr. 8): ein Bestands-Orte-Abo ohne Tabelle und ohne Marke
-    zeigt den Ausblick weiter in jedem eingeschalteten Briefing."""
+def test_orte_bestand_ohne_marke_folgt_der_vorbelegung():
+    """AC-13 (Spec Nr. 8), seit #3237: ein Bestands-Orte-Abo ohne Tabelle und
+    ohne Marke liest die Grundauswahl-Tabelle (``placements_aus_grundauswahl``,
+    AC-3 #3237). Ihr Ausblick folgt der Vorbelegung (ADR-0124 Nr. 3: nur im
+    Abend-Briefing, bewusste Verhaltensaenderung #3164) -- Karte und Ausgabe
+    zeigen dieselben Schalter."""
+    from services.placements import placements_aus_grundauswahl
+
     abo = _orte_abo(outlook_enabled=True)
-    assert _karte_orte(abo)["blocks"]["outlook"] == {"morning": True, "evening": True}
+    karte = _karte_orte(abo)
+    assert karte["stored"] is False
+    assert karte["blocks"]["outlook"] == {"morning": False, "evening": True}
+    # Ausgabe: das Abo mit genau der Tabelle, die der Lesepfad ohne ``rows``
+    # bildet (der Test-Versandweg ``sende_orte_mail`` rechnet sonst die
+    # Altfelder des Presets als Einstellung um).
+    tab = placements_aus_grundauswahl(abo["display_config"], "compare",
+                                      enabled_reports=list(BRIEFINGS))
+    assert tab["rows"] == karte["placements"]["rows"], "Karte liest eine andere Tabelle"
+    mit_tab = copy.deepcopy(abo)
+    mit_tab["display_config"]["placements"] = tab
     for rt in BRIEFINGS:
-        assert _orte_ausgabe(abo, rt)["html"], rt
+        assert bool(_orte_ausgabe(mit_tab, rt)["html"]) is (rt == "evening"), rt
 
 
 # ---------------------------------------------------------------------------

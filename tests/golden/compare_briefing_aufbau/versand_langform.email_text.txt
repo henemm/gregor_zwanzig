@@ -6,6 +6,7 @@ Erstellt: <ZEITPUNKT>
 --------------------------------------------------
 Innsbruck
    Temperatur Maximum: 22°C
+   Temperatur Minimum: 12°C
    Wind: 11 km/h
    Niederschlag: 0.0 mm
    Regenwahrscheinlichkeit: 10%
@@ -16,7 +17,6 @@ Innsbruck
    Sichtweite: 9.0 km
    Schneehöhe: -
    Neuschnee: -
-   Temperatur Minimum: 12°C
    Böen: 19 km/h
    Nullgradgrenze: -
    Windrichtung: -
@@ -33,6 +33,7 @@ Innsbruck
 
 Bozen
    Temperatur Maximum: 27°C
+   Temperatur Minimum: 15°C
    Wind: 11 km/h
    Niederschlag: 0.0 mm
    Regenwahrscheinlichkeit: 10%
@@ -43,7 +44,6 @@ Bozen
    Sichtweite: 9.0 km
    Schneehöhe: -
    Neuschnee: -
-   Temperatur Minimum: 15°C
    Böen: 19 km/h
    Nullgradgrenze: -
    Windrichtung: -
@@ -61,21 +61,21 @@ Bozen
 STUNDENVERLAUF
 ---------------
 Innsbruck (CEST)
-   11:00  Temp 12°  Feels 11°  Wind 11  Gust 19  Rain ·  UV 5  Thdr –  Rain% 10%  Visib 9.0
-   14:00  Temp 22°  Feels 21°  Wind 11  Gust 19  Rain ·  UV 5  Thdr –  Rain% 10%  Visib 9.0
-   17:00  Temp 21°  Feels 20°  Wind 11  Gust 19  Rain ·  UV 5  Thdr –  Rain% 10%  Visib 9.0
+   11:00  Temp 12°  Wind 11  Rain ·  Rain% 10%  Thdr –  UV 5  Visib 9.0  Gust 19  Feels 11°
+   14:00  Temp 22°  Wind 11  Rain ·  Rain% 10%  Thdr –  UV 5  Visib 9.0  Gust 19  Feels 21°
+   17:00  Temp 21°  Wind 11  Rain ·  Rain% 10%  Thdr –  UV 5  Visib 9.0  Gust 19  Feels 20°
 3-Tages-Ausblick
    ⚠️ Vorhersage derzeit nicht abrufbar.
 
 Bozen (CEST)
-   11:00  Temp 15°  Feels 14°  Wind 11  Gust 19  Rain ·  UV 5  Thdr –  Rain% 10%  Visib 9.0
-   14:00  Temp 27°  Feels 26°  Wind 11  Gust 19  Rain ·  UV 5  Thdr –  Rain% 10%  Visib 9.0
-   17:00  Temp 26°  Feels 25°  Wind 11  Gust 19  Rain ·  UV 5  Thdr –  Rain% 10%  Visib 9.0
+   11:00  Temp 15°  Wind 11  Rain ·  Rain% 10%  Thdr –  UV 5  Visib 9.0  Gust 19  Feels 14°
+   14:00  Temp 27°  Wind 11  Rain ·  Rain% 10%  Thdr –  UV 5  Visib 9.0  Gust 19  Feels 26°
+   17:00  Temp 26°  Wind 11  Rain ·  Rain% 10%  Thdr –  UV 5  Visib 9.0  Gust 19  Feels 25°
 3-Tages-Ausblick
    ⚠️ Vorhersage derzeit nicht abrufbar.
 
 Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · Rain% % · Visib km
-Spalten: Temp = Temperatur · Feels = Gefühlte Temperatur · Gust = Böen · Rain = Niederschlag · UV = UV-Index · Thdr = Gewitter · Rain% = Regenwahrscheinlichkeit · Visib = Sichtweite
+Spalten: Temp = Temperatur · Rain = Niederschlag · Rain% = Regenwahrscheinlichkeit · Thdr = Gewitter · UV = UV-Index · Visib = Sichtweite · Gust = Böen · Feels = Gefühlte Temperatur
 
 ── Antwort-Kommandos ──
   HEUTE                – Briefing für heute jetzt senden

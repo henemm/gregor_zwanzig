@@ -329,7 +329,7 @@ func New(deps Deps) chi.Router {
 	r.Delete("/api/groups/{id}", handler.DeleteGroupHandler(deps.Store))
 	r.Get("/api/trips", handler.TripsHandler(deps.Store))
 	r.Get("/api/trips/{id}", handler.TripHandler(deps.Store))
-	r.Post("/api/trips", handler.CreateTripHandler(deps.Store))
+	r.Post("/api/trips", handler.CreateTripHandler(deps.Store, deps.Config.PythonCoreURL))
 	r.Put("/api/trips/{id}", handler.UpdateTripHandler(deps.Store))
 	r.Patch("/api/trips/{id}/state", handler.UpdateTripStateHandler(deps.Store))
 	r.Patch("/api/trips/{id}/waypoints/{waypointId}/confirm", handler.ConfirmWaypointHandler(deps.Store))
@@ -369,7 +369,7 @@ func New(deps Deps) chi.Router {
 	// Issue #458: ComparePreset CRUD (List/Create/Update/Delete/Send-Stub)
 	r.Get("/api/compare/presets", handler.ListComparePresetsHandler(deps.Store))
 	r.Get("/api/compare/presets/{id}", handler.GetComparePresetHandler(deps.Store))
-	r.Post("/api/compare/presets", handler.CreateComparePresetHandler(deps.Store))
+	r.Post("/api/compare/presets", handler.CreateComparePresetHandler(deps.Store, deps.Config.PythonCoreURL))
 	r.Put("/api/compare/presets/{id}", handler.UpdateComparePresetHandler(deps.Store))
 	r.Patch("/api/compare/presets/{id}/state", handler.UpdateComparePresetStateHandler(deps.Store)) // Issue #611
 	r.Delete("/api/compare/presets/{id}", handler.DeleteComparePresetHandler(deps.Store))
@@ -378,7 +378,7 @@ func New(deps Deps) chi.Router {
 	// ueber die bestehenden Trip-/ComparePreset-Stores (kein briefings/-Store).
 	r.Get("/api/briefings", handler.ListBriefingsHandler(deps.Store))
 	r.Get("/api/briefings/{id}", handler.GetBriefingHandler(deps.Store))
-	r.Post("/api/briefings", handler.CreateBriefingHandler(deps.Store))
+	r.Post("/api/briefings", handler.CreateBriefingHandler(deps.Store, deps.Config.PythonCoreURL))
 	r.Put("/api/briefings/{id}", handler.UpdateBriefingHandler(deps.Store))
 	r.Delete("/api/briefings/{id}", handler.DeleteBriefingHandler(deps.Store))
 	// Issue #2283: kind-neutrale Alarm-Vorschau (Alt-Route oben als Delegate).

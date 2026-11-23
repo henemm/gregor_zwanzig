@@ -56,6 +56,17 @@ export interface TabellenSpeicherung {
 	laden(): Promise<void>;
 	/** Ein anderer Speicherweg des Hubs hat das Abo geschrieben: neu laden, wenn nichts ungespeichert ist. */
 	nachFremdemSpeichern(): void;
+	/** „−“/„+“/Vorlagenwechsel des Reiters: lokaler Stand geändert, OHNE eigenen PUT — der PUT des Reiters
+	 *  trägt ihn mit (#3237 Runde 13). Ein eigener Tabellen-PUT verdrängte über den Besitzerwechsel des
+	 *  Controllers die Entprellung des Reiters (zwei Gesten = zwei Schreibvorgänge) und lief bei veraltetem
+	 *  Stempel vor dem Reiter-PUT in den 412. Ältere GETs werden trotzdem verworfen (Version zählt). */
+	mitgefuehrt(): void;
+	/** Der Reiter liest den Stand zum Mitsenden (nur bei gespeicherter Tabelle, sonst `undefined`). Das
+	 *  gelieferte Objekt trägt die Versionsmarke seines Stands (#3237 Runde 14). */
+	zumMitsenden(tabelleGespeichert: boolean): Placements | undefined;
+	/** Der Reiter-PUT ist gespeichert. `gesendet` = das placements-Objekt, das dieser PUT wirklich trug:
+	 *  nur dessen Stand gilt als gespeichert; danach neu laden, wenn nichts ungespeichert ist. */
+	nachReiterSpeichern(gesendet?: unknown): void;
 	readonly ungespeichert: boolean;
 }
 
@@ -65,6 +76,8 @@ export function erstelleTabellenSpeicherung(o: TabellenOptionen): TabellenSpeich
 	let gespeichert = 0;
 	let ausgegeben = 0;
 	let uebernommen = 0;
+	/** Versionsmarke je mitgesendetem placements-Objekt (#3237 Runde 14). */
+	const marken = new WeakMap<object, number>();
 
 	async function laden(): Promise<void> {
 		const ticket = { nr: ++ausgegeben, version };
@@ -101,6 +114,22 @@ export function erstelleTabellenSpeicherung(o: TabellenOptionen): TabellenSpeich
 		},
 		laden,
 		nachFremdemSpeichern() {
+			if (version === gespeichert) ladenStill();
+		},
+		mitgefuehrt() {
+			version += 1;
+		},
+		zumMitsenden(tabelleGespeichert: boolean) {
+			const p = tabelleGespeichert ? o.placements() : null;
+			if (!p) return undefined;
+			// Eigene Identität je Auswertung: der Speicherer liest mehrfach, gespeichert gilt nur, was gesendet wurde.
+			const objekt = { ...p };
+			marken.set(objekt, version);
+			return objekt;
+		},
+		nachReiterSpeichern(gesendet?: unknown) {
+			const v = gesendet && typeof gesendet === 'object' ? marken.get(gesendet) : undefined;
+			if (v !== undefined) gespeichert = Math.max(gespeichert, v);
 			if (version === gespeichert) ladenStill();
 		},
 		get ungespeichert() {

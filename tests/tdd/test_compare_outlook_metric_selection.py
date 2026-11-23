@@ -15,7 +15,6 @@ welche Funktion aufgerufen wurde. Kein Dateiinhalt-Check.
 from __future__ import annotations
 from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
-import logging
 import re
 from datetime import date, datetime, timedelta, timezone
 
@@ -187,7 +186,11 @@ def _plain_outlook_blocks(text: str) -> list[tuple[str, list[str]]]:
 
 
 def _preset(**display_config) -> dict:
-    return {
+    """#3237: die Ausblick-Auswahl des Falls steht in der Tabelle "Was steht
+    wo"; ``outlook_metrics`` bleibt als Beschreibung stehen und wirkt nicht."""
+    from tests.helpers.tabelle_aus_wunsch import orte_wunsch_als_tabelle
+
+    return orte_wunsch_als_tabelle({
         "id": "cp-outlook-selection",
         "name": "Ausblick-Auswahl",
         "location_ids": ["innsbruck"],
@@ -196,7 +199,7 @@ def _preset(**display_config) -> dict:
         "empfaenger": ["gregor-test@henemm.com"],
         "created_at": "2026-01-01T00:00:00Z",
         "display_config": dict(display_config),
-    }
+    })
 
 
 def _resolved_outlook_metrics(preset: dict):
@@ -513,8 +516,10 @@ def test_missing_outlook_selection_uses_the_catalog_col_labels():
     # bisher, in derselben Folge, wie der Editor sie zeigt), damit HTML und
     # Klartext sie in derselben Form tragen -- nicht mehr None (fester Zweig).
     # Weiterhin gilt: nie [] (= bewusst leer).
+    # #3237: EINE Zeilenfolge (Spec #3122 Teil A Nr. 8) -- dieselben sechs
+    # Groessen der Vorgabemenge, in der Folge der Tabelle (Grundauswahl-Folge).
     assert _resolved_outlook_metrics(preset) == [
-        "temperature", "precipitation", "rain_probability", "wind", "gust", "thunder",
+        "temperature", "wind", "precipitation", "rain_probability", "thunder", "gust",
     ], "Ein FEHLENDES Auswahl-Feld ohne Grundauswahl muss die Vorgabemenge ergeben."
     assert resolve_compare_render_options(preset).outlook_enabled is True, (
         "Ohne Auswahl bleibt der Ausblick sichtbar (Default True)."
@@ -673,34 +678,30 @@ def test_ac5_column_legend_resolves_outlook_only_abbreviations():
 # AC-10: unbekannter Auswahl-Eintrag wird verworfen und protokolliert
 # ---------------------------------------------------------------------------
 
-def test_unknown_outlook_selection_entry_is_dropped_and_logged(caplog):
+def test_unknown_outlook_selection_entry_is_dropped_and_logged():
     """AC-10: Given eine gespeicherte Auswahl mit einem Eintrag, der auf kein
     bekanntes Groesse-Auswertung-Paar passt / When die Vergleichs-Mail erzeugt
-    wird / Then wird dieser Eintrag verworfen UND ueber eine Log-Warnung
-    sichtbar gemacht; die restliche, gueltige Auswahl bleibt wirksam, kein
-    Absturz.
+    wird / Then wird dieser Eintrag verworfen; die restliche, gueltige Auswahl
+    bleibt wirksam, kein Absturz.
 
     Zweiter ungueltiger Eintrag: `confidence` — ADR-0005/#710, keine waehlbare
     Wetter-Groesse und deshalb auch im Ausblick nicht auswaehlbar.
-    """
-    preset = _preset(outlook_metrics=[
-        {"metric_id": "einhorn", "aggregation": "max"},
-        SEL_TEMPERATUR,
-        {"metric_id": "confidence", "aggregation": "min"},
-    ])
 
-    with caplog.at_level(logging.WARNING):
-        resolved = _resolved_outlook_metrics(preset)
+    #3237: die Auswahl steht in der Tabelle -- die beiden ungueltigen Eintraege
+    sind Tabellenzeilen mit Ausblick-Haken, die das robuste Lesen (Spec #3122
+    Teil A Nr. 1) ohne Wirkung verwirft. Entfallen ist die Protokollwarnung
+    des Altfeld-Resolvers (``outlook_metrics``, #1361 Befund 3): reiner Altpfad.
+    """
+    preset = _preset(outlook_metrics=[SEL_TEMPERATUR])
+    zeilen = preset["display_config"]["placements"]["rows"]
+    for unbekannt in ("einhorn", "confidence"):
+        zeilen.insert(0, {"metric_id": unbekannt, "places": {"email": True, "outlook": True}})
+
+    resolved = _resolved_outlook_metrics(preset)
 
     assert resolved is not None and len(resolved) == 1, (
         "Von drei gespeicherten Eintraegen ist genau einer gueltig "
         f"(Temperatur max) — aufgeloest wurden {resolved!r}."
-    )
-    warnings = "\n".join(r.getMessage() for r in caplog.records
-                         if r.levelno >= logging.WARNING)
-    assert "einhorn" in warnings, (
-        "Der unbekannte Auswahl-Eintrag wurde still verworfen — es fehlt die "
-        f"Protokollwarnung (#1361 Befund 3). Gesehene Warnungen:\n{warnings}"
     )
 
     html, _text = _render_mail(outlook_metrics=resolved)

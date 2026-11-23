@@ -179,16 +179,17 @@ def test_get_put_desselben_objekts_ist_wertgleich(client, kind):
 
 
 def test_ohne_tabelle_bleibt_placements_die_umrechnung(client):
+    """#3237: ohne gespeicherte Tabelle ist ``placements`` die Tabelle aus der
+    Grundauswahl (vorher: Umrechnung der Altfelder)."""
     from app.loader import get_data_root, load_trip
-    from services.placements import placements_from_legacy
+    from services.placements import placements_aus_grundauswahl
 
     _trip(NUTZER_A, "t-p3u", grund=["wind", "gust"])
     antwort = _ok(client, "t-p3u", "route")
     trip = load_trip("t-p3u", data_dir=get_data_root(), user_id=NUTZER_A)
     assert antwort["stored"] is False
-    assert antwort["placements"] == placements_from_legacy(
-        trip.display_config, "trip", report_config=trip.report_config,
-        enabled_reports=["morning", "evening"]).placements
+    assert antwort["placements"] == placements_aus_grundauswahl(
+        trip.display_config, "trip", enabled_reports=["morning", "evening"])
 
 
 # ---------------------------------------------------------------------------

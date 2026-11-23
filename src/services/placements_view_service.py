@@ -5,8 +5,8 @@ Nr. 11/12; ADR-0124. Fuer Trip und Orte EIN Weg:
 
 1. Abo DIESES Nutzers laden (``user_id`` aus dem Go-Proxy, nie ``"default"``).
 2. Zeilen, Zustaende, Formen und ``outlook_reports`` aus dem Kanal-Listen-
-   Resolver (``with_rows=True``: ein Abo ohne gespeicherte Tabelle zeigt das
-   Ergebnis der Umrechnung ``placements_from_legacy``).
+   Resolver (ein Abo ohne gespeicherte Tabelle zeigt die Tabelle aus seiner
+   Grundauswahl, ``placements_aus_grundauswahl``, #3237).
 3. Beispielwerte, SMS-Beispiel und Marken aus DENSELBEN Renderer-Funktionen
    wie der Versand, mit dem festen Datensatz ``services.placements_beispiel``
    (kein Wetterabruf). Gelesen wird die fertige Ausgabe; nichts wird
@@ -101,16 +101,11 @@ def build_placements_view(kind: str, entity_id: str, user_id: str) -> dict:
     return _antwort(kind, abo, tabelle, placements, gespeichert, muster, lang)
 
 
-def erstanlage_begleitfelder(kind: str, entity_id: str, user_id: str) -> dict:
-    """#3154 F002 (Spec Nr. 8, AC-11): was das Speichern der Tabelle JETZT
-    neben ``placements`` mitschreiben muss, damit die Ausgabe gleich bleibt.
-
-    Die Aussage kommt allein aus der Umrechnung ``placements_from_legacy``:
-    ``show_stability_off`` gilt nur fuer ein Abo ohne lesbare Tabelle (erstes
-    Speichern); mit Tabelle ist sie immer ``False``. Der Go-PUT fragt das
-    unter der Briefing-Sperre ab und schreibt ``report_config.show_stability
-    = false`` im selben Schreibvorgang. Fehler wie ``build_placements_view``."""
-    from services.placements import placements_from_legacy
+def erstanlage_placements(kind: str, entity_id: str, user_id: str) -> dict:
+    """#3275/#3237: volle Tabelle eines Abos DIESES Nutzers aus seiner
+    Grundauswahl fuer die Go-Anlage (schreibt nichts). Fehler wie
+    ``build_placements_view``."""
+    from services.placements import placements_aus_grundauswahl
 
     if kind not in KINDS:
         raise ValueError(kind)
@@ -120,11 +115,9 @@ def erstanlage_begleitfelder(kind: str, entity_id: str, user_id: str) -> dict:
         abo, _muster = _trip_abo(entity_id, user_id, "de")
     else:
         abo, _muster = _orte_abo(entity_id, user_id, "de")
-    umgerechnet = placements_from_legacy(
-        abo.display_config, abo.surface, report_config=abo.report_config,
-        enabled_reports=abo.enabled_reports, outlook_enabled=abo.outlook_enabled,
-    )
-    return {"show_stability_off": umgerechnet.show_stability_off}
+    return {"placements": placements_aus_grundauswahl(
+        abo.display_config, abo.surface, enabled_reports=abo.enabled_reports,
+        outlook_enabled=abo.outlook_enabled)}
 
 
 # ---------------------------------------------------------------------------
@@ -133,13 +126,12 @@ def erstanlage_begleitfelder(kind: str, entity_id: str, user_id: str) -> dict:
 
 def _tabelle_aufloesen(abo: _Abo, report_type: str):
     from services.channel_list_resolver import resolve_channel_lists
-    from services.placements import placements_from_legacy, read_placements
+    from services.placements import placements_aus_grundauswahl, read_placements
 
     dc = abo.display_config
     vm = resolve_channel_lists(
         dc, abo.surface, report_type, enabled_reports=abo.enabled_reports,
-        hourly_enabled=abo.hourly_enabled, report_config=abo.report_config,
-        outlook_enabled=abo.outlook_enabled, with_rows=True,
+        hourly_enabled=abo.hourly_enabled, outlook_enabled=abo.outlook_enabled,
     )
     roh = dc.get("placements") if isinstance(dc, dict) else getattr(dc, "placements", None)
     if read_placements(roh) is not None:
@@ -148,27 +140,16 @@ def _tabelle_aufloesen(abo: _Abo, report_type: str):
         # reservierte Schluessel (``premium_sms``, kuenftige Felder) gehen so
         # nicht verloren; unlesbare Eintraege wirken weiter nicht (Nr. 1).
         return vm, copy.deepcopy(roh), True
-    umgerechnet = placements_from_legacy(
-        dc, abo.surface, report_config=abo.report_config,
-        enabled_reports=abo.enabled_reports, outlook_enabled=abo.outlook_enabled,
-    )
-    return vm, umgerechnet.placements, False
+    return vm, placements_aus_grundauswahl(
+        dc, abo.surface, enabled_reports=abo.enabled_reports,
+        outlook_enabled=abo.outlook_enabled), False
 
 
 def _tabellen_grundauswahl(abo: _Abo) -> tuple[list[str], dict]:
-    """Grundauswahl der Tabelle: Abend-Fassung, dahinter, was nur morgens
-    gewaehlt ist -- dieselbe Menge wie die Umrechnung (``_legacy_rows``).
-    ``morning_enabled``/``evening_enabled`` wirken im Versand je Briefing-Typ,
-    die Tabelle hat dafuer keine Bedienung und zeigt jede Metrik (#3154)."""
-    from services.channel_list_resolver import grundauswahl
+    """Grundauswahl der Tabelle (``channel_list_resolver.tabellen_grundauswahl``)."""
+    from services.channel_list_resolver import tabellen_grundauswahl
 
-    ids: list[str] = []
-    eltern: dict = {}
-    for rt in ("evening", "morning"):
-        grund = grundauswahl(abo.display_config, abo.surface, rt)
-        ids += [m for m in grund.ids if m not in ids]
-        eltern = {**grund.parents, **eltern}
-    return ids, eltern
+    return tabellen_grundauswahl(abo.display_config, abo.surface)
 
 
 def _tabellen_zeilen(abo: _Abo, placements: dict) -> tuple:

@@ -39,7 +39,7 @@ func seedPreset(t *testing.T, s storeForTest, r *chi.Mux) string {
 func TestUpdateComparePresetState_ArchiveAndReactivate(t *testing.T) {
 	s := newTestStore(t)
 	r := chi.NewRouter()
-	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 	r.Patch("/api/compare/presets/{id}/state", UpdateComparePresetStateHandler(s))
 	r.Get("/api/compare/presets/{id}", GetComparePresetHandler(s))
 

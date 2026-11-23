@@ -148,6 +148,11 @@ def _trip(*, outlook_metrics, enabled_ids=None, leere_grundauswahl=False,
         }
     if outlook_metrics is not None:
         dc = mit_outlook_metrics(dc, outlook_metrics)
+    # #3237: E-Mail-Liste, Ausblick-Auswahl und "Ausblick erscheint im"
+    # (``multi_day_trend_reports``) wirken nur ueber die Tabelle.
+    from tests.helpers.tabelle_aus_wunsch import trip_modell_als_tabelle
+
+    dc = trip_modell_als_tabelle(dc, outlook_reports=list(trend_reports))
 
     trip = Trip(id=trip_id, name="Karnischer Höhenweg", stages=stages,
                 display_config=dc, official_warnings=None)
@@ -394,21 +399,16 @@ def test_ac15_globale_abwahl_entfernt_die_spalte_im_naechsten_lauf():
     )
 
 
-def test_ac16_leere_grundauswahl_schneidet_auch_die_zugestellte_mail_nicht():
-    """AC-16 (ganze Kette): ohne jede Grundauswahl (``metrics == []``)
-    erscheinen alle gewaehlten Spalten -- "kein Maximum definiert", nicht
-    "nichts erlaubt" (Regel D4, models.py:913-914).
-    """
-    trip = _trip(outlook_metrics=[NIEDERSCHLAG, BOEEN, SCHNEEHOEHE],
-                 leere_grundauswahl=True)
-    html, _ = _zugestellte_teile(trip)
-
-    assert html_outlook_headers(html) == [
-        "Tag", NIEDERSCHLAG_LABEL, BOEEN_LABEL, SCHNEEHOEHE_LABEL, _ACC,
-    ], (
-        f"Kopfzeile {html_outlook_headers(html)!r}: bei leerer Grundauswahl "
-        "wurde geschnitten -- Totalausfall fuer jeden Altbestand (AC-16)."
-    )
+# #3237: entfallen sind ``test_ac16_leere_grundauswahl_schneidet_auch_die_
+# zugestellte_mail_nicht`` (fester Ausblick-Zweig fuer einen Trip ganz ohne
+# Grundauswahl, ADR-0050 D4 -- Rueckfall des Altpfads; ohne Grundauswahl hat
+# die Tabelle keine Zeile), ``test_ac17_eigenes_email_kanal_layout_schneidet_
+# die_vorschau_nicht`` und ``test_ac17_ueberschrift_und_zahl_bleiben_bei_
+# engem_kanal_layout_gepaart`` (der Ausblick ohne Kanal-Ebene neben einem
+# engeren E-Mail-Layout: in der Tabelle "Was steht wo" gilt der Ausblick nur
+# fuer Metriken mit Haken an der Stelle E-Mail -- Zustand ``not_in_email``,
+# Spec #3122 Nr. 3). Die Zuordnung Ueberschrift/Zelle bewacht weiter
+# ``test_ac2_zellwerte_der_zugestellten_mail_gehoeren_zu_ihren_spalten``.
 
 
 def test_ac4_leere_auswahl_laesst_den_block_auch_in_der_zugestellten_mail_entfallen():
@@ -426,89 +426,8 @@ def test_ac4_leere_auswahl_laesst_den_block_auch_in_der_zugestellten_mail_entfal
 
 # ═════ AC-17 — der Ausblick kennt keine Kanal-Ebene (Adversary F001) ════════
 
-def test_ac17_eigenes_email_kanal_layout_schneidet_die_vorschau_nicht():
-    """AC-17: Given ein Trip mit einem E-Mail-eigenen Kanal-Layout
-    (``per_channel_layouts["email"]``), das "Böen" NICHT enthaelt, waehrend
-    "Böen" in der Grundauswahl aktiv UND in der Vorschau gewaehlt ist / When
-    die Mail ueber den echten Versandpfad zugestellt wird / Then erscheint
-    "Böen" als Spalte im Ausblick.
-
-    Adversary-Finding F001 (HIGH): der Ausblick hat bewusst KEINE Kanal-Ebene
-    (Spec "Out of Scope"). Wird der Schnitt gegen
-    ``get_metrics_for_channel("email", ...)`` statt gegen die kanal-neutrale
-    Grundauswahl gefahren, faellt eine global aktive, ausdruecklich gewaehlte
-    Groesse still aus der Vorschau -- fuer jeden Trip mit eigenem
-    E-Mail-Layout (Bestandsfeature seit #429).
-
-    Die Stundentabelle derselben Mail behaelt ihr enges Kanal-Layout: der
-    Ausblick folgt der Grundauswahl, die Kanal-Ebene bleibt fuer alles andere
-    unangetastet.
-    """
-    trip = _trip(outlook_metrics=[NIEDERSCHLAG, BOEEN],
-                 enabled_ids={"precipitation", "gust"},
-                 email_layout_ids={"precipitation"})
-    assert {mc.metric_id
-            for mc in trip.display_config.get_metrics_for_channel("email", "evening")
-            } == {"precipitation"}, (
-        "Vorbedingung: das E-Mail-Kanal-Layout muss enger sein als die "
-        "Grundauswahl, sonst prueft dieser Test die Kanal-Kopplung gar nicht."
-    )
-
-    html, plain = _zugestellte_teile(trip)
-
-    assert html_outlook_headers(html) == [
-        "Tag", NIEDERSCHLAG_LABEL, BOEEN_LABEL, _ACC,
-    ], (
-        f"Kopfzeile {html_outlook_headers(html)!r}: 'Böen' ist global aktiv "
-        "und ausdruecklich gewaehlt, faellt aber wegen des E-Mail-eigenen "
-        "Kanal-Layouts aus der Vorschau -- der Ausblick hat keine "
-        "Kanal-Ebene (AC-17)."
-    )
-    block = plain_outlook_block(plain)
-    assert block is not None and BOEEN_LABEL in block, (
-        f"Der Klartext-Teil zeigt die Groesse nicht:\n{block}\n(AC-17)"
-    )
-
-
-def test_ac17_ueberschrift_und_zahl_bleiben_bei_engem_kanal_layout_gepaart():
-    """AC-17 (Zuordnung): Given dasselbe Kanal-Layout schliesst diesmal die
-    ERSTE gewaehlte Groesse aus / When die Mail zugestellt wird / Then traegt
-    jede Spalte den Wert IHRER Groesse -- kein Spaltenversatz.
-
-    Genau die Fehlerklasse, die der urspruengliche Schnitt gegen
-    ``get_metrics_for_channel()`` vermeiden wollte: laufen Zeilenbau
-    (Scheduler, ungekollabiertes ``display_config``) und Spaltenbau
-    (Renderer, kanal-kollabiertes ``dc``) auseinander, stuenden die richtigen
-    Ueberschriften ueber den falschen Zahlen. Weil das Layout hier die erste
-    Spalte betrifft, verschiebt sich die Zuordnung um eine Position statt nur
-    abgeschnitten zu werden -- ein Test, der nur die Kopfzeile prueft, saehe
-    das nicht.
-    """
-    trip = _trip(outlook_metrics=[NIEDERSCHLAG, BOEEN],
-                 enabled_ids={"precipitation", "gust"},
-                 email_layout_ids={"gust"})
-    html, _ = _zugestellte_teile(trip)
-
-    assert html_outlook_headers(html) == [
-        "Tag", NIEDERSCHLAG_LABEL, BOEEN_LABEL, _ACC,
-    ], (
-        f"Kopfzeile {html_outlook_headers(html)!r} (AC-17)."
-    )
-    zeilen = html_outlook_body_rows(html)
-    assert len(zeilen) == 3, f"Erwartet drei Ausblick-Zeilen: {zeilen!r}"
-    assert [z[1] for z in zeilen] == ["2.5 mm", "0.0 mm", "7.1 mm"], (
-        f"Unter 'Niederschlag' stehen {[z[1] for z in zeilen]!r} -- Zeilenbau "
-        "und Spaltenbau haben verschiedene Auswahl-Listen benutzt (AC-17)."
-    )
-    assert [z[2] for z in zeilen] == ["44 km/h", "52 km/h", "33 km/h"], (
-        f"Unter 'Böen' stehen {[z[2] for z in zeilen]!r} -- die Zellen sind "
-        "um eine Position gegen die Ueberschriften verschoben (AC-17)."
-    )
-
-
 def test_ac17_vorschau_zeigt_denselben_ausblick_wie_die_zugestellte_mail():
-    """AC-17 (Vorschau-Paritaet): Given ein Trip mit engem E-Mail-Kanal-Layout
-    UND einem Abend-Override, das "Böen" nur im Morgenbericht zeigt / When
+    """AC-17 (Vorschau-Paritaet): Given ein Trip mit einem Abend-Override, das "Böen" nur im Morgenbericht zeigt / When
     die Morgen-Vorschau ueber ``PreviewService._build_report()`` erzeugt wird
     / Then zeigt sie Kopfzeile UND Zellen des Ausblicks genau wie die
     zugestellte Morgen-Mail.
@@ -528,9 +447,10 @@ def test_ac17_vorschau_zeigt_denselben_ausblick_wie_die_zugestellte_mail():
     import services.trip_report_scheduler as sched_mod
     from services.preview_service import PreviewService
 
+    # #3237: ohne engeres E-Mail-Layout -- in der Tabelle gilt der Ausblick
+    # nur fuer Metriken mit Haken an der Stelle E-Mail (Spec #3122 Nr. 3).
     trip = _trip(outlook_metrics=[NIEDERSCHLAG, BOEEN],
                  enabled_ids={"precipitation", "gust"},
-                 email_layout_ids={"gust"},
                  report_overrides={"gust": {"evening_enabled": False}},
                  trend_reports=("morning", "evening"), ohne_nachtblock=True)
     html_versand, _ = _zugestellte_teile(trip, report_type="morning")

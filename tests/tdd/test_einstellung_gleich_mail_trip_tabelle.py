@@ -738,14 +738,16 @@ def _zusammenfassung(data: dict, report_type: str = "evening") -> str:
 
 
 def _mit_tabelle_aus_altbestand(alt: dict) -> dict:
+    """#3237: das Abo mit gespeicherter Tabelle der Neuanlage
+    (``placements_aus_grundauswahl``, frueher die Umrechnung
+    ``placements_from_legacy`` des Altbestands)."""
     from app.loader import load_trip
-    from services.placements import placements_from_legacy
+    from services.placements import placements_aus_grundauswahl
     from tests.tdd._einstellung_gleich_mail_trip_fixtures import frisches_profil
 
     t = load_trip(copy.deepcopy(alt), user_id=frisches_profil())
     neu = copy.deepcopy(alt)
-    neu["display_config"]["placements"] = placements_from_legacy(
-        t.display_config, "trip", report_config=t.report_config).placements
+    neu["display_config"]["placements"] = placements_aus_grundauswahl(t.display_config, "trip")
     return neu
 
 
@@ -758,6 +760,7 @@ def test_nachttief_in_kurzzusammenfassung_wie_ohne_tabelle(folge):
     das Nachttief wie dasselbe Abo ohne Tabelle -- die Nachtgroesse hat in der
     Stundentabelle keine Spalte, gehoert aber weiter zur Mail."""
     alt = trip_json(folge, report_config=ALLE_KANAELE)
+    assert "placements" not in alt["display_config"], "Vorbedingung: Abo ohne Tabelle"
     ohne = _zusammenfassung(alt)
     assert _nennt_nachttief(ohne), f"Vorbedingung: Nachttief im Bestand: {ohne}"
     assert _zusammenfassung(_mit_tabelle_aus_altbestand(alt)) == ohne
@@ -893,82 +896,6 @@ def _zufalls_konfiguration(rng) -> dict:
     return dc
 
 
-def _adapter_gegen_orakel(name: str, roh: dict) -> list[str]:
-    """Eintraege des Adapters (aus den Kanal-Zeilen des View-Models) feldweise
-    gegen die wortgleiche Kopie der bisherigen Kaskade; E-Mail (Briefing und
-    Alarm-Format) und Telegram (Alarm-Format)."""
-    import dataclasses
-
-    from app.loader import _parse_display_config
-    from output.renderers.email.helpers import channel_metric_configs
-    from services.channel_list_resolver import resolve_channel_lists
-    from tests.helpers.kanal_liste_orakel import alt_trip_metrics_for_channel
-
-    fehler = []
-    dc = _parse_display_config(copy.deepcopy(roh))
-    for rt in REPORT_TYPES:
-        vm = resolve_channel_lists(dc, "trip", rt)
-        for kanal in ("email", "telegram"):
-            neu = channel_metric_configs(getattr(vm, kanal), dc)
-            alt = [dataclasses.replace(mc, enabled=True)
-                   for mc in alt_trip_metrics_for_channel(dc, kanal, rt)]
-            if [m.metric_id for m in neu] != [m.metric_id for m in alt]:
-                fehler.append(f"{name}/{rt}/{kanal}: Auswahl/Folge "
-                              f"{[m.metric_id for m in neu]} != {[m.metric_id for m in alt]}")
-                continue
-            for n, a in zip(neu, alt):
-                felder = [f.name for f in dataclasses.fields(a)
-                          if getattr(n, f.name) != getattr(a, f.name)]
-                if felder:
-                    fehler.append(f"{name}/{rt}/{kanal}/{a.metric_id}: " + ", ".join(
-                        f"{f}={getattr(n, f)!r} statt {getattr(a, f)!r}" for f in felder))
-    return fehler
-
-
-def test_bestand_ohne_tabelle_mail_eintraege_gleich_bisheriger_kaskade():
-    """Unveraendertheit (Abos ohne ``placements``): fuer jede Kombination aus
-    Kanal-Ebenen, Briefing-Typ und Grundauswahl liefert der Adapter aus den
-    Kanal-Zeilen des View-Models dieselben Eintraege (samt ``horizons``,
-    ``use_friendly_format``, Position) wie die bisherige Kaskade -- Orakel ist
-    die wortgleiche Kopie ``alt_trip_metrics_for_channel`` (Stand vor #3057)."""
-    from tests.tdd.test_3057_channel_list_resolver import _trip_kombinationen
-
-    faelle = list(_trip_kombinationen()) + [("eigene_horizonte", _EIGENE_HORIZONTE)]
-    fehler = [f for name, roh in faelle for f in _adapter_gegen_orakel(name, roh)]
-    assert len(faelle) > 50 and not fehler, f"{len(fehler)} Abweichungen: {fehler[:5]}"
-
-
-@pytest.mark.parametrize("name", sorted(_RUECKFALL_FAELLE))
-def test_bestand_rueckfall_liefert_eintraege_der_grundauswahl(name):
-    """F001: greift der Rueckfall auf die volle Grundauswahl (oder steht eine
-    abgewaehlte Dublette vorn), reicht der Adapter die Eintraege durch, die die
-    Kaskade geliefert haette -- nicht den abgewaehlten oder per Briefing-Typ
-    gefilterten Kanal-Eintrag derselben Metrik."""
-    fehler = _adapter_gegen_orakel(name, _RUECKFALL_FAELLE[name])
-    assert not fehler, fehler[:5]
-
-
-def test_bestand_zufallslauf_adapter_gleich_bisheriger_kaskade():
-    """Deterministischer Zufallslauf (fester Startwert) ueber die Achsen
-    Auswahl, abgewaehlt, ausserhalb der Grundauswahl, ``horizons``, Format-
-    Schreibweisen, Briefing-Typ und Kanal-Ebene: der Adapter liefert feldweise
-    die Eintraege der bisherigen Kaskade."""
-    import random
-
-    rng = random.Random(_ZUFALL_STARTWERT)
-    fehler, rueckfaelle = [], 0
-    for i in range(_ZUFALL_ANZAHL):
-        roh = _zufalls_konfiguration(rng)
-        grund = {e["metric_id"] for e in roh.get("metrics", [])}
-        rueckfaelle += any(
-            liste and all(e["metric_id"] not in grund for e in liste if e.get("enabled", True))
-            and any(e.get("enabled", True) for e in liste)
-            for liste in (roh.get("channel_layouts") or {}).values())
-        fehler += _adapter_gegen_orakel(f"zufall-{i}", roh)
-    assert rueckfaelle >= 20, f"Vorbedingung: Zufallslauf trifft den Rueckfall ({rueckfaelle})"
-    assert not fehler, f"{len(fehler)} Abweichungen, erste: {fehler[:5]}"
-
-
 def _mail_bild(mit) -> dict:
     """Was die Mail zeigt: Spalten und Zellformen der Stunden- und
     Nachttabellen (HTML, Klartext), Ausblick-Spalten und Kurz-Zusammenfassung."""
@@ -1043,26 +970,7 @@ def test_bestand_rueckfall_telegram_wie_ohne_kanal_liste(monkeypatch, report_typ
     assert a and a == telegram_bubbles(senden(monkeypatch, ohne, report_type))
 
 
-def test_alarm_format_loest_keinen_ausblick_auf(caplog):
-    """Der Alarm-Pfad braucht nur die Kanal-Zeilen: er loest den 3-Tages-
-    Ausblick nicht mit auf und meldet darum auch dessen Rueckfall-Warnung
-    (#1848 A3, unaufloesbare Ausblick-Liste) nicht."""
-    import logging
-
-    from app.loader import _parse_display_config
-    from services.channel_list_resolver import resolve_channel_lists
-    from services.notification_service import _alert_format_modes, _alert_indicator_keys
-
-    dc = _parse_display_config({
-        "metrics": [{"metric_id": "gust", "enabled": True}],
-        "outlook_metrics": ["humidity"],
-    })
-    with caplog.at_level(logging.WARNING):
-        resolve_channel_lists(dc, "trip", "evening")
-    assert any("#1848 A3" in r.getMessage() for r in caplog.records), "Vorbedingung"
-    caplog.clear()
-    with caplog.at_level(logging.WARNING):
-        modi = _alert_format_modes(dc)
-        _alert_indicator_keys(dc)
-    assert "gust" in modi["email"]
-    assert not any("#1848 A3" in r.getMessage() for r in caplog.records), caplog.text
+# #3237: ``test_alarm_format_loest_keinen_ausblick_auf`` ist entfallen -- seine
+# Vorbedingung war die Rueckfall-Warnung des Altpfads (#1848 A3, unaufloesbare
+# ``outlook_metrics``-Liste). Die Tabelle kennt keinen Rueckfall und keine
+# solche Warnung mehr; der Alarm liest nur Kanal-Zeilen der Tabelle.

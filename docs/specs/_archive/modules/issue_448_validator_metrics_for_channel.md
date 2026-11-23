@@ -14,6 +14,8 @@ tags: [validator, api, observability, metrics, channel, display-config]
 
 - [x] Approved
 
+> **Nachtrag 2026-11-22 (#3237, Spec `docs/specs/modules/feat_3237_altpfad_entfernen.md` AC-7) — gilt vor allem Folgenden:** Die Kanal-Kaskade (`per_report_layouts` > `per_channel_layouts` > global, `get_metrics_for_channel`, `_determine_cascade_source`) ist entfernt. Der Endpoint liest allein die Tabelle „Was steht wo“: Antwort `{"source": "placements" | "grundauswahl", "metric_ids": [...]}`. `placements` = das Abo trägt eine gespeicherte Tabelle (`display_config.placements.rows`); `grundauswahl` = keine Tabelle, gelesen wird die Tabelle aus der Grundauswahl (`services.placements.placements_aus_grundauswahl`). `metric_ids` = die Metriken an der Stelle `channel` in Tabellenfolge (`metrics_at`, Tabellen-Grundauswahl aus Abend- und nur-morgens-Fassung). Die Werte `per_report`, `per_channel` und `global` kommen nicht mehr vor. `report` bleibt Parameter des Vertrags, wirkt aber nicht (die Tabelle gilt für beide Briefings). Die ACs unten beschreiben den historischen Stand.
+
 ## Purpose
 
 Neuer Read-only-Endpoint `GET /api/_validator/metrics-for-channel`, der die dreistufige Kaskade von `get_metrics_for_channel(channel, report_type)` von außen prüfbar macht. Er existiert, damit der External Validator ohne Einblick in interne Python-State nachvollziehen kann, welche Metriken ein Trip für einen bestimmten Kanal und Report-Typ liefert und auf welcher Kaskadenstufe (per_report / per_channel / global) diese Konfiguration ermittelt wurde.
@@ -156,3 +158,4 @@ Diese Zeile wird nach den bestehenden `_validator`-Routen aus Issue #221 eingef�
 ## Changelog
 
 - 2026-05-29: Initial spec — Issue #448 (Validator-Endpoint für metrics-for-channel-Kaskade)
+- 2026-11-22: Nachtrag #3237 — Vertrag `source` = `placements` | `grundauswahl`, Kaskade entfernt.

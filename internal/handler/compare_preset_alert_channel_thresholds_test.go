@@ -513,7 +513,7 @@ func TestCreateComparePresetHandler_AlertChannelThresholdsDefaultsNil(t *testing
 	buf, _ := json.Marshal(body)
 
 	r := chi.NewRouter()
-	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 	req := httptest.NewRequest(http.MethodPost, "/api/compare/presets", bytes.NewReader(buf))
 	req.Header.Set("Content-Type", "application/json")
 	req = addUserToContext(req, "user1")
@@ -568,7 +568,7 @@ func TestCreateComparePresetHandler_AlertChannelThresholdsPersistedWhenSet(t *te
 	buf, _ := json.Marshal(body)
 
 	r := chi.NewRouter()
-	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 	req := httptest.NewRequest(http.MethodPost, "/api/compare/presets", bytes.NewReader(buf))
 	req.Header.Set("Content-Type", "application/json")
 	req = addUserToContext(req, "user1")

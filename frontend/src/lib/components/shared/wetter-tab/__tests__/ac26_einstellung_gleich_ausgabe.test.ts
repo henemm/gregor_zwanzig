@@ -13,6 +13,9 @@
 // kanalStilStart; ladeMailZustand), echte Speicherer (tripNutzlast/vergleichNutzlast/
 // kanalStilNutzlast), Ebene-1-Merge wie Go, danach die ECHTEN Python-Resolver (ausgabeOrakel.ts).
 // Zwei Nutzer mit verschiedenen Konfigurationen; Folgen ungleich Katalogfolge.
+// #3237 (Altpfad entfernt): den Ausblick je Briefing zeigt die Seite allein in der Karte „Was steht wo“
+// (Tabellen-Antwort ueber ausgabeOrakel.ts `{ karte: true }`); die Altliste `multi_day_trend_reports`
+// wirkt nicht mehr und bleibt nur als Bestandsdatum erhalten (Bereinigung #3277).
 //
 //   cd frontend && npm test -- src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts
 
@@ -107,14 +110,22 @@ const trip = (id: string, roh: Abo): Abo => ({ id, name: id, stages: [], ...stru
 const ort = (id: string, roh: Abo): Abo => ({ id, name: id, location_ids: [], ...structuredClone(roh) });
 
 // ── Editor-Seite (echte Lader) ───────────────────────────────────────────────────────────────
-function tripSicht(abo: Abo) {
+// #3237: den Ausblick je Briefing zeigt allein die Karte „Was steht wo“ (Tabellen-Antwort, `karteTrend`);
+// `kanalStilStart` liest die Altliste `multi_day_trend_reports` nur noch fuer seinen Speicherer.
+// `schluessel` = Konfiguration in der Python-Runde (AUS), deren Karten-Antwort die Seite zeigt.
+// Ehrliche Reichweite der Spalte `trend` (Adversary #3237 Lauf 2, F007): sie vergleicht die Python-
+// Antwort der Karte „Was steht wo“ (`outlook_reports` + Zeilen mit Haken Ausblick) mit der Python-
+// Ausgabe -- also Karte (Python) gleich Ausgabe (Python), KEINE Frontend-Ableitung. Die Seite zeigt den
+// Ausblick allein aus dieser Karten-Antwort (WasStehtWoKarte `ausblickBerichte`), einen eigenen
+// Frontend-Lader fuer den Ausblick gibt es nicht mehr; die uebrigen Spalten laufen ueber die echten
+// Frontend-Lader (standAusAbo, ladeMailZustand).
+function tripSicht(abo: Abo, schluessel: string) {
 	const w = Z.standAusAbo('route', abo, VORLAGEN, {}, { eig: EIG });
-	const k = kanalStilStart('route', abo as never);
 	const m = ladeMailZustand(abo.report_config ?? {});
 	return {
 		auswahl: menge(w.auswahl),
 		tagesfenster: [w.tagesfenster.start, w.tagesfenster.end],
-		trend: [k.trendMorgen, k.trendAbend],
+		trend: karteTrend(schluessel),
 		etappen_kennzahlen: m.show_stage_stats,
 		vortag: m.show_yesterday_comparison
 	};
@@ -169,18 +180,43 @@ function ohneId(k: Record<string, Abo>): Record<string, unknown> {
 const nachWetter = Object.fromEntries(Object.entries(TRIPS).map(([id, r]) => [id, tripNachWetterGeste(trip(id, r))]));
 const nachKurz = Object.fromEntries(Object.entries(TRIPS).map(([id, r]) => [id, tripNachKurzstil(trip(id, r))]));
 const orteNach = Object.fromEntries(Object.entries(ORTE).map(([id, r]) => [id, orteNachWetterGeste(ort(id, r))]));
+/** Trips mit gespeicherter Altliste `multi_day_trend_reports`, dazu je dieselbe Konfiguration ohne und mit
+ *  der Gegen-Liste (#3237: die Liste wirkt nicht). */
+const MIT_LISTE = Object.keys(TRIPS).filter((k) => Array.isArray(TRIPS[k].report_config?.multi_day_trend_reports));
+function listenVarianten(id: string): [string, unknown][] {
+	const rc = TRIPS[id].report_config as Record<string, unknown>;
+	const liste = rc.multi_day_trend_reports as string[];
+	const { multi_day_trend_reports: _weg, ...ohne } = rc;
+	const andere = ['morning', 'evening'].filter((b) => !liste.includes(b));
+	return [
+		[`${id}__ohne_liste`, { ...structuredClone(TRIPS[id]), report_config: ohne }],
+		[`${id}__andere_liste`, { ...structuredClone(TRIPS[id]), report_config: { ...rc, multi_day_trend_reports: andere } }]
+	];
+}
 const eingabe: Konfigs = {
 	trip: {
 		...ohneId(Object.fromEntries(Object.entries(TRIPS).map(([id, r]) => [id, trip(id, r)]))),
 		...Object.fromEntries(Object.entries(ohneId(nachWetter)).map(([id, a]) => [`${id}__wetter`, a])),
-		...Object.fromEntries(Object.entries(ohneId(nachKurz)).map(([id, a]) => [`${id}__kurzstil`, a]))
+		...Object.fromEntries(Object.entries(ohneId(nachKurz)).map(([id, a]) => [`${id}__kurzstil`, a])),
+		...Object.fromEntries(MIT_LISTE.flatMap((id) => listenVarianten(id)))
 	},
 	orte: {
 		...ohneId(Object.fromEntries(Object.entries(ORTE).map(([id, r]) => [id, ort(id, r)]))),
 		...Object.fromEntries(Object.entries(ohneId(orteNach)).map(([id, a]) => [`${id}__wetter`, a]))
 	}
 };
-const AUS = pythonAusgabe(eingabe);
+const AUS = pythonAusgabe(eingabe, { karte: true });
+
+/** #3237: was die Karte „Was steht wo“ als Ausblick zeigt (Morgen, Abend) — Briefing in `outlook_reports`
+ *  (Schalter „Ausblick erscheint im“, WasStehtWoKarte `ausblickBerichte`) UND mindestens eine Zeile mit
+ *  Haken in der Spalte Ausblick. Die Altfelder `multi_day_trend_*` zeigt die Seite nicht mehr an.
+ *  Quelle ist die Python-Antwort der Karte (`pythonAusgabe(..., { karte: true })`), nicht ein Frontend-
+ *  Lader: der Vergleich mit `AUS.trip[..].trend` heisst „Karte (Python) gleich Ausgabe (Python)“ (F007). */
+function karteTrend(schluessel: string): [boolean, boolean] {
+	const k = AUS.karte![schluessel];
+	const zeilen = k.ausblick_zeilen.length > 0;
+	return [k.ausblick_berichte.includes('morning') && zeilen, k.ausblick_berichte.includes('evening') && zeilen];
+}
 
 function tripAusgabeSicht(id: string) {
 	const a = AUS.trip[id];
@@ -190,7 +226,11 @@ function tripAusgabeSicht(id: string) {
 describe('AC-26 Trip: Einstellungsseite zeigt, was die Ausgabe tut', () => {
 	for (const id of Object.keys(TRIPS)) {
 		test(`anzeige_gleich_ausgabe_${id}`, () => {
-			assert.deepEqual(tripSicht(trip(id, TRIPS[id])), tripAusgabeSicht(id));
+			assert.deepEqual(
+				tripSicht(trip(id, TRIPS[id]), id),
+				tripAusgabeSicht(id),
+				'Seite (Frontend-Lader; Ausblick = Karte „Was steht wo“ als Python-Antwort) weicht von der Ausgabe ab'
+			);
 		});
 	}
 });
@@ -205,7 +245,7 @@ describe('AC-26 Trip: unbeteiligtes Speichern aendert die Ausgabe nicht', () => 
 			assert.deepEqual(AUS.trip[`${id}__kurzstil`].trend, AUS.trip[id].trend, 'Kurzstil umschalten aendert den Mehrtages-Trend');
 		});
 		test(`neu_geladen_zeigt_dasselbe_${id}`, () => {
-			assert.deepEqual(tripSicht(nachWetter[id]), tripSicht(trip(id, TRIPS[id])));
+			assert.deepEqual(tripSicht(nachWetter[id], `${id}__wetter`), tripSicht(trip(id, TRIPS[id]), id));
 		});
 	}
 });
@@ -299,31 +339,43 @@ describe('E6: gesperrte Groesse mit Grund in DE und EN', () => {
 });
 
 // #3155 (Spec feat_3155 Entscheidung 4): die Karte „Mehrtages-Trend" und ihre Bool-Felder
-// entfallen; gueltig bleibt, dass die Liste (die Python allein liest) das Speichern
-// unveraendert uebersteht und widersprechende Bool-Felder nichts bewirken.
-describe('E2: Speichern erhaelt die Ausblick-Liste, die Python liest (Liste vor Bool-Feldern)', () => {
-	for (const id of Object.keys(TRIPS).filter((k) => Array.isArray(TRIPS[k].report_config?.multi_day_trend_reports))) {
+// entfallen; gueltig bleibt, dass die Liste das Speichern unveraendert uebersteht (Bestandsdaten,
+// Read-Modify-Write bis zur Bereinigung #3277).
+// #3237 (Spec feat_3237 Schritt 5, AC-6): `multi_day_trend_reports` ist Altfeld und wirkt nicht mehr;
+// den Ausblick je Briefing traegt allein die Tabelle „Was steht wo“ (`outlook_reports`). Zugesichert wird
+// darum: dieselbe Ausgabe mit der gespeicherten, ohne und mit einer anderen Liste, und die Karte zeigt sie.
+describe('E2: Speichern erhaelt die Ausblick-Liste (Altfeld, ohne Wirkung auf die Ausgabe seit #3237)', () => {
+	for (const id of MIT_LISTE) {
 		test(`liste_vor_flags_${id}`, () => {
 			const rc = TRIPS[id].report_config as Record<string, unknown>;
 			const liste = rc.multi_day_trend_reports as string[];
 			const nach = baueReportConfigPayload({ snapshot: rc, live: rc, zustand: ladeReportZustand(rc) });
 			assert.deepEqual(nach.multi_day_trend_reports, liste, 'Speichern veraendert die Ausblick-Liste');
-			assert.deepEqual([liste.includes('morning'), liste.includes('evening')], AUS.trip[id].trend);
+			assert.deepEqual(AUS.trip[`${id}__ohne_liste`].trend, AUS.trip[id].trend, 'die Altliste steuert den Ausblick');
+			assert.deepEqual(AUS.trip[`${id}__andere_liste`].trend, AUS.trip[id].trend, 'die Altliste steuert den Ausblick');
+			assert.deepEqual(karteTrend(id), AUS.trip[id].trend, 'Karte „Was steht wo“ (Python-Antwort) zeigt einen anderen Ausblick als die Ausgabe (Python)');
 		});
 	}
 });
 
+// #3237: den Ausblick je Briefing schreibt die Karte „Was steht wo“ (`placements.outlook_reports`); der
+// Kurzstil-Speicherer schreibt nur `report_config.telegram_style` und laesst einen inzwischen von einem
+// anderen Schreiber gespeicherten Ausblick-Stand unberuehrt.
 describe('E2: Kurzstil umschalten sendet nur den Stil (fremder Trend-Stand bleibt)', () => {
 	test('kurzstil_ueberschreibt_spaeter_gespeicherten_trend_nicht', () => {
 		const geladen = trip('t', TRIPS.a_trend_nie_eingestellt);
 		const start = kanalStilStart('route', geladen as never);
-		// Nach dem Laden speichert ein anderer Schreiber (z. B. zweiter Tab) „Trend nur morgens“.
-		const zwischen = { ...geladen, report_config: ebene1(geladen.report_config, { multi_day_trend_reports: ['morning'] }) };
+		// Nach dem Laden speichert ein anderer Schreiber (z. B. zweiter Tab) „Ausblick nur morgens“.
+		const zwischen = {
+			...geladen,
+			display_config: ebene1(geladen.display_config, { placements: { version: 1, outlook_reports: ['morning'] } })
+		};
 		const n = kanalStilNutzlast('route', { ...start, stil: 'kurzform' }, start) as { report_config: Record<string, unknown> };
+		assert.deepEqual(n.report_config, { telegram_style: 'kurzform' }, 'Kurzstil-Speichern sendet mehr als den Stil');
 		const danach = { ...zwischen, report_config: ebene1(zwischen.report_config, n.report_config), id: undefined };
-		const a = pythonAusgabe({ trip: { danach } });
-		assert.deepEqual(a.trip.danach.trend, [true, false], 'Kurzstil-Speichern hat den Trend zurueckgeschrieben');
-		assert.equal(n.report_config.telegram_style, 'kurzform');
+		const a = pythonAusgabe({ trip: { zwischen: { ...zwischen, id: undefined }, danach } });
+		assert.deepEqual(a.trip.zwischen.trend, [true, false], 'Messaufbau: der fremde Ausblick-Stand wirkt nicht');
+		assert.deepEqual(a.trip.danach.trend, [true, false], 'Kurzstil-Speichern hat den Ausblick zurueckgeschrieben');
 	});
 });
 

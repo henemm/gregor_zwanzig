@@ -154,15 +154,6 @@ def test_ac1_alle_kanallisten_tragen_katalog_ids_samt_aggregation(dc_bauen):
     assert set(vm.layout_channels) <= set(KANAELE)
 
 
-def test_ac1_altpfad_kanallisten_konkret():
-    vm = _vm(_orte_dc_altpfad())
-    assert _paare(vm, "email") == SOLL_TEMP_WIND
-    assert _paare(vm, "telegram") == [("wind", "max"), ("temperature", "max")]
-    assert _paare(vm, "sms") == SOLL_TEMP_WIND
-    assert "sms" in vm.layout_channels
-    assert _paare(vm, "premium_sms") == _paare(vm, "sms")
-
-
 def test_ac1_tabelle_kanallisten_konkret():
     vm = _vm(_orte_dc_tabelle())
     assert _paare(vm, "email") == SOLL_TEMP_WIND
@@ -175,14 +166,6 @@ def test_ac1_tabelle_kanallisten_konkret():
 # ---------------------------------------------------------------------------
 # AC-2: Teilauswahl je Kanal bleibt erhalten
 # ---------------------------------------------------------------------------
-
-def test_ac2_sms_nur_hoechstwert_email_beide_altpfad():
-    dc = {"active_metrics": GRUND_TEMP_WIND,
-          "channel_active_metrics": {"sms": _am(("temperature", "max"))}}
-    vm = _vm(dc)
-    assert _paare(vm, "sms") == [("temperature", "max")]
-    assert _paare(vm, "email") == SOLL_TEMP_WIND
-
 
 def test_ac2_grundauswahl_nur_hoechstwert_tabelle():
     """Tabellen-Zeile 'temperature' bei einer Grundauswahl nur mit dem
@@ -204,35 +187,21 @@ def test_ac2_windchill_nur_tiefstwert():
 # dem Adapter in den Render-Optionen
 # ---------------------------------------------------------------------------
 
-FOLGE = _am(("temperature", "max"), ("wind", "max"), ("temperature", "min"))
-
-
 def _preset(dc: dict) -> dict:
     return {"id": "p-3101", "display_config": dc, "hourly_enabled": True,
             "morning_enabled": True, "evening_enabled": True}
 
 
-def test_ac3_reihenfolge_im_view_model():
-    dc = {"active_metrics": GRUND_TEMP_WIND, "channel_active_metrics": {"email": FOLGE}}
-    vm = _vm(dc)
-    assert _paare(vm, "email") == [("temperature", "max"), ("wind", "max"),
-                                   ("temperature", "min")]
-
-
-def test_ac3_reihenfolge_nach_dem_adapter():
-    from services.report_config_resolver import resolve_compare_render_options
-
-    dc = {"active_metrics": GRUND_TEMP_WIND, "channel_active_metrics": {"email": FOLGE}}
-    opts = resolve_compare_render_options(_preset(dc), report_type="evening")
-    assert opts.enabled_metrics_by_channel["email"] == ["temp_max", "wind_max", "temp_min"]
-    assert opts.enabled_metrics_by_channel["sms"] == ["temp_max", "temp_min", "wind_max"]
-
-
 def test_ac3_layout_kanal_nach_dem_adapter_mit_format():
+    """#3237: Folge und Format stehen in der Tabelle (EINE Zeilenfolge, Spec
+    #3122 Nr. 8); Wind vor Temperatur, Wind Einfach."""
     from services.report_config_resolver import resolve_compare_render_options
+    from tests.helpers.tabelle_aus_wunsch import orte_wunsch_als_tabelle
 
-    dc = {"active_metrics": GRUND_TEMP_WIND, "channel_layouts": {"telegram": [
-        {"metric_id": "wind", "format": "simplified"}, {"metric_id": "temperature"}]}}
+    dc = orte_wunsch_als_tabelle({"display_config": {
+        "active_metrics": GRUND_TEMP_WIND, "channel_layouts": {"telegram": [
+            {"metric_id": "wind", "format": "simplified"}, {"metric_id": "temperature"}]}}}
+    )["display_config"]
     vm = _vm(dc)
     assert _paare(vm, "telegram") == [("wind", "max"), ("temperature", "max"),
                                       ("temperature", "min")]
@@ -245,41 +214,6 @@ def test_ac3_layout_kanal_nach_dem_adapter_mit_format():
 # ---------------------------------------------------------------------------
 # AC-6: Alt/Neu-Vergleich -- Max/Min-Doppelzeilen fallen auf eine Katalog-ID
 # ---------------------------------------------------------------------------
-
-def test_ac6_katalog_id_der_kanalzeile_ist_die_eigene_kennung():
-    """``katalog_id`` wird fuer Orte trivial: die Zeile traegt sie schon."""
-    from services.channel_list_resolver import katalog_id, vm_lists
-
-    vm = _vm({"active_metrics": GRUND_TEMP_WIND})
-    listen = vm_lists(vm, "compare")
-    assert [m for m, _f in listen["email"]] == ["temperature", "temperature", "wind"]
-    assert {katalog_id("compare", m) for m, _f in listen["email"]} == {"temperature", "wind"}
-
-
-def test_ac6_alt_und_neusicht_mit_doppelzeilen_ohne_unterschied():
-    """Umrechnung des Altbestands (Max/Min der Temperatur in allen Kanaelen)
-    und Neusicht ueber die Tabelle zeigen in keinem Kanal einen Unterschied."""
-    from services.placements import placements_from_legacy
-
-    dc = {"active_metrics": GRUND_TEMP_WIND}
-    umrechnung = placements_from_legacy(dc, "compare")
-    assert [a for a in umrechnung.changes if a.stelle in KANAELE] == []
-    neu = _vm({**dc, "placements": umrechnung.placements})
-    assert _paare(neu, "email") == SOLL_TEMP_WIND
-
-
-def test_ac6_gemeldete_aenderung_nennt_die_katalog_id():
-    """SMS bisher nur mit dem Hoechstwert: die Umrechnung koppelt beide
-    Auswertungen (Spec #3122 Nr. 2) und meldet das -- im einen Vokabular,
-    also mit der Katalog-ID, nicht mit ``temp_min``."""
-    from services.placements import placements_from_legacy
-
-    dc = {"active_metrics": GRUND_TEMP_WIND,
-          "channel_active_metrics": {"sms": _am(("temperature", "max"), ("wind", "max"))}}
-    sms = [a for a in placements_from_legacy(dc, "compare").changes if a.stelle == "sms"]
-    assert sms, "Vorbedingung: die Kopplung wird gemeldet"
-    assert {a.metric_id for a in sms} <= {"temperature", None}, sms
-
 
 # ---------------------------------------------------------------------------
 # AC-7: zwei Nutzer, keine Vermischung
@@ -323,24 +257,10 @@ GOLDEN_GRUND = [("temperature", "max"), ("temperature", "min"), ("wind", "max"),
                 ("sunshine", "sum"), ("cloud_total", "avg"), ("wind_chill", "min")]
 
 #: Konfigurationen mit Teilauswahl, eigener Folge und Format je Kanal.
+#: #3237: die Faelle ``altpfad_kanalauswahl``/``altpfad_layouts`` (Steuerung
+#: ueber Altfelder, je Kanal eigene Folge/Auswertung) sind entfallen -- die
+#: Altfelder wirken nicht mehr; die Tabelle traegt Teilauswahl, Folge und Format.
 GOLDEN_FAELLE = {
-    "altpfad_kanalauswahl": {
-        "active_metrics": _am(*GOLDEN_GRUND),
-        "channel_active_metrics": {
-            "sms": _am(("temperature", "max"), ("wind", "max"), ("temperature", "min")),
-            "telegram": _am(("wind_chill", "min"), ("temperature", "max"), ("gust", "max")),
-        },
-    },
-    "altpfad_layouts": {
-        "active_metrics": _am(*GOLDEN_GRUND),
-        "channel_layouts": {
-            "email": [{"metric_id": "wind", "format": "simplified"},
-                      {"metric_id": "temperature"}, {"metric_id": "cloud_total",
-                                                     "format": "simplified"}],
-            "sms": [{"metric_id": "temperature"}, {"metric_id": "precipitation"},
-                    {"metric_id": "wind", "enabled": False}],
-        },
-    },
     "tabelle": {
         "active_metrics": _am(*GOLDEN_GRUND),
         "placements": {"version": 1, "outlook_reports": ["morning"], "rows": [
@@ -471,11 +391,17 @@ def test_ac5_b2b_tabelle_unveraendert(name):
 
 
 def test_ac3_reihenfolge_in_der_gerenderten_ausgabe(mit):
-    """AC-3 in der echten Ausgabe: Hoechsttemperatur, Wind, Tiefsttemperatur
-    erscheinen im Text-Teil der Orts-Vergleich-Mail in genau dieser Folge."""
-    dc = {"active_metrics": GRUND_TEMP_WIND, "channel_active_metrics": {"email": FOLGE}}
+    """AC-3 in der echten Ausgabe: die eingestellte Folge (Wind vor
+    Temperatur) erscheint im Text-Teil der Orts-Vergleich-Mail; Hoechst- und
+    Tiefstwert der Temperatur stehen als EINE Tabellenzeile beieinander
+    (#3237, Spec #3122 Nr. 2/Nr. 8; frueher: Hoechst, Wind, Tiefst ueber
+    ``channel_active_metrics``)."""
+    from tests.helpers.tabelle_aus_wunsch import tabelle
+
+    dc = {"active_metrics": GRUND_TEMP_WIND}
+    dc["placements"] = tabelle(dc, "compare", folge=["wind", "temperature"])
     text = _senden(mit, dc)["email_text"]
     erster_ort = text.split("\nSulden\n")[0]
     pos = [erster_ort.index(b) for b in
-           ("Temperatur Maximum:", "Wind:", "Temperatur Minimum:")]
-    assert pos == sorted(pos), f"Reihenfolge Hoechst, Wind, Tiefst verletzt: {pos}"
+           ("Wind:", "Temperatur Maximum:", "Temperatur Minimum:")]
+    assert pos == sorted(pos), f"Reihenfolge Wind, Hoechst, Tiefst verletzt: {pos}"

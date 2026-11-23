@@ -170,10 +170,13 @@ class TestSmsExcludesCape:
             )
 
     def test_get_metrics_for_channel_sms_excludes_cape(self):
-        """AC-3 (User-Pfad): dc.get_metrics_for_channel('sms', 'evening') — derselbe
-        Aufruf, den trip_report.py für das SMS-Kürzel 'CP:' nutzt — enthält cape nicht mehr."""
+        """AC-3 (User-Pfad): die SMS-Kanal-Liste des Kanal-Listen-Resolvers (#3237:
+        Tabelle "Was steht wo", ohne Tabelle aus der Grundauswahl) — dieselbe
+        Quelle, aus der trip_report.py die SMS-Kürzel baut — enthält cape nicht mehr."""
+        from services.channel_list_resolver import resolve_channel_lists
+
         dc = _legacy_dc_with_cape()
-        sms_ids = {mc.metric_id for mc in dc.get_metrics_for_channel("sms", "evening")}
+        sms_ids = {r.metric_id for r in resolve_channel_lists(dc, "trip", "evening").sms}
         assert "cape" not in sms_ids, (
             f"AC-3: cape erscheint noch in der SMS-Kanal-Metrikmenge (CP:-Kürzel): {sms_ids}"
         )
@@ -456,8 +459,11 @@ class TestChannelFilterIsGenericNotCapeSpecific:
     def test_get_metrics_for_channel_excludes_confidence(self):
         """Derselbe Nachweis am Nutzer-Pfad (SMS/Telegram teilen diesen Aufruf)."""
         dc = _legacy_dc_with_confidence()
+        from services.channel_list_resolver import resolve_channel_lists
+
+        view = resolve_channel_lists(dc, "trip", "evening")
         for channel in ("sms", "telegram", "email"):
-            ids = {mc.metric_id for mc in dc.get_metrics_for_channel(channel, "evening")}
+            ids = {r.metric_id for r in getattr(view, channel)}
             assert "confidence" not in ids, (
                 f"F001: confidence erscheint noch in der Kanal-Metrikmenge "
                 f"({channel}): {ids}"

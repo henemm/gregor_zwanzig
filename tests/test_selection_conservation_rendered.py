@@ -382,16 +382,11 @@ def test_ac15_kanal_und_grundauswahl_mit_demselben_unmappbaren_zaehlen_einmal():
     assert [_fragezaehler(t) for t in _sms_orte(sms)] == [None, None, None], sms
 
 
-def test_ac15_nur_kanal_eigener_unmappbarer_zaehlt_nur_in_diesem_kanal():
-    """Adversary F004b: ein unmappbarer Schluessel NUR in der SMS-Auswahl
-    zaehlt nur fuer die SMS, nicht in Mail/Telegram. #3172 (ADR-0125): in der
-    SMS selbst erzeugt er kein Zeichen mehr (kein ``?1``)."""
-    opts, sms = _sms_ueber_echten_eingang({
-        "active_metrics": ["temp_max_c", "wind_max_kmh"],
-        "channel_active_metrics": {"sms": ["temp_max_c", "gibt_es_nicht_abc"]},
-    })
-    assert opts.unresolved_by_channel == {"email": 0, "telegram": 0, "sms": 1}
-    assert [_fragezaehler(t) for t in _sms_orte(sms)] == [None, None, None], sms
+# #3237: ``test_ac15_nur_kanal_eigener_unmappbarer_zaehlt_nur_in_diesem_kanal``
+# ist entfallen -- eine kanal-eigene Auswahl mit unbekanntem Schluessel gab es
+# nur im Altfeld ``channel_active_metrics``. Die Tabelle "Was steht wo" traegt
+# nur Katalog-Metriken (unbekannte Zeilen wirken nicht); der Zaehler kommt
+# allein aus der Grundauswahl (``test_ac18``).
 
 
 def test_ac15_unmappbarer_schluessel_erhoeht_den_zaehler_an_jedem_ort():
@@ -444,9 +439,14 @@ def test_ac16_namensform_einer_waehlbaren_groesse_bleibt_meldepflichtig():
 def test_ac17_kanal_abgewaehlte_groesse_ist_keine_luecke():
     from services.report_config_resolver import resolve_compare_render_options
 
+    # #3237: die SMS-Abwahl steht in der Tabelle "Was steht wo" (frueher
+    # ``channel_active_metrics``).
     preset = {"id": "p17", "display_config": {
         "active_metrics": ["temp_max_c", "wind_max_kmh"],
-        "channel_active_metrics": {"sms": ["temp_max_c"]},
+        "placements": {"version": 1, "rows": [
+            {"metric_id": "temperature"},
+            {"metric_id": "wind", "places": {"sms": False}},
+        ]},
     }}
     opts = resolve_compare_render_options(preset)
     assert opts.enabled_metrics_by_channel["sms"] == ["temp_max"]

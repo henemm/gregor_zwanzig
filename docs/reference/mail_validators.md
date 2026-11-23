@@ -164,7 +164,9 @@ das Soll ab — nur aus der Datei und dem statischen Register (`col_label`,
 - **Orte:** Zeilenfolge der Vergleichstabelle (`channel_layouts.email` vor
   `channel_active_metrics.email`, geschnitten mit `active_metrics`), Ortsfolge (`location_ids`), Spalten des
   Stundenverlaufs je Ort (`hourly_metrics`, `hourly_enabled`), Ausblick-Kopf
-  (`outlook_metrics`, `outlook_enabled`).
+  (`outlook_metrics`, `outlook_enabled`). Diese Altfeld-Regeln sind seit #3237 überholt:
+  gelesen wird nur noch die Tabelle `placements.rows` (Regel „Auswahl und Reihenfolge mit Tabelle (#3242)“);
+  ein Abo ohne Tabelle wird aus seiner Grundauswahl umgerechnet.
 
 Soll-Regel Orte-Stundenverlauf (Konzept §5.8 „Jede Liste nimmt nur aus den
 Metriken oben"): gespeichert = Schnitt mit der Grundauswahl (`active_metrics`)
@@ -196,8 +198,7 @@ erste Zeile je `metric_id`; ein Wert gilt nur an einer Stelle mit zwei Formen
 ungültig, gilt der Katalog-Standard (`standard_form`), Trip und Orte gleich.
 Eine abgeleitete Größe ohne eigene Zeile (z. B. Nachttief) liest die
 Eltern-Zeile (`_DERIVED_METRIC_RULES`). Die Altfelder (`use_friendly_format`,
-`format_mode`, `channel_layouts.email`, `outlook_metric_formats`) gelten nur
-ohne Tabelle; dort ist das Soll unverändert.
+`format_mode`, `channel_layouts.email`, `outlook_metric_formats`) werden seit #3237 nicht mehr gelesen; ohne Tabelle gilt die Grundauswahl-Umrechnung.
 
 **Auswahl und Reihenfolge mit Tabelle (#3242):** Mit `placements` folgen auch
 Auswahl und Folge der Tabelle (`_tabellen_folge`, statische Zweitregel ohne
@@ -210,7 +211,7 @@ nur bei E-Mail an. Gilt für Trip-Stundentabelle und -Ausblick sowie Orte-
 Vergleichstabelle (Katalog-ID aufgeweitet auf ihre Auswertungen der
 Grundauswahl), -Stundenverlauf und -Ausblick; Orte ohne `active_metrics` nehmen
 die Standardzeilen. `channel_layouts`, `outlook_metrics`, `hourly_metrics` und
-die `metrics`-Folge wirken mit Tabelle nicht mehr; ohne Tabelle unverändert.
+die `metrics`-Folge wirken nicht mehr (seit #3237 auch nicht ohne Tabelle; dort gilt die Grundauswahl).
 
 **Bekannte Einschränkung (#3242):** Abgeleitete Größen mit Fenstercharakter (z. B. Nachttief) bleiben in der Trip-E-Mail auch bei ausgeschalteter Eltern-Zeile, wie im Produkt (`keine_eigene_spalte`); das Haken-Erbe von der Eltern-Zeile wirkt nur bei künftigen abgeleiteten Größen, die keine Fenstergrößen sind.
 
@@ -387,9 +388,15 @@ Lückenschluss Runde 7 (#3047 B-L5, Paket p4b), alle nur mit `--konfig`:
 - **Ampelfarbe (Trip und Orte):** Grenzen nach der Rückfallkette ADR-0106
   (`ampel.template` > `preset_name` > Profil > „allgemein", Abo-Grenzen je
   Metrik überschreiben; gelesen wird nur die statische Vorlagentabelle). Trip:
-  je Stunde für Wind, Böen, Regen, Regen-W. — Ampelpunkt (Einfach) gegen den
-  Klartext-Wert derselben Stunde, Zahl-Zelle (Roh) gegen ihre Tönung
-  (ungetönt = grün), erste Abweichung je Tabelle und Spalte. Orte: Tönung der Zahl-Zellen der Vergleichstabelle
+  je Stunde für Wind, Böen, Regen, Regen-W. — Zahl-Zelle (Roh) gegen ihre Tönung
+  (ungetönt = grün); Ampelpunkt (Einfach) gegen die Klartext-Zahl derselben
+  Stunde, sonst gegen den Rohwert aus `--ampel-werte JSON` (Prüfdaten, nur mit
+  `--konfig`: `{"gust": {"1": [45, …]}}`, Größe → Segment N = N-te
+  Etappen-Stundentabelle → Wert je Stunde; ungültig = Exit 2). Die Wortstufe
+  des Klartexts (seit Spec #3122 Nr. 4) ist kein Vergleichswert: ihre Skala ist
+  fest, die Ampel folgt den Grenzen des Abos (#3237). Ampelpunkt ohne Zahl und
+  ohne Rohwert = Befund „kein Vergleichswert“, nie stilles Bestehen. Erste
+  Abweichung je Tabelle und Spalte. Orte: Tönung der Zahl-Zellen der Vergleichstabelle
   (Temperatur, Wind, Böen, Niederschlag, Regen-W., UV; Sicht ungeprüft). Eine
   gerundete Zahl darf eine halbe letzte Stelle abweichen.
 - **Trip, Stundenband:** erlaubt sind Stunden vom früheren aus Tagesfensterbeginn

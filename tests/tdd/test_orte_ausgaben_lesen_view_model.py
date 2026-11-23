@@ -40,11 +40,16 @@ def test_altbestand_hourly_enabled_false_heisst_block_entfaellt():
 
 
 def test_altbestand_ausblick_in_jedem_slot():
-    """Abos ohne ``placements``: Ausblick unabhaengig vom Briefing-Typ (heute)."""
-    for typ in ("morning", "evening"):
-        view = resolve_channel_lists(ALT, "compare", typ, enabled_reports=["morning"],
-                                     outlook_enabled=True)
-        assert [z.metric_id for z in view.outlook] == ["temperature", "gust"]
+    """Abos ohne ``placements``: #3237 (ADR-0124 Nr. 3, bewusste Aenderung)
+    -- ohne Tabelle gilt die Tabelle aus der Grundauswahl samt Vorbelegung
+    des Ausblicks; ist nur das Morgen-Briefing an, steht der Ausblick im
+    Morgen-Briefing und nicht im Abend-Briefing (frueher: in jedem Slot)."""
+    morgen = resolve_channel_lists(ALT, "compare", "morning", enabled_reports=["morning"],
+                                   outlook_enabled=True)
+    assert [z.metric_id for z in morgen.outlook] == ["temperature", "gust"]
+    abend = resolve_channel_lists(ALT, "compare", "evening", enabled_reports=["morning"],
+                                  outlook_enabled=True)
+    assert abend.outlook == ()
 
 
 # ---------------------------------------------------------------------------
@@ -89,7 +94,8 @@ def test_render_optionen_altbestand_outlook_enabled_false():
 
 def test_hinweiszaehler_aus_der_grundauswahl_auch_mit_tabelle():
     """Zaehler nicht zuordenbarer Eintraege: Grundauswahl zaehlt, eine
-    Kanal-Altliste wird mit Tabelle nicht gelesen."""
+    Kanal-Altliste wird nicht gelesen -- #3237: auch ohne Tabelle nicht mehr
+    (frueher zaehlte sie dort mit, ``email: 2``)."""
     from services.report_config_resolver import resolve_compare_render_options
 
     p = _tabelle()
@@ -100,7 +106,7 @@ def test_hinweiszaehler_aus_der_grundauswahl_auch_mit_tabelle():
     alt = resolve_compare_render_options({"id": "p", "display_config": {
         "active_metrics": p["display_config"]["active_metrics"],
         "channel_active_metrics": {"email": ["auch_nicht"]}}})
-    assert alt.unresolved_by_channel == {"email": 2, "telegram": 1, "sms": 1}
+    assert alt.unresolved_by_channel == {"email": 1, "telegram": 1, "sms": 1}
 
 
 # ---------------------------------------------------------------------------

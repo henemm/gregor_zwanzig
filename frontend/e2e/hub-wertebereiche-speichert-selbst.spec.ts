@@ -321,11 +321,20 @@ for (const kind of HUB_KINDS) {
 				for (const key of Object.keys((vorher.report_config ?? {}) as Stand)) {
 					expect((nachher.report_config as Stand)[key], `report_config.${key} hat sich verändert`).toEqual((vorher.report_config as Stand)[key]);
 				}
-				const dcEigen = new Set(['ampel', 'metrics', 'active_metrics']);
+				const dcEigen = new Set(['ampel', 'metrics', 'active_metrics', 'placements']);
 				for (const key of Object.keys(dc(vorher))) {
 					if (dcEigen.has(key)) continue;
 					expect(dc(nachher)[key], `display_config.${key} hat sich verändert`).toEqual(dc(vorher)[key]);
 				}
+				// #3237 (AC-1/AC-2): die Tabelle liegt seit der Anlage vor; „−“ nimmt im selben Vorgang genau die
+				// Zeile der entfernten Metrik heraus (#3122 AC-32), alles andere an der Tabelle bleibt.
+				const pv = dc(vorher).placements as Stand;
+				expect(Array.isArray(pv?.rows), 'Vorbedingung: Tabelle seit der Anlage gespeichert').toBe(true);
+				expect((pv.rows as Stand[]).some((r) => r.metric_id === weg), `Vorbedingung: Zeile ${weg} in der Tabelle`).toBe(true);
+				expect(dc(nachher).placements, 'display_config.placements: nur die Zeile der entfernten Metrik fehlt').toEqual({
+					...pv,
+					rows: (pv.rows as Stand[]).filter((r) => r.metric_id !== weg)
+				});
 				expect(seiteImStand(nachher, ZEILE, 'upper').orange).toBe(50);
 				expect(dc(nachher).ampel.metrics.wind.alarm_ab).toBe('red');
 				expect(auswahlImStand(kind, nachher)).not.toContain(weg);

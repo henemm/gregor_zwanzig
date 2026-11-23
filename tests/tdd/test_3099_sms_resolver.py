@@ -28,7 +28,6 @@ SMS (ADR-0095: Ergebnis unveraendert) und schon heute gruen; sie bewachen die Um
 from __future__ import annotations
 
 import copy
-import dataclasses
 import json
 import re
 from datetime import datetime
@@ -37,7 +36,7 @@ from pathlib import Path
 import pytest
 
 from app.loader import load_trip
-from app.models import MetricConfig, UnifiedWeatherDisplayConfig
+from app.models import UnifiedWeatherDisplayConfig
 from output.renderers.trip_report import TripReportFormatter
 from tests.tdd._einstellung_auslieferung_fixtures import (
     STAGE_NAME, TZ, frisches_profil, golden_dict, night_weather, segment,
@@ -97,6 +96,14 @@ def _trip_dict(sms: list[dict] | None = None, *, grund: list[dict] | None = None
     layouts.update(extra_layouts or {})
     d["display_config"]["channel_layouts"] = layouts
     d["display_config"]["outlook_metrics"] = []
+    # #3237: dieselbe Einstellung in der Tabelle "Was steht wo" (die
+    # Altfelder oben wirken nicht mehr und bleiben nur als Beschreibung).
+    from tests.helpers.tabelle_aus_wunsch import tabelle
+
+    folge = None if sms else [mc["metric_id"] for mc in sorted(
+        d["display_config"]["metrics"], key=lambda mc: mc.get("order", 0))]
+    d["display_config"]["placements"] = tabelle(
+        d["display_config"], "trip", listen={**layouts, "outlook": []}, folge=folge)
     return d
 
 
@@ -225,27 +232,31 @@ def test_ac2_sms_folge_niederschlag_boe_bewoelkung():
 # AC-3: Roh / Einfach / ohne Angabe
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("fmt,soll", [("raw", "E1 CT70@4 G45@4"),
+# #3237 (Spec #3122 Nr. 4 und Nr. 8, AC-6): die SMS hat keine Wahl -- ein
+# gespeichertes Format fuer die SMS bleibt ohne Wirkung, Bewoelkung steht fest
+# in der Form, die ohne Einstellung erscheint (Stufe). Bis #3237 zeigte ein
+# SMS-Eintrag ``format_mode: raw`` die Prozentzahl.
+@pytest.mark.parametrize("fmt,soll", [("raw", "E1 CT:SCT@4 G45@4"),
                                       ("symbol", "E1 CT:SCT@4 G45@4"),
                                       (None, "E1 CT:SCT@4 G45@4")],
                          ids=["roh", "einfach", "ohne_angabe"])
 def test_ac3_bewoelkung_roh_einfach_ohne_angabe(fmt, soll):
-    """AC-3: Bewoelkung Roh = Prozentzahl (CT70), Einfach = Stufe (CT:SCT); ohne
-    Angabe bleibt die Katalog-Darstellung (Stufe), sie wird NICHT als Roh gedeutet."""
+    """AC-3 (#3237): Bewoelkung in der SMS immer als Stufe (CT:SCT) -- Roh,
+    Einfach und ohne Angabe sind gleich (SMS-Format ohne Wirkung)."""
     erste = _ohne_angabe("cloud_total", 0) if fmt is None else _mc("cloud_total", 0, fmt)
     sms = _sms(_trip(_trip_dict([erste, _mc("gust", 1)])))
     assert sms == soll, sms
 
 
 def test_ac3_kanal_format_gewinnt_gegen_grundauswahl():
-    """AC-3: Grundauswahl Bewoelkung Roh, SMS-Liste ohne Angabe -> die SMS-Liste
-    gilt (Katalog-Darstellung); umgekehrt Grundauswahl ohne Angabe, SMS-Liste Roh -> Roh."""
+    """AC-3 (#3237): weder ein Roh in der Grundauswahl noch ein Roh in der
+    SMS-Liste aendert die SMS -- Bewoelkung steht fest als Stufe."""
     grund_roh = [_mc(m, i, "raw" if m == "cloud_total" else None)
                  for i, m in enumerate(GRUNDAUSWAHL)]
     a = _sms(_trip(_trip_dict([_ohne_angabe("cloud_total", 0), _mc("gust", 1)], grund=grund_roh)))
     b = _sms(_trip(_trip_dict([_mc("cloud_total", 0, "raw"), _mc("gust", 1)])))
     assert a == "E1 CT:SCT@4 G45@4", a
-    assert b == "E1 CT70@4 G45@4", b
+    assert b == "E1 CT:SCT@4 G45@4", b
 
 
 @pytest.mark.parametrize("mid,sym,roh_wert", [("cloud_total", "CT", "70"),
@@ -253,15 +264,16 @@ def test_ac3_kanal_format_gewinnt_gegen_grundauswahl():
                                                ("cloud_mid", "CM", "30"),
                                                ("cloud_high", "CH", "20")])
 def test_ac3_alle_vier_format_metriken_roh_und_einfach(mid, sym, roh_wert):
-    """AC-3: alle vier Format-Metriken -- Roh zeigt den Prozentwert, Einfach die
-    Stufe (``SYM:`` + Buchstaben), ohne Angabe = Einfach."""
+    """AC-3 (#3237): alle vier Format-Metriken -- die SMS zeigt immer die Stufe
+    (``SYM:`` + Buchstaben); ein Roh-Wunsch fuer die SMS bleibt ohne Wirkung
+    (vorher: Prozentwert ``roh_wert``)."""
     grund = _liste(GRUNDAUSWAHL + ([mid] if mid not in GRUNDAUSWAHL else []))
     roh = _sms(_trip(_trip_dict([_mc(mid, 0, "raw")], grund=grund)))
     einfach = _sms(_trip(_trip_dict([_mc(mid, 0, "symbol")], grund=grund)))
     ohne = _sms(_trip(_trip_dict([_ohne_angabe(mid, 0)], grund=grund)))
-    assert re.fullmatch(rf"E1 {sym}{roh_wert}@\d+", roh), roh
     assert re.fullmatch(rf"E1 {sym}:[A-Z]+@\d+", einfach), einfach
-    assert ohne == einfach, (ohne, einfach)
+    assert not re.search(rf"{sym}{roh_wert}@", roh), roh
+    assert roh == ohne == einfach, (roh, ohne, einfach)
 
 
 # ---------------------------------------------------------------------------
@@ -350,47 +362,8 @@ def test_ac8_trip_zwei_nutzer_je_eigene_sms(reihenfolge):
                           _mc("gust", 2)]), frisches_profil())
     folge = [("a", a), ("b", b)] if reihenfolge == "ab" else [("b", b), ("a", a)]
     ist = {name: _sms(t) for name, t in folge}
-    assert ist == {"a": "E1 G45@4 CT70@4", "b": "E1 CT:SCT@4 R2.0@4 G45@4"}, ist
-
-
-# ---------------------------------------------------------------------------
-# AC-9: Quelle ist der Resolver, nicht get_metrics_for_channel("sms", ...)
-# ---------------------------------------------------------------------------
-
-class _AbweichendesModell(UnifiedWeatherDisplayConfig):
-    """Echte Unterklasse (kein Mock): ``get_metrics_for_channel("sms", ...)``
-    liefert bewusst eine ANDERE Liste als der Resolver (Altpfad-Signatur).
-    Der Resolver liest die Kaskade ueber ``trip_channel_metrics`` und sieht die
-    Abweichung nicht; folgt die SMS ihr, liest der Trip-Pfad noch den Altpfad."""
-
-    def get_metrics_for_channel(self, channel, report_type):
-        echt = super().get_metrics_for_channel(channel, report_type)
-        if channel != "sms":
-            return echt
-        return [MetricConfig(metric_id="humidity", enabled=True, order=0),
-                MetricConfig(metric_id="uv_index", enabled=True, order=1),
-                MetricConfig(metric_id="cloud_total", enabled=True, order=2,
-                             format_mode="raw", use_friendly_format=False)]
-
-
-@pytest.mark.parametrize("report_type", REPORT_TYPES)
-def test_ac9_trip_sms_folgt_resolver_nicht_altpfad(report_type):
-    """AC-9: Resolver-Liste (G, R, CT Einfach) und Altpfad (HU, UV, CT Roh) weichen
-    ab -- die SMS folgt der Resolver-Liste, auch in der Darstellung."""
-    from services.channel_list_resolver import resolve_channel_lists
-
-    dc = _trip(_trip_dict([_mc("gust", 0), _mc("precipitation", 1),
-                           _mc("cloud_total", 2, "symbol")])).display_config
-    # Der Trip-Pfad arbeitet auf dieser (unkollabierten) Instanz: die
-    # Unterklasse wird direkt als display_config uebergeben.
-    abw = _AbweichendesModell(**{f.name: getattr(dc, f.name) for f in dataclasses.fields(dc)})
-    soll_folge = [z.metric_id for z in resolve_channel_lists(abw, "trip", report_type).sms
-                  if z.enabled and z.metric_id in KUERZEL]
-    assert soll_folge == ["gust", "precipitation", "cloud_total"], "Vorbedingung: Resolver-Liste"
-    assert [m.metric_id for m in abw.get_metrics_for_channel("sms", report_type)] == [
-        "humidity", "uv_index", "cloud_total"], "Vorbedingung: Altpfad weicht ab"
-    sms = _sms(abw, report_type)
-    assert sms == "E1 G45@4 R2.0@4 CT:SCT@4", sms
+    # #3237: Nutzer a waehlt Bewoelkung Roh -- in der SMS ohne Wirkung (Stufe).
+    assert ist == {"a": "E1 G45@4 CT:SCT@4", "b": "E1 CT:SCT@4 R2.0@4 G45@4"}, ist
 
 
 # ---------------------------------------------------------------------------
@@ -525,9 +498,11 @@ def _orte_wolke(ortsteil: str) -> str:
     return m.group(1)
 
 
-#: Wolken-Token Orte-SMS (Innsbruck, Stundenspitze 35 % um 11 Uhr): Roh = Zahl,
-#: Einfach = Stufe (#3172: Token-Zeile wie im Trip, ``CT:SCT@11``).
-ORTE_WOLKE = {"raw": "35@11", "simplified": ":SCT@11"}
+#: Wolken-Token Orte-SMS (Innsbruck, Stundenspitze 35 % um 11 Uhr). #3237
+#: (Spec #3122 Nr. 4/Nr. 8, AC-6): die SMS hat keine Wahl, ein Format fuer die
+#: SMS bleibt ohne Wirkung -- Orte zeigen fest die Form ohne Einstellung (Zahl).
+#: Bis #3237: Einfach = Stufe ``CT:SCT@11``.
+ORTE_WOLKE = {"raw": "35@11", "simplified": "35@11"}
 
 
 @pytest.mark.parametrize("cloud_fmt", ["raw", "simplified"], ids=["roh", "einfach"])
@@ -582,7 +557,7 @@ def test_ac8_orte_zwei_nutzer_je_eigene_sms(mit, reihenfolge):
     pb = preset({"sms": _orte_liste([
         {"metric_id": "cloud_total", "enabled": True, "format": "simplified"},
         {"metric_id": "precipitation", "enabled": True}])})
-    soll = {"a": (["G", "CT"], "35@11"), "b": (["CT", "R"], ":SCT@11")}
+    soll = {"a": (["G", "CT"], "35@11"), "b": (["CT", "R"], ORTE_WOLKE["simplified"])}
     folge = [("a", pa), ("b", pb)] if reihenfolge == "ab" else [("b", pb), ("a", pa)]
     for name, p in folge:
         for _uid, snap in zwei_nutzer(mit, p):

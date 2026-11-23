@@ -65,7 +65,6 @@ from app.models import MetricConfig, UnifiedWeatherDisplayConfig
 from output.renderers.trip_report import TripReportFormatter
 from output.tokens.dto import DailyForecast, HourlyValue, MetricSpec, NormalizedForecast
 from output.tokens.builder import build_token_line
-from api.routers.validator import _determine_cascade_source
 
 from tests.tdd import _min_temp_felt_fixtures as F
 
@@ -235,25 +234,6 @@ def test_ac2_default_order_byte_identical_without_sms_layout():
 # ---------------------------------------------------------------------------
 # AC-3
 # ---------------------------------------------------------------------------
-
-
-def test_ac3_per_report_layout_overrides_per_channel_layout():
-    """per_report_layouts['evening']['sms'] (Ebene 1) schlaegt
-    per_channel_layouts['sms'] (Ebene 2); fuer 'morning' (kein per_report-
-    Eintrag) greift per_channel_layouts als Fallback."""
-    dc = _sms_layout_dc(
-        ["wind", "precipitation", "gust"],           # Ebene 2 (A)
-        per_report_evening=["gust", "wind", "precipitation"],  # Ebene 1 (B), nur evening
-    )
-    evening = _render_sms(dc, "evening")
-    morning = _render_sms(dc, "morning")
-
-    assert _token_index(evening, "G") < _token_index(evening, "W") < _token_index(evening, "R"), (
-        f"Abend muss Reihenfolge B (per_report: G,W,R) folgen: {evening!r}"
-    )
-    assert _token_index(morning, "W") < _token_index(morning, "R") < _token_index(morning, "G"), (
-        f"Morgen muss auf Reihenfolge A (per_channel: W,R,G) zurueckfallen: {morning!r}"
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -457,42 +437,6 @@ def test_ac7_wintersport_metric_can_precede_forecast_metric_but_stays_before_sys
 # ---------------------------------------------------------------------------
 # AC-9
 # ---------------------------------------------------------------------------
-
-
-def test_ac9_cascade_source_helper_matches_validator_and_couples_to_order_effect():
-    """``UnifiedWeatherDisplayConfig.cascade_source_for_channel()`` (models.py,
-    noch nicht existent -> AttributeError = RED) muss dieselbe Antwort geben
-    wie der Validator-Spiegel ``_determine_cascade_source`` UND diese
-    Antwort muss mit der tatsaechlichen Reihenfolge-Wirkung gekoppelt sein
-    (Adversary-Hinweis 4: kein Test, der nur EINEN der beiden Pfade prueft).
-
-    Issue #2422 S2a AC-13 (B9-Fix, loest DEC-2 ab, PO-Entscheid 2026-09-27):
-    ``dc_global`` (Kaskadenquelle 'global', kein eigenes SMS-Kanal-Layout)
-    erwartet jetzt ebenfalls ``expected_order_effect=True`` -- die
-    Kopplung "Meldung 'global' -> KEINE Reihenfolgen-Wirkung" (DEC-2) ist
-    mit dem B9-Fix aufgehoben, ``position`` wirkt jetzt unabhaengig von der
-    gemeldeten Kaskadenquelle. Der ``model_source == validator_source``-
-    Vergleich bleibt unveraendert (die KLASSIFIZIERUNG 'global' selbst
-    aendert sich durch den B9-Fix nicht, nur ihre Wirkung auf die Position)."""
-    dc_layout = _sms_layout_dc(["gust", "wind", "precipitation"])
-    dc_global = F.dc("gust", "wind", "precipitation")
-
-    for dc, expected_order_effect in ((dc_layout, True), (dc_global, True)):
-        validator_source = _determine_cascade_source(dc, "sms", "evening")
-        model_source = dc.cascade_source_for_channel("sms", "evening")  # type: ignore[attr-defined]
-        assert model_source == validator_source, (
-            f"models.py-Helfer und Validator-Spiegel laufen auseinander: "
-            f"{model_source!r} != {validator_source!r}"
-        )
-        sms = _render_sms(dc)
-        order_matches_user = (
-            _token_index(sms, "G") < _token_index(sms, "W") < _token_index(sms, "R")
-        )
-        assert order_matches_user == expected_order_effect, (
-            f"Kopplung von Meldung ({model_source!r}) und Wirkung gebrochen: "
-            f"order_matches_user={order_matches_user}, erwartet="
-            f"{expected_order_effect}. SMS: {sms!r}"
-        )
 
 
 # ---------------------------------------------------------------------------

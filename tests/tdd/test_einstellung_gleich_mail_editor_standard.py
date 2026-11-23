@@ -33,7 +33,6 @@ from app.ampel import resolve_ampel
 from app.loader import _parse_display_config
 from app.metric_catalog import get_all_metrics
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
-from output.renderers.compare_outlook_metric_ids import resolve_trip_outlook_metrics
 from output.renderers.email.compare_html import (
     _hour_zeilen,
     _visible_hour_metrics,
@@ -56,11 +55,52 @@ def _zustand(liste: str, zustand_id: str) -> dict:
     return next(z for z in LISTEN[liste]["zustaende"] if z["id"] == zustand_id)
 
 
+#: #3237: Faelle, deren Soll ein Schnitt-Rueckfall des Altpfads ist (die
+#: gespeicherte Liste liegt ganz ausserhalb der Grundauswahl -> Rueckfall auf
+#: die volle Grundauswahl bzw. Vorgabe). Die Tabelle "Was steht wo" kennt
+#: keinen Rueckfall (ADR-0124, "Leer bleibt leer"); die Python-Seite prueft
+#: diese Faelle nicht mehr. Die Datei bleibt unveraendert (die Frontend-Seite
+#: liest sie bis #3276 weiter).
+_ALTPFAD_RUECKFALL_3237 = {
+    ("trip_tabellen", "gespeichert_totalschnitt"),
+    ("trip_ausblick", "gespeichert_totalschnitt"),
+    ("orte_stundenverlauf", "gespeichert_totalschnitt"),
+}
+
+#: #3237: Python-Soll nach bewussten, dokumentierten Ausgabeaenderungen
+#: (Spec #3122); die Frontend-Seite behaelt das Soll der Datei bis #3276.
+#: Von Hand, je mit Grund.
+_SOLL_3237 = {
+    # Spec #3122 Nr. 8 (EINE Zeilenfolge): ohne Tabelle gilt die
+    # Grundauswahl-Tabelle; Hoechst- und Tiefstwert der Temperatur sind eine
+    # Zeile (Nr. 2), Stundenverlauf und Ausblick folgen der Zeilenfolge.
+    ("orte_vergleichstabelle", "nie_eingestellt"): [
+        "temp_max_c", "temp_min_c", "wind_max_kmh", "precip_sum_mm", "pop_max_pct",
+        "thunder_level_max", "sunny_hours_h", "cloud_avg_pct", "uv_index_max",
+        "visibility_min_m", "snow_depth_cm", "snow_new_sum_cm", "gust_max_kmh",
+        "freezing_level_m", "wind_direction_deg", "wind_chill_min_c", "wind_chill_max_c",
+        "cloud_low_avg_pct", "cloud_mid_avg_pct", "cloud_high_avg_pct", "humidity_avg_pct",
+        "dewpoint_avg_c", "pressure_avg_hpa", "precip_type_dominant", "snowfall_limit_m"],
+    ("orte_stundenverlauf", "nie_eingestellt"): [
+        "temperature", "wind", "precipitation", "rain_probability", "thunder",
+        "uv_index", "visibility", "gust", "wind_chill"],
+    ("orte_ausblick", "nie_eingestellt"): [
+        "temperature", "wind", "precipitation", "rain_probability", "thunder", "gust"],
+    # #3122 Fix-Loop B1b: Nacht-/Tagesgroessen der Temperatur haben in der
+    # Trip-Stundentabelle keinen eigenen Haken und gehoeren weiter zur Ausgabe
+    # (folgen der Grundauswahl), auch wenn die Temperatur-Zeile an der Stelle
+    # E-Mail abgewaehlt ist.
+    ("trip_tabellen", "gespeichert_ausserhalb_grundauswahl"): [
+        "thunder", "gust", "temperature_night", "temperature_day_low",
+        "temperature_day_high"],
+}
+
+
 def _gespeicherte(liste: str) -> list:
     return [
         pytest.param(z, id=z["id"])
         for z in LISTEN[liste]["zustaende"]
-        if z["id"].startswith("gespeichert")
+        if z["id"].startswith("gespeichert") and (liste, z["id"]) not in _ALTPFAD_RUECKFALL_3237
     ]
 
 
@@ -101,23 +141,63 @@ def _ausblick_spalten(metrics: list[str] | None) -> list[str]:
 
 # ── Python-Seite je Liste ──────────────────────────────────────────────────────
 
+def _trip_dc(eingabe: dict):
+    """#3237: die gespeicherte Einstellung der Eingabe (Altfelder, so schreibt
+    der Editor bis #3276) wirkt nur als Tabelle "Was steht wo"; der Test
+    druckt sie als Tabelle aus (``trip_wunsch_als_tabelle``), dann Loader."""
+    from tests.helpers.tabelle_aus_wunsch import trip_wunsch_als_tabelle
+
+    roh = trip_wunsch_als_tabelle({"display_config": eingabe["display_config"]})
+    return _parse_display_config(roh["display_config"], trip_standard_bei_leer=True)
+
+
 def python_trip_tabellen(eingabe: dict) -> list[str]:
     """E-Mail-Spaltenfolge der Stundentabelle: Loader -> Kanal-Listen-Resolver
     (``resolve_channel_lists(dc, "trip", rt).email``, wie ``trip_report.py``,
     #3096) -> Adapter ``email_col_order`` (geteilt von html.py und plain.py)."""
-    dc = _parse_display_config(eingabe["display_config"], trip_standard_bei_leer=True)
+    dc = _trip_dc(eingabe)
     abbildung = _col_key_zu_kennung()
     zeilen = resolve_channel_lists(dc, "trip", "evening").email
     return [abbildung[k] for k in email_col_order(zeilen)]
 
 
 def python_trip_ausblick(eingabe: dict) -> list[str]:
-    dc = _parse_display_config(eingabe["display_config"], trip_standard_bei_leer=True)
-    return _ausblick_spalten(resolve_trip_outlook_metrics(dc, "evening"))
+    dc = _trip_dc(eingabe)
+    # #3237: Ausblick-Spalten aus der Tabelle (ohne Tabelle: Grundauswahl).
+    return _ausblick_spalten([z.metric_id for z in resolve_channel_lists(dc, "trip", "evening").outlook])
+
+
+def _katalog_ids(liste):
+    """Alt-Vokabular (``gust_max_kmh``) -> Katalog-ID (``gust``); Katalog-IDs
+    bleiben. Nur fuer den Ausdruck als Tabelle (die Tabelle kennt Katalog-IDs)."""
+    from output.renderers.compare_metric_ids import katalog_paar
+
+    if not isinstance(liste, list):
+        return liste
+    out = []
+    for e in liste:
+        rid = FRONTEND_TO_RENDERER_METRIC_ID.get(e) if isinstance(e, str) else None
+        paar = katalog_paar(rid) if rid else None
+        out.append(paar[0] if paar else e)
+    return list(dict.fromkeys(out))
 
 
 def _orte_optionen(eingabe: dict):
-    preset = {"id": "pruef-3047", **eingabe}
+    """#3237: die Einstellung der Eingabe wirkt nur als Tabelle (s. ``_trip_dc``)."""
+    import copy
+
+    from tests.helpers.tabelle_aus_wunsch import orte_wunsch_als_tabelle
+
+    wunsch = copy.deepcopy(eingabe)
+    dc = wunsch.get("display_config") or {}
+    cam = dc.get("channel_active_metrics")
+    if isinstance(cam, dict):
+        dc["channel_active_metrics"] = {k: _katalog_ids(v) for k, v in cam.items()}
+    preset = orte_wunsch_als_tabelle({"id": "pruef-3047", **wunsch})
+    preset["display_config"].pop("channel_active_metrics", None)
+    preset["display_config"].update(
+        {k: v for k, v in (eingabe.get("display_config") or {}).items()
+         if k == "channel_active_metrics"})
     return preset, resolve_compare_render_options(preset)
 
 
@@ -149,9 +229,10 @@ def python_orte_ausblick(eingabe: dict) -> list[str]:
 
 def _pruefe(seite, liste: str, zustand: dict) -> None:
     ist = seite(zustand["eingabe"])
-    assert ist == zustand["erwartet"], (
+    soll = _SOLL_3237.get((liste, zustand["id"]), zustand["erwartet"])
+    assert ist == soll, (
         f"Python-Seite {liste}/{zustand['id']}: Mail liefert {ist}, "
-        f"editor_standard.json erwartet {zustand['erwartet']}"
+        f"Soll {soll} (editor_standard.json bzw. _SOLL_3237)"
     )
 
 

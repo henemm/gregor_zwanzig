@@ -105,8 +105,11 @@ def test_kompakt_gesperrte_schalter_aendern_die_mail_nicht(monkeypatch, report_t
     assert _ohne_zeitstempel(an) == _ohne_zeitstempel(aus), (
         "Kompakt: gesperrte Schalter veraendern die Mail (Editor-Sperre luegt)")
     t = TEXT[lang]
-    assert t["ueberblick"] in aus and t["ausblick"] in aus, (
-        f"Kompakt-Hinweis verspricht Ueberblick + Ausblick:\n{aus}")
+    assert t["ueberblick"] in aus, f"Kompakt-Hinweis verspricht den Ueberblick:\n{aus}"
+    # #3237 (ADR-0124 Nr. 3): ohne Tabelle gilt die Ausblick-Vorbelegung Abend
+    # -- der Ausblick steht im Abend-Briefing, im Morgen-Briefing nicht mehr.
+    assert (t["ausblick"] in aus) is (report_type == "evening"), (
+        f"Ausblick nach Vorbelegung (nur Abend), {report_type}:\n{aus}")
 
 
 def test_zwei_nutzer_kompakt_und_ausfuehrlich(monkeypatch):

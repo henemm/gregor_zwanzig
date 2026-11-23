@@ -6,6 +6,12 @@ SPEC: docs/specs/modules/feat_3122_was_steht_wo.md, Teil A Nr. 1/7/8, AC-14
 undurchsichtiges Roh-Objekt durch Laden und Speichern getragen werden.
 
 Kern-Schicht, echte Dateien unter ``tmp_path``, ohne Mock.
+
+#3237 (Altpfad entfernt): entfallen sind F2 (Wegfall-Meldungen der Umrechnung
+``placements_from_legacy``) und ``test_altpfad_berechnet_rows_nur_auf_anforderung``
+(der bisherige Pfad ohne Tabelle) -- ohne Tabelle gilt jetzt die Tabelle aus der
+Grundauswahl (``placements_aus_grundauswahl``, bewacht in
+``test_3237_placements_aus_grundauswahl.py``).
 """
 from __future__ import annotations
 
@@ -162,42 +168,6 @@ def test_f1_trip_grundauswahl_je_briefing_typ_im_neuen_eingang():
         assert [z.metric_id for z in getattr(morgens, stelle)] == ["precipitation", "wind"]
         assert [z.metric_id for z in getattr(abends, stelle)] == ["gust", "wind"]
     assert [z.metric_id for z in morgens.rows] == ["precipitation", "wind"]
-
-
-# ---------------------------------------------------------------------------
-# F2: Wegfall von Altzeilen an gesperrten Stellen wird gemeldet
-# ---------------------------------------------------------------------------
-
-def test_f2_wegfall_an_gesperrter_stelle_wird_gemeldet():
-    from services.placements import placements_from_legacy
-
-    dc = {"trip_id": "t-f2", "metrics": [
-        {"metric_id": "temperature", "enabled": True, "order": 0},
-        {"metric_id": "wind", "enabled": True, "order": 1}]}
-    arten = {(c.kind, c.stelle, c.metric_id) for c in placements_from_legacy(dc, "trip").changes}
-    # #3122 Fix-Loop B1b: "keine eigene Spalte" laesst die Groesse in der Mail
-    # -- an der E-Mail-Stelle entfaellt nichts mehr.
-    for kind in ("temperature_night", "temperature_day_low", "temperature_day_high"):
-        assert not any(a[1] == "email" and a[2] == kind for a in arten), arten
-    assert not any(a[0] == "gesperrte_stelle_entfaellt" and a[2] == "wind" for a in arten)
-
-
-# ---------------------------------------------------------------------------
-# rows im bisherigen Pfad nur auf Anforderung
-# ---------------------------------------------------------------------------
-
-def test_altpfad_berechnet_rows_nur_auf_anforderung():
-    dc = {"trip_id": "t-r", "metrics": [{"metric_id": "wind", "enabled": True}],
-          "channel_layouts": {"sms": [{"metric_id": "wind"}]}}
-    ohne = _resolve(dc, "trip")
-    assert ohne.rows == () and ohne.outlook_reports == ()
-    mit = _resolve(dc, "trip", with_rows=True)
-    assert [z.metric_id for z in mit.rows] == ["wind"]
-    assert mit.outlook_reports == ("evening",)
-    assert (mit.email, mit.sms, mit.outlook) == (ohne.email, ohne.sms, ohne.outlook)
-    orte = {"active_metrics": ["wind_max_kmh"]}
-    assert _resolve(orte, "compare").rows == ()
-    assert [z.metric_id for z in _resolve(orte, "compare", with_rows=True).rows] == ["wind"]
 
 
 def test_neuer_eingang_setzt_rows_immer():

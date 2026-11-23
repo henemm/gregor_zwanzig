@@ -48,6 +48,21 @@ VISIBLE_HIDDEN: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
 }
 
 
+def _display_config() -> dict:
+    """#3237: die Kanal-Auswahl steht in der Tabelle "Was steht wo" (Katalog-
+    IDs); ``channel_active_metrics`` bleibt als Beschreibung stehen und wirkt
+    nicht. ``outlook_enabled: False`` steht als ``outlook_reports: []``."""
+    from tests.helpers.tabelle_aus_wunsch import tabelle
+
+    dc = dict(DISPLAY_CONFIG)
+    dc["placements"] = tabelle(dc, "compare", listen={
+        "email": ["temperature", "sunshine"],
+        "telegram": ["temperature", "uv_index"],
+        "sms": ["temperature"],
+    }, outlook_reports=[])
+    return dc
+
+
 def _preset(preset_id: str, user_id: str) -> dict:
     return {
         "id": preset_id, "name": "Kanal-Probe", "user_id": user_id, "kind": "vergleich",
@@ -56,7 +71,7 @@ def _preset(preset_id: str, user_id: str) -> dict:
         # Stundenverlauf/Ausblick aus: diese Scheibe betrifft NUR die
         # Uebersichtstabelle — beide Bloecke wuerden die Kuerzel-Suche stoeren.
         "hourly_enabled": False, "outlook_enabled": False,
-        "display_config": dict(DISPLAY_CONFIG),
+        "display_config": _display_config(),
     }
 
 

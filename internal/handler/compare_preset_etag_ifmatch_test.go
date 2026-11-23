@@ -28,7 +28,7 @@ import (
 func comparePresetEtagRouter(s *store.Store) *chi.Mux {
 	r := chi.NewRouter()
 	r.Get("/api/compare/presets/{id}", GetComparePresetHandler(s))
-	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 	r.Put("/api/compare/presets/{id}", UpdateComparePresetHandler(s))
 	r.Delete("/api/compare/presets/{id}", DeleteComparePresetHandler(s))
 	r.Patch("/api/compare/presets/{id}/state", UpdateComparePresetStateHandler(s))

@@ -74,6 +74,41 @@ def metrik_eintraege(
     return eintraege
 
 
+def _wunsch_als_tabelle(dc, folge, rc, email_layout, outlook_metrics, formate) -> Optional[dict]:
+    """#3237: dieselbe Einstellung ueber die Tabelle (Altfelder wirken nicht
+    mehr; sie bleiben im JSON nur als Beschreibung fuer das Orakel und
+    belegen dabei, dass sie nichts steuern). ``None``: nichts eingestellt ->
+    das Abo liest die Grundauswahl-Tabelle wie eine Neuanlage."""
+    from tests.helpers.tabelle_aus_wunsch import tabelle
+
+    listen: dict = {}
+    reihen = None
+    if email_layout is not None:
+        listen["email"] = email_layout
+    grund = [m for m in folge if any(
+        e["metric_id"] == m and e["enabled"] for e in dc["metrics"])]
+    if outlook_metrics is not _FEHLT and outlook_metrics is not None:
+        ids = [g if isinstance(g, str) else g["metric_id"] for g in outlook_metrics]
+        schnitt = [m for m in dict.fromkeys(ids) if m in grund]
+        if outlook_metrics == [] or schnitt:
+            listen["outlook"] = schnitt
+    if isinstance(formate, dict):
+        listen["outlook"] = [(m, bool(formate.get(m, False)))
+                             for m in listen.get("outlook", grund)]
+    # EINE Zeilenfolge fuer alle Stellen (ADR-0124): E-Mail-Folge, sonst die
+    # Ausblick-Folge, wenn sie von der Grundauswahl abweicht, sonst diese.
+    ausblick = [m if isinstance(m, str) else m[0] for m in listen.get("outlook", [])]
+    if "email" not in listen:
+        reihen = ausblick if ausblick != [m for m in grund if m in ausblick] else grund
+    berichte = rc.get("multi_day_trend_reports")
+    if rc.get("show_outlook") is False and rc.get("email_format") != "compact":
+        berichte = []
+    if not listen and berichte is None:
+        return None
+    return tabelle(dc, "trip", listen=listen, folge=reihen,
+                   outlook_reports=berichte if isinstance(berichte, list) else None)
+
+
 def trip_json(
     folge: list[str], *, einfach: Optional[set[str]] = None,
     email_layout: Optional[list[dict]] = None,
@@ -115,6 +150,11 @@ def trip_json(
         "send_premium_sms": False, "email_format": "full",
     }
     rc.update(report_config or {})
+    if "placements" not in (display or {}):
+        tab = _wunsch_als_tabelle(dc, folge, rc, email_layout, outlook_metrics,
+                                  outlook_metric_formats)
+        if tab is not None:
+            dc["placements"] = tab
     return {
         "id": trip_id, "name": "Pruefkatalog 3047", "stages": stages,
         # #3047 E4: Briefing ODER Alarm an -> beides an; aus = beide Schalter aus.

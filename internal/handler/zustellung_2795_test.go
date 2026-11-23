@@ -419,7 +419,7 @@ func TestCreate_2795_UnzulaessigeMinuteWird400(t *testing.T) {
 		t.Run(eingabe, func(t *testing.T) {
 			s := newTestStore(t)
 			r := chi.NewRouter()
-			r.Post("/api/trips", CreateTripHandler(s))
+			r.Post("/api/trips", CreateTripHandler(s, ""))
 			body := `{"id":"trip-2795-neu","name":"Neu","stages":[{"id":"S1","name":"Tag 1","date":"2026-08-20","waypoints":[{"id":"W1","name":"P","lat":47.0,"lon":11.0,"elevation_m":500}]}],"report_config":{"enabled":true,"send_email":true,"morning_time":"` + eingabe + `","evening_time":"18:00"}}`
 
 			w := doReq(r, http.MethodPost, "/api/trips", body, "", "usera")

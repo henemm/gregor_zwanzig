@@ -38,7 +38,7 @@ Von diesen Tests festgelegte Schnittstellen (die GREEN-Phase baut genau diese):
 
   Dienste
     ``NotificationService.send_deviation_alert(..., anchor_weather=None)``: ALTE Reihe;
-        Modus je Kanal aus ``trip.display_config`` (Kanal-Kaskade).
+        Modus je Kanal aus ``trip.display_config`` (Tabelle "Was steht wo", #3237).
     ``NotificationService.send_multi_location_deviation_alert(..., anchor_points=None)``:
         Ortsvergleich-Stundenwerte sind IMMER ROH (v1.1, PO-Entscheid 2026-10-21) --
         eine Anzeige-Konfiguration (``display_config``), falls der Parameter noch
@@ -345,8 +345,25 @@ def _user(prefix: str) -> str:
     return uid
 
 
+_FORM = {"symbol": "simplified", "simplified": "simplified", "raw": "raw"}
+
+
+def _formen_tabelle(dc: UnifiedWeatherDisplayConfig, formen: dict[str, dict[str, str]]) -> dict:
+    """#3237: Roh/Einfach je Stelle steht in der Tabelle "Was steht wo" (einzige
+    Quelle, ADR-0124 Nr. 11). Ausgang = Tabelle einer Neuanlage
+    (``placements_aus_grundauswahl``), ``formen`` = {metric_id: {stelle: modus}}
+    ueberschreibt die Form (``symbol``/``simplified`` = Einfach, ``raw`` = Roh)."""
+    from services.placements import placements_aus_grundauswahl
+
+    tabelle = placements_aus_grundauswahl(dc, "trip")
+    for zeile in tabelle["rows"]:
+        for stelle, modus in formen.get(zeile["metric_id"], {}).items():
+            zeile.setdefault("formats", {})[stelle] = _FORM[modus]
+    return tabelle
+
+
 def _trip(uid: str, email_mode: str, telegram_mode: str):
-    """Trip mit kanalgenauer Darstellung fuer Gewitter (Kanal-Kaskade, ADR-0050)."""
+    """Trip mit kanalgenauer Darstellung fuer Gewitter (Tabelle "Was steht wo", #3237)."""
     from app.trip import Stage, Trip, Waypoint
 
     tid = f"trip-1737-{uuid.uuid4().hex[:6]}"
@@ -354,16 +371,13 @@ def _trip(uid: str, email_mode: str, telegram_mode: str):
         id="T1", name="Tag 1", date=datetime(2026, 5, 1).date(),
         waypoints=[Waypoint(id="G1", name="Start", lat=47.0, lon=11.0, elevation_m=1000.0)],
     )
+    dc = UnifiedWeatherDisplayConfig(
+        trip_id=tid, metrics=[MetricConfig(metric_id="thunder", enabled=True)])
+    dc.placements = _formen_tabelle(
+        dc, {"thunder": {"email": email_mode, "telegram": telegram_mode}})
     return Trip(
         id=tid, name="Stunden-Trip", stages=[stage], official_warnings=None, corridors=[],
-        display_config=UnifiedWeatherDisplayConfig(
-            trip_id=tid,
-            metrics=[MetricConfig(metric_id="thunder", enabled=True)],
-            per_channel_layouts={
-                "email": [MetricConfig(metric_id="thunder", enabled=True, format_mode=email_mode)],
-                "telegram": [MetricConfig(metric_id="thunder", enabled=True, format_mode=telegram_mode)],
-            },
-        ),
+        display_config=dc,
     )
 
 
@@ -442,8 +456,12 @@ def test_ac1_trip_alert_service_reicht_alte_reihe_bis_zur_mail_durch():
         settings=settings_email_only(), user_id=f"tdd-1737-{uuid.uuid4().hex[:6]}",
         mail_sink=lambda subject, body: mails.append((subject, body)),
     )
+    trip = gust_alert_trip(f"t1737-{uuid.uuid4().hex[:6]}")
+    # Boeen im Briefing ROH (Tabelle, #3237) -> der Alarm zeigt Zahlen alt -> neu.
+    trip.display_config.placements = _formen_tabelle(
+        trip.display_config, {"gust": {"email": "raw", "telegram": "raw"}})
     assert svc.check_and_send_alerts(
-        gust_alert_trip(f"t1737-{uuid.uuid4().hex[:6]}"), [cached], fresh_weather=[fresh],
+        trip, [cached], fresh_weather=[fresh],
     ), "Vorbedingung: der Boeen-Alarm wird ausgeloest"
     assert len(mails) == 1
     tz = tz_for_coords(LAT, LON)
@@ -1079,12 +1097,15 @@ def _trip_bauen(trip_id: str):
             Waypoint(id="G2", name="Ziel", lat=47.30, lon=11.45, elevation_m=1200.0),
         ],
     )
+    dc = UnifiedWeatherDisplayConfig(
+        trip_id=trip_id, metrics=[MetricConfig(metric_id="gust", enabled=True)],
+        metric_alert_levels={"wind_gust": "standard"},
+    )
+    # Boeen im Briefing ROH (Tabelle, #3237): die Stundenzeilen zeigen Zahlen.
+    dc.placements = _formen_tabelle(dc, {"gust": {"email": "raw", "telegram": "raw"}})
     return Trip(
         id=trip_id, name="Stunden-Trip", stages=[stage], official_warnings=None, corridors=[],
-        display_config=UnifiedWeatherDisplayConfig(
-            trip_id=trip_id, metrics=[MetricConfig(metric_id="gust", enabled=True)],
-            metric_alert_levels={"wind_gust": "standard"},
-        ),
+        display_config=dc,
     )
 
 
@@ -1834,18 +1855,13 @@ def test_f004_kanaltrennung_mail_und_telegram_folgen_je_ihrem_eigenen_modus_bei_
             id="T1", name="Tag 1", date=datetime(2026, 5, 1).date(),
             waypoints=[Waypoint(id="G1", name="Start", lat=47.0, lon=11.0, elevation_m=1000.0)],
         )
+        dc = UnifiedWeatherDisplayConfig(
+            trip_id=tid, metrics=[MetricConfig(metric_id="gust", enabled=True)])
+        dc.placements = _formen_tabelle(
+            dc, {"gust": {"email": email_mode, "telegram": telegram_mode}})
         trip = Trip(
             id=tid, name="Boeen-Trip", stages=[stage], official_warnings=None, corridors=[],
-            display_config=UnifiedWeatherDisplayConfig(
-                trip_id=tid, metrics=[MetricConfig(metric_id="gust", enabled=True)],
-                per_channel_layouts={
-                    "email": [MetricConfig(metric_id="gust", enabled=True, format_mode=email_mode,
-                                           use_friendly_format=email_mode != "raw")],
-                    "telegram": [MetricConfig(metric_id="gust", enabled=True,
-                                              format_mode=telegram_mode,
-                                              use_friendly_format=telegram_mode != "raw")],
-                },
-            ),
+            display_config=dc,
         )
         NotificationService(settings, uid).send_deviation_alert(
             trip=trip, weather=[_segment_data(fx, fx["fresh"])], changes=[_wc(fx["change"])],

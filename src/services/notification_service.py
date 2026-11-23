@@ -641,15 +641,14 @@ def _official_source_url_for(dto_notices: list) -> str | None:
 
 def _alert_kanal_metriken(display_config, channel: str, report_type: str) -> list:
     """Issue #3122 (ADR-0124 Nr. 11): Roh/Einfach des Alarms je Kanal aus dem
-    View-Model des Briefings -- keine eigene Kaskade. Mit Tabelle
-    ``placements`` jede Zeile der Grundauswahl mit dem Format ihrer Stelle,
-    auch wenn sie dort abgewaehlt ist (ob eine Metrik im Alarm erscheint,
-    haengt nicht an der Tabelle); sonst die Kanal-Zeilen des bisherigen Pfads."""
+    View-Model des Briefings -- keine eigene Kaskade. Jede Zeile der Tabelle
+    (ohne gespeicherte Tabelle: aus der Grundauswahl, #3237) mit dem Format
+    ihrer Stelle, auch wenn sie dort abgewaehlt ist (ob eine Metrik im Alarm
+    erscheint, haengt nicht an der Tabelle)."""
     from output.renderers.email.helpers import channel_metric_configs
     from services.channel_list_resolver import ChannelRow, resolve_channel_lists
 
-    # Nur die Kanal-Zeilen: der Ausblick wird hier nicht aufgeloest.
-    view = resolve_channel_lists(display_config, "trip", report_type, ausblick=False)
+    view = resolve_channel_lists(display_config, "trip", report_type)
     zeilen = getattr(view, channel)
     if view.rows:
         zeilen = tuple(ChannelRow(r.metric_id, True, r.cell(channel).format, i)

@@ -10,7 +10,8 @@ from __future__ import annotations
 
 from tests.helpers.vorschau_umgebung import env, mittagsuhr  # noqa: F401  (Fixture)
 from tests.tdd.test_alert_hour_rows import (
-    TRIP_STURM, _cell, _plant, _rows, _trip_anker_schreiben, _trip_body, _trip_versand,
+    TRIP_STURM, _cell, _formen_tabelle, _plant, _rows, _trip_anker_schreiben, _trip_body,
+    _trip_versand,
 )
 from tests.tdd.test_alert_preview_real_stage_ids import _trip_mit_echter_etappe
 
@@ -20,14 +21,13 @@ def _einfach_in_mail_roh_in_telegram(uid: str):
     from app.models import MetricConfig, UnifiedWeatherDisplayConfig
 
     trip = _trip_mit_echter_etappe(uid)
-    trip.display_config = UnifiedWeatherDisplayConfig(
+    dc = UnifiedWeatherDisplayConfig(
         trip_id=trip.id, metrics=[MetricConfig(metric_id="gust", enabled=True)],
         metric_alert_levels={"wind_gust": "standard"},
-        per_channel_layouts={
-            "email": [MetricConfig(metric_id="gust", enabled=True, format_mode="simplified")],
-            "telegram": [MetricConfig(metric_id="gust", enabled=True, format_mode="raw")],
-        },
     )
+    # #3237: Roh/Einfach je Kanal steht in der Tabelle "Was steht wo".
+    dc.placements = _formen_tabelle(dc, {"gust": {"email": "simplified", "telegram": "raw"}})
+    trip.display_config = dc
     save_trip(trip, user_id=uid)
     return trip
 

@@ -23,6 +23,15 @@ ist unveraendert der Premium-SMS-Nachrichtentext (echter lokaler HTTP-Stub
 als Transport-Ersatz, Vorbild ``tests/unit/test_premium_sms_versand.py`` --
 kein Mock, kein patch()).
 
+#3237 (Altpfad entfernt): das eingefrorene Muster lebte in
+``channel_layouts.sms``; dieses Altfeld wirkt nicht mehr, Auswahl je Stelle
+kommt allein aus der Tabelle "Was steht wo" (abgeleitete Zeilen folgen dort
+ihrer Eltern-Metrik). Entfallen sind deshalb die Negativkontrolle
+``test_frozen_layout_shows_neither_fd_nor_fl`` und die Kette
+``test_ac13_fixture_migration_loader_renderer_yields_fd_fl`` (Vorbedingung
+"vor der Migration keine FD" ist nicht mehr herstellbar); das
+Migrationsskript selbst bewacht ``test_migrate_eingefrorene_kindmetriken.py``.
+
 Kern-Schicht, deterministisch: kein Netz ausser dem LOKALEN 127.0.0.1-Stub
 fuer den Premium-SMS-Transport-Nachweis (dafuer laeuft diese Datei bewusst
 NICHT mit --disable-socket, exakt wie ihr Vorbild).
@@ -32,7 +41,6 @@ from __future__ import annotations
 import http.server
 import json
 import socket
-import subprocess
 import sys
 import threading
 import urllib.parse
@@ -55,19 +63,6 @@ from tests.tdd import _min_temp_felt_fixtures as F  # noqa: E402
 WIND_CHILL_KIDS = ("wind_chill_night", "wind_chill_day_low", "wind_chill_day_high")
 
 
-def _script_path() -> Path:
-    return REPO_ROOT / "scripts" / "migrate_2454_derived_children.py"
-
-
-def _frozen_wind_chill_layout(order: int = 0) -> list[dict]:
-    return [
-        {"metric_id": "wind_chill", "enabled": True, "bucket": "primary", "order": order},
-        {"metric_id": "wind_chill_night", "enabled": False, "order": 0},
-        {"metric_id": "wind_chill_day_low", "enabled": False, "order": 0},
-        {"metric_id": "wind_chill_day_high", "enabled": False, "order": 0},
-    ]
-
-
 def _clean_wind_chill_layout(order: int = 0) -> list[dict]:
     """Nach der Migration bzw. wie der gefixte Editor speichert: die drei
     Kinder stehen explizit enabled:true (die Ableitung ist beim Speichern
@@ -80,13 +75,16 @@ def _clean_wind_chill_layout(order: int = 0) -> list[dict]:
 
 def _report_for(sms_layout: list[dict]):
     """Baut den Report exakt ueber den Loader-Parser, mit einer
-    Kanal-eigenen SMS-Auswahl (channel_layouts.sms) -- derselbe Weg wie
-    KHW 403."""
-    raw = {
+    Kanal-eigenen SMS-Auswahl. #3237: die Auswahl steht in der Tabelle
+    "Was steht wo" (Stelle ``sms``); ``channel_layouts.sms`` bleibt als
+    wirkungslose Beschreibung stehen."""
+    from tests.helpers.tabelle_aus_wunsch import trip_wunsch_als_tabelle
+
+    raw = trip_wunsch_als_tabelle({"display_config": {
         "trip_id": "b2454",
         "metrics": [{"metric_id": "wind_chill", "enabled": True, "bucket": "primary", "order": 0}],
         "channel_layouts": {"sms": sms_layout},
-    }
+    }})["display_config"]
     dc = _parse_display_config(raw)
     return TripReportFormatter().format_email(
         [F.segment()], trip_name="B2454", report_type="evening",
@@ -101,13 +99,6 @@ def _report_for(sms_layout: list[dict]):
 
 class TestAc3bLoaderUndRendererZeigenFdFl:
 
-    def test_frozen_layout_shows_neither_fd_nor_fl(self):
-        """Negativkontrolle: das eingefrorene Muster (heutiger Bug-Zustand)
-        zeigt WEDER FD noch FL im SMS-Kanal."""
-        sms = _report_for(_frozen_wind_chill_layout()).sms_text
-        assert F.sms_token_value(sms, "FD") is None, f"FD erscheint trotz eingefrorenem Muster.\nSMS: {sms}"
-        assert F.sms_token_value(sms, "FL") is None, f"FL erscheint trotz eingefrorenem Muster.\nSMS: {sms}"
-
     def test_clean_layout_shows_fd_and_fl_in_sms_channel(self):
         """AC-3b: ein korrekt befuellter (nicht eingefrorener) Bestand zeigt
         FD und FL im SMS-Kanal -- WAECHTER (misst den Wirkort Loader+Renderer,
@@ -119,55 +110,6 @@ class TestAc3bLoaderUndRendererZeigenFdFl:
         assert F.sms_token_value(sms, "FL") == str(int(F.FELT_HIKE_MIN_C)), (
             f"AC-3b: FL fehlt oder falsch, obwohl wind_chill_day_low im SMS-Kanal aktiv ist.\nSMS: {sms}"
         )
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-# AC-13 — E2E-Kern: Fixture -> Migration -> Loader -> Renderer
-# ═══════════════════════════════════════════════════════════════════════════
-
-def test_ac13_fixture_migration_loader_renderer_yields_fd_fl(tmp_path):
-    """AC-13 GIVEN eine Trip-JSON mit dem eingefrorenen Muster in
-    channel_layouts.sms (wie KHW 403) / WHEN sie migriert UND ueber
-    src/app/loader.py geladen UND ueber den Kurzform-Renderer fuer SMS
-    verarbeitet wird / THEN enthaelt der erzeugte Kurzform-Text FD und FL,
-    wo er sie vor der Migration nicht enthielt.
-
-    RED heute: scripts/migrate_2454_derived_children.py existiert nicht."""
-    root = tmp_path / "users"
-    briefings_dir = root / "henning" / "briefings"
-    briefings_dir.mkdir(parents=True, exist_ok=True)
-    briefing_path = briefings_dir / "b2454.json"
-    roh = {
-        "id": "b2454", "name": "B2454", "kind": "route", "stages": [],
-        "display_config": {
-            "metrics": [{"metric_id": "wind_chill", "enabled": True, "bucket": "primary", "order": 0}],
-            "channel_layouts": {"sms": _frozen_wind_chill_layout()},
-        },
-    }
-    briefing_path.write_text(json.dumps(roh, ensure_ascii=False), encoding="utf-8")
-
-    vor_migration = _report_for(_frozen_wind_chill_layout()).sms_text
-    assert F.sms_token_value(vor_migration, "FD") is None, "Vorbedingung: vor der Migration keine FD."
-
-    result = subprocess.run(
-        ["uv", "run", "python3", str(_script_path()), "--root", str(root), "--execute"],
-        capture_output=True, text=True, timeout=90, cwd=REPO_ROOT,
-    )
-    assert result.returncode == 0, (
-        f"Migrations-Skript fehlgeschlagen (existiert noch nicht?):\n"
-        f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
-    )
-
-    migriert = json.loads(briefing_path.read_text(encoding="utf-8"))
-    sms_layout_migriert = migriert["display_config"]["channel_layouts"]["sms"]
-    nach_migration = _report_for(sms_layout_migriert).sms_text
-
-    assert F.sms_token_value(nach_migration, "FD") == str(int(F.FELT_HIKE_MAX_C)), (
-        f"AC-13: FD fehlt nach der Migration -- die Ableitung greift nicht.\nSMS: {nach_migration}"
-    )
-    assert F.sms_token_value(nach_migration, "FL") == str(int(F.FELT_HIKE_MIN_C)), (
-        f"AC-13: FL fehlt nach der Migration.\nSMS: {nach_migration}"
-    )
 
 
 # ---------------------------------------------------------------------------

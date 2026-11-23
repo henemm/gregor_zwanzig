@@ -59,11 +59,24 @@ _AGG = {"temperature": "max", "wind": "max", "gust": "max", "cloud_total": "avg"
         "sunshine": "sum", "rain_probability": "max", "thunder": "max"}
 
 
+def _zeilenfolge(vorlage: dict, vorne: list[str]) -> dict:
+    """#3237: Zeilen der Tabelle in dieser Folge, die uebrigen dahinter."""
+    zeilen = vorlage["display_config"]["placements"]["rows"]
+    zeilen.sort(key=lambda z: vorne.index(z["metric_id"]) if z["metric_id"] in vorne else len(vorne))
+    return vorlage
+
+
 def _grundauswahl(vorlage: dict, paare: list[tuple[str, str]]) -> dict:
     vorlage["display_config"]["active_metrics"] = [
         {"metric_id": m, "aggregation": a} for m, a in paare
     ]
-    return vorlage
+    # #3237: die Tabelle "Was steht wo" folgt der geaenderten Grundauswahl
+    # (die Kanal-Einstellung des Falls steht weiter in ``channel_layouts``
+    # als Beschreibung und wird erneut als Tabelle ausgedrueckt).
+    from tests.helpers.tabelle_aus_wunsch import orte_wunsch_als_tabelle
+
+    vorlage["display_config"].pop("placements", None)
+    return orte_wunsch_als_tabelle(vorlage)
 
 
 # ---------------------------------------------------------------------------
@@ -135,7 +148,11 @@ def test_f003_temperatur_wirkt_auf_hoechst_und_tiefstwert(mit):
         "telegram": [_eintrag("temperature", einfach=False), _eintrag("gust", einfach=False)],
         "email": [_eintrag("temperature", an=False, einfach=False), _eintrag("gust", einfach=False)],
     }
-    for lauf in _zwei(mit, _grundauswahl(_vorlage(layouts), paare)):
+    vorlage = _grundauswahl(_vorlage(layouts), paare)
+    # #3237: EINE Zeilenfolge fuer alle Stellen (Spec #3122 Teil A Nr. 8) --
+    # die Folge der Telegram-Liste (Temperatur vor Boeen) gilt als Zeilenfolge.
+    _zeilenfolge(vorlage, ["temperature", "gust"])
+    for lauf in _zwei(mit, vorlage):
         for ort in ORTSNAMEN:
             assert _keys(lauf, "telegram")[ort] == ["temp_max_c", "temp_min_c", "gust_max_kmh"], (
                 _text(lauf.snap, "telegram"))
@@ -143,8 +160,16 @@ def test_f003_temperatur_wirkt_auf_hoechst_und_tiefstwert(mit):
 
 
 def test_f003_channel_layouts_ohne_grundauswahl_wirkt_ungeschnitten(mit):
+    """Ohne Grundauswahl (nie eingestellt) zeigt Telegram genau die dort
+    angehakten Zeilen in Tabellenfolge. #3237: die Einstellung steht in der
+    Tabelle (Grundauswahl = Standardsatz), nicht mehr in ``channel_layouts``."""
+    from tests.helpers.tabelle_aus_wunsch import tabelle
+
     vorlage = _vorlage({"telegram": [_eintrag("gust", einfach=False), _eintrag("wind", einfach=False)]})
-    vorlage["display_config"].pop("active_metrics")
+    dc = vorlage["display_config"]
+    dc.pop("active_metrics")
+    dc["placements"] = tabelle(dc, "compare", listen={"telegram": [("gust", False), ("wind", False)]},
+                               outlook_reports=dc["placements"].get("outlook_reports"))
     for lauf in _zwei(mit, vorlage):
         for ort in ORTSNAMEN:
             assert _keys(lauf, "telegram")[ort] == ["gust_max_kmh", "wind_max_kmh"], (
@@ -157,16 +182,17 @@ def test_f003_channel_layouts_ohne_grundauswahl_wirkt_ungeschnitten(mit):
 
 
 def test_f004_luecken_zaehler_ignoriert_channel_active_metrics_bei_channel_layouts(mit):
-    """Eine unaufloesbare Kennung in ``channel_active_metrics["sms"]`` zaehlt nur,
-    solange diese Stufe gilt; mit ``channel_layouts["sms"]`` wird sie nicht
-    gelesen (Spec Punkt 2) -- die SMS traegt dann kein ``?N``."""
+    """Eine unaufloesbare Kennung in ``channel_active_metrics["sms"]`` zaehlt
+    nicht -- die SMS traegt kein ``?N``. #3237: das Altfeld wirkt gar nicht
+    mehr (mit und ohne Kanal-Einstellung, AC-3/AC-6); entfallen ist der
+    Altpfad-Fall "ohne ``channel_layouts`` zaehlt die Altliste" (== 1)."""
     from services.report_config_resolver import resolve_compare_render_options
 
     vorlage = _vorlage({"sms": _voll(GRUNDAUSWAHL)})
     vorlage["display_config"]["channel_active_metrics"] = {"sms": ["gibt_es_nicht"]}
     ohne_layouts = _vorlage(None)
     ohne_layouts["display_config"]["channel_active_metrics"] = {"sms": ["gibt_es_nicht"]}
-    assert resolve_compare_render_options(ohne_layouts).unresolved_by_channel["sms"] == 1
+    assert resolve_compare_render_options(ohne_layouts).unresolved_by_channel["sms"] == 0
     assert resolve_compare_render_options(vorlage).unresolved_by_channel["sms"] == 0
     for lauf in _zwei(mit, vorlage):
         sms = _text(lauf.snap, "sms")
@@ -191,10 +217,19 @@ def test_f005_gewitter_einfach_zeigt_in_der_html_mail_den_ampelpunkt(mit):
 
 
 def test_f005_doppelte_kennung_der_erste_eintrag_gilt(mit):
-    """Steht dieselbe Kennung zweimal in einer Kanalliste, bestimmt der ERSTE
-    Eintrag Position und Format (heutiges Verhalten festgelegt)."""
-    layouts = {"email": [_eintrag("gust", einfach=False)] + _voll(GRUNDAUSWAHL, gust={"einfach": True})}
-    for lauf in _zwei(mit, _vorlage(layouts)):
+    """Steht dieselbe Kennung zweimal in der Liste, bestimmt der ERSTE
+    Eintrag Position und Format (heutiges Verhalten festgelegt). #3237: die
+    Liste ist die Tabelle -- eine erste Boeen-Zeile (Roh) ganz vorn, die
+    spaetere doppelte Zeile (Einfach) hat keine Wirkung."""
+    import copy
+
+    vorlage = _vorlage({"email": _voll(GRUNDAUSWAHL, gust={"einfach": True})})
+    zeilen = vorlage["display_config"]["placements"]["rows"]
+    boeen = copy.deepcopy(next(z for z in zeilen if z["metric_id"] == "gust"))
+    assert boeen["formats"]["email"] == "simplified", "Vorbedingung: spaetere Zeile Einfach"
+    boeen["formats"]["email"] = "raw"
+    zeilen.insert(0, boeen)
+    for lauf in _zwei(mit, vorlage):
         assert _plain_wert(_text(lauf.snap, "email"), "Innsbruck", "Böen") == "19 km/h"
         assert _AMPEL_PUNKT not in _html_zeile(lauf.snap.sendungen("email")[-1]["body"], "Böen")
         assert _keys(lauf, "email")["Innsbruck"][0] == "gust_max_kmh"

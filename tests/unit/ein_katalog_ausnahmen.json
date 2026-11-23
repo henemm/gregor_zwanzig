@@ -4,7 +4,7 @@
       "VALIDATOR_IMPORT": 3
     },
     ".claude/hooks/_soll_aus_konfiguration.py": {
-      "VALIDATOR_IMPORT": 32
+      "VALIDATOR_IMPORT": 29
     },
     ".claude/hooks/email_spec_validator.py": {
       "VALIDATOR_IMPORT": 4
@@ -253,5 +253,5 @@
       "VERARBEITUNG_AUSSEN": 1
     }
   },
-  "hoechststand": 438
+  "hoechststand": 435
 }

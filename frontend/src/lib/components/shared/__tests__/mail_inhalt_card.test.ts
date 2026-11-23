@@ -85,7 +85,8 @@ const SCHALTER = ['report-show-outlook', 'report-show-stage-stats', 'report-show
 
 describe('AC-1: Startzustand der Karte kommt aus dem Blob', () => {
 	test('compact_und_ausblick_aus__hinweis_kompakt_gewaehlt_alle_schalter_deaktiviert', async () => {
-		const html = await renderKarte({ email_format: 'compact', show_outlook: false });
+		// #3237 F002: der Haken "Grosswetterlage" folgt show_stability; show_outlook=true daneben wirkt nicht.
+		const html = await renderKarte({ email_format: 'compact', show_stability: false, show_outlook: true });
 
 		assert.ok(html.includes('data-testid="report-mail-content"'), 'Karte report-mail-content fehlt.');
 		assert.ok(
@@ -106,7 +107,7 @@ describe('AC-1: Startzustand der Karte kommt aus dem Blob', () => {
 		for (const id of SCHALTER) {
 			assert.ok(hat(inputTagNach(html, id), 'disabled'), `AC-1: Schalter ${id} ist im Kompakt-Modus nicht deaktiviert.`);
 		}
-		assert.ok(!hat(inputTagNach(html, 'report-show-outlook'), 'checked'), 'AC-1: "Ausblick" muss aus sein (show_outlook=false).');
+		assert.ok(!hat(inputTagNach(html, 'report-show-outlook'), 'checked'), 'AC-1/#3237: "Grosswetterlage" muss aus sein (show_stability=false, show_outlook=true wirkt nicht).');
 		assert.ok(hat(inputTagNach(html, 'report-show-stage-stats'), 'checked'), 'Etappen-Kennzahlen: Default an.');
 	});
 
@@ -120,7 +121,7 @@ describe('AC-1: Startzustand der Karte kommt aus dem Blob', () => {
 			assert.ok(!hat(inputTagNach(html, id), 'disabled'), `Schalter ${id} darf im Modus "Ausfuehrlich" nicht deaktiviert sein.`);
 		}
 		assert.ok(!hat(inputTagNach(html, 'report-show-yesterday-comparison'), 'checked'), 'AC-1: "Vortag-Vergleich" muss aus sein.');
-		assert.ok(hat(inputTagNach(html, 'report-show-outlook'), 'checked'), 'Ausblick: Default an, wenn Feld fehlt.');
+		assert.ok(hat(inputTagNach(html, 'report-show-outlook'), 'checked'), 'Grosswetterlage: Default an, wenn show_stability fehlt.');
 	});
 
 	test('schalter_wrapper_ist_im_compact_modus_gedimmt_und_im_full_modus_nicht', async () => {

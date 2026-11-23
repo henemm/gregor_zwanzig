@@ -19,6 +19,7 @@ import pytest
 
 from app.loader import get_data_dir, load_trip
 from services.notification_service import NotificationService, TripReportRequest
+from tests.helpers.tabelle_aus_wunsch import trip_wunsch_als_tabelle
 from tests.helpers.transport_mitschrift import aufzeichner_installieren
 from tests.tdd._einstellung_auslieferung_fixtures import (
     STAGE_NAME, TRANSPORT_ENV, TZ, frisches_profil, golden_dict, night_weather, segment,
@@ -38,7 +39,7 @@ def _mc(mid: str, order: int, fmt: str | None = None, enabled: bool = True) -> d
 
 
 def _trip(telegram: list[dict] | None = None, sms: list[dict] | None = None,
-          extra: list[str] = ()) -> dict:
+          extra: list[str] = (), email: list[dict] | None = None) -> dict:
     d = golden_dict("golden_c")
     d["display_config"]["metrics"] = [
         _mc(m, i) for i, m in enumerate(GRUNDAUSWAHL + list(extra))]
@@ -47,10 +48,14 @@ def _trip(telegram: list[dict] | None = None, sms: list[dict] | None = None,
         layouts["telegram"] = telegram
     if sms is not None:
         layouts["sms"] = sms
+    if email is not None:
+        layouts["email"] = email
     d["display_config"]["channel_layouts"] = layouts
     d["display_config"]["outlook_metrics"] = []
     d["report_config"]["telegram_style"] = "rich"
-    return d
+    # #3237: die Kanal-Listen wirken nur ueber die Tabelle "Was steht wo";
+    # die Altfelder bleiben als Beschreibung stehen.
+    return trip_wunsch_als_tabelle(d)
 
 
 def _warnung():
@@ -154,8 +159,7 @@ def test_ac22_telegram_windrichtung_einfach_bleibt_kompass(monkeypatch):
 
 def test_ac22_telegram_roh_gleich_mail_roh(monkeypatch):
     """Dieselbe Roh-Wahl in Mail- und Telegram-Liste ergibt denselben Windrichtungswert."""
-    data = _trip(telegram=_tg_liste("raw", "raw"))
-    data["display_config"]["channel_layouts"]["email"] = _tg_liste("raw", "raw")
+    data = _trip(telegram=_tg_liste("raw", "raw"), email=_tg_liste("raw", "raw"))
     for _uid, mit in _zwei_nutzer(monkeypatch, data):
         mail = mit.sendungen("email")[0]["plain_text_body"]
         assert "250°" in mail

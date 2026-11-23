@@ -1460,50 +1460,6 @@
       "status": "gruen"
     },
     {
-      "id": "O-SV-H-TOTALSCHNITT-VORGABE",
-      "liste": "orte_stundenverlauf",
-      "kontext": "orte",
-      "format": "html",
-      "pruefung": "grundauswahl",
-      "test": "test_ac10_stundenverlauf_totalschnitt_rueckfall",
-      "ac": "AC-10",
-      "befund": "O5 (F7/F002 Rueckfall Vorgabemenge)",
-      "status": "gruen"
-    },
-    {
-      "id": "O-SV-K-TOTALSCHNITT-VORGABE",
-      "liste": "orte_stundenverlauf",
-      "kontext": "orte",
-      "format": "klartext",
-      "pruefung": "grundauswahl",
-      "test": "test_ac10_stundenverlauf_totalschnitt_rueckfall",
-      "ac": "AC-10",
-      "befund": "O5 (F7/F002 Rueckfall Vorgabemenge)",
-      "status": "gruen"
-    },
-    {
-      "id": "O-SV-H-TOTALSCHNITT-WAEHLBAR",
-      "liste": "orte_stundenverlauf",
-      "kontext": "orte",
-      "format": "html",
-      "pruefung": "grundauswahl",
-      "test": "test_ac10_stundenverlauf_totalschnitt_rueckfall",
-      "ac": "AC-10",
-      "befund": "O5 (F7/F002 Rueckfall waehlbare Groessen)",
-      "status": "gruen"
-    },
-    {
-      "id": "O-SV-K-TOTALSCHNITT-WAEHLBAR",
-      "liste": "orte_stundenverlauf",
-      "kontext": "orte",
-      "format": "klartext",
-      "pruefung": "grundauswahl",
-      "test": "test_ac10_stundenverlauf_totalschnitt_rueckfall",
-      "ac": "AC-10",
-      "befund": "O5 (F7/F002 Rueckfall waehlbare Groessen)",
-      "status": "gruen"
-    },
-    {
       "id": "O-SV-K-ALT",
       "liste": "orte_stundenverlauf",
       "kontext": "orte",

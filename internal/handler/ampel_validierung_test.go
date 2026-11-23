@@ -46,8 +46,8 @@ func ampelUngueltig() map[string]obj {
 func ampelRouter(s *store.Store) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Lang(s))
-	r.Post("/api/trips", CreateTripHandler(s))
-	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	r.Post("/api/trips", CreateTripHandler(s, ""))
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 	r.Put("/api/trips/{id}", UpdateTripHandler(s))
 	r.Put("/api/trips/{id}/weather-config", PutTripWeatherConfigHandler(s))
 	r.Put("/api/compare/presets/{id}", UpdateComparePresetHandler(s))

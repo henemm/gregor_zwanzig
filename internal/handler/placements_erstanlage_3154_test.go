@@ -1,17 +1,15 @@
 package handler
 
-// Issue #3154 F002 (Spec feat_3122_was_steht_wo Teil A Nr. 8, AC-11): das
-// erste Speichern der Tabelle schreibt report_config.show_stability=false im
-// selben Vorgang mit, wenn der Kern das meldet. Echter Store, echte Dateien,
-// zwei Nutzer. Der Kern ist ein Test-Server, der die AUFGEZEICHNETE Antwort
-// des echten Python-Endpoints ausliefert (Fixture, gegen den Kern geprueft in
-// tests/tdd/test_placements_erstes_speichern_3154.py) und mitschreibt, was
-// ankommt -- keine Fachlogik.
+// Issue #3154 F002, abgeloest durch #3237: der Tabellen-PUT fragt den Kern
+// nicht mehr nach Begleitfeldern (show_stability_off entfaellt, Nachweis in
+// briefing_anlage_tabelle_3237_test.go). Hier bleiben der Test-Kern (Server,
+// der eine feste Antwort ausliefert und mitschreibt, was ankommt -- keine
+// Fachlogik), die frueher aufgezeichnete Kern-Antwort als beliebige Antwort
+// und der Orte-Fall.
 //
 //   go test ./internal/handler/ -run Placements3154
 
 import (
-	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -77,102 +75,7 @@ func seedAltTrip(t *testing.T, s *store.Store, u, id string) {
 	}
 }
 
-func ohneTabelleUndStabilitaet(m map[string]interface{}) map[string]interface{} {
-	ohnePlacements(m)
-	if rc, ok := m["report_config"].(map[string]interface{}); ok {
-		delete(rc, "show_stability")
-	}
-	return m
-}
-
-func TestPlacements3154ErstesSpeichernSchreibtStabilitaetAusZweiNutzer(t *testing.T) {
-	s := newTestStore(t)
-	kern := neuerErstanlageKern(t, http.StatusOK, aufgezeichneteAntwort(t))
-	r := placementsRouter(s, kern.srv.URL)
-	seedAltTrip(t, s, "e3154-a", "alt")
-	seedAltTrip(t, s, "e3154-b", "alt")
-	dateiA, dateiB := aboDatei(s, "e3154-a", "alt"), aboDatei(s, "e3154-b", "alt")
-	vorherA := roheDatei(t, dateiA)
-	vorherB, _ := os.ReadFile(dateiB)
-
-	w := doReq(r, http.MethodPut, placementsPfad("alt", "route")+"&user_id=e3154-b", placementsB2Neu, "", "e3154-a")
-	if w.Code != http.StatusOK {
-		t.Fatalf("PUT: %d %s", w.Code, w.Body.String())
-	}
-	if len(kern.anfragen) != 1 {
-		t.Fatalf("Kern %d-mal gefragt, erwartet einmal", len(kern.anfragen))
-	}
-	a := kern.anfragen[0]
-	if a.Path != "/api/briefings/alt/placements/erstanlage" || a.Query().Get("kind") != "route" {
-		t.Errorf("Abfrage beim Kern: %s", a.String())
-	}
-	if got := a.Query()["user_id"]; !reflect.DeepEqual(got, []string{"e3154-a"}) {
-		t.Errorf("user_id zum Kern %v, erwartet nur den angemeldeten Nutzer", got)
-	}
-	nachherA := roheDatei(t, dateiA)
-	if got := nachherA["report_config"].(map[string]interface{})["show_stability"]; got != false {
-		t.Errorf("report_config.show_stability = %#v, erwartet false", got)
-	}
-	if nachherA["display_config"].(map[string]interface{})["placements"] == nil {
-		t.Errorf("placements nicht geschrieben")
-	}
-	if !reflect.DeepEqual(ohneTabelleUndStabilitaet(nachherA), ohneTabelleUndStabilitaet(vorherA)) {
-		t.Errorf("andere Felder veraendert:\nvorher  %#v\nnachher %#v", vorherA, nachherA)
-	}
-	if nachherB, _ := os.ReadFile(dateiB); !bytes.Equal(nachherB, vorherB) {
-		t.Errorf("Datei von B veraendert")
-	}
-}
-
-func TestPlacements3154KernOhneMeldungLaesstReportConfig(t *testing.T) {
-	s := newTestStore(t)
-	kern := neuerErstanlageKern(t, http.StatusOK, []byte(`{"show_stability_off": false}`))
-	r := placementsRouter(s, kern.srv.URL)
-	seedAltTrip(t, s, "e3154-a", "alt")
-	vorher := roheDatei(t, aboDatei(s, "e3154-a", "alt"))
-	if w := doReq(r, http.MethodPut, placementsPfad("alt", "route"), placementsB2Neu, "", "e3154-a"); w.Code != http.StatusOK {
-		t.Fatalf("PUT: %d %s", w.Code, w.Body.String())
-	}
-	nachher := roheDatei(t, aboDatei(s, "e3154-a", "alt"))
-	if !reflect.DeepEqual(nachher["report_config"], vorher["report_config"]) {
-		t.Errorf("report_config veraendert: %#v", nachher["report_config"])
-	}
-}
-
-// Ohne gueltige Antwort des Kerns wird nichts geschrieben (sonst schaltete
-// das Speichern die Grosswetterlage unbemerkt ein).
-func TestPlacements3154KernFehlerSchreibtNichts(t *testing.T) {
-	faelle := map[string]struct {
-		status  int
-		antwort string
-	}{
-		"500":          {http.StatusInternalServerError, `{"show_stability_off": false}`},
-		"ohne Feld":    {http.StatusOK, `{"rows": []}`},
-		"kein JSON":    {http.StatusOK, `<html>`},
-		"nicht da":     {0, ""},
-		"falscher Typ": {http.StatusOK, `{"show_stability_off": "ja"}`},
-	}
-	for name, f := range faelle {
-		t.Run(name, func(t *testing.T) {
-			s := newTestStore(t)
-			ziel := "http://127.0.0.1:1"
-			if f.status != 0 {
-				ziel = neuerErstanlageKern(t, f.status, []byte(f.antwort)).srv.URL
-			}
-			r := placementsRouter(s, ziel)
-			seedAltTrip(t, s, "e3154-a", "alt")
-			vorher, _ := os.ReadFile(aboDatei(s, "e3154-a", "alt"))
-			if w := doReq(r, http.MethodPut, placementsPfad("alt", "route"), placementsB2Neu, "", "e3154-a"); w.Code != http.StatusBadGateway {
-				t.Errorf("Status %d, erwartet 502 (%s)", w.Code, w.Body.String())
-			}
-			if nachher, _ := os.ReadFile(aboDatei(s, "e3154-a", "alt")); !bytes.Equal(nachher, vorher) {
-				t.Errorf("bei Kern-Fehler wurde geschrieben")
-			}
-		})
-	}
-}
-
-// Orte haben keine Grosswetterlage: kein Kern-Aufruf, report_config bleibt.
+// Orte-PUT: kein Kern-Aufruf, nur placements wird geschrieben.
 func TestPlacements3154OrteFragenNicht(t *testing.T) {
 	s := newTestStore(t)
 	kern := neuerErstanlageKern(t, http.StatusOK, aufgezeichneteAntwort(t))
@@ -188,4 +91,10 @@ func TestPlacements3154OrteFragenNicht(t *testing.T) {
 	if nachher := roheDatei(t, aboDatei(s, "e3154-a", "orte-e3154-a")); !reflect.DeepEqual(ohnePlacements(nachher), ohnePlacements(vorher)) {
 		t.Errorf("Orte-PUT hat andere Felder veraendert")
 	}
+}
+
+// ohneKern: Anlage-Handler ohne Python-Kern (pythonURL leer, #3237) fuer
+// Tabellen, die Handler der Form func(*store.Store) erwarten.
+func ohneKern(h func(*store.Store, string) http.HandlerFunc) func(*store.Store) http.HandlerFunc {
+	return func(s *store.Store) http.HandlerFunc { return h(s, "") }
 }

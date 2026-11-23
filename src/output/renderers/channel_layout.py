@@ -126,11 +126,11 @@ def render_for_channel(
 ) -> ChannelLayout:
     """Berechne das Spalten-/Detail-Layout fuer ``channel``.
 
-    Respektiert die per-Report-Typ-Flags ueber ``get_metrics_for_channel``,
-    das wiederum kanal-spezifische Listen (Issue #429) oder die globale
-    Liste (Fallback) liefert.
+    ``dc.metrics`` ist die fertige Liste des Kanals (die Aufrufer liefern sie
+    aus der Tabelle "Was steht wo", #3237); gelesen ueber die per-Report-Typ-
+    Flags (``get_metrics_for_report_type``), keine eigene Kanal-Kaskade.
     """
-    enabled = dc.get_metrics_for_channel(channel, report_type)
+    enabled = dc.get_metrics_for_report_type(report_type)
     # #1484/#1660 Scheibe A: Nachtfenster-Skalare — nie eine Tabellenspalte/
     # Detail-Zeile; den Wert tragen SMS-Token bzw. die Abend-Untergrenzen der
     # Kurzzusammenfassung/Telegram-Kurzuebersicht.

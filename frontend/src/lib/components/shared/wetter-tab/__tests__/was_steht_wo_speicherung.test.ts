@@ -279,3 +279,65 @@ describe('Schalter unter der Tabelle: nur geänderte Felder am heutigen Ort', ()
 		assert.equal(c.aufrufe[0].pfad, '/api/compare/presets/cp-9');
 	});
 });
+
+// #3237 Runde 13: „−“/„+“ des Reiters fährt im PUT des Reiters mit. Ein eigener Tabellen-PUT (anderer Besitzer)
+// sendete über den Besitzerwechsel des Controllers den entprellten Reiter-Vorgang vorzeitig (zwei Gesten =
+// zwei Schreibvorgänge) und lief bei veraltetem Stempel als erster PUT in den 412 (Reiter-PUT fehlte).
+describe('Tabelle: Stand fährt im PUT des Reiters mit', () => {
+	test('mitgefuehrt plant keinen eigenen Speichervorgang ein', async () => {
+		const t = aufbau();
+		const geplant: string[] = [];
+		const s = erstelleTabellenSpeicherung({
+			client: t.c,
+			kind: 'route',
+			id: 't-1',
+			saveController: { schedule: (_fn, _ms, owner) => void geplant.push(owner ?? '') },
+			placements: () => p('wind'),
+			uebernehmen: () => {}
+		});
+		s.mitgefuehrt();
+		s.mitgefuehrt();
+		await ruhe();
+		assert.deepEqual(geplant, [], 'kein Tabellen-Vorgang im Controller');
+		assert.equal(t.c.aufrufe.length, 0, 'kein PUT, kein GET');
+		assert.equal(s.ungespeichert, true);
+	});
+
+	test('ein GET, das vor dem Mitsenden zurückkommt, überschreibt den mitgeführten Stand nicht', async () => {
+		const t = aufbau();
+		const laeuft = t.s.laden();
+		t.s.mitgefuehrt();
+		t.c.aufrufe[0].erledigen(a(p('alt')));
+		await laeuft;
+		assert.equal(t.uebernommen.length, 0);
+	});
+
+	test('nach erfolgreichem Reiter-PUT gilt der mitgesendete Stand als gespeichert, die Karte lädt neu', async () => {
+		const t = aufbau();
+		t.s.mitgefuehrt();
+		const gesendet = t.s.zumMitsenden(true);
+		t.s.nachFremdemSpeichern();
+		assert.equal(t.c.aufrufe.length, 0, 'vor dem Speichern kein GET über den ungespeicherten Stand');
+		t.s.nachReiterSpeichern(gesendet);
+		assert.equal(t.s.ungespeichert, false);
+		assert.equal(t.c.aufrufe[0]?.methode, 'GET');
+		void t.ctl.los();
+		await ruhe();
+		assert.equal(t.c.aufrufe.filter((x) => x.methode === 'PUT').length, 0, 'kein Tabellen-PUT hinterher');
+	});
+
+	test('ein später mitgeführter Stand bleibt ungespeichert, auch wenn ein älterer Reiter-PUT ankommt', () => {
+		const t = aufbau();
+		t.s.mitgefuehrt();
+		const alt = t.s.zumMitsenden(true);
+		t.s.mitgefuehrt();
+		t.s.nachReiterSpeichern(alt);
+		assert.equal(t.s.ungespeichert, true);
+	});
+
+	test('ohne gespeicherte Tabelle (AC-3) liefert die Karte nichts zum Mitsenden', () => {
+		const t = aufbau();
+		t.s.mitgefuehrt();
+		assert.equal(t.s.zumMitsenden(false), undefined);
+	});
+});

@@ -55,8 +55,8 @@ func v2794Router(s *store.Store) http.Handler {
 	r.Get("/api/metric-presets", ListMetricPresetsHandler(s))
 	r.Post("/api/metric-presets", CreateMetricPresetHandler(s))
 	r.Patch("/api/metric-presets/{id}", PatchMetricPresetHandler(s))
-	r.Post("/api/trips", CreateTripHandler(s))
-	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	r.Post("/api/trips", CreateTripHandler(s, ""))
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 	return r
 }
 

@@ -30,7 +30,6 @@ explizit benannten AST-Waechters).
 """
 from __future__ import annotations
 
-import logging
 import sys
 from pathlib import Path
 
@@ -137,62 +136,19 @@ def test_ac4_in_der_grundauswahl_abgewaehlte_groesse_erscheint_nie_im_ausblick()
     )
 
 
-# ═══════════════ AC-10 / AC-11 — stiller Totalausfall wird unmoeglich ═══════
+# ═══════════════ AC-11 — bewusst geleert laesst den Block entfallen ═════════
+#
+# #3237: der AC-10-Teil (eine nach dem Grundauswahl-Schnitt vollstaendig
+# verworfene Auswahl faellt mit Warnung auf die volle Grundauswahl zurueck)
+# ist entfallen -- das war ein Schnitt-Rueckfall des Altpfads. Die Tabelle
+# "Was steht wo" kennt keinen Rueckfall (ADR-0124, "Leer bleibt leer"); eine
+# Metrik ausserhalb der Grundauswahl hat dort keine Zeile.
 
-def test_ac10_vs_ac11_vollstaendig_geschnittene_auswahl_faellt_auf_die_grundauswahl_zurueck_bewusst_geleert_bleibt_verschieden(
-    caplog,
-):
-    """AC-10 + AC-11 im selben Test gegenuebergestellt (Spec-Vorgabe: "sonst
-    beweist keiner die Unterscheidbarkeit").
-
-    AC-10: eine NICHT-LEERE, aber nach dem Schnitt gegen die Grundauswahl
-    VOLLSTAENDIG verworfene Auswahl (beide Eintraege liegen ausserhalb der
-    Grundauswahl) darf NICHT denselben Zustand erzeugen wie eine bewusst
-    geleerte Auswahl -- der Ausblick muss mit der vollen Grundauswahl
-    erscheinen, plus einer Protokoll-Warnung.
-
-    AC-11: eine ausdruecklich leere Auswahl (``outlook_metrics=[]``) laesst
-    den Block dagegen vollstaendig entfallen.
-
-    🔴 M3-Bug (Kontext-Dokument): ``resolve_trip_outlook_metrics()`` liefert
-    heute fuer den AC-10-Fall ``[]`` statt ``None`` -- ``html.py:1356``
-    (``_outlook_metrics != []``) schaltet den GESAMTEN Block ab. Der
-    AC-10-Teil dieses Tests ist deshalb rot; der AC-11-Teil kann bereits
-    heute gruen sein (Regressionsschutz fuer den "bewusst geleert"-Zweig, der
-    unveraendert bleiben muss).
-    """
+def test_ac11_bewusst_geleerte_auswahl_laesst_den_block_entfallen():
+    """AC-11: eine ausdruecklich leere Auswahl (``outlook_metrics=[]``, in der
+    Tabelle: an keiner Ausblick-Stelle ein Haken) laesst den Block vollstaendig
+    entfallen; Gegenprobe: ohne Einstellung erscheint er."""
     enabled = {"temperature", "wind", "precipitation"}
-
-    # --- AC-10: "humidity"/"uv_index" liegen BEIDE ausserhalb der Grundauswahl.
-    dc_ac10 = display_config(
-        enabled_ids=enabled, outlook_metrics=["humidity", "uv_index"],
-    )
-    with caplog.at_level(logging.WARNING):
-        rows_ac10 = outlook_rows(trip_display_config=dc_ac10, report_type="evening")
-        html_ac10, plain_ac10 = render_trip_mail(dc_ac10, rows_ac10)
-    kopf_ac10 = html_outlook_headers(html_ac10)
-
-    assert kopf_ac10, (
-        "AC-10 FAIL: der Ausblick-Block ist komplett verschwunden, obwohl "
-        "die gespeicherte Auswahl nicht ausdruecklich leer war -- 'unaufloesbar "
-        "nach dem Grundauswahl-Schnitt' und 'bewusst geleert' duerfen nie "
-        "denselben Zustand erzeugen (M3-Bug, resolve_trip_outlook_metrics() "
-        "liefert [] statt None)."
-    )
-    erwartet = _soll_ueberschriften(enabled)
-    assert set(kopf_ac10[1:]) == erwartet | {_ACC}, (
-        f"AC-10: nach dem Totalschnitt zeigt der Ausblick {kopf_ac10[1:]!r} "
-        f"statt der VOLLEN Grundauswahl {sorted(erwartet)!r}."
-    )
-    warnungen = "\n".join(
-        r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING
-    )
-    assert "humidity" in warnungen or "uv_index" in warnungen, (
-        f"AC-10: der Rueckfall auf die Grundauswahl wurde nicht protokolliert "
-        f"(logger.warning erwartet). Gesehene Warnungen:\n{warnungen}"
-    )
-
-    # --- AC-11: ausdruecklich LEERE Auswahl -- Gegenprobe, muss verschieden bleiben.
     dc_ac11 = display_config(enabled_ids=enabled, outlook_metrics=[])
     rows_ac11 = outlook_rows(trip_display_config=dc_ac11, report_type="evening")
     html_ac11, plain_ac11 = render_trip_mail(dc_ac11, rows_ac11)
@@ -206,12 +162,7 @@ def test_ac10_vs_ac11_vollstaendig_geschnittene_auswahl_faellt_auf_die_grundausw
         "AC-11 FAIL: der Klartext zeigt trotz bewusst leerer Auswahl weiterhin "
         f"einen Ausblick-Block:\n{plain_ac11}"
     )
-
-    # --- Unterscheidbarkeit: AC-10 (Totalschnitt) und AC-11 (bewusst leer)
-    # duerfen NICHT dasselbe Ergebnis liefern.
-    assert bool(html_outlook_headers(html_ac10)) != bool(html_outlook_headers(html_ac11)), (
-        "AC-10 und AC-11 sind nicht unterscheidbar: 'unaufloesbar nach dem "
-        "Grundauswahl-Schnitt' (AC-10) und 'bewusst geleert' (AC-11) erzeugen "
-        "denselben Zustand -- genau der Fehler, den A2 an der Nachbarstelle "
-        "bereits beseitigt hat (compare_outlook_metric_ids.py:91-97)."
-    )
+    dc_an = display_config(enabled_ids=enabled)
+    html_an, _plain_an = render_trip_mail(
+        dc_an, outlook_rows(trip_display_config=dc_an, report_type="evening"))
+    assert html_outlook_headers(html_an), "Gegenprobe: ohne Einstellung fehlt der Ausblick"

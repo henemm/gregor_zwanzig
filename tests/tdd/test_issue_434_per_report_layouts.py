@@ -17,30 +17,24 @@ Alle Tests MÜSSEN in der RED-Phase scheitern:
   AC-7: AssertionError (trip_report.py ruft get_metrics_for_report_type, nicht get_metrics_for_channel)
 
 KEINE Mocks — reine Datenstrukturen + echte Aufrufe.
+
+#3237 (Altpfad entfernt): die dreistufige Kaskade ``get_metrics_for_channel``
+(per_report > per_channel > global) existiert nicht mehr; die Tabelle "Was steht
+wo" ist die einzige Quelle und gilt fuer beide Briefings (ADR-0124). Entfallen
+sind AC-2 bis AC-5 (Kaskaden-Regeln) und AC-7/AC-7b (Quelltext-Pruefung, dass
+``format_email`` die Kaskade aufruft -- sie war nach der Loeschung nur noch
+durch einen Kommentar erfuellt). Loader und Serialisierung der Altfelder
+bleiben bis #3277 (AC-1, AC-6).
 """
 
 from __future__ import annotations
 
-import inspect
 from typing import Any
 
 
 # ---------------------------------------------------------------------------
 # Test-Fixtures
 # ---------------------------------------------------------------------------
-
-
-def _legacy_trip_data() -> dict[str, Any]:
-    """Alter Trip ohne channel_layouts_per_report (backward-compat)."""
-    return {
-        "trip_id": "legacy-trip-434",
-        "metrics": [
-            {"metric_id": "temperature", "enabled": True, "bucket": "primary", "order": 0},
-            {"metric_id": "wind", "enabled": True, "bucket": "primary", "order": 1},
-            {"metric_id": "rain_probability", "enabled": True, "bucket": "secondary", "order": 0},
-        ],
-        "updated_at": "2026-05-29T10:00:00",
-    }
 
 
 def _per_report_trip_data() -> dict[str, Any]:
@@ -93,27 +87,6 @@ def _per_report_trip_data() -> dict[str, Any]:
     }
 
 
-def _per_report_empty_evening_data() -> dict[str, Any]:
-    """Trip mit explizit leerer per_report_layouts["evening"]["email"]-Liste."""
-    return {
-        "trip_id": "empty-per-report-trip",
-        "metrics": [
-            {"metric_id": "temperature", "enabled": True, "bucket": "primary", "order": 0},
-        ],
-        "channel_layouts": {
-            "email": [
-                {"metric_id": "temperature", "enabled": True, "bucket": "primary", "order": 0},
-            ],
-        },
-        "channel_layouts_per_report": {
-            "evening": {
-                "email": [],  # explizit leer — kein Fallback
-            },
-        },
-        "updated_at": "2026-05-29T10:00:00",
-    }
-
-
 def _parse(data: dict[str, Any]):
     """Convenience: parse display-config-dict to UnifiedWeatherDisplayConfig."""
     from app.loader import _parse_display_config
@@ -155,103 +128,6 @@ def test_ac1_loader_reads_channel_layouts_per_report():
     assert evening_email[0].metric_id == "wind"
     assert evening_email[1].metric_id == "gust"
     assert evening_email[2].metric_id == "wind_chill"
-
-
-# ---------------------------------------------------------------------------
-# AC-2: Backward-Compat — Trip ohne channel_layouts_per_report → per_report_layouts ist None
-# ---------------------------------------------------------------------------
-
-
-def test_ac2_legacy_trip_has_no_per_report_layouts():
-    """AC-2: Alter Trip → per_report_layouts is None, Fallback-Verhalten bleibt unverändert."""
-    dc = _parse(_legacy_trip_data())
-
-    assert hasattr(dc, "per_report_layouts"), (
-        "UnifiedWeatherDisplayConfig braucht per_report_layouts (auch wenn None)."
-    )
-    assert dc.per_report_layouts is None
-
-    # Verhalten: get_metrics_for_channel muss auf globale Liste zurückfallen
-    via_channel = dc.get_metrics_for_channel("email", "evening")
-    via_report = dc.get_metrics_for_report_type("evening")
-    assert [m.metric_id for m in via_channel] == [m.metric_id for m in via_report], (
-        "Ohne per_report_layouts muss get_metrics_for_channel('email', 'evening') "
-        "dasselbe liefern wie get_metrics_for_report_type('evening')."
-    )
-
-
-# ---------------------------------------------------------------------------
-# AC-3: per_report schlägt per_channel (Prioritätskaskade)
-# ---------------------------------------------------------------------------
-
-
-def test_ac3_per_report_wins_over_per_channel():
-    """AC-3: per_report_layouts["morning"]["email"] schlägt per_channel_layouts["email"]."""
-    dc = _parse(_per_report_trip_data())
-
-    morning_metrics = dc.get_metrics_for_channel("email", "morning")
-    ids = [m.metric_id for m in morning_metrics]
-
-    # Morgen-Override: nur temperature + precipitation (nicht das per_channel
-    # email-Layout). Issue #1728 DEC-6b: die abgeleiteten Sichtbarkeits-Gates
-    # kommen aus dem Ladepfad dazu und sind hier nicht der Pruefgegenstand --
-    # die Zusicherung ist, dass NICHTS aus dem per_channel-Layout (wind/gust)
-    # durchschlaegt.
-    gewaehlt = [m.metric_id for m in morning_metrics if not m.derived]
-    assert gewaehlt == ["temperature", "precipitation"], (
-        f"Morgen-Override sollte [temperature, precipitation] liefern, "
-        f"nicht das per_channel-Layout [temperature, wind, gust]. Erhalten: {ids}"
-    )
-    assert "wind" not in ids and "gust" not in ids, (
-        f"per_channel-Layout schlaegt durch: {ids}"
-    )
-
-    evening_metrics = dc.get_metrics_for_channel("email", "evening")
-    evening_ids = [m.metric_id for m in evening_metrics]
-
-    # Abend-Override: wind + gust + wind_chill (nicht das per_channel email-Layout)
-    assert "wind" in evening_ids and "gust" in evening_ids and "wind_chill" in evening_ids, (
-        f"Abend-Override sollte [wind, gust, wind_chill] liefern. Erhalten: {evening_ids}"
-    )
-    assert "temperature" not in evening_ids, (
-        "Das per_channel email-Layout enthält temperature, aber der Abend-Override nicht — "
-        f"per_report muss gewinnen. Erhalten: {evening_ids}"
-    )
-
-
-# ---------------------------------------------------------------------------
-# AC-4: Kein per_report-Eintrag → Fallback auf per_channel oder global
-# ---------------------------------------------------------------------------
-
-
-def test_ac4_no_per_report_falls_back_to_per_channel():
-    """AC-4: per_report_layouts["morning"]["telegram"] fehlt → Fallback auf global."""
-    dc = _parse(_per_report_trip_data())
-
-    # Telegram: per_report_layouts hat keinen telegram-Eintrag
-    # per_channel_layouts hat auch keinen telegram-Eintrag → Fallback auf global
-    telegram_morning = dc.get_metrics_for_channel("telegram", "morning")
-    global_morning = dc.get_metrics_for_report_type("morning")
-
-    assert [m.metric_id for m in telegram_morning] == [m.metric_id for m in global_morning], (
-        "Ohne per_report_layouts für Telegram muss auf globale Liste zurückgefallen werden."
-    )
-
-
-# ---------------------------------------------------------------------------
-# AC-5: Explizit leere per_report_layouts → kein Fallback
-# ---------------------------------------------------------------------------
-
-
-def test_ac5_empty_per_report_no_fallback():
-    """AC-5: per_report_layouts["evening"]["email"] == [] → leere Liste, kein Fallback."""
-    dc = _parse(_per_report_empty_evening_data())
-
-    evening_metrics = dc.get_metrics_for_channel("email", "evening")
-    assert evening_metrics == [], (
-        "Explizit leere per_report_layouts-Liste darf nicht auf per_channel oder global "
-        f"zurückfallen. Erhalten: {[m.metric_id for m in evening_metrics]}"
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -317,41 +193,3 @@ def test_ac6_roundtrip_per_channel_and_per_report_layouts():
     assert [m.metric_id for m in dc2.per_channel_layouts["email"]] == (
         [m.metric_id for m in dc.per_channel_layouts["email"]]
     ), "Roundtrip für per_channel_layouts.email muss bit-identisch sein."
-
-
-# ---------------------------------------------------------------------------
-# AC-7: Email-Renderer-Fix — trip_report.py nutzt get_metrics_for_channel
-# ---------------------------------------------------------------------------
-
-
-def test_ac7_trip_report_uses_get_metrics_for_channel():
-    """AC-7: trip_report.py:73 soll get_metrics_for_channel("email", ...) nutzen.
-
-    Strukturtest: Verifiziert, dass der Email-Formatter den kanal-bewussten Pfad
-    nimmt, nicht den globalen. Ohne diesen Fix haben per_report_layouts-Overrides
-    für Email null Wirkung.
-    """
-    from src.output.renderers.trip_report import TripReportFormatter
-
-    source = inspect.getsource(TripReportFormatter.format_email)
-
-    assert "get_metrics_for_channel" in source, (
-        "trip_report.py muss dc.get_metrics_for_channel('email', report_type) aufrufen, "
-        "um per_report_layouts und per_channel_layouts für Email zu respektieren. "
-        "Aktuell: get_metrics_for_report_type() — muss auf get_metrics_for_channel() umgestellt werden."
-    )
-
-
-def test_ac7_trip_report_does_not_bypass_channel_logic():
-    """AC-7b: trip_report.py:73 darf get_metrics_for_report_type NICHT mehr direkt aufrufen."""
-    from src.output.renderers.trip_report import TripReportFormatter
-
-    source = inspect.getsource(TripReportFormatter.format_email)
-
-    # Zeile 73 lautet aktuell: active_metrics = dc.get_metrics_for_report_type(report_type)
-    # Nach Fix: get_metrics_for_channel("email", report_type) — get_metrics_for_report_type
-    # taucht danach nicht mehr in format_email auf.
-    assert "get_metrics_for_report_type" not in source, (
-        "Nach dem Fix darf trip_report.py nicht mehr dc.get_metrics_for_report_type() aufrufen — "
-        "das umgeht die per_report_layouts-Kaskade. Stattdessen: get_metrics_for_channel('email', ...)."
-    )

@@ -98,12 +98,18 @@ def _trip_roh(*, rc: Optional[dict] = None, official: bool = True) -> dict:
          "send_telegram": False, "send_premium_sms": False, "email_format": "full",
          "morning_time": "07:00:00", "evening_time": "18:00:00"}
     r.update(rc or {})
+    dc = {"trip_id": tid, "metrics": metrics, "show_night_block": False}
+    if isinstance(r.get("multi_day_trend_reports"), list):
+        # #3237: "Ausblick erscheint im" steht in der Tabelle "Was steht wo"
+        # (``outlook_reports``); das Altfeld bleibt als Beschreibung stehen.
+        from tests.helpers.tabelle_aus_wunsch import tabelle
+
+        dc["placements"] = tabelle(dc, "trip", outlook_reports=r["multi_day_trend_reports"])
     return {"id": tid, "name": "Runde7 Zeitplaner", "stages": stages,
             # #3047 E4: der Editor-Schalter schreibt Briefing- UND Alarm-Feld
             # (Briefing ODER Alarm an -> beides an, PO 2026-11-16).
             "official_alerts_enabled": official, "official_warnings": {"enabled": official},
-            "display_config": {"trip_id": tid, "metrics": metrics,
-                               "show_night_block": False},
+            "display_config": dc,
             "report_config": r}
 
 
@@ -198,18 +204,10 @@ def test_trip_ausblick_erscheint_im(monkeypatch, fmt, reports, report_type):
 
 
 # --- show_outlook im echten Versand ---------------------------------------
-# Ausfuehrlich: der Schalter wirkt. Kompakt: PO-Entscheidung #722, der Editor
-# sperrt den Schalter, der Ausblick steht immer drin (kein Fehler, B-P2).
-
-@pytest.mark.parametrize("fmt", ["full", "compact"])
-@pytest.mark.parametrize("an", [True, False])
-def test_trip_show_outlook_zeitplaner(monkeypatch, fmt, an):
-    rc = {"email_format": fmt, "show_outlook": an,
-          "multi_day_trend_reports": ["morning", "evening"]}
-    s, _uid = _zeitplaner_senden(monkeypatch, _trip_roh(rc=rc, official=False), "evening")
-    soll = True if fmt == "compact" else an
-    for teil, wert in _hat_ausblick(s).items():
-        assert wert is soll, f"{fmt} show_outlook={an} {teil}: Ausblick {wert}, soll {soll}"
+# #3237: ``test_trip_show_outlook_zeitplaner`` ist entfallen -- ``show_outlook``
+# steuert den Ausblick nicht mehr (Altfeld, wirkungslos mit der Tabelle; Feld
+# und Renderer-Parameter entfernt #3277). Den Ausblick schaltet allein
+# ``placements.outlook_reports`` (``test_trip_ausblick_erscheint_im``, Fall []).
 
 
 # ===========================================================================

@@ -83,8 +83,12 @@ def _trip_dict(telegram: list[dict] | None = None, *, grund: list[dict] | None =
 
 
 def _dc(data: dict, uid: str | None = None) -> UnifiedWeatherDisplayConfig:
-    """Echter Loader (Persistenzformat -> Modell) fuer einen echten Nutzer."""
-    trip = load_trip(copy.deepcopy(data), user_id=uid or frisches_profil())
+    """Echter Loader (Persistenzformat -> Modell) fuer einen echten Nutzer.
+    #3237: die Kanal-Einstellung des Falls steht in der Tabelle "Was steht wo"
+    (Altfelder wirken nicht mehr, sie bleiben Beschreibung)."""
+    from tests.helpers.tabelle_aus_wunsch import trip_wunsch_als_tabelle
+
+    trip = load_trip(trip_wunsch_als_tabelle(data), user_id=uid or frisches_profil())
     assert trip is not None
     return trip.display_config
 
@@ -371,20 +375,6 @@ def test_f002_per_channel_layout_bucket_und_folge(report_type):
     Spalten folgen der Resolver-Liste (T, W, G); bucket aus der Grundauswahl,
     die Kanal-Ebene wird nicht erneut kaskadiert."""
     bubbles = _bubbles(_dc(_trip_dict(_tg_bucket_folge())), report_type)
-    assert _koepfe(bubbles) == ["T", "W", "G"], bubbles
-
-
-@pytest.mark.parametrize("report_type", REPORT_TYPES)
-def test_f002_per_report_layout_bucket_und_folge(report_type):
-    """F002: dieselbe Konfiguration ueber ``channel_layouts_per_report`` --
-    Spalten folgen der Resolver-Liste (T, W, G)."""
-    d = _trip_dict(None)
-    d["display_config"]["channel_layouts_per_report"] = {
-        report_type: {"telegram": _tg_bucket_folge()}}
-    dc = _dc(d)
-    assert dc.per_report_layouts and "telegram" in dc.per_report_layouts[report_type], \
-        "Vorbedingung: per_report-Ebene geladen"
-    bubbles = _bubbles(dc, report_type)
     assert _koepfe(bubbles) == ["T", "W", "G"], bubbles
 
 

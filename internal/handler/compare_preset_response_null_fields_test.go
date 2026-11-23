@@ -35,7 +35,7 @@ func TestCreateComparePresetHandler_ResponseHasEmptyCorridorsNotNull(t *testing.
 		t.Fatalf("marshal: %v", err)
 	}
 
-	h := CreateComparePresetHandler(s)
+	h := CreateComparePresetHandler(s, "")
 	req := httptest.NewRequest("POST", "/api/compare/presets", bytes.NewReader(b))
 	req.Header.Set("Content-Type", "application/json")
 	req = addUserToContext(req, "user1")

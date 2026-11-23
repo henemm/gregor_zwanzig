@@ -18,7 +18,7 @@ from fastapi import HTTPException
 
 from tests.helpers.vorschau_umgebung import env, mittagsuhr  # noqa: F401  (Fixture)
 from tests.tdd.test_alert_hour_rows import (
-    TRIP_ID, TRIP_LAT, TRIP_LON, TRIP_STURM, _erwartete_zeilen, _plant, _rows,
+    TRIP_ID, TRIP_LAT, TRIP_LON, TRIP_STURM, _erwartete_zeilen, _formen_tabelle, _plant, _rows,
     _trip_anker_schreiben, _trip_body, _trip_versand,
 )
 
@@ -35,15 +35,18 @@ def _trip_mit_echter_etappe(uid: str):
         Waypoint(id="G1", name="Start", lat=TRIP_LAT, lon=TRIP_LON, elevation_m=600.0),
         Waypoint(id="G2", name="Ziel", lat=47.30, lon=11.45, elevation_m=1200.0),
     ]
+    dc = UnifiedWeatherDisplayConfig(
+        trip_id=TRIP_ID, metrics=[MetricConfig(metric_id="gust", enabled=True)],
+        metric_alert_levels={"wind_gust": "standard"},
+    )
+    # Boeen im Briefing ROH (Tabelle "Was steht wo", #3237): Zeilen zeigen Zahlen.
+    dc.placements = _formen_tabelle(dc, {"gust": {"email": "raw", "telegram": "raw"}})
     trip = Trip(
         id=TRIP_ID, name="Stunden-Trip",
         stages=[Stage(id="T01", name="Etappe 1", date=heute, waypoints=wp),
                 Stage(id="T02", name="Etappe 2", date=heute + timedelta(days=1), waypoints=wp)],
         official_warnings=None, corridors=[],
-        display_config=UnifiedWeatherDisplayConfig(
-            trip_id=TRIP_ID, metrics=[MetricConfig(metric_id="gust", enabled=True)],
-            metric_alert_levels={"wind_gust": "standard"},
-        ),
+        display_config=dc,
     )
     save_trip(trip, user_id=uid)
     assert trip.start_date <= heute <= trip.end_date, "Vorbedingung: Trip laeuft heute"

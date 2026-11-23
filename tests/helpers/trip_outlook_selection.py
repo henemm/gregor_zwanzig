@@ -242,8 +242,12 @@ def display_config(*, enabled_ids: Optional[set[str]] = None,
 def mit_outlook_metrics(dc, outlook_metrics):
     """Setzt die Vorschau-Auswahl -- mit sprechendem RED-Fehler, solange das
     Feld in ``UnifiedWeatherDisplayConfig`` fehlt."""
+    from tests.helpers.tabelle_aus_wunsch import trip_modell_als_tabelle
+
     try:
-        return dataclasses.replace(dc, outlook_metrics=outlook_metrics)
+        # #3237: die Auswahl wirkt nur ueber die Tabelle "Was steht wo"; das
+        # Altfeld bleibt als Beschreibung stehen.
+        return trip_modell_als_tabelle(dataclasses.replace(dc, outlook_metrics=outlook_metrics))
     except TypeError as exc:
         raise AssertionError(
             "UnifiedWeatherDisplayConfig kennt das Feld 'outlook_metrics' noch "
@@ -257,8 +261,10 @@ def mit_outlook_metric_formats(dc, formats):
     """Setzt die Roh/Einfach-Zuordnung des Ausblicks -- mit sprechendem
     RED-Fehler, solange das Feld in ``UnifiedWeatherDisplayConfig`` fehlt
     (#2049, Spec Source: src/app/models.py:860)."""
+    from tests.helpers.tabelle_aus_wunsch import trip_modell_als_tabelle
+
     try:
-        return dataclasses.replace(dc, outlook_metric_formats=formats)
+        return trip_modell_als_tabelle(dataclasses.replace(dc, outlook_metric_formats=formats))
     except TypeError as exc:
         raise AssertionError(
             "UnifiedWeatherDisplayConfig kennt das Feld "

@@ -72,7 +72,7 @@ func TestTempo3196_PutMitTempoMergedNurDiesesFeld(t *testing.T) {
 // nichts gespeichert; fehlendes tempo bleibt erlaubt und wird aus activity abgeleitet.
 func TestTempo3196_PostPrueftTempo(t *testing.T) {
 	post := func(s *store.Store, body string) int {
-		return doReq(CreateTripHandler(s), http.MethodPost, "/api/trips", body, "", "userA").Code
+		return doReq(CreateTripHandler(s, ""), http.MethodPost, "/api/trips", body, "", "userA").Code
 	}
 	for _, tempo := range []string{
 		`{"fortbewegung":"auto","grundtempo_kmh":4}`,

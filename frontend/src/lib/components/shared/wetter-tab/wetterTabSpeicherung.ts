@@ -38,8 +38,9 @@ export type SpeicherOptionen = {
 	abo: () => AboSicht;
 	saveController?: SaveStatus;
 	enqueueHubWrite?: <T>(fn: () => Promise<T>) => Promise<T>;
-	/** Server-Antwort an die Seite (Trip bzw. Vergleich). */
-	uebernehmen?: (antwort: unknown) => void;
+	/** Server-Antwort an die Seite (Trip bzw. Vergleich); `gesendet` = das placements-Objekt, das dieser
+	 *  Speichervorgang wirklich gesendet hat (#3237 Runde 14), sonst `undefined`. */
+	uebernehmen?: (antwort: unknown, gesendet?: unknown) => void;
 	/** Vergleich: nach 412 neu geladenes Abo, der Reiter hydriert daraus neu. */
 	neuGeladen?: (abo: AboSicht) => void;
 	/** Anlegen: Nutzlast an die Anlege-Seite statt PUT. */
@@ -107,12 +108,20 @@ function tripSpeicherer(o: SpeicherOptionen): Speicherer {
 	return {
 		melden() {
 			const id = String(o.abo().id);
+			// #3237 Runde 14: der Rumpf wird mehrfach gelesen (Nutzlast-Merker, dann Senden); die LETZTE Lesung des
+			// /weather-config-Teils ist die gesendete — nur deren placements gelten nach Erfolg als gespeichert.
+			let gesendet: unknown;
+			const wetter = () => {
+				const w = tripNutzlast(o).weatherConfig as { placements?: unknown };
+				gesendet = w.placements;
+				return w;
+			};
 			const fn = baueWetterMetrikenSpeicherung<unknown>(
 				o.client,
 				id,
-				() => tripNutzlast(o).weatherConfig,
+				wetter,
 				() => tripNutzlast(o).tripFelder,
-				(antwort) => o.uebernehmen?.(antwort),
+				(antwort) => o.uebernehmen?.(antwort, gesendet),
 				WETTER_OWNER
 			);
 			o.saveController?.schedule(fn, 700, 'wetter-ampel');
@@ -127,7 +136,9 @@ function vergleichSaveFn(o: SpeicherOptionen): SaveFn {
 		const reihe = o.enqueueHubWrite ?? (<T>(f: () => Promise<T>) => f());
 		await reihe(async () => {
 			try {
-				o.uebernehmen?.(await o.client.put<unknown>(pfad, vergleichNutzlast(o), init));
+				const nutzlast = vergleichNutzlast(o);
+				const gesendet = (nutzlast.display_config as { placements?: unknown }).placements;
+				o.uebernehmen?.(await o.client.put<unknown>(pfad, nutzlast, init), gesendet);
 			} catch (e) {
 				if ((e as { status?: number })?.status === 412) {
 					const frisch = await o.client.get<AboSicht>(pfad).catch(() => null);

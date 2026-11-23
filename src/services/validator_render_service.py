@@ -470,17 +470,18 @@ def compare_preview_render_kwargs(body: Any) -> dict:
     """Render-Argumente der Validator-Vorschau (ohne Wetterdaten).
 
     Issue #3122 B1b: kein eigener Lesepfad -- aus dem Body entsteht ein
-    Orte-Preset (``display_config.hourly_metrics``/``hourly_metric_formats``,
-    ``hourly_enabled``), das durch dieselbe Aufloesung wie der Versand geht
-    (Kanal-Listen-Resolver, #3096/#3097). Ohne Auswahl gilt die Vorgabe;
+    Orte-Preset (``display_config.placements`` mit Stundenverlauf-Haken und
+    -Formen aus ``_stunden_tabelle``, ``hourly_enabled``), das durch dieselbe
+    Aufloesung wie der Versand geht (Kanal-Listen-Resolver, #3237). Ohne
+    Auswahl gilt die Vorgabe;
     ``getattr`` fuer aeltere Aufrufer ohne die Felder."""
     from services.report_config_resolver import resolve_compare_render_options
 
     display_config: dict = {}
     if getattr(body, "hourly_metrics", None) is not None:
-        display_config["hourly_metrics"] = _hourly_kennungen(body.hourly_metrics)
-    if getattr(body, "hourly_metric_formats", None) is not None:
-        display_config["hourly_metric_formats"] = body.hourly_metric_formats
+        display_config["placements"] = _stunden_tabelle(
+            _hourly_kennungen(body.hourly_metrics),
+            getattr(body, "hourly_metric_formats", None) or {})
     opts = resolve_compare_render_options(
         {"display_config": display_config, "hourly_enabled": body.hourly_enabled})
     return {
@@ -492,6 +493,20 @@ def compare_preview_render_kwargs(body: Any) -> dict:
         # Validators; daraus loest der Renderer die Vorlage auf.
         "preset": {"profil": body.profile},
     }
+
+
+def _stunden_tabelle(kennungen: list, formate: dict) -> dict:
+    """#3237: Stundenverlauf-Auswahl der Vorschau als Tabelle (Haken ``hourly``
+    und Form je gewaehlter Katalog-ID, sonst ohne Haken) -- Versandweg."""
+    from services.channel_list_resolver import tabellen_grundauswahl
+
+    grund, _eltern = tabellen_grundauswahl({}, "compare")
+    gewaehlt = [k for k in dict.fromkeys(kennungen) if k in grund]
+    rows = [{"metric_id": k, "places": {"hourly": True},
+             "formats": {"hourly": "simplified" if formate.get(k) else "raw"}}
+            for k in gewaehlt]
+    rows += [{"metric_id": k, "places": {"hourly": False}} for k in grund if k not in gewaehlt]
+    return {"version": 1, "rows": rows}
 
 
 def _hourly_kennungen(felder: list) -> list:

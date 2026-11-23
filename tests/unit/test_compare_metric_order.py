@@ -434,11 +434,20 @@ class TestAC7LegacyDefaultOrderUnchanged:
         )
 
     def test_preset_without_active_metrics_uses_default_order(self):
-        """Der Weg, den ein Altbestand tatsaechlich nimmt (kein display_config)."""
+        """Der Weg, den ein Altbestand tatsaechlich nimmt (kein display_config).
+
+        #3237 (Spec #3122 Teil A Nr. 8, ADR-0124, bewusste Aenderung): ohne
+        Tabelle gilt die Tabelle aus der Grundauswahl -- die Liste ist
+        ausdruecklich (nicht mehr ``None``) und folgt der EINEN Zeilenfolge:
+        die Zeile ``temperature`` traegt Hoechst- und Tiefstwert, "Temperatur
+        Minimum" steht deshalb direkt hinter "Temperatur Maximum"; alle
+        uebrigen Zeilen wie eingefroren."""
         opts = resolve_compare_render_options({"id": "legacy", "display_config": {}})
-        assert opts.enabled_metrics_by_channel["email"] is None
+        assert opts.enabled_metrics_by_channel["email"] is not None
         text = render_comparison_text(_result(), enabled_metrics=opts.enabled_metrics_by_channel["email"], preset=None)
-        assert _text_labels(text) == self.FROZEN_PLAIN_ORDER
+        soll = [z for z in self.FROZEN_PLAIN_ORDER if z != "Temperatur Minimum"]
+        soll.insert(soll.index("Temperatur Maximum") + 1, "Temperatur Minimum")
+        assert _text_labels(text) == soll
 
 
 class TestAC8ExplicitEmptySelection:
