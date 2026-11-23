@@ -333,26 +333,29 @@
 		font-family: var(--g-font-ui);
 		font-size: var(--g-size-12-5px);
 	}
+	/* #3283 B7 (Mockup Fassung 4): Kürzel und Erklärung in zwei Spalten, die Hülle je Eintrag ist
+	   für das Raster unsichtbar (display: contents), damit dt und dd direkt im Grid liegen. */
 	.wsw-legende {
-		display: flex;
-		flex-direction: column;
-		gap: var(--g-s-1);
+		display: grid;
+		grid-template-columns: auto 1fr;
+		gap: var(--g-s-1) var(--g-size-14px);
 		margin: 0;
 		padding: 0 var(--g-s-5) var(--g-s-4);
 		font-size: var(--g-size-12-5px);
 		color: var(--g-ink-2);
 	}
 	.wsw-legende-eintrag {
-		display: flex;
-		gap: var(--g-s-2);
+		display: contents;
 	}
+	/* Feste Spalten: ein Eintrag ohne Erklärung verschiebt die folgenden Kürzel nicht. */
 	.wsw-legende dt {
-		min-width: var(--g-size-60px);
+		grid-column: 1;
 		color: var(--g-ink);
 		font-family: var(--g-font-mono);
-		font-weight: 600;
+		font-weight: 400;
 	}
 	.wsw-legende dd {
+		grid-column: 2;
 		margin: 0;
 	}
 	/* Mockup `.sub`: Zwischentitel unter der Tabelle. */

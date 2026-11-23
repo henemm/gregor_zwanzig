@@ -13,7 +13,7 @@
 		unterzeile?: string;
 		/** Mit Trennlinie abgesetzt (Stundenverlauf, 3-Tages-Ausblick). */
 		abgesetzt?: boolean;
-		/** Schmale Spalte ohne Platz für Beispielwerte. */
+		/** Schmale Zusatzspalte (Stundenverlauf, Ausblick): nur Haken und Roh/Einfach, kein Beispielwert (#3283 B2). */
 		schmal?: boolean;
 		/** false: Block aus bzw. Kurzstil — Haken der Spalte nicht bedienbar, kein Knopf, kein Beispielwert. */
 		bedienbar?: boolean;
@@ -27,6 +27,8 @@
 		/** Gewählte Form; null oder fehlend: die Stelle hat nur eine Form, kein Knopf. */
 		format?: Darstellung | null;
 		beispiel?: string;
+		/** #3283 B6: Beispielwert ist ein reines Symbol (kein Buchstabe, keine Ziffer); größer und dunkler dargestellt. */
+		symbol?: boolean;
 		/** #3122 B3b: Ampelpunkt der HTML-Mail (Farbe aus --g-ampel-*), `name` ist die Farbe als Wort für Screenreader. */
 		ampel?: { farbe: 'green' | 'yellow' | 'orange' | 'red'; name: string };
 		/** warn = „passt nicht mehr“, leise = „nur Tageswert“. */
@@ -77,9 +79,10 @@
 	const HAKEN: Record<ZellenZustand, HakenZustand> = { on: 'an', off: 'aus', locked: 'gesperrt', not_in_email: 'nicht_in_email' };
 	const proId = $derived(new Map(metriken.map((m) => [m.id, m])));
 	const kennungen = $derived(metriken.map((m) => m.id));
-	// Breites Raster (Mockup `.kx.s4`/`.s5`): Griff, Name, je Stelle eine Spalte. Maße nur aus Tokens.
+	// Breites Raster (Mockup `.kx.s4`/`.s5`): Griff, Name, je Stelle eine Spalte. Maße nur aus Tokens;
+	// Kanalspalten mindestens 150 px, schmale Zusatzspalten 118 px (#3283 B1, Mockup Fassung 4).
 	const raster = $derived(
-		['var(--g-size-22px)', 'minmax(var(--g-size-130px), 0.9fr)', ...stellen.map((s) => (s.schmal ? 'var(--g-size-120px)' : 'minmax(var(--g-size-120px), 1fr)'))].join(' ')
+		['var(--g-size-22px)', 'minmax(var(--g-size-130px), 0.9fr)', ...stellen.map((s) => (s.schmal ? 'var(--g-size-118px)' : 'minmax(var(--g-size-150px), 1fr)'))].join(' ')
 	);
 </script>
 
@@ -127,7 +130,7 @@
 								{#if z.zustand === 'on' && bedienbar}
 									<RohEinfachKnopf wert={z.format ?? null} {name} onAenderung={(format) => onFormat?.({ metrik: m.id, stelle: s.id, format })} />
 									{#if z.ampel}<span class="et-ampel" data-slot="et-ampel" data-farbe={z.ampel.farbe} role="img" aria-label={z.ampel.name} title={z.ampel.name}></span>{/if}
-									{#if z.beispiel}<span class="et-beispiel" data-slot="et-beispiel">{z.beispiel}</span>{/if}
+									{#if z.beispiel && !s.schmal}<span class="et-beispiel" data-slot="et-beispiel" data-art={z.symbol ? 'symbol' : undefined}>{z.beispiel}</span>{/if}
 									{#if z.marke}<em class="et-marke" data-slot="et-marke" data-ton={z.marke.ton}>{z.marke.text}</em>{/if}
 								{/if}
 							{/if}
@@ -212,18 +215,20 @@
 		gap: var(--g-s-2);
 		min-width: 0;
 	}
-	/* Der Beispielwert bekommt nur den Platz, den Haken, Knopf und Marke übrig lassen (Auslassungspunkte),
-	   höchstens seine eigene Breite. Erst wenn auch ohne ihn kein Platz ist, bricht die Marke um. */
+	/* Der Beispielwert steht immer vollständig da (#3283 B1, keine Auslassungspunkte); die Kanalspalten
+	   sind dafür mindestens 150 px breit. Reicht der Platz nicht, bricht er um statt abzuschneiden. */
 	.et-beispiel {
-		flex: 1 1 0;
+		flex: 0 1 auto;
 		min-width: 0;
-		max-width: max-content;
-		overflow: hidden;
 		color: var(--g-ink-2);
 		font-family: var(--g-font-mono);
 		font-size: var(--g-text-xs);
-		text-overflow: ellipsis;
-		white-space: nowrap;
+		overflow-wrap: anywhere;
+	}
+	/* #3283 B6: reines Symbol (Einfach-Form) größer und in voller Schriftfarbe (Kontrast WCAG AA). */
+	.et-beispiel[data-art='symbol'] {
+		font-size: var(--g-text-sm);
+		color: var(--g-ink);
 	}
 	/* #3122 B3b: Ampelpunkt wie in der HTML-Mail (Design-System: --g-ampel-*, Kontur gegen die Karte). */
 	.et-ampel {
