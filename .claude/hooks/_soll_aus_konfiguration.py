@@ -24,6 +24,12 @@ Die Regeln sind das dokumentierte Produktverhalten:
   Folge, ohne Ableitungen), wie der Loader ihn liest. Bewusst leer (Eintraege
   vorhanden, alle ``enabled: false``): Stundentabellen ohne Metrikspalten,
   der Ausblick entfaellt (Konzept "alle Zeilen abgewaehlt").
+  #3273 (Loader-Regel #3122 B2b): Trip-Huelle (``stages``/``id``), deren
+  ``display_config`` fehlt oder nur ``placements`` traegt -> Grundauswahl aus
+  ``weather_config`` (Altnamen, ``_ALTNAMEN``), sonst Profil-Vorlage
+  (``_PROFIL_GRUNDAUSWAHL``, Rueckfall ``allgemein``), Register-Folge;
+  ``placements`` bleibt. ``display_config: null`` bzw. weitere Schluessel:
+  Register-Standard wie oben; nackte ``display_config`` unveraendert.
 * Ausblick: Drei-Werte-Semantik (ADR-0037/0055): ``[]`` = Block aus, nie
   eingestellt = GANZE Grundauswahl in der eingestellten Reihenfolge (AC-4,
   nicht Katalogfolge), sonst Schnitt mit der Grundauswahl, leerer Schnitt =
@@ -379,11 +385,56 @@ def _altformat_folge(metrics: list) -> list[dict]:
              "order": platz.get(e.get("metric_id"), ("secondary", 0))[1]} for e in eintraege]
 
 
+#: Von Hand aus WEATHER_TEMPLATES / loader._OLD_METRIC_MAP, Stand #3273;
+#: Gleichlauf bewacht test_ac8 (ADR-0127 Nr. 5: Soll von Hand, kein Produktimport).
+#: Profil -> Grundauswahl in Register-Folge; jedes andere Profil (auch
+#: summer_trekking, fehlend, unbekannt) -> ``allgemein``.
+_PROFIL_GRUNDAUSWAHL = {
+    "allgemein": ("temperature", "temperature_night", "wind", "gust", "precipitation",
+                  "rain_probability", "cloud_total", "sunshine"),
+    "wandern": ("temperature", "temperature_night", "humidity", "wind", "gust", "precipitation",
+                "rain_probability", "cloud_total", "sunshine", "uv_index"),
+    "wintersport": ("temperature", "temperature_night", "wind_chill", "wind", "gust",
+                    "precipitation", "cloud_total", "visibility", "sunshine", "snow_depth",
+                    "fresh_snow"),
+}
+#: Altname der ``weather_config`` -> Katalog-ID (Aggregation ohne Belang).
+_ALTNAMEN = {
+    "temp_min_c": "temperature", "temp_max_c": "temperature", "temp_avg_c": "temperature",
+    "wind_max_kmh": "wind", "gust_max_kmh": "gust", "precip_sum_mm": "precipitation",
+    "cloud_avg_pct": "cloud_total", "humidity_avg_pct": "humidity",
+    "thunder_level_max": "thunder", "dewpoint_avg_c": "dewpoint",
+    "pressure_avg_hpa": "pressure", "wind_chill_min_c": "wind_chill",
+}
+
+
+def _trip_grundauswahl(trip: dict) -> list[dict]:
+    """#3273 (Loader-Regel #3122 B2b, nur Datentabellen): ``weather_config``
+    -> eingeschaltete Altnamen ueber ``_ALTNAMEN`` (Register-Folge); sonst
+    Vorlage des Profils (fehlend/``null``/unbekannt -> ``allgemein``)."""
+    wc = trip.get("weather_config")
+    if wc is not None:
+        an = {_ALTNAMEN[n] for n in wc.get("enabled_metrics") or [] if n in _ALTNAMEN}
+        ids = [m.id for m in _METRICS if m.id in an]
+    else:
+        profil = (trip.get("aggregation") or {}).get("profile")
+        ids = _PROFIL_GRUNDAUSWAHL.get(profil, _PROFIL_GRUNDAUSWAHL["allgemein"])
+    return [{"metric_id": m, "enabled": True, "bucket": "primary", "order": i}
+            for i, m in enumerate(ids)]
+
+
 def _trip_display_config(trip: dict) -> dict:
     """Rohe ``display_config``; Fall A (``metrics`` fehlt oder ``[]``) traegt
     den Register-Standardsatz mit ``order``/``bucket`` -- wie der Loader;
-    Altformat ohne ``order`` die Register-Prioritaet (B-L6)."""
-    dc = (trip.get("display_config") if "display_config" in trip else trip) or {}
+    Altformat ohne ``order`` die Register-Prioritaet (B-L6). #3273: Trip-Huelle
+    ohne ``display_config`` bzw. nur mit ``placements`` -> ``_trip_grundauswahl``."""
+    huelle = "stages" in trip or "id" in trip
+    roh = trip.get("display_config")
+    nur_tabelle = (isinstance(roh, dict) and set(roh) == {"placements"}
+                   and isinstance(roh["placements"], dict))
+    if huelle and ("display_config" not in trip or nur_tabelle):
+        return {**(roh or {}), "metrics": _trip_grundauswahl(trip)}
+    dc = (roh if "display_config" in trip else trip) or {}
     if dc.get("metrics"):
         return {**dc, "metrics": _altformat_folge(dc["metrics"])}
     return {**dc, "metrics": [{"metric_id": m, "enabled": True, "bucket": "primary", "order": i}

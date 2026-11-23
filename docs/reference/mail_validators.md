@@ -212,6 +212,10 @@ Vergleichstabelle (Katalog-ID aufgeweitet auf ihre Auswertungen der
 Grundauswahl), -Stundenverlauf und -Ausblick; Orte ohne `active_metrics` nehmen
 die Standardzeilen. `channel_layouts`, `outlook_metrics`, `hourly_metrics` und
 die `metrics`-Folge wirken nicht mehr (seit #3237 auch nicht ohne Tabelle; dort gilt die Grundauswahl).
+Trips ohne `display_config` bzw. nur mit `placements` (#3273) nehmen wie der Loader
+die Grundauswahl aus `weather_config` (Altnamen), sonst aus der Profil-Vorlage
+(Rückfall `allgemein`), von Hand im Soll abgeschrieben (ADR-0127 Nr. 5); den
+Gleichlauf mit dem Loader bewacht `tests/tdd/test_3273_trip_grundauswahl_ohne_metrics.py`.
 
 **Bekannte Einschränkung (#3242):** Abgeleitete Größen mit Fenstercharakter (z. B. Nachttief) bleiben in der Trip-E-Mail auch bei ausgeschalteter Eltern-Zeile, wie im Produkt (`keine_eigene_spalte`); das Haken-Erbe von der Eltern-Zeile wirkt nur bei künftigen abgeleiteten Größen, die keine Fenstergrößen sind.
 
