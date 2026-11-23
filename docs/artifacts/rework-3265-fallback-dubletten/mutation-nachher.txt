@@ -1,0 +1,24 @@
+##### Lauf: nachher #####
+=== Basislauf 1142 (unverändert, -m 'not live') ===
+2 passed, 2 deselected in 3.07s
+=== M1: Seam faengt ProviderRequestError nicht mehr ===
+Ersetzungen: 1
+FAILED tests/tdd/test_issue_1142_geosphere_direct_fallback.py::test_geosphere_5xx_preserves_original_error_and_retry
+1 failed, 1 passed, 2 deselected in 2.91s
+=== M2: Seam faengt ProviderNotFoundError nicht mehr ===
+Ersetzungen: 1
+FAILED tests/tdd/test_issue_1142_geosphere_direct_fallback.py::test_seam_catches_provider_request_and_not_found_error
+1 failed, 1 passed, 2 deselected in 1.89s
+=== Wiederhergestellt ===
+byte-identisch zur Sicherung
+kein Diff gegen origin/main
+7 passed, 12 deselected in 5.41s
+=== collect (vier Dateien) ===
+tests/tdd/test_issue_1141_cross_provider_fallback.py::test_total_outage_outside_regions_raises_original_error
+tests/tdd/test_issue_1141_cross_provider_fallback.py::test_stub_provider_reraises_original_error
+tests/tdd/test_issue_1141_cross_provider_fallback.py::test_total_outage_keeps_feeding_error_log
+tests/tdd/test_issue_1142_geosphere_direct_fallback.py::test_geosphere_5xx_preserves_original_error_and_retry
+tests/tdd/test_issue_1142_geosphere_direct_fallback.py::test_seam_catches_provider_request_and_not_found_error
+19 tests collected in 1.20s
+=== exc_a in 1142 ===
+0
