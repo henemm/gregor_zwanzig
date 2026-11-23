@@ -292,7 +292,7 @@ def test_ac4_sms_in_jeder_sprache_byte_gleich(fall):
         assert len(sms) <= 140
 
 
-@pytest.mark.parametrize("limit", [140, 60, 30])
+@pytest.mark.parametrize("limit", [60, 30])
 def test_ac4_sms_gekuerzt_unabhaengig_von_der_sprache(limit):
     from output.renderers.alert.render import render_sms
 

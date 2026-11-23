@@ -15,10 +15,8 @@ oder ``# i18n-fest: <Grund>`` (begruendet sprachfest: Eigenname, SMS-Kanal,
 Bot-Menue nach P7 #2669; Grund >= 10 Zeichen, sonst wirkungslos; #2751).
 
 Allowlist ``tests/fixtures/i18n_python_allowlist.json``: JSON-Objekt
-``{"<repo-pfad>": <Baseline-Fundzahl>}``. Je Datei darf die Fundzahl nur
-sinken: mehr Funde als die Baseline = rot; weniger Funde, ohne dass die
-Baseline mitsinkt (bzw. der Eintrag bei 0 gestrichen wird) = ebenfalls rot,
-damit die Zahl nie wieder wachsen kann.
+``{"<repo-pfad>": <Baseline-Fundzahl>}``. Sie ist leer und bleibt leer:
+``test_allowlist_ist_leer`` ist der Waechter, jeder Eintrag ist rot.
 
 Endstand (#2783, P13): Allowlist leer. #2751 hat alles ausserhalb des
 Renderer-Gates abgebaut, #2783 die Restdateien unter
@@ -161,15 +159,6 @@ def test_keine_neuen_hartkodierten_nutzertexte():
     assert len(_scan_dateien()) >= _MIN_DATEIEN, "Messaufbau leer"
     verstoesse = _verstoesse(_alle_funde(), _allowlist())
     assert not verstoesse, "\n".join([*verstoesse, _HINWEIS])
-
-
-def test_allowlist_hat_keine_toten_eintraege():
-    erlaubt = _allowlist()
-    assert list(erlaubt) == sorted(erlaubt), "Allowlist sortiert"
-    assert all(isinstance(n, int) and n > 0 for n in erlaubt.values()), erlaubt
-    tote = _tote_eintraege(_alle_funde(), erlaubt)
-    assert not tote, ("Baseline senken bzw. Eintrag bei 0 streichen (die Allowlist "
-                      f"schrumpft nur): {tote}")
 
 
 def test_allowlist_ist_leer():

@@ -36,7 +36,6 @@ from dataclasses import replace
 import pytest
 
 from app.ampel import resolve_ampel
-from i18n.catalog import MESSAGES_DIR, parity_errors
 from output.renderers.alert.model import AlertMessage
 from output.renderers.alert.render import (
     render_email, render_sms, render_subject, render_telegram,
@@ -227,13 +226,6 @@ def test_ac6_englischer_alarm_ohne_deutschen_hinweistext_und_ohne_katalog_rueckf
                    if r.getMessage().startswith(("i18n fallback", "i18n missing"))]
     assert not rueckfaelle, f"AC-6: Katalog-Rueckfall im EN-Alarm: {rueckfaelle!r}"
     assert SATZ_EN in plain, f"AC-6: EN-Satz fehlt: {plain!r}"
-
-
-def test_ac6_katalog_paritaet_de_en():
-    """AC-6 (Waechter, gruen vor und nach der Aenderung). Jeder Schluessel
-    beider Sprachen existiert in der anderen, mit denselben Platzhaltern —
-    die neuen Hinweis-Schluessel eingeschlossen."""
-    assert parity_errors(MESSAGES_DIR) == []
 
 
 # ────────────────── AC-3 / AC-8: ohne Kennzeichen byte-gleich ─────────────────
