@@ -223,7 +223,7 @@ Channel (E-Mail / Telegram / SMS / Premium-SMS / Console)
 `resolve_report_render_options()` (`src/services/report_config_resolver.py`)
 vor dem `Formatter`-Schritt `TripReportConfig`/`UnifiedWeatherDisplayConfig`
 eines Trips zentral und an EINER Stelle in ein frozen `ReportRenderOptions`-Objekt
-(7 render-wirksame Felder, z. B. `email_format`, `show_outlook`) auf. Der
+(7 render-wirksame Felder, z. B. `email_format`) auf. `show_outlook` ist seit #3237 ohne Wirkung: der Ausblick folgt allein der Tabelle „Was steht wo“ (`placements`). Der
 Scheduler-Versandpfad (`trip_report_scheduler.py` → `notification_service.py` →
 `TripReportFormatter.format_email()`) reicht nur noch dieses Objekt durch statt
 einzelner Config-Felder; `format_email()` hat bei `render_options=None` einen

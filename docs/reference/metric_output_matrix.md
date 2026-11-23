@@ -720,6 +720,14 @@ Aufrufstellen umgestellt (`scheduler_dispatch_service.py:439/505/509`,
 > des Trip-Versands (E-Mail, SMS, Telegram) und der Vorschau läuft über
 > `src/services/trip_briefing_aufbau.py` (`trip_report_rendern`); die Zeilenangaben der Trip-Abschnitte
 > oben sind dafür historisch. Die Gewitter-Vorschau (`trip_report_scheduler.py`) bleibt unverändert.
+>
+> **Nachtrag 2026-11-23 (Issue #3237, Altpfad entfernt):** Die Kanal-Auswahl und Kanal-Folge laufen
+> ausschließlich über die Tabelle `display_config.placements.rows`. Die Kanal-Kaskade
+> (`channel_layouts`, `channel_active_metrics`, `outlook_metrics`, `hourly_metrics`, `show_outlook`)
+> wird für Abos mit Tabelle nicht mehr gelesen; Abos ohne Tabelle werden aus der Grundauswahl
+> umgerechnet (`placements_aus_grundauswahl`). Die Zeilenangaben und Kaskaden-Beschreibungen in
+> diesem Abschnitt sind historisch. Verbindlich: `docs/reference/api_contract.md` (Abschnitt „Tabelle
+> Was steht wo“) und `docs/specs/modules/feat_3237_altpfad_entfernen.md`.
 
 **Zuschnitt-Korrektur festhalten:** Stundenverlauf (`hourly_metrics`) und
 Ausblick (`outlook_metrics`) bleiben **global** — eigene, getrennt

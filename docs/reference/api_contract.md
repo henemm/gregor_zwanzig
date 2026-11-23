@@ -1453,7 +1453,7 @@ placements = { version: 1,
 ```
 
 - **Speichern:** Go speichert das Objekt ungeprueft (ADR-0077) als Teil von `display_config`; andere Schreibwege (`PUT /api/trips/{id}`, `PUT /api/trips/{id}/weather-config`, `PUT /api/compare/presets/{id}`, `PUT /api/briefings/{id}?kind=vergleich`) lassen es per Read-Modify-Write unveraendert. Wer es sendet, sendet immer den vollstaendigen Stand (`mergeConfigMap` ersetzt Unterschluessel als Ganzes). Python traegt es beim Laden roh durch und schreibt es als ganzen Unterbaum zurueck. Ein `display_config` allein mit `placements` (so legt es der PUT bei einem Trip ohne `display_config` an) gilt beim Trip-Laden wie ein fehlendes `display_config` (Grundauswahl „nie eingestellt“ = Profil-Default bzw. `weather_config`, #3122 B2b) -- sonst tauschte das erste Speichern der Tabelle die Metriken aus.
-- **Lesen:** nur der Kanal-Listen-Resolver (`src/services/channel_list_resolver.py`, `services/placements.py`), robust: unbekannte Metriken, Stellen, Formate und falsche Typen wirken nicht. Fehlt das Objekt oder hat es keine Liste `rows`, gelten bis B3 die Altfelder.
+- **Lesen:** nur der Kanal-Listen-Resolver (`src/services/channel_list_resolver.py`, `services/placements.py`), robust: unbekannte Metriken, Stellen, Formate und falsche Typen wirken nicht. Fehlt das Objekt oder hat es keine Liste `rows`, wird die Tabelle aus der Grundauswahl umgerechnet (`placements_aus_grundauswahl`, #3237). Die Altfelder (`channel_layouts`, `outlook_metrics`, `channel_active_metrics`, `hourly_metrics`, `show_outlook`) werden nicht mehr gelesen.
 
 ### Tabelle „Was steht wo“ — Lese- und Schreib-Endpoint (Issue #3122 B2, seit B2)
 
@@ -1463,10 +1463,10 @@ placements = { version: 1,
 
 ```
 { kind: "route"|"vergleich", lang: "de"|"en",
-  stored: bool,                 // false = Abo ohne gespeicherte Tabelle, Inhalt = Umrechnung placements_from_legacy
+  stored: bool,                 // false = Abo ohne gespeicherte Tabelle, Inhalt = Umrechnung aus der Grundauswahl (placements_aus_grundauswahl)
   placements: {...},            // Grundlage für den PUT: stored true = gespeicherter Stand WIE GESPEICHERT (unbekannte und reservierte
                                 //   Schlüssel wie places.premium_sms, künftige Felder je Zeile/oben, version bleiben; unlesbare Einträge wirken
-                                //   weiter nicht) -- unverändert zurückgeschrieben verliert er nichts; stored false = Umrechnung placements_from_legacy
+                                //   weiter nicht) -- unverändert zurückgeschrieben verliert er nichts; stored false = Umrechnung aus der Grundauswahl (placements_aus_grundauswahl)
   location_count: int|null,     // nur Orte: Zahl der Orte des Abos
   columns: [ { stelle: "email"|"telegram"|"sms"|"hourly"|"outlook",   // hourly nur Orte
                subtitle: "stundentabelle"|"uebersicht"|"nachricht"|"und_premium_sms"|"nur_email"|"email_und_telegram",
@@ -5398,6 +5398,7 @@ Ablage: `GZ_DATA_DIR/mcp/clients.json` (DCR-Clients) und `GZ_DATA_DIR/mcp/tokens
 
 ## Changelog
 
+- 2026-11-23: Issue #3237 (Altpfad entfernt) — Die Tabelle `display_config.placements.rows` ist die einzige Quelle für alle vier Kanäle. Neue Trips und Orts-Vergleiche bekommen die Tabelle bei der Anlage aus der Grundauswahl (`placements_aus_grundauswahl`, Go ruft nur den Kern-Endpunkt `…/placements/erstanlage` auf). Abos ohne `rows` werden aus der Grundauswahl aufgelöst, nie aus `channel_layouts`, `outlook_metrics`, `channel_active_metrics`, `hourly_metrics`, `show_outlook`. Entfernt: `placements_from_legacy`, `scripts/migrate_3157_placements.py`, Begleitfeld `show_stability_off`. Validator-Endpoint `GET /api/_validator/metrics-for-channel`: `source` ist jetzt `"placements"` oder `"grundauswahl"` (statt `per_report|per_channel|global`); Eintrag vom 2026-05-29 (#448) ist insoweit überholt. Wächter: `tests/test_altpfad_import_sperre.py`.
 - 2026-11-22: Issue #3281 (ADR-0128) — MCP-Konnektor „Gregor Wetter“: OAuth 2.1 (`/api/mcp/oauth/{register,authorize,token}`, Metadaten unter `/.well-known/oauth-*`) und MCP-Endpunkt `POST /api/mcp` mit den Werkzeugen `ort_suchen` und `wetter` (Abschnitt 27). Neue Env `GZ_MCP_USER_IDS`.
 - 2026-11-22: Issue #3275/#3237 (Epic #3122) — Anlage (`POST /api/trips`, `POST /api/compare/presets`, `POST /api/briefings`) schreibt sofort die volle Tabelle `display_config.placements` aus der Grundauswahl (Kern-Endpunkt `GET /api/briefings/{id}/placements/erstanlage` liefert jetzt `{ "placements": {...} }` statt `{ "show_stability_off": bool }`; nur Go). Der Tabellen-PUT fragt den Kern nicht mehr und lässt `report_config` unverändert (kein 502 mehr). Die Orte-Anlage-Marke (`placements` ohne `rows`) entfällt. `GET /api/_validator/metrics-for-channel`: `source` = `placements` | `grundauswahl`, `metric_ids` aus der Tabelle; `channel=premium_sms` folgt der SMS-Spalte, ein Kanal ohne Tabellenspalte ergibt 422. Spec: `docs/specs/modules/feat_3237_altpfad_entfernen.md`.
 - 2026-11-20: Issue #3197 (ADR-0108) — Etappen-Feld `stages[].grundtempo_kmh` (optional, 0,5 bis 60 km/h): überschreibt nur das Grundtempo dieser Etappe, Fortbewegung bleibt trip-weit; `arrival_calculated` je Etappe mit diesem Tempo. PUT/POST: außerhalb des Bereichs oder kein Zahlwert → 422 (`invalid_params`); fehlt das Feld, gilt das Trip-Tempo (Zurücknehmen entfernt es). Ungültige gespeicherte Werte werden beim Laden ignoriert. Keine Migration.
