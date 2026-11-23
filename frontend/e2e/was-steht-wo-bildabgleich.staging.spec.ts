@@ -22,7 +22,8 @@ import { oeffneKarte, seedAbo, type Abo, type HubKind } from './was-steht-wo.hel
 const HIER = path.dirname(fileURLToPath(import.meta.url));
 const MOCKUP = 'file://' + path.resolve(HIER, '..', '..', 'docs', 'context', 'einstellungen_neu', 'seiten', 'mockup-hub-fassung4.html');
 const ARTEFAKTE = path.resolve(HIER, '..', '..', 'docs', 'artifacts', 'fix-3283-wsw-optik', 'bilder');
-const DESKTOP = { width: 1280, height: 900 };
+// Wie #3154: hoher Viewport, damit die ganze Karte (Kopf bis letzte Zeile) ohne Scrollen hineinpasst.
+const DESKTOP = { width: 1280, height: 3200 };
 
 type Lang = 'de' | 'en';
 type Ctx = 'trip' | 'orte' | 'ort1';
@@ -38,7 +39,7 @@ const TRIP_METRIKEN = ['temperature', 'wind', 'gust', 'precipitation', 'thunder'
 const ORTE_METRIKEN = ['temp_max_c', 'temp_min_c', 'wind_max_kmh', 'gust_max_kmh', 'precip_sum_mm', 'sunny_hours_h', 'cloud_avg_pct', 'humidity_avg_pct'];
 
 /** Prüfaufbau: das globale „Gespeichert“-Etikett ragt sonst in die Element-Aufnahme (Befund 5). */
-const OHNE_SAVE_INDICATOR = '[data-slot="save-indicator"], .save-indicator { display: none !important; }';
+const OHNE_SAVE_INDICATOR = '[data-testid="save-indicator"] { display: none !important; }';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -67,7 +68,15 @@ test('#3283 Mockup: Karte „Was steht wo“ je Kontext (trip, orte, ort1)', asy
 		await page.evaluate((c) => document.querySelector<HTMLElement>(`[data-ctx="${c}"]`)?.click(), ctx);
 		const karte = page.locator('[data-abschnitt="was-steht-wo"]').first();
 		await expect(karte, `Mockup ${ctx}: Karte fehlt`).toBeVisible();
-		await karte.screenshot({ path: path.join(ordner, `mockup-${ctx}-de.png`) });
+		const legende = karte.locator('details.adv').filter({ hasText: 'Kürzel erklärt' }).first();
+		const hatLegende = (await legende.count()) > 0;
+		if (hatLegende) await legende.evaluate((d) => ((d as HTMLDetailsElement).open = false));
+		await karte.scrollIntoViewIfNeeded();
+		await karte.screenshot({ path: path.join(ordner, `mockup-${ctx}-de-zu.png`) });
+		if (hatLegende) {
+			await legende.evaluate((d) => ((d as HTMLDetailsElement).open = true));
+			await karte.screenshot({ path: path.join(ordner, `mockup-${ctx}-de-auf.png`) });
+		}
 	}
 });
 
@@ -82,12 +91,10 @@ for (const { ctx, kind, orte } of KONTEXTE) {
 			try {
 				abo = await seedAbo(page.request, kind, { metriken: kind === 'route' ? TRIP_METRIKEN : ORTE_METRIKEN, orte });
 				const karte = await oeffneKarte(page, kind, abo.id);
+				await expect(karte.getByText(lang === 'de' ? 'Was steht wo' : 'What goes where').first(), 'Kartenkopf sichtbar').toBeVisible();
+				await karte.scrollIntoViewIfNeeded();
 				await page.addStyleTag({ content: OHNE_SAVE_INDICATOR });
-				await expect(page.locator('[data-slot="save-indicator"]:visible, .save-indicator:visible'), 'AC-7: Etikett im Prüfaufbau sichtbar').toHaveCount(0);
-				// Legende aufklappen, damit der Bildprüfer Befund 7 sieht.
-				const legende = karte.locator('[data-testid="was-steht-wo-legende-auf"]').first();
-				if (await legende.isVisible()) await legende.click();
-
+				await expect(page.locator('[data-testid="save-indicator"]:visible'), 'AC-7: Etikett im Prüfaufbau sichtbar').toHaveCount(0);
 				// AC-1: kein Beispielwert in den Kanalspalten abgeschnitten (berechnete Breite = Inhaltsbreite).
 				const abgeschnitten = await karte.locator('[data-slot="et-beispiel"]:visible').evaluateAll((els) =>
 					els.filter((e) => e.scrollWidth > e.clientWidth + 1).map((e) => e.textContent)
@@ -97,7 +104,15 @@ for (const { ctx, kind, orte } of KONTEXTE) {
 				const zusatz = karte.locator('[data-slot="et-zelle"][data-stelle="outlook"] [data-slot="et-beispiel"], [data-slot="et-zelle"][data-stelle="hourly"] [data-slot="et-beispiel"]');
 				await expect(zusatz, 'AC-2: Beispielwert in Stundenverlauf/Ausblick').toHaveCount(0);
 
-				await karte.screenshot({ path: path.join(bildOrdner(), `staging-${ctx}-${lang}.png`) });
+				// Legende zugeklappt (Vergleich mit Mockup) und aufgeklappt (Befund 7).
+				const legende = karte.locator('[data-testid="was-steht-wo-legende-auf"]').first();
+				const detail = karte.locator('[data-testid="was-steht-wo-legende"]').first();
+				if ((await detail.count()) > 0 && (await detail.evaluate((d) => (d as HTMLDetailsElement).open))) await legende.click();
+				await karte.screenshot({ path: path.join(bildOrdner(), `staging-${ctx}-${lang}-zu.png`) });
+				if (await legende.isVisible()) {
+					await legende.click();
+					await karte.screenshot({ path: path.join(bildOrdner(), `staging-${ctx}-${lang}-auf.png`) });
+				}
 			} finally {
 				await abo?.aufraeumen();
 			}
