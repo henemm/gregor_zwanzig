@@ -219,12 +219,21 @@ describe('#2968 AC-5 Regel c: sprachneutral', () => {
 		assert.notEqual(r.sprachneutral, true, JSON.stringify(r));
 		assert.notEqual(r.text_en, 'Gewitter');
 	});
-	test('„Gewitter“ ohne Katalogwert ⇒ Lücke, obwohl es ein Metrikname im Schnappschuss ist', () => {
-		assert.ok(bekannte().metriknamen.includes('Gewitter'), 'Vorbedingung: Gewitter ist Metrikname');
-		const r = mitBekannten('Gewitter', ohneWerte('Gewitter'));
+	// #3154 (AC-10): Metriknamen mit Server-EN (daten/metrik_namen.json, label_de/label_en) sind keine Lücke mehr
+	// („Gewitter“ ⇒ „Thunderstorm“). Die Regel „Metrikname allein gibt kein EN“ gilt weiter für einen Namen ohne
+	// EN im Schnappschuss.
+	test('„Gewitterenergie (CAPE)“ ohne Katalogwert und ohne Server-EN ⇒ Lücke, obwohl es ein Metrikname im Schnappschuss ist', () => {
+		assert.ok(bekannte().metriknamen.includes('Gewitterenergie (CAPE)'), 'Vorbedingung: Gewitterenergie (CAPE) ist Metrikname');
+		const r = mitBekannten('Gewitterenergie (CAPE)', ohneWerte('Gewitterenergie (CAPE)'));
 		assert.equal(r.luecke, true, JSON.stringify(r));
 		assert.notEqual(r.sprachneutral, true);
 		assert.equal(r.text_en, null);
+	});
+	test('#3154: „Gewitter“ ohne Katalogwert ⇒ EN aus dem Metrikname-Schnappschuss (Server-Katalog), nie DE', () => {
+		const r = mitBekannten('Gewitter', ohneWerte('Gewitter'));
+		assert.equal(r.luecke, false, JSON.stringify(r));
+		assert.equal(r.text_en, 'Thunderstorm');
+		assert.notEqual(r.sprachneutral, true);
 	});
 	test('deutsches Wort ohne Katalogtreffer ⇒ Lücke, nie sprachneutral', () => {
 		const r = mitBekannten('Hagelschauer');
@@ -305,7 +314,8 @@ describe('#2968 AC-8/AC-9 Messgröße und Besitzer über die eingecheckte Elemen
 		for (const e of neutral) {
 			assert.equal(e.luecke, false, e.id);
 			assert.equal(e.i18n_key, null, e.id);
-			assert.equal(e.text_en, e.text_de.replace(/\d+([.,]\d+)?/g, '{zahl}'), e.id);
+			// #3154: Beispieltexte (Rolle beispiel) sind das Muster {wert}, nicht die Zahlenform des Mockups.
+			assert.equal(e.text_en, e.rolle === 'beispiel' ? '{wert}' : e.text_de.replace(/\d+([.,]\d+)?/g, '{zahl}'), e.id);
 		}
 	});
 	test('jede Lücke hat einen Besitzer (Element-ID oder Abschnitt) mit Verweis ≠ #2968', () => {

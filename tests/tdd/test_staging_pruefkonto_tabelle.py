@@ -221,3 +221,59 @@ class TestSichereTabelle:
         with pytest.raises(m.SeedFehler):
             _seed(m, server, "konto-a").sichere_tabelle("t1", "vergleich", m.tabelle_orte_soll())
         assert server.puts() == []
+
+
+# --------------------------------------------------------------------------- Fix-Loop 1 (F002, F003)
+
+class _Protokoll:
+    """Transport, der jede Anfrage mitschreibt; GET liefert die vorgegebene Antwort."""
+
+    def __init__(self, get_antwort):
+        self.get_antwort = get_antwort
+        self.anfragen: list[tuple[str, str, object]] = []
+
+    def __call__(self, methode, url, headers, body):
+        self.anfragen.append((methode, url, body))
+        return (200, self.get_antwort) if methode == "GET" else (200, {"placements": body})
+
+
+@pytest.mark.parametrize("uid", ["default", None, "", "  "])
+def test_f002_ohne_echte_nutzer_id_kein_aufruf(uid):
+    m = _modul()
+    t = _Protokoll({"stored": False, "placements": {}})
+    s = m.PruefkontoSeed("https://staging.gregor20.henemm.com", "http://localhost:8091", "geheim", t)
+    s.uid = uid
+    with pytest.raises(m.SeedFehler):
+        s.sichere_tabelle("t1", "route", m.tabelle_trip_soll())
+    assert t.anfragen == []
+
+
+def test_f003_umrechnung_wird_nicht_uebernommen():
+    """``stored: false``: die Umrechnung ist kein gespeicherter Stand; PUT-Rumpf = Soll exakt."""
+    m = _modul()
+    t = _Protokoll({"stored": False, "placements": {"version": 1, "rows": [], "umrechnung": 1}})
+    s = _seed(m, t, "konto-a")
+    assert s.sichere_tabelle("t1", "route", m.tabelle_trip_soll()) is True
+    puts = [a for a in t.anfragen if a[0] == "PUT"]
+    assert len(puts) == 1 and puts[0][2] == m.tabelle_trip_soll()
+
+
+def test_f003_gespeicherte_zusatzschluessel_bleiben():
+    m = _modul()
+    alt = {"version": 1, "rows": [{"metric_id": "wind"}], "outlook_reports": ["morning"], "zukunft": [1]}
+    t = _Protokoll({"stored": True, "placements": alt})
+    assert _seed(m, t, "konto-a").sichere_tabelle("t1", "route", m.tabelle_trip_soll()) is True
+    body = [a for a in t.anfragen if a[0] == "PUT"][0][2]
+    assert body == {**m.tabelle_trip_soll(), "zukunft": [1]}
+
+
+def test_f003_abgewaehlter_haken_braucht_put():
+    """Soll = alle Haken an: ein gespeichertes ``places.email = false`` ist eine Abweichung."""
+    m = _modul()
+    ist = m.tabelle_trip_soll()
+    ist["rows"][3]["places"] = {"email": False}
+    assert m.tabelle_braucht_put({"stored": True, "placements": ist}, m.tabelle_trip_soll()) is True
+    gleich = m.tabelle_trip_soll()
+    gleich["rows"][3]["places"] = {"email": True}
+    gleich["rows"][3]["vom_server"] = 1
+    assert m.tabelle_braucht_put({"stored": True, "placements": gleich}, m.tabelle_trip_soll()) is False

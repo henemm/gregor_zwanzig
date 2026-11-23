@@ -813,6 +813,26 @@ export function schreibBefund(anfragen: { method: string; url: string }[]): stri
 const HAT_PLATZHALTER = /\{[^}]+\}/;
 
 /**
+ * #3154 (AC-9): Zellennamen und Darstellungs-Knöpfe der Tabelle „Was steht wo“ (Katalog wetter.wsw.zelle.*,
+ * bausteine.darstellung.name, DE und EN). Ein `{wert}` (Beispieltext einer Zelle) passt nie auf einen solchen
+ * Text, sonst verschluckte ein fehlender Beispieltext den nächsten Zellennamen.
+ */
+const ZELLEN_QUELLE =
+	'(?:Darstellung |Format of |.*\\s(?:in|im) (?:E-Mail|Telegram|SMS|Stundenverlauf|3-Tages-Ausblick|email|the hourly view|the 3-day outlook)$)';
+export const ZELLENNAME = new RegExp('^' + ZELLEN_QUELLE);
+/** Negativvorschau am Textanfang für Muster mit `{wert}` (leer ohne `{wert}`). */
+/**
+ * #3154: Marken und Sperr-Gründe der Zellen (Katalog wetter.wsw.marke.*, wetter.wsw.grund.*, DE und EN) sind nie
+ * ein Beispieltext; sonst nähme ein fehlendes Beispiel die Marke „passt nicht mehr“ und die Marke selbst spränge
+ * zur nächsten Zeile (Reihenfolge-Kaskade).
+ */
+const MARKEN_QUELLE =
+	'(?:passt nicht mehr|nur Tageswert|kein Stundenwert|keine eigene Spalte|kein Tageswert|kein Kürzel|nicht in der E-Mail|no longer fits|daily value only|no hourly value|no column of its own|no daily value|no abbreviation|not in the email)$';
+function wertVorschau(muster: string | null | undefined): string {
+	return muster && muster.includes('{wert}') ? '(?!' + ZELLEN_QUELLE + '|' + MARKEN_QUELLE + ')' : '';
+}
+
+/**
  * Erwarteter Text als RegExp (DE: Muster bzw. exakt; EN: text_en mit beliebigen Zahlen); null = EN-Lücke.
  * #2913 Fix-Loop 2 (C5): EN-Texte mit Platzhaltern (`{metrik}`) sind Muster — der Generator setzt keine
  * DE-Werte mehr ein; ein Platzhalter passt auf jeden Wert.
@@ -824,13 +844,13 @@ export function erwartung(e: ListenElement, sprache: Sprache): RegExp | null {
 		const kandidaten = e.text_en_alternativen?.length ? e.text_en_alternativen : [e.text_en];
 		return new RegExp('^(?:' + kandidaten.map(enQuelle).join('|') + ')$');
 	}
-	if (e.muster) return new RegExp('^' + musterAlsRegExp(e.muster).source + '$');
+	if (e.muster) return new RegExp('^' + wertVorschau(e.muster) + musterAlsRegExp(e.muster).source + '$');
 	return new RegExp('^' + esc(normalisiere(e.text_de)) + '$');
 }
 
 /** EN-Erwartung eines Kandidaten (ohne Anker): Platzhalter beliebig, sonst wörtlich mit beliebigen Zahlen. */
 function enQuelle(text: string): string {
-	if (HAT_PLATZHALTER.test(text)) return musterAlsRegExp(text).source;
+	if (HAT_PLATZHALTER.test(text)) return wertVorschau(text) + musterAlsRegExp(text).source;
 	return normalisiere(text).split(/\d+(?:[.,]\d+)?/).map(esc).join('[\\d.,]+');
 }
 
@@ -844,7 +864,10 @@ const ZAHL_TEXT = '[-−+]?\\d+(?:[.,:]\\d+)*';
  * „100%“) — AC-6 sagt „Zahlen beliebig“, wie das DE-Muster; geprüft wird die Form, nicht der Wert (Kontodaten).
  */
 function neutralMuster(muster: string): RegExp {
-	return new RegExp('^' + normalisiere(muster).split('{zahl}').map(esc).join('\\d+(?:[.,]\\d+)*') + '$');
+	// #3154: `{wert}` (Beispieltext) passt auf beliebigen Text außer einem Zellennamen.
+	const teile = normalisiere(muster).split(/(\{zahl\}|\{wert\})/);
+	const quelle = teile.map((t, i) => (i % 2 === 0 ? esc(t) : t === '{zahl}' ? '\\d+(?:[.,]\\d+)*' : '.+?')).join('');
+	return new RegExp('^' + wertVorschau(muster) + quelle + '$');
 }
 
 /**
@@ -864,7 +887,7 @@ function gegenMuster(muster: string, metrik: string): RegExp {
 	const teile = normalisiere(muster).split(/(\{[^}]+\})/);
 	const platzhalter = (t: string) => (t === '{zahl}' ? ZAHL_TEXT : t === '{metrik}' ? metrik : '.+?');
 	const quelle = teile.map((t, i) => (i % 2 === 0 ? esc(t) : platzhalter(t))).join('');
-	return new RegExp('^' + quelle + '$');
+	return new RegExp('^' + wertVorschau(muster) + quelle + '$');
 }
 
 /**
@@ -875,8 +898,17 @@ function gegenMuster(muster: string, metrik: string): RegExp {
 function erwartungGegenrichtung(e: ListenElement, sprache: Sprache, metrik: string): RegExp | null {
 	const vorlage = sprache === 'en' ? e.text_en : e.muster;
 	if (sprache === 'en' && (e.luecke || !vorlage)) return null;
+	// #3154: ein Beispieltext (`{wert}`) erklärt in der Gegenrichtung nur Text in der Form seines Mockup-Beispiels
+	// (Zahlen beliebig, wie `{zahl}`), nie beliebigen Text und nie einen Zellennamen.
+	if (vorlage && vorlage.includes('{wert}')) return beispielForm(e.text_de);
 	if (vorlage && HAT_PLATZHALTER.test(vorlage)) return gegenMuster(vorlage, metrik);
 	return erwartung(e, sprache);
+}
+
+/** #3154: Form eines Beispieltexts für die Gegenrichtung: der Text wörtlich, jede Zahl als `{zahl}`. */
+function beispielForm(text: string): RegExp {
+	const quelle = normalisiere(text).split(/\d+(?:[.,:]\d+)*/).map(esc).join(ZAHL_TEXT);
+	return new RegExp('^(?!' + ZELLEN_QUELLE + '|' + MARKEN_QUELLE + ')' + quelle + '$');
 }
 
 /**
@@ -1331,6 +1363,12 @@ export function bewerteKontoChips(
  * `data-abschnitt` vorhanden?): gefunden nur mit Haken und in Reihenfolge; ohne Haken abweichend;
  * Script-Abschnitt ohne Haken nicht_pruefbar; EN-Lücke nicht_pruefbar.
  */
+/** #3154: Element ist ein Beispieltext (Muster mit `{wert}` in der Sprache des Laufs). */
+function istWert(e: ListenElement, sprache: Sprache): boolean {
+	const vorlage = sprache === 'en' ? e.text_en : e.muster;
+	return typeof vorlage === 'string' && vorlage.includes('{wert}');
+}
+
 export function bewerteAbschnitt(
 	liste: ListenElement[],
 	befund: { marker: boolean; texte: string[] },
@@ -1350,6 +1388,23 @@ export function bewerteAbschnitt(
 		const re = erwartung(e, sprache);
 		if (!re) {
 			out.set(e.id, { status: 'nicht_pruefbar', grund: 'EN-Lücke: kein Katalogtext' });
+			continue;
+		}
+		// #3154 (AC-9): ein Beispieltext (`{wert}`) gehört zum Block direkt hinter dem Cursor; gesucht wird nur
+		// bis zum nächsten Zellennamen. Fehlt er, ist genau dieses Element abweichend, der Cursor bleibt stehen.
+		if (istWert(e, sprache)) {
+			const grenze = norm.findIndex((t, i) => i > zuletzt && ZELLENNAME.test(t));
+			const bis = grenze < 0 ? norm.length : grenze;
+			const treffer = norm.findIndex((t, i) => i > zuletzt && i < bis && re.test(t));
+			if (treffer >= 0 && befund.marker) {
+				out.set(e.id, { status: 'gefunden' });
+				zuletzt = treffer;
+			} else if (treffer >= 0) {
+				out.set(e.id, { status: 'abweichend', grund: `Abschnitt-Haken data-abschnitt="${abschnitt}" fehlt`, ist: 'nur seitenweit gefunden' });
+				zuletzt = treffer;
+			} else {
+				out.set(e.id, { status: 'abweichend', grund: 'Text nicht sichtbar', ist: 'kein Beispieltext vor dem nächsten Zellennamen' });
+			}
 			continue;
 		}
 		const nachher = norm.findIndex((t, i) => i > zuletzt && re.test(t));

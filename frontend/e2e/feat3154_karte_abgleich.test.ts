@@ -42,6 +42,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
 import * as L from './elementliste_abgleich_logik.ts';
 import * as G from '../../scripts/elementliste_aus_mockup.ts';
 
@@ -172,6 +173,22 @@ describe('#3154 AC-9: {wert} mit Negativvorschau gegen Zellennamen', () => {
 		assert.equal(abw.length, 1, `genau eine Abweichung erwartet, ist: ${JSON.stringify(abw)}`);
 		assert.equal(abw[0][0], 't.5');
 		assert.notEqual(abw[0][1].grund, 'Reihenfolge im Abschnitt');
+	});
+
+	test('Staging-Runde 1: fehlendes SMS-Beispiel vor der Marke „passt nicht mehr“ — {wert} nimmt die Marke nicht, keine Kaskade', () => {
+		// Live: gekürzte SMS-Zelle zeigt nur die Marke; im Soll steht dort noch ein Beispiel, danach die Marke der nächsten Zeile.
+		const l: L.ListenElement[] = [
+			el(1, 'Bewölkung in SMS', { rolle: 'eingabe' }),
+			beispiel(2, 'CT70@16'),
+			el(3, 'Bewölkung im Stundenverlauf', { rolle: 'eingabe' }),
+			el(4, 'Sonnenstunden in SMS', { rolle: 'eingabe' }),
+			el(5, 'passt nicht mehr')
+		];
+		const texte = ['Bewölkung in SMS', 'passt nicht mehr', 'Bewölkung im Stundenverlauf', 'Sonnenstunden in SMS', 'passt nicht mehr'];
+		for (const sprache of ['de', 'en'] as const) assert.ok(!L.erwartung(beispiel(1, 'x'), sprache)!.test(sprache === 'de' ? 'passt nicht mehr' : 'no longer fits'));
+		const erg = L.bewerteAbschnitt(l, { marker: true, texte }, 'de', 'was-steht-wo');
+		const abw = [...erg.entries()].filter(([, e]) => e.status !== 'gefunden');
+		assert.deepEqual(abw.map(([id]) => id), ['t.2']);
 	});
 
 	test('alle Beispiele vorhanden: alles gefunden (Gegenprobe, DE)', () => {
@@ -335,5 +352,77 @@ describe('#3154 AC-10/AC-11: EN-Namen und Besitzer in der erzeugten Liste', () =
 		const alle = Array.isArray(b) ? b : (b.eintraege ?? Object.values(b).flat());
 		const alt = (alle as Array<Record<string, unknown>>).filter((x) => x.abschnitt === 'was-steht-wo' && /noch nicht gebaut/.test(JSON.stringify(x)));
 		assert.equal(alt.length, 0);
+	});
+});
+
+// ------------------------------------------------------------------ Mockup selbst (Fix-Loop 1, F004)
+
+/**
+ * Rendert die Tabelle „Was steht wo“ des Mockups ohne Browser: das Mockup-Skript läuft im vm-Kontext mit einem
+ * leeren `document`-Platzhalter bis vor `render();`; `wasStehtWo()` liefert das HTML der Karte als Text.
+ */
+function mockupKarte(ctx: 'trip' | 'orte'): string {
+	const html = readFileSync(join(REPO, 'docs/context/einstellungen_neu/seiten/mockup-hub-fassung4.html'), 'utf-8');
+	const skript = html.slice(html.indexOf('<script>') + '<script>'.length, html.lastIndexOf('</script>'));
+	const bis = skript.indexOf('\nrender();\n');
+	assert.ok(bis > 0, 'Mockup-Skript ohne render()-Aufruf');
+	const quelle = skript.slice(0, bis) + '\nglobalThis.__wsw={wasStehtWo,setCtx:(c)=>{ctx=c;}};\n})();';
+	const leer = (): unknown =>
+		new Proxy(function () {}, { get: (_t, k) => (k === Symbol.toPrimitive ? () => '' : leer()), apply: () => leer() });
+	const kontext = vm.createContext({ document: leer(), window: {} }) as { __wsw?: { wasStehtWo(): string; setCtx(c: string): void } };
+	vm.runInContext(quelle, kontext);
+	kontext.__wsw!.setCtx(ctx);
+	return kontext.__wsw!.wasStehtWo();
+}
+/** Zeile einer Metrik (Name) aus dem Karten-HTML: von ihrem `kn`-Namen bis zur nächsten Zeile. */
+function mockupZeile(html: string, name: string): string {
+	const start = html.indexOf(`<span class="kn">${name}</span>`);
+	assert.ok(start >= 0, `Zeile „${name}“ fehlt im Mockup`);
+	const ende = html.indexOf('<div class="kx', start);
+	return html.slice(start, ende < 0 ? undefined : ende);
+}
+
+describe('#3154 F004: Mockup selbst — gesperrte Fensterzellen und Gewitter-Knopf (ohne Elementliste)', () => {
+	const FENSTER = [
+		'Tiefsttemperatur Nacht',
+		'Tages-Tiefsttemperatur (Gehzeit)',
+		'Tages-Höchsttemperatur (Gehzeit)',
+		'Gefühlte Tiefsttemperatur Nacht',
+		'Gefühlte Tages-Tiefsttemperatur (Gehzeit)',
+		'Gefühlte Tages-Höchsttemperatur (Gehzeit)'
+	];
+
+	test('Trip: jede Fensterzeile gesperrt in E-Mail („keine eigene Spalte“) und Ausblick („kein Tageswert“), Haken in Telegram und SMS', () => {
+		const html = mockupKarte('trip');
+		for (const n of FENSTER) {
+			const z = mockupZeile(html, n);
+			assert.ok(!z.includes(`aria-label="${n} in E-Mail"`), `${n}: E-Mail-Haken statt Sperre`);
+			assert.ok(!z.includes(`aria-label="${n} im 3-Tages-Ausblick"`), `${n}: Ausblick-Haken statt Sperre`);
+			assert.ok(z.includes('>keine eigene Spalte</em>'), `${n}: Grund E-Mail fehlt`);
+			assert.ok(z.includes('>kein Tageswert</em>'), `${n}: Grund Ausblick fehlt`);
+			assert.ok(z.includes(`aria-label="${n} in Telegram"`) && z.includes(`aria-label="${n} in SMS"`), `${n}: Telegram/SMS-Haken fehlen`);
+		}
+		// Gegenprobe: eine normale Zeile hat beide Haken und keinen Sperr-Grund.
+		const t = mockupZeile(html, 'Temperatur');
+		assert.ok(t.includes('aria-label="Temperatur in E-Mail"') && t.includes('aria-label="Temperatur im 3-Tages-Ausblick"'));
+		assert.ok(!t.includes('keine eigene Spalte'));
+	});
+
+	for (const ctx of ['trip', 'orte'] as const) {
+		test(`${ctx}: Gewitter hat den Darstellungs-Knopf nur in der E-Mail, Wind und Regenwahrscheinlichkeit überall`, () => {
+			const html = mockupKarte(ctx);
+			const knoepfe = (n: string) => [...mockupZeile(html, n).matchAll(/aria-label="Darstellung .*? (?:in|im) ([^":]+): /g)].map((m) => m[1]);
+			assert.deepEqual(knoepfe('Gewitter'), ['E-Mail']);
+			const alle = ctx === 'trip' ? ['E-Mail', 'Telegram', '3-Tages-Ausblick'] : ['E-Mail', 'Telegram', 'Stundenverlauf', '3-Tages-Ausblick'];
+			assert.deepEqual(knoepfe('Wind'), alle);
+			assert.deepEqual(knoepfe('Regenwahrscheinlichkeit'), alle);
+		});
+	}
+
+	test('Orte: keine Zelle mit den Trip-Sperren „keine eigene Spalte“ / „kein Tageswert“', () => {
+		const html = mockupKarte('orte');
+		assert.ok(html.includes('aria-label="Temperatur in E-Mail"'), 'Gegenprobe: Orte-Karte gerendert');
+		assert.ok(!html.includes('keine eigene Spalte'));
+		assert.ok(!html.includes('kein Tageswert'));
 	});
 });

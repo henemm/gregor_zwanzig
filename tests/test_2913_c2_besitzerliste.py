@@ -163,9 +163,11 @@ def test_ac12_eintraege_anderer_scheiben_unveraendert(daten):
     # Kürzel (sprachneutral) und Bedeutungen (EN aus wetter.wsw.legende.* bzw. Server-Katalog-Schnappschuss
     # daten/kuerzel_bedeutung.json). Besitzer nur für die datensatzabhängigen SMS-Beispielwerte des Trips als
     # {zahl}-Muster: FN, FD/…, „TF- FN FD“ und die ganze SMS-Zeile → #3258 (4).
+    # #3154 (22.11., Spec feat_3154_karte_abgleich.md): die zwei Abschnitt-Einträge was-steht-wo (Trip/Orte,
+    # „noch nicht gebaut“) sind gestrichen — die Karte ist gebaut und wird bewertet, nicht abgedeckt: #3122 14 → 12.
     soll = {
         "#2967": 0, "#2966": 0, "#2913-d": 0, "#2795": 318, "#2797": 8, "#2968": 0, "#3022": 62,
-        "#3111": 0, "#3194": 0, "#3241": 61, "#3009": 2, "#3151": 2, "#3122": 14, "#3202": 0, "#3203": 0, "#3204": 0,
+        "#3111": 0, "#3194": 0, "#3241": 61, "#3009": 2, "#3151": 2, "#3122": 12, "#3202": 0, "#3203": 0, "#3204": 0,
         "#3205": 0, "#3145": 0, "#3258": 4,
     }
     ist = _verweise(daten)

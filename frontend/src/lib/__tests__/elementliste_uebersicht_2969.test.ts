@@ -98,9 +98,22 @@ const ALT_ANZAHL_3251 = 2756;
 // Liste neu erzeugt: 184 neue Einträge, nur Abschnitt was-steht-wo im Reiter Wetter (Trip 55, Orte 37, je Zustand
 // normal/luecken); die folgenden Einträge desselben Abschnitts ändern nur ordnung. Keine ID entfallen, alle
 // übrigen Einträge byte-gleich (Diff je ID geprüft).
-const ALT_ANZAHL = ALT_ANZAHL_3251 + 184;
-const ALT_SHA = '95e04d795303ff82654aed38d16ec213f581ef4167b8a6aa5bb63b0a269b12a5';
-const MOCKUP_HASH = 'sha256:c347e818e03ed26119a6a9fd3460258b3409e8c322914041df6dbb9503cdb972';
+// #3154: Abnahme-Abgleich „Was steht wo“ (22.11.; vorher 95e04d79…0a269b12a5, Mockup-Hash c347e818…9503cdb972,
+// Anzahl 2940). Mockup Fassung 4 an freigegebene Entscheidungen angeglichen: die sechs Fensterzeilen sind in
+// E-Mail und 3-Tages-Ausblick gesperrt mit Grund („keine eigene Spalte“, „kein Tageswert“) statt Haken,
+// Gewitter-Einfach nur in der E-Mail (dort nur der Ampelpunkt ohne Text, wie live), Regenwahrscheinlichkeit mit
+// Roh/Einfach-Knopf (Spec #3122 Teil A Nr. 4), Orte-SMS als Token-Zeile (ADR-0125) ohne „+N“ und ohne
+// „Dafür steht …“, gekürzte SMS-Zellen nur mit Marke, Zeichenzahl als eigenes Element, Ausblick-Schalter vor dem
+// Titel (Titel aria-hidden wie live). Generator: Beispieltexte (Rolle beispiel) als Muster {wert}, je Zelle ein
+// Element; EN-Metriknamen aus daten/metrik_namen.json; SMS-Kürzungshinweis als Regel g (E1–E4). Liste neu
+// erzeugt: im Abschnitt was-steht-wo (Trip/Orte, je Zustand normal/luecken) 180 IDs entfallen und 174 neu
+// (Haken → Sperr-Grund, Beispiele mit Rolle beispiel, Darstellungs-Knöpfe Regenwahrscheinlichkeit, Orte-SMS/
+// Hinweis), 294 ändern nur ordnung, 10 Inhalt (EN der Zeilennamen); außerhalb von was-steht-wo ändern genau 10
+// Einträge im Abschnitt metriken (Zeilennamen Regenwahrscheinlichkeit, Tiefe Wolken, UV-Index, Bewölkung je
+// Zustand) nur EN (Lücke → Server-EN). Alle übrigen Einträge byte-gleich (Diff je ID geprüft).
+const ALT_ANZAHL = ALT_ANZAHL_3251 + 184 - 180 + 174;
+const ALT_SHA = '2d92d626780a7faf915d4fba7869672a5aed7ec4f7433222764ba5ed0bf0d059';
+const MOCKUP_HASH = 'sha256:fbb04f549d974116e70c0e89facac657cf5ab13a31e267eb00882ad7e6496ec6';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {
 	const e = uebersicht();
