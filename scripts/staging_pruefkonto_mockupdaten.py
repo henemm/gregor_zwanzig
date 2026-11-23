@@ -10,7 +10,8 @@ idempotent an bzw. gleicht ab: Trip „GR221 Mallorca" mit Wetterkonfiguration
 (Vorlage ``alpen-trekking``, Flags wie ``TRIP_METRICS``/``TRIP_OFF`` im Mockup),
 eigene Vorlage „Mallorca Frühling", drei Orte und den Orts-Vergleich „Münsterland",
 dazu die vier Kanaele (E-Mail, SMS, Telegram, Premium-SMS) wie ``konto()`` im
-Mockup. Telegram und Premium-SMS laufen ueber die internen Routen direkt am
+Mockup und (#3154) die Tabelle „Was steht wo“ von Trip und Orts-Vergleich in
+Mockup-Reihenfolge und -Formaten (``PUT /api/briefings/{id}/placements``). Telegram und Premium-SMS laufen ueber die internen Routen direkt am
 Loopback der Staging-Go-API (``http://localhost:8091``) mit Core-Auth-Header.
 
 Aufruf:  uv run python scripts/staging_pruefkonto_mockupdaten.py
@@ -72,9 +73,33 @@ _TRIP_REIHE = ("temperature", "temperature_night", "wind_chill", "wind", "gust",
 _TRIP_AUS = ("cloud_total", "sunshine", "fresh_snow", "snow_depth", "dewpoint", "humidity",
              "pressure")
 # Mockup ORTE_METRICS mit Aggregation wie internal/handler/vergleich_grundauswahl.go.
-_ORTE_METRIKEN = (("temperature", "max"), ("wind", "max"), ("gust", "max"),
+# #3154: Temperatur mit Max UND Min wie das Mockup („13°C / 4°C“, „D 13C L 4C“).
+_ORTE_METRIKEN = (("temperature", "max"), ("temperature", "min"), ("wind", "max"), ("gust", "max"),
                   ("precipitation", "sum"), ("thunder", "max"), ("rain_probability", "max"),
                   ("cloud_total", "avg"), ("sunshine", "sum"))
+
+# #3154: Tabelle „Was steht wo“ (display_config.placements, api_contract.md) wie das
+# Mockup Fassung 4. Trip-Folge = TRIP_METRICS ohne die ausgeschaltete Windrichtung
+# (18 Zeilen inkl. der fuenf Nur-Anzeige-Zeilen), Orte-Folge = ORTE_METRICS ohne sie.
+_TABELLE_TRIP = ("temperature", "temperature_night", "temperature_day_low",
+                 "temperature_day_high", "wind_chill", "wind_chill_night", "wind_chill_day_low",
+                 "wind_chill_day_high", "wind", "gust", "precipitation", "thunder",
+                 "rain_probability", "visibility", "cloud_low", "uv_index", "freezing_level",
+                 "snowfall_limit")
+_TABELLE_ORTE = ("temperature", "wind", "gust", "precipitation", "thunder", "rain_probability",
+                 "cloud_total", "sunshine")
+# Stellen mit zwei Formen (metric_catalog.STELLEN_ZWEI_FORMEN; Gewitter nur E-Mail, AC-5).
+_ALLE_FORMSTELLEN = ("email", "telegram", "hourly", "outlook")
+_ZWEI_FORMEN = {"wind": _ALLE_FORMSTELLEN, "gust": _ALLE_FORMSTELLEN,
+                "precipitation": _ALLE_FORMSTELLEN, "rain_probability": _ALLE_FORMSTELLEN,
+                "thunder": ("email",),
+                "cloud_low": _ALLE_FORMSTELLEN, "cloud_total": _ALLE_FORMSTELLEN,
+                "sunshine": ("email", "telegram", "outlook")}
+# Mockup ``defFmt``: Einfach fuer Windrichtung, Gewitter, Bewoelkung, Sonne; sonst Roh.
+_EINFACH = ("wind_direction", "thunder", "cloud_total", "cloud_low", "cloud_mid", "cloud_high",
+            "sunshine")
+# Mockup ``outM:false, outA:true``: Ausblick nur im Abend-Briefing.
+_AUSBLICK = ("evening",)
 
 # Etappen: Wegpunkte auf einer Linie Port d'Andratx -> Deià; Strecke je Etappe wie im
 # Mockup (7,8/8,4/6,9/8,4 km), Anstieg ueber den Mittelpunkt (520/610/380/227 Hm).
@@ -292,6 +317,54 @@ def soll_vergleich(location_ids: list[str], empfaenger: list[str]) -> dict:
             **soll_kanalauswahl_vergleich()}
 
 
+def _tabelle(folge: tuple[str, ...], stellen: tuple[str, ...]) -> dict:
+    """``placements`` (version 1): alle Haken an (``places`` fehlt), Formate wie Mockup."""
+    zeilen = []
+    for mid in folge:
+        zeile: dict = {"metric_id": mid}
+        formstellen = [s for s in _ZWEI_FORMEN.get(mid, ()) if s in stellen]
+        if formstellen:
+            form = "simplified" if mid in _EINFACH else "raw"
+            zeile["formats"] = {s: form for s in formstellen}
+        zeilen.append(zeile)
+    return {"version": 1, "rows": zeilen, "outlook_reports": list(_AUSBLICK)}
+
+
+def tabelle_trip_soll() -> dict:
+    """#3154 AC-1: Tabelle des Trips (``kind=route``; ohne Stundenverlauf)."""
+    return _tabelle(_TABELLE_TRIP, ("email", "telegram", "outlook"))
+
+
+def tabelle_orte_soll() -> dict:
+    """#3154 AC-2: Tabelle des Orts-Vergleichs (``kind=vergleich``)."""
+    return _tabelle(_TABELLE_ORTE, _ALLE_FORMSTELLEN)
+
+
+def tabelle_braucht_put(get_antwort: dict, soll: dict) -> bool:
+    """False nur, wenn eine gespeicherte Tabelle das Soll schon enthaelt (gleiche Folge,
+    gleiche Formate); eine blosse Umrechnung (``stored: false``) braucht immer den PUT."""
+    if not isinstance(get_antwort, dict) or get_antwort.get("stored") is not True:
+        return True
+    ist = get_antwort.get("placements")
+    if not isinstance(ist, dict) or not isinstance(ist.get("rows"), list):
+        return True
+    gleich = (ist.get("version") == soll["version"]
+              and ist.get("outlook_reports") == soll["outlook_reports"]
+              and [_zeile_kern(r) for r in ist["rows"]] == [_zeile_kern(r) for r in soll["rows"]])
+    return not gleich
+
+
+def _zeile_kern(zeile) -> tuple:
+    """Vergleichskern einer Tabellenzeile: Metrik, abgewaehlte Stellen (``places`` != True;
+    fehlt = angehakt) und Formate. Ein gespeicherter Haken ``false`` weicht damit vom Soll
+    „alle Haken an“ ab; vom Server ergaenzte, unbekannte Schluessel zaehlen nicht."""
+    if not isinstance(zeile, dict):
+        return (None, {}, {})
+    places = zeile.get("places") if isinstance(zeile.get("places"), dict) else {}
+    formats = zeile.get("formats") if isinstance(zeile.get("formats"), dict) else {}
+    return (zeile.get("metric_id"), {k: v for k, v in places.items() if v is not True}, dict(formats))
+
+
 class PruefkontoSeed:
     """Seed gegen die Staging-Go-API; ``transport(methode, url, headers, body) -> (status, json)``."""
 
@@ -369,6 +442,27 @@ class PruefkontoSeed:
                        {**_merge(ist, soll), "display_config": dc})
         return vid
 
+    # --- Tabelle „Was steht wo“ (#3154) ------------------------------------------
+
+    def sichere_tabelle(self, briefing_id: str, kind: str, soll: dict) -> bool:
+        """GET, vergleichen, nur bei Abweichung PUT; True = geschrieben.
+
+        Der PUT ersetzt nur ``display_config.placements`` (Read-Modify-Write in Go, alle
+        anderen Felder des Abos bleiben). Rumpf = vollstaendige Tabelle (api_contract.md):
+        ``version``, ``rows``, ``outlook_reports`` aus dem Soll; unbekannte Schluessel oben
+        einer GESPEICHERTEN Tabelle bleiben erhalten (Merge). Eine Umrechnung
+        (``stored: false``) ist kein gespeicherter Stand und wird nicht uebernommen."""
+        if not isinstance(self.uid, str) or not self.uid.strip() or self.uid == "default":
+            raise SeedFehler("Tabelle ohne angemeldeten Nutzer - Abbruch (nie 'default')")
+        pfad = f"/api/briefings/{briefing_id}/placements?kind={kind}"
+        ist = self._rufe("GET", pfad)[1]
+        if not tabelle_braucht_put(ist, soll):
+            return False
+        gespeichert = ist.get("placements") if isinstance(ist, dict) and ist.get("stored") else None
+        body = {**gespeichert, **soll} if isinstance(gespeichert, dict) else soll
+        self._rufe("PUT", pfad, body)
+        return True
+
     # --- Kanaele ----------------------------------------------------------------
 
     def sichere_tarif(self) -> None:
@@ -422,6 +516,8 @@ def fuehre_seed(seed: PruefkontoSeed, nutzer: str, passwort: str) -> tuple[str, 
         "id": oid, "name": name, "lat": lat, "lon": lon, "elevation_m": hoehe,
         "region": "Westfalen"})["id"] for oid, name, lat, lon, hoehe in _ORTE]
     vergleich_id = seed.sichere_vergleich(orte, empfaenger)
+    seed.sichere_tabelle(TRIP_ID, "route", tabelle_trip_soll())
+    seed.sichere_tabelle(vergleich_id, "vergleich", tabelle_orte_soll())
     profil = seed.profil()
     seed.sichere_sms(profil)
     seed.sichere_telegram(profil)

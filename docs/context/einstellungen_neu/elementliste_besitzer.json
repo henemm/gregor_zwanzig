@@ -551,14 +551,6 @@
 			"art": "abschnitt",
 			"ctx": "trip",
 			"reiter": "wetter",
-			"abschnitt": "was-steht-wo",
-			"grund": "Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.",
-			"verweis": "#3122"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
 			"abschnitt": "kebab-bestaetigung-archivieren",
 			"grund": "Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
 			"verweis": "#2797"
@@ -698,14 +690,6 @@
 			"abschnitt": "tempo",
 			"grund": "Tempo-Karte im Reiter Etappen (Fortbewegung, Tempo flach, Aufstieg, Gehzeit je Etappe) braucht persistente Tempo-Felder: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108), aus c2 umgehängt. Ursachen: Text nicht sichtbar, Abschnitt-Haken fehlt, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)",
 			"verweis": "#2796"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "wetter",
-			"abschnitt": "was-steht-wo",
-			"grund": "Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.",
-			"verweis": "#3122"
 		},
 		{
 			"art": "abschnitt",
