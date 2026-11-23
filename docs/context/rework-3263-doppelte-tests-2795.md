@@ -99,3 +99,29 @@ Wiederherstellung per Kopie aus der Sicherung, `cmp` gegen die Sicherung. Kein g
 | Collect | 44 Tests, davon 5 `neu_erkannte` + 7 `begruendung` | offen (erwartet: 39, nur 7 `begruendung`) |
 
 M2 belegt schon vorher: der zu entfernende Test fängt diese Mutation nicht, der bleibende schon.
+
+## Mutationsprotokoll (Phase 6, Lauf „nachher“, 2026-11-23)
+
+Gleiches Skript (`mutation_lauf.sh nachher`, Sicherung im Scratchpad der aktuellen Sitzung), Vollausgabe in
+`docs/artifacts/rework-3263-doppelte-tests-2795/mutation-nachher-output.txt` (reiner Grünlauf: `test-green-output.txt`). Stand: `test_ac23_neu_erkannte_...` samt
+Parametrisierung entfernt, `test_ac23_nicht_zuordenbar_mit_begruendung_...` inhaltlich unverändert (nur Kommentar).
+
+- **M1 nachher:** 2 Ersetzungen; 7 failed / 32 deselected, rot sind genau die 7 `begruendung`-Fälle
+  (thunder_level_max, cape_max_jkg, wind_direction_deg, cloud_mid_avg_pct, cloud_high_avg_pct, pressure_avg_hpa,
+  precip_type_dominant). Die Mutation wird weiterhin für alle 5 ehemals doppelt geprüften Schlüssel gefangen.
+- **M2 nachher:** `begruendung[wind_direction_deg]` rot (1 failed / 38 deselected).
+- **Wiederherstellung:** `cmp` byte-identisch zur Sicherung, Datei 39/39 grün;
+  `git diff origin/main -- scripts/migrate_2792_profil_ampel.py` leer.
+- **Collect:** vorher 44, nachher 39 Tests; keine `neu_erkannte`-Fälle mehr, alle 7 `begruendung`-Fälle vorhanden,
+  keine Collect-Fehler.
+- **Benannte Dateien** (2792-Migration + sechs `test_2795_*.py`): 87 passed, 0 failed.
+
+| Mutation | vorher | nachher |
+|---|---|---|
+| Basis | 12/12 AC-23-Fälle grün | 7/7 AC-23-Fälle grün |
+| M1 (`nicht zuordenbar` → `nicht-zuordenbar`, Z. 119/125) | 12 rot (5 `neu_erkannte` + 7 `begruendung`) | 7 rot (alle `begruendung`) |
+| M2 (`wind_direction_deg` aus `_NICHT_ZUORDENBAR`) | `neu_erkannte[wind_direction_deg]` grün, `begruendung[wind_direction_deg]` rot | `begruendung[wind_direction_deg]` rot |
+| Wiederherstellung | byte-identisch, 44/44 grün | byte-identisch, 39/39 grün |
+| Collect | 44 | 39 (−5 = genau die Fälle des entfernten Tests) |
+
+Ergebnis: keine Mutation ist nachher grün; durch das Entfernen geht kein Schutz verloren.

@@ -482,14 +482,6 @@ def test_ac23_gewitter_und_cape_stehen_nicht_zuordenbar_im_bericht(tmp_path):
     assert "thunder" not in ampel.get("metrics", {})
 
 
-@pytest.mark.parametrize("key", ["wind_direction_deg", "cloud_mid_avg_pct", "cloud_high_avg_pct",
-                                 "pressure_avg_hpa", "precip_type_dominant"])
-def test_ac23_neu_erkannte_nicht_zuordenbare_schluessel_stehen_im_bericht(tmp_path, key):
-    ampel, out = _vgl_ampel(tmp_path, [_band(key, 1, 9)])
-    assert f"nicht zuordenbar: {key}" in out
-    assert not ampel.get("metrics")
-
-
 def test_ac23_ratsche_jeder_vergleichsschluessel_ist_zugeordnet_oder_nicht_zuordenbar(tmp_path):
     """Ratsche gegen die Tabellen des Skripts selbst (nicht gegen seinen Berichtstext):
     ein neuer Schluessel in FRONTEND_TO_RENDERER_METRIC_ID ohne Eintrag macht sie rot."""
@@ -509,6 +501,8 @@ def test_ac23_ratsche_jeder_vergleichsschluessel_ist_zugeordnet_oder_nicht_zuord
         assert mid in ampel.get("metrics", {}), (key, out)
 
 
+# Deckt auch die bei #2792 neu erkannten Schluessel ab (wind_direction_deg, cloud_mid/high,
+# pressure, precip_type; ehemals eigener Test, entfernt als echte Teilmenge, #3263).
 @pytest.mark.parametrize("key, grund", [
     ("thunder_level_max", "Gewitter hat keine Zahlengrenzen"),
     ("cape_max_jkg", "CAPE hat keine eigene Farbe (P1)"),
