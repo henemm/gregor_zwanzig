@@ -57,11 +57,10 @@ def test_f1_altbestand_leer_sms_folgt_register_wie_editor_gespeichert(monkeypatc
 #: von Hand, je Kanal die Folge der Editor-Liste ``_REGISTER``. Temperatur
 #: (Rang 1) ist in Mail/Telegram eine eigene Spalte vorn; Tagestief/-hoch
 #: (Rang 8/9) haben dort keine Spalte und erscheinen nur in SMS/Premium-SMS als
-#: ``D`` hinten. In der SMS hat die Temperatur selbst kein Kuerzel.
+#: ``D`` hinten.
 _SPALTEN = ["temperature", "wind", "gust", "precipitation", "thunder", "freezing_level", "visibility"]
 _TG_KUERZEL = ["T", "W", "G", "R", "TH", "FZ", "VS"]
 _KOMPAKT_AUSBLICK = ["Temp", "Wind", "Gust", "Rain", "Thdr", "0Line", "Visib"]
-_SMS_KUERZEL = ["W", "G", "R", "TH:", "TH+:", "FZ", "VS", "D"]
 
 
 def _alle_kanaele(monkeypatch, metrics: list) -> dict:
@@ -92,18 +91,16 @@ def _alle_kanaele(monkeypatch, metrics: list) -> dict:
         "telegram_ueberblick": [z.split()[0] for z in ov if z.strip() and not z.startswith("⚡")],
         "telegram_tabelle": tab,
         "kompakt_ausblick": [f.split()[0] for f in kompakt.split("  ")[1:]],
-        "sms": [re.match(r"[A-Z]+\+?:?", t).group(0) for t in
-                ms.sendungen("sms")[0]["body"].split()[1:]],  # #3174: Praefix ohne ':'
-        "premium_sms": ms.sendungen("premium_sms")[0]["body"],
-        "sms_roh": ms.sendungen("sms")[0]["body"],
     }
 
 
 def test_f1_altbestand_leer_jeder_kanal_folgt_editor(monkeypatch):
     """F1 (AC-22/AC-26), Nachfrage Koordinator: ``metrics: []`` und die vom
     Editor unveraendert gespeicherte Liste ergeben in HTML, Klartext,
-    Ausblick, Kompakt, Telegram, SMS und Premium-SMS dieselbe Folge -- die
-    Editor-Folge. Zwei Nutzer je Liste."""
+    Ausblick, Kompakt und Telegram dieselbe Folge -- die Editor-Folge. Zwei
+    Nutzer je Liste. Waechter fuer SMS und Premium-SMS ist
+    ``test_f1_altbestand_leer_sms_folgt_register_wie_editor_gespeichert``
+    (#3266)."""
     gespeichert = [{"metric_id": m, "enabled": True, "bucket": "primary", "order": i}
                    for i, m in enumerate(_REGISTER)]
     gespeichert.append({"metric_id": "temperature_night", "enabled": False})
@@ -114,8 +111,6 @@ def test_f1_altbestand_leer_jeder_kanal_folgt_editor(monkeypatch):
         assert k["html"] == k["klartext"] == k["ausblick"] == _SPALTEN, k
         assert k["telegram_ueberblick"] == k["telegram_tabelle"] == _TG_KUERZEL, k
         assert k["kompakt_ausblick"] == _KOMPAKT_AUSBLICK, k
-        assert k["sms"] == _SMS_KUERZEL, k["sms_roh"]
-        assert k["premium_sms"] == k["sms_roh"]
     assert len(uids) == 8
 
 
