@@ -277,13 +277,14 @@ def test_ac13_email_column_selection_and_order(metric_id):
 def _telegram_cells(dc: UnifiedWeatherDisplayConfig) -> list[str]:
     """Prueft die Kaskaden-AUSWAHL fuer Telegram, nicht die Sichtbarkeit in
     Tabelle/Kurzuebersicht (s. Kommentar bei ``test_ac4_*_telegram_table_
-    budget`` weiter unten) -- deshalb die rohe Kanal-Auswahl
-    (``get_metrics_for_channel``), nicht ``ChannelLayout.table_columns``
+    budget`` weiter unten) -- deshalb die rohe Kanal-Auswahl (#3237: die
+    Telegram-Liste des Kanal-Listen-Resolvers, dieselbe Quelle wie der
+    Versand), nicht ``ChannelLayout.table_columns``
     (das kappt bei 7 Slots). Die reinen Sichtbarkeits-Gates
     (``VISIBILITY_GATE_IDS``) bleiben ausgenommen -- sie landen strukturell
     nie in einem Bucket, unabhaengig von der Kaskade (#1741)."""
     return [
-        m.metric_id for m in dc.get_metrics_for_channel("telegram", "evening")
+        m.metric_id for m in resolve_channel_lists(dc, "trip", "evening").telegram
         if m.metric_id not in VISIBILITY_GATE_IDS
     ]
 
@@ -893,7 +894,7 @@ def _kaskade_telegram_cells(dc: UnifiedWeatherDisplayConfig, report_type: str = 
     """Kaskaden-AUSWAHL fuer Telegram (nicht Sichtbarkeit) -- s. Docstring
     von ``_telegram_cells`` oben, gleiche Begruendung (#1741)."""
     return [
-        m.metric_id for m in dc.get_metrics_for_channel("telegram", report_type)
+        m.metric_id for m in resolve_channel_lists(dc, "trip", report_type).telegram
         if m.metric_id not in VISIBILITY_GATE_IDS
     ]
 
@@ -903,14 +904,6 @@ def _kaskade_sms_text(dc: UnifiedWeatherDisplayConfig, report_type: str = "eveni
 
 
 # --- AC-2: Fixture ueber den echten Loader geparst, reproduziert den Ist-Widerspruch ---
-
-
-def test_kaskade_ac2_fixture_loaded_via_real_loader_reproduces_cascade():
-    dc = _load_cascade_dc()
-    assert dc.cascade_source_for_channel("sms", "evening") == "per_channel"
-    active_sms_ids = [mc.metric_id for mc in dc.get_metrics_for_channel("sms", "evening") if mc.enabled]
-    assert len(active_sms_ids) == 13, active_sms_ids
-    assert "wind_chill" not in active_sms_ids
 
 
 # --- AC-3: Anonymisierung geprueft, nicht nur behauptet ---
@@ -939,109 +932,10 @@ def test_kaskade_ac3_fixture_is_anonymized():
 # --- AC-4/AC-5: Abwahl als enabled:false vs. Weglassen, je Kanal-Renderpfad ---
 
 
-def test_kaskade_ac4_sms_deselect_as_enabled_false_wins_over_global():
-    target = _AC4_5_TARGET
-    symbol = SMS_SYMBOL_BY_METRIC[target]
-    base_dc = _load_cascade_dc()
-    base_entry = next(mc for mc in base_dc.per_channel_layouts["sms"] if mc.metric_id == target)
-    assert base_entry.enabled is True, "Vorbedingung: Basis-Fixture fuehrt Ziel aktiv im SMS-Layout"
-    global_entry = next(mc for mc in base_dc.metrics if mc.metric_id == target)
-    assert global_entry.enabled is True, "Vorbedingung: Ziel ist global aktiv"
-
-    off_dc = _cascade_sms_variant({target: {"enabled": False}})
-
-    sms = _kaskade_sms_text(off_dc)
-    assert _first_index_starting_with(sms, symbol) is None, (
-        f"AC-4: {target!r} ({symbol!r}) erscheint trotz enabled:false im SMS-Kanal-Layout: {sms!r}"
-    )
-    headers = _kaskade_mail_headers(off_dc)
-    assert get_metric(target).col_label in headers, (
-        "AC-4: E-Mail hat in dieser Fixture keine eigene Kanal-Ebene -- die "
-        f"Spalte bleibt ueber die unveraenderte Grundauswahl sichtbar: {headers}"
-    )
-    cells = _kaskade_telegram_cells(off_dc)
-    assert target in cells, (
-        f"AC-4: Telegram hat keine eigene Kanal-Ebene -- die Zelle bleibt "
-        f"ueber die Grundauswahl sichtbar: {cells}"
-    )
-
-
-def test_kaskade_ac5_sms_deselect_as_omission_matches_enabled_false():
-    target = _AC4_5_TARGET
-    symbol = SMS_SYMBOL_BY_METRIC[target]
-
-    omitted_dc = _cascade_sms_variant({target: None})
-    sms_omitted = _kaskade_sms_text(omitted_dc)
-    assert _first_index_starting_with(sms_omitted, symbol) is None, (
-        f"AC-5: {target!r} ({symbol!r}) erscheint trotz Weglassen aus dem SMS-Kanal-Layout: {sms_omitted!r}"
-    )
-
-    off_dc = _cascade_sms_variant({target: {"enabled": False}})
-    sms_disabled = _kaskade_sms_text(off_dc)
-
-    assert sms_omitted == sms_disabled, (
-        "AC-5: Weglassen und enabled:false muessen denselben SMS-Text liefern -- "
-        f"weggelassen={sms_omitted!r} disabled={sms_disabled!r}"
-    )
-    assert _kaskade_mail_headers(omitted_dc) == _kaskade_mail_headers(off_dc)
-    assert _kaskade_telegram_cells(omitted_dc) == _kaskade_telegram_cells(off_dc)
-
-
 # --- AC-6: Widerspruchsfall global AN + Kanal AUS -- Regression-Baseline ---
 
 
-def test_kaskade_ac6_wind_chill_contradiction_baseline_stays_green():
-    dc = _load_cascade_dc()
-    sms = _kaskade_sms_text(dc)
-    # Fix #1887 E6 Scheibe A (PO-Entscheid): 'WC' entfaellt ERSATZLOS --
-    # "wind_chill" fuehrt seither UEBERHAUPT keinen Eintrag mehr in
-    # SMS_MULTI_SYMBOLS_BY_METRIC (nicht nur ein leeres Tupel). `.get(...,
-    # ())` haelt die Schleife wirkungslos statt mit KeyError abzustuerzen --
-    # sie hat nichts mehr zu pruefen, weil die Groesse kein Kuerzel mehr
-    # traegt, das trotz Abwahl auftauchen koennte.
-    # #2422 S6 (B1): ``wind_chill`` traegt jetzt 'TF' (SMS_SYMBOL_BY_METRIC) -- die
-    # Schleife hat wieder etwas zu pruefen: trotz globaler AN-Wahl darf 'TF' im SMS-
-    # Text NICHT stehen, wenn der SMS-Kanal die Groesse abgewaehlt hat.
-    wc_symbole = tuple(SMS_MULTI_SYMBOLS_BY_METRIC.get("wind_chill", ())) + tuple(
-        s for s in (SMS_SYMBOL_BY_METRIC.get("wind_chill"),) if s
-    )
-    for symbol in wc_symbole:
-        assert _first_index_starting_with(sms, symbol) is None, (
-            f"AC-6: wind_chill-Symbol {symbol!r} erscheint trotz enabled:false im SMS-Kanal-Layout: {sms!r}"
-        )
-    headers = _kaskade_mail_headers(dc)
-    assert get_metric("wind_chill").col_label in headers, (
-        f"AC-6: E-Mail folgt der Grundauswahl (wind_chill global AN, keine eigene E-Mail-Kanal-Ebene): {headers}"
-    )
-    cells = _kaskade_telegram_cells(dc)
-    assert "wind_chill" in cells, f"AC-6: Telegram folgt ebenso der Grundauswahl: {cells}"
-
-
 # --- AC-7 (Pflicht-AC): Widerspruchsfall global AUS + Kanal AN -- #1719 S2 behebt ---
-
-
-def test_kaskade_ac7_sms_channel_must_not_add_globally_disabled_metric():
-    target = _AC7_TARGET
-    symbol = SMS_SYMBOL_BY_METRIC[target]
-    base_dc = _load_cascade_dc()
-    global_entry = next(mc for mc in base_dc.metrics if mc.metric_id == target)
-    assert global_entry.enabled is False, (
-        "Vorbedingung: Ziel muss global INAKTIV sein (Verwechslungsprobe -- "
-        "wind_chill waere hier falsch, s. Pruefhinweis der Spec)"
-    )
-    on_dc = _cascade_sms_variant({target: {"enabled": True}})
-
-    headers = _kaskade_mail_headers(on_dc)
-    assert get_metric(target).col_label not in headers, (
-        f"AC-7: {target!r} erscheint in der E-Mail-Kopfzeile trotz globaler Abwahl: {headers}"
-    )
-    cells = _kaskade_telegram_cells(on_dc)
-    assert target not in cells, f"AC-7: {target!r} erscheint in Telegram-rich trotz globaler Abwahl: {cells}"
-    sms = _kaskade_sms_text(on_dc)
-    assert _first_index_starting_with(sms, symbol) is None, (
-        f"AC-7: {target!r} ({symbol!r}) erscheint im SMS-Text, obwohl die Grundauswahl es global "
-        f"abgewaehlt hat (models.py:808-846 ersetzt statt zu verfeinern): {sms!r}"
-    )
 
 
 # --- AC-8: alle Kuerzel einer Metrik toggeln gemeinsam (wind_chill FK/FD) ---
@@ -1049,56 +943,6 @@ def test_kaskade_ac7_sms_channel_must_not_add_globally_disabled_metric():
 # Issue #1824 (A): das gefuehlte Bereichs-Token ('FD1/18') traegt den
 # Tiefstwert in seiner ersten Haelfte.
 _RANGE_TOKEN_FD = re.compile(rf"(?:^|\s)FD(?:{_RANGE_HALF})/(?:{_RANGE_HALF})(?:\s|$)")
-
-
-def test_kaskade_ac8_all_wind_chill_symbols_toggle_together():
-    """Issue #1728 Scheibe 1: 'FK'/'FD' haengen seit dieser Scheibe an eigenen
-    Groessen. Fix #1887 E6 Scheibe A (PO-Entscheid, docs/specs/modules/
-    fix_1887_e6a_sms_kuerzel_register.md): 'WC' (vormals an ``wind_chill``
-    selbst) entfaellt ERSATZLOS -- ``wind_chill`` traegt danach ueberhaupt
-    keinen Eintrag mehr in SMS_MULTI_SYMBOLS_BY_METRIC, deshalb bleibt nur
-    noch dieser Traeger uebrig. Die Zusicherung dieses AC — die Zuwahl der
-    gefuehlten Temperatur macht ALLE ihre Kuerzel sichtbar, die Abwahl
-    entfernt sie alle — gilt unveraendert; sie umfasst zwei Groessen, und
-    genau deshalb wird sie hier aus der Kuerzel-Tabelle GELESEN statt
-    getippt."""
-    traeger = ("wind_chill_day_low", "wind_chill_day_high")
-    symbols = tuple(
-        sym for mid in traeger for sym in SMS_MULTI_SYMBOLS_BY_METRIC[mid]
-    )
-    # Fix #1926: wind_chill_day_low SMS-Wire-Token FK->FL.
-    assert set(symbols) == {"FL", "FD"}, (
-        f"Die gefuehlten Tages-Kuerzel haben ihren Traeger gewechselt: "
-        f"{symbols!r}"
-    )
-    assert "wind_chill" not in SMS_MULTI_SYMBOLS_BY_METRIC, (
-        "'wind_chill' fuehrt weiterhin einen Eintrag in "
-        "SMS_MULTI_SYMBOLS_BY_METRIC — 'WC' sollte ersatzlos entfallen "
-        f"(PO-Entscheid): {SMS_MULTI_SYMBOLS_BY_METRIC.get('wind_chill')!r}"
-    )
-
-    sms_off = _kaskade_sms_text(_load_cascade_dc())
-    for symbol in symbols:
-        assert _first_index_starting_with(sms_off, symbol) is None, (
-            f"AC-8: {symbol!r} erscheint trotz Abwahl: {sms_off!r}"
-        )
-
-    on_dc = _cascade_sms_variant({
-        mid: {"enabled": True} for mid in traeger
-    })
-    sms_on = _kaskade_sms_text(on_dc)
-    for symbol in symbols:
-        # Issue #1824 (A): sind beide Auswertungen gewaehlt, steht der
-        # gefuehlte Tiefstwert nicht mehr als eigenes 'FL'-Token (Fix #1926:
-        # vormals 'FK'), sondern als ERSTE HAELFTE des Bereichs-Tokens
-        # 'FD{min}/{max}'. Die Zusicherung dieses AC bleibt dieselbe -- die
-        # Groesse muss mit ihrer Zuwahl sichtbar werden -- nur ihr Traeger
-        # hat sich geaendert.
-        if symbol == "FL" and _RANGE_TOKEN_FD.search(sms_on):
-            continue
-        assert _first_index_starting_with(sms_on, symbol) is not None, (
-            f"AC-8: {symbol!r} fehlt trotz Zuwahl: {sms_on!r}"
-        )
 
 
 # --- AC-9: volle Katalogbreite, GERECHNET statt getippt (F003-Fix) ---
@@ -1211,65 +1055,7 @@ def _cascade_email_only_layout_dc() -> UnifiedWeatherDisplayConfig:
     return dataclasses.replace(dc, per_channel_layouts={"email": [email_entry]})
 
 
-def test_kaskade_f002_sms_global_fallback_is_not_restricted_by_email_layout():
-    email_only_id, global_only_id = _AC12_PAIR  # "humidity" (eigene Email-Ebene), "gust" (nur global)
-    email_only_symbol = SMS_SYMBOL_BY_METRIC[email_only_id]
-    global_only_symbol = SMS_SYMBOL_BY_METRIC[global_only_id]
-
-    dc = _cascade_email_only_layout_dc()
-    assert dc.cascade_source_for_channel("email", "evening") == "per_channel"
-    assert dc.cascade_source_for_channel("sms", "evening") == "global", (
-        "Vorbedingung: SMS-Kanal-Ebene fehlt bewusst -- muss auf 'global' fallen"
-    )
-
-    sms = _kaskade_sms_text(dc)
-    assert _first_index_starting_with(sms, email_only_symbol) is not None, (
-        f"F002: {email_only_id!r} ({email_only_symbol!r}) fehlt im globalen SMS-Fallback: {sms!r}"
-    )
-    assert _first_index_starting_with(sms, global_only_symbol) is not None, (
-        f"F002: {global_only_id!r} ({global_only_symbol!r}) fehlt im globalen SMS-Fallback -- SMS "
-        "erbt faelschlich die Email-Kanal-Restriktion (trip_report.py:295 muss _dc_uncollapsed "
-        f"statt dc verwenden): {sms!r}"
-    )
-
-
 # --- AC-12: Reihenfolge wird mitgeprueft, nicht nur die Menge ---
-
-
-def test_kaskade_ac12_sms_order_is_applied_not_positional():
-    first_id, second_id = _AC12_PAIR
-    first_symbol = SMS_SYMBOL_BY_METRIC[first_id]
-    second_symbol = SMS_SYMBOL_BY_METRIC[second_id]
-
-    base_dc = _load_cascade_dc()
-    sms_layout = {mc.metric_id: mc for mc in base_dc.per_channel_layouts["sms"]}
-    assert sms_layout[first_id].enabled and sms_layout[second_id].enabled
-
-    # F001-Fix: order-Werte werden als Roh-JSON-Patch gesetzt und erneut
-    # durch _parse_display_config() geladen (_cascade_sms_variant) -- damit
-    # deckt diese Variante auch loader.py's order=mc_data.get("order", 0)
-    # ab, nicht nur models.py::_sorted_by_layout().
-    dc_ab = _cascade_sms_variant({
-        first_id: {"order": 0},
-        second_id: {"order": 1},
-    })
-    dc_ba = _cascade_sms_variant({
-        first_id: {"order": 1},
-        second_id: {"order": 0},
-    })
-
-    sms_ab = _kaskade_sms_text(dc_ab)
-    sms_ba = _kaskade_sms_text(dc_ba)
-    ia_first = _first_index_starting_with(sms_ab, first_symbol)
-    ia_second = _first_index_starting_with(sms_ab, second_symbol)
-    ib_first = _first_index_starting_with(sms_ba, first_symbol)
-    ib_second = _first_index_starting_with(sms_ba, second_symbol)
-    assert ia_first is not None and ia_second is not None and ia_first < ia_second, (
-        f"AC-12: Reihenfolge A ({first_id} vor {second_id}) nicht umgesetzt: {sms_ab!r}"
-    )
-    assert ib_first is not None and ib_second is not None and ib_second < ib_first, (
-        f"AC-12: Reihenfolge B ({second_id} vor {first_id}) nicht umgesetzt: {sms_ba!r}"
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -1339,315 +1125,22 @@ def _kaskade_telegram_table_text(report) -> str:
 # --- S2 AC-2: Kanal-Grenze bleibt dicht -- SMS-Abwahl aendert email/telegram nicht ---
 
 
-def test_kaskade_s2_ac2_sms_deselect_cannot_affect_email_or_telegram_source():
-    """S2 AC-2 (Regressions-Bestaetigung + global-Zweig-Beleg): die S1-Faelle
-    AC-4/AC-6 oben bleiben nach dem Umbau unveraendert gruen (nicht dupliziert
-    -- diese Funktion ergaenzt nur die fehlende Zusicherung, dass E-Mail und
-    Telegram strukturell auf der GLOBALEN Ebene antworten; der Schnitt aus D1
-    greift ausschliesslich in den per_report-/per_channel-Zweigen)."""
-    dc = _load_cascade_dc()
-    assert dc.cascade_source_for_channel("email", "evening") == "global"
-    assert dc.cascade_source_for_channel("telegram", "evening") == "global"
-
-
 # --- S2 AC-3: Telegram MIT eigener Ebene = Telegram ∩ Grundauswahl ---
-
-
-def test_kaskade_s2_ac3_telegram_own_layer_intersects_base_selection():
-    """S2 AC-3: geprueft ueber render_for_channel() direkt (wie
-    _kaskade_telegram_cells) -- bewusst UNABHAENGIG von format_email()s
-    Kollabierungsschritt (D5), weil eine EIGENE Telegram-Ebene die
-    Ersetzungssemantik des heutigen Codes bereits korrekt behandelt (der
-    per_channel-Zweig liest self.metrics gar nicht)."""
-    target = _AC4_5_TARGET  # "freezing_level", global AN in der Basis-Fixture
-    raw = _load_cascade_fixture_raw()
-    telegram_layout = [
-        {**e, "enabled": False} if e["metric_id"] == target else e
-        for e in raw["metrics"]
-    ]
-    dc = _cascade_channel_variant({"telegram": telegram_layout})
-    assert dc.cascade_source_for_channel("telegram", "evening") == "per_channel"
-
-    cells = _kaskade_telegram_cells(dc)
-    assert target not in cells, (
-        f"S2 AC-3: {target!r} bleibt trotz eigener Telegram-Abwahl sichtbar: {cells}"
-    )
-    assert "wind_chill" in cells, (
-        f"S2 AC-3: eine andere global aktive Metrik faellt faelschlich mit weg: {cells}"
-    )
 
 
 # --- S2 AC-4/AC-5: Telegram OHNE eigene Ebene -- K2 (Spalte + echter Wert) ---
 
 
-def test_kaskade_s2_ac4_telegram_without_own_layer_follows_base_not_email():
-    """S2 AC-4 (K2): der ECHTE Renderpfad -- report.telegram_bubbles, NICHT
-    render_for_channel() direkt (s. Konstruktionshinweis der Spec: der
-    direkte Aufruf geht nie durch die E-Mail-Kollabierung und kann K2
-    strukturell nicht sehen).
-
-    ZWEI Zielmetriken (Team-Lead-Befund/Freigabe, Nachbesserung 2026-08-11):
-    Telegram-Tabellen haben nur 7 Metrik-Slots (Platzbudget, s.
-    ``_AC4_TABLE_BUDGET_TARGET``-Kommentar oben) -- eine Metrik jenseits
-    dieses Budgets verschwindet aus dem <pre>-Tabellentext, UNABHAENGIG
-    davon, ob die Kaskade sie korrekt durchlaesst. Ein einzelner
-    Tabellen-Check koennte deshalb aus dem falschen Grund rot werden (Budget
-    statt Kaskade) oder aus dem falschen Grund gruen bleiben, wenn die
-    Zielmetrik zufaellig im Budget liegt. Deshalb zwei Assertions:
-    ``_AC4_TABLE_BUDGET_TARGET`` (im Budget) beweist K2 direkt im
-    Tabellentext; ``_AC4_5_TARGET`` (ausserhalb des Budgets) beweist, dass
-    der Schnitt sie trotzdem in der Kanal-AUSWAHL belaesst (table_columns +
-    detail_metrics) -- verschwindet sie DORT auch, liegt es an der Kaskade,
-    nicht am Platzbudget.
-    """
-    table_target = _AC4_TABLE_BUDGET_TARGET
-    capacity_target = _AC4_5_TARGET
-    raw = _load_cascade_fixture_raw()
-    email_layout = [
-        {**e, "enabled": False} if e["metric_id"] in (table_target, capacity_target) else e
-        for e in raw["metrics"]
-    ]
-    dc = _cascade_channel_variant({"email": email_layout})
-    assert dc.cascade_source_for_channel("email", "evening") == "per_channel"
-    assert dc.cascade_source_for_channel("telegram", "evening") == "global", (
-        "Vorbedingung: Telegram hat keine eigene Ebene -- muss auf 'global' fallen"
-    )
-
-    report = _kaskade_report(dc)
-    table_text = _kaskade_telegram_table_text(report)
-    assert _label_token_present(table_text, get_metric(table_target).compact_label), (
-        f"S2 AC-4 (K2): {table_target!r} fehlt in der Telegram-Tabelle trotz globaler Aktivierung "
-        f"-- Telegram folgt faelschlich der E-Mail-Kollabierung statt der Grundauswahl: {table_text!r}"
-    )
-
-    cells = _kaskade_telegram_cells(dc)
-    assert capacity_target in cells, (
-        f"S2 AC-4: {capacity_target!r} muss trotz Telegram-Tabellen-Platzbudget Teil der "
-        f"Kanal-AUSWAHL bleiben (table_columns+detail_metrics) -- fehlt sie auch DORT, liegt es "
-        f"an der Kaskade (E-Mail-Kollabierung), nicht am Platzbudget: {cells}"
-    )
-
-
-def test_kaskade_s2_ac5_telegram_own_layer_shows_real_value_not_dash():
-    """S2 AC-5 (D5, zweite Haelfte -- eigene Telegram-Zeilenmenge): 'humidity'
-    ist in F.segment() KONSTANT 55 (humidity_pct, s. _min_temp_felt_fixtures)
-    -- die Telegram-Zelle muss diesen echten Wert zeigen, nicht '-'.
-
-    Adversary F001-Nachbesserung (Pflicht-Mutationsprobe (a) der Spec, "Schnitt
-    aus D1 weglassen" muss AC-1 UND AC-5 rot machen): 'humidity' allein ist
-    global AN und bleibt deshalb auch OHNE den D1-Schnitt sichtbar -- ein Fix,
-    der nur D5 (Wert) umsetzt, aber D1 (Schnitt) weglaesst, blieb bislang
-    unbemerkt. Zweite Zielmetrik 'cloud_mid' (Muster AC-1/_AC7_TARGET: global
-    AUS, eigene Telegram-Ebene AN) prueft D1 unabhaengig vom Wert-Nachweis."""
-    target = "humidity"
-    d1_target = "cloud_mid"
-    raw = _load_cascade_fixture_raw()
-    global_entry = _global_entry(raw, target)
-    assert global_entry.get("enabled", True) is True, "Vorbedingung: Ziel global aktiv"
-    d1_global_entry = _global_entry(raw, d1_target)
-    assert d1_global_entry.get("enabled", True) is False, (
-        "Vorbedingung: D1-Zielmetrik muss global INAKTIV sein (Muster AC-1)"
-    )
-
-    dc = _cascade_channel_variant({
-        "telegram": [
-            {**global_entry, "enabled": True},
-            {**d1_global_entry, "enabled": True},
-        ],
-        "email": [{**global_entry, "enabled": False}],
-    })
-    assert dc.cascade_source_for_channel("telegram", "evening") == "per_channel"
-    assert dc.cascade_source_for_channel("email", "evening") == "per_channel"
-
-    report = _kaskade_report(dc)
-    table_text = _kaskade_telegram_table_text(report)
-    assert _label_token_present(table_text, get_metric(target).compact_label), (
-        f"S2 AC-5: Spalte {get_metric(target).compact_label!r} fehlt in der Telegram-Tabelle: {table_text!r}"
-    )
-    assert _label_token_present(table_text, "55"), (
-        f"S2 AC-5: Zelle zeigt nicht den echten Messwert 55 (humidity_pct, F.segment() konstant) "
-        f"-- vermutlich '-' statt Wert (D5 fehlt): {table_text!r}"
-    )
-
-    cells = _kaskade_telegram_cells(dc)
-    assert d1_target not in cells, (
-        f"S2 AC-5 (F001): {d1_target!r} erscheint trotz globaler Abwahl in der Telegram-Kanal-Auswahl "
-        f"-- die eigene Telegram-Ebene darf die globale Grundauswahl nur einschraenken, nie erweitern "
-        f"(D1-Schnitt fehlt): {cells}"
-    )
-
-
 # --- S2 AC-5-Nachbesserung (F003): Force-Enable-Schritt der D5-Konstruktion ---
-
-
-def test_kaskade_s2_ac5b_evening_override_forces_real_telegram_value():
-    """Adversary F003: 'temperature' ist global INAKTIV (enabled:false), aber
-    evening_enabled=true hebt sie fuer den Abend-Report an (D2, kein eigenes
-    Telegram-Layout -- Kaskade faellt auf 'global'). trip_report.py erzwingt
-    beim Bau von _dc_telegram enabled=True auf jeder Metrik aus dem D2-Schnitt
-    (dataclasses.replace(mc, enabled=True)) -- OHNE diesen Schritt bliebe das
-    urspruengliche enabled=False stehen, und _dp_to_row() traegt nur Metriken
-    ein, die in der uebergebenen dc enabled sind: die Telegram-Zelle zeigte
-    '-' statt des echten Messwerts, obwohl die Spalte (ueber evening_enabled)
-    korrekt erscheint."""
-    target = "temperature"
-    raw = _load_cascade_fixture_raw()
-    raw["metrics"] = [
-        {**e, "enabled": False, "evening_enabled": True} if e["metric_id"] == target else e
-        for e in raw["metrics"]
-    ]
-    dc = _parse_display_config(raw)
-    assert dc.cascade_source_for_channel("telegram", "evening") == "global", (
-        "Vorbedingung: keine eigene Telegram-Ebene -- Kaskade faellt auf 'global'"
-    )
-
-    report = _kaskade_report(dc)
-    table_text = _kaskade_telegram_table_text(report)
-    assert _label_token_present(table_text, get_metric(target).compact_label), (
-        f"F003: Spalte {get_metric(target).compact_label!r} fehlt trotz evening_enabled=True: "
-        f"{table_text!r}"
-    )
-    assert _label_token_present(table_text, "15.0"), (
-        f"F003: Zelle zeigt nicht den echten Messwert 15.0 (t2m_c, F.segment() Basisstunde) -- "
-        f"vermutlich '-' statt Wert (Force-Enable-Schritt in trip_report.py fehlt): {table_text!r}"
-    )
 
 
 # --- S2 AC-6: E-Mail-Stundentabelle bleibt bei horizon=None exakt bei der eigenen Auswahl ---
 
 
-def test_kaskade_s2_ac6_email_stays_within_own_selection_at_horizon_none_stage():
-    """S2 AC-6 (Waechter gegen den verworfenen Ansatz 'seg_tables global
-    verbreitern'): die Telegram-Ebene ist echte Obermenge der E-Mail-Ebene
-    (zusaetzlich 'humidity'); geprueft an einer Etappe mit horizon=None
-    (Tag 4+, delta>=3 zum Report-Datum, email/html.py:924-947) -- dort
-    filtert _allowed_col_keys_for_horizon() NICHT, visible_cols() liest die
-    Spalten direkt aus den Zeilen-Schluesseln (email/helpers.py:296-299).
-    Eine distinkte segment_id ("SEG 4") isoliert die Kopfzeile GENAU dieser
-    Etappe -- sonst faende re.search blind das erste <thead> im HTML."""
-    dc = _cascade_channel_variant({
-        "email": [{"metric_id": "wind_chill", "enabled": True}],
-        "telegram": [
-            {"metric_id": "wind_chill", "enabled": True},
-            {"metric_id": "humidity", "enabled": True},
-        ],
-    })
-    assert dc.cascade_source_for_channel("email", "evening") == "per_channel"
-    assert dc.cascade_source_for_channel("telegram", "evening") == "per_channel"
-
-    seg_today = F.segment(day=F.DAY)
-    seg_horizon_none = F.segment(day=F.DAY + 3)
-    seg_horizon_none = dataclasses.replace(
-        seg_horizon_none,
-        segment=dataclasses.replace(seg_horizon_none.segment, segment_id=4),
-    )
-    report = TripReportFormatter().format_email(
-        [seg_today, seg_horizon_none], trip_name="Kaskade1719S2AC6", report_type="evening",
-        night_weather=None, display_config=dc, stage_name=F.STAGE_NAME, tz=F.TZ,
-    )
-    html = report.email_html
-    start = html.index("SEG 4")
-    rest = html[start:]
-    nxt = re.search(r"SEG \d", rest[1:])
-    block = rest[: nxt.start() + 1] if nxt else rest
-    head = re.search(r"<thead><tr>(.*?)</tr></thead>", block, re.S)
-    assert head, "S2 AC-6: keine Kopfzeile fuer die horizon=None-Etappe (SEG 4) gefunden"
-    headers = [
-        re.sub(r"<[^>]+>", "", th).strip()
-        for th in re.findall(r"<th[^>]*>.*?</th>", head.group(1), re.S)
-    ]
-    metric_cols = [h for h in headers if h not in {"Zeit", "Risiko"}]  # #3047 AC-17
-    assert metric_cols == [get_metric("wind_chill").col_label], (
-        f"S2 AC-6: Kopfzeile der horizon=None-Etappe enthaelt mehr als die E-Mail-Auswahl "
-        f"(Telegram-exklusive Metrik 'humidity' darf hier NICHT auftauchen): {headers}"
-    )
-
-
 # --- S2 AC-7 (D4): leere/fehlende Grundauswahl schneidet nicht ---
 
 
-def test_kaskade_s2_ac7_empty_base_selection_does_not_cut_sms_channel():
-    """S2 AC-7 (D4): eine SMS-Kanal-Ebene MIT MEHREREN AKTIVEN Eintraegen
-    (bewusst kein Mix aus aktiv/inaktiv wie in der Basis-Fixture -- eine
-    Vergleichs-Laenge gegen deren VOLLE, gemischte per_channel_layouts-Liste
-    waere strukturell IMMER falsch, weil inaktive Eintraege ohnehin nie
-    zurueckkommen, unabhaengig vom Schnitt) bleibt bei LEERER globaler Liste
-    vollstaendig erhalten -- kein Totalausfall.
-
-    #3047 H5: Der Loader liefert fuer ``metrics: []`` seit H5 den
-    Register-Standard (#1394 Fall A, siehe
-    ``test_kaskade_s2_ac7_leere_liste_im_loader_ist_altbestand``); eine leere
-    globale Liste entsteht nur noch am Modell -- dort wirkt D4 und wird hier
-    geprueft."""
-    raw = {
-        "trip_id": "x1719s2ac7",
-        "metrics": [],
-        "channel_layouts": {"sms": [
-            {"metric_id": "uv_index", "enabled": True},
-            {"metric_id": "cloud_low", "enabled": True},
-            {"metric_id": "visibility", "enabled": True},
-        ]},
-    }
-    dc = dataclasses.replace(_parse_display_config(raw), metrics=[])
-    assert dc.cascade_source_for_channel("sms", "evening") == "per_channel"
-
-    result = dc.get_metrics_for_channel("sms", "evening")
-    assert len(result) == len(dc.per_channel_layouts["sms"]), (
-        f"S2 AC-7: leere Grundauswahl schneidet die SMS-Kanal-Ebene auf {len(result)} von "
-        f"{len(dc.per_channel_layouts['sms'])} Eintraegen -- D4 fehlt: "
-        f"{[mc.metric_id for mc in result]}"
-    )
-
-
-def test_kaskade_s2_ac7_leere_liste_im_loader_ist_altbestand():
-    """#3047 H5 (#1394 Fall A): ``metrics: []`` ist Altbestand -- der Loader
-    setzt den Register-Standard als Grundauswahl (wie der Editor), die
-    SMS-Kanal-Ebene nimmt daraus nur, was im Standard steht (ADR-0050):
-    hier ``visibility``; ``uv_index``/``cloud_low`` liegen ausserhalb."""
-    raw = {
-        "trip_id": "x3047h5",
-        "metrics": [],
-        "channel_layouts": {"sms": [
-            {"metric_id": "uv_index", "enabled": True},
-            {"metric_id": "cloud_low", "enabled": True},
-            {"metric_id": "visibility", "enabled": True},
-        ]},
-    }
-    dc = _parse_display_config(raw, trip_standard_bei_leer=True)
-    assert [m.metric_id for m in dc.metrics if m.enabled] == [
-        "temperature", "wind", "gust", "precipitation", "thunder",
-        "freezing_level", "visibility", "temperature_day_low", "temperature_day_high",
-    ]
-    result = dc.get_metrics_for_channel("sms", "evening")
-    assert [mc.metric_id for mc in result] == ["visibility"]
-
-
 # --- S2 AC-8 (D3): per_report_layouts wird gegen GLOBAL geschnitten, nicht gegen per_channel ---
-
-
-def test_kaskade_s2_ac8_per_report_layer_cuts_against_global_not_per_channel():
-    """S2 AC-8 (D3): 'uv_index' ist global aktiv, aber im ALLGEMEINEN
-    per_channel_layouts.sms NICHT enthalten -- der per_report-Override fuer
-    'evening' fuehrt sie trotzdem. Eine Verkettung mit per_channel (statt des
-    in D3 vorgeschriebenen Schnitts gegen die globale Menge) wuerde sie
-    faelschlich ausschliessen."""
-    raw = _load_cascade_fixture_raw()
-    global_entry = _global_entry(raw, "uv_index")
-    assert global_entry.get("enabled", True) is True, "Vorbedingung: Ziel global aktiv"
-    raw["channel_layouts"]["sms"] = [
-        e for e in raw["channel_layouts"]["sms"] if e["metric_id"] != "uv_index"
-    ]
-    raw["channel_layouts_per_report"] = {
-        "evening": {"sms": [{"metric_id": "uv_index", "enabled": True}]},
-    }
-    dc = _parse_display_config(raw)
-    assert dc.cascade_source_for_channel("sms", "evening") == "per_report"
-
-    result_ids = [mc.metric_id for mc in dc.get_metrics_for_channel("sms", "evening")]
-    assert "uv_index" in result_ids, (
-        f"S2 AC-8: 'uv_index' faellt aus dem per_report-Ergebnis, obwohl es global aktiv ist "
-        f"(Schnitt darf nur gegen die globale Menge pruefen, nicht gegen per_channel): {result_ids}"
-    )
 
 
 # --- S2 AC-9 (D2): Report-Typ-Flags wirken im Schnitt ---
@@ -1756,69 +1249,7 @@ def test_kaskade_s2_ac11_premium_sms_forwards_the_cut_sms_text(
 # --- S2 AC-12: abgeleitete Nachtgroesse (temperature_night) faellt nicht aus dem Schnitt ---
 
 
-def test_kaskade_s2_ac12_derived_night_metric_survives_the_cut():
-    """S2 AC-12 (D2, ID-basiert): 'temperature_night' wird hier ERZWUNGEN
-    ABGELEITET (kein expliziter Eintrag in raw['metrics'], loader.py:810-819
-    haengt sie an self.metrics), die SMS-Kanal-Ebene fuehrt sie zusaetzlich
-    explizit mit enabled:true -- die ID muss trotzdem im Schnitt-Ergebnis
-    bleiben, weil sie bereits Teil des abgeleiteten globalen Maximums ist."""
-    raw = _load_cascade_fixture_raw()
-    raw["metrics"] = [
-        {**e, "enabled": True} if e["metric_id"] == "temperature" else e
-        for e in raw["metrics"]
-        if e["metric_id"] != "temperature_night"
-    ]
-    raw["channel_layouts"]["sms"] = [
-        e for e in raw["channel_layouts"]["sms"] if e["metric_id"] != "temperature_night"
-    ] + [{"metric_id": "temperature_night", "enabled": True}]
-    dc = _parse_display_config(raw)
-
-    global_tn = next(mc for mc in dc.metrics if mc.metric_id == "temperature_night")
-    assert global_tn.derived is True, "Vorbedingung: die Nachtgroesse muss ABGELEITET sein"
-    assert global_tn.enabled is True, "Vorbedingung: Ableitung erbt den AN-Zustand von 'temperature'"
-
-    result_ids = [mc.metric_id for mc in dc.get_metrics_for_channel("sms", "evening")]
-    assert "temperature_night" in result_ids, (
-        f"S2 AC-12: die abgeleitete Nachtgroesse faellt aus dem Schnitt heraus: {result_ids}"
-    )
-
-
 # --- S2 AC-13 (Adversary F004-Regression): Telegram-Kurzuebersicht respektiert evening_enabled ---
-
-
-def test_kaskade_s2_ac13_telegram_overview_respects_evening_enabled_without_own_layer():
-    """S2 AC-13 (F004): 'visibility' ist global AN, evening_enabled=False,
-    OHNE eigene Telegram-Ebene (Kaskade faellt auf 'global'). Der D1-D4-Schnitt
-    (get_metrics_for_channel) schliesst sie fuer report_type='evening' korrekt
-    aus -- render_telegram_bubbles() bekam bis zu diesem Fix jedoch
-    dc=_dc_uncollapsed (die UNGEFILTERTE Grundauswahl) statt dc=_dc_telegram.
-    narrow.py:735/741/776 lesen dc.get_enabled_metric_ids() DIREKT, ohne durch
-    get_metrics_for_channel() zu gehen -- die Telegram-Kurzuebersicht zeigte
-    die Metrik deshalb trotzdem (als '-'-Geisterzeile, weil seg_tables_telegram
-    bereits korrekt gefiltert war). Muss ueber den ECHTEN Pfad format_email()
-    -> report.telegram_bubbles laufen (Konstruktionshinweis der Spec, nicht
-    render_for_channel() direkt -- der geht nie durch die Kollabierung)."""
-    target = "visibility"
-    raw = _load_cascade_fixture_raw()
-    global_entry = _global_entry(raw, target)
-    assert global_entry.get("enabled", True) is True, "Vorbedingung: Ziel global aktiv"
-    raw["metrics"] = [
-        {**e, "evening_enabled": False} if e["metric_id"] == target else e
-        for e in raw["metrics"]
-    ]
-    dc = _parse_display_config(raw)
-    assert dc.cascade_source_for_channel("telegram", "evening") == "global", (
-        "Vorbedingung: keine eigene Telegram-Ebene -- Kaskade faellt auf 'global'"
-    )
-
-    report = _kaskade_report(dc, "evening")
-    overview = F.overview_bubble(report)
-    assert overview, f"Keine Kurzuebersicht-Bubble gefunden: {report.telegram_bubbles!r}"
-    assert F.overview_line(report, get_metric(target).compact_label) == "", (
-        f"S2 AC-13: {target!r} erscheint in der Telegram-Kurzuebersicht trotz "
-        f"evening_enabled=False (ohne eigene Kanal-Ebene) -- render_telegram_bubbles() muss die "
-        f"report-typ-/kanal-kaskadierte dc lesen, nicht die ungefilterte Grundauswahl: {overview!r}"
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -4366,15 +3797,24 @@ def test_ac_s7_4_altbestand_klartext_folgt_html_reihenfolge():
 # Der Daten-/Engine-Rahmen (`env`, oben importiert) ist der Waechter aus
 # Scheibe 8: echte Engine-Subklasse, echte Renderer, kein Mock/patch, kein Netz.
 
+#: #3237 (ADR-0124): die Tabelle "Was steht wo" fuehrt EINE Folge fuer alle
+#: Kanaele; sie steht bewusst gegen die Grundauswahl-Folge, damit eine
+#: Aufrufstelle, die wieder die gemeinsame `opts.enabled_metrics` liest, in
+#: JEDEM Kanal einzeln auffaellt. (Bis #3237: je Kanal eine eigene Folge ueber
+#: das Altfeld ``channel_active_metrics``.)
+_S7_TABELLE = ["temp_max_c", "sunny_hours_h", "uv_index_max"]
 _S7_KANAL_ORDNUNG: dict[str, list[str]] = {
-    "email": ["temp_max_c", "sunny_hours_h", "uv_index_max"],
-    "telegram": ["sunny_hours_h", "uv_index_max", "temp_max_c"],
-    "sms": ["uv_index_max", "temp_max_c", "sunny_hours_h"],
-}
+    k: list(_S7_TABELLE) for k in ("email", "telegram", "sms")}
 _S7_GRUNDAUSWAHL = ["temp_max_c", "uv_index_max", "sunny_hours_h"]
 
 
 def _s7_kanal_preset(preset_id: str, user_id: str) -> dict:
+    from output.renderers.compare_outlook_metric_ids import _kennungen_aus_renderer_ids
+    from tests.helpers.tabelle_aus_wunsch import tabelle
+
+    dc = {"active_metrics": list(_S7_GRUNDAUSWAHL)}
+    folge = _kennungen_aus_renderer_ids(
+        [FRONTEND_TO_RENDERER_METRIC_ID[k] for k in _S7_TABELLE])
     return {
         "id": preset_id, "name": "S7-Reihenfolge", "user_id": user_id,
         "kind": "vergleich", "location_ids": [_S7_LOCATION.id], "schedule": "daily",
@@ -4384,8 +3824,7 @@ def _s7_kanal_preset(preset_id: str, user_id: str) -> dict:
         # Uebersicht -- beide Bloecke wuerden die Kuerzel-Suche stoeren.
         "hourly_enabled": False, "outlook_enabled": False,
         "display_config": {
-            "active_metrics": list(_S7_GRUNDAUSWAHL),
-            "channel_active_metrics": {k: list(v) for k, v in _S7_KANAL_ORDNUNG.items()},
+            **dc, "placements": tabelle(dc, "compare", folge=folge, outlook_reports=[]),
         },
     }
 
@@ -4445,22 +3884,19 @@ def _s7_pruefe_kanal_reihenfolge(
         )
 
 
-def test_ac_s7_5_versand_traegt_je_kanal_eine_eigene_reihenfolge(
+def test_ac_s7_5_versand_traegt_je_kanal_die_tabellen_reihenfolge(
     env,  # noqa: F811 - pytest loest die Fixture per Name auf
     tmp_path,
 ):
-    """AC-S7-5: GIVEN ein Vergleich, dessen drei Kanaele DIESELBEN Groessen in
-    DREI verschiedenen Reihenfolgen fuehren / WHEN der echte Versandpfad
-    laeuft / THEN traegt jede zugestellte Nachricht die Reihenfolge IHRES
-    Kanals."""
+    """AC-S7-5 (#3237): GIVEN ein Vergleich, dessen Tabelle die Groessen in
+    einer anderen Folge als die Grundauswahl fuehrt / WHEN der echte
+    Versandpfad laeuft / THEN traegt jede zugestellte Nachricht (E-Mail,
+    Telegram, SMS) die Folge der Tabelle."""
     from app.config import Settings
     from services.scheduler_dispatch_service import send_one_compare_preset
 
-    ordnungen = [tuple(v) for v in _S7_KANAL_ORDNUNG.values()] + [tuple(_S7_GRUNDAUSWAHL)]
-    assert len(set(ordnungen)) == 4, (
-        "Vakuum: die drei Kanal-Reihenfolgen und die Grundauswahl muessen "
-        f"paarweise verschieden sein, sind aber {ordnungen}"
-    )
+    assert _S7_TABELLE != _S7_GRUNDAUSWAHL, (
+        "Vakuum: Tabellen- und Grundauswahl-Folge muessen verschieden sein")
 
     versandt: dict[str, list[str]] = {"email": [], "telegram": [], "sms": []}
     send_one_compare_preset(
@@ -4588,27 +4024,85 @@ def test_ac_s7_5d_telegram_vergleich_faengt_die_wolken_kollision(ids):
             )
 
 
+def test_kaskade_ac7_sms_channel_must_not_add_globally_disabled_metric():
+    target = _AC7_TARGET
+    symbol = SMS_SYMBOL_BY_METRIC[target]
+    base_dc = _load_cascade_dc()
+    global_entry = next(mc for mc in base_dc.metrics if mc.metric_id == target)
+    assert global_entry.enabled is False, (
+        "Vorbedingung: Ziel muss global INAKTIV sein (Verwechslungsprobe -- "
+        "wind_chill waere hier falsch, s. Pruefhinweis der Spec)"
+    )
+    on_dc = _cascade_sms_variant({target: {"enabled": True}})
+
+    headers = _kaskade_mail_headers(on_dc)
+    assert get_metric(target).col_label not in headers, (
+        f"AC-7: {target!r} erscheint in der E-Mail-Kopfzeile trotz globaler Abwahl: {headers}"
+    )
+    cells = _kaskade_telegram_cells(on_dc)
+    assert target not in cells, f"AC-7: {target!r} erscheint in Telegram-rich trotz globaler Abwahl: {cells}"
+    sms = _kaskade_sms_text(on_dc)
+    assert _first_index_starting_with(sms, symbol) is None, (
+        f"AC-7: {target!r} ({symbol!r}) erscheint im SMS-Text, obwohl die Grundauswahl es global "
+        f"abgewaehlt hat (models.py:808-846 ersetzt statt zu verfeinern): {sms!r}"
+    )
+
+
+
+def test_kaskade_s2_ac13_telegram_overview_respects_evening_enabled_without_own_layer():
+    """S2 AC-13 (F004): 'visibility' ist global AN, evening_enabled=False,
+    OHNE eigene Telegram-Ebene (Kaskade faellt auf 'global'). Der D1-D4-Schnitt
+    (get_metrics_for_channel) schliesst sie fuer report_type='evening' korrekt
+    aus -- render_telegram_bubbles() bekam bis zu diesem Fix jedoch
+    dc=_dc_uncollapsed (die UNGEFILTERTE Grundauswahl) statt dc=_dc_telegram.
+    narrow.py:735/741/776 lesen dc.get_enabled_metric_ids() DIREKT, ohne durch
+    get_metrics_for_channel() zu gehen -- die Telegram-Kurzuebersicht zeigte
+    die Metrik deshalb trotzdem (als '-'-Geisterzeile, weil seg_tables_telegram
+    bereits korrekt gefiltert war). Muss ueber den ECHTEN Pfad format_email()
+    -> report.telegram_bubbles laufen (Konstruktionshinweis der Spec, nicht
+    render_for_channel() direkt -- der geht nie durch die Kollabierung)."""
+    target = "visibility"
+    raw = _load_cascade_fixture_raw()
+    global_entry = _global_entry(raw, target)
+    assert global_entry.get("enabled", True) is True, "Vorbedingung: Ziel global aktiv"
+    raw["metrics"] = [
+        {**e, "evening_enabled": False} if e["metric_id"] == target else e
+        for e in raw["metrics"]
+    ]
+    dc = _parse_display_config(raw)
+    report = _kaskade_report(dc, "evening")
+    overview = F.overview_bubble(report)
+    assert overview, f"Keine Kurzuebersicht-Bubble gefunden: {report.telegram_bubbles!r}"
+    assert F.overview_line(report, get_metric(target).compact_label) == "", (
+        f"S2 AC-13: {target!r} erscheint in der Telegram-Kurzuebersicht trotz "
+        f"evening_enabled=False (ohne eigene Kanal-Ebene) -- render_telegram_bubbles() muss die "
+        f"report-typ-/kanal-kaskadierte dc lesen, nicht die ungefilterte Grundauswahl: {overview!r}"
+    )
+
+
+
 # --- AC-S7-6: DER FIX -- die Kurz-E-Mail folgt der eingestellten Ordnung --
 
 def _s7_email_layout_dc(reihenfolge: list[str]) -> UnifiedWeatherDisplayConfig:
-    """Trip mit E-Mail-KANAL-Layout in ``reihenfolge``. ``format_email()``
-    kollabiert `dc.metrics` vor dem Rendern auf
-    ``get_metrics_for_channel("email", ...)`` (trip_report.py:133-138) --
-    diese Reihenfolge ist damit genau die, die ``render_compact()`` sieht
-    (gemessen 2026-08-13)."""
-    return UnifiedWeatherDisplayConfig(
-        trip_id="s7-pillen",
+    """Trip, dessen Tabelle "Was steht wo" (#3237, ADR-0124: EINE Folge fuer
+    alle Stellen) die Metriken in ``reihenfolge`` fuehrt; die Grundauswahl
+    steht bewusst in anderer (alphabetischer) Folge."""
+    return _s7_tabellen_dc("s7-pillen", reihenfolge)
+
+
+def _s7_tabellen_dc(trip_id: str, reihenfolge: list[str]) -> UnifiedWeatherDisplayConfig:
+    import dataclasses
+
+    from tests.helpers.tabelle_aus_wunsch import tabelle
+
+    dc = UnifiedWeatherDisplayConfig(
+        trip_id=trip_id,
         metrics=[
             MetricConfig(metric_id=m, enabled=True, order=i)
             for i, m in enumerate(sorted(reihenfolge))
         ],
-        per_channel_layouts={
-            "email": [
-                MetricConfig(metric_id=m, enabled=True, bucket="primary", order=i)
-                for i, m in enumerate(reihenfolge)
-            ],
-        },
     )
+    return dataclasses.replace(dc, placements=tabelle(dc, "trip", folge=reihenfolge))
 
 
 def _s7_pillen(reihenfolge: list[str]) -> list[str]:
@@ -4732,19 +4226,7 @@ _S7_TELEGRAM_ORDER_METRIKEN = [
 
 
 def _s7_telegram_layout_dc(reihenfolge: list[str]) -> UnifiedWeatherDisplayConfig:
-    return UnifiedWeatherDisplayConfig(
-        trip_id="s7-telegram",
-        metrics=[
-            MetricConfig(metric_id=m, enabled=True, order=i)
-            for i, m in enumerate(sorted(reihenfolge))
-        ],
-        per_channel_layouts={
-            "telegram": [
-                MetricConfig(metric_id=m, enabled=True, bucket="primary", order=i)
-                for i, m in enumerate(reihenfolge)
-            ],
-        },
-    )
+    return _s7_tabellen_dc("s7-telegram", reihenfolge)
 
 
 def _s7_kurzuebersicht_index(zeilen: list[str], metric_id: str) -> int:

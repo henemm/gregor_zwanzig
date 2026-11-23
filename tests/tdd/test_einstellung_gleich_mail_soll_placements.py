@@ -26,8 +26,6 @@ import pytest
 
 _ROOT = Path(__file__).resolve().parents[2]
 _FIXTURES = _ROOT / "tests" / "fixtures" / "einstellung_gleich_mail"
-#: Gesicherte Soll-Ausgabe VOR #3218 fuer Altbestand ohne Tabelle (AC-10).
-GOLDEN_VORHER = _FIXTURES / "soll_ohne_tabelle_vorher_3218.json"
 
 ZAHL, WORT, AMPEL = "zahl", "wort", "ampel"
 #: Erwartete Zellformen der Trip-Stundentabelle, von Hand (Spec §2 Punkt 3).
@@ -331,13 +329,53 @@ def soll_ohne_tabelle(soll_mod) -> dict[str, object]:
             for name, daten in altbestand_eingaben().items()}
 
 
-def test_ac10_altbestand_ohne_tabelle_bytegleich_zu_vorher(soll):
-    """Gesicherte Vorher-Ausgabe (erzeugt mit dem Stand vor #3218) gegen jetzt.
-    Waechter: die Ueberlagerung darf nur hinter ``_hat_tabelle`` wirken."""
-    vorher = GOLDEN_VORHER.read_text(encoding="utf-8")
-    jetzt = json.dumps(soll_ohne_tabelle(soll), ensure_ascii=False, sort_keys=True, indent=1)
-    assert len(json.loads(vorher)) >= 12, "Vorbedingung: Vorher-Ausgabe deckt den Altbestand ab"
-    assert jetzt == vorher
+def _mit_grundauswahl_tabelle(daten: dict) -> dict:
+    """Dasselbe Abo mit ausdruecklich gespeicherter Grundauswahl-Tabelle
+    (``placements_aus_grundauswahl``, die Quelle von Anlage und Versand), mit
+    den eingeschalteten Briefings des Abos wie die Anlage
+    (``erstanlage_placements``)."""
+    from services.placements import placements_aus_grundauswahl
+
+    daten = copy.deepcopy(daten)
+    if "location_ids" in daten:
+        from services.compare_slot_scheduler import resolve_preset_slots
+
+        slots = resolve_preset_slots(daten)
+        surface, outlook_enabled = "compare", daten.get("outlook_enabled")
+        an = tuple(r for r, ein in (("morning", slots.morning_enabled),
+                                    ("evening", slots.evening_enabled)) if ein)
+    else:
+        from app.loader import load_trip_from_dict
+        from services.report_config_resolver import trip_enabled_reports
+
+        surface, outlook_enabled = "trip", None
+        an = trip_enabled_reports(load_trip_from_dict(copy.deepcopy(daten)).report_config)
+    dc = daten.setdefault("display_config", {})
+    dc["placements"] = placements_aus_grundauswahl(
+        copy.deepcopy(dc), surface, enabled_reports=an, outlook_enabled=outlook_enabled)
+    return daten
+
+
+def test_ac10_altbestand_ohne_tabelle_folgt_der_grundauswahl_tabelle(soll):
+    """#3237 (AC-8) ersetzt die Vorher-Ausgabe von #3218 (``soll_ohne_tabelle_
+    vorher_3218.json``, Soll aus den Altfeldern -- Altpfad, entfernt).
+    GIVEN der ganze Altbestand ohne Tabelle (Fixtures plus Trip-Varianten mit
+    Kanal-Liste, Ausblick-Liste und -Formaten)
+    WHEN das Soll abgeleitet wird
+    THEN ist es gleich dem Soll desselben Abos mit gespeicherter
+    Grundauswahl-Tabelle -- die Altfelder steuern nichts mehr."""
+    eingaben = altbestand_eingaben()
+    assert len(eingaben) >= 12, "Vorbedingung: der Altbestand ist abgedeckt"
+    abweichend = [name for name, daten in eingaben.items()
+                  if _kanon(soll.soll_aus_daten(copy.deepcopy(daten), "de"))
+                  != _kanon(soll.soll_aus_daten(_mit_grundauswahl_tabelle(daten), "de"))]
+    assert not abweichend, abweichend
+    # Gegenprobe: die Altfelder-Varianten unterscheiden sich im Soll nicht mehr
+    # von der Variante ohne Altfelder (vorher: eigene Kanal-/Ausblick-Liste).
+    for name in ("roh", "einfach", "gemischt"):
+        basis = _kanon(soll.soll_aus_daten(copy.deepcopy(eingaben[f"trip_{name}"]), "de"))
+        for variante in (f"trip_{name}_kanal", f"trip_{name}_ausblick"):
+            assert _kanon(soll.soll_aus_daten(copy.deepcopy(eingaben[variante]), "de")) == basis, variante
 
 
 # --------------------------------------------------------------------------- #
@@ -443,12 +481,13 @@ def test_ac12_abnahme_3156_soll_formen(soll):
 
 
 def test_ac12_abnahme_3156_echte_mail_ohne_soll_verletzung(monkeypatch, tmp_path):
-    from tests.tdd.test_einstellung_gleich_mail_validatoren import _konfig, _lauf, _trip_eml
+    from tests.tdd.test_einstellung_gleich_mail_validatoren import _ampel_rohwerte, _konfig, _lauf, _trip_eml
 
     daten = _abnahme_daten()
     eml = _trip_eml(monkeypatch, daten)
+    # #3237: Ampelpunkt + Wortstufe tragen keine Zahl -> Rohwerte als Pruefdaten.
     code, aus = _lauf(tmp_path, "briefing_mail_validator", eml, "--konfig",
-                      _konfig(tmp_path, "abnahme_3156", daten))
+                      _konfig(tmp_path, "abnahme_3156", daten), *_ampel_rohwerte())
     assert "soll Zahl (Roh) zeigen" not in aus, aus
     assert "SOLL: Darstellung" not in aus, aus
     assert code == 0, aus

@@ -1,21 +1,23 @@
-"""TDD-RED: Issue #448 — Validator-Endpoint für metrics-for-channel-Kaskade.
+"""Issue #448 -- Validator-Endpoint metrics-for-channel (Stand #3237).
 
-Spec: docs/specs/modules/issue_448_validator_metrics_for_channel.md
+Spec: docs/specs/_archive/modules/issue_448_validator_metrics_for_channel.md
+(Nachtrag #3237), docs/specs/modules/feat_3237_altpfad_entfernen.md AC-7.
 
 Endpoint: GET /api/_validator/metrics-for-channel
 Parameters: trip=<id>, channel=<ch>, report=<morning|evening>, user_id=<id>
-Response:   {"source": "per_report|per_channel|global", "metric_ids": [...]}
+Response:   {"source": "placements|grundauswahl", "metric_ids": [...]}
 
-Sechs ACs decken die dreistufige Kaskade ab:
-- AC-1: Kein Kaskaden-Eintrag → source="global"
-- AC-2: per_channel_layouts["email"] vorhanden → source="per_channel"
-- AC-3: per_report_layouts["morning"]["email"] vorhanden → source="per_report" (schlägt per_channel)
-- AC-4: per_report für telegram, nicht für email → Fallback auf global für email
-- AC-5: Leere per_report-Liste → source="per_report", metric_ids=[]
-- AC-6: Unbekannter Trip → 404
+Seit #3237 ist die Tabelle "Was steht wo" die einzige Quelle; die
+Kanal-Kaskade (per_report > per_channel > global) ist entfernt. Der
+fruehere AC-3 (per_report schlaegt per_channel) beschrieb nur die Kaskade
+und ist entfallen.
+- AC-1: ohne Tabelle -> source="grundauswahl"
+- AC-2: Tabelle mit E-Mail-Teilauswahl -> source="placements", genau diese Metriken
+- AC-4: Telegram-Einstellung beeinflusst die Stelle E-Mail nicht
+- AC-5: leere Stelle -> metric_ids=[] (kein Rueckfall)
+- AC-6: Unbekannter Trip -> 404
 
-Keine Mocks — echte Trip-Fixtures in data/users/. Tests scheitern in RED,
-weil GET /api/_validator/metrics-for-channel noch nicht implementiert ist.
+Keine Mocks -- echte Trip-Dateien in data/users/.
 
 Issue #1308: api/routers/validator.py importiert bare (`from app.loader
 import ...`), damit greift die #1133-Isolation auch hier. Die Fixtures
@@ -60,164 +62,63 @@ def _write_trip(user_id: str, trip_id: str, payload: dict) -> None:
     (trip_dir / f"{trip_id}.json").write_text(json.dumps(payload))
 
 
-@pytest.fixture
-def trip_global():
-    """AC-1: Trip mit globaler Metrik-Liste, kein per_channel/per_report."""
+# Ohne temperature: deren abgeleitete Tagesgroessen (Nacht, Tagesspanne) sind
+# an der Stelle E-Mail gesperrt ("keine eigene Spalte") und gehoeren trotzdem
+# zur Ausgabe -- das wuerde die Teilauswahl-Aussagen verwischen.
+_METRIKEN = [
+    {"metric_id": "sunshine", "enabled": True},
+    {"metric_id": "wind", "enabled": True},
+    {"metric_id": "precipitation", "enabled": True},
+    {"metric_id": "humidity", "enabled": True},
+]
+
+
+def _trip_mit(placements_listen: dict | None) -> tuple[str, str]:
+    """Trip mit Grundauswahl ``_METRIKEN``; ``placements_listen`` = Haken je
+    Stelle als Tabelle (#3237: die Tabelle ist die einzige Quelle),
+    ``None`` = Abo ohne Tabelle."""
+    from tests.helpers.tabelle_aus_wunsch import tabelle
+
     user_id = f"test_issue_448_{uuid.uuid4().hex[:8]}"
-    trip_id = "trip-global"
+    trip_id = "trip-448"
+    dc = {"trip_id": trip_id, "metrics": [dict(m) for m in _METRIKEN]}
+    if placements_listen is not None:
+        dc["placements"] = tabelle(dc, "trip", listen=placements_listen)
     _write_trip(user_id, trip_id, {
-        "id": trip_id,
-        "name": "Global Metrics Trip",
-        "stages": [],
-        "display_config": {
-            "trip_id": trip_id,
-            "metrics": [
-                {"metric_id": "temperature", "enabled": True},
-                {"metric_id": "wind_speed", "enabled": True},
-            ],
-        },
+        "id": trip_id, "name": "Trip 448", "stages": [], "display_config": dc,
     })
+    return user_id, trip_id
+
+
+@pytest.fixture
+def trip_ohne_tabelle():
+    """AC-1: Trip ohne Tabelle (nur Grundauswahl)."""
+    user_id, trip_id = _trip_mit(None)
     yield user_id, trip_id
     shutil.rmtree(Path("data/users") / user_id, ignore_errors=True)
 
 
 @pytest.fixture
-def trip_per_channel():
-    """AC-2: Trip mit channel_layouts["email"], kein per_report.
-
-    Issue #1719 Scheibe 2 (ADR-0050): die globale Liste ist seit dieser
-    Scheibe das Maximum, gegen das channel_layouts geschnitten wird -- sie
-    muss deshalb precipitation/humidity fuehren (sonst schneidet der
-    per_channel-Zweig sie jetzt weg, obwohl der Trip sie im Email-Layout
-    fuehrt).
-    """
-    user_id = f"test_issue_448_{uuid.uuid4().hex[:8]}"
-    trip_id = "trip-per-channel"
-    _write_trip(user_id, trip_id, {
-        "id": trip_id,
-        "name": "Per-Channel Trip",
-        "stages": [],
-        "display_config": {
-            "trip_id": trip_id,
-            "metrics": [
-                {"metric_id": "temperature", "enabled": True},
-                {"metric_id": "wind_speed", "enabled": True},
-                {"metric_id": "precipitation", "enabled": True},
-                {"metric_id": "humidity", "enabled": True},
-            ],
-            "channel_layouts": {
-                "email": [
-                    {"metric_id": "precipitation", "enabled": True},
-                    {"metric_id": "humidity", "enabled": True},
-                ],
-            },
-        },
-    })
+def trip_email_teilauswahl():
+    """AC-2: Tabelle, an der Stelle E-Mail nur precipitation und humidity."""
+    user_id, trip_id = _trip_mit({"email": ["precipitation", "humidity"]})
     yield user_id, trip_id
     shutil.rmtree(Path("data/users") / user_id, ignore_errors=True)
 
 
 @pytest.fixture
-def trip_per_report_and_channel():
-    """AC-3: Trip mit per_report_layouts["morning"]["email"] UND channel_layouts["email"].
-
-    per_report muss per_channel schlagen.
-
-    Issue #1719 Scheibe 2 (ADR-0050): die globale Liste ist das Maximum --
-    wind_speed (per_channel) und sunshine_hours (per_report) muessen deshalb
-    auch global gefuehrt werden, sonst schneidet der Schnitt sie weg.
-    """
-    user_id = f"test_issue_448_{uuid.uuid4().hex[:8]}"
-    trip_id = "trip-per-report-and-channel"
-    _write_trip(user_id, trip_id, {
-        "id": trip_id,
-        "name": "Per-Report-And-Channel Trip",
-        "stages": [],
-        "display_config": {
-            "trip_id": trip_id,
-            "metrics": [
-                {"metric_id": "temperature", "enabled": True},
-                {"metric_id": "wind_speed", "enabled": True},
-                {"metric_id": "sunshine_hours", "enabled": True},
-            ],
-            "channel_layouts": {
-                "email": [
-                    {"metric_id": "wind_speed", "enabled": True},
-                ],
-            },
-            "channel_layouts_per_report": {
-                "morning": {
-                    "email": [
-                        {"metric_id": "sunshine_hours", "enabled": True},
-                    ],
-                },
-            },
-        },
-    })
+def trip_nur_telegram_eingestellt():
+    """AC-4: Tabelle, nur an der Stelle Telegram eingeschraenkt (wind);
+    E-Mail bleibt bei der Grundauswahl."""
+    user_id, trip_id = _trip_mit({"telegram": ["wind"]})
     yield user_id, trip_id
     shutil.rmtree(Path("data/users") / user_id, ignore_errors=True)
 
 
 @pytest.fixture
-def trip_per_report_telegram_only():
-    """AC-4: per_report_layouts["morning"]["telegram"] vorhanden, NICHT ["morning"]["email"].
-
-    Für channel=email muss Fallback auf global greifen.
-    """
-    user_id = f"test_issue_448_{uuid.uuid4().hex[:8]}"
-    trip_id = "trip-per-report-telegram-only"
-    _write_trip(user_id, trip_id, {
-        "id": trip_id,
-        "name": "Per-Report Telegram Trip",
-        "stages": [],
-        "display_config": {
-            "trip_id": trip_id,
-            "metrics": [
-                {"metric_id": "temperature", "enabled": True},
-                {"metric_id": "precipitation", "enabled": True},
-            ],
-            "channel_layouts_per_report": {
-                "morning": {
-                    "telegram": [
-                        {"metric_id": "wind_speed", "enabled": True},
-                    ],
-                },
-            },
-        },
-    })
-    yield user_id, trip_id
-    shutil.rmtree(Path("data/users") / user_id, ignore_errors=True)
-
-
-@pytest.fixture
-def trip_per_report_empty_list():
-    """AC-5: per_report_layouts["morning"]["email"] = [] (expliziter User-Wunsch).
-
-    Leere Liste = kein Fallback — source bleibt "per_report", metric_ids=[].
-    """
-    user_id = f"test_issue_448_{uuid.uuid4().hex[:8]}"
-    trip_id = "trip-per-report-empty"
-    _write_trip(user_id, trip_id, {
-        "id": trip_id,
-        "name": "Per-Report Empty Trip",
-        "stages": [],
-        "display_config": {
-            "trip_id": trip_id,
-            "metrics": [
-                {"metric_id": "temperature", "enabled": True},
-            ],
-            "channel_layouts": {
-                "email": [
-                    {"metric_id": "wind_speed", "enabled": True},
-                ],
-            },
-            "channel_layouts_per_report": {
-                "morning": {
-                    "email": [],
-                },
-            },
-        },
-    })
+def trip_email_leer():
+    """AC-5: Tabelle, an der Stelle E-Mail alles abgewaehlt (expliziter Wunsch)."""
+    user_id, trip_id = _trip_mit({"email": []})
     yield user_id, trip_id
     shutil.rmtree(Path("data/users") / user_id, ignore_errors=True)
 
@@ -227,89 +128,54 @@ def trip_per_report_empty_list():
 # ---------------------------------------------------------------------------
 
 class TestMetricsForChannelEndpoint:
-    """AC-1 bis AC-6: dreistufige Kaskaden-Sichtbarkeit."""
+    """AC-1 bis AC-6: Metriken je Kanal laut Tabelle (#3237: Vertrag
+    ``{source: placements|grundauswahl, metric_ids}``)."""
 
-    def test_ac1_no_cascade_config_returns_global(self, client, trip_global):
-        """AC-1: Trip ohne Kaskaden-Konfiguration → source='global'."""
-        user_id, trip_id = trip_global
+    @staticmethod
+    def _abfrage(client, user_id, trip_id, channel="email", report="morning"):
         resp = client.get(
             "/api/_validator/metrics-for-channel",
-            params={"trip": trip_id, "channel": "email", "report": "morning", "user_id": user_id},
+            params={"trip": trip_id, "channel": channel, "report": report, "user_id": user_id},
         )
         assert resp.status_code == 200, f"Erwartet 200, got {resp.status_code}: {resp.text[:300]}"
-        data = resp.json()
-        assert data["source"] == "global", f"source muss 'global' sein, got: {data['source']!r}"
+        return resp.json()
+
+    def test_ac1_ohne_tabelle_quelle_grundauswahl(self, client, trip_ohne_tabelle):
+        """AC-1: Trip ohne Tabelle -> source='grundauswahl', Grundauswahl erscheint."""
+        data = self._abfrage(client, *trip_ohne_tabelle)
+        assert data["source"] == "grundauswahl", f"got: {data['source']!r}"
         assert isinstance(data["metric_ids"], list), "metric_ids muss eine Liste sein"
-        assert "temperature" in data["metric_ids"], (
-            "Globale Metriken müssen in metric_ids erscheinen"
+        for mid in ("sunshine", "wind", "precipitation", "humidity"):
+            assert mid in data["metric_ids"], f"Grundauswahl-Metrik {mid} fehlt: {data['metric_ids']}"
+
+    def test_ac2_tabelle_email_teilauswahl(self, client, trip_email_teilauswahl):
+        """AC-2: Tabelle mit E-Mail-Teilauswahl -> source='placements', nur diese Metriken."""
+        data = self._abfrage(client, *trip_email_teilauswahl)
+        assert data["source"] == "placements", f"got: {data['source']!r}"
+        assert data["metric_ids"] == ["precipitation", "humidity"], data["metric_ids"]
+        assert "sunshine" not in data["metric_ids"], (
+            "an der Stelle E-Mail abgewaehlter sunshine darf nicht erscheinen"
         )
 
-    def test_ac2_per_channel_layout_returns_per_channel(self, client, trip_per_channel):
-        """AC-2: per_channel_layouts['email'] vorhanden → source='per_channel'."""
-        user_id, trip_id = trip_per_channel
-        resp = client.get(
-            "/api/_validator/metrics-for-channel",
-            params={"trip": trip_id, "channel": "email", "report": "morning", "user_id": user_id},
-        )
-        assert resp.status_code == 200, f"Erwartet 200, got {resp.status_code}: {resp.text[:300]}"
-        data = resp.json()
-        assert data["source"] == "per_channel", f"source muss 'per_channel' sein, got: {data['source']!r}"
-        assert "precipitation" in data["metric_ids"], (
-            "per_channel_layouts['email'] enthält precipitation — muss in metric_ids erscheinen"
-        )
-        assert "temperature" not in data["metric_ids"], (
-            "Globale Metrik temperature darf nicht erscheinen wenn per_channel aktiv ist"
-        )
-
-    def test_ac3_per_report_beats_per_channel(self, client, trip_per_report_and_channel):
-        """AC-3: per_report_layouts['morning']['email'] schlägt per_channel_layouts['email']."""
-        user_id, trip_id = trip_per_report_and_channel
-        resp = client.get(
-            "/api/_validator/metrics-for-channel",
-            params={"trip": trip_id, "channel": "email", "report": "morning", "user_id": user_id},
-        )
-        assert resp.status_code == 200, f"Erwartet 200, got {resp.status_code}: {resp.text[:300]}"
-        data = resp.json()
-        assert data["source"] == "per_report", f"source muss 'per_report' sein, got: {data['source']!r}"
-        assert "sunshine_hours" in data["metric_ids"], (
-            "per_report['morning']['email'] enthält sunshine_hours — muss gewonnen haben"
-        )
-        assert "wind_speed" not in data["metric_ids"], (
-            "wind_speed ist nur in per_channel — darf nicht erscheinen wenn per_report aktiv ist"
-        )
-
-    def test_ac4_per_report_telegram_fallback_to_global_for_email(
-        self, client, trip_per_report_telegram_only
+    def test_ac4_telegram_einstellung_beeinflusst_email_nicht(
+        self, client, trip_nur_telegram_eingestellt
     ):
-        """AC-4: per_report für telegram, nicht für email → Fallback auf global für email."""
-        user_id, trip_id = trip_per_report_telegram_only
-        resp = client.get(
-            "/api/_validator/metrics-for-channel",
-            params={"trip": trip_id, "channel": "email", "report": "morning", "user_id": user_id},
-        )
-        assert resp.status_code == 200, f"Erwartet 200, got {resp.status_code}: {resp.text[:300]}"
-        data = resp.json()
-        assert data["source"] == "global", (
-            f"telegram-Eintrag darf email nicht beeinflussen; source muss 'global' sein, got: {data['source']!r}"
-        )
-        assert "temperature" in data["metric_ids"], (
-            "Globale Metriken (temperature, precipitation) müssen in metric_ids erscheinen"
-        )
+        """AC-4: nur Telegram eingeschraenkt -> E-Mail zeigt weiter die Grundauswahl,
+        Telegram nur seine Auswahl."""
+        user_id, trip_id = trip_nur_telegram_eingestellt
+        email = self._abfrage(client, user_id, trip_id, channel="email")
+        assert email["source"] == "placements", f"got: {email['source']!r}"
+        for mid in ("sunshine", "wind", "precipitation", "humidity"):
+            assert mid in email["metric_ids"], f"E-Mail verliert {mid}: {email['metric_ids']}"
+        telegram = self._abfrage(client, user_id, trip_id, channel="telegram")
+        assert telegram["metric_ids"] == ["wind"], telegram["metric_ids"]
 
-    def test_ac5_empty_per_report_list_no_fallback(self, client, trip_per_report_empty_list):
-        """AC-5: per_report_layouts['morning']['email']=[] → source='per_report', metric_ids=[]."""
-        user_id, trip_id = trip_per_report_empty_list
-        resp = client.get(
-            "/api/_validator/metrics-for-channel",
-            params={"trip": trip_id, "channel": "email", "report": "morning", "user_id": user_id},
-        )
-        assert resp.status_code == 200, f"Erwartet 200, got {resp.status_code}: {resp.text[:300]}"
-        data = resp.json()
-        assert data["source"] == "per_report", (
-            f"Leere Liste ist expliziter User-Wunsch; source muss 'per_report' sein, got: {data['source']!r}"
-        )
+    def test_ac5_leere_stelle_kein_rueckfall(self, client, trip_email_leer):
+        """AC-5: Stelle E-Mail ganz abgewaehlt -> metric_ids=[], kein Rueckfall."""
+        data = self._abfrage(client, *trip_email_leer)
+        assert data["source"] == "placements", f"got: {data['source']!r}"
         assert data["metric_ids"] == [], (
-            f"Leere per_report-Liste darf nicht auf per_channel oder global fallen; metric_ids muss [] sein, got: {data['metric_ids']}"
+            f"Leere Stelle darf nicht auf die Grundauswahl fallen; got: {data['metric_ids']}"
         )
 
     def test_ac6_unknown_trip_returns_404(self, client):

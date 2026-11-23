@@ -75,6 +75,22 @@ def _result_mit_stunden(*, mit_ausblick: bool = False) -> ComparisonResult:
     )
 
 
+def _stunden_preset(preset_id: str, altfeld: list, katalog: list, *,
+                    unbekannt: tuple = (), **top) -> dict:
+    """#3237: die Stundenverlauf-Auswahl steht in der Tabelle "Was steht wo"
+    (``katalog``: Katalog-IDs mit Haken im Stundenverlauf, in dieser Folge);
+    ``hourly_metrics`` (``altfeld``) bleibt als Beschreibung stehen und wirkt
+    nicht. ``unbekannt``: zusaetzliche Zeilen mit unbekannter Kennung und
+    Stundenverlauf-Haken (robustes Lesen: ohne Wirkung)."""
+    from tests.helpers.tabelle_aus_wunsch import tabelle
+
+    dc = {"hourly_metrics": list(altfeld)}
+    dc["placements"] = tabelle(dc, "compare", listen={"hourly": list(katalog)})
+    for kennung in unbekannt:
+        dc["placements"]["rows"].insert(0, {"metric_id": kennung, "places": {"hourly": True}})
+    return {"id": preset_id, "display_config": dc, **top}
+
+
 class TestUebersichtsAufloeserAC2:
     def test_komplett_unbekannte_auswahl_ergibt_leere_liste_nicht_alle(self):
         """AC-2: Given eine gespeicherte Auswahl, die sich auf KEINE bekannte
@@ -133,7 +149,7 @@ class TestReportConfigResolverAC4AC5:
         hourly_metrics-Auswahl und gespeichertem hourly_enabled=True (bzw.
         Feld fehlt = Default True) / When resolve_compare_render_options()
         aufgerufen wird / Then ist hourly_enabled trotzdem False."""
-        preset = {"id": "p-leer", "display_config": {"hourly_metrics": []}}
+        preset = _stunden_preset("p-leer", [], [])
         options = resolve_compare_render_options(preset)
         assert options.hourly_enabled is False, (
             "Leere Stundenauswahl muss den Stundenblock abschalten, auch "
@@ -152,11 +168,8 @@ class TestReportConfigResolverAC4AC5:
         nur eine Tabelle mit der Zeit-Spalte, was die PO-Entscheidung vom
         2026-07-26 ausschliesst und der Pflicht-Validator zurueckweist
         (.claude/hooks/email_spec_validator.py:379-383)."""
-        preset = {
-            "id": "p-nur-windrichtung",
-            "display_config": {"hourly_metrics": ["wind_dir_deg"]},
-            "hourly_enabled": True,
-        }
+        preset = _stunden_preset("p-nur-windrichtung", ["wind_dir_deg"], ["wind_direction"],
+                                 hourly_enabled=True)
         options = resolve_compare_render_options(preset)
         assert options.hourly_metrics == ["wind_direction_deg"], (
             f"Voraussetzung: die Windrichtung ist aufloesbar, die Liste also "
@@ -181,11 +194,8 @@ class TestReportConfigResolverAC4AC5:
         abschalten (stiller Verlust, Invariante 2 aus Epic #1372)."""
         from app.metric_catalog import get_metric
 
-        preset = {
-            "id": "p-nur-feuchte",
-            "display_config": {"hourly_metrics": ["humidity"]},
-            "hourly_enabled": True,
-        }
+        preset = _stunden_preset("p-nur-feuchte", ["humidity"], ["humidity"],
+                                 hourly_enabled=True)
         options = resolve_compare_render_options(preset)
 
         assert options.hourly_metrics == [get_metric("humidity").dp_field], (
@@ -198,11 +208,8 @@ class TestReportConfigResolverAC4AC5:
         )
 
     def test_komplett_unbekannte_stundenauswahl_schaltet_stundenblock_ab(self):
-        preset = {
-            "id": "p-unbekannt",
-            "display_config": {"hourly_metrics": ["voellig_unbekannt"]},
-            "hourly_enabled": True,
-        }
+        preset = _stunden_preset("p-unbekannt", ["voellig_unbekannt"], [],
+                                 unbekannt=("voellig_unbekannt",), hourly_enabled=True)
         options = resolve_compare_render_options(preset)
         assert options.hourly_enabled is False, (
             "Komplett unauflösbare Stundenauswahl muss hourly_enabled trotz "
@@ -262,7 +269,7 @@ class TestKlartextStundenverlaufAC4:
         sie fiel der Kopf zufaellig mit der Tabelle weg (leerer
         `section_lines`-Puffer), mit ihnen blieb er stehen und beschriftete
         den 3-Tages-Ausblick falsch."""
-        preset = {"id": "p-ac4", "display_config": {"hourly_metrics": []}}
+        preset = _stunden_preset("p-ac4", [], [])
         options = resolve_compare_render_options(preset)
         assert options.hourly_enabled is False  # Voraussetzung, s. TestReportConfigResolverAC4AC5
 
@@ -285,11 +292,8 @@ class TestKlartextStundenverlaufAC4:
     def test_gesetzte_auswahl_zeigt_nur_die_gewaehlten_werte_in_der_gewaehlten_reihenfolge(self):
         """Gegenprobe: bei nicht-leerer Auswahl bleibt alles wie es war --
         Ueberschrift, Stundenzeilen UND Ausblick."""
-        preset = {
-            "id": "p-ac4-auswahl",
-            "display_config": {"hourly_metrics": ["wind_kmh", "temp_c"]},
-            "hourly_enabled": True,
-        }
+        preset = _stunden_preset("p-ac4-auswahl", ["wind_kmh", "temp_c"], ["wind", "temperature"],
+                                 hourly_enabled=True)
         options = resolve_compare_render_options(preset)
 
         _, plain = render_compare_email(
@@ -322,7 +326,7 @@ class TestKlartextStundenverlaufAC4:
         """Gegenprobe zur Kopf-Bedingung: der Ausblick selbst darf NICHT mit
         dem Kopf verschwinden -- er haengt nicht am Stundenverlauf-Schalter
         (Issue #1323)."""
-        preset = {"id": "p-ausblick-solo", "display_config": {"hourly_metrics": []}}
+        preset = _stunden_preset("p-ausblick-solo", [], [])
         options = resolve_compare_render_options(preset)
 
         _, plain = render_compare_email(
@@ -352,11 +356,8 @@ class TestNurMergeSignalGewaehlt:
     vorhandene Stundensektion."""
 
     def test_nur_windrichtung_zeigt_keinen_stundenblock_in_html_und_klartext(self):
-        preset = {
-            "id": "p-nur-windrichtung-mail",
-            "display_config": {"hourly_metrics": ["wind_dir_deg"]},
-            "hourly_enabled": True,
-        }
+        preset = _stunden_preset("p-nur-windrichtung-mail", ["wind_dir_deg"], ["wind_direction"],
+                                 hourly_enabled=True)
         options = resolve_compare_render_options(preset)
 
         html, plain = render_compare_email(
@@ -378,11 +379,8 @@ class TestNurMergeSignalGewaehlt:
         `opts.hourly_enabled` (scheduler_dispatch_service.py:399) -- derselbe
         Aufruf hier, damit der Header nicht eine Stundensektion behauptet, die
         die Mail gar nicht enthaelt."""
-        preset = {
-            "id": "p-nur-windrichtung-header",
-            "display_config": {"hourly_metrics": ["wind_dir_deg"]},
-            "hourly_enabled": True,
-        }
+        preset = _stunden_preset("p-nur-windrichtung-header", ["wind_dir_deg"], ["wind_direction"],
+                                 hourly_enabled=True)
         options = resolve_compare_render_options(preset)
         html, plain = render_compare_email(
             _result_mit_stunden(),

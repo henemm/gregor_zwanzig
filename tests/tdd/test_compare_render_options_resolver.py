@@ -99,8 +99,15 @@ def test_deactivated_metric_missing_from_enabled_metrics():
 
 
 def test_no_active_metrics_means_no_filter():
+    """Ohne Grundauswahl filtert die Mail nichts weg: sie zeigt jede Zeile der
+    Uebersicht. #3237: ohne Tabelle gilt die Tabelle aus der Grundauswahl
+    (Standardsatz) -- die Liste ist ausdruecklich, nicht mehr ``None``."""
+    from output.renderers.email.compare_html import CV2_ZEILEN
+
     options = resolve_compare_render_options({"id": "p8"})
-    assert options.enabled_metrics_by_channel["email"] is None
+    email = options.enabled_metrics_by_channel["email"]
+    assert email is not None
+    assert sorted(email) == sorted(z["key"] for z in CV2_ZEILEN if z["key"] != "warn")
     assert not hasattr(options, "enabled_metrics"), "totes Feld (#3122 B1b) ist zurueck"
 
 
@@ -131,12 +138,21 @@ def test_channel_selection_is_clipped_to_the_global_maximum_per_channel():
     """ADR-0050 Regel 1/2: die Grundauswahl ist das MAXIMUM, ein Kanal darf nur
     ABWAEHLEN. SMS waehlt hier 'wind_max_kmh' zusaetzlich an -- das ist nicht in
     der Grundauswahl und muss weggeschnitten werden; die beiden Kanaele ohne
-    eigenen Eintrag folgen unveraendert der Grundauswahl (AC-S8-15)."""
+    eigenen Eintrag folgen unveraendert der Grundauswahl (AC-S8-15).
+
+    #3237: die Kanal-Auswahl steht in der Tabelle -- eine Zeile ``wind`` mit
+    SMS-Haken, obwohl Wind nicht in der Grundauswahl steht, hat keine Wirkung;
+    Bewoelkung ist in der SMS abgewaehlt."""
     preset = {
         "id": "p19",
         "display_config": {
             "active_metrics": ["temp_max_c", "cloud_avg_pct"],
             "channel_active_metrics": {"sms": ["temp_max_c", "wind_max_kmh"]},
+            "placements": {"version": 1, "rows": [
+                {"metric_id": "wind", "places": {"sms": True}},
+                {"metric_id": "temperature", "places": {"sms": True}},
+                {"metric_id": "cloud_total", "places": {"sms": False}},
+            ]},
         },
     }
     options = resolve_compare_render_options(preset)
@@ -167,10 +183,13 @@ def test_hourly_enabled_top_level_false_respected():
 
 
 def test_hourly_metrics_resolved_from_display_config():
-    preset = {
-        "id": "p11",
-        "display_config": {"hourly_metrics": ["wind_kmh"]},
-    }
+    """#3237: die Stundenverlauf-Auswahl steht in der Tabelle "Was steht wo"
+    (``hourly_metrics`` bleibt als Beschreibung stehen und wirkt nicht)."""
+    from tests.helpers.tabelle_aus_wunsch import tabelle
+
+    dc = {"hourly_metrics": ["wind_kmh"]}
+    dc["placements"] = tabelle(dc, "compare", listen={"hourly": ["wind"]})
+    preset = {"id": "p11", "display_config": dc}
     options = resolve_compare_render_options(preset)
     # Issue #1335 Scheibe 1: reihenfolge-erhaltende Liste statt Set.
     assert options.hourly_metrics == ["wind10m_kmh"]
@@ -178,11 +197,13 @@ def test_hourly_metrics_resolved_from_display_config():
 
 def test_no_hourly_metrics_means_default_list():
     """#3096 (ADR-0121 Nachtrag 3a): nie eingestellt = die konkrete Vorgabe
-    (neun Spalten, Soll von Hand), nicht mehr ``None``."""
+    (neun Spalten, Soll von Hand), nicht mehr ``None``. #3237: EINE
+    Zeilenfolge (Spec #3122 Teil A Nr. 8) -- dieselben neun Spalten in der
+    Folge der Tabelle (Grundauswahl-Folge)."""
     options = resolve_compare_render_options({"id": "p12"})
     assert options.hourly_metrics == [
-        "t2m_c", "wind_chill_c", "wind10m_kmh", "gust_kmh", "precip_1h_mm",
-        "uv_index", "thunder_level", "pop_pct", "visibility_m",
+        "t2m_c", "wind10m_kmh", "precip_1h_mm", "pop_pct", "thunder_level",
+        "uv_index", "visibility_m", "gust_kmh", "wind_chill_c",
     ]
 
 

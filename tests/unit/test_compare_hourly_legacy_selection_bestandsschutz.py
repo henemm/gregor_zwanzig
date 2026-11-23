@@ -64,6 +64,16 @@ HEUTIGE_SPALTEN = [
     "Rain%", "Visib",
 ]
 
+# #3237 (Spec #3122 Teil A Nr. 8, ADR-0124, bewusste Aenderung): EINE
+# Zeilenfolge fuer alle Stellen -- dieselben neun Wert-Spalten, aber in der
+# Folge der Tabelle (Grundauswahl-Folge) statt einer eigenen Stunden-Folge.
+# Von Hand aus HEUTIGE_SPALTEN umgestellt; Menge und Zahl bleiben gleich.
+HEUTIGE_SPALTEN_EINE_FOLGE = [
+    "Zeit", "Temp", "Wind", "Rain", "Rain%", "Thdr", "UV", "Visib",
+    "Gust", "Feels",
+]
+assert sorted(HEUTIGE_SPALTEN_EINE_FOLGE) == sorted(HEUTIGE_SPALTEN)
+
 
 def _result() -> ComparisonResult:
     loc = LocationResult(
@@ -116,7 +126,10 @@ def test_legacy_preset_renders_exactly_the_columns_of_today():
         hourly_enabled=options.hourly_enabled, preset=PRESET_ALLGEMEIN,
     )
 
-    assert _hour_header(html) == HEUTIGE_SPALTEN, (
+    # #3237: ohne Tabelle gilt die Tabelle aus der Grundauswahl; das Altfeld
+    # ``hourly_metrics`` wirkt nicht -- die Mail zeigt dieselben Spalten wie
+    # vorher (die Alt-Auswahl war die Vorgabemenge), in der EINEN Zeilenfolge.
+    assert _hour_header(html) == HEUTIGE_SPALTEN_EINE_FOLGE, (
         "Ein unveraendert gespeicherter Alt-Vergleich zeigt andere Spalten als "
         "vor der Umstellung — das ist eine Migration durch die Hintertuer."
     )
@@ -208,10 +221,10 @@ def test_never_configured_comparison_keeps_the_nine_columns_of_today():
     )
     ist = _hour_header(html)
 
-    assert ist == HEUTIGE_SPALTEN, (
+    assert ist == HEUTIGE_SPALTEN_EINE_FOLGE, (
         "Ein nie eingestellter Vergleich hat ungefragt neue Spalten bekommen "
         "— AC-4: kein automatisches Hinzufuegen der neuen Groessen.\n"
-        f"  erwartet: {HEUTIGE_SPALTEN}\n"
+        f"  erwartet: {HEUTIGE_SPALTEN_EINE_FOLGE}\n"
         f"  bekommen: {ist}\n"
         f"  ungefragt dazu: {[s for s in ist if s not in HEUTIGE_SPALTEN]}"
     )

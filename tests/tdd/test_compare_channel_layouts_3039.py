@@ -101,7 +101,11 @@ def _vorlage(layouts: dict | None, *, ohne_kanal_auswahl: bool = True) -> dict:
         dc.pop("channel_active_metrics", None)
     if layouts is not None:
         dc["channel_layouts"] = copy.deepcopy(layouts)
-    return p
+    # #3237: die Kanal-Einstellung steht in der Tabelle "Was steht wo" (das
+    # Altfeld bleibt Beschreibung und wirkt nicht mehr).
+    from tests.helpers.tabelle_aus_wunsch import orte_wunsch_als_tabelle
+
+    return orte_wunsch_als_tabelle(p)
 
 
 def _voll(kennungen: list[str], **je_kennung) -> list[dict]:
@@ -200,14 +204,20 @@ def test_ac2_bestand_nur_channel_active_metrics_bleibt_zeichengleich(mit):
     """Bestandsvergleich ohne ``channel_layouts``: Telegram/SMS/Premium-SMS
     zeichengleich zu einem Lauf derselben Vorlage, die Kanal-Auswahl greift wie
     bisher (Reihenfolge der Kanal-Liste), die Mail zeigt Zahlen (Festzustand)."""
+    from tests.helpers.tabelle_aus_wunsch import orte_wunsch_als_tabelle
+
     bestand = fixture_dict("kanal_reihenfolge")
     assert "channel_layouts" not in bestand["display_config"]
-    a, b = _zwei(mit, bestand)
+    # #3237: die Kanal-Auswahl steht in der Tabelle (Altfeld wirkt nicht).
+    a, b = _zwei(mit, orte_wunsch_als_tabelle(bestand))
     for kanal in ("telegram", "sms", "premium_sms"):
         assert _text(a.snap, kanal) == _text(b.snap, kanal)
     assert _keys(a, "telegram")["Innsbruck"] == [
         "sunny_hours_h", "cloud_avg_pct", "gust_max_kmh", "wind_max_kmh", "temp_max_c"]
-    assert _keys(a, "sms")["Innsbruck"] == ["gust_max_kmh", "temp_max_c", "sunny_hours_h"]
+    # #3237: EINE Zeilenfolge (Spec #3122 Teil A Nr. 8) -- die SMS waehlt
+    # weiter nur Boeen, Temperatur, Sonne, in der Folge der Tabelle (= der
+    # Telegram-Liste), nicht in einer eigenen.
+    assert _keys(a, "sms")["Innsbruck"] == ["sunny_hours_h", "gust_max_kmh", "temp_max_c"]
     assert _plain_wert(_text(a.snap, "email"), "Innsbruck", "Böen") == "19 km/h"
     assert _AMPEL_PUNKT not in _html_zeile(a.snap.sendungen("email")[-1]["body"], "Böen")
 
@@ -245,15 +255,21 @@ def test_ac4_aus_nur_in_telegram_blendet_nur_dort_aus(mit):
 
 
 def test_ac5_jeder_kanal_folgt_seiner_eigenen_reihenfolge(mit):
+    """#3237 (Spec #3122 Teil A Nr. 8, ADR-0124, bewusste Aenderung): es gibt
+    EINE Zeilenfolge fuer alle Stellen -- jeder Kanal folgt der Folge der
+    Tabelle (hier die der E-Mail-Liste), eine eigene Folge je Kanal gibt es
+    nicht mehr. Abgewaehlte Zeilen fehlen je Kanal weiter."""
+    folge = ["sunshine", "gust", "temperature", "cloud_total", "wind"]
     reihen = {
-        "email": ["sunshine", "gust", "temperature", "cloud_total", "wind"],
+        "email": folge,
         "telegram": ["cloud_total", "wind", "sunshine", "temperature", "gust"],
         "sms": ["gust", "sunshine", "temperature", "wind", "cloud_total"],
     }
     layouts = {k: _voll(v) for k, v in reihen.items()}
+    layouts["sms"] = _voll(reihen["sms"], wind={"an": False, "einfach": False})
     for lauf in _zwei(mit, _vorlage(layouts)):
-        for kanal, reihe in reihen.items():
-            soll = [KENNUNG_ZU_KEY[k] for k in reihe]
+        for kanal in reihen:
+            soll = [KENNUNG_ZU_KEY[k] for k in folge if not (kanal == "sms" and k == "wind")]
             for ort in ORTSNAMEN:
                 assert _keys(lauf, kanal)[ort] == soll, (
                     f"{kanal}/{ort}: erwartet {soll}, gesendet {_keys(lauf, kanal)[ort]}\n"
@@ -344,15 +360,18 @@ def test_ac8_einfach_bei_metrik_ohne_zweite_darstellung_wie_roh(mit):
 
 
 def test_ac9_sms_einfach_nur_fuer_wolken_gsm7_und_hoechstens_160(mit):
+    """#3237 (Spec #3122 Teil A Nr. 4, bewusste Aenderung): die SMS hat keine
+    Formwahl -- ein Einfach-Wunsch bleibt ohne Wirkung, die Orte-SMS zeigt die
+    Bewoelkung fest als Zahl (``CT35@11``); GSM-7 und 160 Zeichen gelten weiter."""
     layouts = {"sms": _voll(
         ["cloud_total", "gust", "temperature"],
         cloud_total={"einfach": True}, gust={"einfach": True},
     )}
     for lauf in _zwei(mit, _vorlage(layouts)):
         sms = _text(lauf.snap, "sms")
-        # #3172 (ADR-0125): Token-Zeile, Einfach als Stufe ``CT:SCT@11``.
-        assert re.search(rf"^O1 CT:{_WOLKEN_STUFE}@\d+", sms), (
-            f"SMS: Wolken muessen bei Einfach als Stufe erscheinen\n{sms}")
+        # #3172 (ADR-0125): Token-Zeile; Wolken fest als Zahl der Spitzenstunde.
+        assert re.search(r"^O1 CT35@\d+", sms) and "CT:" not in sms, (
+            f"SMS: Wolken erscheinen fest als Zahl\n{sms}")
         # Boeen haben keine Einfachform: Zahl bzw. Leerwert unter Gelb, nie Stufe.
         assert re.search(r"(?:: | )G(?:-|\d+@)", sms) and "G:" not in sms, (
             f"SMS: Boeen bleiben trotz Einfach eine Zahl\n{sms}")
@@ -367,9 +386,11 @@ def test_ac10_premium_sms_text_gleich_sms_text_mit_kanal_einstellungen(mit):
     for lauf in _zwei(mit, _vorlage(layouts)):
         sms = _text(lauf.snap, "sms")
         assert _text(lauf.snap, "premium_sms") == sms
-        assert re.search(rf"CT:{_WOLKEN_STUFE}@\d+", sms), (
+        # #3237 (Spec #3122 Teil A Nr. 4): Einfach wirkt in der SMS nicht --
+        # Wolken fest als Zahl; Auswahl und Folge der Einstellung wirken.
+        assert re.search(r"CT35@\d+", sms), (
             f"Vorbedingung: SMS muss die Kanal-Einstellung tragen\n{sms}")
-        assert sms.index(" SU") < sms.index(" CT:") < sms.index(" G"), sms
+        assert sms.index(" SU") < sms.index(" CT") < sms.index(" G"), sms
 
 
 # ---------------------------------------------------------------------------
@@ -415,9 +436,10 @@ def test_ac13_vorschau_und_versand_zeigen_dieselben_zeilen_und_formate(mit):
         # Inhalt, nicht nur Gleichheit: die Kanal-Einstellung hat gewirkt.
         # Spec-Regel 7 (AC-14): Grundauswahl-Werte ohne Kanal-Eintrag (Wind,
         # Sonne) sind neu und folgen eingeschaltet am Ende, in der Reihenfolge
-        # der Grundauswahl.
+        # der Grundauswahl. #3237: EINE Zeilenfolge (Spec #3122 Teil A Nr. 8)
+        # -- Telegram folgt der Tabellenfolge (die der E-Mail-Liste).
         assert _keys(lauf, "telegram")["Innsbruck"] == [
-            "cloud_avg_pct", "gust_max_kmh", "temp_max_c", "wind_max_kmh", "sunny_hours_h"]
+            "gust_max_kmh", "temp_max_c", "cloud_avg_pct", "wind_max_kmh", "sunny_hours_h"]
         assert _AMPEL_PUNKT in _html_zeile(versand_html, "Böen")
 
 

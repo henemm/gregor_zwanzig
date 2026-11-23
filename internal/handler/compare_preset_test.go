@@ -79,7 +79,7 @@ func TestListComparePresets_Empty(t *testing.T) {
 func TestCreateComparePreset_Success(t *testing.T) {
 	s := newTestStore(t)
 	r := chi.NewRouter()
-	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 
 	req := httptest.NewRequest("POST", "/api/compare/presets", jsonBody(t, validPresetBody()))
 	req.Header.Set("Content-Type", "application/json")
@@ -115,7 +115,7 @@ func TestCreateComparePreset_Success(t *testing.T) {
 func TestCreateComparePreset_NameRequired(t *testing.T) {
 	s := newTestStore(t)
 	r := chi.NewRouter()
-	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 
 	body := validPresetBody()
 	delete(body, "name")
@@ -138,7 +138,7 @@ func TestCreateComparePreset_NameRequired(t *testing.T) {
 func TestCreateComparePreset_InvalidSchedule(t *testing.T) {
 	s := newTestStore(t)
 	r := chi.NewRouter()
-	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 
 	body := validPresetBody()
 	body["schedule"] = "monatlich"
@@ -161,7 +161,7 @@ func TestCreateComparePreset_InvalidSchedule(t *testing.T) {
 func TestCreateComparePreset_InvalidProfil(t *testing.T) {
 	s := newTestStore(t)
 	r := chi.NewRouter()
-	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 
 	body := validPresetBody()
 	body["profil"] = "UNBEKANNT"
@@ -184,7 +184,7 @@ func TestCreateComparePreset_InvalidProfil(t *testing.T) {
 func TestCreateComparePreset_InvalidHourRange(t *testing.T) {
 	s := newTestStore(t)
 	r := chi.NewRouter()
-	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 
 	body := validPresetBody()
 	body["hour_from"] = 14
@@ -210,7 +210,7 @@ func TestCreateComparePreset_InvalidHourRange(t *testing.T) {
 func TestCreateComparePreset_EmpfaengerOhneAtWirdNichtAbgewiesen(t *testing.T) {
 	s := newTestStore(t)
 	r := chi.NewRouter()
-	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 
 	body := validPresetBody()
 	body["empfaenger"] = []string{"keine-email-adresse"}
@@ -235,7 +235,7 @@ func TestUpdateComparePreset_Success(t *testing.T) {
 
 	// Erst anlegen
 	createRouter := chi.NewRouter()
-	createRouter.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	createRouter.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 	createReq := httptest.NewRequest("POST", "/api/compare/presets", jsonBody(t, validPresetBody()))
 	createReq.Header.Set("Content-Type", "application/json")
 	createReq = addUserToContext(createReq, "user1")
@@ -309,7 +309,7 @@ func TestDeleteComparePreset_Success(t *testing.T) {
 
 	// Erst anlegen
 	createRouter := chi.NewRouter()
-	createRouter.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	createRouter.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 	createReq := httptest.NewRequest("POST", "/api/compare/presets", jsonBody(t, validPresetBody()))
 	createReq.Header.Set("Content-Type", "application/json")
 	createReq = addUserToContext(createReq, "user1")
@@ -434,7 +434,7 @@ func TestComparePreset_UserIsolation(t *testing.T) {
 
 	// User A legt Preset an
 	createRouter := chi.NewRouter()
-	createRouter.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	createRouter.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 	createReq := httptest.NewRequest("POST", "/api/compare/presets", jsonBody(t, validPresetBody()))
 	createReq.Header.Set("Content-Type", "application/json")
 	createReq = addUserToContext(createReq, "userA")
@@ -470,7 +470,7 @@ func TestCreateComparePreset_AppearsInList(t *testing.T) {
 	s := newTestStore(t)
 
 	createRouter := chi.NewRouter()
-	createRouter.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	createRouter.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 	req := httptest.NewRequest("POST", "/api/compare/presets", jsonBody(t, validPresetBody()))
 	req.Header.Set("Content-Type", "application/json")
 	req = addUserToContext(req, "user1")
@@ -653,7 +653,7 @@ func TestCreateComparePreset_ValidForecastHours_Accepted(t *testing.T) {
 		// die hier nicht Gegenstand ist.
 		s := newTestStore(t)
 		r := chi.NewRouter()
-		r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+		r.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 
 		body := validPresetBody()
 		body["forecast_hours"] = hours
@@ -673,7 +673,7 @@ func TestCreateComparePreset_ValidForecastHours_Accepted(t *testing.T) {
 func TestCreateComparePreset_InvalidForecastHours_Rejected(t *testing.T) {
 	s := newTestStore(t)
 	r := chi.NewRouter()
-	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 
 	for _, hours := range []int{-1, 99, 1, 23, 25, 71, 73} {
 		body := validPresetBody()
@@ -694,7 +694,7 @@ func TestCreateComparePreset_InvalidForecastHours_Rejected(t *testing.T) {
 func TestCreateComparePreset_MissingForecastHours_DefaultsTo48(t *testing.T) {
 	s := newTestStore(t)
 	r := chi.NewRouter()
-	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 
 	body := validPresetBody()
 	// forecast_hours bewusst nicht gesetzt
@@ -768,7 +768,7 @@ func TestUpdateComparePreset_AlertFields_RoundtripAndRMW(t *testing.T) {
 
 	// Preset anlegen (noch ohne Alarm-Felder).
 	createRouter := chi.NewRouter()
-	createRouter.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	createRouter.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 	createReq := httptest.NewRequest("POST", "/api/compare/presets", jsonBody(t, validPresetBody()))
 	createReq.Header.Set("Content-Type", "application/json")
 	createReq = addUserToContext(createReq, "user1")
@@ -869,7 +869,7 @@ func TestUpdateComparePreset_AlertFields_UserIsolation(t *testing.T) {
 
 	// User A legt Preset an.
 	createRouterA := chi.NewRouter()
-	createRouterA.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	createRouterA.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 	createReqA := httptest.NewRequest("POST", "/api/compare/presets", jsonBody(t, validPresetBody()))
 	createReqA.Header.Set("Content-Type", "application/json")
 	createReqA = addUserToContext(createReqA, "userA")
@@ -940,7 +940,7 @@ func TestUpdateComparePreset_EndDateSentinel_DeletesSetDate(t *testing.T) {
 	s := newTestStore(t)
 
 	createRouter := chi.NewRouter()
-	createRouter.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	createRouter.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 	createBody := validPresetBody()
 	createBody["end_date"] = "2026-08-01"
 	createReq := httptest.NewRequest("POST", "/api/compare/presets", jsonBody(t, createBody))
@@ -1005,7 +1005,7 @@ func TestUpdateComparePreset_Corridors_PreservedWhenOmitted(t *testing.T) {
 	s := newTestStore(t)
 
 	createRouter := chi.NewRouter()
-	createRouter.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	createRouter.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 	createBody := validPresetBody()
 	createBody["corridors"] = []map[string]interface{}{
 		{"metric": "temp_max_c", "range": [2]interface{}{nil, 30}, "notify": false, "mark": true},
@@ -1053,7 +1053,7 @@ func TestUpdateComparePreset_EndDateOmitted_PreservesOriginal(t *testing.T) {
 	s := newTestStore(t)
 
 	createRouter := chi.NewRouter()
-	createRouter.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	createRouter.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 	createBody := validPresetBody()
 	createBody["end_date"] = "2026-09-15"
 	createReq := httptest.NewRequest("POST", "/api/compare/presets", jsonBody(t, createBody))

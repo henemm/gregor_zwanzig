@@ -408,6 +408,12 @@ def _morgenausblick_trip_anlegen() -> None:
     for mc in treffer:
         mc.morning_enabled = False
         mc.evening_enabled = True
+    # #3237: "Ausblick auch morgens" steht in der Tabelle (``outlook_reports``);
+    # das Altfeld ``multi_day_trend_reports`` bleibt als Beschreibung stehen.
+    from tests.helpers.tabelle_aus_wunsch import tabelle
+
+    trip.display_config.placements = tabelle(
+        trip.display_config, "trip", outlook_reports=["morning", "evening"])
     save_trip(trip, user_id=NUTZER_A)
 
 
@@ -457,6 +463,11 @@ def test_f004_morgen_ausblick_in_der_vorschau_nutzt_morgen_spalten(monkeypatch):
     for mc in trip.display_config.metrics:
         if mc.metric_id == "wind":
             mc.morning_enabled, mc.evening_enabled = False, True
+    # #3237: "Ausblick auch morgens" ueber die Tabelle (s. o.).
+    from tests.helpers.tabelle_aus_wunsch import tabelle
+
+    trip.display_config.placements = tabelle(
+        trip.display_config, "trip", outlook_reports=["morning", "evening"])
 
     gesehen: list[dict] = []
     original = TripReportFormatter.format_email

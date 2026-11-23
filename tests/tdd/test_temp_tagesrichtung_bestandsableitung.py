@@ -47,7 +47,8 @@ GR221 = TESTS_ROOT / "fixtures" / "data_root" / "users" / "default" / \
 
 def _write_trip(root: Path, user_id: str, trip_id: str,
                 metrics: list[dict], channel_layouts: dict | None = None,
-                channel_layouts_per_report: dict | None = None) -> None:
+                channel_layouts_per_report: dict | None = None,
+                placements: dict | None = None) -> None:
     """Gespeicherter Bestands-Trip im echten Dateiformat (briefings/<id>.json)."""
     display_config: dict = {"trip_id": trip_id, "metrics": metrics,
                             "show_night_block": True, "night_interval_hours": 2}
@@ -55,6 +56,8 @@ def _write_trip(root: Path, user_id: str, trip_id: str,
         display_config["channel_layouts"] = channel_layouts
     if channel_layouts_per_report is not None:
         display_config["channel_layouts_per_report"] = channel_layouts_per_report
+    if placements is not None:
+        display_config["placements"] = placements
     path = root / "users" / user_id / "briefings" / f"{trip_id}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({
@@ -297,40 +300,56 @@ class TestTwoUsersOppositeDayDirections:
 
 
 # ---------------------------------------------------------------------------
-# AC-13 — Kanal-Kaskade: abgeleitete Groessen fallen nicht aus der SMS-Ebene
+# AC-13 — Kanal-Auswahl: abgeleitete Groessen fallen nicht aus der SMS-Stelle
+# #3237: Quelle ist die Tabelle "Was steht wo"; der fruehere Test der
+# per-Report-Ebene (``channel_layouts_per_report`` schlaegt die Kanal-Ebene)
+# ist mit der Kaskade entfallen -- die Tabelle gilt fuer beide Briefings.
 # ---------------------------------------------------------------------------
 
 class TestCascadeKeepsDerivedDayDirections:
 
     def test_sms_channel_layout_without_new_ids_keeps_them(self, tmp_path):
-        """AC-13: ein kanal-konfigurierter Bestands-Trip fuehrt in
-        ``channel_layouts.sms`` (vom Editor vor dieser Scheibe geschrieben)
-        keinen Eintrag fuer die vier neuen IDs. Sie muessen im SMS-Ergebnis
-        trotzdem erhalten bleiben — sonst verliert JEDER kanal-konfigurierte
-        Trip seine Tages-Token.
+        """AC-13: ein kanal-konfigurierter Bestands-Trip fuehrt in seiner
+        SMS-Auswahl keinen Eintrag fuer die vier neuen IDs. Sie muessen im
+        SMS-Ergebnis trotzdem erhalten bleiben — sonst verliert JEDER
+        kanal-konfigurierte Trip seine Tages-Token.
 
-        Das BEFUELLTE Kanal-Layout ist der Kern des Tests: ohne es antwortet
-        die Kaskade auf Ebene 3 (global) und der Test waere gruen, egal ob
-        Ableitung und Kaskade zusammenspielen (Spec-Pruefhinweis 4).
+        #3237: die SMS-Auswahl steht in der Tabelle "Was steht wo"
+        (``placements.rows`` NUR mit temperature/precipitation, wie der Editor
+        speichert, an der Stelle ``sms`` angehakt, ``humidity`` dort aus); die
+        abgeleiteten Zeilen ergaenzt die Tabellen-Aufloesung hinter ihrer
+        Eltern-Zeile. Die GESPEICHERTE Tabelle ist der Kern des Tests: ohne sie
+        gaelte die Grundauswahl und der Test waere gruen, egal ob Ableitung
+        und Tabelle zusammenspielen (Spec-Pruefhinweis 4).
         """
+        from services.channel_list_resolver import resolve_channel_lists
+        from services.placements import read_placements
+
         _write_trip(
             tmp_path, "default", "kanal", [
                 {"metric_id": "temperature", "enabled": True,
                  "aggregations": ["min", "max"]},
                 {"metric_id": "precipitation", "enabled": True},
+                {"metric_id": "humidity", "enabled": True},
             ],
             channel_layouts={"sms": [
                 {"metric_id": "temperature", "enabled": True},
                 {"metric_id": "precipitation", "enabled": True},
             ]},
+            placements={"version": 1, "rows": [
+                {"metric_id": "temperature", "places": {"sms": True}},
+                {"metric_id": "precipitation", "places": {"sms": True}},
+                {"metric_id": "humidity", "places": {"sms": False}},
+            ]},
         )
         dc = _load(tmp_path, "default", "kanal").display_config
 
-        assert dc.cascade_source_for_channel("sms", "evening") == "per_channel", (
-            "Das Fixture antwortet nicht auf der Kanal-Ebene — der Test "
-            "wuerde die Kaskade gar nicht pruefen."
+        assert read_placements(dc.placements) is not None, (
+            "Das Fixture traegt keine Tabelle — der Test wuerde die "
+            "Tabellen-Aufloesung gar nicht pruefen."
         )
-        ids = [m.metric_id for m in dc.get_metrics_for_channel("sms", "evening")]
+        ids = [r.metric_id for r in resolve_channel_lists(dc, "trip", "evening").sms]
+        assert "humidity" not in ids, f"Vorbedingung: die Tabelle wirkt: {ids!r}"
         fehlend = [mid for mid in (TEMP_LOW, TEMP_HIGH) if mid not in ids]
         assert not fehlend, (
             f"{fehlend} fallen aus dem SMS-Schnitt heraus: {ids!r} — die "
@@ -344,46 +363,6 @@ class TestCascadeKeepsDerivedDayDirections:
         assert not fehlende_token, (
             f"Der kanal-konfigurierte Trip verliert {fehlende_token} im "
             f"Briefing.\nSMS: {sms}"
-        )
-
-
-    def test_per_report_layout_without_new_ids_keeps_them(self, tmp_path):
-        """DEC-6b, zweite Ebene: dieselbe Ableitung muss in
-        ``channel_layouts_per_report`` greifen (``loader.py:877-905``). Die
-        per-Report-Ebene schlaegt die Kanal-Ebene (#434) — greift die
-        Ableitung nur dort, verliert ein Trip mit Abend-Sonderlayout seine
-        Tages-Token trotzdem."""
-        eintraege = [
-            {"metric_id": "temperature", "enabled": True},
-            {"metric_id": "precipitation", "enabled": True},
-        ]
-        _write_trip(
-            tmp_path, "default", "kanal-report", [
-                {"metric_id": "temperature", "enabled": True,
-                 "aggregations": ["min", "max"]},
-                {"metric_id": "precipitation", "enabled": True},
-            ],
-            channel_layouts={"sms": [{"metric_id": "precipitation",
-                                      "enabled": True}]},
-            channel_layouts_per_report={"evening": {"sms": eintraege}},
-        )
-        dc = _load(tmp_path, "default", "kanal-report").display_config
-
-        assert dc.cascade_source_for_channel("sms", "evening") == "per_report", (
-            "Das Fixture antwortet nicht auf der per-Report-Ebene — der Test "
-            "wuerde die falsche Ebene pruefen."
-        )
-        ids = [m.metric_id for m in dc.get_metrics_for_channel("sms", "evening")]
-        fehlend = [mid for mid in (TEMP_LOW, TEMP_HIGH) if mid not in ids]
-        assert not fehlend, (
-            f"{fehlend} fallen aus dem per-Report-SMS-Schnitt heraus: {ids!r}"
-        )
-        sms = _sms(dc)
-        fehlende_token = [s for s in ("L", "D")
-                          if F.sms_token_value(sms, s) is None]
-        assert not fehlende_token, (
-            f"Der Trip mit Abend-Sonderlayout verliert {fehlende_token}.\n"
-            f"SMS: {sms}"
         )
 
     def test_channel_configured_trip_roundtrip_stays_free_of_derived(self, tmp_path):

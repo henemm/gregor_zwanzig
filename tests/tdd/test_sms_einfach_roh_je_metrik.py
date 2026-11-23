@@ -31,6 +31,16 @@ Orakel-Konstantenpfad; Fixture-CAPE >= 300.
 
 Keine Mocks: Builder mit echten ``DailyForecast``-Werten, Produkt-Durchlaeufe ueber
 echten Loader/Kaskade/Formatter mit dem Transport-Aufzeichner als einziger Naht.
+
+#3237 (Altpfad entfernt, Spec #3122 Teil A Nr. 4): die SMS und die Premium-SMS
+haben keine Roh/Einfach-Wahl mehr -- die Bewoelkung steht dort fest als Stufe
+(die Form ohne Einstellung), ein gespeichertes SMS-Format bleibt ohne Wirkung.
+Die Builder-Tests (``zeile``/``spec``) bleiben, der Builder kennt beide Formen.
+Die Produktpfad-Tests pruefen jetzt "Roh-Wunsch == Einfach-Wunsch, Stufe";
+entfallen sind ``test_ac5_modus_ist_je_metrik_nicht_kanalweit`` und
+``test_ac8_groesse_in_der_konstante_roh_und_einfach_text_verschieden`` (beide
+setzten eine wirksame SMS-Formwahl voraus). Auswahl und Folge kommen aus der
+Tabelle (``variante`` drueckt die Kanal-Listen als ``placements`` aus).
 """
 from __future__ import annotations
 from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
@@ -43,7 +53,6 @@ from tests.tdd._einstellung_auslieferung_fixtures import (
     TZ,
     _voller_datenpunkt,
     night_weather,
-    render_golden,
     render_trip_dict,
     segment,
 )
@@ -168,43 +177,36 @@ def test_ac5_orakel_liest_roh_als_raw_und_einfach_als_friendly():
 
 
 def test_ac5_produktpfad_wolken_roh_und_einfach_in_allen_drei_kanaelen(monkeypatch):
-    """AC-5 (Produktpfad, Mutation 1): gespeichertes Trip-JSON mit allen vier
-    Wolken-Metriken im SMS-Layout, je Metrik ``use_friendly_format`` -> echter
-    Loader/Kaskade/Formatter -> SMS, Premium-SMS und Telegram-Kurzform. Werte der
-    Fixture: CT 70, CL 40, CM 30, CH 20 %. Roh = Zahlen, Einfach = Stufen aus den
-    E-Mail-Baendern."""
+    """AC-5 (Produktpfad, Stand #3237 / Spec #3122 Teil A Nr. 4): gespeichertes
+    Trip-JSON mit allen vier Wolken-Metriken an der Stelle SMS der Tabelle -> echter
+    Loader/Resolver/Formatter -> SMS, Premium-SMS und Telegram-Kurzform. Werte der
+    Fixture: CT 70, CL 40, CM 30, CH 20 %. Die SMS hat keine Wahl: die Bewoelkung
+    steht fest als Stufe aus den E-Mail-Baendern (die Form ohne Einstellung),
+    ein Roh-Wunsch bleibt ohne Wirkung -- beide Texte sind gleich."""
     werte = {"cloud_total": 70, "cloud_low": 40, "cloud_mid": 30, "cloud_high": 20}
     roh_texte = sms_texte(monkeypatch, standard="raw")
     einfach_texte = sms_texte(monkeypatch, standard="einfach")
     for kanal in ("sms", "premium_sms", "telegram_kurzform"):
+        assert roh_texte[kanal] == einfach_texte[kanal], (
+            f"AC-5 ({kanal}): ein SMS-Format darf nicht wirken: "
+            f"roh={roh_texte[kanal]!r} einfach={einfach_texte[kanal]!r}"
+        )
         for mid, pct in werte.items():
             sym = WOLKEN_SYMBOL[mid]
-            assert token(roh_texte[kanal], sym) == f"{sym}{pct}@4", (
-                f"AC-5 ({kanal}, roh): {sym} erwartet {sym}{pct}@4 in {roh_texte[kanal]!r}"
-            )
             assert token(einfach_texte[kanal], sym) == f"{sym}:{stufe_aus_email_band(pct)}@4", (
                 f"AC-5 ({kanal}, einfach): {sym} erwartet "
                 f"{sym}:{stufe_aus_email_band(pct)}@4 in {einfach_texte[kanal]!r}"
             )
 
 
-def test_ac5_modus_ist_je_metrik_nicht_kanalweit(monkeypatch):
-    """AC-5: die Wahl gilt PRO Metrik -- CT Einfach, CL Roh im selben Text."""
-    texte = sms_texte(monkeypatch, {"cloud_total": "einfach", "cloud_low": "raw",
-                                    "cloud_mid": "einfach", "cloud_high": "raw"})
-    for kanal, text in texte.items():
-        assert token(text, "CT") == "CT:SCT@4", f"({kanal}) {text!r}"
-        assert token(text, "CL") == "CL40@4", f"({kanal}) {text!r}"
-        assert token(text, "CM") == "CM:FEW@4", f"({kanal}) {text!r}"
-        assert token(text, "CH") == "CH20@4", f"({kanal}) {text!r}"
-
-
 def test_ac10_bestandsnutzer_katalog_default_einfach_raw_bleibt_zahl(monkeypatch):
-    """AC-10 (PO-Freigabe): Trip-JSON OHNE ``format_mode``/``use_friendly_format``
-    (Katalog-Default ``symbol``) zeigt die Wolke kuenftig als Stufe
-    (``CT:SCT@4``); ein ausdrueckliches ``format_mode: "raw"`` bleibt die Zahl
-    (``CT70@4``). Fuer ``thunder``/``wind_direction``/``sunshine``/Ampel-Groessen
-    aendert sich nichts (siehe Guard ``test_ac8_groessen_ohne_sms_form_...``)."""
+    """AC-10 (PO-Freigabe), Stand #3237 / Spec #3122 Teil A Nr. 4: Trip-JSON OHNE
+    ``format_mode``/``use_friendly_format`` (Katalog-Default ``symbol``) zeigt die
+    Wolke als Stufe (``CT:SCT@4``). Ein ausdrueckliches ``format_mode: "raw"`` im
+    SMS-Layout war die "abweichend gewaehlte Wolken-Form", die mit der Tabelle
+    entfaellt: die SMS hat keine Wahl, es erscheint ebenfalls die Stufe und der
+    Text ist zeichengleich. Fuer ``thunder``/``wind_direction``/``sunshine``/
+    Ampel-Groessen aendert sich nichts (siehe Guard ``test_ac8_groessen_ohne_sms_form_...``)."""
     from tests.tdd._sms_einfach_fixtures import variante as _v
 
     mit_d, _ = render_trip_dict(monkeypatch, _v("golden_b", {"cloud_total": "default"}),
@@ -216,8 +218,8 @@ def test_ac10_bestandsnutzer_katalog_default_einfach_raw_bleibt_zahl(monkeypatch
             f"AC-10 ({kanal}): Katalog-Default muss als Stufe erscheinen: "
             f"{mit_d.sendungen(kanal)[0]['body']!r}"
         )
-        assert token(mit_r.sendungen(kanal)[0]["body"], "CT") == "CT70@4", (
-            f"AC-10 ({kanal}): ausdruecklich Roh bleibt die Zahl: "
+        assert mit_r.sendungen(kanal)[0]["body"] == mit_d.sendungen(kanal)[0]["body"], (
+            f"AC-10 ({kanal}): ausdruecklich Roh bleibt ohne Wirkung (SMS ohne Wahl): "
             f"{mit_r.sendungen(kanal)[0]['body']!r}"
         )
 
@@ -395,9 +397,10 @@ def test_ac7_wolken_produktpfad_sms_stufe_gleich_email_emoji_band(monkeypatch):
     from tests.helpers.einstellung_auslieferung_orakel import roh_wert_der_metrik
 
     d = variante("golden_b", {"cloud_total": "einfach", "cloud_low": "einfach"})
-    for m in d["display_config"]["channel_layouts"]["email"]:
-        if m["metric_id"] in ("cloud_total", "cloud_low"):
-            m["use_friendly_format"] = True
+    # #3237: Roh/Einfach der E-Mail steht in der Tabelle "Was steht wo".
+    for z in d["display_config"]["placements"]["rows"]:
+        if z["metric_id"] in ("cloud_total", "cloud_low"):
+            z.setdefault("formats", {})["email"] = "simplified"
     mit, _ = render_trip_dict(monkeypatch, d, name="s6-ac7")
     for mid, pct in (("cloud_total", 70), ("cloud_low", 40)):
         zelle = roh_wert_der_metrik(mit, "email_plain", mid)
@@ -461,20 +464,6 @@ def _text_fuer(monkeypatch, mid: str, modus: str) -> str:
     return mit.sendungen("sms")[0]["body"]
 
 
-@pytest.mark.parametrize("mid", WOLKEN)
-def test_ac8_groesse_in_der_konstante_roh_und_einfach_text_verschieden(monkeypatch, mid):
-    """AC-8 (Produkttest, Haelfte 1): Groesse IN der Konstante -> Roh- und
-    Einfach-Text unterscheiden sich, und zwar genau am Token dieser Groesse.
-    Parametrisiert ueber die WORTGLEICHE Spec-Menge."""
-    roh, einfach = _text_fuer(monkeypatch, mid, "raw"), _text_fuer(monkeypatch, mid, "einfach")
-    assert roh != einfach, f"AC-8: {mid} hat in der SMS keine Einfachform: {roh!r}"
-    sym = WOLKEN_SYMBOL[mid]
-    assert token(roh, sym) != token(einfach, sym)
-    rest_roh = [t for t in tokens_von(roh) if not t.startswith(sym)]
-    rest_einfach = [t for t in tokens_von(einfach) if not t.startswith(sym)]
-    assert rest_roh == rest_einfach, "AC-8: ein anderes Token als das der Groesse hat sich geaendert"
-
-
 def test_ac8_guard_groessen_ohne_sms_form_roh_und_einfach_byte_gleich(monkeypatch):
     """AC-8 (Produkttest, Haelfte 2, GUARD heute gruen): fuer ``thunder``,
     ``wind_direction``, ``sunshine``, ``wind``, ``gust``, ``rain_probability``,
@@ -500,20 +489,13 @@ def test_ac8_guard_groessen_ohne_sms_form_roh_und_einfach_byte_gleich(monkeypatc
 
 @pytest.mark.parametrize("mid", PRODUKT_ERREICHBAR)
 def test_ac8_konstante_und_verhalten_stimmen_je_groesse_ueberein(monkeypatch, mid):
-    """AC-8: Konstante und Verhalten sind EINE Aussage: fuer jede der elf
-    produkterreichbaren Groessen gilt ``(Roh != Einfach) == (id in Konstante)`` --
-    die Konstante wird zur LAUFZEIT aus dem Produkt gelesen. Faengt beide
-    Richtungen: eine Groesse in der Konstante ohne gebaute Einfachform (z.B.
-    ``sunshine`` aufgenommen, nichts gebaut) UND eine gebaute Einfachform ohne
-    Konstanten-Eintrag."""
-    import app.metric_catalog as katalog
-
-    konstante = getattr(katalog, "SMS_FORMAT_MODE_METRIC_IDS", None)
-    assert konstante is not None, "AC-8: SMS_FORMAT_MODE_METRIC_IDS fehlt im Katalog"
+    """AC-8, Stand #3237 (Spec #3122 Teil A Nr. 4 und AC-6: "jedes Format fuer die
+    SMS bleibt ohne Wirkung"): fuer jede der elf produkterreichbaren Groessen
+    ist der SMS-Text mit Roh und mit Einfach zeichengleich -- auch fuer die
+    Wolken-Groessen der Konstante (dort gilt fest die Stufe)."""
     roh, einfach = _text_fuer(monkeypatch, mid, "raw"), _text_fuer(monkeypatch, mid, "einfach")
-    assert (roh != einfach) == (mid in konstante), (
-        f"AC-8: {mid}: in der Konstante={mid in konstante}, aber "
-        f"Roh{'!=' if roh != einfach else '=='}Einfach.\nroh={roh!r}\neinfach={einfach!r}"
+    assert roh == einfach, (
+        f"AC-8: {mid}: ein SMS-Format wirkt.\nroh={roh!r}\neinfach={einfach!r}"
     )
 
 
@@ -553,11 +535,12 @@ def test_ac8_orakel_prueft_echte_konstante_in_den_sms_kanaelen():
 
 
 def test_ac8_vakuum_schutz_jede_produkterreichbare_groesse_hat_einen_geprueften_modus(monkeypatch):
-    """AC-8 (Vakuum-Schutz): fuer jede Groesse der Konstante, die einen
-    Kanaltext erreichen kann (die vier Wolken-Groessen), liest das Orakel in der
-    Roh-Variante "raw" und in der Einfach-Variante "friendly" -- nie ``None``
-    (ungeprueft). Varianten der Goldens, weil ``cloud_mid``/``cloud_high`` in
-    keinem Golden-SMS-Layout stehen."""
+    """AC-8 (Vakuum-Schutz), Stand #3237: fuer jede Groesse der Konstante, die
+    einen Kanaltext erreichen kann (die vier Wolken-Groessen), liest das Orakel
+    in BEIDEN Varianten die feste Stufenform "friendly" -- nie ``None``
+    (ungeprueft), nie "raw" (die SMS hat keine Wahl, Spec #3122 Teil A Nr. 4).
+    Varianten der Goldens, weil ``cloud_mid``/``cloud_high`` in keinem
+    Golden-SMS-Layout stehen."""
     from tests.helpers.einstellung_auslieferung_orakel import parse_sms_artig
 
     roh = sms_texte(monkeypatch, standard="raw")
@@ -566,7 +549,9 @@ def test_ac8_vakuum_schutz_jede_produkterreichbare_groesse_hat_einen_geprueften_
         _, modi_roh = parse_sms_artig(roh[kanal])
         _, modi_einfach = parse_sms_artig(einfach[kanal])
         for mid in WOLKEN:
-            assert modi_roh.get(mid) == "raw", f"({kanal}) {mid} roh: {modi_roh.get(mid)!r}"
+            assert modi_roh.get(mid) == "friendly", (
+                f"({kanal}) {mid} roh-Wunsch: {modi_roh.get(mid)!r} -- Text {roh[kanal]!r}"
+            )
             assert modi_einfach.get(mid) == "friendly", (
                 f"({kanal}) {mid} einfach: {modi_einfach.get(mid)!r} -- Text {einfach[kanal]!r}"
             )
@@ -590,8 +575,14 @@ def test_ac9_golden_sms_text_und_laenge_nach_s6(monkeypatch):
     Soll-Werte (nicht aus dem aktuellen Output eingefroren). Die unveraenderten
     Goldens tragen ``cloud_total`` mit ``use_friendly_format: true``."""
     assert len(GOLDEN_SMS_NACH_S6) == 60
-    mit_b, _ = render_golden(monkeypatch, "golden_b")
-    mit_a, _ = render_golden(monkeypatch, "golden_a")
+    # #3237: die Kanal-Listen der Goldens wirken nur als Tabelle "Was steht wo".
+    from tests.helpers.tabelle_aus_wunsch import trip_wunsch_als_tabelle
+    from tests.tdd._einstellung_auslieferung_fixtures import golden_dict
+
+    mit_b, _ = render_trip_dict(monkeypatch, trip_wunsch_als_tabelle(golden_dict("golden_b")),
+                                name="golden_b")
+    mit_a, _ = render_trip_dict(monkeypatch, trip_wunsch_als_tabelle(golden_dict("golden_a")),
+                                name="golden_a")
     kurz = [s for s in mit_a.sendungen("telegram") if s["parse_mode"] is None][0]["body"]
     for kanal, text in (
         ("sms", mit_b.sendungen("sms")[0]["body"]),
@@ -639,6 +630,9 @@ def test_ac11_vorschau_und_versand_tragen_dieselben_wolken_token(monkeypatch):
     from output.tokens.render import render_line
     from services.validator_render_service import build_sms_fidelity_specs
 
+    # #3237 / Spec #3122 Teil A Nr. 4: die SMS hat keine Wahl -- der Versand
+    # zeigt die Wolken fest als Stufe, ein Roh-Wunsch (CL/CH) bleibt ohne Wirkung.
+    # Die Vorschau bekommt deshalb die einzige Form der SMS.
     modi = {"cloud_total": "einfach", "cloud_low": "raw", "cloud_mid": "einfach",
             "cloud_high": "raw"}
     real = sms_texte(monkeypatch, modi)["sms"]
@@ -647,8 +641,8 @@ def test_ac11_vorschau_und_versand_tragen_dieselben_wolken_token(monkeypatch):
     )
     ids = list(variante("golden_b")["display_config"]["channel_layouts"]["sms"])
     aktive = [m["metric_id"] for m in ids if m.get("enabled")]
-    formate = {"cloud_total": "symbol", "cloud_low": "raw", "cloud_mid": "symbol",
-              "cloud_high": "raw"}
+    formate = {"cloud_total": "symbol", "cloud_low": "symbol", "cloud_mid": "symbol",
+              "cloud_high": "symbol"}
     try:
         specs = build_sms_fidelity_specs(aktive, format_by_metric=formate)
     except TypeError as exc:
@@ -664,4 +658,5 @@ def test_ac11_vorschau_und_versand_tragen_dieselben_wolken_token(monkeypatch):
             f"AC-11: {sym} weicht ab -- Vorschau {token(vorschau, sym)!r} vs Versand "
             f"{token(real, sym)!r}.\nVorschau: {vorschau!r}\nVersand:  {real!r}"
         )
-    assert token(real, "CT").startswith("CT:"), "AC-11: Vakuum -- Versand ohne Stufe"
+    for sym in ("CT", "CL", "CM", "CH"):
+        assert token(real, sym).startswith(f"{sym}:"), f"AC-11: {sym} -- Versand ohne Stufe: {real!r}"

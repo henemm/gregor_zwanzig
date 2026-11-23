@@ -68,28 +68,24 @@ def _render_beide(monkeypatch_a, monkeypatch_b):
 # ═══════════════════════════ Hauptmatrix-Test ═══════════════════════════════
 
 
-def test_hauptmatrix_einstellung_gleich_auslieferung(monkeypatch):
-    """Kernfrage des PO: kommt an, was eingestellt wurde?
-
-    Given beide Golden-Trip-JSONs (identisches Roster/Layout, nur die
-    Versand-Schalter unterscheiden sich) ueber den echten Loader eingelesen
-    und ueber den echten Formatter + NotificationService versendet (Naht nur
-    am Transport).
-    When die Matrix ueber alle sechs Ausgabe-Formen laeuft.
-    Then bleibt sie an JEDER Zelle gruen, die nicht durch einen begruendeten
-    Register-Eintrag gedeckt ist -- rote Zellen OHNE Deckung sind die
-    belegte Testluecken-Liste aus #2422.
-
-    RED heute: ``AUSNAHMEN`` ist leer, die vier Produktabweichungen B1/B2/B3/
-    B5 + die strukturelle Telegram-7er-Ausnahme sind ungedeckt.
-    """
-    ga, mit_a, gb, mit_b = _render_beide(monkeypatch, monkeypatch)
-    rot, _genutzt = rote_zellen_beide_goldens(ga, mit_a, gb, mit_b, AUSNAHMEN)
-    assert rot == set(), (
-        f"Ungedeckte Abweichung(en) Einstellung != Auslieferung: {sorted(rot)} "
-        f"-- jede Zelle braucht entweder einen Fix oder einen begruendeten "
-        f"Register-Eintrag in AUSNAHMEN."
-    )
+# #3237: entfallen sind die Tests, deren Orakel die Kanal-Kaskade des
+# Altpfads ist (``erwartete_kaskade``: ``channel_layouts`` je Kanal mit eigener
+# Folge, Schnitt gegen ``metrics``, Kaskadenquelle global/per_channel) --
+# ``test_hauptmatrix_einstellung_gleich_auslieferung``,
+# ``test_ac2_fehlender_register_eintrag_gust_telegram_rich_wird_rot``,
+# ``test_ac6_ac7_echtes_register_hat_keine_unbenutzten_eintraege``,
+# ``test_ac9_m2_clip_laesst_dewpoint_durch_wird_bei_sms_rot`` (Mutation an
+# ``_clip_to_global_maximum``, geloescht), ``test_ac9_m4_formatter_liest_
+# globale_liste_wird_bei_uv_index_rot`` (Mutation an ``trip_channel_metrics``,
+# geloescht), ``test_ac10_register_deckt_exakt_die_ausgeloesten_befunde_ab``,
+# ``test_golden_c_kaskadenquelle_global_wird_ausgeloest``
+# (``cascade_source_for_channel``, geloescht) und
+# ``test_hauptmatrix_golden_c_b9_reihenfolge_wird_rot``. Die Altfelder der
+# Golden-Trips wirken nicht mehr; je Kanal eigene Folgen sind in der Tabelle
+# "Was steht wo" nicht ausdrueckbar (EINE Zeilenfolge, Spec #3122 Nr. 8).
+# "Einstellung = Auslieferung" fuer die Tabelle pruefen
+# ``test_einstellung_gleich_mail_trip_tabelle.py`` (alle Trip-Ausgaben) und
+# der Golden-Schnappschuss ``tests/fixtures/golden_3237`` (AC-5/AC-6 #3237).
 
 
 # ═══════════════════════════ AC-1 ═══════════════════════════════════════════
@@ -135,34 +131,6 @@ def test_ac1_golden_trips_laden_unveraendert(monkeypatch):
 #: #2422 S6: das Register fuehrt nur noch ``gust`` -- die Isolations-Gegenprobe
 #: haengt deshalb an DIESER Zelle (vormals B1 ``wind_chill``/Kurzform).
 _GUST_ZELLE = ("gust", "telegram_rich", "erscheint")
-
-
-def test_ac2_fehlender_register_eintrag_gust_telegram_rich_wird_rot(monkeypatch):
-    """AC-2 (Bug-Nachweis aus Nutzersicht), #2422 S6 neu aufgebaut um den
-    verbleibenden ``gust``-Eintrag (B1 ist behoben, sein Eintrag entfaellt).
-
-    Given der Register-Eintrag fuer ``gust x telegram_rich x erscheint`` wird
-    aus einer LOKALEN Kopie von ``AUSNAHMEN`` entfernt.
-    When der Invarianten-Test auf Golden B laeuft.
-    Then wird GENAU diese eine Zelle rot -- nicht ihre Reihenfolge- oder
-    Roh/Einfach-Zelle und keine zweite Zelle (alle anderen Golden-B-
-    Abweichungen sind im Produkt behoben, nicht mehr registriert).
-    """
-    gb = golden_dict("golden_b")
-    mit_b, _ = render_golden(monkeypatch, "golden_b")
-    register = [
-        e for e in AUSNAHMEN
-        if (e.metrik, e.kanal, e.dimension) != _GUST_ZELLE
-    ]
-    assert len(register) == len(AUSNAHMEN) - 1, (
-        "Testaufbau: der gust-Eintrag muss im Register stehen (AC-14)."
-    )
-    rot, _genutzt = rote_zellen_fuer_golden(gb, mit_b, register)
-    assert rot == {_GUST_ZELLE}, (
-        f"AC-2: erwartet GENAU {{{_GUST_ZELLE}}}, erhalten {sorted(rot)} "
-        f"-- ausser der Telegram-7er-Grenze darf Golden B keine Abweichung "
-        f"mehr zeigen (B1/B2/B3/B5 sind im Produkt behoben)."
-    )
 
 
 # ═══════════════════════════ AC-4 ═══════════════════════════════════════════
@@ -304,30 +272,6 @@ def test_ac7_veralteter_eintrag_wird_rot(monkeypatch):
     assert veralteter_eintrag in veraltete, (
         f"AC-7: der Eintrag fuer eine bereits korrekte Zelle muss als "
         f"veraltet erkannt werden, gemeldet wurden {veraltete}"
-    )
-
-
-def test_ac6_ac7_echtes_register_hat_keine_unbenutzten_eintraege(monkeypatch):
-    """AC-6/AC-7 (Finding F002 der Adversary-Pruefung): Gegenprobe gegen das
-    ECHTE ``AUSNAHMEN``-Register, nicht nur gegen eine lokale Kopie mit einem
-    testkoerper-eigenen Eintrag.
-
-    Given das ECHTE ``AUSNAHMEN``-Register laeuft ueber BEIDE Goldens.
-    When die tatsaechlich genutzten Eintraege gesammelt werden.
-    Then ist KEIN Eintrag unbenutzt -- ein zusaetzlicher, erfundener oder
-    laengst veralteter Eintrag im echten Register faellt sonst nie auf (die
-    Hauptmatrix wird nur an ungedeckten Abweichungen rot, nicht an
-    ueberschuessiger Deckung). Mutations-Gegenprobe (PFLICHT): ein Bogus-
-    Eintrag ins echte Register (z.B. eine gruene Zelle, die keine der beiden
-    Goldens ueberhaupt abweichen laesst) muss GENAU diesen Test rot faerben.
-    """
-    ga, mit_a, gb, mit_b = _render_beide(monkeypatch, monkeypatch)
-    _rot, genutzt = rote_zellen_beide_goldens(ga, mit_a, gb, mit_b, AUSNAHMEN)
-    veraltete = veraltete_eintraege(AUSNAHMEN, genutzt)
-    assert veraltete == set(), (
-        f"AC-6/AC-7: das ECHTE Register enthaelt unbenutzte Eintraege (weder "
-        f"durch Golden A noch Golden B ausgeloest): {veraltete} -- entweder "
-        f"bereits gefixt (veraltet) oder nie eine tatsaechliche Abweichung."
     )
 
 
@@ -492,28 +436,6 @@ def test_ac9_m1_sortkey_invertiert_wird_in_email_reihenfolge_rot(monkeypatch):
     )
 
 
-def test_ac9_m2_clip_laesst_dewpoint_durch_wird_bei_sms_rot(monkeypatch):
-    """AC-9 M2: ``_clip_to_global_maximum``-Aequivalent laesst eine Metrik
-    durch, die laut P2 geclippt werden muesste (``dewpoint``: aktiv im
-    SMS-Kanal-Layout, aber NICHT im globalen Maximum)."""
-    from app.models import UnifiedWeatherDisplayConfig as DC
-
-    rot_basis = _rot_fuer_golden_b(monkeypatch)
-
-    def kein_schnitt(self, metrics, report_type):
-        return metrics
-
-    monkeypatch.setattr(DC, "_clip_to_global_maximum", kein_schnitt, raising=True)
-    rot_mutiert = _rot_fuer_golden_b(monkeypatch)
-
-    diff = rot_mutiert - rot_basis
-    erwartet_zelle = ("dewpoint", "sms", "erscheint")
-    assert erwartet_zelle in diff, (
-        f"AC-9 M2: erwartet {erwartet_zelle} in der Differenz, erhalten "
-        f"{sorted(diff)}"
-    )
-
-
 def test_ac9_m3_friendly_keys_liest_falsche_dc_wird_bei_telegram_rich_rot(monkeypatch):
     """AC-9 M3: ``build_friendly_keys`` liefert eine falsche (hier: leere)
     Menge statt der aus der uebergebenen ``dc`` abgeleiteten.
@@ -563,60 +485,7 @@ def test_ac9_m3_friendly_keys_liest_falsche_dc_wird_bei_telegram_rich_rot(monkey
     )
 
 
-def test_ac9_m4_formatter_liest_globale_liste_wird_bei_uv_index_rot(monkeypatch):
-    """AC-9 M4: der Formatter liest ``dc.metrics`` (die globale Liste)
-    statt des Kanal-Layouts -- sichtbar an P3 (``uv_index``: global aktiv,
-    in KEINEM Kanal-Layout aktiv)."""
-    import services.channel_list_resolver as clr
-
-    rot_basis = _rot_fuer_golden_b(monkeypatch)
-
-    def immer_global(dc, channel, report_type):
-        return dc.get_metrics_for_report_type(report_type)
-
-    # #3122: der Formatter liest Auswahl und Folge aus dem View-Model
-    # (``resolve_channel_lists``), nicht mehr ueber ``get_metrics_for_channel``;
-    # die Kanal-Kaskade beider Wege ist ``trip_channel_metrics`` -- die
-    # Mutation "liest die globale Liste" trifft deshalb diese eine Stelle.
-    monkeypatch.setattr(clr, "trip_channel_metrics", immer_global, raising=True)
-    rot_mutiert = _rot_fuer_golden_b(monkeypatch)
-
-    diff = rot_mutiert - rot_basis
-    uv_treffer = {z for z in diff if z[0] == "uv_index" and z[2] == "erscheint"}
-    assert uv_treffer, (
-        f"AC-9 M4: erwartet mindestens eine neue uv_index-Erscheint-Zelle, "
-        f"Differenz war {sorted(diff)}"
-    )
-
-
 # ═══════════════════════════ AC-10 ═══════════════════════════════════════════
-
-
-def test_ac10_register_deckt_exakt_die_ausgeloesten_befunde_ab(monkeypatch):
-    """AC-10 (Register-Endzustand nach #2422 S6, AC-14 der S6-Spec).
-
-    Given die S1-Befunde B1, B2, B3, B5 sind im Produkt behoben.
-    When Scheibe S6 abgeschlossen wird.
-    Then enthaelt ``AUSNAHMEN`` NUR noch den strukturellen ``gust``-Eintrag
-    (Telegram-7er-Limit, ``befristet=False``), und der Lauf ueber beide
-    Goldens ist ohne weitere Deckung gruen. Fuer B1/B2/B3/B5 und B4/B6/B7/B8/
-    B9 existiert bewusst KEIN Eintrag.
-    """
-    for befund in ("B1", "B2", "B3", "B5", "B4", "B6", "B7", "B8", "B9"):
-        assert not any(e.befund == befund for e in AUSNAHMEN), (
-            f"AC-10/S6: kein Register-Eintrag fuer {befund!r} erlaubt -- "
-            f"{[e for e in AUSNAHMEN if e.befund == befund]!r}"
-        )
-    for e in AUSNAHMEN:
-        assert e.befund and e.befund.strip()
-        assert e.grund and e.grund.strip()
-
-    ga, mit_a, gb, mit_b = _render_beide(monkeypatch, monkeypatch)
-    rot, _ = rote_zellen_beide_goldens(ga, mit_a, gb, mit_b, AUSNAHMEN)
-    assert rot == set(), (
-        f"AC-10: mit dem Register (nur gust) muss der Lauf ueber beide "
-        f"Goldens gruen sein, rot war {sorted(rot)}"
-    )
 
 
 # ═══════════════════════════ AC-11 ═══════════════════════════════════════════
@@ -794,35 +663,6 @@ def test_ac13_naht_liegt_nur_am_transport(monkeypatch):
 # der Editor die globale Reihenfolge zeigt -- das ist GENAU B9.
 
 
-def test_golden_c_kaskadenquelle_global_wird_ausgeloest():
-    """AC-1: Golden C laedt ueber ``load_trip`` und loest fuer SMS die
-    Kaskadenquelle 'global' aus (kein eigenes ``channel_layouts.sms``),
-    waehrend E-Mail (eigenes ``channel_layouts.email``) bei 'per_channel'
-    bleibt. Dies ist eine reine Vorbedingungs-Pruefung der Golden-C-Fixture
-    (Kaskadenquelle-KLASSIFIZIERUNG aendert sich durch den B9-Fix NICHT --
-    nur die *Wirkung* der Kaskadenquelle 'global' auf die SMS-Position tut
-    es, siehe ``test_hauptmatrix_golden_c_b9_reihenfolge``). Bereits heute
-    GRUEN -- das Golden-Setup, nicht der Bug, wird hier bewiesen."""
-    from app.loader import load_trip
-
-    trip = load_trip(golden_dict("golden_c"), user_id="default")
-    dc = trip.display_config
-
-    for report_type in ("morning", "evening"):
-        assert dc.cascade_source_for_channel("sms", report_type) == "global", (
-            f"Golden C muss fuer SMS/{report_type} die Kaskadenquelle "
-            f"'global' ausloesen (kein eigenes channel_layouts.sms)."
-        )
-        assert dc.cascade_source_for_channel("telegram", report_type) == "global", (
-            f"Golden C muss fuer Telegram/{report_type} ebenfalls 'global' "
-            f"ausloesen (kein eigenes channel_layouts.telegram)."
-        )
-        assert dc.cascade_source_for_channel("email", report_type) == "per_channel", (
-            f"Golden C muss fuer E-Mail/{report_type} bei 'per_channel' "
-            f"bleiben (eigenes channel_layouts.email vorhanden)."
-        )
-
-
 #: Empirisch ermittelte (Scratchpad-Lauf 2026-09-27 gegen den UNVERAENDERTEN
 #: Code) rote Zellmenge, die Golden C ueber die S1-Matrixfunktion UND das
 #: unveraenderte S1-Register (B1/B2/B3/B5) erzeugt -- ausschliesslich
@@ -855,69 +695,6 @@ _B9_ERWARTETE_ZELLEN_JE_REPORT_TYPE = {
     "evening": _B9_ERWARTETE_ZELLEN_EVENING,
     "morning": _B9_ERWARTETE_ZELLEN_MORNING,
 }
-
-
-@pytest.mark.parametrize("report_type", ["evening", "morning"])
-def test_hauptmatrix_golden_c_b9_reihenfolge_wird_rot(monkeypatch, report_type):
-    """B9-Nachweis (Kern dieser Scheibe, AC-1/AC-18), fuer morning UND
-    evening (G4: ``morning_enabled``/``evening_enabled`` wirken nur je
-    eigenem Report-Typ).
-
-    Given Golden C (Kaskadenquelle 'global' fuer sms/telegram_kurzform/
-    premium_sms, siehe ``test_golden_c_kaskadenquelle_global_wird_
-    ausgeloest``) und das UNVERAENDERTE S1-Register (B1/B2/B3/B5, keine
-    neuen Eintraege -- AC-18).
-    When Golden C ueber dieselbe Matrixfunktion wie A/B laeuft
-    (``rote_zellen_fuer_golden``), fuer ``report_type`` in {evening, morning}.
-    Then ist die rote Zellmenge LEER -- die Editor-Reihenfolge fuer
-    sms/premium_sms/telegram_kurzform kommt genauso an wie bei Golden A/B
-    mit eigenem Kanal-Layout, unabhaengig vom Report-Typ.
-
-    RED heute: das Aktivierungs-Gate in ``trip_report.py:337-346`` setzt bei
-    Kaskadenquelle 'global' keine ``position`` -> SMS-/Kurzform-/
-    Premium-Ausgabe faellt auf die feste POSITIONAL-Standardreihenfolge
-    zurueck, waehrend die Orakel-Erwartung der GLOBALEN Editor-Reihenfolge
-    folgt -- das erzeugt exakt die je Report-Typ dokumentierte Zellmenge.
-    Nach dem B9-Fix wird die rote Menge fuer BEIDE Report-Typen leer, ohne
-    dass das Register einen einzigen neuen Eintrag braucht (bestaetigt
-    gegen einen simulierten Fix, Scratchpad-Lauf 2026-09-27).
-    """
-    gc = golden_dict("golden_c")
-    mit_c, _ = render_golden(monkeypatch, "golden_c", report_type=report_type)
-    rot, _genutzt = rote_zellen_fuer_golden(gc, mit_c, AUSNAHMEN, report_type=report_type)
-
-    # #2422 S6: B1 (wind_chill ohne SMS-Kuerzel) ist im Produkt behoben, der
-    # Register-Eintrag entfernt -- ``wind_chill`` (global aktiv, Kaskadenquelle
-    # 'global') muss in SMS/Premium-SMS/Kurzform als ``TF`` ERSCHEINEN, ohne
-    # jede Deckung.
-    for kanal in ("sms", "premium_sms", "telegram_kurzform"):
-        assert ("wind_chill", kanal, "erscheint") not in rot, (
-            f"Golden C: wind_chill muss in {kanal!r} als TF erscheinen "
-            f"(S6/B1 behoben, kein Register-Eintrag mehr)."
-        )
-
-    # Charakterisierung des heutigen (kaputten) Standes -- verschwindet mit
-    # dem B9-Fix; bleibt sie ungleich, ist Golden C selbst nicht mehr
-    # register-sauber (Kategorie (c), AC-18-Verstoss).
-    erwartete_zellen = _B9_ERWARTETE_ZELLEN_JE_REPORT_TYPE[report_type]
-    assert rot in (set(), erwartete_zellen), (
-        f"Golden C/{report_type} loest eine ANDERE als die bekannte "
-        f"B9-Zellmenge aus -- das waere ein neuer, hier nicht benannter "
-        f"Befund (Kategorie (c), AC-18: PO vorlegen statt registrieren). "
-        f"Erhalten: {sorted(rot)}"
-    )
-
-    # Die eigentliche B9-Zusicherung dieser Scheibe: nach dem Fix ist die
-    # Menge LEER -- RED heute, GRUEN nach dem B9-Fix (Aktivierungs-Gate
-    # entfernt).
-    assert rot == set(), (
-        f"B9 (Kaskadenquelle 'global', report_type={report_type!r}): "
-        f"unbehobene 'reihenfolge'-Zellen fuer sms/premium_sms/"
-        f"telegram_kurzform: {sorted(rot)} -- der B9-Fix "
-        f"(trip_report.py:337-346, Aktivierungs-Gate entfernen) behebt "
-        f"genau diese Zellmenge, ohne einen neuen Register-Eintrag zu "
-        f"brauchen."
-    )
 
 
 # ═══════════════ AC-18 (keine neuen Register-Eintraege) ══════════════════════

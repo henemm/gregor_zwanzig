@@ -36,7 +36,7 @@ func stagesJSON3197(s1Extra, s2Extra string) string {
 
 func seedStageTempoTrip(t *testing.T, s *store.Store, user, id string) {
 	t.Helper()
-	w := doReq(CreateTripHandler(s), http.MethodPost, "/api/trips",
+	w := doReq(CreateTripHandler(s, ""), http.MethodPost, "/api/trips",
 		`{"id":"`+id+`","name":"Etappen-Tempo","region":"Mallorca","tempo":{"fortbewegung":"fuss","grundtempo_kmh":4},"stages":`+
 			stagesJSON3197("", "")+`}`, "", user)
 	if w.Code != http.StatusCreated && w.Code != http.StatusOK {
@@ -127,7 +127,7 @@ func TestStageTempo3197_Ungueltig422(t *testing.T) {
 		})
 		t.Run("POST "+wert, func(t *testing.T) {
 			s := newTestStore(t)
-			w := doReq(CreateTripHandler(s), http.MethodPost, "/api/trips",
+			w := doReq(CreateTripHandler(s, ""), http.MethodPost, "/api/trips",
 				`{"id":"neu","name":"Neu","tempo":{"fortbewegung":"fuss","grundtempo_kmh":4},"stages":`+
 					stagesJSON3197("", `,"grundtempo_kmh":`+wert)+`}`, "", "userA")
 			if w.Code != http.StatusUnprocessableEntity {
@@ -146,7 +146,7 @@ func TestStageTempo3197_Ungueltig422(t *testing.T) {
 func TestStageTempo3197_PostSpeichertUndRechnetJeEtappe(t *testing.T) {
 	s := newTestStore(t)
 	seedStageTempoTrip(t, s, "userB", "neu")
-	w := doReq(CreateTripHandler(s), http.MethodPost, "/api/trips",
+	w := doReq(CreateTripHandler(s, ""), http.MethodPost, "/api/trips",
 		`{"id":"neu","name":"Neu","tempo":{"fortbewegung":"fuss","grundtempo_kmh":4},"stages":`+
 			stagesJSON3197("", `,"grundtempo_kmh":3`)+`}`, "", "userA")
 	if w.Code != http.StatusCreated && w.Code != http.StatusOK {

@@ -20,7 +20,6 @@ Zwei Arten von Tests:
 """
 from __future__ import annotations
 
-import copy
 import os
 import re
 from pathlib import Path
@@ -222,15 +221,15 @@ ORTE_GRUND = [("temperature", "max"), ("rain_probability", "max"), ("thunder", "
 
 
 def _orte_kanal_layout(mit_, einfach: bool) -> dict:  # noqa: F811
-    """Altform ``channel_layouts`` (ohne Tabelle): Regenwahrscheinlichkeit und
-    Gewitter in Telegram und E-Mail mit ``use_friendly_format``."""
-    p = preset(grund=ORTE_GRUND)
-    del p["display_config"]["placements"]
-    eintraege = [{"metric_id": "temperature"},
-                 {"metric_id": "rain_probability", "use_friendly_format": einfach},
-                 {"metric_id": "thunder", "use_friendly_format": einfach}]
-    p["display_config"]["channel_layouts"] = {
-        "telegram": copy.deepcopy(eintraege), "email": copy.deepcopy(eintraege)}
+    """Regenwahrscheinlichkeit und Gewitter in Telegram und E-Mail Einfach bzw.
+    Roh. #3237: eingestellt in der Tabelle "Was steht wo" (frueher Altform
+    ``channel_layouts`` mit ``use_friendly_format``, die nicht mehr wirkt)."""
+    form = "simplified" if einfach else "raw"
+    formate = {"email": form, "telegram": form}
+    p = preset([{"metric_id": "temperature", "places": AN},
+                {"metric_id": "rain_probability", "places": AN, "formats": dict(formate)},
+                {"metric_id": "thunder", "places": AN, "formats": dict(formate)}],
+               grund=ORTE_GRUND)
     return orte_senden(mit_, p, slot="evening")
 
 
@@ -243,7 +242,7 @@ def _tg_zelle(tg: str, ort: str, label: str) -> str:
 
 
 def test_ac6_orte_telegram_regenwahrscheinlichkeit_einfach_wirkt(mit):  # noqa: F811
-    """AC-6: Orte-Telegram (Altform channel_layouts) mit Regenwahrscheinlichkeit
+    """AC-6: Orte-Telegram (Tabelle, Stelle Telegram) mit Regenwahrscheinlichkeit
     Einfach zeigt die Wortstufe statt der Zahl -- die Telegram-Stelle hat laut
     Quelle zwei Formen (heute verworfen, weil ``format_modes`` nur Roh kennt)."""
     aus = _orte_kanal_layout(mit, True)
@@ -254,7 +253,7 @@ def test_ac6_orte_telegram_regenwahrscheinlichkeit_einfach_wirkt(mit):  # noqa: 
 
 
 def test_ac6_orte_klartext_regenwahrscheinlichkeit_einfach_wirkt(mit):  # noqa: F811
-    """AC-6: Orte-Klartext-Uebersicht (Altform channel_layouts, E-Mail) mit
+    """AC-6: Orte-Klartext-Uebersicht (Tabelle, Stelle E-Mail) mit
     Regenwahrscheinlichkeit Einfach -> Wortstufe."""
     aus = _orte_kanal_layout(mit, True)
     werte = re.findall(r"^   Regenwahrscheinlichkeit: (.*)$", aus["plain"], re.M)
@@ -345,12 +344,17 @@ def test_ac4_stundenverlauf_formate_nur_wo_quelle_zwei_formen_nennt():
 
 
 def _kanalzeilen(kanal: str, kennung: str) -> set[bool]:
-    from output.renderers.compare_metric_ids import resolve_channel_layout_rows
+    """#3237: Einfach an der Stelle ``kanal`` in der Tabelle gespeichert; die
+    Kanal-Zeilen des Resolvers sagen, ob es dort wirkt (frueher ueber die
+    geloeschte Altform-Aufloesung ``resolve_channel_layout_rows``)."""
+    from services.channel_list_resolver import resolve_channel_lists
 
-    rows = resolve_channel_layout_rows(
-        None, {kanal: [{"metric_id": kennung, "use_friendly_format": True}]}, kanal)
+    dc = {"placements": {"version": 1, "rows": [
+        {"metric_id": kennung, "formats": {kanal: "simplified"}}]}}
+    rows = [z for z in getattr(resolve_channel_lists(dc, "compare"), kanal)
+            if z.metric_id == kennung]
     assert rows, f"Vorbedingung: Zeilen fuer {kennung}"
-    return {einfach for _rid, einfach in rows}
+    return {z.format == "simplified" for z in rows}
 
 
 @pytest.mark.parametrize("kanal,kennung,soll", [
@@ -362,7 +366,7 @@ def _kanalzeilen(kanal: str, kennung: str) -> set[bool]:
     ("telegram", "temperature", False),
 ])
 def test_ac4_kanal_einfach_folgt_quelle_je_stelle(kanal, kennung, soll):
-    """Orte-Telegram/Klartext (``channel_layouts``): Einfach wirkt genau an den
+    """Orte-Telegram/Klartext (Tabelle): Einfach wirkt genau an den
     Stellen, die die Quelle fuer diese Metrik nennt."""
     assert _kanalzeilen(kanal, kennung) == {soll}
 
@@ -405,9 +409,12 @@ def test_ac7_trip_altbestand_ohne_einfach_zeichengleich(monkeypatch):
 
 
 def test_ac7_trip_altbestand_ampel_altform_nur_text_bleibt_zahl(monkeypatch):
-    """AC-7 / Known Limitation: Altbestand mit ``use_friendly_format`` (HTML-
-    Ampel) fuer die Regenwahrscheinlichkeit -- die Nur-Text-Mail bleibt bei
-    der Zahl (Nur-Text folgt erst mit der Migration B6)."""
+    """AC-7: Altbestand mit ``use_friendly_format`` (HTML-Ampel) fuer die
+    Regenwahrscheinlichkeit. #3237: das Abo ohne Tabelle liest die
+    Grundauswahl-Tabelle -- die Nur-Text-Mail folgt der HTML-Mail und zeigt
+    bei Einfach die Wortstufe (Spec #3122 Nr. 4, frueher Known Limitation
+    "bis B6"), die SMS zeigt die Bewoelkung fest als Stufe (Nr. 4, SMS ohne
+    Wahl). Golden mit #3237 neu aufgenommen, sonst zeichengleich."""
     from tests.tdd._einstellung_gleich_mail_trip_fixtures import trip_json
     from tests.tdd.test_einstellung_gleich_mail_trip_tabelle import ALLE_KANAELE
 

@@ -740,8 +740,7 @@ def _filter_metrics_by_report_type(
 ) -> list["MetricConfig"]:
     """Wendet morning/evening_enabled-Override auf eine Metrik-Liste an.
 
-    Shared zwischen get_metrics_for_report_type() und get_metrics_for_channel()
-    (Issue #429), damit beide Pfade dieselbe Filter-Semantik haben.
+    Filter von get_metrics_for_report_type() (Issue #429).
 
     Issue #1585: zusaetzlich faellt jede zentral nicht waehlbare Groesse
     heraus (s. _is_selectable) -- dieser Choke-Point speist E-Mail, SMS und
@@ -773,34 +772,6 @@ def _filter_metrics_by_report_type(
 
 # Issue #1575: Bucket-Rangfolge fuer die Spalten-/Zeilenreihenfolge.
 _BUCKET_RANK = {"primary": 0, "secondary": 1}
-
-CascadeSource = Literal["per_report", "per_channel", "global"]
-
-
-def _cascade_source_for_channel(
-    per_report_layouts: Optional[dict[str, dict[str, list["MetricConfig"]]]],
-    per_channel_layouts: Optional[dict[str, list["MetricConfig"]]],
-    channel: str,
-    report_type: str,
-) -> CascadeSource:
-    """Issue #1677 DEC-2/AC-9: geteilte Bedingungsprüfung, welche Kaskaden-
-    ebene für ``channel``/``report_type`` antwortet -- EXAKT dieselben drei
-    Bedingungen wie ``UnifiedWeatherDisplayConfig.get_metrics_for_channel()``.
-    Genutzt von ``UnifiedWeatherDisplayConfig.cascade_source_for_channel()``
-    UND (indirekt) von ``api/routers/validator.py::_determine_cascade_source``
-    -- damit gibt es fuer diese Frage nur EINEN Ableitungsweg, keine zweite,
-    unabhaengig gepflegte Kopie der drei if-Zweige.
-    """
-    if (
-        per_report_layouts is not None
-        and report_type in per_report_layouts
-        and channel in per_report_layouts[report_type]
-    ):
-        return "per_report"
-    if per_channel_layouts is not None and channel in per_channel_layouts:
-        return "per_channel"
-    return "global"
-
 
 def _sorted_by_layout(metrics: list["MetricConfig"]) -> list["MetricConfig"]:
     """Sortiert nach der im Editor eingestellten Position (Issue #1575).
@@ -945,102 +916,6 @@ class UnifiedWeatherDisplayConfig:
         if not self.metrics:
             return None
         return {mc.metric_id for mc in self.get_metrics_for_report_type(report_type)}
-
-    def get_metrics_for_channel(self, channel: str, report_type: str) -> list[MetricConfig]:
-        """Liefert die Metriken-Liste für einen Kanal (Issue #429 + #434).
-
-        Dreistufige Kaskade, ADR-0050: die globale Auswahl (Ebene 3) ist das
-        MAXIMUM -- Ebenen 1/2 duerfen davon nur ABWAEHLEN, nie ergaenzen
-        (Issue #1719 Scheibe 2).
-        1. per_report_layouts[report_type][channel] (Issue #434) — höchste Priorität.
-           Leere Liste = expliziter User-Wunsch, kein Fallback. Wird gegen das
-           globale Maximum geschnitten (s.u.), NICHT zusaetzlich gegen
-           per_channel_layouts verkettet -- ADR-0050 kennt nur EIN Maximum,
-           keine Zwischenebene (#1719 AC-8).
-        2. per_channel_layouts[channel] (Issue #429) — zweite Stufe.
-           Leere Liste = expliziter User-Wunsch, kein Fallback. Ebenfalls
-           gegen das globale Maximum geschnitten.
-        3. globale Liste via get_metrics_for_report_type(report_type) — Fallback
-           UND zugleich das Maximum selbst; hier greift kein Schnitt (er
-           wuerde sich gegen sich selbst richten und waere wirkungslos).
-
-        Maximum-Schnitt (#1719 Scheibe 2): Ebenen 1/2 werden auf die IDs
-        geschnitten, die ``get_metrics_for_report_type(report_type)`` liefert
-        -- NICHT gegen rohe ``enabled``-Flags, damit ``morning_enabled``/
-        ``evening_enabled`` (ADR-0050 Regel 3) und das ``selectable``-Gate
-        (#1585) im Schnitt korrekt wirken. Ist ``self.metrics`` leer, ist kein
-        Maximum definiert -- es wird NICHT geschnitten (sonst Totalausfall
-        fuer Altbestand ohne globale Liste, s. ``_clip_to_global_maximum``).
-
-        Issue #1575: JEDE Ebene laeuft durch dieselbe Sortierung nach der im
-        Editor eingestellten Position — sonst verhielte sich ein Trip mit
-        kanal-eigenen Listen anders als einer ohne.
-
-        Issue #1677 DEC-2: die Ebenen-ERKENNUNG teilt sich mit
-        ``cascade_source_for_channel()`` den Helfer ``_cascade_source_for_
-        channel()`` -- kein zweiter Ableitungsweg fuer dieselbe Frage.
-
-        Issue #3057 (ADR-0121): Adapter -- die Aufloesung liegt im Kanal-Listen-
-        Resolver (``services.channel_list_resolver``); lokaler Import gegen den
-        Zyklus (der Resolver importiert dieses Modul).
-        """
-        from services.channel_list_resolver import trip_channel_metrics
-
-        return trip_channel_metrics(self, channel, report_type)
-
-    def _clip_to_global_maximum(
-        self, metrics: list[MetricConfig], report_type: str,
-    ) -> list[MetricConfig]:
-        """Schneidet eine Kanal-Ebene (per_report/per_channel) gegen das
-        globale Maximum (ADR-0050, #1719 Scheibe 2, D1-D4).
-
-        Nur aufgerufen aus den per_report/per_channel-Zweigen von
-        ``get_metrics_for_channel()`` -- NIE aus dem global-Zweig, der selbst
-        das Maximum ist (D1).
-
-        Die Regeln D1-D4 stehen NICHT mehr hier: welche Kennungen erlaubt
-        sind, beantwortet ausschliesslich
-        ``allowed_metric_ids_for_report_type()`` -- dieselbe Quelle, die auch
-        der Ausblick fragt (#1848 Scheibe A). Diese Methode ist nur noch der
-        schmale Adapter auf den Traegertyp ``list[MetricConfig]``.
-
-        ``None`` von der gemeinsamen Quelle heisst "kein Maximum definiert"
-        (D4) -> nicht schneiden, Eingabe unveraendert zurueck.
-
-        #3047 AC-10: Bleibt von einer NICHT leeren Kanal-Liste nach dem Schnitt
-        nichts uebrig, gilt der dokumentierte Rueckfall auf die volle
-        Grundauswahl (wie ``_erbe_grundauswahl`` im Ausblick) statt einer
-        Tabelle ohne Wertspalten. Eine ausdruecklich LEERE gespeicherte Liste
-        erreicht diese Methode nie (Zweige in ``get_metrics_for_channel``
-        geben vorher ``[]`` zurueck) und bleibt Nutzerwunsch (#2422).
-        """
-        allowed_ids = self.allowed_metric_ids_for_report_type(report_type)
-        if allowed_ids is None:
-            return metrics
-        geschnitten = [mc for mc in metrics if mc.metric_id in allowed_ids]
-        if metrics and not geschnitten:
-            logger.warning(
-                "Kanal-Liste %s liegt vollstaendig ausserhalb der Grundauswahl "  # i18n-log
-                "(%s) -- Rueckfall auf die volle Grundauswahl statt leerer "
-                "Tabelle (#3047 AC-10)",
-                [mc.metric_id for mc in metrics], sorted(allowed_ids),
-            )
-            return self.get_metrics_for_report_type(report_type)
-        return geschnitten
-
-    def cascade_source_for_channel(self, channel: str, report_type: str) -> CascadeSource:
-        """Issue #1677 AC-9: auf welcher Kaskadenebene antwortet
-        ``get_metrics_for_channel()`` fuer diesen Kanal/Report-Typ?
-
-        Teilt sich die Bedingungsprüfung mit ``get_metrics_for_channel()``
-        (``_cascade_source_for_channel()``) -- der Validator-Spiegel
-        ``api/routers/validator.py::_determine_cascade_source`` ruft diese
-        Methode ebenfalls auf, statt eine eigene Kopie der drei if-Zweige zu
-        pflegen.
-        """
-        return _cascade_source_for_channel(
-            self.per_report_layouts, self.per_channel_layouts, channel, report_type,
-        )
 
 
 # --- Ausblick-Zustand (Fix #1486) ---

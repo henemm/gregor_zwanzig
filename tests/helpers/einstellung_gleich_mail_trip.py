@@ -325,7 +325,9 @@ def soll_stundenformen(trip: dict, teil: str, report_type: str = "evening") -> d
 
     * Einfach + Katalog-Einfachform -> ``einfach``.
     * Einfach + Ampel-Groesse (#814) -> HTML ``einfach`` (Ampelpunkt allein),
-      Klartext ``zahl`` (gewollte Ausnahme, Spec §2 Punkt 3).
+      Klartext seit #3237 ebenfalls ``einfach`` (Wortstufe): die Nur-Text-Mail
+      folgt bei Roh/Einfach der HTML-Mail (bewusste Aenderung, Spec #3122
+      Teil A Nr. 8; vorher gewollte Ausnahme Spec §2 Punkt 3).
     * Einfach ohne Einfachform (z. B. UV) -> ``zahl`` (AC-8).
     * Roh -> ``zahl``.
     """
@@ -337,7 +339,7 @@ def soll_stundenformen(trip: dict, teil: str, report_type: str = "evening") -> d
         if einfach and _HAT_EINFACH.get(mid):
             out[mid] = "einfach"
         elif einfach and mid in AMPEL_GROESSEN:
-            out[mid] = "einfach" if teil == "html" else "zahl"
+            out[mid] = "einfach"
         else:
             out[mid] = "zahl"
     # #435: eine verschmolzene Wind-Zelle ("20 W") liest ``zellform`` als Zahl

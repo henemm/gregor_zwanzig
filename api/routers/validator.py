@@ -148,27 +148,6 @@ def _effective_detector_source(trip: Trip) -> str:
     return "defaults"
 
 
-def _determine_cascade_source(
-    dc: "UnifiedWeatherDisplayConfig | None",
-    channel: str,
-    report_type: str,
-) -> str:
-    """Spiegel von UnifiedWeatherDisplayConfig.get_metrics_for_channel() in models.py.
-
-    Ermittelt welche Kaskadenstufe aktiv ist: per_report → per_channel → global.
-    Eine leere Liste auf Stufe 1/2 ist expliziter User-Wunsch — kein Fallback
-    auf die nächste Stufe. Spec: docs/specs/modules/issue_448_validator_metrics_for_channel.md.
-
-    Issue #1677 AC-9: delegiert an ``UnifiedWeatherDisplayConfig.
-    cascade_source_for_channel()`` -- dem models.py-Helfer, den auch das
-    Aktivierungs-Gate der Trip-Kurzform (trip_report.py) nutzt. Kein zweiter,
-    unabhaengig gepflegter Ableitungsweg mehr.
-    """
-    if dc is None:
-        return "global"
-    return dc.cascade_source_for_channel(channel, report_type)
-
-
 # ---------------------------------------------------------------------------
 # Endpoint #1 — Pure format_metric_value wrapper (AC-1, AC-2).
 # ---------------------------------------------------------------------------
@@ -568,29 +547,57 @@ def _synthesize_segment_times(
 
 
 # ---------------------------------------------------------------------------
-# Endpoint #4 — Metrics-for-channel cascade visibility (Issue #448).
+# Endpoint #4 — Metriken je Kanal laut Tabelle (Issue #448, #3237).
 # ---------------------------------------------------------------------------
 
 @router.get("/api/_validator/metrics-for-channel")
 def metrics_for_channel(
     trip: str = Query(..., description="Trip-ID"),
-    channel: str = Query(..., description="email|telegram|sms"),
-    report: str = Query(..., description="morning|evening"),
+    channel: str = Query(..., description="email|telegram|sms|premium_sms|outlook"),
+    report: str = Query(..., description=(
+        "morning|evening -- wirkungslos, nur aus Kompatibilitaetsgruenden "
+        "angenommen (die Tabelle gilt fuer beide Briefings, #3237)")),
     user_id: str = Query(..., description="Vom Go-Proxy injiziert (Anti-Spoofing)"),
 ):
-    """Macht die dreistufige get_metrics_for_channel-Kaskade von außen prüfbar.
+    """Macht die Metriken eines Kanals laut Tabelle "Was steht wo" von aussen
+    pruefbar (Issue #448, #3237).
 
-    Spec: docs/specs/modules/issue_448_validator_metrics_for_channel.md.
-    Response: {"source": "per_report|per_channel|global", "metric_ids": [...]}.
+    ``report`` wirkt nicht (die Tabelle "Was steht wo" gilt fuer Morgen und
+    Abend gleich); der Parameter bleibt Pflicht, damit bestehende Aufrufer
+    (Validatoren) unveraendert funktionieren, und wird nicht geprueft.
+
+    Spec: docs/specs/_archive/modules/issue_448_validator_metrics_for_channel.md.
+    Response: {"source": "placements|grundauswahl", "metric_ids": [...]} --
+    ``placements`` = gespeicherte Tabelle, ``grundauswahl`` = Abo ohne
+    Tabelle (Tabelle aus der Grundauswahl, ``placements_aus_grundauswahl``).
+    ``metric_ids`` = Metriken an der Stelle ``channel`` in Tabellenfolge.
+    ``premium_sms`` folgt der SMS-Spalte (ADR-0049, die Tabelle hat keine
+    eigene Premium-SMS-Spalte); ein Kanal ohne Tabellenspalte -> 422.
     """
+    from services.channel_list_resolver import tabellen_grundauswahl
+    from services.placements import (
+        STELLEN_TRIP, metrics_at, placements_aus_grundauswahl, read_placements, resolve_rows,
+    )
+    from services.report_config_resolver import trip_enabled_reports
+
+    stelle = "sms" if channel == "premium_sms" else channel
+    if stelle not in STELLEN_TRIP:
+        raise HTTPException(status_code=422, detail="unbekannter_kanal")
+
     trip_obj = _load_trip_for_validator(user_id, trip)
     if trip_obj is None:
         raise api_fehler(404, "trip_nicht_gefunden", user_id, trip_id=trip, user_id=user_id)
 
-    dc = trip_obj.display_config  # kann None sein (Loader injiziert i.d.R. Default)
-    source = _determine_cascade_source(dc, channel, report)
-    metrics = dc.get_metrics_for_channel(channel, report) if dc else []
-    return {"source": source, "metric_ids": [mc.metric_id for mc in metrics]}
+    dc = trip_obj.display_config or UnifiedWeatherDisplayConfig(trip_id=trip_obj.id)
+    stored = read_placements(dc.placements)
+    source = "placements"
+    if stored is None:
+        source = "grundauswahl"
+        stored = read_placements(placements_aus_grundauswahl(
+            dc, "trip", enabled_reports=trip_enabled_reports(trip_obj.report_config)))
+    ids, eltern = tabellen_grundauswahl(dc, "trip")
+    rows = resolve_rows(stored.rows, ids, "trip", parents=eltern)
+    return {"source": source, "metric_ids": [m for m, _f in metrics_at(rows, stelle)]}
 
 
 # ---------------------------------------------------------------------------

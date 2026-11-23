@@ -323,6 +323,12 @@ def test_ac5_ortsreihenfolge_vertauscht(location_ids):
     Abschnitte Stundenverlauf/Ausblick folgen ``location_ids``."""
     p = preset_dict("ac5_vergleichstabelle")
     p["location_ids"] = location_ids
+    # #3237 (ADR-0124): EINE Metrik-Folge fuer alle Stellen -- Stundenverlauf
+    # und Ausblick in der Folge der Vergleichstabelle; geprueft wird hier die
+    # Ortsfolge.
+    folge = ["wind", "temperature", "precipitation"]
+    p["display_config"]["hourly_metrics"] = folge[:2]
+    p["display_config"]["outlook_metrics"] = folge
     mail = sende_orte_mail(p)
     erwartet = [NAME_JE_ID[i] for i in location_ids]
     for fmt in ("html", "klartext"):
@@ -542,32 +548,6 @@ def test_ac10_stundenverlauf_nimmt_nur_aus_grundauswahl():
         pruefe_stundenverlauf(mail, fmt)
 
 
-@pytest.mark.parametrize("variante,grund,stunden,erwartet", [
-    # Rueckfall 1: Vorgabemenge geschnitten mit der Grundauswahl, Folge der
-    # Vorgabemenge (Temperatur vor Wind vor Niederschlag).
-    ("vorgabemenge", ["wind", "temperature", "precipitation"], ["gust", "uv_index"],
-     ["Temp", "Wind", "Rain"]),
-    # Rueckfall 2: Grundauswahl ohne jede Groesse der Vorgabemenge -> die
-    # stuendlich waehlbaren Groessen der Grundauswahl in deren Folge.
-    ("waehlbare_groessen", ["humidity", "cloud_total"], ["temperature", "gust"],
-     ["Humid", "Cloud"]),
-], ids=["vorgabemenge", "waehlbare_groessen"])
-def test_ac10_stundenverlauf_totalschnitt_rueckfall(variante, grund, stunden, erwartet):
-    """AC-10 / #3047 O5: liegt die gespeicherte Stundenliste vollstaendig
-    ausserhalb der Grundauswahl, verschwindet der Block nicht still, sondern
-    zeigt den dokumentierten Rueckfall -- in HTML und Klartext (F7/F002)."""
-    p = preset_dict("ac10_grundauswahl")
-    dc = p["display_config"]
-    dc["active_metrics"] = [{"metric_id": m, "aggregation": AGG.get(m, "avg")} for m in grund]
-    dc.pop("channel_active_metrics")
-    dc["hourly_metrics"] = list(stunden)
-    mail = sende_orte_mail(p)
-    assert not set(stunden) & set(grundauswahl(mail.roh)), "Vorbedingung: Totalschnitt"
-    assert soll_stundenverlauf(mail.roh, _standard_stunden()) == erwartet, variante
-    for fmt in ("html", "klartext"):
-        pruefe_stundenverlauf(mail, fmt)
-
-
 def _stunden_koepfe(mail, fmt: str) -> dict[str, list[str]]:
     return (html_stundenverlauf(mail.html) if fmt == "html"
             else klartext_stundenverlauf(mail.plain))
@@ -641,7 +621,12 @@ def test_orte_koepfe_in_nutzersprache_en(fmt):
     und Ausblick mit englischen Festtexten -- HTML-Kopfzellen ("Time", "Day")
     und Klartext-Ueberschriften ("HOURLY VIEW", "3-day outlook") laut Katalog
     ``src/i18n/messages/en/``; Spalten und Folge wie eingestellt."""
-    mail = sende_orte_mail(preset_dict("ac6_stundenverlauf"), language="en")
+    p = preset_dict("ac6_stundenverlauf")
+    # #3237 (ADR-0124): EINE Metrik-Folge fuer alle Stellen -- der Ausblick
+    # steht in der Folge des Stundenverlaufs; geprueft wird die Sprache.
+    p["display_config"]["outlook_metrics"] = [
+        "gust", "temperature", "precipitation", "wind", "rain_probability"]
+    mail = sende_orte_mail(p, language="en")
     assert soll_stundenverlauf(mail.roh, _standard_stunden()), "Vorbedingung: Stundenverlauf an"
     assert soll_ausblick(mail.roh), "Vorbedingung: Ausblick an"
     pruefe_stundenverlauf(mail, fmt, "en")
@@ -696,14 +681,13 @@ def test_ac7_ausblick_ausserhalb_grundauswahl():
 def test_ac10_grundauswahl_ausblick():
     """AC-10 Ausblick: (a) neu in die Grundauswahl aufgenommener UV-Index
     erscheint im nie eingestellten Ausblick; (b) abgewaehlte Boeen erscheinen
-    nicht; (c) Totalschnitt -> dokumentierter Rueckfall auf die volle Grundauswahl."""
+    nicht. (#3237: der fruehere Fall (c) "Totalschnitt -> Rueckfall" war
+    Altpfad-Verhalten; die Tabelle kennt nur Zeilen der Grundauswahl.)"""
     a = preset_dict("basis")
     a["display_config"]["active_metrics"] += _am(["uv_index"])
     b = preset_dict("ac10_grundauswahl")
-    c = preset_dict("ac10_grundauswahl")
-    c["display_config"]["outlook_metrics"] = ["gust"]
-    erwartet = [list(POOL) + ["uv_index"], ["wind", "temperature"], ["wind", "temperature", "precipitation"]]
-    for p, soll in zip((a, b, c), erwartet):
+    erwartet = [list(POOL) + ["uv_index"], ["wind", "temperature"]]
+    for p, soll in zip((a, b), erwartet):
         mail = sende_orte_mail(p)
         assert soll_ausblick(mail.roh) == soll
         for fmt in ("html", "klartext"):

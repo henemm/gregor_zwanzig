@@ -55,15 +55,16 @@ def test_position_wirkt_bei_globaler_kaskade_wie_bei_per_channel():
     dc_a = F.dc(*order_a)
     dc_b = F.dc(*order_b)
 
-    # Vorbedingung: beide Konfigurationen loesen tatsaechlich 'global' aus
-    # (kein channel_layouts.sms gesetzt) -- sonst waere die Zusicherung
-    # unten wirkungslos (Vakuum-Schutz).
-    assert dc_a.cascade_source_for_channel("sms", "evening") == "global", (
-        "Testaufbau: dc_a muss ueber KEIN eigenes SMS-Kanal-Layout verfuegen "
-        "(Kaskadenquelle 'global'), sonst prueft dieser Test AC-1 aus "
-        "fix_1677, nicht AC-13 aus fix_2422_s2a."
-    )
-    assert dc_b.cascade_source_for_channel("sms", "evening") == "global"
+    # Vorbedingung: beide Konfigurationen haben KEINE eigene SMS-Auswahl --
+    # weder Tabelle "Was steht wo" noch Kanal-Layout (#3237: die Kaskade ist
+    # entfernt; ohne Tabelle gilt die Tabelle aus der Grundauswahl in deren
+    # Folge). Sonst waere die Zusicherung unten wirkungslos (Vakuum-Schutz).
+    for dc in (dc_a, dc_b):
+        assert dc.placements is None and not dc.per_channel_layouts, (
+            "Testaufbau: ohne eigene SMS-Auswahl (keine Tabelle, kein Kanal-"
+            "Layout), sonst prueft dieser Test AC-1 aus fix_1677, nicht AC-13 "
+            "aus fix_2422_s2a."
+        )
 
     sms_a = _render_sms(dc_a)
     sms_b = _render_sms(dc_b)

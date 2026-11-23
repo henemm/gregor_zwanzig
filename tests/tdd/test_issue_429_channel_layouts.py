@@ -19,6 +19,14 @@ GREEN-Phase: nach dem Refactor darf das Rendering für alte Trips nicht abweiche
 
 AC-8 (Frontend-Types) wird separat per `tsc --noEmit` geprüft, nicht in diesem Python-Suite.
 
+#3237 (Altpfad entfernt): die Kanal-Kaskade ``get_metrics_for_channel`` (globaler
+Rueckfall, Kanal-Liste schlaegt global, leere Kanal-Liste ohne Rueckfall) existiert
+nicht mehr -- die Tabelle "Was steht wo" ist die einzige Quelle. Entfallen sind
+deshalb AC-2, AC-3, AC-4 und AC-7 (reine Kaskaden-Regeln); die Aussagen fuer die
+Tabelle bewachen ``tests/tdd/test_3237_placements_aus_grundauswahl.py`` und
+``tests/integration/test_issue_448_validator_metrics_for_channel.py``. Der Loader
+liest ``channel_layouts`` weiter bis #3277 (AC-1).
+
 KEINE Mocks — reine Datenstrukturen + echte Aufrufe der (zu bauenden) Funktionen.
 Builder-Pattern und Test-Trip-JSON sind aus tests/tdd/test_issue_360_channel_renderer.py
 und tests/integration/test_config_persistence.py übernommen.
@@ -111,23 +119,6 @@ def _per_channel_trip_data() -> dict[str, Any]:
     }
 
 
-def _empty_sms_layout_trip_data() -> dict[str, Any]:
-    """Trip mit explizit leerer SMS-Liste (User hat alle SMS-Metriken deaktiviert)."""
-    return {
-        "trip_id": "empty-sms-trip",
-        "metrics": [
-            {"metric_id": "temperature", "enabled": True, "bucket": "primary", "order": 0},
-        ],
-        "channel_layouts": {
-            "email": [
-                {"metric_id": "temperature", "enabled": True, "bucket": "primary", "order": 0},
-            ],
-            "sms": [],  # explizit leer — kein Fallback
-        },
-        "updated_at": "2026-05-28T10:00:00",
-    }
-
-
 def _parse(data: dict[str, Any]):
     """Convenience: parse display-config-dict to UnifiedWeatherDisplayConfig."""
     from app.loader import _parse_display_config
@@ -196,79 +187,21 @@ def test_all_empty_channel_layouts_kept_as_dict_not_none():
 
 
 # ---------------------------------------------------------------------------
-# AC-2: Backward-Compat — Trip ohne channel_layouts → per_channel_layouts ist None
-# ---------------------------------------------------------------------------
-
-
-def test_ac2_legacy_trip_has_no_per_channel_layouts():
-    """AC-2: Alter Trip → per_channel_layouts is None, get_metrics_for_channel = global."""
-    dc = _parse(_legacy_trip_data())
-
-    assert hasattr(dc, "per_channel_layouts")
-    assert dc.per_channel_layouts is None
-
-    # Fallback-Verhalten: get_metrics_for_channel == get_metrics_for_report_type
-    assert hasattr(dc, "get_metrics_for_channel"), (
-        "UnifiedWeatherDisplayConfig braucht get_metrics_for_channel(channel, report_type)."
-    )
-    via_channel = dc.get_metrics_for_channel("email", "evening")
-    via_report = dc.get_metrics_for_report_type("evening")
-    via_channel_ids = [m.metric_id for m in via_channel]
-    via_report_ids = [m.metric_id for m in via_report]
-    assert via_channel_ids == via_report_ids
-
-
-# ---------------------------------------------------------------------------
-# AC-3: Per-Channel-Liste schlägt globale Liste
-# ---------------------------------------------------------------------------
-
-
-def test_ac3_per_channel_layout_wins_over_global():
-    """AC-3: Email-Layout gespeichert → get_metrics_for_channel("email", ...) liefert Email-Liste."""
-    dc = _parse(_per_channel_trip_data())
-
-    metrics = dc.get_metrics_for_channel("email", "evening")
-    ids = [m.metric_id for m in metrics]
-
-    # Email-spezifische Reihenfolge (nicht die globale Reihenfolge!).
-    # Fix #1947: abgeleitete Kind-Groessen (temperature_night/_day_low/
-    # _day_high) erben jetzt bucket/order der Elterngroesse (loader.py::
-    # _append_derived_metrics) statt hartcodiert "secondary" -- sie stehen
-    # deshalb direkt HINTER ihrem Elter, nicht mehr strukturell am Ende.
-    assert ids[0] == "temperature"
-    assert ids[1:4] == ["temperature_night", "temperature_day_low", "temperature_day_high"]
-    assert ids[4] == "wind_chill"
-    assert ids[5:8] == ["wind_chill_night", "wind_chill_day_low", "wind_chill_day_high"]
-    assert ids[8] == "wind"
-    assert ids[9] == "gust"
-    assert ids[10] == "precipitation"
-    assert "cloud_total" in ids  # secondary, aber in der Liste enthalten
-
-
-# ---------------------------------------------------------------------------
-# AC-4: Fehlender Kanal-Eintrag → Fallback auf globale Liste
-# ---------------------------------------------------------------------------
-
-
-def test_ac4_missing_channel_falls_back_to_global():
-    """AC-4: Signal nicht in channel_layouts → Fallback auf globale Metriken."""
-    dc = _parse(_per_channel_trip_data())
-
-    signal_metrics = dc.get_metrics_for_channel("signal", "morning")
-    global_metrics = dc.get_metrics_for_report_type("morning")
-    assert [m.metric_id for m in signal_metrics] == [m.metric_id for m in global_metrics]
-
-
-# ---------------------------------------------------------------------------
 # AC-5: CHANNEL_LIMITS bleiben durchgesetzt
 # ---------------------------------------------------------------------------
 
 
 def test_ac5_channel_limits_still_applied_with_per_channel_layouts():
-    """AC-5: Telegram-Layout mit 10 primaries → max 7 in table_columns (limit 8, Slot 0 = Zeit)."""
+    """AC-5: Telegram-Liste mit 10 primaries → max 7 in table_columns (limit 8, Slot 0 = Zeit).
+
+    #3237: ``render_for_channel`` bekommt die fertige Kanal-Liste vom Aufrufer
+    (``dc.metrics``, aus der Tabelle "Was steht wo"); die Kanal-Kaskade ist weg.
+    Die Telegram-Liste des Trips geht deshalb als ``metrics`` hinein."""
     from src.output.renderers.channel_layout import render_for_channel
 
-    dc = _parse(_per_channel_trip_data())
+    daten = _per_channel_trip_data()
+    daten["metrics"] = daten["channel_layouts"]["telegram"]
+    dc = _parse(daten)
     layout = render_for_channel("telegram", dc, "evening")
 
     # CHANNEL_LIMITS["telegram"]["max_table_cols"] = 8 → 7 Metrik-Slots (Slot 0 = Zeit).
@@ -313,19 +246,3 @@ def test_ac6_legacy_trip_render_bit_identical():
     layout_sms = render_for_channel("sms", dc, "evening")
     assert layout_sms.table_columns == []
     assert layout_sms.demoted_count == 9
-
-
-# ---------------------------------------------------------------------------
-# AC-7: Leere Liste = leere Liste (kein Fallback)
-# ---------------------------------------------------------------------------
-
-
-def test_ac7_empty_channel_layout_no_fallback():
-    """AC-7: per_channel_layouts["sms"] == [] → leere Liste, kein Fallback."""
-    dc = _parse(_empty_sms_layout_trip_data())
-
-    sms_metrics = dc.get_metrics_for_channel("sms", "evening")
-    assert sms_metrics == [], (
-        "Eine explizit leere channel_layouts-Liste muss leer bleiben — "
-        "kein Fallback auf globale Metrik-Liste."
-    )

@@ -17,72 +17,72 @@ Etappe 3: Kamm 2: 2°C, ⛅, starker Regen max 16:00, starker Wind 50 km/h, Böe
   Sonne 39.0h
 
 ━━ Segment 1: km 0.0–20.4 | 08:00–13:35 | ↑600m → 900m ━━
-  Zeit   Temp   Feels   Wind   Gust   Rain   Thdr     Cloud   Visib   Sun   SnowH   NewSn 
-  -----  -----  ------  -----  -----  -----  -------  ------  ------  ----  ------  ------
-  08     2.0    –       15     22     0.1    kein     ⛅       9.0     ⛅     5       –     
-  09     2.0    –       15     22     0.1    kein     ⛅       9.0     ⛅     5       –     
-  10     2.0    –       15     22     0.1    kein     ⛅       9.0     ⛅     5       –     
-  11     2.0    –       50     75     2.5    mittel   ⛅       9.0     ⛅     5       –     
-  12     2.0    –       50     75     2.6    mittel   ⛅       9.0     ⛅     5       –     
-  13     2.0    –       50     75     2.7    mittel   ⛅       9.0     ⛅     5       –     
-  08     2.0    –       15     22     0.1    kein     ⛅       9.0     ⛅     5       –     
-  09     2.0    –       15     22     0.1    kein     ⛅       9.0     ⛅     5       –     
-  10     2.0    –       15     22     0.1    kein     ⛅       9.0     ⛅     5       –     
-  11     2.0    –       50     75     2.5    mittel   ⛅       9.0     ⛅     5       –     
-  12     2.0    –       50     75     2.6    mittel   ⛅       9.0     ⛅     5       –     
-  13     2.0    –       50     75     2.7    mittel   ⛅       9.0     ⛅     5       –     
-  08     2.0    –       15     22     0.1    kein     ⛅       9.0     ⛅     5       –     
-  09     2.0    –       15     22     0.1    kein     ⛅       9.0     ⛅     5       –     
-  10     2.0    –       15     22     0.1    kein     ⛅       9.0     ⛅     5       –     
-  11     2.0    –       50     75     2.5    mittel   ⛅       9.0     ⛅     5       –     
-  12     2.0    –       50     75     2.6    mittel   ⛅       9.0     ⛅     5       –     
-  13     2.0    –       50     75     2.7    mittel   ⛅       9.0     ⛅     5       –     
+  Zeit   Temp   Feels   Wind         Gust         Rain     Thdr     Cloud   Visib   Sun   SnowH   NewSn 
+  -----  -----  ------  -----------  -----------  -------  -------  ------  ------  ----  ------  ------
+  08     2.0    –       mäßig        mäßig        leicht   kein     ⛅       9.0     ⛅     5       –     
+  09     2.0    –       mäßig        mäßig        leicht   kein     ⛅       9.0     ⛅     5       –     
+  10     2.0    –       mäßig        mäßig        leicht   kein     ⛅       9.0     ⛅     5       –     
+  11     2.0    –       sehr stark   sehr stark   mäßig    mittel   ⛅       9.0     ⛅     5       –     
+  12     2.0    –       sehr stark   sehr stark   mäßig    mittel   ⛅       9.0     ⛅     5       –     
+  13     2.0    –       sehr stark   sehr stark   mäßig    mittel   ⛅       9.0     ⛅     5       –     
+  08     2.0    –       mäßig        mäßig        leicht   kein     ⛅       9.0     ⛅     5       –     
+  09     2.0    –       mäßig        mäßig        leicht   kein     ⛅       9.0     ⛅     5       –     
+  10     2.0    –       mäßig        mäßig        leicht   kein     ⛅       9.0     ⛅     5       –     
+  11     2.0    –       sehr stark   sehr stark   mäßig    mittel   ⛅       9.0     ⛅     5       –     
+  12     2.0    –       sehr stark   sehr stark   mäßig    mittel   ⛅       9.0     ⛅     5       –     
+  13     2.0    –       sehr stark   sehr stark   mäßig    mittel   ⛅       9.0     ⛅     5       –     
+  08     2.0    –       mäßig        mäßig        leicht   kein     ⛅       9.0     ⛅     5       –     
+  09     2.0    –       mäßig        mäßig        leicht   kein     ⛅       9.0     ⛅     5       –     
+  10     2.0    –       mäßig        mäßig        leicht   kein     ⛅       9.0     ⛅     5       –     
+  11     2.0    –       sehr stark   sehr stark   mäßig    mittel   ⛅       9.0     ⛅     5       –     
+  12     2.0    –       sehr stark   sehr stark   mäßig    mittel   ⛅       9.0     ⛅     5       –     
+  13     2.0    –       sehr stark   sehr stark   mäßig    mittel   ⛅       9.0     ⛅     5       –     
 
 ━━ Segment 2: km 20.4–43.4 | 13:35–19:51 | ↑900m → 1200m ━━
-  Zeit   Temp   Feels   Wind   Gust   Rain   Thdr     Cloud   Visib   Sun   SnowH   NewSn 
-  -----  -----  ------  -----  -----  -----  -------  ------  ------  ----  ------  ------
-  13     -5.0   –       50     75     2.7    mittel   ⛅       7.0     ⛅     45      –     
-  14     -5.0   –       50     75     2.8    mittel   ⛅       7.0     ⛅     45      –     
-  15     -5.0   –       50     75     2.9    mittel   ⛅       7.0     ⛅     45      –     
-  16     -5.0   –       50     75     3.0    mittel   ⛅       7.0     ⛅     45      –     
-  17     -5.0   –       20     30     0.3    kein     ⛅       7.0     ⛅     45      –     
-  18     -5.0   –       20     30     0.3    kein     ⛅       7.0     ⛅     45      –     
-  19     -5.0   –       20     30     0.3    kein     ⛅       7.0     ⛅     45      –     
-  13     -5.0   –       50     75     2.7    mittel   ⛅       7.0     ⛅     45      –     
-  14     -5.0   –       50     75     2.8    mittel   ⛅       7.0     ⛅     45      –     
-  15     -5.0   –       50     75     2.9    mittel   ⛅       7.0     ⛅     45      –     
-  16     -5.0   –       50     75     3.0    mittel   ⛅       7.0     ⛅     45      –     
-  17     -5.0   –       20     30     0.3    kein     ⛅       7.0     ⛅     45      –     
-  18     -5.0   –       20     30     0.3    kein     ⛅       7.0     ⛅     45      –     
-  19     -5.0   –       20     30     0.3    kein     ⛅       7.0     ⛅     45      –     
-  13     -5.0   –       50     75     2.7    mittel   ⛅       7.0     ⛅     45      –     
-  14     -5.0   –       50     75     2.8    mittel   ⛅       7.0     ⛅     45      –     
-  15     -5.0   –       50     75     2.9    mittel   ⛅       7.0     ⛅     45      –     
-  16     -5.0   –       50     75     3.0    mittel   ⛅       7.0     ⛅     45      –     
-  17     -5.0   –       20     30     0.3    kein     ⛅       7.0     ⛅     45      –     
-  18     -5.0   –       20     30     0.3    kein     ⛅       7.0     ⛅     45      –     
-  19     -5.0   –       20     30     0.3    kein     ⛅       7.0     ⛅     45      –     
+  Zeit   Temp   Feels   Wind         Gust         Rain     Thdr     Cloud   Visib   Sun   SnowH   NewSn 
+  -----  -----  ------  -----------  -----------  -------  -------  ------  ------  ----  ------  ------
+  13     -5.0   –       sehr stark   sehr stark   mäßig    mittel   ⛅       7.0     ⛅     45      –     
+  14     -5.0   –       sehr stark   sehr stark   mäßig    mittel   ⛅       7.0     ⛅     45      –     
+  15     -5.0   –       sehr stark   sehr stark   mäßig    mittel   ⛅       7.0     ⛅     45      –     
+  16     -5.0   –       sehr stark   sehr stark   mäßig    mittel   ⛅       7.0     ⛅     45      –     
+  17     -5.0   –       mäßig        stark        leicht   kein     ⛅       7.0     ⛅     45      –     
+  18     -5.0   –       mäßig        stark        leicht   kein     ⛅       7.0     ⛅     45      –     
+  19     -5.0   –       mäßig        stark        leicht   kein     ⛅       7.0     ⛅     45      –     
+  13     -5.0   –       sehr stark   sehr stark   mäßig    mittel   ⛅       7.0     ⛅     45      –     
+  14     -5.0   –       sehr stark   sehr stark   mäßig    mittel   ⛅       7.0     ⛅     45      –     
+  15     -5.0   –       sehr stark   sehr stark   mäßig    mittel   ⛅       7.0     ⛅     45      –     
+  16     -5.0   –       sehr stark   sehr stark   mäßig    mittel   ⛅       7.0     ⛅     45      –     
+  17     -5.0   –       mäßig        stark        leicht   kein     ⛅       7.0     ⛅     45      –     
+  18     -5.0   –       mäßig        stark        leicht   kein     ⛅       7.0     ⛅     45      –     
+  19     -5.0   –       mäßig        stark        leicht   kein     ⛅       7.0     ⛅     45      –     
+  13     -5.0   –       sehr stark   sehr stark   mäßig    mittel   ⛅       7.0     ⛅     45      –     
+  14     -5.0   –       sehr stark   sehr stark   mäßig    mittel   ⛅       7.0     ⛅     45      –     
+  15     -5.0   –       sehr stark   sehr stark   mäßig    mittel   ⛅       7.0     ⛅     45      –     
+  16     -5.0   –       sehr stark   sehr stark   mäßig    mittel   ⛅       7.0     ⛅     45      –     
+  17     -5.0   –       mäßig        stark        leicht   kein     ⛅       7.0     ⛅     45      –     
+  18     -5.0   –       mäßig        stark        leicht   kein     ⛅       7.0     ⛅     45      –     
+  19     -5.0   –       mäßig        stark        leicht   kein     ⛅       7.0     ⛅     45      –     
 
 ━━ 🏁 Wetter am Ziel: 19:51–20:51 | 1200m ━━
-  Zeit   Temp   Feels   Wind   Gust   Rain   Thdr   Cloud   Visib   Sun   SnowH   NewSn 
-  -----  -----  ------  -----  -----  -----  -----  ------  ------  ----  ------  ------
-  19     2.0    –       15     22     0.1    kein   ⛅       9.0     ⛅     5       –     
-  20     2.0    –       15     22     0.1    kein   ⛅       9.0     ⛅     5       –     
-  19     2.0    –       15     22     0.1    kein   ⛅       9.0     ⛅     5       –     
-  20     2.0    –       15     22     0.1    kein   ⛅       9.0     ⛅     5       –     
-  19     2.0    –       15     22     0.1    kein   ⛅       9.0     ⛅     5       –     
-  20     2.0    –       15     22     0.1    kein   ⛅       9.0     ⛅     5       –     
+  Zeit   Temp   Feels   Wind    Gust    Rain     Thdr   Cloud   Visib   Sun   SnowH   NewSn 
+  -----  -----  ------  ------  ------  -------  -----  ------  ------  ----  ------  ------
+  19     2.0    –       mäßig   mäßig   leicht   kein   ⛅       9.0     ⛅     5       –     
+  20     2.0    –       mäßig   mäßig   leicht   kein   ⛅       9.0     ⛅     5       –     
+  19     2.0    –       mäßig   mäßig   leicht   kein   ⛅       9.0     ⛅     5       –     
+  20     2.0    –       mäßig   mäßig   leicht   kein   ⛅       9.0     ⛅     5       –     
+  19     2.0    –       mäßig   mäßig   leicht   kein   ⛅       9.0     ⛅     5       –     
+  20     2.0    –       mäßig   mäßig   leicht   kein   ⛅       9.0     ⛅     5       –     
 
 ━━ Nacht am Ziel (1200m) ━━
 Ankunft 20:51 → Morgen 06:00
-  Zeit   Temp   Feels   Wind   Gust   Rain   Thdr   Cloud   Visib   Sun   SnowH   NewSn 
-  -----  -----  ------  -----  -----  -----  -----  ------  ------  ----  ------  ------
-  20     2.0    –       15     22     0.2    kein   ⛅       9.0     ⛅     5       –     
-  22     2.0    –       15     22     0.2    kein   ⛅       9.0     ⛅     5       –     
-  00     2.0    –       15     22     0.2    kein   ⛅       9.0     ⛅     5       –     
-  02     2.0    –       15     22     4.1    hoch   ⛅       9.0     ⛅     5       –     
-  04     2.0    –       15     22     0.2    kein   ⛅       9.0     ⛅     5       –     
-  06     2.0    –       15     22     0.1    kein   ⛅       9.0     ⛅     5       –     
+  Zeit   Temp   Feels   Wind    Gust    Rain     Thdr   Cloud   Visib   Sun   SnowH   NewSn 
+  -----  -----  ------  ------  ------  -------  -----  ------  ------  ----  ------  ------
+  20     2.0    –       mäßig   mäßig   leicht   kein   ⛅       9.0     ⛅     5       –     
+  22     2.0    –       mäßig   mäßig   leicht   kein   ⛅       9.0     ⛅     5       –     
+  00     2.0    –       mäßig   mäßig   leicht   kein   ⛅       9.0     ⛅     5       –     
+  02     2.0    –       mäßig   mäßig   mäßig    hoch   ⛅       9.0     ⛅     5       –     
+  04     2.0    –       mäßig   mäßig   leicht   kein   ⛅       9.0     ⛅     5       –     
+  06     2.0    –       mäßig   mäßig   leicht   kein   ⛅       9.0     ⛅     5       –     
   * Temperatur/Nullgradgrenze: Minimum im 2h-Block
 
 

@@ -150,11 +150,11 @@ func quoteLocationCount(t *testing.T, s *store.Store, uid string) int {
 // quoteRouter verdrahtet alle betroffenen Handler mit ihrer HEUTIGEN Signatur.
 func quoteRouter(s *store.Store) http.Handler {
 	r := chi.NewRouter()
-	r.Post("/api/trips", CreateTripHandler(s))
+	r.Post("/api/trips", CreateTripHandler(s, ""))
 	r.Put("/api/trips/{id}", UpdateTripHandler(s))
 	r.Patch("/api/trips/{id}/state", UpdateTripStateHandler(s))
 	r.Delete("/api/trips/{id}", DeleteTripHandler(s))
-	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 	r.Put("/api/compare/presets/{id}", UpdateComparePresetHandler(s))
 	r.Patch("/api/compare/presets/{id}/state", UpdateComparePresetStateHandler(s))
 	r.Delete("/api/compare/presets/{id}", DeleteComparePresetHandler(s))

@@ -9,8 +9,9 @@ unveraendert (Go ``store.SaveBriefingPlacements``: nur
 ``display_config.placements`` wird gesetzt, fehlt ``display_config``, entsteht
 es), muss der naechste Abruf dieselben Zeilen in derselben Folge mit denselben
 Zustaenden und Formen zeigen (Fixpunkt) -- und das Briefing dieselben Metriken
-tragen wie vorher (View-Model des Versandwegs gleich), ausser in den Faellen,
-die ``placements_from_legacy`` als bewusste Aenderung meldet.
+tragen wie vorher (View-Model des Versandwegs gleich). #3237: ohne Tabelle
+gilt die Grundauswahl-Tabelle (``placements_aus_grundauswahl``); es gibt keine
+gemeldeten Ausnahmen mehr.
 
 Kern-Schicht: echte Dateien in der isolierten Datenwurzel, echter Loader,
 echter Resolver, kein Mock.
@@ -163,38 +164,25 @@ def _tabelle(antwort: dict) -> list:
 # ---------------------------------------------------------------------------
 
 def _versand_listen(kennung: str, surface: str, outlook_reports: list) -> dict:
-    """Je (Briefing-Typ, Stelle) die Liste ``[(kennung, format)]`` genau so,
+    """Je (Briefing-Typ, Stelle) die Liste ``[(Katalog-ID, Form)]`` genau so,
     wie der Versandweg den Resolver ruft (Trip: geladenes Modell je Typ;
-    Orte: ``resolve_compare_render_options`` ruft ohne Typ). Der Trip-Ausblick
-    steht im bisherigen Pfad nur in den Briefings aus ``multi_day_trend_reports``
-    (``report_config_resolver``) -- dieselbe Lesart wie ``_output_changes``."""
-    from services.channel_list_resolver import resolve_channel_lists, vm_lists
+    Orte: ``resolve_compare_render_options`` ruft ohne Typ). #3237: Quelle ist
+    die aufgeloeste Tabelle (``view.rows``); der Ausblick zaehlt nur in den
+    Briefings, in denen der View ihn fuehrt."""
+    from services.channel_list_resolver import resolve_channel_lists
+    from services.placements import metrics_at
 
     dc, _abo = _dc_und_abo(kennung, surface)
-    if surface == "trip":
-        out = {(rt, st): _form_gezeigt("trip", st, liste) for rt in ("morning", "evening")
-               for st, liste in vm_lists(resolve_channel_lists(dc, "trip", rt), "trip").items()}
-        for rt in ("morning", "evening"):
-            if rt not in outlook_reports:
-                out[(rt, "outlook")] = []
-        return out
-    return {(None, st): _form_gezeigt("compare", st, liste)
-            for st, liste in vm_lists(resolve_channel_lists(dc, "compare"), "compare").items()}
-
-
-def _form_gezeigt(surface: str, stelle: str, liste: list) -> list:
-    """``None`` (Flaechen-Standard) und die ausdrueckliche Form, die er
-    bedeutet, zeigen dasselbe: verglichen wird die gezeigte Form
-    (``heutige_form``, dieselbe Regel wie die Umrechnung)."""
-    from app.metric_catalog import zwei_formen_stellen
-    from services.channel_list_resolver import katalog_id
-    from services.placements import heutige_form
-
-    out = []
-    for mid, fmt in liste:
-        kid = katalog_id(surface, mid)
-        zwei = stelle in zwei_formen_stellen(kid)
-        out.append((mid, heutige_form(surface, stelle, kid, fmt) if zwei else None))
+    typen = ("morning", "evening") if surface == "trip" else (None,)
+    stellen = ("email", "telegram", "sms", "outlook") + (("hourly",) if surface != "trip" else ())
+    out = {}
+    for rt in typen:
+        view = resolve_channel_lists(dc, surface, rt)
+        for st in stellen:
+            liste = metrics_at(view.rows, st)
+            if st == "outlook" and not view.outlook:
+                liste = []
+            out[(rt, st)] = liste
     return out
 
 
@@ -210,27 +198,10 @@ def _dc_und_abo(kennung: str, surface: str):
     return preset.get("display_config") or {}, preset
 
 
-def _gemeldete_stellen(kennung: str, surface: str) -> set:
-    """(Briefing-Typ, Stelle) mit bewusster Aenderung laut Umrechnung."""
-    from services.placements import placements_from_legacy
-
-    dc, abo = _dc_und_abo(kennung, surface)
-    if surface == "trip":
-        changes = placements_from_legacy(dc, "trip", report_config=abo.report_config,
-                                         enabled_reports=["morning", "evening"]).changes
-        return {(c.report_type, c.stelle) for c in changes} | {
-            (rt, c.stelle) for c in changes if c.report_type is None
-            for rt in ("morning", "evening")}
-    changes = placements_from_legacy(dc, "compare", enabled_reports=["morning", "evening"],
-                                     outlook_enabled=abo.get("outlook_enabled")).changes
-    return {(None, c.stelle) for c in changes}
-
-
 def _fixpunkt(client, kennung: str, kind: str, surface: str) -> None:
     vorher = _get(client, kennung, kind)
     assert vorher["stored"] is False
     versand_vorher = _versand_listen(kennung, surface, vorher["outlook_reports"])
-    gemeldet = _gemeldete_stellen(kennung, surface)
 
     go_put(kennung, vorher["placements"])
     nachher = _get(client, kennung, kind)
@@ -239,11 +210,11 @@ def _fixpunkt(client, kennung: str, kind: str, surface: str) -> None:
     assert _tabelle(nachher) == _tabelle(vorher), "erstes Speichern hat die Tabelle veraendert"
     assert nachher["outlook_reports"] == vorher["outlook_reports"]
     versand_nachher = _versand_listen(kennung, surface, nachher["outlook_reports"])
+    # #3237: ohne Tabelle gilt dieselbe Grundauswahl-Tabelle wie nach dem
+    # Speichern -- es gibt keine gemeldeten Ausnahmen mehr, jede Stelle gleich.
     for schluessel, liste in versand_vorher.items():
-        if schluessel in gemeldet:
-            continue
         assert versand_nachher[schluessel] == liste, (
-            f"{schluessel}: Briefing nach dem ersten Speichern anders, ohne gemeldete Aenderung")
+            f"{schluessel}: Briefing nach dem ersten Speichern anders")
 
 
 @pytest.mark.parametrize("fall", list(TRIP_FAELLE))
@@ -315,8 +286,6 @@ def test_neue_metrik_ohne_tabelle_zeigt_die_haken_des_versands(client, kind, fal
     ist, zeigt die Tabelle an jeder Kanal-Stelle genau dann einen Haken, wenn
     der Versand die Metrik dort fuehrt. (Trip mit Kanal-Listen des Altbestands:
     dort steht sie NICHT -- die Tabelle sagt das, statt "ueberall an".)"""
-    from services.channel_list_resolver import katalog_id
-
     kennung = f"{kind[0]}-plus-{fall}"
     surface = "trip" if kind == "route" else "compare"
     if kind == "route":
@@ -334,7 +303,7 @@ def test_neue_metrik_ohne_tabelle_zeigt_die_haken_des_versands(client, kind, fal
     rt = "evening" if surface == "trip" else None
     versand = _versand_listen(kennung, surface, antwort["outlook_reports"])
     for stelle in ("email", "telegram", "sms"):
-        im_versand = any(katalog_id(surface, m) == "pressure" for m, _f in versand[(rt, stelle)])
+        im_versand = any(m == "pressure" for m, _f in versand[(rt, stelle)])
         assert (zellen[stelle]["state"] == "on") == im_versand, (stelle, zellen[stelle])
 
 
@@ -364,8 +333,6 @@ def _alle_orte_metriken(form: str) -> list:
 
 @pytest.mark.parametrize("form", ["zeichenkette", "paar", "gemischt"])
 def test_orte_jede_metrik_der_grundauswahl_hat_eine_zeile(client, form):
-    from services.channel_list_resolver import katalog_id
-
     kennung = f"o-alle-{form}"
     _orte(kennung, {"active_metrics": _alle_orte_metriken(form)})
     erwartet = {e["metric_id"] for e in _orte_auswertungen()}
@@ -378,7 +345,7 @@ def test_orte_jede_metrik_der_grundauswahl_hat_eine_zeile(client, form):
         assert set(ids) == erwartet, (erwartet - set(ids), set(ids) - erwartet)
         versand = _versand_listen(kennung, "compare", antwort["outlook_reports"])
         for stelle in ("email", "telegram", "sms"):
-            im_versand = {katalog_id("compare", m) for m, _f in versand[(None, stelle)]}
+            im_versand = {m for m, _f in versand[(None, stelle)]}
             assert im_versand == erwartet, (gespeichert, stelle, erwartet ^ im_versand)
         if not gespeichert:
             go_put(kennung, antwort["placements"])

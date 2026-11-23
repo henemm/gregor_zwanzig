@@ -10,6 +10,9 @@ Zeile 129-134 auf die **Email**-Auswahl (``get_metrics_for_channel("email",
 die SMS erbt dadurch strukturell die Email-Auswahl und kann nie eine eigene
 haben, egal was unter ``per_channel_layouts["sms"]`` gespeichert ist.
 
+#3237: die SMS-eigene Auswahl steht in der Tabelle "Was steht wo" (Stelle
+``sms``); ``per_channel_layouts`` wirkt nicht mehr.
+
 Kern-Schicht (Test-Politik "Zwei Schichten", CLAUDE.md): kein Netz, kein
 Versand, kein Mock/patch — echter Aufruf des Formatters mit praeparierten
 ``UnifiedWeatherDisplayConfig``-Objekten, Assertion auf den zusammengesetzten
@@ -124,6 +127,16 @@ def _mc(metric_id: str, **kw) -> MetricConfig:
 _GLOBAL_FIVE = ["temperature", "wind", "gust", "precipitation", "thunder"]
 
 
+def _dc(trip_id: str, metrics: list[MetricConfig], **listen) -> UnifiedWeatherDisplayConfig:
+    """#3237: die Kanal-Auswahl steht in der Tabelle "Was steht wo"
+    (``placements``, Stelle je Kanal), nicht mehr in ``per_channel_layouts``."""
+    from tests.helpers.tabelle_aus_wunsch import tabelle
+
+    dc = UnifiedWeatherDisplayConfig(trip_id=trip_id, metrics=metrics)
+    dc.placements = tabelle(dc, "trip", listen=listen)
+    return dc
+
+
 # ---------------------------------------------------------------------------
 # AC-6 — ROT vor dem Fix
 # ---------------------------------------------------------------------------
@@ -135,18 +148,11 @@ def test_sms_zeigt_nur_die_sms_eigene_auswahl():
     Heute erbt die SMS die (globale, ueber den Email-Zweig kollabierte)
     Auswahl und zeigt zusaetzlich K/D/W/G/TH.
     """
-    dc = UnifiedWeatherDisplayConfig(
-        trip_id="sms-eigene-auswahl",
-        metrics=[_mc(m) for m in _GLOBAL_FIVE],
-        per_channel_layouts={"sms": [_mc("precipitation")]},
-    )
+    dc = _dc("sms-eigene-auswahl", [_mc(m) for m in _GLOBAL_FIVE], sms=["precipitation"])
     sms = _render_sms(dc)
     assert _sms_symbols(sms) == {"R"}, (
-        "AC-6 FAIL: die SMS-eigene Metrikauswahl (per_channel_layouts['sms'] = "
-        f"['precipitation']) bleibt wirkungslos. SMS-Text: {sms!r}. Ursache: "
-        "trip_report.py bildet active_metric_ids/_sms_thr aus der bereits "
-        "email-kollabierten dc (Z. 129-134 vs. Z. 282-296) statt aus "
-        "dc.get_metrics_for_channel('sms', report_type)."
+        "AC-6 FAIL: die SMS-eigene Metrikauswahl (Tabelle, Stelle sms = "
+        f"['precipitation']) bleibt wirkungslos. SMS-Text: {sms!r}."
     )
 
 
@@ -157,14 +163,8 @@ def test_sms_folgt_nicht_dem_email_layout():
     (die Email-Auswahl) und kein einziges Wind-/Boeen-Kuerzel — der direkte
     Beweis, dass SMS die Email-Kaskade erbt statt der eigenen.
     """
-    dc = UnifiedWeatherDisplayConfig(
-        trip_id="email-vs-sms",
-        metrics=[_mc(m) for m in _GLOBAL_FIVE],
-        per_channel_layouts={
-            "email": [_mc("temperature")],
-            "sms": [_mc("wind"), _mc("gust")],
-        },
-    )
+    dc = _dc("email-vs-sms", [_mc(m) for m in _GLOBAL_FIVE],
+             email=["temperature"], sms=["wind", "gust"])
     sms = _render_sms(dc)
     symbols = _sms_symbols(sms)
     assert symbols == {"W", "G"}, (
@@ -179,7 +179,8 @@ def test_sms_folgt_nicht_dem_email_layout():
 
 
 def test_ohne_sms_layout_gilt_weiterhin_die_globale_auswahl():
-    """Kaskadenebene 3 (Fallback) bleibt unveraendert.
+    """Ohne Tabelle gilt die Tabelle aus der Grundauswahl (#3237; vorher
+    Kaskadenebene 3).
 
     Zugleich der Falsifizierbarkeits-Beleg fuer die beiden ROT-Faelle: die
     Symbolmenge {'R'} IST vom Renderer erreichbar — die Assertion oben kann
@@ -209,17 +210,11 @@ def test_globaler_sms_schwellwert_wirkt_nicht_mehr_auch_bei_sms_eigener_auswahl(
     Werte tauchen wieder auf ('W-' -> 'W10@9(15@10)'). Der Schwellwert muss
     weiterhin aus der globalen Metrikliste aufgeloest werden.
     """
-    dc = UnifiedWeatherDisplayConfig(
-        trip_id="globale-schwelle",
-        metrics=[
-            _mc("wind", sms_threshold=50.0),
-            _mc("gust", sms_threshold=50.0),
-            _mc("precipitation"),
-        ],
-        per_channel_layouts={
-            "sms": [_mc("wind"), _mc("gust"), _mc("precipitation")],
-        },
-    )
+    dc = _dc("globale-schwelle", [
+        _mc("wind", sms_threshold=50.0),
+        _mc("gust", sms_threshold=50.0),
+        _mc("precipitation"),
+    ], sms=["wind", "gust", "precipitation"])
     sms = _render_sms(dc)
     assert "W-" in sms.split() and "G30@10" in sms.split(), (
         "E1: die globale SMS-Schwelle (50 km/h) darf Böen ab Gelb (30) nicht "

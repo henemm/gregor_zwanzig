@@ -13,7 +13,7 @@ Keine I/O, keine Mutation der Eingaben — reine Aufloesungsfunktion.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
@@ -29,12 +29,10 @@ logger = logging.getLogger(__name__)
 # TripReportConfig entfernt — kein RENDER_NEUTRAL-Eintrag mehr noetig.
 RENDER_EFFECTIVE_FIELDS: tuple[str, ...] = (
     "email_format",
-    "show_outlook",
     "show_stage_stats",
     "show_stability",
     "show_compact_summary",
     "show_yesterday_comparison",
-    "multi_day_trend_reports",
     # Issue #1361 / ADR-0035 (S1b, gemeinsames Tagesfenster Trip + Vergleich):
     # das konfigurierte Tagesfenster erreicht den Render-Pfad
     # (trip_report.py:108-111 -> day_window.resolve_configured_window) und
@@ -46,7 +44,7 @@ RENDER_EFFECTIVE_FIELDS: tuple[str, ...] = (
     "day_window_end_hour",
 )
 
-# Die uebrigen 19 TripReportConfig-Felder — begruendet nach Kategorie
+# Die uebrigen (seit #3237: 21) TripReportConfig-Felder — begruendet nach Kategorie
 # (Spec-Tabelle "RENDER_NEUTRAL — 20 Felder, kategorisiert und begruendet";
 # seit #1224 nur noch 19, show_daylight entfernt).
 RENDER_NEUTRAL: dict[str, str] = {
@@ -82,6 +80,11 @@ RENDER_NEUTRAL: dict[str, str] = {
     "show_highlights": "Seit #790 in render_email() **_ignored absorbiert, strukturell wirkungslos.",
     "daily_summary_metrics": "Seit #790 in render_email() **_ignored absorbiert, strukturell wirkungslos.",
     "show_metrics_summary": "Seit #790 in render_email() **_ignored absorbiert, strukturell wirkungslos.",
+    # Issue #3237: Altfelder des Ausblicks. Ob und in welchen Briefings der
+    # Ausblick erscheint, steht allein in der Tabelle "Was steht wo"
+    # (``placements.outlook_reports``/Haken Ausblick); Feld entfaellt in #3277.
+    "show_outlook": "Altfeld seit #3237: der Ausblick folgt allein der Tabelle 'Was steht wo'.",  # i18n-log
+    "multi_day_trend_reports": "Altfeld seit #3237: 'Ausblick erscheint im' steht in placements.outlook_reports.",  # i18n-log
     # Issue #1306: unklassifiziertes Feld aus der Rot-Triage (#1211b).
     "telegram_style": (
         "Steuert den Telegram-Kurzstil-Kanal (#1260: 'rich'|'kurzform'), "  # i18n-log
@@ -125,72 +128,23 @@ def resolve_report_render_options(
     - `report_config is None` → alle Toggles an (bisheriges Default-Verhalten),
       `email_format="full"`.
     - `display_config is None` → `build_default_display_config()`.
-    - `show_multi_day_trend`: mit rc die Regel der Umrechnung
-      (`_legacy_outlook_reports`, #3155: `show_outlook: false` und leere
-      `outlook_metrics` = aus, Kompakt nach `multi_day_trend_reports`), ohne
-      rc dc.multi_day_trend_reports, sonst `["evening"]`.
+    - `show_multi_day_trend`: allein das View-Model der Tabelle (#3122 Nr. 6,
+      #3237); `show_outlook`/`multi_day_trend_reports` wirken nicht.
 
     Reine Funktion — mutiert weder `report_config` noch `display_config`.
     """
     from app.metric_catalog import build_default_display_config
 
     dc = display_config if display_config is not None else build_default_display_config()
-
-    bisher = _options_bisher(report_config, dc, report_type)
-    if not _hat_tabelle(dc):
-        return bisher
-    # #3122 (Spec Nr. 6): mit Tabelle steuert den 3-Tages-Ausblick allein das
-    # View-Model (Briefing-Typ in ``outlook_reports``, mindestens eine
-    # Metrik); ``show_outlook``/``multi_day_trend_reports`` wirken nicht, die
-    # Grosswetterlage haengt allein an ``show_stability``.
     ausblick = bool(resolve_trip_view(report_config, dc, report_type).outlook)
-    return replace(bisher, show_outlook=True, show_multi_day_trend=ausblick)
-
-
-def _options_bisher(
-    report_config: Optional["TripReportConfig"],
-    dc: "UnifiedWeatherDisplayConfig",
-    report_type: str,
-) -> ReportRenderOptions:
-    """Bisheriger Pfad (Abos ohne Tabelle ``placements``)."""
-    if report_config is None:
-        return ReportRenderOptions(
-            email_format="full",
-            show_outlook=True,
-            show_stage_stats=True,
-            show_stability=True,
-            show_compact_summary=True,
-            show_multi_day_trend=report_type in (dc.multi_day_trend_reports or ["evening"]),
-            show_yesterday_comparison=True,
-            display_config=dc,
-        )
-
-    # #3155 (Spec B4 Nr. 1): der 3-Tages-Ausblick folgt auch ohne Tabelle der
-    # einen Regel der Umrechnung (``_legacy_outlook_reports``, samt Kompakt-
-    # Ausnahme) -- so wirkt er in allen vier Ausgaben gleich, und die Karte
-    # "Was steht wo" zeigt dieselben Schalter. ``show_outlook`` steuert danach
-    # nur noch die Grosswetterlage.
-    from services.placements import _legacy_outlook_reports
-
-    ausblick_reports, _stabilitaet_aus = _legacy_outlook_reports(
-        dc, "trip", report_config, None, None)
+    rc = report_config  # None: alle Toggles an, "full" (getattr-Vorgabe)
     return ReportRenderOptions(
-        email_format=report_config.email_format,
-        show_outlook=report_config.show_outlook,
-        show_stage_stats=report_config.show_stage_stats,
-        show_stability=report_config.show_stability,
-        show_compact_summary=report_config.show_compact_summary,
-        show_multi_day_trend=report_type in ausblick_reports,
-        show_yesterday_comparison=report_config.show_yesterday_comparison,
-        display_config=dc,
+        email_format=getattr(rc, "email_format", "full"), show_outlook=True,
+        show_multi_day_trend=ausblick, display_config=dc,
+        **{f: getattr(rc, f, True) for f in (
+            "show_stage_stats", "show_stability", "show_compact_summary",
+            "show_yesterday_comparison")},
     )
-
-
-def _hat_tabelle(display_config: object) -> bool:
-    """#3122: traegt das Abo eine lesbare Tabelle ``placements``?"""
-    from services.placements import read_placements
-
-    return read_placements(getattr(display_config, "placements", None)) is not None
 
 
 def trip_enabled_reports(report_config: Optional["TripReportConfig"]) -> tuple[str, ...]:
@@ -254,8 +208,7 @@ class CompareRenderOptions:
     # Groesse `{kennung: True}` aus `view.hourly[].format`; `None` = alles Roh.
     hourly_metric_formats: Optional[dict] = None
     # Issue #1703 Scheibe 8: kanal-eigene Auswahl der UEBERSICHTSTABELLE, je
-    # Kanal bereits gegen die Grundauswahl geschnitten (ADR-0050 Regel 1/2 ueber
-    # `resolve_channel_enabled_metrics`). Keys: "email"/"telegram"/"sms" --
+    # Kanal aus der Tabelle "Was steht wo" (#3122/#3237). Keys: "email"/"telegram"/"sms" --
     # Compare-Briefing kennt strukturell nur diese drei (ADR-0049): Premium-SMS
     # ist seit #2275 auch im Vergleich Briefing-Kanal, hat aber keine eigene
     # Metrik-Auswahl -- sie sendet den fertig gerenderten SMS-Text.
@@ -266,17 +219,15 @@ class CompareRenderOptions:
         default_factory=dict
     )
     # Issue #1405 S3: je Kanal die Anzahl GEWAEHLTER Eintraege ohne Renderer-
-    # Zuordnung (Grundauswahl + Kanal-eigene, dedupliziert). Zentral nicht
+    # Zuordnung (Grundauswahl, dedupliziert). Zentral nicht
     # waehlbare und vom Kanal abgewaehlte Groessen zaehlen nicht. Die Renderer
     # zeigen die Zahl (Hinweiszeile bzw. SMS-Zaehler `?N`), statt sie nur zu
     # loggen. Lesestelle: `.get(kanal, 0)` (fehlender Eintrag = nichts fehlt).
     unresolved_by_channel: dict[str, int] = field(default_factory=dict)
     # Issue #3039 (ADR-0119): je Kanal die geordneten Zeilen samt Format aus
-    # `display_config.channel_layouts` als `(renderer_id, einfach)`. BEWUSST
-    # ADDITIV: `enabled_metrics_by_channel` traegt dieselbe Reihenfolge ohne
-    # Format. `None` je Kanal = keine `channel_layouts`-Liste -- Auswahl und
-    # Reihenfolge kommen dann aus `channel_active_metrics` bzw. der
-    # Grundauswahl, das Format ist der heutige Festzustand (Bestand).
+    # der Tabelle als `(renderer_id, einfach)`. BEWUSST ADDITIV:
+    # `enabled_metrics_by_channel` traegt dieselbe Reihenfolge ohne Format.
+    # `None` je Kanal = Festzustand (nur Aufrufer ohne Resolver).
     channel_rows_by_channel: dict[str, Optional[list[tuple[str, bool]]]] = field(
         default_factory=dict
     )
@@ -314,7 +265,8 @@ def resolve_compare_render_options(
     View-Model des Kanal-Listen-Resolvers. Er bekommt dafuer die Abo-Angaben
     (Briefing-Typ ``report_type`` des Versand-Slots, eingeschaltete Briefings,
     ``hourly_enabled``, ``outlook_enabled``); ``report_type=None`` (Vorschau)
-    heisst "irgendein Typ". Abos ohne ``placements`` behalten ihr Ergebnis.
+    heisst "irgendein Typ". Abos ohne ``placements`` lesen die Tabelle aus
+    ihrer Grundauswahl (#3237).
     - `corridors`: Issue #1231, Slice 7 — TOP-LEVEL Preset-Feld `corridors`,
       geparst ueber den defensiven Trip-Parser `_corridor_from_dict`.
 
@@ -331,35 +283,23 @@ def resolve_compare_render_options(
         hourly_enabled=bool(hourly_schalter),
         outlook_enabled=bool(preset.get("outlook_enabled", True)),
     )
-    # Spalten-Legende: im bisherigen Pfad nennt sie die Stundenspalten auch bei
-    # abgeschaltetem Block (Bestand, #2136) -- dieselbe Aufloesung ohne
-    # Schalter. Mit Tabelle (``view.rows`` gefuellt) folgt sie allein
-    # ``view.hourly``: Block entfaellt = kein Rest in der Legende.
-    spalten = view.hourly or (() if view.rows else resolve_channel_lists(
-        display_config, "compare", report_type, **abo).hourly)
-    hourly = _compare_hourly(view.hourly, spalten, hourly_schalter)
-    # Issue #3039/#3057: Kanal-Zeilen samt Format nur fuer Layout-Kanaele.
+    hourly = _compare_hourly(view.hourly, view.hourly, hourly_schalter)
+    # Issue #3039/#3057: Kanal-Zeilen samt Format je Metrik-Kanal.
     # ADR-0049: nur Metrik-/Layout-Kanaele -- Premium-SMS sendet den SMS-Text.
     kanaele = ("email", "telegram", "sms")
     channel_rows = {
-        ch: ([(rid, z.format == "simplified") for rid, z in orte_renderer_zeilen(getattr(view, ch))]
-             if ch in view.layout_channels else None)
+        ch: [(rid, z.format == "simplified") for rid, z in orte_renderer_zeilen(getattr(view, ch))]
         for ch in kanaele
     }
-    # Issue #1405 S3: Hinweiszaehler -- Grundauswahl ueber die Resolver-Hilfe;
-    # eine Kanal-Altliste zaehlt nur, wo der Kanal sie noch liest (#3039).
-    unaufloesbar = grundauswahl(display_config, "compare", report_type).unaufloesbar
-    channel_raw = display_config.get("channel_active_metrics")
+    # Issue #1405 S3: Hinweiszaehler -- Grundauswahl ueber die Resolver-Hilfe.
+    unaufloesbar = len(dict.fromkeys(
+        grundauswahl(display_config, "compare", report_type).unaufloesbar))
     return CompareRenderOptions(
         **hourly,
         corridors=_compare_corridors(preset) or None,
         **_compare_outlook(view.outlook),
         enabled_metrics_by_channel={ch: orte_renderer_ids(getattr(view, ch)) for ch in kanaele},
-        unresolved_by_channel={
-            ch: _channel_unresolved_count(
-                unaufloesbar, channel_raw if channel_rows[ch] is None else None, ch)
-            for ch in kanaele
-        },
+        unresolved_by_channel={ch: unaufloesbar for ch in kanaele},
         channel_rows_by_channel=channel_rows,
     )
 
@@ -444,17 +384,3 @@ def _compare_corridors(preset: dict) -> list:
         except (KeyError, TypeError, ValueError, AttributeError):
             logger.warning("Compare-Preset %s: ungueltiger Korridor %r uebersprungen", preset_id, raw)
     return corridors
-
-
-def _channel_unresolved_count(
-    global_unresolved: tuple[str, ...], channel_raw: object, channel: str,
-) -> int:
-    """Issue #1405 S3: Anzahl unmappbarer Eintraege fuer EINEN Kanal --
-    Grundauswahl plus Kanal-eigene Auswahl, dedupliziert nach Kennung."""
-    from output.renderers.compare_metric_ids import resolve_enabled_metrics_report
-
-    names = dict.fromkeys(global_unresolved)
-    if isinstance(channel_raw, dict) and channel in channel_raw:
-        _resolved, own = resolve_enabled_metrics_report(channel_raw.get(channel))
-        names.update(dict.fromkeys(own))
-    return len(names)

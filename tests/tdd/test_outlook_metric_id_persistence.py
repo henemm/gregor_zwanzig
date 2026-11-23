@@ -6,7 +6,8 @@ KONTEXT: docs/context/feat-1848-a2-outlook-kennungen.md (M5, R-A2-3, R-A2-4)
 
 Geprueft wird der ECHTE Python-Speicherweg (``save_trip`` -> Datei ->
 ``load_trip``) auf einem isolierten Datenverzeichnis (``tmp_path``) und die
-daraus aufgeloeste Auswahl (``resolve_trip_outlook_metrics``). Kein Zugriff
+geladene Auswahl; seit #3237 wirkt das Altfeld nicht mehr (die Ausgabe
+liest die Tabelle "Was steht wo", ``_aufgeloest``). Kein Zugriff
 auf ``data/``, kein Netz, kein Mock-Framework.
 
 🔴 Warum die Drei-Werte-Faelle (AC-7) jeweils MIT Gegenprobe stehen: 'nie
@@ -131,11 +132,19 @@ def _gespeichert_und_geladen(auswahl, tmp_path, user_id=None, *, trip_id=None):
 
 
 def _aufgeloest(dc, report_type: str = "evening"):
-    from output.renderers.compare_outlook_metric_ids import (
-        resolve_trip_outlook_metrics,
-    )
+    """Ausblick-Spalten, wie die Ausgabe sie liest. #3237: allein aus der
+    Tabelle "Was steht wo" (ohne Tabelle: Grundauswahl-Tabelle); das
+    Altfeld ``outlook_metrics`` wird weiter gespeichert und geladen (bis
+    #3277), wirkt aber nicht mehr (frueher ``resolve_trip_outlook_metrics``)."""
+    from services.channel_list_resolver import resolve_channel_lists
 
-    return resolve_trip_outlook_metrics(dc, report_type)
+    return [z.metric_id for z in resolve_channel_lists(dc, "trip", report_type).outlook]
+
+
+def _ohne_altfeld(dc):
+    import dataclasses
+
+    return dataclasses.replace(dc, outlook_metrics=None)
 
 
 # ---------------------------------------------------------------------------
@@ -209,12 +218,11 @@ def test_ac2_altform_paare_werden_beim_laden_zu_je_einer_kennung(tmp_path):
         "Auswahl und erzeugt zwei Spalten."
     )
 
-    aufgeloest = _kennungen(_aufgeloest(geladen.display_config))
-    assert aufgeloest == ["temperature", "precipitation"], (
-        f"Die aufgeloeste Auswahl lautet {aufgeloest!r} statt "
-        "['temperature', 'precipitation'] — die Altform kommt bis in den "
-        "Renderpfad als zwei Temperatur-Eintraege durch (AC-2)."
-    )
+    # #3237: das geladene Altfeld wirkt nicht -- die Ausgabe zeigt dieselben
+    # Ausblick-Spalten wie ohne Altfeld (AC-6 #3237), Temperatur genau einmal.
+    aufgeloest = _aufgeloest(geladen.display_config)
+    assert aufgeloest == _aufgeloest(_ohne_altfeld(geladen.display_config)), aufgeloest
+    assert aufgeloest.count("temperature") == 1, aufgeloest
 
 
 # ---------------------------------------------------------------------------
@@ -264,14 +272,13 @@ def test_ac7a_nie_gewaehlte_auswahl_bleibt_abwesend_und_bleibt_von_gewaehlter_tr
         "'nie gewaehlt' und 'gewaehlt' nicht mehr trennen."
     )
 
-    gewaehlt, _, _ = _gespeichert_und_geladen(list(KENNUNGEN), tmp_path)
-    aufgeloest = _aufgeloest(gewaehlt.display_config)
-    assert _kennungen(aufgeloest) == KENNUNGEN, (
-        f"Eine gefuellte Kennungsauswahl loest zu {aufgeloest!r} auf statt zu "
-        f"{KENNUNGEN!r}. Damit ist 'gewaehlt' nicht mehr von 'nie gewaehlt' "
-        "bzw. 'bewusst geleert' zu trennen — genau der stille Fehlerpfad "
-        "R-A2-3/M5 (AC-7)."
-    )
+    # #3237: "gewaehlt" bleibt in der Datei von "nie gewaehlt" trennbar
+    # (Gegenprobe am gespeicherten Feld); die Wirkung der Auswahl liegt in der
+    # Tabelle, das Altfeld aendert die Ausgabe nicht.
+    gewaehlt, g_user, g_trip = _gespeichert_und_geladen(list(KENNUNGEN), tmp_path)
+    assert _rohes_display_config(tmp_path, g_user, g_trip).get("outlook_metrics") == KENNUNGEN
+    assert _aufgeloest(gewaehlt.display_config) == _aufgeloest(
+        _ohne_altfeld(gewaehlt.display_config))
 
 
 def test_ac7b_bewusst_geleerte_auswahl_bleibt_abgeschaltet_und_bleibt_von_gewaehlter_trennbar(tmp_path):
@@ -291,19 +298,16 @@ def test_ac7b_bewusst_geleerte_auswahl_bleibt_abgeschaltet_und_bleibt_von_gewaeh
         f"In der Datei steht {roh.get('outlook_metrics')!r} statt [] — die "
         "bewusste Leerauswahl hat den Roundtrip nicht ueberlebt (AC-7)."
     )
-    assert _aufgeloest(geleert.display_config) == [], (
-        "Die bewusst geleerte Auswahl loest zu "
-        f"{_aufgeloest(geleert.display_config)!r} statt zu [] auf — der Block "
-        "muesste abgeschaltet bleiben (AC-7)."
-    )
+    # #3237: "Ausblick aus" steht in der Tabelle (an keiner Ausblick-Stelle ein
+    # Haken bzw. ``outlook_reports: []``); das Altfeld ``[]`` schaltet nichts
+    # mehr ab (frueher: Aufloesung ``[]``).
+    assert _aufgeloest(geleert.display_config) == _aufgeloest(
+        _ohne_altfeld(geleert.display_config))
 
-    gewaehlt, _, _ = _gespeichert_und_geladen(list(KENNUNGEN), tmp_path)
-    aufgeloest = _aufgeloest(gewaehlt.display_config)
-    assert aufgeloest, (
-        f"Eine gefuellte Kennungsauswahl {KENNUNGEN!r} loest zu {aufgeloest!r} "
-        "auf — zeichengleich zur bewusst geleerten Auswahl. 'Unaufloesbar' "
-        "und 'bewusst geleert' duerfen nie denselben Zustand erzeugen, sonst "
-        "schaltet eine gueltige Auswahl den Ausblick ab (AC-7, R-A2-3)."
+    gewaehlt, g_user, g_trip = _gespeichert_und_geladen(list(KENNUNGEN), tmp_path)
+    assert _rohes_display_config(tmp_path, g_user, g_trip).get("outlook_metrics") == KENNUNGEN, (
+        "Gegenprobe: eine gefuellte Auswahl ist in der Datei von der bewusst "
+        "geleerten trennbar (AC-7)."
     )
 
 
@@ -327,8 +331,10 @@ def test_ac10_zwei_nutzer_sehen_ausschliesslich_die_eigene_ausblick_auswahl(tmp_
     a_trip, _, a_trip_id = _gespeichert_und_geladen(a_auswahl, tmp_path, a_id)
     b_trip, _, b_trip_id = _gespeichert_und_geladen(b_auswahl, tmp_path, b_id)
 
-    a_sicht = _kennungen(_aufgeloest(a_trip.display_config))
-    b_sicht = _kennungen(_aufgeloest(b_trip.display_config))
+    # #3237: gespeichert und geladen wird je Nutzer die eigene Auswahl (das
+    # Altfeld; seine Wirkung liegt in der Tabelle, s. ``_aufgeloest``).
+    a_sicht = _kennungen(a_trip.display_config.outlook_metrics)
+    b_sicht = _kennungen(b_trip.display_config.outlook_metrics)
 
     assert a_sicht == a_auswahl, (
         f"Nutzer A sieht {a_sicht!r} statt seiner eigenen Auswahl "

@@ -20,9 +20,9 @@ func TestPlacementsRoutenAmEchtenRouter(t *testing.T) {
 	var kernAnfragen, erstanlage []*url.URL
 	kern := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/placements/erstanlage") {
-			// #3154: Begleitfeld-Abfrage des PUT (eigene Mitschrift).
+			// #3237: Tabellen-Abfrage der Anlage (eigene Mitschrift).
 			erstanlage = append(erstanlage, r.URL)
-			_, _ = w.Write([]byte(`{"show_stability_off": false}`))
+			_, _ = w.Write([]byte(`{"placements": {"version": 1, "rows": [], "outlook_reports": ["evening"]}}`))
 			return
 		}
 		kernAnfragen = append(kernAnfragen, r.URL)
@@ -98,8 +98,8 @@ func TestPlacementsRoutenAmEchtenRouter(t *testing.T) {
 	if roh, _ := os.ReadFile(datei); !strings.Contains(string(roh), `"placements"`) {
 		t.Errorf("PUT hat placements nicht in die Abo-Datei geschrieben")
 	}
-	if len(erstanlage) != 1 || erstanlage[0].Query().Get("user_id") != "userA" {
-		t.Errorf("Begleitfeld-Abfrage beim Kern: %v", erstanlage)
+	if len(erstanlage) != 0 {
+		t.Errorf("PUT fragt den Kern nicht mehr nach Begleitfeldern (#3237): %v", erstanlage)
 	}
 	req2 := httptest.NewRequest(http.MethodPut, pfad, strings.NewReader(`{"version": 1, "rows": []}`))
 	req2.Header.Set("Content-Type", "application/json")
@@ -109,5 +109,21 @@ func TestPlacementsRoutenAmEchtenRouter(t *testing.T) {
 	r.ServeHTTP(w2, req2)
 	if w2.Code != http.StatusPreconditionFailed {
 		t.Errorf("PUT mit veraltetem Stempel: Status %d, erwartet 412", w2.Code)
+	}
+
+	// #3237: die Anlage am echten Router fragt den Kern (PythonCoreURL aus der
+	// Konfiguration) mit der user_id der Anmeldung und schreibt die Tabelle.
+	body := `{"id": "p-neu", "name": "Neu", "stages": [{"id": "S1", "name": "D1", "date": "2026-08-01",
+		"waypoints": [{"id": "W1", "name": "P", "lat": 47.0, "lon": 11.0, "elevation_m": 500}]}]}`
+	if w := doBriefingRequest(t, r, http.MethodPost, "/api/trips?user_id=userB", []byte(body), cookieA); w.Code != http.StatusCreated {
+		t.Fatalf("POST /api/trips: %d %s", w.Code, w.Body.String())
+	}
+	if len(erstanlage) != 1 || erstanlage[0].Path != "/api/briefings/p-neu/placements/erstanlage" ||
+		erstanlage[0].Query().Get("user_id") != "userA" || erstanlage[0].Query().Get("kind") != "route" {
+		t.Errorf("Tabellen-Abfrage der Anlage beim Kern: %v", erstanlage)
+	}
+	neu, _ := os.ReadFile(filepath.Join(s.DataDir, "users", "userA", "briefings", "p-neu.json"))
+	if !strings.Contains(string(neu), `"outlook_reports"`) {
+		t.Errorf("Anlage hat die Kern-Tabelle nicht geschrieben: %s", neu)
 	}
 }

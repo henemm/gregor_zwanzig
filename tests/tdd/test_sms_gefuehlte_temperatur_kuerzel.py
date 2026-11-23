@@ -46,7 +46,6 @@ from tests.tdd._einstellung_auslieferung_fixtures import (
     TZ,
     _local_to_utc,
     golden_dict,
-    render_golden,
     render_trip_dict,
     segment,
 )
@@ -58,9 +57,15 @@ pytestmark = pytest.mark.filterwarnings("ignore")
 
 
 def _texte_a_b(monkeypatch) -> dict:
-    """{sms, premium_sms, telegram_kurzform} aus den UNVERAENDERTEN Goldens."""
-    mit_b, _ = render_golden(monkeypatch, "golden_b")
-    mit_a, _ = render_golden(monkeypatch, "golden_a")
+    """{sms, premium_sms, telegram_kurzform} aus den UNVERAENDERTEN Goldens.
+    #3237: deren Kanal-Listen wirken nur als Tabelle "Was steht wo"
+    (``trip_wunsch_als_tabelle``, Folge = SMS-Layout)."""
+    from tests.helpers.tabelle_aus_wunsch import trip_wunsch_als_tabelle
+
+    mit_b, _ = render_trip_dict(monkeypatch, trip_wunsch_als_tabelle(golden_dict("golden_b")),
+                                name="golden_b")
+    mit_a, _ = render_trip_dict(monkeypatch, trip_wunsch_als_tabelle(golden_dict("golden_a")),
+                                name="golden_a")
     kurz = [s for s in mit_a.sendungen("telegram") if s["parse_mode"] is None]
     assert kurz, "Vorbedingung: golden_a muss die Telegram-Kurzform senden"
     return {
@@ -317,7 +322,10 @@ def test_ac2_kuerzung_tf_faellt_als_erstes_der_komfort_angaben():
 def _variante_beide_aktiv() -> dict:
     """golden_b mit Eltern-Metrik ``wind_chill`` UND Kind ``wind_chill_day_low``
     (FL) ausdruecklich aktiv -- im SMS-Layout und im globalen Maximum (Kaskade:
-    Kanal <= global). ``day_high``/``night`` bleiben ausdruecklich abgewaehlt."""
+    Kanal <= global). ``day_high``/``night`` bleiben ausdruecklich abgewaehlt.
+    #3237: die Auswahl steht als Tabelle "Was steht wo" (Stelle ``sms``)."""
+    from tests.helpers.tabelle_aus_wunsch import trip_wunsch_als_tabelle
+
     d = golden_dict("golden_b")
     dc = d["display_config"]
     for liste in (dc["channel_layouts"]["sms"], dc["metrics"]):
@@ -326,6 +334,12 @@ def _variante_beide_aktiv() -> dict:
                 m["enabled"] = True
                 m["bucket"] = "primary"
                 m["order"] = 9
+    d = trip_wunsch_als_tabelle(d)
+    an = {"wind_chill": True, "wind_chill_day_low": True,
+          "wind_chill_day_high": False, "wind_chill_night": False}
+    for z in d["display_config"]["placements"]["rows"]:
+        if z["metric_id"] in an:
+            z["places"]["sms"] = an[z["metric_id"]]
     return d
 
 

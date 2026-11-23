@@ -19,9 +19,12 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"reflect"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -63,6 +66,14 @@ func tripBody3237(id string, extraDC map[string]interface{}) string {
 	return string(buf)
 }
 
+// festeOrteID3237: die Orte-Anlage vergibt die Kennung serverseitig
+// (newComparePresetID, Test-Naht #2359); fuer die Pfad-/Dateipruefung fest.
+func festeOrteID3237(t *testing.T, id string) {
+	orig := newComparePresetID
+	newComparePresetID = func() string { return id }
+	t.Cleanup(func() { newComparePresetID = orig })
+}
+
 func orteBody3237(id string) string {
 	body := orteBody3155("Orte 3237", slots3155(true, false))
 	body["id"] = id
@@ -96,14 +107,17 @@ func TestAnlage3237TripUndOrteSchreibenKernTabelleZweiNutzer(t *testing.T) {
 	}
 	for _, f := range faelle {
 		t.Run(f.name, func(t *testing.T) {
+			festeOrteID3237(t, f.id)
 			s := newTestStore(t)
 			kern := neuerErstanlageKern(t, http.StatusOK, []byte(kernTabelle3237))
 			r := anlageRouter3237(s, kern.srv.URL)
+			antworten := map[string][]byte{}
 			for _, nutzer := range []string{"a3237", "b3237"} {
 				w := doReq(r, http.MethodPost, f.pfad+"?user_id=fremd", f.body(f.id), "", nutzer)
 				if w.Code != http.StatusCreated {
 					t.Fatalf("%s POST: %d %s", nutzer, w.Code, w.Body.String())
 				}
+				antworten[nutzer] = w.Body.Bytes()
 			}
 			if len(kern.anfragen) != 2 {
 				t.Fatalf("Kern %d-mal gefragt, erwartet einmal je Anlage", len(kern.anfragen))
@@ -118,6 +132,18 @@ func TestAnlage3237TripUndOrteSchreibenKernTabelleZweiNutzer(t *testing.T) {
 				}
 				if got := gespeicherteTabelle3237(t, s, nutzer, f.id); !reflect.DeepEqual(got, kernSoll3237(t)) {
 					t.Errorf("%s: gespeicherte Tabelle %#v, erwartet die Kern-Antwort", nutzer, got)
+				}
+			}
+			// F005 (Adversary Lauf 2): auch der Antwort-Rumpf (201) traegt die
+			// Kern-Tabelle, die Oberflaeche zeigt sie ohne zweiten Abruf.
+			for nutzer, rumpf := range antworten {
+				var antwort map[string]interface{}
+				if err := json.Unmarshal(rumpf, &antwort); err != nil {
+					t.Fatalf("%s: Antwort kein JSON: %v", nutzer, err)
+				}
+				dc, _ := antwort["display_config"].(map[string]interface{})
+				if got, _ := dc["placements"].(map[string]interface{}); !reflect.DeepEqual(got, kernSoll3237(t)) {
+					t.Errorf("%s: Antwort-Rumpf placements %#v, erwartet die Kern-Antwort", nutzer, dc["placements"])
 				}
 			}
 		})
@@ -171,6 +197,7 @@ func TestAnlage3237KernNichtErreichbarAnlageBleibtGueltig(t *testing.T) {
 		{"/api/trips", "t3237", tripBody3237("t3237", nil)},
 		{"/api/compare/presets", "o3237", orteBody3237("o3237")},
 	} {
+		festeOrteID3237(t, f.id)
 		s := newTestStore(t)
 		r := anlageRouter3237(s, "http://127.0.0.1:1")
 		if w := doReq(r, http.MethodPost, f.pfad, f.body, "", "a3237"); w.Code != http.StatusCreated {
@@ -204,5 +231,156 @@ func TestAnlage3237PutFragtKernNichtMehrNachBegleitfeldern(t *testing.T) {
 	nachher := roheDatei(t, aboDatei(s, "a3237", "alt"))
 	if !reflect.DeepEqual(nachher["report_config"], vorher["report_config"]) {
 		t.Errorf("report_config veraendert: %#v", nachher["report_config"])
+	}
+}
+
+// F003 (Adversary Lauf 3): die Tabellen-Abfrage laeuft unter dem nutzerweiten
+// Quoten-Lock; ihr Standardwert muss kurz sein (hoechstens 5 s), sonst blockiert
+// ein haengender Kern jede weitere Anlage/Loeschung desselben Nutzers lange.
+func TestAnlage3237ZeitgrenzeStandardwertHoechstensFuenfSekunden(t *testing.T) {
+	if placementsErstanlageTimeout <= 0 {
+		t.Fatalf("placementsErstanlageTimeout = %s: ohne Zeitgrenze haengt die Anlage", placementsErstanlageTimeout)
+	}
+	if placementsErstanlageTimeout > 5*time.Second {
+		t.Errorf("placementsErstanlageTimeout = %s, erwartet <= 5s (laeuft unter dem Quoten-Lock)",
+			placementsErstanlageTimeout)
+	}
+}
+
+// F004 (Adversary Lauf 2): haengt der Kern, begrenzt placementsErstanlageTimeout
+// die Anlage. Die Antwort kommt nach der (im Test verkuerzten) Zeitgrenze
+// zurueck, die Anlage bleibt gueltig (201, Abo gespeichert, keine erfundenen
+// Zeilen). Ohne Zeitgrenze wartete die Anlage, bis der Kern aufgibt.
+func TestAnlage3237HaengenderKernZeitgrenzeBeendetAnlage(t *testing.T) {
+	orig := placementsErstanlageTimeout
+	placementsErstanlageTimeout = 100 * time.Millisecond
+	t.Cleanup(func() { placementsErstanlageTimeout = orig })
+	freigabe := make(chan struct{})
+	kern := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-freigabe:
+		case <-time.After(5 * time.Second):
+		}
+		_, _ = w.Write([]byte(kernTabelle3237))
+	}))
+	// Reihenfolge: erst den Kern freigeben, dann schliessen (Close wartet auf offene Anfragen).
+	t.Cleanup(kern.Close)
+	t.Cleanup(func() { close(freigabe) })
+	for _, f := range []struct{ pfad, id, body string }{
+		{"/api/trips", "t3237h", tripBody3237("t3237h", nil)},
+		{"/api/compare/presets", "o3237h", orteBody3237("o3237h")},
+	} {
+		festeOrteID3237(t, f.id)
+		s := newTestStore(t)
+		r := anlageRouter3237(s, kern.URL)
+		start := time.Now()
+		w := doReqWithin(t, 2*time.Second, r, http.MethodPost, f.pfad, f.body, "", "a3237")
+		if w.Code != http.StatusCreated {
+			t.Fatalf("%s: Anlage bei haengendem Kern %d %s, erwartet 201", f.pfad, w.Code, w.Body.String())
+		}
+		if d := time.Since(start); d > time.Second {
+			t.Errorf("%s: Anlage brauchte %s, Zeitgrenze 100ms greift nicht", f.pfad, d)
+		}
+		if _, err := os.Stat(aboDatei(s, "a3237", f.id)); err != nil {
+			t.Errorf("%s: Abo nicht gespeichert: %v", f.pfad, err)
+		}
+		if tab := gespeicherteTabelle3237(t, s, "a3237", f.id); tab != nil {
+			if _, hatRows := tab["rows"]; hatRows {
+				t.Errorf("%s: nach Zeitueberschreitung darf keine Tabelle stehen: %#v", f.pfad, tab)
+			}
+		}
+	}
+}
+
+// F001 (Adversary Lauf 5): placements OHNE rows (nur die Ausblick-Marke oder
+// leer) gelten nicht als mitgeschickte Tabelle. Die Anlage fragt den Kern genau
+// einmal, schreibt dessen rows und gibt sie im Antwort-Rumpf zurueck. Die Marke
+// outlook_reports liegt im Moment der Kern-Abfrage im gespeicherten Abo (der
+// Kern liest sie dort, anlage_outlook_reports) -- Go wirft sie nicht vorher weg.
+// Der Test-Kern merkt sich nur, was auf der Platte steht; keine Fachlogik.
+func TestAnlage3237TabelleOhneRowsFragtKernMarkeBleibt(t *testing.T) {
+	arten := []struct {
+		name, pfad, id string
+		body           func(id string, tab map[string]interface{}) string
+	}{
+		{"trip", "/api/trips", "t3237r", func(id string, tab map[string]interface{}) string {
+			return tripBody3237(id, map[string]interface{}{"placements": tab})
+		}},
+		{"orte", "/api/compare/presets", "o3237r", func(id string, tab map[string]interface{}) string {
+			body := orteBody3155("Orte 3237 ohne rows", slots3155(true, false))
+			body["id"] = id
+			body["display_config"].(map[string]interface{})["placements"] = tab
+			buf, _ := json.Marshal(body)
+			return string(buf)
+		}},
+	}
+	eingaben := []struct {
+		name  string
+		tab   map[string]interface{}
+		marke interface{}
+	}{
+		{"nur_marke", map[string]interface{}{"outlook_reports": []interface{}{"morning"}}, []interface{}{"morning"}},
+		{"leer", map[string]interface{}{}, nil},
+	}
+	for _, a := range arten {
+		for _, e := range eingaben {
+			t.Run(a.name+"_"+e.name, func(t *testing.T) {
+				festeOrteID3237(t, a.id)
+				s := newTestStore(t)
+				var (
+					mu         sync.Mutex
+					anfragen   int
+					beimKern   map[string]interface{}
+					hatteDatei bool
+				)
+				kern := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					mu.Lock()
+					defer mu.Unlock()
+					anfragen++
+					if data, err := os.ReadFile(aboDatei(s, "a3237", a.id)); err == nil {
+						hatteDatei = true
+						var abo map[string]interface{}
+						if json.Unmarshal(data, &abo) == nil {
+							dc, _ := abo["display_config"].(map[string]interface{})
+							beimKern, _ = dc["placements"].(map[string]interface{})
+						}
+					}
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(kernTabelle3237))
+				}))
+				t.Cleanup(kern.Close)
+				r := anlageRouter3237(s, kern.URL)
+				w := doReq(r, http.MethodPost, a.pfad, a.body(a.id, e.tab), "", "a3237")
+				if w.Code != http.StatusCreated {
+					t.Fatalf("POST: %d %s", w.Code, w.Body.String())
+				}
+				mu.Lock()
+				defer mu.Unlock()
+				if anfragen != 1 {
+					t.Fatalf("Kern %d-mal gefragt, erwartet genau einmal (placements ohne rows ist keine Tabelle)", anfragen)
+				}
+				if !hatteDatei {
+					t.Fatalf("Abo lag bei der Kern-Abfrage nicht auf der Platte")
+				}
+				if got := beimKern["outlook_reports"]; !reflect.DeepEqual(got, e.marke) {
+					t.Errorf("Marke outlook_reports beim Kern %#v, erwartet %#v", got, e.marke)
+				}
+				got := gespeicherteTabelle3237(t, s, "a3237", a.id)
+				if !reflect.DeepEqual(got, kernSoll3237(t)) {
+					t.Errorf("gespeicherte Tabelle %#v, erwartet die Kern-Antwort", got)
+				}
+				if rows, _ := got["rows"].([]interface{}); len(rows) == 0 {
+					t.Errorf("gespeicherte Tabelle ohne rows: %#v", got)
+				}
+				var antwort map[string]interface{}
+				if err := json.Unmarshal(w.Body.Bytes(), &antwort); err != nil {
+					t.Fatalf("Antwort kein JSON: %v", err)
+				}
+				dc, _ := antwort["display_config"].(map[string]interface{})
+				if p, _ := dc["placements"].(map[string]interface{}); !reflect.DeepEqual(p, kernSoll3237(t)) {
+					t.Errorf("Antwort-Rumpf placements %#v, erwartet die Kern-Antwort", dc["placements"])
+				}
+			})
+		}
 	}
 }

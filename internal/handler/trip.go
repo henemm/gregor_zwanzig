@@ -189,7 +189,10 @@ func writeSaveError(w http.ResponseWriter, r *http.Request, err error) {
 	WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 }
 
-func CreateTripHandler(s *store.Store) http.HandlerFunc {
+// CreateTripHandler: POST /api/trips. pythonURL: Python-Kern fuer die
+// Anlage-Tabelle "Was steht wo" (anlageTabelle, Issue #3275/#3237); leer =
+// keine Abfrage (Tests ohne Kern).
+func CreateTripHandler(s *store.Store, pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		var trip model.Trip
@@ -307,6 +310,7 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 			writeSaveError(w, r, err)
 			return
 		}
+		anlageTabelle(r, s, pythonURL, briefingKindRoute, trip.ID, &trip.DisplayConfig)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(201)

@@ -16,21 +16,21 @@ GR20 E3: 18–20°C, feels 12–13°C, moderate rain max 11:00, moderate wind 20
   Sun 4.0h
 
 ━━ Segment 1: km 0.0–0.0 | 11:00–14:00 | ↑400m → 1200m ━━
-  Time   Temp   Feels   Wind   Gust   Rain   Thdr   SnowL   Cloud   Sun 
-  -----  -----  ------  -----  -----  -----  -----  ------  ------  ----
-  11     17.7   11.8    16     39     2.5    none   –       ⛅       –   
-  12     18.0   12.0    17     40     0.0    none   –       ⛅       –   
-  13     18.3   12.2    18     41     0.0    none   –       ⛅       –   
-  14     18.6   12.4    18     42     0.0    none   –       ⛅       –   
+  Time   Temp   Feels   Wind       Gust          Rain       Thdr   SnowL   Cloud   Sun 
+  -----  -----  ------  ---------  ------------  ---------  -----  ------  ------  ----
+  11     17.7   11.8    moderate   strong        moderate   none   –       ⛅       –   
+  12     18.0   12.0    moderate   very strong   dry        none   –       ⛅       –   
+  13     18.3   12.2    moderate   very strong   dry        none   –       ⛅       –   
+  14     18.6   12.4    moderate   very strong   dry        none   –       ⛅       –   
 
 ━━ Segment 2: km 0.0–0.0 | 14:00–18:00 | ↑400m → 1200m ━━
-  Time   Temp   Feels   Wind   Gust   Rain   Thdr   SnowL   Cloud   Sun 
-  -----  -----  ------  -----  -----  -----  -----  ------  ------  ----
-  14     18.6   12.4    18     42     0.0    none   –       ⛅       –   
-  15     18.9   12.6    18     43     0.0    none   –       ⛅       –   
-  16     19.2   12.8    19     44     0.0    none   –       ⛅       –   
-  17     19.5   13.0    20     45     0.0    none   –       ⛅       –   
-  18     19.8   13.2    20     46     0.0    none   –       ⛅       –   
+  Time   Temp   Feels   Wind       Gust          Rain   Thdr   SnowL   Cloud   Sun 
+  -----  -----  ------  ---------  ------------  -----  -----  ------  ------  ----
+  14     18.6   12.4    moderate   very strong   dry    none   –       ⛅       –   
+  15     18.9   12.6    moderate   very strong   dry    none   –       ⛅       –   
+  16     19.2   12.8    moderate   very strong   dry    none   –       ⛅       –   
+  17     19.5   13.0    moderate   very strong   dry    none   –       ⛅       –   
+  18     19.8   13.2    moderate   very strong   dry    none   –       ⛅       –   
 
 
 ── Reply commands ──

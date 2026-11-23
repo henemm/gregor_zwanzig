@@ -14,12 +14,11 @@ package handler
 //       Objekt, Inhalt ungeprueft, ADR-0077). Read-Modify-Write schreibt nur
 //       dieses Feld (store.SaveBriefingPlacements). If-Match wie beim Abo:
 //       veralteter Stand -> 412 precondition_failed, nichts wird geschrieben.
-//       Issue #3154 F002: bei kind=route fragt der PUT unter derselben Sperre
-//       den Kern (GET .../placements/erstanlage), ob das Speichern die
-//       Grosswetterlage einschalten wuerde (erstes Speichern, show_outlook
-//       false, nicht Kompakt); dann schreibt er report_config.show_stability
-//       =false im selben Vorgang mit. Kern nicht erreichbar -> 502, nichts
-//       wird geschrieben (sonst aenderte sich die Ausgabe unbemerkt).
+//       Issue #3237: der PUT fragt den Kern nicht (frueheres Begleitfeld
+//       show_stability_off entfallen); report_config bleibt unveraendert.
+//   Anlage (POST Trip/Orte, anlageTabelle): nach dem Speichern fragt Go den
+//       Kern (GET .../placements/erstanlage) nach der vollen Tabelle aus der
+//       Grundauswahl und schreibt sie per Read-Modify-Write (#3275/#3237).
 //
 // Die Rumpfgrenze setzt die globale LimitBody-Middleware wie fuer alle Routen.
 
@@ -28,6 +27,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -107,38 +107,62 @@ func BriefingPlacementsGetHandler(s *store.Store, pythonURL string) http.Handler
 	}
 }
 
-// placementsErstanlageTimeout: Zeitgrenze der Begleitfeld-Abfrage beim Kern
-// (reine Umrechnung, kein Wetterabruf). Paket-`var` fuer Tests.
-var placementsErstanlageTimeout = 30 * time.Second
+// placementsErstanlageTimeout: Zeitgrenze der Tabellen-Abfrage (Paket-`var`).
+// Kurz (5 s), weil anlageTabelle unter dem nutzerweiten Quoten-Lock laeuft
+// (trip.go/compare_preset.go `defer s.LockQuota()()`): ein haengender Kern
+// blockiert sonst jede weitere Anlage/Loeschung des Nutzers. Fail-soft: ohne
+// Antwort bleibt die Anlage gueltig (Grundauswahl-Tabelle beim Lesen).
+var placementsErstanlageTimeout = 5 * time.Second
 
-// placementsStabilitaetAus fragt den Kern, ob das Speichern der Tabelle
-// report_config.show_stability=false mitschreiben muss (#3154 F002). Die
-// Regel kennt allein die Umrechnung placements_from_legacy; Orte haben keine
-// Grosswetterlage und fragen nicht. Zweiter Wert false = Antwort geschrieben.
-func placementsStabilitaetAus(w http.ResponseWriter, r *http.Request, pythonURL, kind, id string) (bool, bool) {
-	if kind != briefingKindRoute {
-		return false, true
+// tabelleMitZeilen: display_config traegt schon placements.rows.
+func tabelleMitZeilen(dc map[string]interface{}) bool {
+	tab, ok := dc["placements"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+	_, hatRows := tab["rows"].([]interface{})
+	return hatRows
+}
+
+// anlageTabelle (#3275/#3237): nach der Anlage berechnet der Kern die volle
+// Tabelle aus der Grundauswahl DIESES Nutzers, Go schreibt sie per Read-
+// Modify-Write (unter der Briefing-Sperre, s per WithUser gebunden). Keine
+// Zeilen in Go; mitgeschickte rows bleiben; Kern-Fehler: Anlage bleibt
+// gueltig (ohne rows gilt dieselbe Grundauswahl-Tabelle). *dc (Antwort) folgt.
+func anlageTabelle(r *http.Request, s *store.Store, pythonURL, kind, id string, dc *map[string]interface{}) {
+	if pythonURL == "" || tabelleMitZeilen(*dc) {
+		return
 	}
 	query := appendUserID(url.Values{"kind": {kind}}.Encode(), middleware.UserIDFromContext(r.Context()))
 	ziel := pythonURL + "/api/briefings/" + url.PathEscape(id) + "/placements/erstanlage?" + query
 	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, ziel, nil)
-	if bailIf(w, r, err != nil, http.StatusInternalServerError, "proxy_error") {
-		return false, false
+	var resp *http.Response
+	if err == nil {
+		resp, err = (&http.Client{Timeout: placementsErstanlageTimeout}).Do(req)
 	}
-	resp, err := (&http.Client{Timeout: placementsErstanlageTimeout}).Do(req)
-	if bailIf(w, r, err != nil, http.StatusBadGateway, "upstream_unreachable") {
-		return false, false
+	if err != nil {
+		log.Printf("[anlage] Tabelle %s: Kern nicht erreichbar: %v", id, err)
+		return
 	}
 	defer resp.Body.Close()
 	var antwort struct {
-		ShowStabilityOff *bool `json:"show_stability_off"`
+		Placements json.RawMessage `json:"placements"`
 	}
-	dekodiert := json.NewDecoder(resp.Body).Decode(&antwort)
-	if bailIf(w, r, resp.StatusCode != http.StatusOK || dekodiert != nil || antwort.ShowStabilityOff == nil,
-		http.StatusBadGateway, "upstream_unreachable") {
-		return false, false
+	var tabelle map[string]interface{}
+	if resp.StatusCode != http.StatusOK || json.NewDecoder(resp.Body).Decode(&antwort) != nil ||
+		json.Unmarshal(antwort.Placements, &tabelle) != nil || tabelle == nil {
+		log.Printf("[anlage] Tabelle %s: Kern-Antwort unbrauchbar (Status %d)", id, resp.StatusCode)
+		return
 	}
-	return *antwort.ShowStabilityOff, true
+	// gz-store-scope-call: Hilfsfunktion, beide Anlage-Handler reichen den per WithUser gebundenen Store durch
+	if err := s.SaveBriefingPlacements(id, kind == briefingKindVergleich, antwort.Placements); err != nil {
+		log.Printf("[anlage] Tabelle %s: Speichern fehlgeschlagen: %v", id, err)
+		return
+	}
+	if *dc == nil {
+		*dc = map[string]interface{}{}
+	}
+	(*dc)["placements"] = tabelle
 }
 
 // BriefingPlacementsPutHandler: PUT /api/briefings/{id}/placements.
@@ -170,11 +194,7 @@ func BriefingPlacementsPutHandler(s *store.Store, pythonURL string) http.Handler
 		if !ok {
 			return
 		}
-		stabilitaetAus, ok := placementsStabilitaetAus(w, r, pythonURL, kind, id)
-		if !ok {
-			return
-		}
-		if err := s.SaveBriefingPlacements(id, kind == briefingKindVergleich, placements, stabilitaetAus); err != nil {
+		if err := s.SaveBriefingPlacements(id, kind == briefingKindVergleich, placements); err != nil {
 			if errors.Is(err, store.ErrNotFound) {
 				WriteError(w, r, http.StatusNotFound, "not_found", nil)
 				return

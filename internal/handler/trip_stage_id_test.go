@@ -19,7 +19,7 @@ func TestCreateTrip_EmptyStageID_AutoGenerates(t *testing.T) {
 
 	body := `{"id":"khw-test","name":"KHW","stages":[{"id":"","name":"Tag 1","date":"2026-05-04","waypoints":[{"id":"W1","name":"Start","lat":47.1,"lon":13.2,"elevation_m":800}]}]}`
 
-	h := CreateTripHandler(s)
+	h := CreateTripHandler(s, "")
 	req := httptest.NewRequest("POST", "/api/trips", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()

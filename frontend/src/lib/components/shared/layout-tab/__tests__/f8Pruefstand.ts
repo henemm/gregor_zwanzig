@@ -103,7 +103,7 @@ export function bausteineRendern(): string {
 		html(LTCutLine, { label: 'Telegram', platz: 8, context: 'route' }), // #3047 R8 F3
 		ausblick({ enabled: true, onEnabledChange: nix }),
 		ausblick({ title: '3-Tages-Vorschau', showEmailOnlyHint: false }),
-		html(MailInhaltCard, { reportConfig: { email_format: 'full', show_outlook: true } }),
+		html(MailInhaltCard, { reportConfig: { email_format: 'full', show_stability: true } }), // #3237 F002: Haken = show_stability
 		html(MailInhaltCard, { reportConfig: { email_format: 'compact' } }),
 		html(LayoutTabPruefstand, { context: 'route', channel: 'sms', colCount: 0, subjectLabel: 'Metriken', hasLabelColumn: false, catalog: KATALOG, buckets: leer }),
 		html(LayoutTabPruefstand, { context: 'route', channel: 'email', colCount: 9, subjectLabel: 'Metriken', hasLabelColumn: false, catalog: KATALOG, buckets: BUCKETS, hideDetailBucket: true })

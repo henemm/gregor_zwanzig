@@ -518,30 +518,30 @@ def test_legende_kuerzel_genau_der_sms_metriken_und_feste_eintraege(client):
 
 
 # ---------------------------------------------------------------------------
-# Altbestand: Ergebnis der Umrechnung
+# Abo ohne Tabelle: Tabelle aus der Grundauswahl (#3237, vorher Umrechnung)
 # ---------------------------------------------------------------------------
 
 def test_abo_ohne_tabelle_zeigt_die_umrechnung(client):
     from app.loader import get_data_root, load_trip
-    from services.placements import placements_from_legacy
+    from services.placements import placements_aus_grundauswahl
 
     _trip(NUTZER_A, "t-alt", grund=["wind", "gust", "precipitation"])
     antwort = _ok(client, "t-alt", "route")
     trip = load_trip("t-alt", data_dir=get_data_root(), user_id=NUTZER_A)
-    soll = placements_from_legacy(trip.display_config, "trip", report_config=trip.report_config,
-                                  enabled_reports=["morning", "evening"]).placements
+    soll = placements_aus_grundauswahl(trip.display_config, "trip",
+                                       enabled_reports=["morning", "evening"])
     assert antwort["stored"] is False
     assert antwort["placements"] == soll
     assert [z["metric_id"] for z in antwort["rows"]] == [r["metric_id"] for r in soll["rows"]]
 
 
 def test_orte_ohne_tabelle_zeigt_die_umrechnung(client):
-    from services.placements import placements_from_legacy
+    from services.placements import placements_aus_grundauswahl
 
     _orte(NUTZER_A, "o-alt", extra={"outlook_enabled": False})
     antwort = _ok(client, "o-alt", "vergleich")
-    soll = placements_from_legacy({"active_metrics": ORTE_GRUND}, "compare",
-                                  enabled_reports=["morning"], outlook_enabled=False).placements
+    soll = placements_aus_grundauswahl({"active_metrics": ORTE_GRUND}, "compare",
+                                       enabled_reports=["morning"], outlook_enabled=False)
     assert antwort["stored"] is False
     assert antwort["placements"] == soll
     assert antwort["outlook_reports"] == []

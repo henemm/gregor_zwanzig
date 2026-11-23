@@ -342,17 +342,26 @@ class TestAC6EveningReportNightAndThunderUnchangedOutsideDopplung:
         )
 
     def test_evening_show_outlook_false_keeps_thunder_and_night_block(self):
-        """Regressionsschutz: show_outlook=False -> Gewitter-Vorschau bleibt
+        """Regressionsschutz: Ausblick aus -> Gewitter-Vorschau bleibt
         sichtbar (kein aktiver Ausblick, keine Dopplung moeglich), Nacht-Block
-        bleibt unveraendert vorhanden. VOR und NACH dem Fix gruen."""
+        bleibt unveraendert vorhanden. VOR und NACH dem Fix gruen.
+
+        #3237: "Ausblick aus" steht in der Tabelle "Was steht wo"
+        (``outlook_reports: []``); das Altfeld ``show_outlook`` wirkt nicht
+        mehr."""
+        from app.metric_catalog import build_default_display_config
         from src.output.renderers.trip_report import TripReportFormatter
+        from tests.helpers.tabelle_aus_wunsch import tabelle
         from tests.tdd.test_issue_721_email_outlook import _trend_stage
         from tests.unit.test_renderers_email import _make_segment_weather
 
         seg = _make_segment_weather()
         trend = [_trend_stage(weekday="Di", name="E1", confidence_pct=80)]
         rc = TripReportConfig(trip_id="gr20", show_outlook=False)
+        dc = build_default_display_config()
+        dc.placements = tabelle(dc, "trip", outlook_reports=[])
         report = TripReportFormatter().format_email(
+            display_config=dc,
             segments=[seg],
             trip_name="GR20",
             report_type="evening",
@@ -366,8 +375,8 @@ class TestAC6EveningReportNightAndThunderUnchangedOutsideDopplung:
         assert "Nacht am Ziel" in report.email_html
         assert "Nacht am Ziel" in report.email_plain
         assert "Gewitter-Vorschau" in report.email_html, (
-            "Gewitter-Vorschau fehlt trotz show_outlook=False — Regression"
+            "Gewitter-Vorschau fehlt trotz abgeschaltetem Ausblick — Regression"
         )
         assert "Gewitter-Vorschau" in report.email_plain, (
-            "Gewitter-Vorschau fehlt trotz show_outlook=False — Regression"
+            "Gewitter-Vorschau fehlt trotz abgeschaltetem Ausblick — Regression"
         )

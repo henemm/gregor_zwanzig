@@ -75,6 +75,27 @@ def _orte_preset(*, stunden=("gust", "temperature", "precipitation"),
     return preset
 
 
+def _als_tabelle(daten: dict) -> dict:
+    """#3237: die per Altfeld beschriebene Einstellung (Kanal-Liste, Ausblick,
+    Formen) als Tabelle ``placements`` -- nur die Tabelle steuert Mail und
+    Soll; die Altfelder bleiben als Beschreibung im JSON und wirken nicht
+    (Muster ``tests/helpers/tabelle_aus_wunsch.py``)."""
+    from tests.helpers.tabelle_aus_wunsch import orte_wunsch_als_tabelle, trip_wunsch_als_tabelle
+
+    return orte_wunsch_als_tabelle(daten) if "location_ids" in daten else trip_wunsch_als_tabelle(daten)
+
+
+def _mit_folge(daten: dict, folge: list[str], surface: str, **kw) -> dict:
+    """#3237: Grundauswahl-Tabelle mit eigener Zeilenfolge (EINE Folge fuer
+    alle Stellen, ADR-0124); ``kw`` wie ``tabelle`` (``listen``, ``outlook_reports``)."""
+    from tests.helpers.tabelle_aus_wunsch import tabelle
+
+    neu = copy.deepcopy(daten)
+    dc = neu["display_config"]
+    dc["placements"] = tabelle(copy.deepcopy(dc), surface, folge=folge, **kw)
+    return neu
+
+
 # --------------------------------------------------------------------------- #
 # Mails aus der echten Kette
 # --------------------------------------------------------------------------- #
@@ -220,6 +241,25 @@ def _lauf(tmp_path, validator, eml, *args):
     return lauf.returncode, lauf.stdout + lauf.stderr
 
 
+#: Ampel-Groesse -> Feld des Datenpunkts (``fx._voller_datenpunkt``).
+_AMPEL_FELDER = {"wind": "wind10m_kmh", "gust": "gust_kmh", "precipitation": "precip_1h_mm",
+                 "rain_probability": "pop_pct"}
+
+
+def _ampel_rohwerte() -> list[str]:
+    """#3237: Pruefdaten ``--ampel-werte`` -- Rohwert je Ampel-Groesse und
+    Stunde der Etappen-Stundentabelle (08-12) aus derselben Fixture, aus der
+    ``_trip_eml`` die Mail baut. Die Mail selbst zeigt bei Einfach keine Zahl
+    (HTML Ampelpunkt, Klartext Wortstufe seit Spec #3122 Nr. 4); ohne
+    Rohwert meldet der Validator die Farbe als nicht pruefbar."""
+    from tests.tdd import _einstellung_auslieferung_fixtures as fx
+
+    dps = {dp.ts: dp for dp in fx.segment().timeseries.data}  # naive UTC
+    stunden = [dps[fx._local_to_utc(fx.DAY, h).replace(tzinfo=None)] for h in range(8, 13)]
+    return ["--ampel-werte", json.dumps({g: {"1": [getattr(dp, feld) for dp in stunden]}
+                                         for g, feld in _AMPEL_FELDER.items()})]
+
+
 # --------------------------------------------------------------------------- #
 # Trip (briefing_mail_validator)
 # --------------------------------------------------------------------------- #
@@ -270,15 +310,17 @@ def test_trip_klartext_ausblick_fehlt_scheitert(tmp_path, trip_mail):
 
 
 def test_trip_kompakt_ausblick_folge(monkeypatch, tmp_path):
-    daten = _trip_daten(_TRIP_FOLGE, email_format="compact")
+    # #3237: Ausblick Wind/Temp/Regen ueber die Tabelle; die Folge ist die EINE
+    # Zeilenfolge der Tabelle (Grundauswahl: Temp, Regen, Wind).
+    daten = _als_tabelle(_trip_daten(_TRIP_FOLGE, email_format="compact"))
     eml, konfig = _trip_eml(monkeypatch, daten), _konfig(tmp_path, "kompakt", daten)
     code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
     assert code == 0, aus
-    falsch = _aendere(eml, plain=lambda p: re.sub(r"(?m)^(\S+ +)Wind (.*?)  Temp (.*?)  ",
-                                                  r"\1Temp \3  Wind \2  ", p))
+    falsch = _aendere(eml, plain=lambda p: re.sub(r"(?m)^(\S+ +)Temp (.*?)  Rain (.*?)  ",
+                                                  r"\1Rain \3  Temp \2  ", p))
     code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
     assert code == 1, aus
-    assert "SOLL: Ausblick (Kompakt)" in aus and "steht 'Temp' statt 'Wind'" in aus, aus
+    assert "SOLL: Ausblick (Kompakt)" in aus and "steht 'Rain' statt 'Temp'" in aus, aus
 
 
 def test_trip_ausblick_nie_eingestellt_folgt_trip_reihenfolge(monkeypatch, tmp_path):
@@ -315,12 +357,14 @@ def test_orte_ortsfolge_vertauscht_scheitert(tmp_path, orte_mail):
 
 
 def test_orte_stundenspalten_vertauscht_scheitert(tmp_path, orte_mail):
+    # #3237: ohne Tabelle folgt der Stundenverlauf der Grundauswahl-Tabelle
+    # (Wind, Temp, Regen, Boeen), ``hourly_metrics`` wirkt nicht mehr.
     eml, konfig = orte_mail
-    falsch = _aendere(eml, plain=lambda p: re.sub(r"(?m)^(\s+\d{2}:\d{2}  )Gust (\S+)  Temp (\S+)",
-                                                  r"\1Temp \3  Gust \2", p))
+    falsch = _aendere(eml, plain=lambda p: re.sub(r"(?m)^(\s+\d{2}:\d{2}  )Wind (\S+)  Temp (\S+)",
+                                                  r"\1Temp \3  Wind \2", p))
     code, aus = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
     assert code == 1, aus
-    assert "SOLL: Stundenverlauf (Klartext)" in aus and "steht 'Temp' statt 'Gust'" in aus, aus
+    assert "SOLL: Stundenverlauf (Klartext)" in aus and "steht 'Temp' statt 'Wind'" in aus, aus
 
 
 def test_orte_vergleichszeile_fehlt_scheitert(tmp_path, orte_mail):
@@ -342,23 +386,27 @@ def test_orte_klartext_ausblick_fehlt_scheitert(tmp_path, orte_mail):
     assert "SOLL: Ausblick fehlt im Klartext-Teil" in aus, aus
 
 
-def test_orte_channel_layouts_vor_channel_active_metrics(monkeypatch, tmp_path):
-    """#3039 / F8: das Orte-Soll der Vergleichstabelle liest
-    ``channel_layouts.email`` (Folge Niederschlag, Wind, Temperatur; Boeen
-    ``enabled: false``) VOR ``channel_active_metrics.email`` (Wind, Temperatur,
-    Niederschlag). Die so gebaute Mail ist gruen; die Mail des Presets ohne
-    ``channel_layouts`` scheitert gegen diese Konfiguration mit Zeilenname."""
-    preset = _orte_preset()
-    preset["display_config"]["channel_layouts"] = {"email": [
-        {"metric_id": "precipitation", "enabled": True},
-        {"metric_id": "gust", "enabled": False},
-        {"metric_id": "wind", "enabled": True, "use_friendly_format": False},
-        {"metric_id": "temperature", "enabled": True},
-    ]}
+def test_orte_tabelle_bestimmt_die_vergleichstabelle(monkeypatch, tmp_path):
+    """#3039 / F8, seit #3237 ueber die Tabelle: das Orte-Soll der
+    Vergleichstabelle liest die E-Mail-Haken und die Folge der Tabelle
+    (Niederschlag, Wind, Temperatur; Boeen aus). Die so gebaute Mail ist gruen;
+    die Mail des Presets ohne Tabelle (Grundauswahl Wind, Temperatur, ...)
+    scheitert gegen diese Konfiguration mit Zeilenname. (Die fruehere
+    Kaskade ``channel_layouts`` vor ``channel_active_metrics`` ist entfernt.)"""
+    def _preset(folge: tuple) -> dict:
+        preset = _orte_preset()
+        preset["display_config"]["channel_layouts"] = {"email": [
+            {"metric_id": m, "enabled": m != "gust",
+             **({"use_friendly_format": False} if m == "wind" else {})} for m in folge]}
+        return _als_tabelle(preset)
+
+    preset = _preset(("precipitation", "gust", "wind", "temperature"))
     konfig = _orte_konfig(tmp_path, preset, "layout")
     code, aus = _lauf(tmp_path, ORTE, _orte_eml(monkeypatch, preset), "--konfig", konfig)
     assert code == 0, aus
-    code, aus = _lauf(tmp_path, ORTE, _orte_eml(monkeypatch, _orte_preset()), "--konfig", konfig)
+    # dieselben Zeilen in anderer Folge (Wind, Temperatur, Niederschlag; Boeen aus)
+    andere = _preset(("wind", "temperature", "precipitation", "gust"))
+    code, aus = _lauf(tmp_path, ORTE, _orte_eml(monkeypatch, andere), "--konfig", konfig)
     assert code == 1, aus
     assert "SOLL: Vergleichstabelle Zeilen (HTML)" in aus, aus
     assert "SOLL: Vergleichstabelle Zeilen (Klartext)" in aus, aus
@@ -379,7 +427,10 @@ def test_orte_altbestand_ausblick_klartext_wie_html(monkeypatch, tmp_path):
 # --------------------------------------------------------------------------- #
 def test_orte_zwei_gueltige_folgen_ohne_konfig_beide_gruen_mit_konfig_nur_passende(
         monkeypatch, tmp_path):
-    a, b = _orte_preset(), _orte_preset(stunden=("precipitation", "gust", "temperature"))
+    # #3237: die zweite gueltige Folge steht in der Tabelle (EINE Zeilenfolge),
+    # ``hourly_metrics`` wirkt nicht mehr.
+    a = _orte_preset()
+    b = _mit_folge(a, ["precipitation", "gust", "temperature", "wind"], "compare")
     mail_a, mail_b = _orte_eml(monkeypatch, a), _orte_eml(monkeypatch, b)
     for mail in (mail_a, mail_b):
         code, aus = _lauf(tmp_path, ORTE, mail)
@@ -422,18 +473,9 @@ def test_orte_stunden_schnitt_mit_grundauswahl(monkeypatch, tmp_path):
     assert "SOLL: Stundenverlauf (HTML)" in aus and "Spalte zu viel: 'Gust'" in aus, aus
 
 
-def test_orte_stunden_leerer_schnitt_rueckfall(monkeypatch, tmp_path):
-    """Punkt 1: gespeicherte Liste ganz ausserhalb der Grundauswahl -> Vorgabe
-    der Stundenspalten geschnitten mit der Grundauswahl (Temp, Wind, Boeen,
-    Regen), nicht die gespeicherten Sicht/UV."""
-    preset = _orte_preset(stunden=("visibility", "uv_index"))
-    eml = _orte_eml(monkeypatch, preset)
-    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", _orte_konfig(tmp_path, preset, "s3"))
-    assert code == 0, aus
-    falsch = _aendere(eml, plain=lambda p: re.sub(r"(?m)^(\s+\d{2}:\d{2}  )Temp (\S+)  Wind (\S+)",
-                                                  r"\1Wind \3  Temp \2", p))
-    code, aus = _lauf(tmp_path, ORTE, falsch, "--konfig", _orte_konfig(tmp_path, preset, "s3"))
-    assert code == 1 and "steht 'Wind' statt 'Temp'" in aus, aus
+# #3237: ``test_orte_stunden_leerer_schnitt_rueckfall`` entfernt -- der
+# Schnitt-Rueckfall einer ``hourly_metrics``-Liste ganz ausserhalb der
+# Grundauswahl war reines Altpfad-Verhalten (Altfeld wirkt nicht mehr).
 
 
 def test_orte_stunden_nie_eingestellt_folgt_grundauswahl(monkeypatch, tmp_path):
@@ -512,7 +554,8 @@ def _trip_darstellung_daten() -> dict:
                                                         ("thunder", True)))]
     dc["outlook_metric_formats"] = {"wind": True, "precipitation": True, "gust": False,
                                     "cloud_total": False}
-    return daten
+    # #3237: Ausblick-Auswahl und -Formen wirken nur ueber die Tabelle.
+    return _als_tabelle(daten)
 
 
 @pytest.fixture
@@ -523,7 +566,7 @@ def darstellung_mail(monkeypatch, tmp_path):
 
 def test_trip_darstellung_roh_einfach_positiv(tmp_path, darstellung_mail):
     eml, konfig = darstellung_mail
-    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig, *_ampel_rohwerte())
     assert code == 0, aus
 
 
@@ -560,10 +603,11 @@ def test_trip_darstellung_ausblick_roh_statt_einfach_scheitert(tmp_path, darstel
     eml, konfig = darstellung_mail
     # #3260 S1b: die HTML-Einfach-Zelle ist jetzt der Ampelpunkt (Markup) --
     # die Verfaelschung ersetzt deshalb den GANZEN Zellinhalt durch die Zahl.
-    falsch = _aendere(eml, plain=lambda p: re.sub(r"Wind \S+  Gust", "Wind 20 km/h  Gust", p),
-                      html=lambda h: re.sub(
-                          r"(<tr>\s*<td[^>]*>(?:Di|Mi|Do)</td>\s*<td[^>]*>).*?(</td>)",
-                          r"\g<1>20 km/h\g<2>", h, flags=re.DOTALL))
+    # #3237: die Ausblick-Spalten folgen der EINEN Zeilenfolge der Tabelle
+    # (Wind steht nicht mehr vorn) -- die Verfaelschung trifft die Wind-Spalte
+    # ueber ihren Kopf.
+    falsch = _aendere(eml, plain=lambda p: re.sub(r"Wind \S+  Cloud", "Wind 20 km/h  Cloud", p),
+                      html=lambda h: _ausblick_html_zelle(h, "de", "Wind", "20 km/h"))
     code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
     assert code == 1, aus
     assert "SOLL: Darstellung Ausblick (Klartext)" in aus and "'Wind'" in aus, aus
@@ -593,7 +637,7 @@ def test_trip_ampel_einfach_klartext_wortstufe_positiv(tmp_path, ampel_einfach_m
     assert re.search(r"(?m)^  \d\d +\d+ +[\d.]+ +[a-zäöüß]+ +[a-zäöüß]+ +"
                      r"(sehr wahrscheinlich|unwahrscheinlich|wahrscheinlich|möglich)\s*$", text), (
         "Testaufbau: Regen/Wind/Regen-W. Einfach muessen im Klartext als Wort erscheinen")
-    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig, *_ampel_rohwerte())
     assert code == 0, aus
 
 
@@ -666,8 +710,10 @@ def test_orte_soll_ampelgroessen_einfach_nur_ampelpunkt_3156(metrik, modus, html
     Wort scheitert --, im Klartext die Wortstufe; Roh = Zahl in beiden Teilen.
     Exakter Vergleich: der allgemeine Einfach-Zweig liesse (Wort, Ampel) zu."""
     soll = _soll_modul()
-    dc = {"channel_layouts": {"email": [
-        {"metric_id": metrik, "enabled": True, "format_mode": modus}]}}
+    # #3237: die Form steht in der Tabelle (``formats.email``), nicht mehr im
+    # Altfeld ``channel_layouts``.
+    dc = {"placements": {"version": 1, "rows": [
+        {"metric_id": metrik, "places": {"email": True}, "formats": {"email": modus}}]}}
     paare = [(metrik, "max")]
     label = soll._uebersicht_labels(paare, "de")[0]
     formen = soll._orte_formen(dc, paare, "de")
@@ -696,7 +742,7 @@ def test_trip_fall_a_register_standard_positiv(monkeypatch, tmp_path, variante, 
     sieben festen Ausblick-Spalten zu scheitern."""
     daten = _trip_fall_a(variante, email_format)
     code, aus = _lauf(tmp_path, TRIP, _trip_eml(monkeypatch, daten),
-                      "--konfig", _konfig(tmp_path, f"a-{variante}-{email_format}", daten))
+                      "--konfig", _konfig(tmp_path, f"a-{variante}-{email_format}", daten), *_ampel_rohwerte())
     assert code == 0, aus
 
 
@@ -768,68 +814,13 @@ def test_trip_bewusst_leer_ausblick_erscheint_scheitert(monkeypatch, tmp_path):
 # --------------------------------------------------------------------------- #
 # Nachlieferung 3 (dritte Nachpruefung #3047, N1, N2, N4-N7)
 # --------------------------------------------------------------------------- #
-@pytest.mark.parametrize("grund_aus", [False, True], ids=["nur_fremd", "grund_ausdruecklich_aus"])
-def test_trip_kanal_liste_totalschnitt_volle_grundauswahl(monkeypatch, tmp_path, grund_aus):
-    """N1 (AC-10, Repro TF): die E-Mail-Liste traegt nur Luftfeuchte (in der
-    Grundauswahl abgewaehlt) als aktive Zeile -- auch wenn sie die Metriken der
-    Grundauswahl ausdruecklich ausschaltet -> die Mail zeigt die volle
-    Grundauswahl (``_clip_to_global_maximum``), das Soll ebenso. Totalschnitt
-    ist nicht "bewusst leer": gegen eine leere E-Mail-Liste ist dieselbe Mail
-    falsch."""
-    daten = _trip_daten(_TRIP_FOLGE)
-    daten["display_config"]["channel_layouts"] = {"email": [
-        {"metric_id": "humidity", "enabled": True, "bucket": "primary", "order": 0}] + (
-        [{"metric_id": m, "enabled": False, "bucket": "primary", "order": i + 1}
-         for i, m in enumerate(_TRIP_FOLGE)] if grund_aus else [])}
-    eml = _trip_eml(monkeypatch, daten)
-    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, "tf", daten))
-    assert code == 0, aus
-    leer = copy.deepcopy(daten)
-    leer["display_config"]["channel_layouts"] = {"email": []}
-    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, "tf-leer", leer))
-    assert code == 1 and "SOLL: Etappen-Stundentabelle (HTML) 1: Spalte zu viel" in aus, aus
-
-
-@pytest.mark.parametrize("email_format", ["full", "compact"])
-def test_trip_ausblick_totalschnitt_volle_grundauswahl(monkeypatch, tmp_path, email_format):
-    """N1 (AC-10, Repro TG, Mutation V04): gespeicherter Ausblick nur mit der
-    abgewaehlten Luftfeuchte -> volle Grundauswahl statt verschwindendem Block;
-    gegen den bewusst geleerten Ausblick (``[]``) ist dieselbe Mail falsch."""
-    daten = _trip_daten(_TRIP_FOLGE, ausblick=("humidity",), email_format=email_format)
-    eml = _trip_eml(monkeypatch, daten)
-    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, "tg", daten))
-    assert code == 0, aus
-    leer = _trip_daten(_TRIP_FOLGE, ausblick=(), email_format=email_format)
-    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, "tg-leer", leer))
-    teil = "Kompakt" if email_format == "compact" else "HTML"
-    assert code == 1 and f"SOLL: Ausblick ({teil}) erscheint" in aus, aus
-
-
-_ORTE_TOTALSCHNITT = {
-    "channel_layouts": ({"email": [{"metric_id": "humidity", "enabled": True}]},
-                        {"email": [{"metric_id": m, "enabled": False}
-                                   for m in ("wind", "temperature", "precipitation", "gust")]},
-                        "SOLL: Vergleichstabelle Zeilen (HTML) Block 1: Spalte zu viel"),
-    "channel_active_metrics": ({"email": ["humidity_avg_pct"]}, {"email": []},
-                               "SOLL: Vergleichstabelle Zeilen (HTML) Block 1: Spalte zu viel"),
-    "outlook_metrics": (["humidity"], [], "SOLL: Ausblick (HTML) erscheint"),
-}
-
-
-@pytest.mark.parametrize("feld", list(_ORTE_TOTALSCHNITT))
-def test_orte_totalschnitt_volle_grundauswahl(monkeypatch, tmp_path, feld):
-    """N1 (AC-10, Repro OF, Mutation V04): Kanal-Liste bzw. Ausblick ganz
-    ausserhalb der Grundauswahl -> volle Grundauswahl in der Mail und im Soll;
-    die bewusst leere Liste (alle aus bzw. ``[]``) verlangt dagegen nichts."""
-    total, leer, meldung = _ORTE_TOTALSCHNITT[feld]
-    preset = _orte_preset()
-    preset["display_config"][feld] = total
-    eml = _orte_eml(monkeypatch, preset)
-    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", _orte_konfig(tmp_path, preset, "of"))
-    assert code == 0, aus
-    preset["display_config"][feld] = leer
-    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", _orte_konfig(tmp_path, preset, "of-leer"))
-    assert code == 1 and meldung in aus, aus
+# #3237: entfernt (reines Altpfad-Verhalten, Schnitt-Rueckfall N1/AC-10):
+# ``test_trip_kanal_liste_totalschnitt_volle_grundauswahl``,
+# ``test_trip_ausblick_totalschnitt_volle_grundauswahl``,
+# ``test_orte_totalschnitt_volle_grundauswahl`` -- eine Kanal-/Ausblick-Liste
+# (``channel_layouts``/``channel_active_metrics``/``outlook_metrics``) ganz
+# ausserhalb der Grundauswahl fiel auf die volle Grundauswahl zurueck; die
+# Altfelder wirken nicht mehr, Mail und Soll folgen allein der Tabelle.
 
 
 def _orte_bewusst_leer(**schalter) -> dict:
@@ -884,7 +875,8 @@ def _orte_einfach(fmt: str = "simplified") -> dict:
     preset["display_config"]["channel_layouts"] = {"email": [
         {"metric_id": m, "enabled": True, "format": fmt}
         for m in ("wind", "temperature", "precipitation", "gust")]}
-    return preset
+    # #3237: die Form wirkt nur ueber die Tabelle (``formats.email``).
+    return _als_tabelle(preset)
 
 
 def test_orte_einfach_zeilen_kein_format_fehler(monkeypatch, tmp_path):
@@ -921,6 +913,8 @@ def test_trip_kompakt_ausblick_roh_einfach(monkeypatch, tmp_path):
     Wort bzw. die Mail gegen eine Roh-Konfiguration scheitern mit Spaltennamen."""
     daten = _trip_daten(_TRIP_FOLGE, email_format="compact")
     daten["display_config"]["outlook_metric_formats"] = {"wind": True, "precipitation": True}
+    # #3237: Ausblick-Formen nur ueber die Tabelle (``formats.outlook``).
+    daten = _als_tabelle(daten)
     eml = _trip_eml(monkeypatch, daten)
     konfig = _konfig(tmp_path, "n7", daten)
     code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
@@ -930,7 +924,7 @@ def test_trip_kompakt_ausblick_roh_einfach(monkeypatch, tmp_path):
         falsch = _aendere(eml, plain=lambda p, a=alt, n=neu: re.sub(a, n, p))
         code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
         assert code == 1 and "SOLL: Darstellung Ausblick (Kompakt)" in aus and spalte in aus, aus
-    roh = _konfig(tmp_path, "n7-roh", _trip_daten(_TRIP_FOLGE, email_format="compact"))
+    roh = _konfig(tmp_path, "n7-roh", _als_tabelle(_trip_daten(_TRIP_FOLGE, email_format="compact")))
     code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", roh)
     assert code == 1 and "SOLL: Darstellung Ausblick (Kompakt)" in aus and "'Wind'" in aus, aus
 
@@ -1002,38 +996,34 @@ def test_orte_en_ausblick_sonntag_kein_spaltenkuerzel(monkeypatch, tmp_path):
     assert code == 0, aus
 
 
-@pytest.mark.parametrize("liste", ["leer", "alle_aus"])
-def test_trip_leere_email_liste_mit_ausblick_besteht(monkeypatch, tmp_path, liste):
-    """F002: leere E-Mail-Liste (``[]`` bzw. alle ``enabled: false``) -- die Mail
-    hat keine Stundentabelle, aber den Ausblick. Der sichtbare Ausblick zaehlt;
-    "keine Wetterdaten-Tabelle sichtbar" ist dann kein Fehler. Gegen dieselbe
-    Konfiguration ohne Ausblick (``[]``) scheitert die Mail weiter."""
-    daten = _trip_daten(_TRIP_FOLGE)
-    daten["display_config"]["channel_layouts"] = {"email": [] if liste == "leer" else [
-        {"metric_id": m, "enabled": False, "bucket": "primary", "order": i}
-        for i, m in enumerate(_TRIP_FOLGE)]}
-    eml = _trip_eml(monkeypatch, daten)
-    konfig = _konfig(tmp_path, f"f002-{liste}", daten)
-    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
-    assert code == 0, aus
-    ohne = copy.deepcopy(daten)
-    ohne["display_config"]["outlook_metrics"] = []
-    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, f"f002o-{liste}", ohne))
-    assert code == 1 and "SOLL: Ausblick (HTML) erscheint" in aus, aus
+# #3237: ``test_trip_leere_email_liste_mit_ausblick_besteht`` entfernt -- die
+# Lage "keine Stundentabelle, aber Ausblick" entstand nur ueber das Altfeld
+# ``channel_layouts.email`` (leer bzw. alle aus); mit der Tabelle steht der
+# Ausblick nur bei Metriken mit E-Mail-Haken (Spec #3122 Teil A Nr. 3).
 
 
 def test_trip_ausblick_erwartet_aber_versteckt_scheitert(monkeypatch, tmp_path):
-    """F002 (Gegenprobe): ohne Stundentabellen muss der erwartete Ausblick bei
-    390px und 1000px sichtbar sein -- per ``display:none`` versteckt scheitert die Mail."""
-    daten = _trip_daten(_TRIP_FOLGE)
-    daten["display_config"]["channel_layouts"] = {"email": []}
+    """F002 (Gegenprobe): der laut Tabelle erwartete Ausblick muss bei 390px
+    und 1000px sichtbar sein -- per ``display:none`` versteckt scheitert die
+    Mail, obwohl die Stundentabellen sichtbar bleiben (die Sichtbarkeit der
+    Ausblick-Tabelle wird eigens geprueft, nicht ueber die Datentabellen).
+    #3237: frueher ohne Stundentabellen ueber das Altfeld
+    ``channel_layouts.email: []``; mit der Tabelle steht der Ausblick nur bei
+    Metriken mit E-Mail-Haken (Spec #3122 Teil A Nr. 3), die Lage "Ausblick
+    ohne Stundentabelle" gibt es nicht mehr."""
+    daten = _als_tabelle(_trip_daten(_TRIP_FOLGE))
+    assert daten["display_config"]["placements"]["rows"], "Testaufbau: Mail aus der Tabelle"
+    konfig = _konfig(tmp_path, "f002v", daten)
     eml = _trip_eml(monkeypatch, daten)
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
+    assert code == 0, aus
     falsch = _aendere(eml, html=lambda h: h.replace(
         '<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;border-top',
         '<table cellpadding="0" cellspacing="0" style="display:none;border-collapse:collapse;'
         'width:100%;border-top', 1))
-    code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", _konfig(tmp_path, "f002v", daten))
+    code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
     assert code == 1 and "Ausblick-Tabelle sichtbar" in aus, aus
+    assert "keine Wetterdaten-Tabelle sichtbar" not in aus, aus
 
 
 def _ohne_erste_stunden(p: str) -> str:
@@ -1174,7 +1164,7 @@ def test_trip_windrichtung_verschmolzen_einfach_positiv(monkeypatch, tmp_path):
     daten = _trip_windrichtung_daten(wind_einfach=True)
     eml = _trip_eml(monkeypatch, daten)
     konfig = _konfig(tmp_path, "f004p", daten)
-    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig, *_ampel_rohwerte())
     assert code == 0, aus
     falsch = _aendere(eml, html=lambda h: re.sub(r'(data-label="Wind"><span[^>]*></span>[^<]*?)W<',
                                                  r"\1O<", h))
@@ -1287,14 +1277,16 @@ def test_trip_ausblick_etappenname_aus_konfig_exakt_abgetrennt(monkeypatch, tmp_
     assert code == 0, aus
 
 
-def _orte_ausblick_formate() -> dict:
+def _orte_ausblick_formate(formate: bool = True) -> dict:
     """A3c: Ausblick Niederschlag/Wind/Temperatur/Boeen; Niederschlag und Boeen
-    Einfach, Wind Roh, Temperatur Einfach (ohne Einfach-Form im Ausblick)."""
+    Einfach, Wind Roh, Temperatur Einfach (ohne Einfach-Form im Ausblick).
+    ``formate=False``: dieselbe Auswahl ohne Formwunsch (Roh-Konfiguration).
+    #3237: als Tabelle (``formats.outlook``)."""
     preset = _orte_preset()
     preset["display_config"]["outlook_metrics"] = ["precipitation", "wind", "temperature", "gust"]
     preset["display_config"]["outlook_metric_formats"] = {
-        "precipitation": True, "wind": False, "temperature": True, "gust": True}
-    return preset
+        "precipitation": True, "wind": False, "temperature": True, "gust": True} if formate else {}
+    return _als_tabelle(preset)
 
 
 def _ausblick_html_zelle(h: str, lang: str, spalte: str, neu: str) -> str:
@@ -1335,8 +1327,7 @@ def test_orte_ausblick_roh_einfach(monkeypatch, tmp_path, lang):
         assert code == 1, aus
         for teil in ("HTML", "Klartext"):
             assert f"SOLL: Darstellung Ausblick ({teil})" in aus and f"Spalte '{spalte}'" in aus, aus
-    roh = copy.deepcopy(preset)
-    roh["display_config"]["outlook_metric_formats"] = {}
+    roh = _orte_ausblick_formate(formate=False)
     code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", _orte_konfig(tmp_path, roh, f"a3c-roh-{lang}"))
     assert code == 1 and "SOLL: Darstellung Ausblick" in aus and "Spalte 'Rain'" in aus, aus
 
@@ -1537,10 +1528,13 @@ def test_r7_trip_kompakt_ignoriert_bausteinschalter(monkeypatch, tmp_path):
 
 
 def test_r7_trip_show_outlook_aus_vollformat(monkeypatch, tmp_path):
-    """Mutation V14: ``show_outlook`` aus -> im Vollformat kein Ausblick."""
+    """Mutation V14: Ausblick aus -> im Vollformat kein Ausblick. #3237: "aus"
+    steht in der Tabelle (``outlook_reports: []``); ``show_outlook`` ist ein
+    Altfeld ohne Wirkung und bleibt nur als Beschreibung stehen."""
     daten = _trip_daten(_TRIP_FOLGE)
     aus_daten = copy.deepcopy(daten)
     aus_daten["report_config"]["show_outlook"] = False
+    aus_daten = _mit_folge(aus_daten, list(_TRIP_FOLGE), "trip", outlook_reports=[])
     konfig = _konfig(tmp_path, "oaus", aus_daten)
     code, aus = _lauf(tmp_path, TRIP, _trip_eml_r7(monkeypatch, aus_daten), "--konfig", konfig)
     assert code == 0, aus
@@ -1558,6 +1552,7 @@ def orte_darstellung_mail(monkeypatch, tmp_path):
         {"metric_id": "temperature", "enabled": True},
         {"metric_id": "precipitation", "enabled": True, "format": "simplified"},
         {"metric_id": "wind", "enabled": True, "use_friendly_format": False}]}
+    preset = _als_tabelle(preset)  # #3237: Formen nur ueber die Tabelle
     return _orte_eml(monkeypatch, preset), _orte_konfig(tmp_path, preset, "darst")
 
 
@@ -1714,7 +1709,7 @@ def test_r7_trip_altformat_ohne_order_register_prioritaet(monkeypatch, tmp_path,
     ids = ["gust", "precipitation", "temperature"]
     daten["display_config"]["metrics"] = ids if form == "zeichenketten" else [{"metric_id": m} for m in ids]
     eml, konfig = _trip_eml(monkeypatch, daten), _konfig(tmp_path, "alt", daten)
-    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig, *_ampel_rohwerte())
     assert code == 0, aus
     code, aus = _lauf(tmp_path, TRIP, _aendere(eml, html=lambda h: _tausche(h, ">Gust</th>", ">Rain</th>")),
                       "--konfig", konfig)
@@ -1932,17 +1927,21 @@ def _trip_ampel_daten(eigene_grenzen: bool = True) -> dict:
 
 
 def test_r7b_trip_ampelfarbe_folgt_den_grenzen(monkeypatch, tmp_path):
-    """Ampelpunkt (Einfach) gegen den Klartext-Wert derselben Stunde: die echte
-    Mail besteht; rot statt gruen scheitert; dieselbe Mail gegen die Vorlage
-    ohne eigene Grenzen (45 = orange) scheitert ebenso."""
+    """Ampelpunkt (Einfach) gegen den Rohwert derselben Stunde (Pruefdaten; die
+    Wortstufe im Klartext hat eine feste Skala und taugt nicht als Vergleich):
+    die echte Mail besteht; ohne Rohwert ist die Farbe nicht pruefbar und das
+    ist ein Befund (#3237, nie stilles Bestehen); rot statt gruen scheitert;
+    dieselbe Mail gegen die Vorlage ohne eigene Grenzen (45 = orange) ebenso."""
     daten = _trip_ampel_daten()
-    eml, konfig = _trip_eml(monkeypatch, daten), _konfig(tmp_path, "amp", daten)
-    code, text = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
+    eml, konfig, werte = _trip_eml(monkeypatch, daten), _konfig(tmp_path, "amp", daten), _ampel_rohwerte()
+    code, text = _lauf(tmp_path, TRIP, eml, "--konfig", konfig, *werte)
     assert code == 0, text
+    code, text = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
+    assert code == 1 and "SOLL: Ampelfarbe Etappen-Stundentabelle (HTML) 08:00 'Gust': kein Vergleichswert" in text, text
     falsch = _aendere(eml, html=lambda h: h.replace("background:#15803d;", "background:#a8104a;"))
-    code, text = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
+    code, text = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig, *werte)
     assert code == 1 and "SOLL: Ampelfarbe Etappen-Stundentabelle (HTML) 08:00 'Gust': red statt green" in text, text
-    code, text = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, "amp2", _trip_ampel_daten(False)))
+    code, text = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, "amp2", _trip_ampel_daten(False)), *werte)
     assert code == 1 and "'Gust': green statt orange" in text, text
 
 

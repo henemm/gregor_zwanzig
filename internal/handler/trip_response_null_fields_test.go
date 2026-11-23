@@ -35,7 +35,7 @@ func TestCreateTripHandler_ResponseHasEmptyListsNotNull(t *testing.T) {
 
 	body := `{"id":"probe-trip-2","name":"Probe Trip 2"}`
 
-	h := CreateTripHandler(s)
+	h := CreateTripHandler(s, "")
 	req := httptest.NewRequest("POST", "/api/trips", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()

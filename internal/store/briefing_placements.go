@@ -18,13 +18,8 @@ import (
 // (Trip bei vergleich=false, Orte-Abo bei vergleich=true) als Ganzes durch
 // placements (ein JSON-Objekt, ungeprueft, ADR-0077). Fehlt die Datei oder ist
 // sie von der anderen Art, liefert sie ErrNotFound und schreibt nichts.
-//
-// Issue #3154 F002 (Spec Nr. 8, AC-11): stabilitaetAus setzt im SELBEN
-// Schreibvorgang report_config.show_stability=false (Read-Modify-Write, kein
-// anderes Feld). Ob das noetig ist, entscheidet allein die Umrechnung des
-// Python-Kerns (erstes Speichern eines Trips mit show_outlook=false, nicht
-// Kompakt); der Store kennt die Regel nicht.
-func (s *Store) SaveBriefingPlacements(id string, vergleich bool, placements json.RawMessage, stabilitaetAus bool) error {
+// Schreibweg des Tabellen-PUT und der Anlage (Issue #3237).
+func (s *Store) SaveBriefingPlacements(id string, vergleich bool, placements json.RawMessage) error {
 	if err := s.requireUser(); err != nil {
 		return err
 	}
@@ -59,11 +54,6 @@ func (s *Store) SaveBriefingPlacements(id string, vergleich bool, placements jso
 		return err
 	}
 	doc["display_config"] = neu
-	if stabilitaetAus {
-		if err := stabilitaetAusSetzen(doc); err != nil {
-			return err
-		}
-	}
 	out, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
 		return err
@@ -72,24 +62,6 @@ func (s *Store) SaveBriefingPlacements(id string, vergleich bool, placements jso
 		return err
 	}
 	return writeFileLogged(path, out)
-}
-
-// stabilitaetAusSetzen schreibt report_config.show_stability=false und laesst
-// jeden anderen Schluessel von report_config wertgleich stehen.
-func stabilitaetAusSetzen(doc map[string]json.RawMessage) error {
-	rc := map[string]json.RawMessage{}
-	if raw, ok := doc["report_config"]; ok && string(raw) != "null" {
-		if err := json.Unmarshal(raw, &rc); err != nil {
-			return err
-		}
-	}
-	rc["show_stability"] = json.RawMessage("false")
-	neu, err := json.Marshal(rc)
-	if err != nil {
-		return err
-	}
-	doc["report_config"] = neu
-	return nil
 }
 
 // istVergleich: dieselbe Regel wie LoadTrip/LoadComparePreset -- nur

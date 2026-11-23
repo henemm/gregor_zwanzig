@@ -66,14 +66,15 @@ describe('AC-3/AC-4: genau eine Karte report-mail-content, in jeder Ansicht', ()
 		});
 
 		test(`startzustand_compact_aus_dem_blob__${baum}`, () => {
-			const html = versand(mobil, { email_format: 'compact', show_outlook: false });
+			// #3237 F002: der Haken "Grosswetterlage" folgt show_stability, nicht dem Altfeld show_outlook.
+			const html = versand(mobil, { email_format: 'compact', show_stability: false, show_outlook: true });
 			assert.equal(countTestid(html, 'report-compact-hint'), 1,
 				`${name}: Kompakt-Hinweis fehlt — der Startzustand der Karte kommt nicht beim Erzeugen aus dem Blob ` +
 					'(onMount laeuft im Server-Render nie).');
 			assert.ok(hatAttribut(checkboxInputTag(html, 'report-show-outlook'), 'disabled'),
-				`${name}: Schalter "Ausblick" im Kompakt-Modus nicht deaktiviert.`);
+				`${name}: Schalter "Grosswetterlage" im Kompakt-Modus nicht deaktiviert.`);
 			assert.ok(!hatAttribut(checkboxInputTag(html, 'report-show-outlook'), 'checked'),
-				`${name}: show_outlook=false wird nicht uebernommen.`);
+				`${name}: show_stability=false wird nicht uebernommen (Haken folgt show_stability).`);
 		});
 
 		test(`ausfuehrlich_ohne_hinweis__${baum}`, () => {

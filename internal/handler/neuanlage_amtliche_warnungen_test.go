@@ -71,7 +71,7 @@ func TestNeuanlageTrip_AmtlicheWarnungenBeidesAn_ZweiNutzer(t *testing.T) {
 				for k, v := range f.felder {
 					body[k] = v
 				}
-				neuanlagePost(t, s, "/api/trips", CreateTripHandler(s), uid, body)
+				neuanlagePost(t, s, "/api/trips", CreateTripHandler(s, ""), uid, body)
 				trip, err := s.WithUser(uid).LoadTrip("trip-p11")
 				if err != nil {
 					t.Fatalf("%s LoadTrip: %v", uid, err)
@@ -96,7 +96,7 @@ func TestNeuanlageVergleich_AmtlicheWarnungenBeidesAn_ZweiNutzer(t *testing.T) {
 				for k, v := range f.felder {
 					body[k] = v
 				}
-				neuanlagePost(t, s, "/api/compare/presets", CreateComparePresetHandler(s), uid, body)
+				neuanlagePost(t, s, "/api/compare/presets", CreateComparePresetHandler(s, ""), uid, body)
 				presets, err := s.WithUser(uid).LoadComparePresets()
 				if err != nil || len(presets) != 1 {
 					t.Fatalf("%s: erwartet genau 1 Preset, bekam %d (%v)", uid, len(presets), err)

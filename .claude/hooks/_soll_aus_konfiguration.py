@@ -47,8 +47,8 @@ Die Regeln sind das dokumentierte Produktverhalten:
 * 3-Tages-Ausblick je Briefing (#3155, Spec B4 AC-12): OB der Ausblick im
   Morgen- bzw. Abend-Briefing steht, entscheidet EINE Regel des Produkts --
   bewusst die echten Funktionen aus ``services.placements`` (Tabelle:
-  ``resolve_outlook_reports`` + ``outlook_applies``; sonst
-  ``_legacy_outlook_reports`` samt Orte-Anlage-Marke), nicht die Altfelder
+  ``resolve_outlook_reports`` + ``outlook_applies``; ohne ``rows`` die
+  Grundauswahl-Tabelle ``placements_aus_grundauswahl``, #3237), nicht die Altfelder
   ``show_outlook``/``multi_day_trend_reports`` (``ausblick_briefings``). Die
   Spec verlangt diese eine Stelle ausdruecklich (Ausnahme vom resolve-Verbot
   oben); nachgebaut waere sie eine zweite Regel, die still auseinanderlaeuft.
@@ -77,8 +77,7 @@ from app.metric_catalog import (  # noqa: E402
 )
 from i18n import t  # noqa: E402
 from output.renderers.compare_hourly_metric_ids import (  # noqa: E402
-    FRONTEND_TO_HOURLY_METRIC_ID, HOURLY_DEFAULT_METRIC_IDS, HOURLY_EXCLUDED_METRIC_IDS,
-    HOURLY_MERGE_ONLY_METRIC_IDS,
+    HOURLY_EXCLUDED_METRIC_IDS, HOURLY_MERGE_ONLY_METRIC_IDS,
 )
 from output.renderers.channel_layout import _PRIMARY_SLOTS, METRIC_PRIORITY  # noqa: E402
 from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG  # noqa: E402
@@ -272,45 +271,22 @@ def _felder_aus_form(mid: str, form: str) -> dict:
 
 
 def _mit_tabelle(liste: list[dict], dc: dict) -> list[dict]:
-    """Mit Tabelle ueberlagert ``formats.email`` die Altfelder der E-Mail-Liste."""
-    if not _hat_tabelle(dc):
-        return liste
+    """``formats.email`` der Tabelle (ohne Zeile: Katalog-Standard) ueberlagert
+    die Altfelder der E-Mail-Liste (#3218, #3237)."""
     return [{**e, **_felder_aus_form(e["metric_id"], _form(dc, e["metric_id"], "email"))}
             for e in liste]
 
 
 def _ausblick_formate(dc: dict, ids: list[str] | None) -> object:
-    """Ausblick-Formen: mit Tabelle ``formats.outlook``, sonst ``outlook_metric_formats``."""
-    if ids is None or not _hat_tabelle(dc):
-        return dc.get("outlook_metric_formats")
+    """Ausblick-Formen aus ``formats.outlook`` der Tabelle (#3218, #3237)."""
+    if ids is None:
+        return None
     return {m: _form(dc, m, "outlook") == "simplified" for m in ids}
 
 
 # --------------------------------------------------------------------------- #
 # Trip
 # --------------------------------------------------------------------------- #
-def _trip_email_liste(dc: dict, report: str) -> list[dict]:
-    """E-Mail-Liste der Kaskade, geschnitten und sortiert (ADR-0050, #1575)."""
-    grund = [e for e in _eintraege(dc.get("metrics")) if _waehlbar(e.get("metric_id"))]
-    erlaubt = {e["metric_id"] for e in grund if _an(e, report)}
-    pro_report = dc.get("channel_layouts_per_report") or {}
-    kanal = dc.get("channel_layouts") or {}
-    if isinstance(pro_report.get(report), dict) and "email" in pro_report[report]:
-        ebene = _eintraege(pro_report[report]["email"])
-    elif isinstance(kanal, dict) and "email" in kanal:
-        ebene = _eintraege(kanal["email"])
-    else:
-        return _sortiert([e for e in grund if _an(e, report)])
-    ebene = [e for e in ebene if _waehlbar(e.get("metric_id")) and _an(e, report)]
-    geschnitten = [e for e in ebene if e["metric_id"] in erlaubt] if grund else ebene
-    if ebene and not geschnitten:
-        # #3047 AC-10 (N1): eine nicht leere Liste ganz ausserhalb der
-        # Grundauswahl (Totalschnitt) -> die volle Grundauswahl. Eine bewusst
-        # leere (bzw. ganz ausgeschaltete) Liste bleibt leer.
-        return _sortiert([e for e in grund if _an(e, report)])
-    return _sortiert(geschnitten)
-
-
 def _wind_verschmolzen(liste: list[dict]) -> bool:
     """Windrichtung Einfach neben Wind: keine eigene WDir-Spalte, die Richtung
     steht in der Wind-Zelle (#435, ``_should_merge_wind_dir``)."""
@@ -328,28 +304,6 @@ def _trip_stundenspalten(liste: list[dict]) -> list[str]:
         if _REG[mid].col_label not in spalten:
             spalten.append(_REG[mid].col_label)
     return spalten
-
-
-def _ausblick(gespeichert: object, grundauswahl: list[str] | None) -> list[str] | None:
-    """Drei-Werte-Regel; ``None`` = feste Spalten."""
-    kennungen = None
-    if isinstance(gespeichert, list):
-        kennungen = []
-        for e in gespeichert:
-            mid = e.get("metric_id") if isinstance(e, dict) else e
-            if isinstance(mid, str) and mid not in kennungen:
-                kennungen.append(mid)
-        if kennungen:
-            kennungen = [m for m in kennungen if _ausblickfaehig(m)] or None
-    if kennungen == [] or grundauswahl == []:
-        # #3047 N2: bewusst leere Grundauswahl (bzw. keine ausblickfaehige
-        # Groesse darin) -> der Ausblick entfaellt, Trip und Orte gleich.
-        return []
-    if grundauswahl is None:
-        return kennungen
-    if kennungen is None:
-        return list(grundauswahl)
-    return [m for m in kennungen if m in grundauswahl] or list(grundauswahl)
 
 
 def _formen_stunden(liste: list[dict]) -> dict[str, dict]:
@@ -480,27 +434,25 @@ def ausblick_briefings(dc: object, surface: str, *, report_config: object = None
     """Je Briefing (morning/evening): steht der 3-Tages-Ausblick darin? Die EINE
     Regel des Produkts: mit Tabelle ``resolve_outlook_reports`` +
     ``outlook_applies`` (Briefing in ``outlook_reports`` und mindestens eine
-    Metrik an der Stelle "outlook"), sonst ``_legacy_outlook_reports``
-    (Trip: ``show_outlook``/Kompakt-Ausnahme/``multi_day_trend_reports``;
-    Orte: ``outlook_enabled``, Anlage-Marke ``placements.outlook_reports``)."""
+    Metrik an der Stelle "outlook"); ohne ``rows`` dieselbe Regel auf der
+    Grundauswahl-Tabelle (``placements_aus_grundauswahl``: Vorbelegung,
+    Orte-Anlage-Marke, ``outlook_enabled``), #3237. ``report_config`` wirkt
+    nicht mehr (``show_outlook``/``multi_day_trend_reports`` sind Altfelder)."""
     from services.channel_list_resolver import grundauswahl
     from services.placements import (
-        _feld, _legacy_outlook_reports, outlook_applies, read_placements, resolve_outlook_reports,
+        outlook_applies, placements_aus_grundauswahl, read_placements, resolve_outlook_reports,
         resolve_rows,
     )
 
-    stored = read_placements(_feld(dc, "placements"))
-    if stored is not None:
-        reports = resolve_outlook_reports(stored.outlook_reports, enabled_reports)
-        an = {}
-        for report in _REPORTS:
-            grund = grundauswahl(dc, surface, report)
-            rows = resolve_rows(stored.rows, grund.ids, surface, parents=grund.parents)
-            an[report] = outlook_applies(rows, reports, report)
-        return an
-    legacy, _stabilitaet = _legacy_outlook_reports(
-        dc, surface, report_config, enabled_reports, outlook_enabled)
-    return {report: report in legacy for report in _REPORTS}
+    stored = read_placements(_roh_placements(dc)) or read_placements(placements_aus_grundauswahl(
+        dc, surface, enabled_reports=enabled_reports, outlook_enabled=outlook_enabled))
+    reports = resolve_outlook_reports(stored.outlook_reports, enabled_reports)
+    an = {}
+    for report in _REPORTS:
+        grund = grundauswahl(dc, surface, report)
+        rows = resolve_rows(stored.rows, grund.ids, surface, parents=grund.parents)
+        an[report] = outlook_applies(rows, reports, report)
+    return an
 
 
 def trip_ausblick_briefings(trip: dict) -> tuple[dict[str, bool], bool]:
@@ -520,10 +472,25 @@ def trip_ausblick_briefings(trip: dict) -> tuple[dict[str, bool], bool]:
                               enabled_reports=trip_enabled_reports(rc)), tabelle
 
 
-def _hat_tabelle(dc: object) -> bool:
-    from services.placements import _feld, read_placements
+def _roh_placements(dc: object) -> object:
+    return dc.get("placements") if isinstance(dc, dict) else getattr(dc, "placements", None)
 
-    return read_placements(_feld(dc, "placements")) is not None
+
+def _hat_tabelle(dc: object) -> bool:
+    from services.placements import read_placements
+
+    return read_placements(_roh_placements(dc)) is not None
+
+
+def _mit_grundauswahl_tabelle(dc: dict, surface: str) -> dict:
+    """#3237 (AC-8): ohne ``rows`` gilt die Grundauswahl-Tabelle -- dieselbe
+    Quelle wie Anlage und Versand (``placements_aus_grundauswahl``, Haken und
+    Form wie heute ohne Einstellung); Altfelder wirken nicht."""
+    if _hat_tabelle(dc):
+        return dc
+    from services.placements import placements_aus_grundauswahl
+
+    return {**dc, "placements": placements_aus_grundauswahl(dc, surface)}
 
 
 #: Spec #3122 Nr. 5, von Hand: Fenster-Groessen (Tag/Nacht-Zeitfenster) haben
@@ -642,22 +609,16 @@ def _trip_aus_tabelle(dc: dict, grund: list[dict]) -> tuple[list[dict], list[str
 
 def trip_soll(trip: dict, report: str = "evening") -> dict:
     """Soll eines Trip-Briefings fuer ``report`` (morning/evening)."""
-    dc = _trip_display_config(trip)
+    dc = _mit_grundauswahl_tabelle(_trip_display_config(trip), "trip")
     grund = _sortiert([e for e in _eintraege(dc.get("metrics"))
                        if _waehlbar(e.get("metric_id")) and _an(e, report)])
-    grundauswahl = list(dict.fromkeys(
-        e["metric_id"] for e in grund if _ausblickfaehig(e["metric_id"])))
     rc = trip.get("report_config") or {}
-    if _hat_tabelle(dc):
-        liste, ids = _trip_aus_tabelle(dc, grund)
-    else:
-        liste = _trip_email_liste(dc, report)
-        # Bewusst leer: alle Zeilen abgewaehlt -> der Ausblick entfaellt.
-        ids = _ausblick(dc.get("outlook_metrics"), grundauswahl) if grundauswahl else []
-    # #3155 (AC-12): Ausblick je Briefing aus der EINEN Regel (Kompakt-Ausnahme
-    # inklusive); im Altpfad zusaetzlich nur mit Spalten (bewusst leer).
-    briefings, tabelle = trip_ausblick_briefings(trip)
-    ausblick_an = briefings[report] and (tabelle or ids != [])
+    # #3237: allein die Tabelle; ohne ``rows`` = Grundauswahl-Tabelle (keine
+    # Zeile: alles an, Katalog-Standard) -- Altfelder wirken nicht.
+    liste, ids = _trip_aus_tabelle(dc, grund)
+    # #3155 (AC-12): Ausblick je Briefing aus der EINEN Regel.
+    briefings, _tabelle = trip_ausblick_briefings(trip)
+    ausblick_an = briefings[report]
     return {
         "kontext": "trip", "report": report,
         # #3047 F2: Etappennamen trennen den Klartext-Ausblick exakt ab.
@@ -728,95 +689,20 @@ def _uebersicht_labels(paare: list[tuple[str, str]], lang: str) -> list[str]:
             for b, (_m, a) in zip(basis, paare)]
 
 
-def _orte_layout(eintraege: list, grund: list[tuple[str, str]] | None) -> list[tuple[str, str]]:
-    """``channel_layouts.email`` (#3039, ADR-0119): Listenfolge, ``enabled: false``
-    fehlt; eine Kennung traegt alle ihre Zeilen der Compare-Katalogtabelle, nur
-    die der Grundauswahl; Zeilen der Grundauswahl ohne jeden Eintrag (auch
-    keinen ausgeschalteten) folgen hinten (#3039 AC-14)."""
-    erfasst: set[tuple[str, str]] = set()
-    paare: list[tuple[str, str]] = []
-    for e in eintraege:
-        if not isinstance(e, dict) or not _waehlbar(e.get("metric_id")):
-            continue
-        zeilen = [(k["metric_id"], k["aggregation"]) for k in COMPARE_METRIC_CATALOG
-                  if k["metric_id"] == e["metric_id"]]
-        erfasst.update(zeilen)
-        if e.get("enabled") is not False:
-            paare += [p for p in zeilen if (grund is None or p in grund) and p not in paare]
-    return paare + [p for p in grund or [] if p not in erfasst and p not in paare]
-
-
-def _orte_uebersicht(dc: dict) -> list[tuple[str, str]] | None:
-    grund = _uebersicht_paare(dc.get("active_metrics"))
-    layouts = dc.get("channel_layouts")
-    if isinstance(layouts, dict) and isinstance(layouts.get("email"), list):
-        return _orte_layout(layouts["email"], grund)
-    kanal = dc.get("channel_active_metrics")
-    if not isinstance(kanal, dict) or "email" not in kanal:
-        return grund
-    eigen = _uebersicht_paare(kanal.get("email"))
-    if eigen is None:
-        return grund
-    if grund is None:
-        return eigen
-    # #3047 AC-10: nicht leere Liste ganz ausserhalb -> volle Grundauswahl.
-    return [p for p in eigen if p in grund] or (list(grund) if eigen else [])
-
-
-def _einfach_eintrag(e: dict) -> bool:
-    """Einfach laut ``channel_layouts``-Eintrag (``format``/``format_mode``
-    vor ``use_friendly_format``); wirkt nur bei mehr als einer Darstellung."""
-    fmt = next((e[k] for k in ("format", "format_mode") if e.get(k) in ("raw", "simplified")), None)
-    einfach = fmt == "simplified" if fmt else e.get("use_friendly_format") is True
-    return einfach and len(_REG[e["metric_id"]].format_modes) > 1
-
-
 def _orte_einfach(dc: dict, paare: list[tuple[str, str]] | None, lang: str) -> list[str]:
     """#3047 N4: Zeilen der Vergleichstabelle, die laut ``channel_layouts.email``
     Einfach zeigen (Ampelpunkt/Wort statt Zahl) -- dort ist ein fehlendes
     Zahlformat kein FORMAT-Fehler."""
-    if paare and _hat_tabelle(dc):
-        # #3218: mit Tabelle gilt ``formats.email`` (Altfeld ohne Wirkung).
-        einfach = {m for m, _a in paare
-                   if _form(dc, m, "email") == "simplified" and len(_REG[m].format_modes) > 1}
-        return [label for label, (m, _a) in zip(_uebersicht_labels(paare, lang), paare) if m in einfach]
-    layouts = dc.get("channel_layouts")
-    if not paare or not isinstance(layouts, dict) or not isinstance(layouts.get("email"), list):
+    if not paare:
         return []
-    # erster eingeschaltete Eintrag je Kennung entscheidet (``rows.setdefault``)
-    erste: dict[str, bool] = {}
-    for e in layouts["email"]:
-        if isinstance(e, dict) and _waehlbar(e.get("metric_id")) and e.get("enabled") is not False:
-            erste.setdefault(e["metric_id"], _einfach_eintrag(e))
-    return [label for label, (m, _a) in zip(_uebersicht_labels(paare, lang), paare) if erste.get(m)]
+    # #3218/#3237: ``formats.email`` der Tabelle (Altfelder ohne Wirkung).
+    einfach = {m for m, _a in paare
+               if _form(dc, m, "email") == "simplified" and len(_REG[m].format_modes) > 1}
+    return [label for label, (m, _a) in zip(_uebersicht_labels(paare, lang), paare) if m in einfach]
 
 
 def _stuendlich(mid: object) -> bool:
     return _waehlbar(mid) and mid not in HOURLY_EXCLUDED_METRIC_IDS
-
-
-def _orte_stunden(dc: dict, grund: list[tuple[str, str]] | None) -> list[str]:
-    """Stundenverlauf (Konzept §5.8 "Jede Liste nimmt nur aus den Metriken
-    oben"): gespeichert -> Schnitt mit der Grundauswahl in gespeicherter Folge;
-    leerer Schnitt einer nicht leeren Liste -> Vorgabemenge geschnitten mit der
-    Grundauswahl, sonst deren stuendlich waehlbare Groessen. Nie eingestellt ->
-    Grundauswahl, soweit stuendlich verfuegbar, in deren Folge; ohne
-    Grundauswahl die Vorgabemenge."""
-    basis = None if grund is None else [m for m in dict.fromkeys(m for m, _a in grund)
-                                        if _stuendlich(m)]
-    roh = dc.get("hourly_metrics")
-    if not isinstance(roh, list):
-        # nie eingestellt: Grundauswahl ``[]`` -> leer (#3047 N2); ohne
-        # Grundauswahl bzw. ohne eigene Stundenspalte darin die Vorgabemenge.
-        eigen = [m for m in basis or [] if m not in HOURLY_MERGE_ONLY_METRIC_IDS]
-        ids = [] if grund == [] else (basis if eigen else list(HOURLY_DEFAULT_METRIC_IDS))
-    else:
-        ids = list(dict.fromkeys(m for m in (FRONTEND_TO_HOURLY_METRIC_ID.get(e, e)
-                                             for e in roh if isinstance(e, str)) if _stuendlich(m)))
-        if basis is not None and ids:
-            ids = ([m for m in ids if m in basis]
-                   or [m for m in HOURLY_DEFAULT_METRIC_IDS if m in basis] or basis)
-    return [_REG[m].col_label for m in ids if m not in HOURLY_MERGE_ONLY_METRIC_IDS]
 
 
 def _orte_formen(dc: dict, paare: list[tuple[str, str]] | None, lang: str) -> dict[str, dict]:
@@ -1017,22 +903,12 @@ def _orte_aus_tabelle(dc: dict, grundpaare: list[tuple[str, str]] | None) -> tup
 
 def orte_soll(preset: dict, lang: str = "de", ortsnamen: dict | None = None) -> dict:
     """Soll eines Orts-Vergleichs; ``ortsnamen`` (Kennung -> Name) fuer die Ortsfolge."""
-    dc = preset.get("display_config") or {}
-    paare = _orte_uebersicht(dc)
+    dc = _mit_grundauswahl_tabelle(preset.get("display_config") or {}, "compare")
     grundpaare = _uebersicht_paare(dc.get("active_metrics"))
-    grundauswahl = None if grundpaare is None else list(dict.fromkeys(
-        m for m, _a in grundpaare if _ausblickfaehig(m)))
-    # #3047 N2: ``active_metrics: []`` = bewusst leere Grundauswahl (wie Trip
-    # alle ``enabled: false``) -> Ausblick und Stundenverlauf entfallen.
-    ids = _ausblick(dc.get("outlook_metrics"), grundauswahl)
-    if ids is None:
-        # #3047 R9: Orte-Altbestand ohne Grundauswahl und ohne Ausblick-Liste
-        # rendert die Vorgabemenge wie eine explizite Liste (HTML = Klartext,
-        # Temp als eine Spanne) -- kein fester Zweig mehr im Ortsvergleich.
-        ids = list(_FEST)
-    stunden = _orte_stunden(dc, grundpaare)
-    if _hat_tabelle(dc):
-        paare, ids, stunden = _orte_aus_tabelle(dc, grundpaare)
+    # #3237: Tabelle zuerst; ohne ``rows`` die Grundauswahl-Tabelle (keine
+    # Zeile: alles an) -- ``channel_layouts``/``channel_active_metrics``/
+    # ``outlook_metrics``/``hourly_metrics`` wirken nicht.
+    paare, ids, stunden = _orte_aus_tabelle(dc, grundpaare)
     an = orte_ausblick_briefings(preset)
     briefings = tuple(r for r in _REPORTS if an[r])
     stunden_an = preset.get("hourly_enabled", True) is not False and stunden != []
@@ -1068,7 +944,7 @@ def orte_soll(preset: dict, lang: str = "de", ortsnamen: dict | None = None) -> 
         # ``ausblick_an`` = in irgendeinem Briefing, der Validator setzt es
         # je Briefing der Mail (``ausblick_im_briefing``).
         "ausblick_briefings": briefings,
-        "ausblick_an": bool(briefings) and (_hat_tabelle(dc) or ids != []),
+        "ausblick_an": bool(briefings),
         "ausblick": None if ids == [] else _ausblick_spalten(ids, _ausblick_formate(dc, ids)),
         **_ortsfolge(ids_orte, ortsnamen),
     }

@@ -37,7 +37,7 @@ for _pfad in (REPO_ROOT, REPO_ROOT / "src"):
         sys.path.insert(0, str(_pfad))
 
 from tests.helpers.trip_outlook_selection import (  # noqa: E402
-    OUTLOOK_EYEBROW, REFERENCE_PLAIN, REFERENCE_TABLE,
+    OUTLOOK_EYEBROW,
     display_config, html_footer_column_legend, html_outlook_body_rows,
     html_outlook_headers, html_outlook_legend, html_outlook_table,
     outlook_rows, plain_outlook_block, render_trip_mail,
@@ -57,66 +57,21 @@ _ACC = "ACC"
 
 
 
-def _dc_altpfad():
-    """Die Vorbedingung des AC-1-Bestandsschutzes: ein Trip, der den FESTEN
-    Sieben-Spalten-Ausblick zeigt.
+def _dc_ohne_auswahl():
+    """Trip ohne gesetzte Ausblick-Auswahl (Grundauswahl wie Neuanlage).
 
-    ⚠️ #1848 A3 (PO-Freigabe 2026-08-21): bis dahin genuegte dafuer ein
-    fehlendes ``outlook_metrics`` -- "nie eingestellt" hiess "sieben feste
-    Spalten". Seither heisst es "nichts abgewaehlt", und der Ausblick erbt
-    die Grundauswahl (Spec "Known Limitations": "Die Ausblick-Tabelle wird
-    fuer bestehende Trips breiter"). Der feste Zweig bleibt fuer Trips ganz
-    OHNE Grundauswahl in Kraft (ADR-0050 D4) -- genau dort bewacht die
-    Aufzeichnung weiter, was sie immer bewacht hat: dass "Feld fehlt" nicht
-    mit "bewusst geleert" verwechselt wird und der Block nicht still
-    verschwindet.
-
-    Die Referenzdateien werden deshalb NICHT nachgezogen. Sie bleiben Byte
-    fuer Byte gueltig -- nur die Vorbedingung ist jetzt ausgesprochen statt
-    stillschweigend."""
-    return display_config(leere_grundauswahl=True)
+    #3237: die frueheren Bestandsschutz-Tests
+    ``test_ac1_bestandstrip_{html,klartext}_ausblick_bleibt_byte_identisch``
+    sind entfallen. Sie bewachten den FESTEN Sieben-Spalten-Zweig, den ein
+    Trip ganz ohne Grundauswahl (``metrics == []``, ADR-0050 D4: "nicht
+    schneiden") erreichte -- ein Rueckfall des Altpfads. Die Tabelle "Was
+    steht wo" kennt keinen Rueckfall (ADR-0124): ohne Grundauswahl hat sie
+    keine Zeile, also auch keinen Ausblick; mit Grundauswahl laeuft jeder
+    Trip ueber den konfigurierbaren Zweig (Spalten aus der Tabelle)."""
+    return display_config()
 
 
 # ══════════════════════════ AC-1 — Bestandsschutz ════════════════════════════
-
-def test_ac1_bestandstrip_html_ausblick_bleibt_byte_identisch():
-    """AC-1 (HTML): Given ein Trip ohne gesetzte Vorschau-Auswahl / When die
-    Mail ueber ``render_email()`` erzeugt wird / Then ist die Ausblick-Tabelle
-    byte-identisch zur VOR dieser Lieferung aufgezeichneten Referenz.
-
-    Faengt Mutation 1 (``resolve_outlook_metrics(...) or []``): der Ausblick
-    waere fuer 100 % der heutigen Trips still leer.
-    """
-    html, _ = render_trip_mail(_dc_altpfad(), outlook_rows())
-    tabelle = html_outlook_table(html)
-
-    assert tabelle is not None, (
-        "Ohne gesetzte Auswahl wurde ueberhaupt keine Ausblick-Tabelle "
-        "gerendert -- genau das passiert, wenn 'Feld fehlt' (None) und "
-        "'bewusst geleert' ([]) verwechselt werden (AC-1)."
-    )
-    # Ausnahme #1801 (2026-08-14, PO-freigegeben): die Referenz WURDE hier
-    # bewusst nachgezogen -- Grund ist NICHT ein unbeachteter Rotstand,
-    # sondern die #1801-Warnstufen-Palette (Ampel-Flaechenfarben). Nachgemessen
-    # per Hex-Maskierung (`#[0-9a-fA-F]{6}` -> Platzhalter) in Ist vs.
-    # aufgezeichneter Referenz: gleiche Laenge (8717 Zeichen), gleiche Anzahl
-    # Farbwerte (86), nach Maskierung ZEICHENGLEICH -- es weichen ausschliesslich
-    # drei Flaechenfarben ab (`#fbeeb8`->`#fdf4cd` gelb, `#fad6b8`->`#fbe3cc`
-    # orange, `#f6c5bf`->`#f7d3e2` rot), keine Struktur-/Text-/Zahlenaenderung.
-    # Der Satz "Die Referenz wird NICHT nachgezogen" bleibt die Regel fuer
-    # INHALTLICHE Aenderungen (Mutation 1: stiller Totalausfall der Vorschau);
-    # diese eine, gemessene, PO-freigegebene Palettenaenderung ist die einzige
-    # dokumentierte Gegenausnahme dazu.
-    # Zweite Gegenausnahme #1670 (2026-11-02, freigegebene Spec AC-3/AC-4):
-    # die gewitterfreie Gewitter-Zelle zeigt den EINEN Platzhalter
-    # metric_format.NO_VALUE (U+2013) statt U+2014 -- genau ein Zeichen in
-    # der Referenz, keine Struktur-/Text-/Zahlenaenderung.
-    assert tabelle == REFERENCE_TABLE.read_text(encoding="utf-8"), (
-        f"Die HTML-Ausblick-Tabelle weicht von der Aufzeichnung ab "
-        f"({REFERENCE_TABLE}). Die Referenz wird NICHT nachgezogen -- rot "
-        "heisst, die Trip-Mail hat sich fuer alle Bestandsnutzer geaendert."
-    )
-
 
 def test_ac1_bestandstrip_altbestand_legendenblock_ist_abgeloest():
     """AC-1 (Legende) + #2136/ADR-0068 (Adversary F001): der Altbestand-
@@ -135,31 +90,14 @@ def test_ac1_bestandstrip_altbestand_legendenblock_ist_abgeloest():
     outlook_active=True)``) -- bewacht von
     ``test_ac8_footer_legende_nennt_spalte_n_nicht_mehr_als_nachtwert``.
     """
-    html, _ = render_trip_mail(_dc_altpfad(), outlook_rows())
+    html, _ = render_trip_mail(_dc_ohne_auswahl(), outlook_rows())
+    assert html_outlook_table(html) is not None, "Vorbedingung: Ausblick aktiv"
 
     assert html_outlook_legend(html) is None, (
         "Der Altbestand-Legendenblock (Pfad 1, #1720/AC-8) ist wieder da -- "
         "er wurde unter #2136/ADR-0068 (Adversary F001) entfernt, weil er "
         "den col_label-Tabellenkoepfen widersprach. Erhalten: "
         f"{html_outlook_legend(html)!r}"
-    )
-
-
-def test_ac1_bestandstrip_klartext_ausblick_bleibt_byte_identisch():
-    """AC-1 (Klartext): byte-identisch zur Aufzeichnung -- inkl. Ueberschrift,
-    26-Zeichen-Namensfeld und Notizzeile.
-
-    Der Klartext-Zweig (``plain.py:309/338``) hat eine EIGENE Bedingung; ein
-    Fehler dort faellt im HTML nicht auf.
-    """
-    _, plain = render_trip_mail(_dc_altpfad(), outlook_rows())
-    block = plain_outlook_block(plain)
-
-    assert block is not None, "Der Klartext-Ausblick fehlt vollstaendig (AC-1)."
-    erwartet = REFERENCE_PLAIN.read_text(encoding="utf-8")
-    assert block == erwartet, (
-        f"Klartext-Ausblick weicht von der Aufzeichnung ab "
-        f"({REFERENCE_PLAIN}).\nErwartet:\n{erwartet}\nErhalten:\n{block}"
     )
 
 
@@ -287,7 +225,7 @@ def test_ac8_footer_legende_nennt_spalte_n_nicht_mehr_als_nachtwert():
     dieser Test jetzt, statt eine Stelle zu bewachen, die nichts mehr
     rendert.
     """
-    html, _ = render_trip_mail(_dc_altpfad(), outlook_rows())
+    html, _ = render_trip_mail(_dc_ohne_auswahl(), outlook_rows())
     footer_legende = html_footer_column_legend(html)
 
     assert footer_legende is not None, (
@@ -497,28 +435,6 @@ def test_ac14_abend_abwahl_schneidet_die_vorschau_ebenfalls():
     )
 
 
-def test_ac16_leere_grundauswahl_schneidet_die_vorschau_nicht():
-    """AC-16: Given ``display_config.metrics == []`` (Altbestand ohne
-    Grundauswahl) / When eine Vorschau-Auswahl gesetzt ist / Then wird sie
-    vollstaendig gezeigt und NICHT gegen eine leere Menge geschnitten.
-
-    Mutation 10, der naheliegendste Fehler beim Nachbilden von
-    ``_clip_to_global_maximum()`` (Regel D4, models.py:913-914).
-    """
-    from app.metric_catalog import get_metric
-
-    auswahl = [NIEDERSCHLAG, BOEEN, SCHNEEHOEHE]
-    dc = display_config(leere_grundauswahl=True, outlook_metrics=auswahl)
-    html, plain = render_trip_mail(dc, outlook_rows(metrics=auswahl))
-
-    # #2136/ADR-0068: `col_label`-Spaltenkoepfe statt deutscher Langnamen.
-    erwartet = ["Tag"] + [get_metric(m).col_label for m in auswahl] + [_ACC]
-    assert html_outlook_headers(html) == erwartet, (
-        f"Kopfzeile {html_outlook_headers(html)!r}: bei leerer Grundauswahl "
-        "wurde geschnitten. D4: kein Maximum definiert -> nicht schneiden, "
-        "sonst Totalausfall fuer jeden Altbestand (AC-16)."
-    )
-    block = plain_outlook_block(plain)
-    assert block is not None and get_metric(SCHNEEHOEHE).col_label in block, (
-        f"Auch der Klartext muss alle drei Groessen zeigen:\n{block}\n(AC-16)"
-    )
+# #3237: ``test_ac16_leere_grundauswahl_schneidet_die_vorschau_nicht`` ist
+# entfallen -- "keine Grundauswahl = nicht schneiden" (ADR-0050 D4) war ein
+# Rueckfall des Altpfads; ohne Grundauswahl hat die Tabelle keine Zeile.

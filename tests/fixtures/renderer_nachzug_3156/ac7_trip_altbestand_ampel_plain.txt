@@ -16,28 +16,28 @@ E1: 15°C, Wolken 70%, starker Regen, mäßiger Wind 20 km/h, Böen bis 45 km/h 
   Regen-W. >30% ab 04:00 · max 60% (04:00)
 
 ━━ Segment 1: km 0.0–12.0 | 08:00–12:00 | ↑500m → 1400m ━━
-  Zeit   Temp   Wind   Gust   WDir   Rain   Cloud   UV    Rain% 
-  -----  -----  -----  -----  -----  -----  ------  ----  ------
-  08     15.0   20     45     250°   2.0    70      5.0   60    
-  09     15.0   20     45     250°   2.0    70      5.0   60    
-  10     15.0   20     45     250°   2.0    70      5.0   60    
-  11     15.0   20     45     250°   2.0    70      5.0   60    
-  12     15.0   20     45     250°   2.0    70      5.0   60    
+  Zeit   Temp   Wind    Gust         WDir   Rain     Cloud   UV    Rain%          
+  -----  -----  ------  -----------  -----  -------  ------  ----  ---------------
+  08     15.0   mäßig   sehr stark   250°   leicht   70      5.0   wahrscheinlich 
+  09     15.0   mäßig   sehr stark   250°   leicht   70      5.0   wahrscheinlich 
+  10     15.0   mäßig   sehr stark   250°   leicht   70      5.0   wahrscheinlich 
+  11     15.0   mäßig   sehr stark   250°   leicht   70      5.0   wahrscheinlich 
+  12     15.0   mäßig   sehr stark   250°   leicht   70      5.0   wahrscheinlich 
 
 ━━ Nacht am Ziel (1400m) ━━
 Ankunft 12:00 → Morgen 06:00
-  Zeit   Temp   Wind   Gust   WDir   Rain   Cloud   UV    Rain% 
-  -----  -----  -----  -----  -----  -----  ------  ----  ------
-  12     15.0   20     45     250°   4.0    70      5.0   60    
-  14     15.0   20     45     250°   4.0    70      5.0   60    
-  16     15.0   20     45     250°   4.0    70      5.0   60    
-  18     15.0   20     45     250°   4.0    70      5.0   60    
-  20     15.0   20     45     250°   4.0    70      5.0   60    
-  22     15.0   20     45     250°   4.0    70      5.0   60    
-  00     15.0   20     45     250°   4.0    70      5.0   60    
-  02     15.0   20     45     250°   4.0    70      5.0   60    
-  04     15.0   20     45     250°   4.0    70      5.0   60    
-  06     15.0   20     45     250°   2.0    70      5.0   60    
+  Zeit   Temp   Wind    Gust         WDir   Rain     Cloud   UV    Rain%          
+  -----  -----  ------  -----------  -----  -------  ------  ----  ---------------
+  12     15.0   mäßig   sehr stark   250°   mäßig    70      5.0   wahrscheinlich 
+  14     15.0   mäßig   sehr stark   250°   mäßig    70      5.0   wahrscheinlich 
+  16     15.0   mäßig   sehr stark   250°   mäßig    70      5.0   wahrscheinlich 
+  18     15.0   mäßig   sehr stark   250°   mäßig    70      5.0   wahrscheinlich 
+  20     15.0   mäßig   sehr stark   250°   mäßig    70      5.0   wahrscheinlich 
+  22     15.0   mäßig   sehr stark   250°   mäßig    70      5.0   wahrscheinlich 
+  00     15.0   mäßig   sehr stark   250°   mäßig    70      5.0   wahrscheinlich 
+  02     15.0   mäßig   sehr stark   250°   mäßig    70      5.0   wahrscheinlich 
+  04     15.0   mäßig   sehr stark   250°   mäßig    70      5.0   wahrscheinlich 
+  06     15.0   mäßig   sehr stark   250°   leicht   70      5.0   wahrscheinlich 
   * Temperatur/Nullgradgrenze: Minimum im 2h-Block
 
 

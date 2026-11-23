@@ -205,7 +205,7 @@ func TestCreateTripHandler_AlertChannelThresholdsDefaultsNil(t *testing.T) {
 	buf, _ := json.Marshal(body)
 
 	r := chi.NewRouter()
-	r.Post("/api/trips", CreateTripHandler(s))
+	r.Post("/api/trips", CreateTripHandler(s, ""))
 	req := httptest.NewRequest(http.MethodPost, "/api/trips", bytes.NewReader(buf))
 	req.Header.Set("Content-Type", "application/json")
 	req = addUserToContext(req, "test")

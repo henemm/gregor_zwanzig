@@ -27,8 +27,7 @@ for _pfad in (REPO_ROOT, REPO_ROOT / "src"):
         sys.path.insert(0, str(_pfad))
 
 from tests.helpers.trip_outlook_channels import (  # noqa: E402
-    BOEEN, COMPACT_OUTLOOK_HEADING, NIEDERSCHLAG, REFERENCE_COMPACT,
-    REFERENCE_TELEGRAM, TELEGRAM_OUTLOOK_HEADING, compact_outlook_block,
+    BOEEN, COMPACT_OUTLOOK_HEADING, NIEDERSCHLAG, TELEGRAM_OUTLOOK_HEADING, compact_outlook_block,
     maskiere_wochentage, telegram_outlook_bubble, trip, versendete_teile,
 )
 
@@ -69,68 +68,15 @@ def _diff(erwartet: list[str], ist: list[str]) -> str:
     return "\nerwartet:\n" + "\n".join(erwartet) + "\nist:\n" + "\n".join(ist)
 
 
-def _altpfad_trip():
-    """Die Vorbedingung des AC-1-Bestandsschutzes: eine Trip, die den FESTEN
-    Ausblick zeigt.
-
-    ⚠️ #1848 A3 (PO-Freigabe 2026-08-21): dafuer genuegt ein fehlendes
-    ``outlook_metrics`` nicht mehr -- "nie eingestellt" heisst seither
-    "nichts abgewaehlt", und der Ausblick erbt die Grundauswahl. Der feste
-    Zweig bleibt fuer Trips OHNE Grundauswahl in Kraft (ADR-0050 D4); dort
-    bewachen die beiden Aufzeichnungen unveraendert weiter, dass "Feld fehlt"
-    nicht mit "bewusst geleert" verwechselt wird (Mutation 4). Die
-    Referenzdateien werden NICHT nachgezogen.
-
-    ⚠️ #3047 J3: eine bewusst LEERE Grundauswahl (alle Eintraege aus) ist
-    kein "kein Maximum" mehr -- dort entfaellt der Ausblick (AC-4, Konzept
-    "jede Liste nimmt nur aus den Metriken oben"). Den festen Zweig erreicht
-    nur noch die fehlende Grundauswahl selbst (``metrics == []`` am
-    Datenobjekt, ADR-0050 D4: ``allowed_metric_ids_for_report_type`` ->
-    ``None``); genau die stellt diese Vorbedingung jetzt her."""
-    t = trip(outlook_metrics=None)
-    t.display_config.metrics = []
-    assert t.display_config.allowed_metric_ids_for_report_type("evening") is None
-    return t
+# #3237: die beiden AC-1-Bestandsschutz-Tests (Kompakt-Mail und Telegram
+# byte-identisch zur Referenz ``trip_outlook_reference``) sind entfallen. Sie
+# bewachten den FESTEN Ausblick-Zweig, den nur ein Trip ganz ohne
+# Grundauswahl erreichte (``metrics == []``, ADR-0050 D4) -- ein Rueckfall des
+# Altpfads. Die Tabelle "Was steht wo" kennt keinen Rueckfall (ADR-0124):
+# ohne Grundauswahl hat sie keine Zeile und damit keinen Ausblick.
 
 
 # ═════════════ AC-1 — Bestandsschutz gegen die aufgezeichnete Referenz ═══════
-
-def test_ac1_kompakt_ausblick_ohne_auswahl_ist_byte_identisch_zur_referenz():
-    """AC-1: Given ein Trip ohne gesetztes ``outlook_metrics`` (Altbestand) /
-    When die Kompakt-Mail ueber den echten Versandpfad zugestellt wird / Then
-    ist ihr Ausblick-Block byte-identisch zur VOR dieser Lieferung
-    aufgezeichneten Referenz.
-
-    Mutation 4 am Wirkort (``_dc_uncollapsed.outlook_metrics or []`` statt des
-    Resolvers): der Ausblick verschwaende fuer 100 % der heutigen Trips.
-    Verglichen wird gegen eine DATEI, nicht gegen einen zweiten Aufruf
-    desselben Codes im selben Lauf.
-    """
-    body, _ = versendete_teile(_altpfad_trip())
-    block = compact_outlook_block(body)
-
-    assert block is not None, "Kein Ausblick in der Kompakt-Mail (AC-1)."
-    assert maskiere_wochentage(block) == REFERENCE_COMPACT.read_text(encoding="utf-8"), (
-        "Der Kompakt-Ausblick eines Bestandstrips hat sich veraendert. Das ist "
-        f"der Befund -- nicht der Anlass, {REFERENCE_COMPACT.name} neu "
-        f"aufzuzeichnen.\nIst:\n{maskiere_wochentage(block)}"
-    )
-
-
-def test_ac1_telegram_ausblick_ohne_auswahl_ist_byte_identisch_zur_referenz():
-    """AC-1 (zweiter Kanal): dieselbe Zusicherung fuer die Ausblick-Bubble.
-    Kompakt-Mail und Telegram haben getrennte Renderer (``compact.py`` /
-    ``narrow.py``) -- eine Aufzeichnung allein deckt den anderen nicht ab.
-    """
-    _, bubbles = versendete_teile(_altpfad_trip())
-    bubble = telegram_outlook_bubble(bubbles)
-
-    assert bubble is not None, f"Keine Ausblick-Bubble: {bubbles!r} (AC-1)"
-    assert maskiere_wochentage(bubble) == REFERENCE_TELEGRAM.read_text(encoding="utf-8"), (
-        "Der Telegram-Ausblick eines Bestandstrips hat sich veraendert "
-        f"({REFERENCE_TELEGRAM.name}).\nIst:\n{maskiere_wochentage(bubble)}"
-    )
-
 
 # ═══════════ AC-2 / AC-3 — die Auswahl erreicht beide Kanaele ════════════════
 
@@ -250,8 +196,11 @@ def test_ac5_enges_telegram_kanal_layout_schneidet_den_ausblick_nicht():
     t = trip(outlook_metrics=AUSWAHL,
              enabled_ids={"precipitation", "gust"},
              telegram_layout_ids={"precipitation"})
-    assert {mc.metric_id for mc in
-            t.display_config.get_metrics_for_channel("telegram", "evening")
+    from services.channel_list_resolver import resolve_channel_lists
+
+    # #3237: die Telegram-Liste steht in der Tabelle "Was steht wo".
+    assert {z.metric_id for z in
+            resolve_channel_lists(t.display_config, "trip", "evening").telegram
             } == {"precipitation"}, (
         "Vorbedingung: das Telegram-Kanal-Layout muss enger sein als die "
         "Grundauswahl, sonst prueft dieser Test die Kanal-Kopplung nicht."

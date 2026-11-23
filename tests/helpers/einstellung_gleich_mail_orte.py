@@ -222,8 +222,12 @@ def sende_orte_mail(preset_json: dict, *, uid: Optional[str] = None,
     from services.scheduler_dispatch_service import send_one_compare_preset
     from tests.tdd._compare_kette_fixtures import preset_ablegen, preset_laden
 
+    from tests.helpers.tabelle_aus_wunsch import orte_wunsch_als_tabelle
+
     uid = profil_anlegen(uid, language=language)
     orte_anlegen(uid)
+    # #3237: die Einstellung des Falls steht in der Tabelle (Altfelder wirken nicht).
+    preset_json = orte_wunsch_als_tabelle(preset_json)
     pfad = preset_ablegen(uid, preset_json)
     gesendet: list[dict] = []
     telegram: list[str] = []

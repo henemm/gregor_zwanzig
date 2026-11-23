@@ -2,8 +2,11 @@
 
 (1) Stunden der frischen Reihe ohne Anker-Gegenstueck erscheinen nicht als alt -> neu -- das
     wird per ``logger.warning`` mit Bezug #1737 gemeldet.
-(2) Metriken der Anzeige-Konfiguration ohne Katalog-Eintrag faellen fuer den Anzeigemodus weg
-    (Stundenzeilen ROH) -- ebenfalls gemeldet.
+(2) entfallen (#3237): Metriken ohne Katalog-Eintrag fielen nur im Altpfad (Kanal-Listen mit
+    rohen Grundauswahl-Eintraegen) fuer den Anzeigemodus weg. Der Alarm liest Roh/Einfach jetzt
+    allein aus der Tabelle "Was steht wo", die nur Katalog-Metriken kennt
+    (``read_placements``/``grundauswahl``) -- eine solche Metrik erscheint weder im Briefing
+    noch im Alarm, es geht kein Anzeigemodus verloren.
 """
 from __future__ import annotations
 from app.ampel import resolve_ampel
@@ -33,18 +36,3 @@ def test_stunden_ohne_anker_gegenstueck_werden_mit_bezug_1737_gemeldet(caplog):
     assert [r.time for r in out["hours"]] == ["11:00"], "Vorbedingung: nur gepaarte Stunden"
     meldungen = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
     assert any("#1737" in m and "2 Stunde" in m for m in meldungen), meldungen
-
-
-def test_metrik_ohne_katalog_eintrag_im_anzeigemodus_wird_mit_bezug_1737_gemeldet(caplog):
-    from app.models import MetricConfig, UnifiedWeatherDisplayConfig
-    from services.notification_service import _alert_format_modes
-
-    dc = UnifiedWeatherDisplayConfig(trip_id="t", metrics=[
-        MetricConfig(metric_id="gust", enabled=True),
-        MetricConfig(metric_id="gibts_nicht", enabled=True),
-    ])
-    with caplog.at_level(logging.WARNING, logger="services.notification_service"):
-        modes = _alert_format_modes(dc)
-    assert "gust" in modes["email"], "Vorbedingung: bekannte Metrik wird aufgeloest"
-    meldungen = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
-    assert any("#1737" in m and "gibts_nicht" in m for m in meldungen), meldungen

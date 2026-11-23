@@ -132,8 +132,12 @@ def test_ac5_selectable_gate_exempt_ist_leer():
 
 @pytest.mark.parametrize("channel", ["email", "telegram", "sms", "premium_sms"])
 def test_ac5_kanal_liefert_keine_temperature_cold(channel):
+    # #3237: die Kanal-Liste kommt allein aus der Tabelle "Was steht wo"
+    # (ohne ``rows``: Grundauswahl-Tabelle), nicht mehr aus der Kanal-Kaskade.
+    from services.channel_list_resolver import resolve_channel_lists
+
     dc = build_default_display_config()
-    ids = [m.metric_id for m in dc.get_metrics_for_channel(channel, "evening")]
+    ids = [r.metric_id for r in getattr(resolve_channel_lists(dc, "trip", "evening"), channel)]
     assert "temperature_cold" not in ids, (
         f"AC-5: Kanal {channel} fuehrt noch temperature_cold: {ids}"
     )

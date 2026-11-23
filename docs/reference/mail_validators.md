@@ -387,9 +387,15 @@ Lückenschluss Runde 7 (#3047 B-L5, Paket p4b), alle nur mit `--konfig`:
 - **Ampelfarbe (Trip und Orte):** Grenzen nach der Rückfallkette ADR-0106
   (`ampel.template` > `preset_name` > Profil > „allgemein", Abo-Grenzen je
   Metrik überschreiben; gelesen wird nur die statische Vorlagentabelle). Trip:
-  je Stunde für Wind, Böen, Regen, Regen-W. — Ampelpunkt (Einfach) gegen den
-  Klartext-Wert derselben Stunde, Zahl-Zelle (Roh) gegen ihre Tönung
-  (ungetönt = grün), erste Abweichung je Tabelle und Spalte. Orte: Tönung der Zahl-Zellen der Vergleichstabelle
+  je Stunde für Wind, Böen, Regen, Regen-W. — Zahl-Zelle (Roh) gegen ihre Tönung
+  (ungetönt = grün); Ampelpunkt (Einfach) gegen die Klartext-Zahl derselben
+  Stunde, sonst gegen den Rohwert aus `--ampel-werte JSON` (Prüfdaten, nur mit
+  `--konfig`: `{"gust": {"1": [45, …]}}`, Größe → Segment N = N-te
+  Etappen-Stundentabelle → Wert je Stunde; ungültig = Exit 2). Die Wortstufe
+  des Klartexts (seit Spec #3122 Nr. 4) ist kein Vergleichswert: ihre Skala ist
+  fest, die Ampel folgt den Grenzen des Abos (#3237). Ampelpunkt ohne Zahl und
+  ohne Rohwert = Befund „kein Vergleichswert“, nie stilles Bestehen. Erste
+  Abweichung je Tabelle und Spalte. Orte: Tönung der Zahl-Zellen der Vergleichstabelle
   (Temperatur, Wind, Böen, Niederschlag, Regen-W., UV; Sicht ungeprüft). Eine
   gerundete Zahl darf eine halbe letzte Stelle abweichen.
 - **Trip, Stundenband:** erlaubt sind Stunden vom früheren aus Tagesfensterbeginn

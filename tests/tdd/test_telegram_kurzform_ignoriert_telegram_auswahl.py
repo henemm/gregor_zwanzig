@@ -3,8 +3,10 @@
 Spec: docs/specs/modules/telegram_kurzform_sms_auswahl_2455.md (AC-4..AC-6).
 
 Bei ``telegram_style="kurzform"`` ist der Telegram-Text der SMS-Text; eine
-abweichende Telegram-Auswahl (``channel_layouts.telegram`` im Trip,
-``channel_active_metrics.telegram`` im Ortsvergleich) bleibt wirkungslos. Bei
+abweichende Telegram-Auswahl (Stelle ``telegram`` der Tabelle "Was steht wo";
+die Tests beschreiben sie wie bisher per ``channel_layouts.telegram`` bzw.
+``channel_active_metrics.telegram`` und druecken sie als Tabelle aus, #3237)
+bleibt wirkungslos. Bei
 ``rich`` greift die Telegram-Auswahl. Loader, Kaskade und Formatter laufen
 echt; Naht nur am Transport (geteilter Aufzeichner). Kein Mock-Theater.
 """
@@ -20,6 +22,7 @@ from tests.tdd._compare_kette_fixtures import (
     briefing_senden, engine_naht, fixture_dict, nutzer_anlegen, orte_anlegen,
     preset_ablegen, settings_fuer, transport_einrichten,
 )
+from tests.helpers.tabelle_aus_wunsch import orte_wunsch_als_tabelle, trip_wunsch_als_tabelle
 from tests.tdd._einstellung_auslieferung_fixtures import golden_dict, render_trip_dict
 
 pytestmark = pytest.mark.filterwarnings("ignore")
@@ -43,6 +46,8 @@ def _trip_text(monkeypatch, *, stil: str, telegram_layout_aendern: bool) -> tupl
         assert aktiv and inaktiv, "Vorbedingung: Golden hat aktive und inaktive Telegram-Metriken"
         aktiv[0]["enabled"] = False
         inaktiv[0]["enabled"] = True
+    # #3237: die Kanal-Auswahl wirkt nur als Tabelle "Was steht wo".
+    d = trip_wunsch_als_tabelle(d)
     mit, _ = render_trip_dict(monkeypatch, d, name="golden_a")
     assert mit.sendungen("telegram") and mit.sendungen("sms"), mit
     # rich sendet mehrere Nachrichten (Bubbles) -- alle zusammen vergleichen.
@@ -82,6 +87,8 @@ def _vergleich_text(mit, *, stil: str, telegram_metriken: list[str]) -> tuple[st
     p["display_config"]["channel_active_metrics"]["telegram"] = [
         {"metric_id": m, "aggregation": "max"} for m in telegram_metriken
     ]
+    # #3237: die Kanal-Auswahl wirkt nur als Tabelle "Was steht wo".
+    p = orte_wunsch_als_tabelle(p)
     uid = nutzer_anlegen("premium")
     orte_anlegen(uid)
     preset_ablegen(uid, copy.deepcopy(p))

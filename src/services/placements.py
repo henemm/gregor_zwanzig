@@ -1,4 +1,4 @@
-"""Tabelle "Was steht wo": gespeichertes Format, Aufloesung, Umrechnung (#3122).
+"""Tabelle "Was steht wo": gespeichertes Format, Aufloesung, Grundauswahl-Tabelle (#3122).
 
 ADR-0124, Spec ``docs/specs/modules/feat_3122_was_steht_wo.md`` Teil A.
 ``display_config.placements`` (Trip und Orte gleich)::
@@ -12,15 +12,15 @@ ADR-0124, Spec ``docs/specs/modules/feat_3122_was_steht_wo.md`` Teil A.
 Reine Funktionen: kein I/O, keine Mutation der Eingaben. Gelesen wird
 robust (Nr. 1): unbekannte Metriken, Stellen, Formate und falsche Typen haben
 keine Wirkung und werfen nicht; bei doppelter ``metric_id`` zaehlt die erste
-Zeile. ``placements_from_legacy`` ist die EINZIGE Umrechnung der Altfelder
-(Nr. 8); sie liest den bisherigen Pfad des Kanal-Listen-Resolvers.
+Zeile. Ein Abo ohne Tabelle liest die Tabelle aus seiner Grundauswahl
+(``placements_aus_grundauswahl``, #3237); Altfelder wirken nicht.
 
 Festlegungen beim Lesen:
 
 * Eine gespeicherte Tabelle liegt vor, sobald ``rows`` eine Liste ist. Auch
   ``rows: []`` oder eine Liste nur mit unlesbaren Eintraegen ist eine Tabelle
   ohne Zeilen: alle Metriken der Grundauswahl stehen hinten, ueberall
-  angehakt (Nr. 3.2). Kein Objekt oder keine Liste = Altbestand.
+  angehakt (Nr. 3.2). Kein Objekt oder keine Liste = keine Tabelle.
 * ``outlook_reports`` mit ausschliesslich unbekannten Werten ist leer =
   Ausblick aus. Die Vorbelegung (Nr. 6) greift nur bei fehlendem Schluessel
   (oder falschem Typ).
@@ -32,8 +32,7 @@ from dataclasses import dataclass
 from typing import Mapping, Optional, Sequence
 
 from app.metric_catalog import (
-    _METRICS_BY_ID, AMPEL_METRIC_IDS, SMS_FORMAT_MODE_METRIC_IDS, standard_form, stellen_sperre,
-    zwei_formen_stellen,
+    _METRICS_BY_ID, AMPEL_METRIC_IDS, standard_form, stellen_sperre, zwei_formen_stellen,
 )
 
 VERSION = 1
@@ -42,26 +41,6 @@ STELLEN_TRIP = ("email", "telegram", "sms", "outlook")
 FORMAT_STELLEN = ("email", "telegram", "hourly", "outlook")
 FORMATE = ("raw", "simplified")
 BRIEFINGS = ("morning", "evening")
-
-# Arten bewusster Ausgabe-Aenderungen der Umrechnung (Spec Nr. 8: die vier
-# ersten; danach Folgen weiterer Festlegungen, s. placements_from_legacy).
-REIHENFOLGE_WIE_SMS = "reihenfolge_wie_sms"
-OHNE_EMAIL_ENTFAELLT = "ohne_email_entfaellt"
-NUR_TEXT_FOLGT_HTML = "nur_text_folgt_html"
-SMS_WOLKENFORM_ENTFAELLT = "sms_wolkenform_entfaellt"
-AUSWERTUNGEN_GEKOPPELT = "auswertungen_gekoppelt"
-AUSSERHALB_GRUNDAUSWAHL = "ausserhalb_grundauswahl"
-MORGEN_FOLGT_ABEND = "morgen_folgt_abend"
-PREMIUM_FOLGT_SMS = "premium_folgt_sms"
-# Altzeile an einer Stelle ohne eigene Ausgabe (Nr. 5), z. B. Nachttief in der
-# Stundentabelle der Trip-Mail: sie zeigte dort nichts und entfaellt.
-GESPERRTE_STELLE_ENTFAELLT = "gesperrte_stelle_entfaellt"
-# Nacht-/Tagesgroesse ohne eigene Spalte (Trip-Mail): sie folgt der
-# Grundauswahl und ist in der E-Mail-Spalte nicht abwaehlbar; eine Kanal-Liste,
-# die sie weggelassen hatte, verliert diese Wirkung (#3122 Fix-Loop B1b).
-OHNE_SPALTE_FOLGT_GRUNDAUSWAHL = "ohne_spalte_folgt_grundauswahl"
-UNERKLAERT = "unerklaert"
-
 
 def stellen_fuer(surface: str) -> tuple[str, ...]:
     """Stellen der Tabelle je Flaeche; Stundenverlauf nur bei Orten."""
@@ -274,30 +253,8 @@ def outlook_applies(
 
 
 # ---------------------------------------------------------------------------
-# Umrechnung des Altbestands (Spec Nr. 8)
+# Tabelle aus der Grundauswahl (#3275 B6b-0, #3237)
 # ---------------------------------------------------------------------------
-
-@dataclass(frozen=True)
-class OutputChange:
-    """Eine bewusste Aenderung der Ausgabe durch die Umrechnung.
-    ``metric_id`` im Vokabular der Stelle (Orte-Kanaele: Renderer-Kennung);
-    ``None`` bei Reihenfolge-Aenderungen."""
-    kind: str
-    stelle: str
-    metric_id: Optional[str]
-    report_type: Optional[str]
-
-
-@dataclass(frozen=True)
-class LegacyConversion:
-    placements: dict
-    changes: tuple[OutputChange, ...]
-    # Trip mit ``show_outlook: false`` (nicht Kompakt): ``show_stability``
-    # gehoert auf ``false``. Die Umrechnung schreibt es nicht; das erste
-    # Speichern der Tabelle (Go-PUT, fragt ``erstanlage_begleitfelder``)
-    # schreibt es im selben Vorgang mit (#3154 F002).
-    show_stability_off: bool = False
-
 
 def _feld(obj: object, key: str, default=None):
     if isinstance(obj, dict):
@@ -305,10 +262,41 @@ def _feld(obj: object, key: str, default=None):
     return getattr(obj, key, default)
 
 
+def anlage_outlook_reports(display_config: object) -> Optional[tuple[str, ...]]:
+    """Marke ``placements.outlook_reports`` ohne ``rows`` (#3155); ``None``: keine."""
+    roh = _feld(display_config, "placements")
+    if not isinstance(roh, dict):
+        return None
+    return _read_reports(roh.get("outlook_reports"))
+
+
+def placements_aus_grundauswahl(
+    display_config: object, surface: str, *,
+    enabled_reports: Optional[Sequence[str]] = None, outlook_enabled: Optional[bool] = None,
+) -> dict:
+    """Volle Tabelle aus der Grundauswahl (#3237, ADR-0124): je Metrik der
+    Tabellen-Grundauswahl eine Zeile in deren Folge, jede Stelle ausdruecklich
+    belegt. Haken und Form je Stelle = was HEUTE ohne Einstellung erscheint
+    (Spec #3122 Nr. 4, ``_heute_ohne_einstellung``); ``outlook_reports`` nach
+    der Vorbelegung Nr. 6 (Marke gilt, ``outlook_enabled is False`` = ``[]``).
+    EINE Quelle fuer Anlage, Karte und Abos ohne ``rows``; liest keine
+    Altfelder, veraendert die Eingabe nicht."""
+    from services.channel_list_resolver import tabellen_grundauswahl
+
+    ids, _eltern = tabellen_grundauswahl(display_config, surface)
+    places, formen = _heute_ohne_einstellung(display_config, surface, ids)
+    rows = [StoredRow(mid, tuple((s, mid in places.get(s, (mid,))) for s in stellen_fuer(surface)),
+                      tuple((s, f) for s, f in formen.get(mid, {}).items()))
+            for mid in dict.fromkeys(ids)]
+    reports = () if outlook_enabled is False else resolve_outlook_reports(
+        anlage_outlook_reports(display_config), enabled_reports)
+    return placements_dict(rows, reports)
+
+
 def heutige_form(surface: str, stelle: str, metric_id: str, fmt: Optional[str]) -> str:
-    """Die Form, die der bisherige Pfad an ``stelle`` zeigt (Zeilen-Format ->
-    raw|simplified). Fuer die E-Mail zaehlt die HTML-Mail; deren Ampelpunkt
-    haengt beim Trip an ``use_friendly_format`` (ohne Angabe: Einfach)."""
+    """Form, die eine Stelle ohne Tabelle zeigte (Zeilen-Format -> raw|simplified):
+    Trip-E-Mail-Ampelgroessen Einfach, sonst Katalog-Standard; Orte,
+    Ausblick und Stundenverlauf Roh."""
     if fmt == "raw":
         return "raw"
     if fmt is not None:
@@ -320,214 +308,37 @@ def heutige_form(surface: str, stelle: str, metric_id: str, fmt: Optional[str]) 
     return standard_form(metric_id)
 
 
-def anlage_outlook_reports(display_config: object) -> Optional[tuple[str, ...]]:
-    """#3155 (Spec B4 Nr. 5): ``outlook_reports`` aus ``display_config.placements``
-    -- auch OHNE ``rows`` (Marke der Orte-Anlage, das Abo bleibt im Altpfad).
-    ``None``: keine Marke (kein ``placements`` oder keine lesbare Liste)."""
-    roh = _feld(display_config, "placements")
-    if not isinstance(roh, dict):
-        return None
-    return _read_reports(roh.get("outlook_reports"))
+def _heute_ohne_einstellung(display_config: object, surface: str, ids: Sequence[str]):
+    """(Haken je Stelle, Formen je Metrik) wie ohne Kanal-Einstellung:
+    Trip: Form aus dem Grundauswahl-Eintrag (``format_mode``/
+    ``use_friendly_format``), Haken ueberall. Orte: Roh; Ausblick und
+    Stundenverlauf nur fuer die bisherigen Vorgabemengen (nie eingestellt:
+    feste Ausblick-Spalten bzw. ``HOURLY_DEFAULT_METRIC_IDS``).
+    Haken: ``{stelle: menge}``, fehlende Stelle = ueberall an."""
+    places: dict = {}
+    zeile_fmt: dict = {}
+    if surface == "trip":
+        from services.channel_list_resolver import _trip_model
+
+        dc = _trip_model(display_config)
+        for rt in ("evening", "morning"):
+            for mc in dc.get_metrics_for_report_type(rt):
+                fmt = mc.format_mode if mc.format_mode is not None else (
+                    None if mc.use_friendly_format else "raw")
+                zeile_fmt.setdefault(mc.metric_id, fmt)
+    else:
+        from output.renderers.compare_hourly_metric_ids import resolve_hourly_metric_ids
+        from output.renderers.email.helpers import OUTLOOK_FIXED_METRIC_IDS
+        from services.channel_list_resolver import grundauswahl
+
+        grund = grundauswahl(display_config, surface, None)
+        renderer = None if grund.nie_eingestellt else sorted(grund.renderer or ())
+        if grund.nie_eingestellt:
+            places["outlook"] = set(OUTLOOK_FIXED_METRIC_IDS)
+        places["hourly"] = set(resolve_hourly_metric_ids(None, renderer))
+    formen = {mid: {s: heutige_form(surface, s, mid, zeile_fmt.get(mid))
+                    for s in stellen_fuer(surface) if s in zwei_formen_stellen(mid)}
+              for mid in ids}
+    return places, formen
 
 
-def _legacy_outlook_reports(
-    dc: object, surface: str, report_config: object,
-    enabled_reports: Optional[Sequence[str]], outlook_enabled: Optional[bool],
-) -> tuple[list[str], bool]:
-    if surface != "trip":
-        if outlook_enabled is False or _feld(dc, "outlook_metrics") == []:
-            return [], False
-        marke = anlage_outlook_reports(dc)
-        if marke is not None:
-            # #3155: die Anlage-Marke steuert den Ausblick je Briefing ueber
-            # dieselbe Regel wie die Tabelle.
-            return list(resolve_outlook_reports(marke, enabled_reports)), False
-        return [r for r in BRIEFINGS if enabled_reports is None or r in enabled_reports], False
-    # #3154 F003: die Kompakt-Mail wertet ``show_outlook`` nicht aus (der
-    # Schalter war dort gesperrt); sie zeigt den Ausblick wie bisher nach
-    # ``multi_day_trend_reports`` und ``outlook_metrics`` (unten).
-    kompakt = _feld(report_config, "email_format", "full") == "compact"
-    if _feld(report_config, "show_outlook") is False and not kompakt:
-        return [], True
-    if _feld(dc, "outlook_metrics") == []:
-        return [], False
-    reports = _feld(report_config, "multi_day_trend_reports")
-    if not isinstance(reports, list):
-        reports = _feld(dc, "multi_day_trend_reports")
-    if not isinstance(reports, list):
-        reports = ["evening"] if _feld(dc, "show_multi_day_trend", True) is not False else []
-    return [r for r in BRIEFINGS if r in reports], False
-
-
-def _legacy_rows(dc: object, surface: str) -> list[StoredRow]:
-    """Haken und Form je Stelle aus dem bisherigen Pfad; Folge: SMS, dann
-    Telegram, E-Mail, Grundauswahl (Abend-Fassung, Morgen nur fuer Metriken,
-    die allein morgens in der Grundauswahl stehen)."""
-    from services import channel_list_resolver as clr
-
-    listen = {rt: clr.legacy_lists(dc, surface, rt) for rt in BRIEFINGS}
-    grund = {rt: clr.grundauswahl(dc, surface, rt).ids for rt in BRIEFINGS}
-    abend = grund["evening"]
-    alle = abend + [m for m in grund["morning"] if m not in abend]
-    folge = list(dict.fromkeys(
-        [m for st in ("sms", "telegram", "email") for m in listen["evening"][st]] + alle
-    ))
-    rows = []
-    for mid in (m for m in folge if m in alle):
-        quelle = listen["evening" if mid in abend else "morning"]
-        places, formats = [], []
-        for stelle in stellen_fuer(surface):
-            places.append((stelle, mid in quelle[stelle]))
-            if stelle in zwei_formen_stellen(mid):
-                formats.append((stelle, heutige_form(surface, stelle, mid,
-                                                     quelle[stelle].get(mid))))
-        rows.append(StoredRow(mid, tuple(places), tuple(formats)))
-    return rows
-
-
-def legacy_placements(
-    display_config: object, surface: str, *, report_config: object = None,
-    enabled_reports: Optional[Sequence[str]] = None, outlook_enabled: Optional[bool] = None,
-) -> tuple[dict, bool]:
-    """Umrechnung ohne Aenderungsliste: (placements, show_stability_off)."""
-    reports, stabilitaet_aus = _legacy_outlook_reports(
-        display_config, surface, report_config, enabled_reports, outlook_enabled)
-    return placements_dict(_legacy_rows(display_config, surface), reports), stabilitaet_aus
-
-
-def placements_from_legacy(
-    display_config: object, surface: str, *, report_config: object = None,
-    enabled_reports: Optional[Sequence[str]] = None, outlook_enabled: Optional[bool] = None,
-) -> LegacyConversion:
-    """Altfelder -> ``placements`` (Spec Nr. 8), samt maschinenlesbarer Liste
-    der bewussten Ausgabe-Aenderungen je Abo (fuer den Probelauf der
-    Migration, B6). Neben den vier Faellen der Spec meldet sie Folgen anderer
-    Festlegungen: ``auswertungen_gekoppelt`` (Orte, Zeile = Katalog-ID, Nr. 2),
-    ``ausserhalb_grundauswahl`` (Nr. 3.1), ``morgen_folgt_abend`` (Nr. 8,
-    Abend-Fassung zaehlt), ``premium_folgt_sms`` (ADR-0124 Nr. 8),
-    ``gesperrte_stelle_entfaellt`` (Altzeile an gesperrter Stelle, Nr. 5),
-    ``ohne_spalte_folgt_grundauswahl`` (Nacht-/Tagesgroesse der Trip-Mail); was sich
-    keiner Art zuordnen laesst, steht als ``unerklaert`` darin.
-    Idempotent: ein Abo mit lesbaren ``placements`` wird nicht umgerechnet."""
-    vorhanden = read_placements(_feld(display_config, "placements"))
-    if vorhanden is not None:
-        return LegacyConversion(placements_dict(vorhanden.rows, vorhanden.outlook_reports), ())
-    placements, stabilitaet_aus = legacy_placements(
-        display_config, surface, report_config=report_config,
-        enabled_reports=enabled_reports, outlook_enabled=outlook_enabled)
-    changes = _output_changes(display_config, surface, placements)
-    return LegacyConversion(placements, changes, stabilitaet_aus)
-
-
-# ---------------------------------------------------------------------------
-# Aenderungsliste: bisheriger Pfad gegen Umrechnung ueber den neuen Eingang
-# ---------------------------------------------------------------------------
-
-def _gekoppelt(cid: str) -> bool:
-    from output.renderers.compare_metric_ids import _renderer_ids_for_kennung
-
-    return len(_renderer_ids_for_kennung(cid)) > 1
-
-
-def _art_entfallen(surface, stelle, cid, rt, ctx) -> str:
-    if stelle == "premium_sms":
-        return PREMIUM_FOLGT_SMS
-    if cid not in ctx["grund"]:
-        return AUSSERHALB_GRUNDAUSWAHL
-    if stelle in ("outlook", "hourly") and cid not in ctx["neu_email"]:
-        return OHNE_EMAIL_ENTFAELLT
-    return _art_sonst(surface, cid, rt)
-
-
-def _art_sonst(surface, cid, rt) -> str:
-    if surface != "trip" and _gekoppelt(cid):
-        return AUSWERTUNGEN_GEKOPPELT
-    if surface == "trip" and rt == "morning":
-        return MORGEN_FOLGT_ABEND
-    return UNERKLAERT
-
-
-def _art_folge(surface, stelle, ids, rt) -> str:
-    if stelle == "premium_sms":
-        return PREMIUM_FOLGT_SMS
-    if stelle != "sms":
-        return REIHENFOLGE_WIE_SMS
-    if surface != "trip" and any(_gekoppelt(c) for c in ids):
-        return AUSWERTUNGEN_GEKOPPELT
-    return MORGEN_FOLGT_ABEND if surface == "trip" and rt == "morning" else UNERKLAERT
-
-
-def _stelle_changes(surface, stelle, rt, alt, neu, ctx, kid) -> list[OutputChange]:
-    """``alt``/``neu``: ``[(zeile, format)]`` mit Zeile = (Katalog-ID,
-    Aggregation) -- verglichen wird je Zeile, gemeldet die Katalog-ID (#3101):
-    Max/Min-Doppelzeilen fallen in der Meldung auf eine Kennung zusammen."""
-    out = []
-    a_ids, n_ids = [m for m, _f in alt], [m for m, _f in neu]
-    for mid in [m for m in a_ids if m not in n_ids]:
-        out.append(OutputChange(_art_entfallen(surface, stelle, kid(mid), rt, ctx), stelle,
-                                kid(mid), rt))
-    for mid in [m for m in n_ids if m not in a_ids]:
-        art = PREMIUM_FOLGT_SMS if stelle == "premium_sms" else _art_sonst(surface, kid(mid), rt)
-        if stelle == "email" and bleibt_in_ausgabe(stellen_sperre(kid(mid), stelle, surface)):
-            art = OHNE_SPALTE_FOLGT_GRUNDAUSWAHL
-        out.append(OutputChange(art, stelle, kid(mid), rt))
-    if set(a_ids) == set(n_ids) and a_ids != n_ids:
-        out.append(OutputChange(_art_folge(surface, stelle, [kid(m) for m in n_ids], rt),
-                                stelle, None, rt))
-    alt_form = dict(alt)
-    for mid, form in neu:
-        c = kid(mid)
-        if mid in alt_form and stelle in zwei_formen_stellen(c) and form != heutige_form(
-                surface, stelle, c, alt_form[mid]):
-            art = MORGEN_FOLGT_ABEND if surface == "trip" and rt == "morning" else UNERKLAERT
-            out.append(OutputChange(art, stelle, c, rt))
-    return out
-
-
-def _regel_changes(surface, stelle, rt, alt, neu, kid) -> list[OutputChange]:
-    """Die zwei Faelle, die das View-Model nicht als Abweichung zeigt:
-    Nur-Text-Mail folgt der HTML-Mail (Trip, Ampel-Groessen auf Einfach) und
-    die in der SMS abweichend gewaehlte Wolken-Form."""
-    out = []
-    if stelle == "email" and surface == "trip":
-        out += [OutputChange(NUR_TEXT_FOLGT_HTML, "email", kid(m), None) for m, f in neu
-                if kid(m) in AMPEL_METRIC_IDS and f == "simplified"]
-    if stelle == "sms":
-        for mid, fmt in alt:
-            c = kid(mid)
-            standard = standard_form(c) if surface == "trip" else "raw"
-            # Bisher zwei Formen in der SMS hatte nur die Bewoelkung (#2422 S6).
-            if c in SMS_FORMAT_MODE_METRIC_IDS and heutige_form(surface, "sms", c, fmt) != standard:
-                out.append(OutputChange(SMS_WOLKENFORM_ENTFAELLT, "sms", c, rt))
-    return out
-
-
-def _output_changes(dc: object, surface: str, placements: dict) -> tuple[OutputChange, ...]:
-    from services import channel_list_resolver as clr
-
-    stored = read_placements(placements)
-    reports = stored.outlook_reports or ()
-    out: list[OutputChange] = []
-    for rt in BRIEFINGS:
-        alt = clr.vm_lists(clr.legacy_view(dc, surface, rt), surface, paare=True)
-        if rt not in reports:
-            alt["outlook"] = []
-        neu = clr.vm_lists(clr.placements_view(dc, surface, rt, stored), surface, paare=True)
-
-        def kid(zeile):
-            return zeile[0]
-        ctx = {"grund": set(clr.grundauswahl(dc, surface, rt).ids),
-               "neu_email": {kid(m) for m, _f in neu["email"]}}
-        for stelle in neu:
-            sperr_stelle = "sms" if stelle == "premium_sms" else stelle
-
-            def entfaellt(m, _s=sperr_stelle):
-                grund = stellen_sperre(kid(m), _s, surface)
-                return bool(grund) and not bleibt_in_ausgabe(grund)
-
-            a = [(m, f) for m, f in alt[stelle] if not entfaellt(m)]
-            out += [OutputChange(GESPERRTE_STELLE_ENTFAELLT, stelle, kid(m), rt)
-                    for m, _f in alt[stelle] if entfaellt(m)]
-            out += _stelle_changes(surface, stelle, rt, a, neu[stelle], ctx, kid)
-            out += _regel_changes(surface, stelle, rt, a, neu[stelle], kid)
-    return tuple(dict.fromkeys(out))

@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import email
 import imaplib
+import json
 import os
 import re
 import sys
@@ -1174,27 +1175,75 @@ def pruefe_windrichtung(html: str, soll_w: dict, lang: str = "de") -> list[str]:
     return fehler
 
 
-def _soll_ampel(html: str, plain: str, s: dict, lang: str) -> list[str]:
-    """Ampelfarbe der Etappen-Stundentabellen gegen die Ampel-Grenzen:
-    Ampelpunkt gegen den Klartext-Wert derselben Stunde, Zahl-Zelle gegen ihre
-    Toenung; erste Abweichung je Tabelle und Spalte."""
+def ampel_werte_parsen(text: str) -> dict:
+    """#3237: ``--ampel-werte`` (JSON-Objekt) frueh pruefen: Groesse (``wind``,
+    ``gust``, ``precipitation``, ``rain_probability``) -> Segment-ID (Zahl-Text,
+    Segment N = N-te Etappen-Stundentabelle) -> Rohwert je Stunde (Zahl oder
+    ``null``). ``ValueError`` mit Grund bei ungueltiger Eingabe."""
+    try:
+        werte = json.loads(text)
+    except ValueError as exc:
+        raise ValueError(f"kein JSON ({exc})") from None
+    if not isinstance(werte, dict) or not werte:
+        raise ValueError("kein nicht-leeres JSON-Objekt")
+    for mid, segmente in werte.items():
+        if mid not in _AMPEL_SPALTEN:
+            raise ValueError(f"'{mid}' ist keine Ampel-Groesse {list(_AMPEL_SPALTEN)}")
+        if not isinstance(segmente, dict) or not segmente:
+            raise ValueError(f"{mid}: erwartet ein Objekt Segment-ID -> Rohwerte je Stunde")
+        for sid, liste in segmente.items():
+            if not re.fullmatch(r"[0-9]+", sid):
+                raise ValueError(f"{mid}: Segment-ID '{sid}' ist nicht numerisch")
+            if not isinstance(liste, list) or not all(
+                    x is None or (isinstance(x, (int, float)) and not isinstance(x, bool)) for x in liste):
+                raise ValueError(f"{mid} Segment {sid}: Rohwerte sind keine Liste von Zahlen")
+    return werte
+
+
+def _soll_ampel(html: str, plain: str, s: dict, lang: str, roh: dict | None = None) -> list[str]:
+    """Ampelfarbe der Etappen-Stundentabellen gegen die Ampel-Grenzen; erste
+    Abweichung je Tabelle und Spalte. Vergleichswert je Zelle: die Zahl der
+    Zelle (Roh, Toenung), sonst die Klartext-Zahl derselben Stunde, sonst der
+    Rohwert aus ``--ampel-werte`` (``roh``, Segment N = N-te Tabelle).
+    #3237: seit Spec #3122 Nr. 4 zeigt der Klartext bei Einfach die Wortstufe.
+    Sie ist KEIN Vergleichswert: ihre Skala ist fest (``format_wind_strength``
+    usw.), die Ampel folgt den Grenzen des Abos. Ampelpunkt ohne jeden
+    Vergleichswert ist ein Befund, nie stilles Bestehen."""
     m = _soll_modul()
     spalten = {m._REG[x].col_label: x for x in _AMPEL_SPALTEN}
     klar = _klartext_zellen(plain, lang, s.get("etappen", ()))["Etappen-Stundentabelle"]
-    fehler = []
-    for i, (th, zeilen) in enumerate(_etappen_tabellen_attrs(html, lang)):
+    tabellen, roh, fehler = _etappen_tabellen_attrs(html, lang), roh or {}, []
+    for mid, segmente in roh.items():
+        for sid, liste in segmente.items():
+            if not 1 <= int(sid) <= len(tabellen):  # nie still ueberspringen (wie #3232 AC-7)
+                fehler.append(f"SOLL: Ampel-Rohwerte '{mid}' Segment {sid}: Etappen-Stundentabelle "
+                              f"fehlt (gueltig 1..{len(tabellen)})")
+            elif len(liste) != len(tabellen[int(sid) - 1][1]):
+                fehler.append(f"SOLL: Ampel-Rohwerte '{mid}' Segment {sid}: {len(liste)} Werte "
+                              f"fuer {len(tabellen[int(sid) - 1][1])} Stunden")
+    for i, (th, zeilen) in enumerate(tabellen):
         gemeldet = set()
         for j, zellen in enumerate(zeilen):
             werte = dict(klar[i][j]) if i < len(klar) and j < len(klar[i]) else {}
+            stunde = f"{_strip_tags(zellen[0][1]).strip()}:00"
             for spalte, (attrs, inhalt) in zip(th[1:], zellen[1:]):
-                if spalte not in spalten or spalte in gemeldet:
-                    continue
-                text = _strip_tags(inhalt) if m.zellform(inhalt, True) == m.ZAHL else werte.get(spalte, "")
-                diff = m.ampel_abweichung(s["ampel"], spalten[spalte], text, m.ampel_farbe(attrs, inhalt))
+                form = m.zellform(inhalt, True)
+                if spalte not in spalten or spalte in gemeldet or form is None:
+                    continue  # "–" = kein Wert, keine Farbe
+                mid, ist = spalten[spalte], m.ampel_farbe(attrs, inhalt)
+                liste = (roh.get(mid) or {}).get(str(i + 1)) or []
+                if form == m.ZAHL or re.search(r"\d", werte.get(spalte, "")):
+                    text = _strip_tags(inhalt) if form == m.ZAHL else werte[spalte]
+                    diff = m.ampel_abweichung(s["ampel"], mid, text, ist)
+                elif j < len(liste) and liste[j] is not None:
+                    stufe = m.ampel_stufe(s["ampel"], mid, float(liste[j]))
+                    diff = f"{ist} statt {stufe}" if stufe is not None and ist != stufe else None
+                else:
+                    diff = ("kein Vergleichswert (Ampelpunkt, Klartext ohne Zahl, kein Rohwert "
+                            "in --ampel-werte) -- Farbe nicht pruefbar")
                 if diff:
                     gemeldet.add(spalte)
-                    fehler.append(f"SOLL: Ampelfarbe Etappen-Stundentabelle (HTML) "
-                                  f"{_strip_tags(zellen[0][1]).strip()}:00 '{spalte}': {diff}")
+                    fehler.append(f"SOLL: Ampelfarbe Etappen-Stundentabelle (HTML) {stunde} '{spalte}': {diff}")
     return fehler
 
 
@@ -1271,7 +1320,7 @@ def pruefe_soll(msg: Message, soll: dict, lang: str = "de") -> list[str]:
     pillen = f"━━ {_ml().erwartet('mail.pille.ueberschrift', lang)} ━━"
     fehler += _soll_kachelfolge({"HTML": _kacheln(html, True, lang, ""),
                                  "Klartext": _kacheln(plain, False, lang, pillen)}, s, lang)
-    fehler += _soll_ampel(html, plain, s, lang)
+    fehler += _soll_ampel(html, plain, s, lang, soll.get("ampel_werte"))
     return fehler + _soll_darstellung(html, plain, s, lang) + _soll_windrichtung(html, plain, s, lang)
 
 
@@ -1546,6 +1595,9 @@ def main() -> None:
     parser.add_argument("--windrichtung", metavar="JSON", default=None,
                         help="Soll der Wind-Zellen-Toenung (Ausgabe 'Soll Windrichtung' "
                              "von scripts/send_gate_test_mails.py, #3228)")
+    parser.add_argument("--ampel-werte", metavar="JSON", default=None,
+                        help="Rohwerte der Ampel-Groessen je Etappe und Stunde (Pruefdaten, "
+                             "nur mit --konfig): Ampelpunkt ohne Zahl in Mail und Klartext (#3237)")
     _e2e_paths.sprach_argumente(parser)
     args = parser.parse_args()
 
@@ -1561,11 +1613,23 @@ def main() -> None:
         except ValueError as exc:
             print(f"FEHLER: --windrichtung ungueltig: {exc}")
             sys.exit(2)
+    ampel_werte = None
+    if args.ampel_werte is not None:  # #3237: frueh pruefen, Exit 2 statt Exit 1
+        if not args.konfig:
+            print("FEHLER: --ampel-werte nur mit --konfig (Ampel-Grenzen des Abos)")
+            sys.exit(2)
+        try:
+            ampel_werte = ampel_werte_parsen(args.ampel_werte)
+        except ValueError as exc:
+            print(f"FEHLER: --ampel-werte ungueltig: {exc}")
+            sys.exit(2)
 
     warnungen: list = []
     try:
         # #3047: Soll aus der gespeicherten Konfiguration; ohne --konfig None.
         soll = _soll_modul().lade_soll(args.konfig, args.lang or "de") if args.konfig else None
+        if ampel_werte is not None:
+            soll["ampel_werte"] = ampel_werte
         if args.eml:  # #2663: Mail aus Datei statt IMAP
             msg = email.message_from_bytes(Path(args.eml).read_bytes())
             success, errors = validate_message(msg, args.max_bytes, warnungen=warnungen, soll=soll,

@@ -111,9 +111,15 @@ def test_render_effective_fields_is_exactly_seven():
     (Herkunft Issue #1361 / ADR-0035, S1b) sind render-wirksam und waren bis
     dahin in KEINER der beiden Kategorien deklariert. Die Zahl bleibt eine
     exakte Gleichheit (kein `>=`), damit weiterer Drift genauso auffaellt
-    wie vorher."""
-    assert len(RENDER_EFFECTIVE_FIELDS) == 9, (
-        f"Erwartet 9 RENDER_EFFECTIVE_FIELDS, gefunden {len(RENDER_EFFECTIVE_FIELDS)}: "
+    wie vorher.
+
+    Aus 9 wurden wieder 7 (#3237): `show_outlook` und
+    `multi_day_trend_reports` sind Altfelder des entfernten Altpfads -- den
+    Ausblick steuert allein die Tabelle "Was steht wo"
+    (`placements.outlook_reports`), die beiden Felder wirken nicht mehr auf
+    das Rendern und stehen darum in RENDER_NEUTRAL."""
+    assert len(RENDER_EFFECTIVE_FIELDS) == 7, (
+        f"Erwartet 7 RENDER_EFFECTIVE_FIELDS, gefunden {len(RENDER_EFFECTIVE_FIELDS)}: "
         f"{RENDER_EFFECTIVE_FIELDS!r}"
     )
 

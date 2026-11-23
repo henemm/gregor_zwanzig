@@ -253,14 +253,18 @@ def test_ac3_vorschau_zeigt_dieselbe_stundentabelle_wie_versand():
 
 def test_resolver_liefert_hourly_format():
     from services.channel_list_resolver import resolve_channel_lists
+    from tests.helpers.tabelle_aus_wunsch import orte_wunsch_als_tabelle
 
-    dc = _preset(["wind", "temperature", "precipitation"],
-                 {"wind": True, "temperature": False})["display_config"]
+    # #3237: der Stundenverlauf-Wunsch wirkt nur ueber die Tabelle.
+    dc = orte_wunsch_als_tabelle(_preset(["wind", "temperature", "precipitation"],
+                                         {"wind": True, "temperature": False}))["display_config"]
     formate = {z.metric_id: z.format for z in resolve_channel_lists(dc, "compare").hourly}
     # #3156: ein gespeichertes Format zaehlt nur, wo die Quelle
     # (``zwei_formen_stellen``) im Stundenverlauf zwei Formen nennt --
     # Temperatur hat dort eine Form, ihr ``False`` entfaellt (Ausgabe Roh).
-    assert formate == {"wind": "simplified", "temperature": None, "precipitation": None}, formate
+    # #3237: ohne Einstellung traegt die Tabelle die Form ausdruecklich
+    # (Orte-Stundenverlauf Roh = ``raw``, frueher ``None`` = Flaechen-Standard Roh).
+    assert formate == {"wind": "simplified", "temperature": None, "precipitation": "raw"}, formate
 
 
 def test_validator_vorschau_vertrag_traegt_hourly_metric_formats():

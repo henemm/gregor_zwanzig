@@ -177,7 +177,7 @@ describe('AC-1: Layout-Reiter englisch in Trip und Ortsvergleich, Kanalnamen und
 			'Detailed (HTML)',
 			'Compact (plain text)',
 			'In compact mode, the metrics overview + outlook are always shown. The content blocks below are disabled.',
-			// #3155 (Spec feat_3155 Nr. 8): der Haken show_outlook traegt Name und Text der Grosswetterlage.
+			// #3155 (Spec feat_3155 Nr. 8) / #3237 F002: der Haken (show_stability) traegt Name und Text der Grosswetterlage.
 			'Weather pattern',
 			'Assessment of weather stability, e.g. “stable high pressure”.',
 			'Stage figures',

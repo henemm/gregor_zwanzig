@@ -45,7 +45,13 @@ def _kennungen(auswahl):
 
 
 def _abgelegtes_preset(tmp_path, auswahl) -> tuple[str, str]:
-    """Legt ein Vergleichs-Preset genau so ab, wie es auf der Platte liegt."""
+    """Legt ein Vergleichs-Preset genau so ab, wie es auf der Platte liegt.
+    #3237: die Ausblick-Auswahl steht in der Tabelle "Was steht wo"
+    (``placements``); ``outlook_metrics`` bleibt als Beschreibung stehen."""
+    from tests.helpers.tabelle_aus_wunsch import orte_wunsch_als_tabelle
+
+    dc = orte_wunsch_als_tabelle({"display_config": {"outlook_metrics": list(auswahl)}})[
+        "display_config"]
     user_id = f"a2-cmp-{uuid.uuid4().hex[:8]}"
     preset_id = f"cp-{uuid.uuid4().hex[:8]}"
     ordner = Path(tmp_path) / "users" / user_id / "briefings"
@@ -60,7 +66,7 @@ def _abgelegtes_preset(tmp_path, auswahl) -> tuple[str, str]:
         "profil": "SUMMER_TREKKING",
         "empfaenger": ["gregor-test@henemm.com"],
         "created_at": "2026-01-01T00:00:00Z",
-        "display_config": {"outlook_metrics": list(auswahl)},
+        "display_config": dc,
     }), encoding="utf-8")
     return user_id, preset_id
 
@@ -91,6 +97,12 @@ def test_ac9_ortsvergleich_rundlauf_temperatur_als_spanne_wind_als_einzelwert(tm
         f"Das abgelegte Preset liess sich nicht wieder laden: {presets!r}"
     )
     roh = compare_preset_to_dict(presets[0])
+    ausblick_zeilen = [z["metric_id"] for z in roh["display_config"]["placements"]["rows"]
+                       if z["places"].get("outlook")]
+    assert ausblick_zeilen == AUSWAHL, (
+        f"Die Tabelle kam mit Ausblick-Zeilen {ausblick_zeilen!r} statt {AUSWAHL!r} "
+        "von der Platte zurueck (AC-9, #3237)."
+    )
     assert roh["display_config"]["outlook_metrics"] == AUSWAHL, (
         "Die gespeicherte Auswahl kam als "
         f"{roh['display_config']['outlook_metrics']!r} statt {AUSWAHL!r} von "

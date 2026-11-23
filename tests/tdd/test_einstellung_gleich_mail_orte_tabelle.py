@@ -509,10 +509,17 @@ SPALTEN_BESTAND = ("Spalten: Temp = Temperatur · Gust = Böen · Rain = Nieders
 @pytest.mark.parametrize("stunden", [True, False])
 def test_bestand_stundenverlauf_aus_legende_und_kopf_unveraendert(mit, schalter, kopf_soll, stunden):
     """Bestands-Abo ohne Tabelle, ``hourly_enabled: false`` bzw. ``null``, mit
-    und ohne Stundenauswahl: kein Stundenverlauf; Legende (HTML, Nur-Text) und
-    Mail-Kopf ``X-GZ-Compare-Hourly-Enabled`` wie heute (``null`` = kein Kopf)."""
-    aus = senden(mit, bestand(schalter, stunden=stunden), slot="evening")
+    und ohne Stundenauswahl: kein Stundenverlauf; Mail-Kopf
+    ``X-GZ-Compare-Hourly-Enabled`` wie heute (``null`` = kein Kopf).
+
+    #3237: ohne Tabelle gilt die Tabelle aus der Grundauswahl -- die Legende
+    folgt derselben Regel wie mit Tabelle (Block entfaellt ohne Rest, keine
+    Einheiten-Zeile der Stundenspalten; die Spalten-Zeile des Ausblicks
+    bleibt). Entfallen ist der Altpfad-Rest (Stundenspalten in der Legende
+    trotz abgeschaltetem Block, ``EINHEITEN_BESTAND``). Der Ausblick steht nach
+    der Vorbelegung (ADR-0124 Nr. 3: nur das Morgen-Briefing ist an) im
+    Morgen-Briefing, deshalb laeuft der Fall im Morgen-Slot."""
+    aus = senden(mit, bestand(schalter, stunden=stunden), slot="morning")
     assert stunden_ids(aus) == {"html": None, "klartext": None}
-    soll = ([EINHEITEN_BESTAND] if stunden else []) + [SPALTEN_BESTAND]
-    assert legende(aus) == {"html": soll, "klartext": soll}
+    assert legende(aus) == {"html": [SPALTEN_BESTAND], "klartext": [SPALTEN_BESTAND]}
     assert aus["hourly_header"] is kopf_soll

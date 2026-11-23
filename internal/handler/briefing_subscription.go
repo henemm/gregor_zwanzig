@@ -134,7 +134,7 @@ func ListBriefingsHandler(s *store.Store) http.HandlerFunc {
 
 // POST /api/briefings — kind aus Body, delegiert an Create*Handler (kein
 // duplizierter Validierungs-/Persistenzcode).
-func CreateBriefingHandler(s *store.Store) http.HandlerFunc {
+func CreateBriefingHandler(s *store.Store, pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bodyBytes, err := io.ReadAll(r.Body)
 		if bailIf(w, r, err != nil, http.StatusBadRequest, "bad_request") {
@@ -148,10 +148,10 @@ func CreateBriefingHandler(s *store.Store) http.HandlerFunc {
 		}
 		r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 		if probe.Kind == briefingKindRoute {
-			CreateTripHandler(s).ServeHTTP(w, r)
+			CreateTripHandler(s, pythonURL).ServeHTTP(w, r)
 			return
 		}
-		CreateComparePresetHandler(s).ServeHTTP(w, r)
+		CreateComparePresetHandler(s, pythonURL).ServeHTTP(w, r)
 	}
 }
 

@@ -30,13 +30,57 @@ from app.loader import load_trip
 from app.metric_catalog import get_metric
 from output.renderers.channel_layout import render_for_channel, telegram_metric_notice
 from tests.helpers.einstellung_auslieferung_orakel import _kanal_texte
-from tests.tdd._einstellung_auslieferung_fixtures import golden_dict, render_golden
+from tests.helpers.tabelle_aus_wunsch import trip_wunsch_als_tabelle
+from tests.tdd._einstellung_auslieferung_fixtures import golden_dict, render_trip_dict
 
 pytestmark = pytest.mark.filterwarnings("ignore")
 
 _WD = get_metric("wind_direction").compact_label
 _HU = get_metric("humidity").compact_label
 _G = get_metric("gust").compact_label
+
+
+def _als_tabelle(d: dict) -> dict:
+    """#3237: die Kanal-Listen wirken nur als Tabelle "Was steht wo". Die
+    Tabelle hat EINE Zeilenfolge fuer alle Stellen (Spec #3122 Teil A Nr. 8);
+    diese Datei prueft die Telegram-Tabelle und stellt deshalb die Folge des
+    Telegram-Layouts ein (Muster red-hinweise Korrektur 5c). Haken je Stelle
+    wie in den Layouts."""
+    from tests.helpers.tabelle_aus_wunsch import tabelle
+
+    d = trip_wunsch_als_tabelle(d)
+    dc = d["display_config"]
+    layouts = dc["channel_layouts"]
+    rang = {"primary": 0, "secondary": 1}
+    folge = [m["metric_id"] for m in sorted(
+        (m for m in layouts["telegram"] if m.get("enabled", True)),
+        key=lambda m: (rang.get(m.get("bucket", "primary"), 2), m.get("order", 0)))]
+    listen = {s: layouts[s] for s in ("sms", "telegram", "email") if s in layouts}
+    dc["placements"] = tabelle({k: v for k, v in dc.items() if k != "placements"}, "trip",
+                               listen=listen, folge=folge)
+    return d
+
+
+def _golden_b_senden(monkeypatch):
+    """golden_b ueber den echten Versand (Kanal-Listen als Tabelle)."""
+    return render_trip_dict(monkeypatch, _als_tabelle(golden_dict("golden_b")),
+                            name="golden_b")
+
+
+def _telegram_layout(d: dict):
+    """``render_for_channel("telegram", ...)`` wie im Versandpfad
+    (``trip_report.py``): #3237 -- ``render_for_channel`` bekommt die fertige
+    Telegram-Liste vom Aufrufer (Resolver-Telegram-Zeilen der Tabelle, Adapter
+    ``telegram_metric_configs``); keine Kanal-Kaskade mehr."""
+    import dataclasses
+
+    from output.renderers.email.helpers import telegram_metric_configs
+    from services.channel_list_resolver import resolve_channel_lists
+
+    dc = load_trip(_als_tabelle(d), user_id="default").display_config
+    zeilen = resolve_channel_lists(dc, "trip", "evening").telegram
+    tg = dataclasses.replace(dc, metrics=telegram_metric_configs(zeilen, dc))
+    return render_for_channel("telegram", tg, "evening")
 
 
 def _tabelle(mitschrift) -> tuple[list[str], str]:
@@ -59,7 +103,7 @@ def test_ac13_kein_wd_im_tabellenkopf_windzelle_traegt_die_richtung(monkeypatch)
 
     Mutation (Merge-Filter in ``render_for_channel`` entfernt) -> ``WD`` steht
     wieder im Kopf -> rot."""
-    mit, _ = render_golden(monkeypatch, "golden_b")
+    mit, _ = _golden_b_senden(monkeypatch)
     kopf, erste_zeile = _tabelle(mit)
     assert _WD not in kopf, (
         f"AC-13: Geisterspalte {_WD!r} im Telegram-Tabellenkopf {kopf} -- die "
@@ -74,7 +118,7 @@ def test_ac13_verdraengte_metrik_rueckt_in_die_tabelle_nach(monkeypatch):
     """AC-13: die bisher wegen des 7er-Limits verdraengte Metrik (``humidity``, in
     golden_b nach ``wind_direction`` eingereiht) steht jetzt im Tabellenkopf;
     ``gust`` bleibt die eine verdraengte (Register-Eintrag, Kurzuebersicht)."""
-    mit, _ = render_golden(monkeypatch, "golden_b")
+    mit, _ = _golden_b_senden(monkeypatch)
     kopf, _ = _tabelle(mit)
     assert _HU in kopf, (
         f"AC-13: {_HU!r} (humidity) muss nachruecken, Tabellenkopf: {kopf}"
@@ -97,8 +141,7 @@ def test_ac13_render_for_channel_table_columns_und_demoted_count():
     enthalten ``wind_direction`` NICHT, ``humidity`` ist die 7. und letzte
     Metrik-Spalte, ``demoted_count`` zaehlt nur ``gust`` (1). Der Filter sitzt VOR
     der Begrenzung, damit Spalten UND Zaehler stimmen."""
-    trip = load_trip(golden_dict("golden_b"), user_id="default")
-    layout = render_for_channel("telegram", trip.display_config, "evening")
+    layout = _telegram_layout(golden_dict("golden_b"))
     assert "wind_direction" not in layout.table_columns, (
         f"AC-13: Geisterspalte in table_columns: {layout.table_columns}"
     )
@@ -129,8 +172,7 @@ def test_ac13_guard_windrichtung_im_roh_modus_bleibt_eigene_spalte():
                 m.pop("use_friendly_format", None)
                 m["format_mode"] = "raw"
 
-    trip = load_trip(_variante_wd(roh), user_id="default")
-    layout = render_for_channel("telegram", trip.display_config, "evening")
+    layout = _telegram_layout(_variante_wd(roh))
     assert "wind_direction" in layout.table_columns, (
         f"GUARD: Windrichtung im Roh-Modus muss eine eigene Spalte bleiben: "
         f"{layout.table_columns}"
@@ -146,8 +188,7 @@ def test_ac13_guard_ohne_aktiven_wind_bleibt_die_spalte():
                 m["enabled"] = False
                 m["bucket"] = "secondary"
 
-    trip = load_trip(_variante_wd(ohne_wind), user_id="default")
-    layout = render_for_channel("telegram", trip.display_config, "evening")
+    layout = _telegram_layout(_variante_wd(ohne_wind))
     assert "wind_direction" in layout.table_columns, (
         f"GUARD: ohne Wind keine Verschmelzung: {layout.table_columns}"
     )
@@ -159,7 +200,7 @@ def test_ac13_kurzuebersicht_hat_keine_eigene_wd_zeile_richtung_steckt_in_der_wi
     eigene Zeile ``WD -``; die Richtung steckt in der Windzeile (``W 20 W``).
 
     Mutation (Filter in ``narrow.py`` entfernt) -> ``WD –`` steht wieder da -> rot."""
-    mit, _ = render_golden(monkeypatch, "golden_b")
+    mit, _ = _golden_b_senden(monkeypatch)
     bodies, _ = _kanal_texte(mit, "telegram_rich")
     uebersicht = next(b for b in bodies if b.startswith("Kurzübersicht"))
     zeilen = uebersicht.splitlines()

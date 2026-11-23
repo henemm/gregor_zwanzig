@@ -61,7 +61,20 @@ def _setze(liste: list, metric_id: str, *, order: int, modus: str) -> None:
 def variante(golden: str, modi: dict | None = None, *, standard: str = "raw") -> dict:
     """Golden-Dict mit ``ALLE_SMS_METRIKEN`` aktiv im SMS-Layout; ``modi`` setzt
     den Modus je Metrik, alle anderen bekommen ``standard`` (``raw``). Die
-    Metrik steht bei Bedarf auch im globalen Maximum (Kaskade: Kanal <= global)."""
+    Metrik steht bei Bedarf auch in der Grundauswahl.
+
+    #3237: Auswahl und Folge wirken nur noch ueber die Tabelle "Was steht wo"
+    -- die Kanal-Listen werden als ``placements`` ausgedrueckt
+    (``trip_wunsch_als_tabelle``); ``channel_layouts`` bleibt als wirkungslose
+    Beschreibung stehen. Ein SMS-Format (``modi``) bleibt ohne Wirkung: die SMS
+    hat keine Wahl (Spec #3122 Teil A Nr. 4), die Bewoelkung steht dort fest als
+    Stufe."""
+    from tests.helpers.tabelle_aus_wunsch import trip_wunsch_als_tabelle
+
+    return trip_wunsch_als_tabelle(_variante_altfelder(golden, modi, standard=standard))
+
+
+def _variante_altfelder(golden: str, modi: dict | None, *, standard: str) -> dict:
     d = golden_dict(golden)
     dc = d["display_config"]
     sms = dc["channel_layouts"]["sms"]

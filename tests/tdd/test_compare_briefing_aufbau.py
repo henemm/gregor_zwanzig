@@ -703,14 +703,19 @@ def test_f001_sms_zeigt_unmappbare_auswahl_in_vorschau_und_versand(env):
     Auswahl erzeugt in der SMS kein Zeichen mehr (die Mail weist sie aus);
     jeder Ortsteil ist die Token-Zeile ``O1 D22``."""
     from services.report_config_resolver import resolve_compare_render_options
+    from tests.helpers.tabelle_aus_wunsch import tabelle
 
+    # #3237: die unmappbare Auswahl steht in der Grundauswahl (eine Kanal-
+    # eigene Altliste wirkt nicht mehr); die SMS zeigt laut Tabelle nur die
+    # Temperatur.
+    dc = {
+        "telegram_style": "kurzform",
+        "active_metrics": ["temp_max_c", "wind_max_kmh", "gibt_es_nicht_2983"],
+    }
+    dc["placements"] = tabelle(dc, "compare", listen={"sms": ["temperature"]})
     preset = _preset_ablegen(
         NUTZER_A, "cp-aufbau-luecke", ["loc-ibk", "loc-bz"], telegram_style="kurzform",
-        extra={"display_config": {
-            "telegram_style": "kurzform",
-            "active_metrics": ["temp_max_c", "wind_max_kmh"],
-            "channel_active_metrics": {"sms": ["temp_max_c", "gibt_es_nicht_2983"]},
-        }},
+        extra={"display_config": dc},
     )
     opts = resolve_compare_render_options(preset)
     assert opts.unresolved_by_channel.get("sms") == 1, (
@@ -755,16 +760,17 @@ def test_f003_mail_und_telegram_langform_zeigen_unmappbare_auswahl(env):
     assert luecke_mail and luecke_ort, "Vorbedingung: Hinweis-Wortlaut nicht leer"
 
     def _ablegen(preset_id: str, mit_luecke: bool) -> dict:
+        # #3237: die unmappbare Auswahl steht in der Grundauswahl (eine Kanal-
+        # eigene Altliste wirkt nicht mehr); Mail und Telegram zeigen laut
+        # Tabelle Temperatur und Wind.
+        from tests.helpers.tabelle_aus_wunsch import tabelle
+
         extra_id = ["gibt_es_nicht_2983"] if mit_luecke else []
+        dc = {"active_metrics": ["temp_max_c", "wind_max_kmh", *extra_id]}
+        dc["placements"] = tabelle(dc, "compare", listen={
+            "email": ["temperature", "wind"], "telegram": ["temperature", "wind"]})
         return _preset_ablegen(
-            NUTZER_A, preset_id, ["loc-ibk", "loc-bz"],
-            extra={"display_config": {
-                "active_metrics": ["temp_max_c", "wind_max_kmh"],
-                "channel_active_metrics": {
-                    "email": ["temp_max_c", "wind_max_kmh", *extra_id],
-                    "telegram": ["temp_max_c", "wind_max_kmh", *extra_id],
-                },
-            }},
+            NUTZER_A, preset_id, ["loc-ibk", "loc-bz"], extra={"display_config": dc},
         )
 
     preset = _ablegen("cp-aufbau-luecke-lang", True)

@@ -77,7 +77,7 @@ func TestLocation_RoundTrip_Basic(t *testing.T) {
 func TestTrip_RoundTrip_Basic(t *testing.T) {
 	s := newTestStore(t)
 	r := chi.NewRouter()
-	r.Post("/api/trips", CreateTripHandler(s))
+	r.Post("/api/trips", CreateTripHandler(s, ""))
 	r.Get("/api/trips/{id}", TripHandler(s))
 	r.Put("/api/trips/{id}", UpdateTripHandler(s))
 

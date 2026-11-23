@@ -35,7 +35,8 @@ export function ladeMailZustand(blob: object | null | undefined): MailZustand {
 		wind_exposition_min_elevation_m:
 			typeof c.wind_exposition_min_elevation_m === 'number' ? c.wind_exposition_min_elevation_m : null,
 		show_quick_take_tags: bool(c.show_quick_take_tags, true),
-		show_stability: bool(c.show_stability, true),
+		// #3237 F002: Haken "Grosswetterlage"; gespeichertes null blendet sie im Kern aus (wie E8).
+		show_stability: pyBool(c.show_stability, true),
 		show_highlights: bool(c.show_highlights, true),
 		daily_summary_metrics: Array.isArray(c.daily_summary_metrics)
 			? [...(c.daily_summary_metrics as string[])]

@@ -31,6 +31,12 @@ from tests.helpers.einstellung_gleich_mail_orte import (
 # Von Hand aus editor_standard.json (Orte-Ausblick, Zustand "nie_eingestellt")
 # abgeschrieben -- bewusst NICHT aus dem Produktcode gelesen.
 EDITOR_ANZEIGE = ["temperature", "precipitation", "rain_probability", "wind", "gust", "thunder"]
+# #3237: EINE Zeilenfolge fuer alle Stellen (Spec #3122 Teil A Nr. 8) -- der
+# Ausblick folgt der Zeilenfolge der Tabelle (Grundauswahl-Folge), nicht einer
+# eigenen Ausblick-Folge. Die gleichwertige ausdrueckliche Einstellung nennt
+# dieselben Groessen deshalb in dieser Folge (von Hand, nicht aus dem Code).
+EDITOR_ANZEIGE_FOLGE = ["temperature", "wind", "precipitation", "rain_probability", "thunder", "gust"]
+assert sorted(EDITOR_ANZEIGE_FOLGE) == sorted(EDITOR_ANZEIGE)
 NUTZER = ("r9-altbestand-anna", "r9-altbestand-bert")
 
 
@@ -42,7 +48,7 @@ def _altbestand() -> dict:
 
 def _explizit() -> dict:
     roh = copy.deepcopy(_altbestand())
-    roh["display_config"]["outlook_metrics"] = list(EDITOR_ANZEIGE)
+    roh["display_config"]["outlook_metrics"] = list(EDITOR_ANZEIGE_FOLGE)
     return roh
 
 

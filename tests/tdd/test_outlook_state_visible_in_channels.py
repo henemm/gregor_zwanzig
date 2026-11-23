@@ -57,12 +57,21 @@ def _render(report_type="evening", email_format="full", *, trend=None,
     from output.renderers.trip_report import TripReportFormatter
     from services.report_config_resolver import resolve_report_render_options
 
+    import dataclasses
+
+    from tests.helpers.tabelle_aus_wunsch import tabelle
+
     trip = _trip_with_thunder()
     rc = TripReportConfig(
         trip_id=trip.id,
         email_format=email_format,
         multi_day_trend_reports=[report_type],
     )
+    # #3237: "Ausblick erscheint im" steht in der Tabelle (``outlook_reports``);
+    # das Altfeld ``multi_day_trend_reports`` bleibt als Beschreibung stehen.
+    trip.display_config = dataclasses.replace(
+        trip.display_config,
+        placements=tabelle(trip.display_config, "trip", outlook_reports=[report_type]))
     extra = {}
     if state is not None:
         extra["outlook_state"] = _state(state)

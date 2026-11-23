@@ -91,6 +91,12 @@ def _trip_anlegen(uid: str, *, sms: list[dict] | None, premium: list[dict] | Non
         layouts["premium_sms"] = premium
     d["display_config"]["channel_layouts"] = layouts
     d["display_config"]["outlook_metrics"] = []
+    # #3237: die Tabelle ist die einzige Quelle -- die SMS-Auswahl steht als
+    # Stelle ``sms`` in ``placements``; ``channel_layouts`` (inkl. der
+    # abweichenden Premium-Ebene) bleibt als wirkungslose Beschreibung stehen.
+    from tests.helpers.tabelle_aus_wunsch import trip_wunsch_als_tabelle
+
+    d = trip_wunsch_als_tabelle(d)
     dc = load_trip(copy.deepcopy(d), user_id=uid).display_config
 
     zone = tz_for_coords(*INNSBRUCK)

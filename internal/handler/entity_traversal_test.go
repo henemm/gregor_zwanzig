@@ -65,7 +65,7 @@ import (
 // bestehenden *_test.go-Vorlagen (briefing_history_test.go u.a.).
 func entityTestRouter(s *store.Store) *chi.Mux {
 	r := chi.NewRouter()
-	r.Post("/api/trips", CreateTripHandler(s))
+	r.Post("/api/trips", CreateTripHandler(s, ""))
 	r.Put("/api/trips/{id}", UpdateTripHandler(s))
 	r.Patch("/api/trips/{id}/state", UpdateTripStateHandler(s))
 	r.Delete("/api/trips/{id}", DeleteTripHandler(s))

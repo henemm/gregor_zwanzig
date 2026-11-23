@@ -29,6 +29,19 @@ from pathlib import Path
 import pytest
 
 GOLDEN = Path(__file__).parents[1] / "fixtures" / "golden_3237"
+
+#: Gestellte Wanduhr (F001, Adversary #3237): Der Schnappschuss wurde am
+#: 22.11.2026 um 06:08 UTC (07:08 Ortszeit) aufgenommen. Die Renderer datieren
+#: in der Ortszone des Abos (Trip ``Europe/Paris`` aus ``_einstellung_auslieferung_fixtures.TZ``,
+#: Orte bei 47.27/11.39 ``Europe/Vienna``; html.py ``local_dt(sent_at, tz)``,
+#: compare_html ``_compute_next_send`` -> ``next_compare_briefing`` in der Ortszone).
+#: Nach 23:00 UTC ist dort schon der Folgetag, und "Naechster Versand" haengt
+#: zusaetzlich an der Tageszeit relativ zum Morgen-Slot. Die Uhr steht deshalb
+#: auf einem festen Zeitpunkt NACH dem Morgen-Slot und weit weg von Mitternacht
+#: in UTC wie in der Ortszone; ``tick=True``, damit Zeitmessungen weiterlaufen.
+GESTELLTE_UHR = "2026-11-22T12:00:00+00:00"
+#: Zone, in der die Renderer das Erzeugungsdatum schreiben (s. o.).
+RENDER_ZONE = "Europe/Paris"
 AUFNEHMEN = os.environ.get("GZ_GOLDEN_3237_AUFNEHMEN") == "1"
 ETAPPEN_DATEN = ("2026-07-19", "2026-07-20", "2026-07-21")
 
@@ -90,15 +103,27 @@ _WT_UHRZEIT = re.compile(r"\b(Mo|Di|Mi|Do|Fr|Sa|So|Mon|Tue|Wed|Thu|Fri|Sat|Sun) 
 _UHRZEIT = re.compile(r"\b\d{2}:\d{2} \(?(CET|CEST|UTC)\)?")
 
 
+@pytest.fixture(autouse=True)
+def _gestellte_uhr():
+    """Alle Faelle dieser Datei laufen unter derselben gestellten Uhr (F001)."""
+    import pydantic.v1.types  # noqa: F401  (vor dem Einfrieren laden, s. conftest)
+    from freezegun import freeze_time
+
+    with freeze_time(GESTELLTE_UHR, tick=True):
+        yield
+
+
 def _normalisiert(text: str) -> str:
     """Nur Zeitstempel des Erzeugungszeitpunkts (ISO mit Uhrzeit, Kopf-Uhrzeit) werden
     neutralisiert; Inhalte, Tagesdaten und Reihenfolgen bleiben."""
-    from datetime import date, timedelta
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
 
     text = _UHRZEIT.sub("<UHRZEIT>", _DATUM.sub("<ZEIT>", text))
     # Erzeugungs- und Folgedatum ("Erstellt: 22.11.2026", "So · 22.11.2026")
     # haengen am Testtag; die Wetterdaten der Fixtures liegen fest im Juli 2026.
-    heute = date.today()
+    # "Heute" aus derselben Zone wie der Renderer (nicht date.today() = Prozesszone).
+    heute = datetime.now(ZoneInfo(RENDER_ZONE)).date()
     for versatz in range(-2, 4):
         tag = heute + timedelta(days=versatz)
         for form in (tag.isoformat(), tag.strftime("%d.%m.%Y")):

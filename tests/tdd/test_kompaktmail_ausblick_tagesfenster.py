@@ -144,21 +144,6 @@ def _heutige_etappe() -> SegmentWeatherData:
     )
 
 
-def _dc_ohne_grundauswahl():
-    """``display_config`` OHNE Grundauswahl -- ADR-0050 D4, "kein Maximum".
-
-    #1848 A3: der Ausblick erbt sonst die Grundauswahl und rendert ueber den
-    konfigurierbaren Zweig, der seine Zellentexte aus ``stage["cells"]``
-    liest. Hand-gebaute Alt-Zeilen (``_AC5_ALT_ZEILE``) tragen die nicht --
-    gegen sie stuende dort ueberall "-". Fuer den Bestandsschutz-Test des
-    FESTEN Zweigs ist das die richtige Vorbedingung, nicht ein Umweg um den
-    Befund: ohne Grundauswahl bleibt der feste Zweig produktiv in Kraft.
-    """
-    dc = build_default_display_config()
-    dc.metrics = []
-    return dc
-
-
 def _mail(zeilen: list[dict], *, report_config: TripReportConfig | None = None,
           display_config=None):
     """Das ECHTE Trip-Briefing ueber den produktiven Formatierer -- Pruefort
@@ -410,64 +395,13 @@ def test_unzerlegbarer_tagestoken_faellt_auf_kein_gewitter_zurueck():
 
 
 # ---------------------------------------------------------------------------
-# AC-5: Bestandsschutz -- Alt-Fixture ohne Stundenreihe bleibt unveraendert
+# AC-5: Bestandsschutz -- Alt-Fixture ohne Stundenreihe
 # ---------------------------------------------------------------------------
-
-# Aufgezeichnet VOR jeder Implementierung dieser Scheibe, am Stand
-# `71dd8a2d45d9edd914c6b8209f85e9ebd050a668` (== HEAD dieses Branches beim
-# Schreiben dieses Tests, 2026-08-14), durch einen echten Renderlauf von
-# ``_mail([_AC5_ALT_ZEILE], report_config=_KOMPAKT).email_plain`` durch
-# ``_kompakt_ausblick_zeile()`` -- KEIN zweiter Aufruf desselben Codes zur
-# Testlaufzeit (Spec AC-5, Begruendung woertlich aus
-# tests/tdd/test_trip_outlook_parity.py).
-# Issue #1488 Scheibe B: Sollwert neu aufgezeichnet -- das Aggregatwort kommt
-# jetzt aus THUNDER_LABEL_DE ("mittel" statt "MED"). Geprueft bleibt die
-# Zweigwahl (Rueckfall auf `thunder_plain` ohne Stundenreihe), nicht das Vokabular.
-# Issue #1848 Scheibe A1: Sollwert erneut aufgezeichnet -- der Temperatur-Spannen-
-# Trenner ist vom Bindestrich auf den Schraegstrich gewechselt ("9-21C" -> "9/21C").
-# Grund: PO-Entscheid 2026-08-20, EIN Trenner ueber alle Klartext-Flaechen; der
-# Bindestrich ist bei Minusgraden zugleich Trenner und Vorzeichen und damit nicht
-# eindeutig lesbar. Gleiche Lage wie bei #1488 oben (MED -> mittel): geaendert hat
-# sich das VOKABULAR, nicht die hier bewachte Zweigwahl -- der Rueckfall auf
-# `thunder_plain` ohne Stundenreihe bleibt am abschliessenden "Tmittel" ablesbar
-# und unveraendert geprueft.
-_AC5_ALT_ZEILE_SOLL = "Mi  Alte Etappe                9/21C   1.5mm NW22  Tmittel"
-
-_AC5_ALT_ZEILE = dict(
-    weekday="Mi", name="Alte Etappe", note=None,
-    temp_lo=9, temp_hi=21, precip_mm=1.5,
-    wind_dir="NW", wind_kmh=22, thunder="MED",
-    # Bewusst OHNE "hourly_thunder"-Schluessel -- der echte Alt-Aufrufer-Fall
-    # (Spec AC-5: "hourly_thunder fehlt"), nicht nur eine leere Stundenreihe.
-)
-
-
-def test_ohne_stundenreihe_bleibt_kurzformat_unveraendert():
-    """AC-5: Given eine Ausblick-Zeile ganz OHNE Stundenreihe (Alt-Fixture,
-    Schluessel 'hourly_thunder' fehlt) / When die Kurzformat-Mail gerendert
-    wird / Then bleibt die Ausgabe zeichengleich zum Stand vor dieser
-    Aenderung (Rueckfall auf ``thunder_plain``, Zweig 'plain').
-
-    Bestandsschutz -- dieser Test ist bereits JETZT gruen, vor jeder
-    Implementierung: ohne Stundenreihe greift ``resolve_thunder_day_branch()``
-    laut Spec unveraendert auf ``tok['thunder_plain']`` zurueck, denselben
-    Wert, den der heutige (ungeaenderte) Code bereits liefert. Er MUSS nach
-    der Implementierung gruen BLEIBEN -- ein rot werdender Lauf hier heisst,
-    dass sich das Alt-Verhalten veraendert hat.
-    """
-    # #1848 A3: ausdruecklich OHNE Grundauswahl gerendert (ADR-0050 D4) --
-    # genau der Fall, den dieser Bestandsschutz bewacht: der feste Zweig, auf
-    # den ein Alt-Aufrufer ohne Stundenreihe und ohne Grundauswahl faellt. Der
-    # aufgezeichnete Sollwert bleibt damit unveraendert gueltig, statt zu
-    # einer Zeile aus lauter "-" nachgezogen zu werden (die Alt-Zeile traegt
-    # keine `cells`, die der konfigurierbare Zweig fuellen wuerde).
-    bericht = _mail([_AC5_ALT_ZEILE], report_config=_KOMPAKT,
-                    display_config=_dc_ohne_grundauswahl())
-    ausblick = _kompakt_ausblick_zeile(bericht.email_plain)
-    assert ausblick == _AC5_ALT_ZEILE_SOLL, (
-        f"Ohne Stundenreihe darf sich die Kompakt-Ausblick-Zeile NICHT "
-        f"aendern.\nSoll (aufgezeichnet vor der Implementierung):\n"
-        f"{_AC5_ALT_ZEILE_SOLL!r}\nIst:\n{ausblick!r}")
+# #3237: ``test_ohne_stundenreihe_bleibt_kurzformat_unveraendert`` ist
+# entfallen -- er bewachte den festen Ausblick-Zweig, auf den ein Trip ganz
+# ohne Grundauswahl fiel (ADR-0050 D4, "kein Maximum = nicht schneiden"), ein
+# Rueckfall des Altpfads. Die Tabelle "Was steht wo" kennt keinen Rueckfall
+# (ADR-0124): ohne Grundauswahl hat sie keine Zeile und damit keinen Ausblick.
 
 
 # ---------------------------------------------------------------------------

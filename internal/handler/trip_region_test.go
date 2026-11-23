@@ -31,7 +31,7 @@ func TestTripRegion_CreateAndRead(t *testing.T) {
 		`{"id":"W1","name":"Start","lat":42.0,"lon":9.0,"elevation_m":100}` +
 		`]}]}`
 
-	h := CreateTripHandler(s)
+	h := CreateTripHandler(s, "")
 	req := httptest.NewRequest("POST", "/api/trips", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()

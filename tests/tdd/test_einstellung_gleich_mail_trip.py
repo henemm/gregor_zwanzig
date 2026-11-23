@@ -330,21 +330,24 @@ def test_ac4_ausblick_bewusst_leer(monkeypatch, fall):
 
 @pytest.mark.parametrize("fall", _faelle("test_ausblick_ausgeschaltet"))
 def test_ausblick_ausgeschaltet(monkeypatch, fall):
-    """Spec §2 Punkt 5: ``show_outlook`` aus -> kein Ausblick, obwohl
-    Tageszeilen vorliegen; Gegenprobe mit ``show_outlook`` an."""
+    """Spec §2 Punkt 5 / #3237: Ausblick aus (die eine Stelle, Tabelle
+    ``outlook_reports: []``) -> kein Ausblick, obwohl Tageszeilen vorliegen,
+    in HTML, Klartext UND Kompakt; Gegenprobe mit dem Abend-Briefing an."""
+    from tests.helpers.tabelle_aus_wunsch import tabelle
+
     data = trip_json(_AC4_GRUND, outlook_metrics=["wind"])
     html, text, _ = _senden(monkeypatch, data, fall["format"])
     assert _ausblick(html, text, fall["format"]) is not None, "Gegenprobe: Ausblick an"
-    data["report_config"]["show_outlook"] = False
+    data["display_config"]["placements"] = tabelle(
+        data["display_config"], "trip", listen={"outlook": ["wind"]}, outlook_reports=[])
     html, text, _ = _senden(monkeypatch, data, fall["format"])
     tab = _ausblick(html, text, fall["format"])
-    if fall["status"] == "ausnahme":
-        # #722: render_compact ignoriert die Baustein-Schalter (compact.py,
-        # Docstring) -- gewollte, in der Fallliste benannte Abweichung.
-        assert tab is not None and tab.spalten == ["wind"], tab
-        return
-    assert tab is None, f"{fall['id']}: Ausblick trotz show_outlook=false: {tab.spalten}"
+    assert tab is None, f"{fall['id']}: Ausblick trotz outlook_reports=[]: {tab.spalten}"
 
+
+#: Ausblick in beiden Briefings (#3237: allein ``outlook_reports`` der Tabelle;
+#: ``trip_json`` traegt den Wunsch dorthin).
+_AUSBLICK_BEIDE = {"multi_day_trend_reports": ["morning", "evening"]}
 
 #: Variante -> (abgeschalteter Bericht, Schalter am Metrik-Eintrag).
 _BERICHT_AUS = {"morgen_aus": ("morning", "morning_enabled"),
@@ -360,7 +363,8 @@ def test_ein_aus_metrik_je_bericht(monkeypatch, fall):
     des anderen Berichts ist unberuehrt und zeigt Boeen in gespeicherter Folge."""
     aus_bericht, schalter = _BERICHT_AUS[_variante(fall)]
     folge = ["gust", "temperature", "wind"]
-    data = trip_json(folge, outlook_metrics=["gust", "temperature"])
+    data = trip_json(folge, outlook_metrics=["gust", "temperature"],
+                     report_config=_AUSBLICK_BEIDE)
     for eintrag in data["display_config"]["metrics"]:
         if eintrag["metric_id"] == "gust":
             eintrag[schalter] = False
@@ -393,7 +397,8 @@ def test_ein_metrik_nur_je_bericht_eingeschaltet(monkeypatch, fall):
     des anderen Berichts zeigt sie in keiner Liste."""
     an_bericht, schalter = _BERICHT_AN[_variante(fall)]
     folge = ["gust", "temperature", "wind"]
-    data = trip_json(folge, outlook_metrics=["gust", "temperature"])
+    data = trip_json(folge, outlook_metrics=["gust", "temperature"],
+                     report_config=_AUSBLICK_BEIDE)
     for eintrag in data["display_config"]["metrics"]:
         if eintrag["metric_id"] == "gust":
             eintrag["enabled"] = False
@@ -429,7 +434,7 @@ def test_f007_ausblick_zellen_je_bericht(monkeypatch, fall):
     Bericht -- faellt so auf)."""
     bericht = {"morgen": "morning", "abend": "evening"}[_variante(fall)]
     folge = ["gust", "precipitation", "temperature"]
-    data = trip_json(folge, outlook_metrics=folge)
+    data = trip_json(folge, outlook_metrics=folge, report_config=_AUSBLICK_BEIDE)
     for eintrag in data["display_config"]["metrics"]:
         if eintrag["metric_id"] == "gust":
             eintrag["enabled"] = False
@@ -440,8 +445,8 @@ def test_f007_ausblick_zellen_je_bericht(monkeypatch, fall):
     for rt, soll in ((bericht, ["gust", "temperature"]),
                      (_ANDERER_BERICHT[bericht], ["precipitation", "temperature"])):
         wo = f"{fall['id']} ({rt})"
-        rh, rtext, _ = _senden(monkeypatch, trip_json(folge, outlook_metrics=folge), fmt,
-                               report_type=rt)
+        referenz = trip_json(folge, outlook_metrics=folge, report_config=_AUSBLICK_BEIDE)
+        rh, rtext, _ = _senden(monkeypatch, referenz, fmt, report_type=rt)
         ref = _ausblick(rh, rtext, fmt)
         assert ref is not None and ref.spalten == folge, f"{wo}: Referenz {ref and ref.spalten}"
         html, text, _ = _senden(monkeypatch, data, fmt, report_type=rt)
@@ -528,13 +533,13 @@ def test_f004_wind_einfach_mit_richtung_einfach(monkeypatch, fall):
 
 @pytest.mark.parametrize("fall", _faelle("test_ac8_ampel_groesse_einfach"))
 def test_ac8_ampel_groesse_einfach(monkeypatch, fall):
-    """#814: Boeen auf Einfach -> HTML Ampelpunkt (Einfach-Form), Klartext
-    die Zahl (gewollte Ausnahme)."""
+    """#814: Boeen auf Einfach -> HTML Ampelpunkt (Einfach-Form). Klartext
+    seit #3237 die Wortstufe: die Nur-Text-Mail folgt bei Roh/Einfach der
+    HTML-Mail (bewusste Aenderung, Spec #3122 Teil A Nr. 8; vorher die Zahl)."""
     data = trip_json(["gust", "temperature"], einfach={"gust"})
     html, text, _ = _senden(monkeypatch, data, fall["format"])
     tab = _stundentabellen(html, text, fall["format"], "etappe")[0]
-    erwartet = "einfach" if fall["format"] == "html" else "zahl"
-    assert tab.formen()["gust"] == erwartet, tab.zellen[:1]
+    assert tab.formen()["gust"] == "einfach", tab.zellen[:1]
 
 
 @pytest.mark.parametrize("fall", _faelle("test_ac8_ausblick_roh_einfach"))
@@ -674,95 +679,6 @@ def test_ac10_neue_metrik_hinten_angehaengt(monkeypatch, fall):
     assert gelesen, f"{fall['id']}: Liste fehlt"
     for spalten in gelesen:
         assert spalten == neu, f"{fall['id']}: {spalten} != {neu}"
-
-
-@pytest.mark.parametrize("fall", _faelle("test_ac10_leerer_schnitt_rueckfall_grundauswahl"))
-def test_ac10_leerer_schnitt_rueckfall_grundauswahl(monkeypatch, fall):
-    """AC-10: die gespeicherte Liste enthaelt nur Groessen, die in der
-    Grundauswahl abgewaehlt sind -> nach dem Schnitt bliebe nichts; Soll ist
-    der dokumentierte Rueckfall auf die volle Grundauswahl (in Katalogfolge
-    eingestellt, damit Befund T1 diesen Fall nicht beruehrt), kein
-    verschwindender Block."""
-    grund = ["temperature", "wind", "gust"]
-    data = trip_json(grund, email_layout=metrik_eintraege(["uv_index"]),
-                     outlook_metrics=["uv_index"])
-    html, text, _ = _senden(monkeypatch, data, fall["format"])
-    gelesen = _listen_spalten(html, text, fall)
-    assert gelesen, f"{fall['id']}: Liste fehlt"
-    for spalten in gelesen:
-        assert spalten == grund, f"{fall['id']}: {spalten} != Grundauswahl {grund}"
-
-
-@pytest.mark.parametrize("fall", _faelle("test_n1_totalschnitt_reine_fremdliste"))
-def test_n1_totalschnitt_reine_fremdliste(monkeypatch, fall):
-    """#3047 N1 (AC-10, Totalschnitt != bewusst leer): die gespeicherte
-    E-Mail-Liste bzw. Ausblick-Liste ist NICHT leer, nennt aber ausschliesslich
-    Groessen ausserhalb der Grundauswahl (UV, Bewoelkung) und keinen einzigen
-    Grundauswahl-Eintrag -- auch keinen ausgeschalteten. Soll: die volle
-    Grundauswahl in ihrer eingestellten Folge (nicht Katalogfolge), kein
-    verschwindender Block, in HTML, Klartext und (Ausblick) Kompakt."""
-    grund = ["gust", "temperature", "wind"]
-    fremd = ["uv_index", "cloud_total"]
-    data = trip_json(grund, email_layout=metrik_eintraege(fremd, katalog=tuple(fremd)),
-                     outlook_metrics=list(fremd))
-    assert grund != [m for m in KATALOG if m in grund], "Vorbedingung: Folge != Katalog"
-    html, text, _ = _senden(monkeypatch, data, fall["format"])
-    gelesen = _listen_spalten(html, text, fall)
-    assert gelesen, f"{fall['id']}: Liste fehlt (Totalschnitt darf den Block nicht leeren)"
-    for spalten in gelesen:
-        assert spalten == grund, f"{fall['id']}: {spalten} != Grundauswahl {grund}"
-
-
-# ---------------------------------------------------------------------------
-# M21 -- Kanal-Liste je Bericht (``channel_layouts_per_report``, ADR-0050)
-# ---------------------------------------------------------------------------
-
-#: Eigene E-Mail-Liste je Bericht; die Abend-Folge steht gegen die Katalogfolge
-#: (Temperatur vor Niederschlag), Folge allein ueber ``order``.
-_JE_BERICHT = {"morning": ["wind", "gust"], "evening": ["precipitation", "temperature"]}
-#: Globale Kanal-Liste ``channel_layouts.email`` -- bewusst anders als beide
-#: Bericht-Listen und als die Grundauswahl, damit jede Ebene sichtbar wirkt.
-_GLOBAL_EMAIL = ["cloud_total", "uv_index", "temperature"]
-_BERICHT = {"morgen": "morning", "abend": "evening"}
-
-
-def _m21_teile(fall: dict) -> tuple[str, str]:
-    """(Bericht ``morning|evening``, Tabelle ``etappe|nacht``) aus der Variante
-    ``<morgen|abend>_<stunden|nacht>`` bzw. ``totalschnitt_<...>``."""
-    teile = _variante(fall).split("_")
-    return _BERICHT[teile[-2]], "etappe" if teile[-1] == "stunden" else "nacht"
-
-
-@pytest.mark.parametrize("fall", _faelle("test_m21_kanal_liste_je_bericht"))
-def test_m21_kanal_liste_je_bericht(monkeypatch, fall):
-    """#3047 M21 (ADR-0050, Ebene ``per_report`` vor ``channel_layouts``): je
-    Bericht eine eigene E-Mail-Liste (Morgen Wind, Boeen; Abend Niederschlag,
-    Temperatur), die globale ``channel_layouts.email`` ist anders -> die
-    Morgen-Mail zeigt genau die Morgen-Liste, die Abend-Mail genau die
-    Abend-Liste, in Etappen- und Nachttabelle, HTML und Klartext."""
-    report_type, art = _m21_teile(fall)
-    data = trip_json(GLOBAL_ANDERS, email_layout=metrik_eintraege(_GLOBAL_EMAIL))
-    data["display_config"]["channel_layouts_per_report"] = {
-        rt: {"email": metrik_eintraege(folge)} for rt, folge in _JE_BERICHT.items()}
-    html, text, _ = _senden(monkeypatch, data, fall["format"], report_type=report_type)
-    _pruefe_spalten(_stundentabellen(html, text, fall["format"], art),
-                    _JE_BERICHT[report_type], fall["id"])
-
-
-@pytest.mark.parametrize("fall", _faelle("test_m21_totalschnitt_je_bericht"))
-def test_m21_totalschnitt_je_bericht(monkeypatch, fall):
-    """#3047 M21/AC-10: die Bericht-Liste ist nicht leer, nennt aber nur
-    Groessen ausserhalb der Grundauswahl (UV, Bewoelkung) -> Rueckfall auf die
-    volle Grundauswahl in eingestellter Folge, wie bei ``channel_layouts``
-    (N1) -- nicht auf die globale Kanal-Liste und kein leerer Block."""
-    report_type, art = _m21_teile(fall)
-    grund = ["gust", "temperature", "wind"]
-    fremd = ["uv_index", "cloud_total"]
-    data = trip_json(grund, email_layout=metrik_eintraege(["temperature"]))
-    data["display_config"]["channel_layouts_per_report"] = {
-        report_type: {"email": metrik_eintraege(fremd, katalog=tuple(fremd))}}
-    html, text, _ = _senden(monkeypatch, data, fall["format"], report_type=report_type)
-    _pruefe_spalten(_stundentabellen(html, text, fall["format"], art), grund, fall["id"])
 
 
 # ---------------------------------------------------------------------------
@@ -1342,34 +1258,3 @@ def test_b4_keine_alten_ausblick_namen(monkeypatch, fall):
     assert _b4_ausblick_da(fall, html, text, bubbles), f"{fall['id']}: Vorbedingung Ausblick"
     funde = alte_namen_in(_b4_texte(fall, html, text, bubbles))
     assert not funde, f"{fall['id']}: alte Namen in der Ausgabe: {funde}"
-
-
-def _stabil():
-    from app.models import StabilityResult
-
-    return StabilityResult(label="STABIL", confidence_pct=82)
-
-
-#: Grosswetterlage-Zeile je Sprache (von Hand, ``mail.stabilitaet.stabil``).
-_GROSSWETTERLAGE = {"de": "Wetterlage: STABIL", "en": "Weather pattern: STABLE"}
-
-
-@pytest.mark.parametrize("fall", _faelle("test_b4_grosswetterlage_folgt_show_outlook"))
-def test_b4_grosswetterlage_folgt_show_outlook(monkeypatch, fall):
-    """AC-5 (#3155): ``show_outlook`` steuert im Altbestand nur noch die
-    Grosswetterlage -- aus: keine Grosswetterlage in HTML- und Nur-Text-Mail;
-    an: sie steht weiterhin da (Bestand, AC-13)."""
-    schalter = fall["konfig"] == "grosswetterlage_an"
-    data = _b4_alt({"show_outlook": schalter, "show_stability": True,
-                    "multi_day_trend_reports": ["evening"]},
-                   outlook_metrics=["gust", "temperature"])
-    mit, _trip, _uid = render_trip_mit_ausblick(
-        monkeypatch, data, report_type=fall.get("briefing", "evening"),
-        language=fall.get("sprache"), ausblick_nach_zeitplaner=True,
-        stability_result=_stabil())
-    html, text = mail_teile(mit)
-    texte = html_textknoten(html) if fall["format"] == "html" else textzeilen(text)
-    zeile = _GROSSWETTERLAGE[fall.get("sprache") or "de"]
-    da = any(t.startswith(zeile) for t in texte)
-    assert da is schalter, (
-        f"{fall['id']}: Grosswetterlage {'fehlt' if schalter else 'steht trotz show_outlook=false'}")

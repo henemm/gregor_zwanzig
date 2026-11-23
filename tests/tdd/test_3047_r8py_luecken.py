@@ -196,21 +196,27 @@ _SMS_LISTE = [{"metric_id": m, "bucket": "primary", "order": i}
 
 @pytest.mark.parametrize("report_type", ["morning", "evening"])
 def test_t3_premium_sms_folgt_sms_liste(report_type):
-    """M20 (AC-22): eigene SMS-Liste, keine Premium-Liste -> Premium-SMS hat
-    dieselben Zeilen in derselben Folge; mit eigener Premium-Liste die eigene."""
+    """M20 (AC-22): eigene SMS-Liste -> Premium-SMS hat dieselben Zeilen in
+    derselben Folge. #3237: die SMS-Liste steht in der Tabelle "Was steht wo"
+    (Stelle ``sms``, Premium-SMS hat keine eigene Stelle); eine frueher
+    moegliche eigene Premium-Liste (Altfeld ``channel_layouts.premium_sms``)
+    wirkt nicht mehr -- Premium-SMS bleibt die SMS-Liste."""
     from services.channel_list_resolver import resolve_channel_lists
+    from tests.helpers.tabelle_aus_wunsch import trip_wunsch_als_tabelle
 
     def ids(zeilen):
         return [z.metric_id for z in zeilen if z.enabled]
 
-    vm = resolve_channel_lists({"metrics": _GRUND, "channel_layouts": {"sms": _SMS_LISTE}},
-                               "trip", report_type)
+    def dc(layouts):
+        return trip_wunsch_als_tabelle(
+            {"display_config": {"metrics": _GRUND, "channel_layouts": layouts}})["display_config"]
+
+    vm = resolve_channel_lists(dc({"sms": _SMS_LISTE}), "trip", report_type)
     assert ids(vm.sms)[:3] == ["gust", "precipitation", "temperature"], ids(vm.sms)
     assert ids(vm.premium_sms) == ids(vm.sms)
     eigen = [{"metric_id": "wind", "bucket": "primary", "order": 0}]
-    vm2 = resolve_channel_lists({"metrics": _GRUND, "channel_layouts": {
-        "sms": _SMS_LISTE, "premium_sms": eigen}}, "trip", report_type)
-    assert ids(vm2.premium_sms) == ["wind"] and ids(vm2.sms) == ids(vm.sms)
+    vm2 = resolve_channel_lists(dc({"sms": _SMS_LISTE, "premium_sms": eigen}), "trip", report_type)
+    assert ids(vm2.premium_sms) == ids(vm2.sms) == ids(vm.sms)
 
 
 # --------------------------------------------------------------------------- #

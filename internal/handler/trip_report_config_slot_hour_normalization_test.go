@@ -178,7 +178,7 @@ func TestCreateTripHandler_ReportConfigMorningTimeQuarterHourOnWrite(t *testing.
 		`"waypoints":[{"id":"W1","name":"P","lat":47.0,"lon":11.0,"elevation_m":500}]}],` +
 		`"report_config":{"enabled":true,"morning_time":"07:30:30"}}`
 
-	h := CreateTripHandler(s)
+	h := CreateTripHandler(s, "")
 	req := httptest.NewRequest("POST", "/api/trips", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()

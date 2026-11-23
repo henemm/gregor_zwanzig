@@ -107,6 +107,17 @@ def _preset(preset_id: str, *, top_n: int | None) -> dict:
         "active_metrics": ["temp_max_c", "wind_max_kmh", "sunny_hours_h"],
         "hourly_metrics": ["t2m_c", "wind_kmh"],
     }
+    # #3237: die Stundenverlauf-Auswahl steht in der Tabelle "Was steht wo";
+    # ``hourly_metrics`` bleibt als Beschreibung stehen. Wirksam war davon nur
+    # ``wind_kmh`` (``t2m_c`` ist keine waehlbare Kennung) -- die Tabelle stellt
+    # genau diese aufgezeichnete Auswahl ein (Stundenverlauf: Wind).
+    from tests.helpers.tabelle_aus_wunsch import tabelle
+
+    # ``outlook_enabled: False`` des Presets steht als ``outlook_reports: []``
+    # in der Tabelle (mit Tabelle wirkt allein sie).
+    display_config["placements"] = tabelle(display_config, "compare", listen={"hourly": ["wind"]},
+                                           folge=["temperature", "wind", "sunshine"],
+                                           outlook_reports=[])
     if top_n is not None:
         display_config["top_n"] = top_n
     return {

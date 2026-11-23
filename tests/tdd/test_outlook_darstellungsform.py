@@ -658,37 +658,12 @@ def test_ac2_ortsvergleich_ohne_formats_bleibt_roh():
     )
 
 
-@pytest.mark.parametrize("stored,erwartet", [
-    ({"gust": True, "wind": False}, {"gust": True, "wind": False}),
-    ({"temperature": True}, {}),
-    ({"gust": "ja"}, {}),
-    ([], None),
-    (None, None),
-])
-def test_ac1_resolve_compare_outlook_formats(stored, erwartet):
-    """AC-1 (Ortsvergleich): Given ein gespeicherter Rohwert aus der
-    Ortsvergleichs-``display_config`` / When ``resolve_compare_outlook_
-    formats()`` ihn aufloest / Then gilt dieselbe Regel wie im Trip-Pendant
-    ``resolve_trip_outlook_formats()`` -- nicht-faehige Kennungen und
-    nicht-boolesche Werte fallen heraus, ein Nicht-Dict liefert ``None``.
-    Zwei Flaechen, EINE Regel (Trip/Compare-Teilungs-Invariante)."""
-    try:
-        from output.renderers.compare_outlook_metric_ids import (
-            resolve_compare_outlook_formats,
-        )
-    except ImportError as exc:
-        raise AssertionError(
-            "compare_outlook_metric_ids kennt "
-            "'resolve_compare_outlook_formats()' noch nicht (#2049) -- ohne "
-            "sie erreicht eine gespeicherte Ortsvergleichs-Zuordnung den "
-            f"Renderpfad nie.\nUrsprungsfehler: {exc}"
-        ) from exc
-
-    ergebnis = resolve_compare_outlook_formats(stored)
-    assert ergebnis == erwartet, (
-        f"resolve_compare_outlook_formats({stored!r}) == {ergebnis!r} statt "
-        f"{erwartet!r}."
-    )
+# #3237: ``test_ac1_resolve_compare_outlook_formats`` ist entfallen -- die
+# Funktion ``resolve_compare_outlook_formats`` (Lesen des Altfelds
+# ``outlook_metric_formats``) ist mit dem Altpfad geloescht. Die Form je
+# Ausblick-Stelle steht in der Tabelle "Was steht wo" und wird dort gelesen
+# (``read_placements``: nur ``raw``/``simplified``; ``resolve_rows``: nur an
+# Stellen mit zwei Formen).
 
 
 def test_ac1_compare_render_options_tragen_die_zuordnung():
@@ -786,10 +761,13 @@ def _erzeugte_vergleichsmail(aufruf) -> tuple[str, str]:
 def _dienst_preset(preset_id: str, loc_id: str, formats):
     """Ortsvergleich mit Boeen-Ausblick; ``formats`` = gespeicherte
     Roh/Einfach-Zuordnung (oder ``None`` fuer den Bestandsfall)."""
+    from tests.helpers.tabelle_aus_wunsch import orte_wunsch_als_tabelle
+
     dc: dict = {"outlook_metrics": ["gust"]}
     if formats is not None:
         dc["outlook_metric_formats"] = formats
-    return _compare_preset(preset_id, loc_id, display_config=dc)
+    # #3237: Auswahl und Form wirken nur ueber die Tabelle "Was steht wo".
+    return orte_wunsch_als_tabelle(_compare_preset(preset_id, loc_id, display_config=dc))
 
 
 def _boeen_zelle_aus_dienst_mail(html: str) -> tuple[str, str]:

@@ -28,7 +28,7 @@ import (
 func empfaengerInertRouter(s *store.Store) *chi.Mux {
 	r := chi.NewRouter()
 	r.Get("/api/compare/presets", ListComparePresetsHandler(s))
-	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s, ""))
 	r.Get("/api/compare/presets/{id}", GetComparePresetHandler(s))
 	r.Put("/api/compare/presets/{id}", UpdateComparePresetHandler(s))
 	return r

@@ -405,10 +405,21 @@ def _mail(forecast: dict | None, *, trend: list[dict] | None = None,
           report_config: TripReportConfig | None = None,
           report_type: str = "morning"):
     """Das ECHTE Trip-Briefing (HTML + Klartext + SMS + Telegram-Bubbles)
-    ueber den produktiven Formatierer — Pruefort = Wirkort."""
+    ueber den produktiven Formatierer — Pruefort = Wirkort.
+
+    #3237: der Mehrtages-Ausblick wird allein ueber die Tabelle "Was steht
+    wo" geschaltet (``placements.outlook_reports``); ``show_outlook`` wirkt
+    nicht mehr. Die Tests beschreiben "Ausblick aus" weiter per
+    ``TripReportConfig(show_outlook=False)`` -- hier wird daraus die Tabelle
+    ohne Briefing mit Ausblick (``outlook_enabled=False``)."""
+    from services.placements import placements_aus_grundauswahl
+
+    dc = build_default_display_config()
+    if report_config is not None and report_config.show_outlook is False:
+        dc.placements = placements_aus_grundauswahl(dc, "trip", outlook_enabled=False)
     return TripReportFormatter().format_email(
         [_ruhige_etappe()], "Test-Trip", report_type,
-        display_config=build_default_display_config(), tz=_TZ,
+        display_config=dc, tz=_TZ,
         stage_name="Etappe A", thunder_forecast=forecast,
         multi_day_trend=trend, report_config=report_config,
     )

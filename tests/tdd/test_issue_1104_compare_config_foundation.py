@@ -243,11 +243,16 @@ class TestIssue1104ActiveMetricsWiring:
         preset["_user_id"] = user_id
 
         enabled_metrics = _capture_render_call(preset, loc, tmp_path)
-        assert enabled_metrics is None, (
-            f"Ohne active_metrics muss enabled_metrics=None durchgereicht werden "
+        # #3237: ohne Tabelle gilt die Tabelle aus der Grundauswahl -- "kein
+        # Filter" heisst jetzt die ausdrueckliche Liste ALLER Uebersichtszeilen
+        # (Standardsatz), nicht mehr ``None``.
+        from output.renderers.email.compare_html import CV2_ZEILEN
+
+        alle = sorted(z["key"] for z in CV2_ZEILEN if z["key"] != "warn")
+        assert isinstance(enabled_metrics, list) and sorted(enabled_metrics) == alle, (
+            f"Ohne active_metrics muss die volle Liste durchgereicht werden "
             f"(kein Filter, alle Metriken wie vor diesem Slice), erhalten "
-            f"{enabled_metrics!r} -- der Versandpfad uebergibt enabled_metrics "
-            "heute gar nicht (kommt als 'NOT_PASSED' an, nicht als None)."
+            f"{enabled_metrics!r}."
         )
 
 

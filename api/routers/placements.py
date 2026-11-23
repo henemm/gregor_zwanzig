@@ -5,7 +5,7 @@ Router ohne Prefix (wie ``briefings_send``): der Go-Dispatcher prueft Anmeldung
 und Besitz, laedt das Abo und reicht ``?kind=...&user_id=...`` durch. Der Kern
 liest das Abo erneut im Bestand DIESES Nutzers (fremd/unbekannt = 404) und baut
 die Antwort in ``services.placements_view_service``. Geschrieben wird hier
-nichts; den Schreibweg (PUT) bedient Go allein.
+nichts; die Schreibwege (PUT, Anlage) bedient Go allein.
 """
 from __future__ import annotations
 
@@ -53,15 +53,16 @@ def get_placements_erstanlage(
     user_id: str = Query(...),
     kind: str | None = Query(None),
 ):
-    """#3154 F002: Begleitfelder des Tabellen-Speicherns (nur fuer den
-    Go-PUT): ``{"show_stability_off": bool}`` aus ``placements_from_legacy``."""
+    """#3275/#3237: volle Tabelle eines frisch angelegten Abos aus seiner
+    Grundauswahl (nur fuer die Go-Anlage, Trip und Orte):
+    ``{"placements": {...}}``. Schreibt nichts."""
     from services.placements_view_service import (
-        KINDS, AboNichtGefunden, erstanlage_begleitfelder,
+        KINDS, AboNichtGefunden, erstanlage_placements,
     )
 
     if kind not in KINDS:
         return _error("kind_required", user_id)
     try:
-        return erstanlage_begleitfelder(kind, entity_id, user_id)
+        return erstanlage_placements(kind, entity_id, user_id)
     except (AboNichtGefunden, InvalidUserIdError):
         return _error("not_found", user_id, entity_id=entity_id)

@@ -1694,17 +1694,6 @@
       "status": "gruen"
     },
     {
-      "id": "trip-ac10--leerer_schnitt-stunden--html",
-      "liste": "trip_stundentabelle",
-      "kontext": "trip",
-      "format": "html",
-      "pruefung": "grundauswahl",
-      "test": "test_ac10_leerer_schnitt_rueckfall_grundauswahl",
-      "ac": "AC-10",
-      "befund": "T3",
-      "status": "gruen"
-    },
-    {
       "id": "trip-ac10--abgewaehlt_nirgends-stunden--klartext",
       "liste": "trip_stundentabelle",
       "kontext": "trip",
@@ -1724,17 +1713,6 @@
       "test": "test_ac10_neue_metrik_hinten_angehaengt",
       "ac": "AC-10",
       "befund": "",
-      "status": "gruen"
-    },
-    {
-      "id": "trip-ac10--leerer_schnitt-stunden--klartext",
-      "liste": "trip_stundentabelle",
-      "kontext": "trip",
-      "format": "klartext",
-      "pruefung": "grundauswahl",
-      "test": "test_ac10_leerer_schnitt_rueckfall_grundauswahl",
-      "ac": "AC-10",
-      "befund": "T3",
       "status": "gruen"
     },
     {
@@ -1760,17 +1738,6 @@
       "status": "gruen"
     },
     {
-      "id": "trip-ac10--leerer_schnitt-nacht--html",
-      "liste": "trip_nachttabelle",
-      "kontext": "trip",
-      "format": "html",
-      "pruefung": "grundauswahl",
-      "test": "test_ac10_leerer_schnitt_rueckfall_grundauswahl",
-      "ac": "AC-10",
-      "befund": "T3",
-      "status": "gruen"
-    },
-    {
       "id": "trip-ac10--abgewaehlt_nirgends-nacht--klartext",
       "liste": "trip_nachttabelle",
       "kontext": "trip",
@@ -1793,17 +1760,6 @@
       "status": "gruen"
     },
     {
-      "id": "trip-ac10--leerer_schnitt-nacht--klartext",
-      "liste": "trip_nachttabelle",
-      "kontext": "trip",
-      "format": "klartext",
-      "pruefung": "grundauswahl",
-      "test": "test_ac10_leerer_schnitt_rueckfall_grundauswahl",
-      "ac": "AC-10",
-      "befund": "T3",
-      "status": "gruen"
-    },
-    {
       "id": "trip-ac10--abgewaehlt_nirgends-ausblick--html",
       "liste": "trip_ausblick",
       "kontext": "trip",
@@ -1821,17 +1777,6 @@
       "format": "html",
       "pruefung": "grundauswahl",
       "test": "test_ac10_neue_metrik_hinten_angehaengt",
-      "ac": "AC-10",
-      "befund": "",
-      "status": "gruen"
-    },
-    {
-      "id": "trip-ac10--leerer_schnitt-ausblick--html",
-      "liste": "trip_ausblick",
-      "kontext": "trip",
-      "format": "html",
-      "pruefung": "grundauswahl",
-      "test": "test_ac10_leerer_schnitt_rueckfall_grundauswahl",
       "ac": "AC-10",
       "befund": "",
       "status": "gruen"
@@ -1859,17 +1804,6 @@
       "status": "gruen"
     },
     {
-      "id": "trip-ac10--leerer_schnitt-ausblick--klartext",
-      "liste": "trip_ausblick",
-      "kontext": "trip",
-      "format": "klartext",
-      "pruefung": "grundauswahl",
-      "test": "test_ac10_leerer_schnitt_rueckfall_grundauswahl",
-      "ac": "AC-10",
-      "befund": "",
-      "status": "gruen"
-    },
-    {
       "id": "trip-ac10--abgewaehlt_nirgends-ausblick--kompakt",
       "liste": "trip_ausblick",
       "kontext": "trip",
@@ -1887,17 +1821,6 @@
       "format": "kompakt",
       "pruefung": "grundauswahl",
       "test": "test_ac10_neue_metrik_hinten_angehaengt",
-      "ac": "AC-10",
-      "befund": "",
-      "status": "gruen"
-    },
-    {
-      "id": "trip-ac10--leerer_schnitt-ausblick--kompakt",
-      "liste": "trip_ausblick",
-      "kontext": "trip",
-      "format": "kompakt",
-      "pruefung": "grundauswahl",
-      "test": "test_ac10_leerer_schnitt_rueckfall_grundauswahl",
       "ac": "AC-10",
       "befund": "",
       "status": "gruen"
@@ -2498,83 +2421,6 @@
       "sprache": "en"
     },
     {
-      "id": "trip-n1--totalschnitt_fremdliste-stunden--html",
-      "liste": "trip_stundentabelle",
-      "kontext": "trip",
-      "format": "html",
-      "pruefung": "grundauswahl",
-      "test": "test_n1_totalschnitt_reine_fremdliste",
-      "ac": "AC-10",
-      "befund": "N1",
-      "status": "gruen"
-    },
-    {
-      "id": "trip-n1--totalschnitt_fremdliste-stunden--klartext",
-      "liste": "trip_stundentabelle",
-      "kontext": "trip",
-      "format": "klartext",
-      "pruefung": "grundauswahl",
-      "test": "test_n1_totalschnitt_reine_fremdliste",
-      "ac": "AC-10",
-      "befund": "N1",
-      "status": "gruen"
-    },
-    {
-      "id": "trip-n1--totalschnitt_fremdliste-nacht--html",
-      "liste": "trip_nachttabelle",
-      "kontext": "trip",
-      "format": "html",
-      "pruefung": "grundauswahl",
-      "test": "test_n1_totalschnitt_reine_fremdliste",
-      "ac": "AC-10",
-      "befund": "N1",
-      "status": "gruen"
-    },
-    {
-      "id": "trip-n1--totalschnitt_fremdliste-nacht--klartext",
-      "liste": "trip_nachttabelle",
-      "kontext": "trip",
-      "format": "klartext",
-      "pruefung": "grundauswahl",
-      "test": "test_n1_totalschnitt_reine_fremdliste",
-      "ac": "AC-10",
-      "befund": "N1",
-      "status": "gruen"
-    },
-    {
-      "id": "trip-n1--totalschnitt_fremdliste-ausblick--html",
-      "liste": "trip_ausblick",
-      "kontext": "trip",
-      "format": "html",
-      "pruefung": "grundauswahl",
-      "test": "test_n1_totalschnitt_reine_fremdliste",
-      "ac": "AC-10",
-      "befund": "N1",
-      "status": "gruen"
-    },
-    {
-      "id": "trip-n1--totalschnitt_fremdliste-ausblick--klartext",
-      "liste": "trip_ausblick",
-      "kontext": "trip",
-      "format": "klartext",
-      "pruefung": "grundauswahl",
-      "test": "test_n1_totalschnitt_reine_fremdliste",
-      "ac": "AC-10",
-      "befund": "N1",
-      "status": "gruen"
-    },
-    {
-      "id": "trip-n1--totalschnitt_fremdliste-ausblick--kompakt",
-      "liste": "trip_ausblick",
-      "kontext": "trip",
-      "format": "kompakt",
-      "pruefung": "grundauswahl",
-      "test": "test_n1_totalschnitt_reine_fremdliste",
-      "ac": "AC-10",
-      "befund": "N1",
-      "status": "gruen"
-    },
-    {
       "id": "trip-f004-wind_richtung_einfach--stunden--html",
       "liste": "trip_stundentabelle",
       "kontext": "trip",
@@ -2755,138 +2601,6 @@
       "befund": "F008b",
       "status": "gruen",
       "sprache": "en"
-    },
-    {
-      "id": "trip-m21--morgen_stunden--html",
-      "liste": "trip_stundentabelle",
-      "kontext": "trip",
-      "format": "html",
-      "pruefung": "reihenfolge",
-      "test": "test_m21_kanal_liste_je_bericht",
-      "ac": "AC-2",
-      "befund": "M21",
-      "status": "gruen"
-    },
-    {
-      "id": "trip-m21--morgen_stunden--klartext",
-      "liste": "trip_stundentabelle",
-      "kontext": "trip",
-      "format": "klartext",
-      "pruefung": "reihenfolge",
-      "test": "test_m21_kanal_liste_je_bericht",
-      "ac": "AC-2",
-      "befund": "M21",
-      "status": "gruen"
-    },
-    {
-      "id": "trip-m21--morgen_nacht--html",
-      "liste": "trip_nachttabelle",
-      "kontext": "trip",
-      "format": "html",
-      "pruefung": "reihenfolge",
-      "test": "test_m21_kanal_liste_je_bericht",
-      "ac": "AC-2",
-      "befund": "M21",
-      "status": "gruen"
-    },
-    {
-      "id": "trip-m21--morgen_nacht--klartext",
-      "liste": "trip_nachttabelle",
-      "kontext": "trip",
-      "format": "klartext",
-      "pruefung": "reihenfolge",
-      "test": "test_m21_kanal_liste_je_bericht",
-      "ac": "AC-2",
-      "befund": "M21",
-      "status": "gruen"
-    },
-    {
-      "id": "trip-m21--abend_stunden--html",
-      "liste": "trip_stundentabelle",
-      "kontext": "trip",
-      "format": "html",
-      "pruefung": "reihenfolge",
-      "test": "test_m21_kanal_liste_je_bericht",
-      "ac": "AC-2",
-      "befund": "M21",
-      "status": "gruen"
-    },
-    {
-      "id": "trip-m21--abend_stunden--klartext",
-      "liste": "trip_stundentabelle",
-      "kontext": "trip",
-      "format": "klartext",
-      "pruefung": "reihenfolge",
-      "test": "test_m21_kanal_liste_je_bericht",
-      "ac": "AC-2",
-      "befund": "M21",
-      "status": "gruen"
-    },
-    {
-      "id": "trip-m21--abend_nacht--html",
-      "liste": "trip_nachttabelle",
-      "kontext": "trip",
-      "format": "html",
-      "pruefung": "reihenfolge",
-      "test": "test_m21_kanal_liste_je_bericht",
-      "ac": "AC-2",
-      "befund": "M21",
-      "status": "gruen"
-    },
-    {
-      "id": "trip-m21--abend_nacht--klartext",
-      "liste": "trip_nachttabelle",
-      "kontext": "trip",
-      "format": "klartext",
-      "pruefung": "reihenfolge",
-      "test": "test_m21_kanal_liste_je_bericht",
-      "ac": "AC-2",
-      "befund": "M21",
-      "status": "gruen"
-    },
-    {
-      "id": "trip-m21--totalschnitt_morgen_stunden--html",
-      "liste": "trip_stundentabelle",
-      "kontext": "trip",
-      "format": "html",
-      "pruefung": "grundauswahl",
-      "test": "test_m21_totalschnitt_je_bericht",
-      "ac": "AC-10",
-      "befund": "M21",
-      "status": "gruen"
-    },
-    {
-      "id": "trip-m21--totalschnitt_morgen_stunden--klartext",
-      "liste": "trip_stundentabelle",
-      "kontext": "trip",
-      "format": "klartext",
-      "pruefung": "grundauswahl",
-      "test": "test_m21_totalschnitt_je_bericht",
-      "ac": "AC-10",
-      "befund": "M21",
-      "status": "gruen"
-    },
-    {
-      "id": "trip-m21--totalschnitt_morgen_nacht--html",
-      "liste": "trip_nachttabelle",
-      "kontext": "trip",
-      "format": "html",
-      "pruefung": "grundauswahl",
-      "test": "test_m21_totalschnitt_je_bericht",
-      "ac": "AC-10",
-      "befund": "M21",
-      "status": "gruen"
-    },
-    {
-      "id": "trip-m21--totalschnitt_morgen_nacht--klartext",
-      "liste": "trip_nachttabelle",
-      "kontext": "trip",
-      "format": "klartext",
-      "pruefung": "grundauswahl",
-      "test": "test_m21_totalschnitt_je_bericht",
-      "ac": "AC-10",
-      "befund": "M21",
-      "status": "gruen"
     },
     {
       "id": "trip-r7-telegram-windrichtung-roh-de",
@@ -3236,19 +2950,6 @@
       "paket": "p3"
     },
     {
-      "id": "trip-show-outlook--zeitplaner--html",
-      "liste": "trip_ausblick",
-      "kontext": "trip",
-      "format": "html",
-      "pruefung": "schalter_an_aus_zeitplaner",
-      "test": "tests/tdd/test_einstellung_gleich_mail_runde7_katalog.py::test_trip_show_outlook_zeitplaner",
-      "ac": "AC-14",
-      "befund": "B-P2 (kompakt: PO #722)",
-      "status": "gruen",
-      "runde": 7,
-      "paket": "p3"
-    },
-    {
       "id": "trip-tagesfenster--10_14--html",
       "liste": "trip_tagesfenster",
       "kontext": "trip",
@@ -3314,19 +3015,6 @@
       "paket": "p3"
     },
     {
-      "id": "trip-show-outlook--zeitplaner--klartext",
-      "liste": "trip_ausblick",
-      "kontext": "trip",
-      "format": "klartext",
-      "pruefung": "schalter_an_aus_zeitplaner",
-      "test": "tests/tdd/test_einstellung_gleich_mail_runde7_katalog.py::test_trip_show_outlook_zeitplaner",
-      "ac": "AC-14",
-      "befund": "B-P2 (kompakt: PO #722)",
-      "status": "gruen",
-      "runde": 7,
-      "paket": "p3"
-    },
-    {
       "id": "trip-tagesfenster--10_14--klartext",
       "liste": "trip_tagesfenster",
       "kontext": "trip",
@@ -3387,19 +3075,6 @@
       "test": "tests/tdd/test_einstellung_gleich_mail_runde7_katalog.py::test_trip_ausblick_erscheint_im",
       "ac": "AC-14",
       "befund": "B-TM4",
-      "status": "gruen",
-      "runde": 7,
-      "paket": "p3"
-    },
-    {
-      "id": "trip-show-outlook--zeitplaner--kompakt",
-      "liste": "trip_ausblick",
-      "kontext": "trip",
-      "format": "kompakt",
-      "pruefung": "schalter_an_aus_zeitplaner",
-      "test": "tests/tdd/test_einstellung_gleich_mail_runde7_katalog.py::test_trip_show_outlook_zeitplaner",
-      "ac": "AC-14",
-      "befund": "B-P2 (kompakt: PO #722)",
       "status": "gruen",
       "runde": 7,
       "paket": "p3"
@@ -3556,18 +3231,17 @@
       "kontext": "trip",
       "format": "telegram",
       "pruefung": "kanal_liste",
-      "test": "tests/tdd/test_einstellung_gleich_auslieferung.py::test_hauptmatrix_einstellung_gleich_auslieferung",
+      "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_ac1_telegram_und_sms_folgen_ihrer_spalte",
       "ac": "AC-22",
       "befund": "",
       "status": "gruen",
       "aspekte": [
         "auswahl",
-        "reihenfolge",
-        "darstellung"
+        "reihenfolge"
       ],
       "runde": 7,
       "paket": "katalog",
-      "hinweis": "#2422-Hauptmatrix: telegram_rich/telegram_kurzform je Metrik erscheint, Reihenfolge, Roh/Einfach (Golden-Trips, echter Loader bis Transport)"
+      "hinweis": "#3237: Hauptmatrix (Kanal-Kaskade des Altpfads) entfallen; Telegram-Tabelle folgt Auswahl und Reihenfolge ihrer Spalte in \"Was steht wo\" (echter Versand). Roh/Einfach: test_ac5_boeen_telegram_* (trip_tabelle)."
     },
     {
       "id": "R7-KAT-trip-sms-matrix",
@@ -3575,18 +3249,17 @@
       "kontext": "trip",
       "format": "sms",
       "pruefung": "kanal_liste",
-      "test": "tests/tdd/test_einstellung_gleich_auslieferung.py::test_hauptmatrix_einstellung_gleich_auslieferung",
+      "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_ac1_telegram_und_sms_folgen_ihrer_spalte",
       "ac": "AC-22",
       "befund": "",
       "status": "gruen",
       "aspekte": [
         "auswahl",
-        "reihenfolge",
-        "darstellung"
+        "reihenfolge"
       ],
       "runde": 7,
       "paket": "katalog",
-      "hinweis": "#2422-Hauptmatrix: SMS je Metrik erscheint, Reihenfolge, Roh/Einfach"
+      "hinweis": "#3237: Hauptmatrix (Kanal-Kaskade des Altpfads) entfallen; SMS folgt Auswahl und Reihenfolge ihrer Spalte in \"Was steht wo\" (echter Versand)."
     },
     {
       "id": "R7-KAT-trip-premium-matrix",
@@ -3594,18 +3267,17 @@
       "kontext": "trip",
       "format": "premium_sms",
       "pruefung": "kanal_liste",
-      "test": "tests/tdd/test_einstellung_gleich_auslieferung.py::test_hauptmatrix_einstellung_gleich_auslieferung",
+      "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_ac1_telegram_und_sms_folgen_ihrer_spalte",
       "ac": "AC-22",
       "befund": "",
       "status": "gruen",
       "aspekte": [
         "auswahl",
-        "reihenfolge",
-        "darstellung"
+        "reihenfolge"
       ],
       "runde": 7,
       "paket": "katalog",
-      "hinweis": "#2422-Hauptmatrix: Premium-SMS (Quelle SMS-Liste, eigene Liste #2801) erscheint, Reihenfolge, Roh/Einfach"
+      "hinweis": "#3237: Hauptmatrix (Kanal-Kaskade des Altpfads) entfallen; Premium-SMS hat im echten Versand denselben Text wie die SMS (Auswahl, Reihenfolge der SMS-Spalte)."
     },
     {
       "id": "R7-KAT-trip-sms-permutation",
@@ -4167,19 +3839,6 @@
       "sprache": "de"
     },
     {
-      "id": "T-3122-B1B-BESTAND-MAIL-ADAPTER",
-      "liste": "trip_tabelle",
-      "kontext": "trip",
-      "format": "intern",
-      "pruefung": "bestand_ohne_tabelle_unveraendert",
-      "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_bestand_ohne_tabelle_mail_eintraege_gleich_bisheriger_kaskade",
-      "ac": "AC-11",
-      "befund": "#3122 B1b",
-      "status": "gruen",
-      "zustand": "kanal_liste",
-      "sprache": "de"
-    },
-    {
       "id": "T-3122-B1B-AC5-TABELLE-SCHLAEGT-ALTSCHREIBWEISE",
       "liste": "trip_tabelle",
       "kontext": "trip",
@@ -4219,19 +3878,6 @@
       "sprache": "de"
     },
     {
-      "id": "T-3122-B1B-ALARM-OHNE-AUSBLICK",
-      "liste": "trip_tabelle",
-      "kontext": "trip",
-      "format": "alarm",
-      "pruefung": "darstellung",
-      "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_alarm_format_loest_keinen_ausblick_auf",
-      "ac": "AC-19",
-      "befund": "#3122 B1b Fix-Loop",
-      "status": "gruen",
-      "zustand": "placements",
-      "sprache": "de"
-    },
-    {
       "id": "T-3122-B1B-BESTAND-RUECKFALL-BOEEN-SPALTE",
       "liste": "trip_tabelle",
       "kontext": "trip",
@@ -4264,32 +3910,6 @@
       "format": "telegram",
       "pruefung": "rueckfall_wie_ohne_kanal_liste",
       "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_bestand_rueckfall_telegram_wie_ohne_kanal_liste",
-      "ac": "AC-11",
-      "befund": "#3122 B1b Fix-Loop 2 (F001-F003)",
-      "status": "gruen",
-      "zustand": "kanal_liste",
-      "sprache": "de"
-    },
-    {
-      "id": "T-3122-B1B-BESTAND-RUECKFALL-ADAPTER",
-      "liste": "trip_tabelle",
-      "kontext": "trip",
-      "format": "intern",
-      "pruefung": "bestand_ohne_tabelle_unveraendert",
-      "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_bestand_rueckfall_liefert_eintraege_der_grundauswahl",
-      "ac": "AC-11",
-      "befund": "#3122 B1b Fix-Loop 2 (F001-F003)",
-      "status": "gruen",
-      "zustand": "kanal_liste",
-      "sprache": "de"
-    },
-    {
-      "id": "T-3122-B1B-BESTAND-ZUFALLSLAUF",
-      "liste": "trip_tabelle",
-      "kontext": "trip",
-      "format": "intern",
-      "pruefung": "bestand_ohne_tabelle_unveraendert",
-      "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_bestand_zufallslauf_adapter_gleich_bisheriger_kaskade",
       "ac": "AC-11",
       "befund": "#3122 B1b Fix-Loop 2 (F001-F003)",
       "status": "gruen",
@@ -6082,118 +5702,6 @@
       "befund": "#3155 B4 eine Stelle, ein Name",
       "status": "gruen",
       "konfig": "alt_abend",
-      "briefing": "evening",
-      "sprache": "en"
-    },
-    {
-      "id": "trip-grosswetterlage--an--html--de",
-      "liste": "trip_ausblick",
-      "kontext": "trip",
-      "format": "html",
-      "pruefung": "grosswetterlage",
-      "test": "test_b4_grosswetterlage_folgt_show_outlook",
-      "ac": "AC-5 AC-13",
-      "befund": "#3155 B4 eine Stelle, ein Name",
-      "status": "gruen",
-      "konfig": "grosswetterlage_an",
-      "briefing": "evening",
-      "sprache": "de"
-    },
-    {
-      "id": "trip-grosswetterlage--an--html--en",
-      "liste": "trip_ausblick",
-      "kontext": "trip",
-      "format": "html",
-      "pruefung": "grosswetterlage",
-      "test": "test_b4_grosswetterlage_folgt_show_outlook",
-      "ac": "AC-5 AC-13",
-      "befund": "#3155 B4 eine Stelle, ein Name",
-      "status": "gruen",
-      "konfig": "grosswetterlage_an",
-      "briefing": "evening",
-      "sprache": "en"
-    },
-    {
-      "id": "trip-grosswetterlage--an--klartext--de",
-      "liste": "trip_ausblick",
-      "kontext": "trip",
-      "format": "klartext",
-      "pruefung": "grosswetterlage",
-      "test": "test_b4_grosswetterlage_folgt_show_outlook",
-      "ac": "AC-5 AC-13",
-      "befund": "#3155 B4 eine Stelle, ein Name",
-      "status": "gruen",
-      "konfig": "grosswetterlage_an",
-      "briefing": "evening",
-      "sprache": "de"
-    },
-    {
-      "id": "trip-grosswetterlage--an--klartext--en",
-      "liste": "trip_ausblick",
-      "kontext": "trip",
-      "format": "klartext",
-      "pruefung": "grosswetterlage",
-      "test": "test_b4_grosswetterlage_folgt_show_outlook",
-      "ac": "AC-5 AC-13",
-      "befund": "#3155 B4 eine Stelle, ein Name",
-      "status": "gruen",
-      "konfig": "grosswetterlage_an",
-      "briefing": "evening",
-      "sprache": "en"
-    },
-    {
-      "id": "trip-grosswetterlage--aus--html--de",
-      "liste": "trip_ausblick",
-      "kontext": "trip",
-      "format": "html",
-      "pruefung": "grosswetterlage",
-      "test": "test_b4_grosswetterlage_folgt_show_outlook",
-      "ac": "AC-5 AC-13",
-      "befund": "#3155 B4 eine Stelle, ein Name",
-      "status": "gruen",
-      "konfig": "grosswetterlage_aus",
-      "briefing": "evening",
-      "sprache": "de"
-    },
-    {
-      "id": "trip-grosswetterlage--aus--html--en",
-      "liste": "trip_ausblick",
-      "kontext": "trip",
-      "format": "html",
-      "pruefung": "grosswetterlage",
-      "test": "test_b4_grosswetterlage_folgt_show_outlook",
-      "ac": "AC-5 AC-13",
-      "befund": "#3155 B4 eine Stelle, ein Name",
-      "status": "gruen",
-      "konfig": "grosswetterlage_aus",
-      "briefing": "evening",
-      "sprache": "en"
-    },
-    {
-      "id": "trip-grosswetterlage--aus--klartext--de",
-      "liste": "trip_ausblick",
-      "kontext": "trip",
-      "format": "klartext",
-      "pruefung": "grosswetterlage",
-      "test": "test_b4_grosswetterlage_folgt_show_outlook",
-      "ac": "AC-5 AC-13",
-      "befund": "#3155 B4 eine Stelle, ein Name",
-      "status": "gruen",
-      "konfig": "grosswetterlage_aus",
-      "briefing": "evening",
-      "sprache": "de"
-    },
-    {
-      "id": "trip-grosswetterlage--aus--klartext--en",
-      "liste": "trip_ausblick",
-      "kontext": "trip",
-      "format": "klartext",
-      "pruefung": "grosswetterlage",
-      "test": "test_b4_grosswetterlage_folgt_show_outlook",
-      "ac": "AC-5 AC-13",
-      "befund": "#3155 B4 eine Stelle, ein Name",
-      "status": "gruen",
-      "konfig": "grosswetterlage_aus",
       "briefing": "evening",
       "sprache": "en"
     }

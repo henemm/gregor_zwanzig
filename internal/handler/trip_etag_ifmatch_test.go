@@ -29,7 +29,7 @@ import (
 func etagRouter(s *store.Store) *chi.Mux {
 	r := chi.NewRouter()
 	r.Get("/api/trips/{id}", TripHandler(s))
-	r.Post("/api/trips", CreateTripHandler(s))
+	r.Post("/api/trips", CreateTripHandler(s, ""))
 	r.Put("/api/trips/{id}", UpdateTripHandler(s))
 	r.Delete("/api/trips/{id}", DeleteTripHandler(s))
 	r.Patch("/api/trips/{id}/state", UpdateTripStateHandler(s))

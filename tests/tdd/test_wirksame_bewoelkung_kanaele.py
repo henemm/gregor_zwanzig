@@ -114,9 +114,16 @@ def _segment_wolken_spalte(mail_text: str) -> list[int]:
     return [int(z.split()[spalte]) for z in zeilen[3:] if re.match(r"^\s*\d\d\s", z)]
 
 
-def _ct_wert(sms: str) -> int | None:
-    treffer = re.search(r"(?:^|\s)CT(\d+)", sms)
-    return int(treffer.group(1)) if treffer else None
+def _ct_stufe(sms: str) -> str | None:
+    """Trip-SMS: Bewoelkung fest als Stufe (``CT:SCT@5``, #3237 / Spec #3122
+    Teil A Nr. 4 -- die SMS hat keine Roh/Einfach-Wahl); ``CT-`` = kein Wert."""
+    from tests.tdd._sms_einfach_fixtures import token
+
+    t = token(sms, "CT")
+    if t is None:
+        return None
+    treffer = re.fullmatch(r"CT:([A-Z]+)@\d+", t)
+    return treffer.group(1) if treffer else t
 
 
 def test_trip_schleierwolken_in_allen_vier_kanaelen(monkeypatch, tmp_path):
@@ -131,9 +138,14 @@ def test_trip_schleierwolken_in_allen_vier_kanaelen(monkeypatch, tmp_path):
     assert f"Wolken {mittel}%" in mail, mail[:600]
     assert "50–52% bewölkt" in mail, mail[:900]
 
+    from tests.tdd._sms_einfach_fixtures import stufe_aus_email_band
+
     for kanal in ("sms", "premium_sms"):
         text = mit.sendungen(kanal)[0]["body"]
-        assert _ct_wert(text) == 52, f"{kanal}: Spitze der wirksamen Bewölkung: {text}"
+        # Spitze der wirksamen Bewoelkung 52 % (Modell 100 %) -> Stufe des 52-%-Bands.
+        assert stufe_aus_email_band(52) != stufe_aus_email_band(100)
+        assert _ct_stufe(text) == stufe_aus_email_band(52), (
+            f"{kanal}: Spitze der wirksamen Bewölkung: {text}")
 
     telegram = "\n".join(s["body"] for s in mit.sendungen("telegram"))
     tabelle = telegram.split("<pre>", 1)[1].split("</pre>", 1)[0]
@@ -149,7 +161,8 @@ def test_trip_hochlage_ueber_den_tiefen_wolken(monkeypatch, tmp_path):
                        hoehe_m=3000.0)
     mail = mit.sendungen("email")[0]["plain_text_body"]
     assert _segment_wolken_spalte(mail) == [0, 0, 0, 0, 0]
-    assert _ct_wert(mit.sendungen("sms")[0]["body"]) in (None, 0)
+    assert _ct_stufe(mit.sendungen("sms")[0]["body"]) in (None, "CT-"), (
+        mit.sendungen("sms")[0]["body"])
 
 
 # ═══════════════════════════ Ortsvergleich ══════════════════════════════════
