@@ -49,7 +49,7 @@ Das Soll der Mail-Validatoren (`--konfig`) leitet für einen Trip ohne gespeiche
    - Die Einträge entstehen in Register-Folge mit explizitem `order` (Register-Index, `bucket: primary`), **nicht** über `_altformat_folge` (dessen Register-Priorität weicht bei allen vier Profilen von der Produktfolge ab; in der Analyse gemessen). `placements` bleibt erhalten.
 3. **Nackte `display_config` ohne Trip-Hülle:** bisheriges Verhalten (Profil nicht erkennbar).
 
-**Spiegel-Verbot (wie #3242):** Quellen sind nur die Datentabellen (`WEATHER_TEMPLATES`, `_OLD_METRIC_MAP`, Register). Kein Aufruf von `resolve_rows`, `resolve_channel_lists`, `placements_view`, `_cell`, `metrics_at`, `build_default_display_config_for_profile`, `tabellen_grundauswahl` oder `grundauswahl` im neuen Pfad; sonst fände der Validator Fehler der Produktregel nie.
+**Spiegel-Verbot (wie #3242, ADR-0127 Nr. 5):** Profil-Vorlagen und Altnamen-Zuordnung stehen von Hand abgeschrieben im Validator (kein Import von `WEATHER_TEMPLATES`/`_OLD_METRIC_MAP`, Ratsche ADR-0127 Nr. 4); Drift fängt der Gleichlauf-Test AC-8 gegen den echten Loader. Kein Aufruf von `resolve_rows`, `resolve_channel_lists`, `placements_view`, `_cell`, `metrics_at`, `build_default_display_config_for_profile`, `tabellen_grundauswahl` oder `grundauswahl` im neuen Pfad; sonst fände der Validator Fehler der Produktregel nie.
 
 ## Expected Behavior
 
@@ -138,3 +138,4 @@ Datei `tests/tdd/test_3273_trip_grundauswahl_ohne_metrics.py`, ohne `Mock`/`patc
 ## Changelog
 
 - 2026-11-23: Initial spec created (Issue #3273)
+- 2026-11-23: Tech-Lead-Präzisierung im Fix-Loop: Vorlagen und Altnamen von Hand abgeschrieben statt importiert (ADR-0127 Nr. 4/5, Ratsche), Verhalten und ACs unverändert.

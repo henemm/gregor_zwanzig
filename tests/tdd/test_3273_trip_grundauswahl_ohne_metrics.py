@@ -195,6 +195,86 @@ def test_ac8_gleichlauf_mit_echtem_loader(soll, name, trip):
     assert _grund(soll, trip) == produkt, name
 
 
+def _produkt_grund(trip: dict) -> list[str]:
+    """Grundauswahl des echten Loaders (Referenz nur fuer Gleichlauf-Tests)."""
+    from app.loader import load_trip_from_dict
+    from services.channel_list_resolver import grundauswahl
+
+    geladen = load_trip_from_dict(copy.deepcopy(trip))
+    return list(grundauswahl(geladen.display_config, "trip", "evening").ids)
+
+
+#: Jeder Altname der weather_config -> Katalog-ID, von Hand (Adversary F001).
+ALTNAME_EINZELN = {
+    "temp_min_c": "temperature", "temp_max_c": "temperature", "temp_avg_c": "temperature",
+    "wind_max_kmh": "wind", "gust_max_kmh": "gust", "precip_sum_mm": "precipitation",
+    "cloud_avg_pct": "cloud_total", "humidity_avg_pct": "humidity",
+    "thunder_level_max": "thunder", "dewpoint_avg_c": "dewpoint",
+    "pressure_avg_hpa": "pressure", "wind_chill_min_c": "wind_chill",
+}
+
+
+@pytest.mark.parametrize("altname", sorted(ALTNAME_EINZELN))
+@pytest.mark.parametrize("dc", [None, "nur_tabelle"])
+def test_f001_jeder_altname_wie_loader(soll, altname, dc):
+    """GIVEN weather_config mit genau einem Altnamen WHEN Soll THEN genau die
+    Katalog-ID (von Hand) und dieselbe Grundauswahl wie der echte Loader."""
+    trip = _trip(aggregation={"profile": "wandern"}, weather_config=_wc([altname]))
+    if dc == "nur_tabelle":
+        trip["display_config"] = _nur_tabelle()
+    assert _grund(soll, trip) == [ALTNAME_EINZELN[altname]]
+    assert _grund(soll, trip) == _produkt_grund(trip), altname
+
+
+def test_f001_altnamen_vollstaendig_gegen_produkt():
+    """Ein neuer Altname im Produkt (``_OLD_METRIC_MAP``) muss hier und im Soll
+    nachgezogen werden -- sonst rot."""
+    from app.loader import _OLD_METRIC_MAP
+
+    assert set(ALTNAME_EINZELN) == set(_OLD_METRIC_MAP)
+    assert {k: v[0] for k, v in _OLD_METRIC_MAP.items()} == ALTNAME_EINZELN
+
+
+def test_f001_profile_vollstaendig_gegen_produkt():
+    """Jeder ``ActivityProfile``-Wert hat eine Vorlage im Test (und damit im
+    Gleichlauf AC-8); neues Profil im Produkt -> rot."""
+    from app.loader import ActivityProfile
+
+    assert {p.value for p in ActivityProfile} == set(PROFILE)
+
+
+@pytest.mark.parametrize("profil", sorted(PROFILE))
+def test_f001_jedes_profil_wie_loader(soll, profil):
+    trip = _trip(aggregation={"profile": profil}, display_config=_nur_tabelle())
+    assert _grund(soll, trip) == PROFILE[profil]
+    assert _grund(soll, trip) == _produkt_grund(trip), profil
+
+
+# --------------------------------------------------------------------------- #
+# Adversary F002: placements kein dict -> Register-Standard wie der Loader
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("placements", [[], None], ids=["liste", "null"])
+def test_f002_placements_kein_dict_register_standard(soll, placements):
+    trip = _trip(aggregation={"profile": "wandern"}, display_config={"placements": placements})
+    assert _grund(soll, trip) == REGISTER
+    assert _grund(soll, trip) == _produkt_grund(trip)
+
+
+# --------------------------------------------------------------------------- #
+# Adversary F003: Trip-Huelle nur ``id`` bzw. nur ``stages``
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("huelle", [{"id": "t3273"}, {"stages": []}], ids=["nur_id", "nur_stages"])
+def test_f003_huelle_teilweise_profilvorlage(soll, huelle):
+    trip = {**huelle, "aggregation": {"profile": "wandern"}}
+    assert _grund(soll, trip) == PROFILE["wandern"]
+
+
+def test_f003_nur_id_wie_loader(soll):
+    trip = {"id": "t3273", "name": "Testtrip", "aggregation": {"profile": "wandern"}}
+    assert _grund(soll, trip) == PROFILE["wandern"]
+    assert _grund(soll, trip) == _produkt_grund(trip)
+
+
 # --------------------------------------------------------------------------- #
 # AC-10: Spiegel-Verbot im neuen Pfad
 # --------------------------------------------------------------------------- #
