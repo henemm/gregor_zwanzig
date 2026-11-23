@@ -46,6 +46,7 @@ SONDEN_USER = (
     "probe-3209-ac4-fenster",
     "probe-3209-f001-spur",
     "probe-3209-f004",
+    "probe-3209-g-fenster",
 )
 
 OFFLINE_FORM = [
@@ -265,6 +266,71 @@ def test_ac4_echtdaten_gruppe_in_einem_worker_ohne_fehlalarm(probe_dir):
     assert not any(m in proc.stdout for m in WAECHTER_MELDUNGEN), _ausgabe(proc)
 
 
+def _fehlerzeilen(proc: subprocess.CompletedProcess) -> list[str]:
+    return [z for z in proc.stdout.splitlines() if z.startswith(("ERROR ", "FAILED "))]
+
+
+def test_ac4_innerer_lauf_ausserhalb_der_gruppe_trifft_den_starter(probe_dir):
+    """AC-3/AC-4, CI-Lauf vom 2026-11-23: ein Test OHNE Echtdaten-Gruppe
+    startet einen inneren seriellen pytest-Lauf mit einem ``real_data_root``-
+    Test (``test_issue_1014_live_optin.py`` -> ``test_issue_1001`` TestAC7 ->
+    ``default/diagnostics/forecast_budget.json``). Dessen Schreibzugriffe
+    stehen in keinem Journal; der Waechter eines UNBETEILIGTEN Tests auf einem
+    anderen Worker schlug an (``test_issue_1142``, zweimal ERROR).
+
+    Soll: der innere ``real_data_root``-Test darf ausserhalb der seriellen
+    Gruppe nicht in den echten Baum schreiben, der Beobachter bleibt gruen,
+    und rot wird der Verursacher -- der Starter --, auch wenn er den
+    Exit-Code seines inneren Laufs ignoriert."""
+    proc = _innerer_lauf(
+        _sonden("probe_g_starter_unmarkiert.py", "probe_g_beobachter.py"),
+        probe_dir, ["-n", "2", "--dist", "loadgroup"],
+    )
+    _xdist_lief_mit_zwei_workern(proc)
+    protokoll = _protokoll(probe_dir)
+    worker = {e["art"]: e["worker"] for e in protokoll if e["art"] in ("g_starter", "g_beobachter")}
+    assert len(worker) == 2 and len(set(worker.values())) == 2, (
+        f"Nachweis ungueltig: Starter und Beobachter nicht auf zwei Workern {worker}\n"
+        + _ausgabe(proc)
+    )
+    assert any(e["art"] == "g_innen_exit" for e in protokoll), (
+        "Nachweis ungueltig: der innere Lauf wurde nie gestartet\n" + _ausgabe(proc)
+    )
+    fehler = _fehlerzeilen(proc)
+    assert not any("probe_g_beobachter" in z for z in fehler), (
+        "Fehlalarm: der unbeteiligte Beobachter wurde rot\n" + _ausgabe(proc)
+    )
+    assert not any(e["art"] == "g_innen_lief" for e in protokoll), (
+        "Der innere real_data_root-Test lief ausserhalb der seriellen Gruppe "
+        "und schrieb in den echten Baum\n" + _ausgabe(proc)
+    )
+    assert any("probe_g_starter_unmarkiert" in z for z in fehler), (
+        "Der Verursacher (Starter ohne Echtdaten-Gruppe) blieb gruen\n" + _ausgabe(proc)
+    )
+    assert "Issue #3209" in proc.stdout and "xdist_group" in proc.stdout, _ausgabe(proc)
+
+
+def test_ac4_innerer_lauf_in_der_gruppe_ohne_fehlalarm(probe_dir):
+    """AC-4: derselbe innere Lauf, gestartet aus der seriellen Echtdaten-Gruppe,
+    schreibt journalisiert -- der Beobachter erlebt das offene Fenster und
+    bleibt gruen, der ganze Lauf ist gruen."""
+    proc = _innerer_lauf(
+        _sonden("probe_g_starter_markiert.py", "probe_g_beobachter.py"),
+        probe_dir, ["-n", "2", "--dist", "loadgroup"],
+    )
+    _xdist_lief_mit_zwei_workern(proc)
+    protokoll = _protokoll(probe_dir)
+    beobachter = [e for e in protokoll if e["art"] == "g_beobachter"]
+    assert beobachter and beobachter[0]["fenster_gesehen"], (
+        "Nachweis ungueltig: der Beobachter hat das Schreibfenster nicht erlebt\n"
+        + _ausgabe(proc)
+    )
+    starter = [e for e in protokoll if e["art"] == "g_starter"]
+    assert starter and starter[0]["worker"] != beobachter[0]["worker"], _ausgabe(proc)
+    assert proc.returncode == 0, "Fehlalarm im Gruppen-Fall\n" + _ausgabe(proc)
+    assert not any(m in proc.stdout for m in WAECHTER_MELDUNGEN), _ausgabe(proc)
+
+
 def _materialisierte_kopien() -> list[tuple[Path, Path]]:
     """(Quelle, Kopie im echten Baum) fuer jede Referenz-Datei, deren Kopie
     byte-gleich zur Quelle ist -- nur solche reinen Kopien nimmt der
@@ -372,7 +438,13 @@ def _gate(command: str) -> subprocess.CompletedProcess:
 
 def test_ac7_sichere_offline_form_bleibt_frei_und_n_bleibt_gesperrt():
     """AC-7: die woertliche Offline-Form bleibt freigegeben; dieselbe Form
-    mit ``-n 4`` bleibt gesperrt (lokale parallele Form ist #3278)."""
+    mit ``-n 4`` bleibt gesperrt (lokale parallele Form ist #3278).
+
+    Ohne das Plugin agent-os-openspec (CI) bricht das Gate schon beim Import
+    ab -- dann uebersprungen wie ``tests/tdd/test_broad_test_run_gate_*.py``."""
+    if str(GATE.parent) not in sys.path:
+        sys.path.insert(0, str(GATE.parent))
+    pytest.importorskip("broad_test_run_gate", exc_type=ImportError)
     seriell = "uv run pytest " + " ".join(OFFLINE_FORM) + " --ignore=tests/red/"
     assert _gate(seriell).returncode == 0, _gate(seriell).stderr
     parallel = _gate(seriell + " -n 4")
@@ -416,3 +488,40 @@ def test_ac8_bug305_parallel_ohne_feste_tmp_pfade(probe_dir):
     assert not veraendert, (
         f"test_bug305_mobile_email.py schreibt weiter feste /tmp-Pfade: {veraendert}"
     )
+
+
+def _wurzel_conftest(config):
+    """Das tatsaechlich geladene ``tests/conftest.py``-Modul (kein Neuimport:
+    nur dessen Modulvariablen bestimmen, welche Journale gelesen werden)."""
+    ziel = (REPO_ROOT / "tests" / "conftest.py").resolve()
+    for plugin in config.pluginmanager.get_plugins():
+        datei = getattr(plugin, "__file__", None)
+        if datei and Path(datei).resolve() == ziel:
+            return plugin
+    raise AssertionError("tests/conftest.py ist nicht als Plugin geladen")
+
+
+def test_f008_journal_erklaert_ignoriert_fremdlauf_eintraege(request, tmp_path, monkeypatch):
+    """F008: ein ``fremdlauf``-Eintrag (Form wie ``_melde_fremdlauf``, ohne
+    ``pfad``) im Journal darf den Beobachter nicht mit KeyError abbrechen und
+    nichts erklaeren -- erklaert wird nur der ``datei``-Pfad."""
+    conftest = _wurzel_conftest(request.config)
+    jetzt = conftest._echte_uhr()
+    fremde_pid = os.getpid() + 100000
+    journal = tmp_path / "journal.jsonl"
+    journal.write_text(
+        json.dumps({"t": jetzt, "quelle": fremde_pid, "art": "fremdlauf",
+                    "ziel": os.getpid(), "test": "tests/x.py::test_y"}) + "\n"
+        + json.dumps({"t": jetzt, "quelle": fremde_pid, "art": "datei",
+                      "pfad": "default/trips/a.json"}) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(conftest, "_EIGENES_JOURNAL", journal)
+    monkeypatch.setattr(conftest, "_GEERBTE_BEOBACHTUNG", [])
+    monkeypatch.setattr(conftest, "_GEERBTE_JOURNALE", [])
+    assert conftest._erklaerende_journale() == [str(journal)]
+
+    dateien, baeume = conftest._journal_erklaert(jetzt)
+
+    assert dateien == {"default/trips/a.json"}
+    assert baeume == []

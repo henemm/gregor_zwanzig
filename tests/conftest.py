@@ -539,6 +539,9 @@ _JOURNAL_ENV = "GZ_ECHTDATEN_JOURNALE"
 # LESEN darf (zum Abzug fremder Gruppen-Schreibzugriffe), siehe
 # ``_erklaerende_journale``.
 _BEOBACHTUNG_ENV = "GZ_ECHTDATEN_BEOBACHTUNG"
+# [Journal, PID] des xdist-Workers, aus dem ein Kind-Prozess stammt (CI-Befund
+# 2026-11-23, siehe ``_fremdlauf``).
+_ELTERN_WORKER_ENV = "GZ_ECHTDATEN_ELTERN_WORKER"
 # Karenz fuer die Reihenfolge "Journal-Eintrag" -> "Schreibzugriff" -> "Vorher-
 # Fingerprint des Beobachters" (Eintrag liegt minimal VOR dem Testbeginn).
 _JOURNAL_KARENZ_S = 1.0
@@ -605,6 +608,7 @@ def _journal_festlegen(tmp_path_factory) -> None:
         os.environ[_BEOBACHTUNG_ENV] = json.dumps(
             sorted({*_GEERBTE_BEOBACHTUNG, str(_EIGENES_JOURNAL)})
         )
+        os.environ[_ELTERN_WORKER_ENV] = json.dumps([str(_EIGENES_JOURNAL), os.getpid()])
 
 
 def _lies_geerbte_journale() -> list[tuple[str, int]]:
@@ -739,6 +743,88 @@ def _lies_geerbte_beobachtung() -> list[str]:
 _GEERBTE_BEOBACHTUNG = _lies_geerbte_beobachtung()
 
 
+def _lies_eltern_worker() -> tuple[str, int] | None:
+    try:
+        journal, pid = json.loads(os.environ.get(_ELTERN_WORKER_ENV, "") or "null")
+        return str(journal), int(pid)
+    except (ValueError, TypeError):
+        return None
+
+
+# Beim IMPORT lesen: ein innerer xdist-Worker ueberschreibt die Variable spaeter
+# fuer seine eigenen Kinder (``_journal_festlegen``).
+_ELTERN_WORKER = _lies_eltern_worker()
+
+
+def _fremdlauf() -> bool:
+    """CI-Befund 2026-11-23: dieser Prozess ist ein innerer pytest-Lauf, den
+    ein Test AUSSERHALB der Echtdaten-Gruppe in einem xdist-Worker gestartet
+    hat (``test_issue_1014_live_optin.py`` fuehrte so ``test_issue_1001``
+    samt Budget-Spur unter ``data/users/default`` aus). Erkennbar daran, dass
+    das Journal des startenden Workers NICHT unter den geerbten
+    Gruppen-Journalen ist -- nur ein laufender Gruppen-Test vererbt es.
+    Seine Schreibzugriffe stuenden in keinem Journal und liefen parallel zur
+    seriellen Gruppe: der Waechter eines Unbeteiligten schluege an."""
+    if _ELTERN_WORKER is None:
+        return False
+    return _ELTERN_WORKER[0] not in {j for j, _q in _GEERBTE_JOURNALE}
+
+
+def _melde_fremdlauf(nodeid: str) -> None:
+    """Meldung ins Journal des startenden Workers -- dessen Test wird rot,
+    auch wenn er den Exit-Code seines inneren Laufs ignoriert."""
+    journal, ziel = _ELTERN_WORKER
+    zeile = json.dumps({
+        "t": _echte_uhr(), "quelle": os.getpid(), "art": "fremdlauf",
+        "ziel": ziel, "test": nodeid,
+    }) + "\n"
+    try:
+        fd = os.open(journal, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+        try:
+            os.write(fd, zeile.encode("utf-8"))
+        finally:
+            os.close(fd)
+    except OSError:
+        pass
+
+
+def _fremdlauf_meldungen(seit: float) -> list[str]:
+    """Tests, die ein Kind-Prozess DIESES Workers seit ``seit`` als
+    Fremdlauf abgewiesen hat."""
+    if _EIGENES_JOURNAL is None:
+        return []
+    try:
+        zeilen = _EIGENES_JOURNAL.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    tests = []
+    for zeile in zeilen:
+        try:
+            eintrag = json.loads(zeile)
+        except ValueError:
+            continue
+        if (eintrag.get("art") == "fremdlauf" and eintrag.get("ziel") == os.getpid()
+                and eintrag.get("t", 0) >= seit):
+            tests.append(str(eintrag.get("test")))
+    return tests
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_setup(item):
+    """Vor JEDER Fixture (auch modul-scope): ein ``real_data_root``-Test laeuft
+    in einem Fremdlauf nicht -- er schriebe ungeordnet neben der seriellen
+    Gruppe in den echten Baum."""
+    if item.get_closest_marker("real_data_root") and _fremdlauf():
+        _melde_fremdlauf(item.nodeid)
+        pytest.fail(
+            "Issue #3209: real_data_root-Test in einem inneren pytest-Lauf, den "
+            "ein Test AUSSERHALB der seriellen Echtdaten-Gruppe gestartet hat -- "
+            "er wird nicht ausgefuehrt. Abhilfe: den startenden Test mit "
+            '@pytest.mark.xdist_group("echtdaten") markieren.',
+            pytrace=False,
+        )
+
+
 def _erklaerende_journale() -> list[str]:
     """Journale, deren Eintraege eine Aenderung am echten Baum erklaeren:
     das eigene Lauf-Journal (xdist-Worker) und die geerbten Beobachtungs-
@@ -772,7 +858,7 @@ def _journal_erklaert(seit: float) -> tuple[set[str], list[str]]:
                 continue
             if eintrag.get("art") == "baum":
                 baeume.append(eintrag["pfad"])
-            else:
+            elif eintrag.get("art") == "datei":
                 dateien.add(eintrag["pfad"])
     return dateien, baeume
 
@@ -1098,6 +1184,16 @@ def _isolate_data_root(request, tmp_path_factory):
     before_snapshot = _detail_snapshot_repo_data_users()
     yield
     loader._DATA_ROOT = before
+
+    abgewiesen = _fremdlauf_meldungen(beginn)
+    if abgewiesen:
+        pytest.fail(
+            "Issue #3209: dieser Test startet einen inneren pytest-Lauf mit "
+            f"real_data_root-Tests ({abgewiesen[:3]}), gehoert aber nicht zur "
+            "seriellen Echtdaten-Gruppe -- unter xdist schrieben sie parallel zur "
+            "Gruppe ohne Journal in den echten Baum. Abhilfe: "
+            '@pytest.mark.xdist_group("echtdaten") an diesem Test.'
+        )
 
     after_snapshot = _detail_snapshot_repo_data_users()
     if after_snapshot != before_snapshot:

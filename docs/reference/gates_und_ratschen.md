@@ -309,7 +309,10 @@ seriell und parallel, Gruppenbildung, Materialisierung, Egress-Sperre je Worker)
 `tests/tdd/test_xdist_worker_sicherheit.py` mit Sonden unter `tests/probes_xdist/`.
 
 Timing-empfindliche Tests, die nur unter Parallelität wackeln, kommen in die Gruppe `echtdaten`;
-Zusicherungen werden nicht gelockert, der globale `timeout = 30` bleibt.
+Zusicherungen werden nicht gelockert, der globale `timeout = 30` bleibt. Anhebungen nur einzeln per
+`@pytest.mark.timeout(N)` mit Begründungskommentar am Test; wegen Parallel-Last in CI (#3209) bisher:
+`tests/refactor/test_epic_129a_3_ui_removed.py::test_ac7_collection_clean` (120 s; sammelt die ganze
+Suite per Subprozess, seriell ca. 16 s).
 
 ## CI-Ratschen
 

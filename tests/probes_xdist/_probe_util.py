@@ -36,6 +36,29 @@ def protokolliere(art: str, **daten) -> None:
         fh.write(json.dumps(eintrag) + "\n")
 
 
+def starte_inneren_lauf(sonde: str) -> int:
+    """Startet einen SERIELLEN inneren pytest-Lauf auf ``sonde`` (wie
+    ``tests/tdd/test_issue_1014_live_optin.py``) und gibt den Exit-Code
+    zurueck -- der Aufrufer wertet ihn bewusst NICHT aus."""
+    import subprocess
+    import sys
+    import tempfile
+
+    env = {
+        k: v for k, v in os.environ.items()
+        if not k.startswith("PYTEST_XDIST") and k != "PYTEST_CURRENT_TEST"
+    }
+    with tempfile.TemporaryDirectory(prefix="gz-g-innen-") as basetemp:
+        proc = subprocess.run(
+            [sys.executable, "-m", "pytest", str(Path(__file__).parent / sonde),
+             "-o", "addopts=", "-p", "no:cacheprovider", "--basetemp", basetemp,
+             "-q", "-rfE", "--tb=short"],
+            cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=120, env=env,
+        )
+    protokolliere("g_innen_exit", exit=proc.returncode, ausgabe=proc.stdout[-1500:])
+    return proc.returncode
+
+
 def warte_auf(pfad: Path, sekunden: float) -> bool:
     ende = time.monotonic() + sekunden
     while time.monotonic() < ende:
