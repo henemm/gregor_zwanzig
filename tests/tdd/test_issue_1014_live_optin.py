@@ -122,6 +122,11 @@ def test_live_telegram_enabled_does_not_touch_environ(monkeypatch):
     )
 
 
+# Issue #3209 (CI-Befund 2026-11-23): der innere Lauf fuehrt real_data_root-Tests
+# aus (test_issue_1001 TestAC7 schreibt die Budget-Spur unter
+# data/users/default) -- er gehoert in die serielle Echtdaten-Gruppe, damit er
+# das Gruppen-Journal erbt und nicht parallel zur Gruppe schreibt.
+@pytest.mark.xdist_group("echtdaten")
 def test_without_optin_all_live_tests_skip_and_env_unchanged():
     # -- Teil B: isolierter Subprocess-pytest-Lauf ueber alle 6 Live-Dateien --
     env = _clean_subprocess_env()

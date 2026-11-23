@@ -59,6 +59,9 @@ var Inventory = map[string]Kind{
 	"www.googleapis.com":    TestAccess,
 	"oauth2.googleapis.com": TestAccess,
 	"accounts.google.com":   TestAccess,
+	// Issue #3281: Client-Dokument der Claude-App (MCP-Konnektor,
+	// resolver.ClientDokumentHolen); Staging braucht es fuer die Anmeldung.
+	"claude.ai": TestAccess,
 	// Staging darf keine Produktions-Heartbeats gruen pingen — das waere
 	// Falsch-Gruen im Monitoring.
 	"uptime.betterstack.com": Blocked,

@@ -32,8 +32,21 @@ func IsMachinePath(path string) bool {
 		strings.HasPrefix(path, "/api/internal/") ||
 		strings.HasPrefix(path, "/api/_internal/") ||
 		path == "/api/scheduler/status" ||
-		path == "/api/auth/google/callback"
+		path == "/api/auth/google/callback" ||
+		// Issue #3281 (ADR-0128): Token-Tausch und Client-Registrierung des
+		// MCP-Konnektors kommen von claude.ai ohne Browser-Herkunft; Nachweis
+		// ist der PKCE-Verifier bzw. die Redirect-Allowlist. Der MCP-Endpunkt
+		// selbst wirkt nur mit Bearer-Token (nie mit dem Sitzungs-Cookie),
+		// eine Herkunft wie https://claude.ai ist dort kein CSRF-Risiko.
+		path == "/api/mcp/oauth/token" ||
+		path == "/api/mcp/oauth/register" ||
+		path == "/api/mcp"
 }
+
+// formularPfade: Pfade, deren Rumpf ein HTML-Formular sein darf. Nur die
+// Zustimmung zum MCP-Konnektor (Issue #3281); die Herkunftspruefung gilt
+// dort weiter.
+var formularPfade = map[string]bool{"/api/mcp/oauth/authorize": true}
 
 func guarded(r *http.Request) bool {
 	return isStateChanging(r.Method) && strings.HasPrefix(r.URL.Path, "/api/") && !IsMachinePath(r.URL.Path)
@@ -141,7 +154,8 @@ func RequireJSONBody(multipartPaths ...string) func(http.Handler) http.Handler {
 			if guarded(r) && hasBody(r) {
 				mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 				ok := err == nil && (mt == "application/json" ||
-					(mt == "multipart/form-data" && multipart[r.URL.Path]))
+					(mt == "multipart/form-data" && multipart[r.URL.Path]) ||
+					(mt == "application/x-www-form-urlencoded" && formularPfade[r.URL.Path]))
 				if !ok {
 					writeError(w, i18n.FromRequest(r, nil), http.StatusUnsupportedMediaType, "unsupported_media_type")
 					return

@@ -448,40 +448,23 @@ def test_geosphere_5xx_preserves_original_error_and_retry(monkeypatch, tmp_path)
 # ---------------------------------------------------------------------------
 
 def test_seam_catches_provider_request_and_not_found_error(monkeypatch, tmp_path):
-    """AC-4 (F001-Fix): Given der Direktanbieter (GeoSphere) antwortet am
-    Seam mit 5xx (Fall a) ODER `at_direct` ist gar nicht registriert (Fall
-    b), When das Segment verarbeitet wird, Then wird die jeweils
-    resultierende `ProviderRequestError`/`ProviderNotFoundError` im
-    `except`-Block des Seams (openmeteo.py:884) gefangen und `raise
-    last_error` (Open-Meteo) propagiert — kein Crash mit einer unbehandelten
-    Exception aus dem GeoSphere-Zweig selbst.
+    """AC-4 (F001-Fix): Given `at_direct` ist gar nicht registriert (Fall
+    b), When das Segment verarbeitet wird, Then wird die resultierende
+    `ProviderNotFoundError` im `except`-Block des Seams (openmeteo.py:884)
+    gefangen und `raise last_error` (Open-Meteo) propagiert — kein Crash mit
+    einer unbehandelten Exception aus dem GeoSphere-Zweig selbst.
 
-    RED heute (beide Faelle): der `except`-Block faengt nur
-    `ProviderNotImplementedError`.
-    - Fall (a): `_FutureAtDirectAdapter` (echte GeoSphere-Delegation, lokaler
-      503-Server) wirft `ProviderRequestError(provider='geosphere')` — die
-      wird heute NICHT gefangen, sondern erreicht den Aufrufer direkt
-      (Assertion auf `provider == 'openmeteo'` schlaegt fehl).
-    - Fall (b): `at_direct` wird aus der Registry entfernt —
-      `get_provider('at_direct')` wirft `ProviderNotFoundError`, die vom
-      `except ProviderNotImplementedError`-Block gar nicht erst abgedeckt
-      ist (andere Exception-Klasse) und daher ungefangen bis in den Test
-      durchschlaegt — `pytest.raises(ProviderRequestError)` faengt sie NICHT
-      (Typ-Mismatch), der Test schlaegt mit der unerwarteten
-      `ProviderNotFoundError` fehl.
+    Der fruehere Fall (a) (GeoSphere antwortet mit 503, der Seam muss die
+    `ProviderRequestError(provider='geosphere')` fangen) war identisch mit
+    `test_geosphere_5xx_preserves_original_error_and_retry` (AC-3) und wurde
+    entfernt (#3265); diesen Fang bewacht jetzt allein der AC-3-Test.
+
+    Fall (b): `at_direct` wird aus der Registry entfernt —
+    `get_provider('at_direct')` wirft `ProviderNotFoundError`. Faengt der
+    Seam sie nicht, schlaegt sie ungefangen bis in den Test durch —
+    `pytest.raises(ProviderRequestError)` faengt sie NICHT (Typ-Mismatch),
+    der Test schlaegt mit der unerwarteten `ProviderNotFoundError` fehl.
     """
-    # --- Fall (a): GeoSphere selbst antwortet mit 503 ---
-    with _geosphere_fault_server(monkeypatch) as _geo_server:
-        with _registered_test_direct_provider("at_direct", _FutureAtDirectAdapter):
-            with _total_outage_seam(monkeypatch, tmp_path) as (provider, _om, _diag):
-                with pytest.raises(ProviderRequestError) as exc_a:
-                    provider.fetch_forecast(_INNSBRUCK, enrich_ensemble=False)
-
-    assert exc_a.value.provider == "openmeteo", (
-        "AC-4a: last_error (Open-Meteo) muss propagieren, nicht GeoSpheres "
-        f"eigene ProviderRequestError — provider={exc_a.value.provider!r}."
-    )
-
     # --- Fall (b): at_direct fehlt komplett in der Registry ---
     with _unregistered_direct_provider("at_direct"):
         with _total_outage_seam(monkeypatch, tmp_path) as (provider, _om, _diag):

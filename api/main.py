@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 
 from api.bind_guard import enforce_loopback_bind
 from api.fehler import register_fehler_handler
-from api.routers import briefings_send, config, compare, forecast, gpx, health, internal, notify, placements, preview, scheduler, validator, webhook
+from api.routers import briefings_send, config, compare, forecast, gpx, health, internal, mcp_wetter, notify, placements, preview, scheduler, validator, webhook
 from app.config import Settings
 from app.egress_guard import install_egress_guard
 from app.loader import InvalidUserIdError
@@ -120,6 +120,7 @@ app.include_router(internal.router)
 app.include_router(preview.router)
 app.include_router(briefings_send.router)  # Issue #2280
 app.include_router(placements.router)  # Issue #3122 B2
+app.include_router(mcp_wetter.router)  # Issue #3281 Scheibe 1
 app.include_router(validator.router)
 app.include_router(webhook.router)
 

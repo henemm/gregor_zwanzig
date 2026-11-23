@@ -551,14 +551,6 @@
 			"art": "abschnitt",
 			"ctx": "trip",
 			"reiter": "wetter",
-			"abschnitt": "was-steht-wo",
-			"grund": "Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.",
-			"verweis": "#3122"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
 			"abschnitt": "kebab-bestaetigung-archivieren",
 			"grund": "Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
 			"verweis": "#2797"
@@ -698,14 +690,6 @@
 			"abschnitt": "tempo",
 			"grund": "Tempo-Karte im Reiter Etappen (Fortbewegung, Tempo flach, Aufstieg, Gehzeit je Etappe) braucht persistente Tempo-Felder: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108), aus c2 umgehängt. Ursachen: Text nicht sichtbar, Abschnitt-Haken fehlt, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)",
 			"verweis": "#2796"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "wetter",
-			"abschnitt": "was-steht-wo",
-			"grund": "Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.",
-			"verweis": "#3122"
 		},
 		{
 			"art": "abschnitt",
@@ -3914,6 +3898,38 @@
 			"muster": "· green: up to {zahl}",
 			"grund": "englischer Live-Text ohne Eintrag in der EN-Elementliste: Grünbereich ohne Einheit („· grün: bis {zahl}“, UV-Index) hat kein EN-Muster im Katalog; bis #3203 als „green: up to {zahl}“ geführt",
 			"verweis": "#3241"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"muster": "FN{zahl}",
+			"grund": "SMS-Beispielwert in „Was steht wo“: Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab (Mockup FN7, live FN12); {zahl} erklärt nur Zahlen",
+			"verweis": "#3258"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"muster": "FD{zahl}/{zahl}",
+			"grund": "SMS-Beispielwert in „Was steht wo“: Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab (Mockup FD7/12, live FD12/16); {zahl} erklärt nur Zahlen",
+			"verweis": "#3258"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"muster": "TF- FN{zahl} FD{zahl}/{zahl}",
+			"grund": "SMS-Beispielzelle der gefühlten Temperatur (EN-Lauf): Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab; Token sprachneutral, {zahl} erklärt nur Zahlen",
+			"verweis": "#3258"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"muster": "Port d'And D{zahl}/{zahl} W{zahl}@{zahl}({zahl}@{zahl}) G{zahl}@{zahl}({zahl}@{zahl}) PR{zahl}%@{zahl} R{zahl}@{zahl} TF- FN{zahl} FD{zahl}/{zahl} TH:L@{zahl}(M@{zahl}) TH+:- VS- FZ{zahl}@{zahl} UV{zahl}@{zahl}({zahl}@{zahl}) SL{zahl} CL:SCT@{zahl} N{zahl}",
+			"grund": "ganze SMS-Beispielzeile in „Was steht wo“: Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab (Etappe, Metrik-Reihenfolge und Werte des Prüf-Trips); {zahl} erklärt nur Zahlen",
+			"verweis": "#3258"
 		}
 	],
 	"ausnahmen": [

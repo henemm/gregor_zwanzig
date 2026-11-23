@@ -30,7 +30,9 @@ import {
 	mockupHash,
 	pruefeHashAktuell,
 	ladeKatalog,
-	ermittleEn
+	ermittleEn,
+	ladeKuerzelBedeutungen,
+	ladeMetrikNamen
 } from '../../../../scripts/elementliste_aus_mockup.ts';
 
 const REPO = join(fileURLToPath(new URL('.', import.meta.url)), '..', '..', '..', '..');
@@ -215,7 +217,8 @@ describe('AC-10: Schema je Eintrag, eindeutige IDs, dynamische Texte als ein Ele
 
 	test('dynamische Texte: je Kombination und Abschnitt kein Text doppelt, der sich nur in Zahlen unterscheidet', () => {
 		const gruppen = new Map<string, Element[]>();
-		for (const e of liste().elemente) {
+		// #3154: Beispieltexte (Rolle beispiel, Muster {wert}) bleiben je Zelle ein eigenes Element.
+		for (const e of liste().elemente.filter((x) => x.rolle !== 'beispiel')) {
 			const k = [e.ctx, e.reiter, e.zustand, e.segment, e.abschnitt, e.text_de.replace(/\d+([.,]\d+)?/g, '#')].join('|');
 			gruppen.set(k, [...(gruppen.get(k) ?? []), e]);
 		}
@@ -270,10 +273,23 @@ describe('AC-11: EN aus dem Katalog — exakter Treffer, Muster, sonst Lücke (n
 		for (const e of liste().elemente) {
 			if (e.luecke) {
 				assert.equal(e.text_en, null, `${e.id}: Lücke mit EN-Text`);
+			} else if ((e as { sprachneutral?: boolean }).sprachneutral && e.rolle === 'beispiel') {
+				// #3154: Beispieltext einer Zelle ⇒ Muster {wert} in DE und EN, kein Schlüssel.
+				assert.equal(e.i18n_key, null, e.id);
+				assert.equal(e.muster, '{wert}', e.id);
+				assert.equal(e.text_en, '{wert}', e.id);
 			} else if ((e as { sprachneutral?: boolean }).sprachneutral) {
 				// #2968 Regel c: sprachneutral ⇒ kein Schlüssel, EN = DE-Muster (Zahlen als {zahl}).
 				assert.equal(e.i18n_key, null, e.id);
 				assert.equal(e.text_en, e.text_de.replace(/\d+([.,]\d+)?/g, '{zahl}'), e.id);
+			} else if (e.i18n_key === null && e.rolle === 'bedeutung') {
+				// #3258: Bedeutung der Legende „Kürzel erklärt“ ohne Frontend-Schlüssel ⇒ EN aus dem Server-Katalog
+				// (Schnappschuss daten/kuerzel_bedeutung.json), nie erfunden.
+				assert.equal(e.text_en, ladeKuerzelBedeutungen().get(e.text_de), `${e.id}: Bedeutung ohne Server-Katalog-EN`);
+			} else if (e.i18n_key === null && ladeMetrikNamen().has(e.text_de)) {
+				// #3154: Metrikname ohne Frontend-Schlüssel ⇒ EN aus dem Server-Katalog (Schnappschuss
+				// daten/metrik_namen.json), nie erfunden.
+				assert.equal(e.text_en, ladeMetrikNamen().get(e.text_de), `${e.id}: Metrikname ohne Server-Katalog-EN`);
 			} else if (e.i18n_key === null) {
 				// #2968 Regel b: Segmente ohne einzelnen Schlüssel, EN = Segment-EN mit „ · “ verbunden.
 				assert.ok(e.text_en && (e.text_en.includes(' · ') || e.text_en.startsWith('· ')), `${e.id}: Treffer ohne Schlüssel und ohne Segmente`);

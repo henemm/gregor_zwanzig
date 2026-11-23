@@ -49,6 +49,11 @@ from tests.tdd._telegram_live_fixture import ensure_test_user_with_active_trip
 # AC-5 (tests/tdd/test_data_root_isolation_scopes.py), nicht diese Zeile.
 _REPO_DATA_USERS_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
+# Issue #3209: das Modul beruehrt den ECHTEN data/users-Baum (Konstante oben)
+# -- unter xdist laeuft es in der seriellen Echtdaten-Gruppe; Datenwurzel-
+# Isolation und Per-Test-Waechter bleiben unveraendert aktiv.
+pytestmark = pytest.mark.xdist_group("echtdaten")
+
 
 def _write_user(
     data_dir: Path, user_id: str, chat_id: str = "", mail_to: str = "",

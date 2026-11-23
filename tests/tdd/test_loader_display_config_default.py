@@ -15,7 +15,12 @@ import pytest
 from app.loader import load_trip_from_dict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-GR221_TRIP_FILE = PROJECT_ROOT / "data" / "users" / "default" / "trips" / "gr221-mallorca.json"
+# Issue #3209: committete Quelle statt der materialisierten Kopie im echten
+# data/users-Baum (parallel zur seriellen Echtdaten-Gruppe lesbar).
+GR221_TRIP_FILE = (
+    PROJECT_ROOT / "tests" / "fixtures" / "data_root" / "users" / "default" / "trips"
+    / "gr221-mallorca.json"
+)
 
 
 def _minimal_trip(**extra) -> dict:

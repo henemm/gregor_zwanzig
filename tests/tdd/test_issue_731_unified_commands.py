@@ -26,7 +26,7 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from app.loader import (  # noqa: E402
-    get_briefings_dir, get_snapshots_dir, load_all_trips, save_trip,
+    get_briefings_dir, get_data_dir, get_snapshots_dir, load_all_trips, save_trip,
 )
 from app.models import TripReportConfig  # noqa: E402
 from app.trip import Stage, Trip, Waypoint  # noqa: E402
@@ -173,8 +173,13 @@ def _ensure_real_user_dir(user_id: str) -> None:
     """Issue #1133: trip_report_scheduler.py schreibt briefing_log.json
     weiterhin über die relative "data/users/..."-Konstruktion (bewusst nicht
     migriert, Known Limitations) und setzt die Existenz des Nutzerverzeichnisses
-    voraus."""
-    (Path("data/users") / user_id).mkdir(parents=True, exist_ok=True)
+    voraus.
+
+    Issue #3209: inzwischen liest/schreibt ``src/`` ausschliesslich ueber
+    ``app.loader.get_data_dir()`` (kein relatives ``data/users`` mehr) -- das
+    Verzeichnis wird deshalb in der isolierten Testwurzel angelegt, nicht im
+    echten Baum (der unter xdist parallel zur Echtdaten-Gruppe laeuft)."""
+    get_data_dir(user_id).mkdir(parents=True, exist_ok=True)
 
 
 def _yesterday_name() -> str:
@@ -194,7 +199,7 @@ def cleanup():
             if p.exists():
                 p.unlink()
         if u != _USER_DEFAULT:
-            ud = Path("data/users") / u
+            ud = get_data_dir(u)  # Issue #3209: isolierte Wurzel, nicht der echte Baum
             if ud.exists():
                 shutil.rmtree(ud, ignore_errors=True)
 

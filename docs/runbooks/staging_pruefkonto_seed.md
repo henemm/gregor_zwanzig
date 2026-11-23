@@ -9,7 +9,9 @@ Staging-Prüfkonto. Damit er keine Scheinabweichungen meldet, füllt das Seed-Sk
 mit den Mockup-Beispieldaten: Trip „GR221 Mallorca“ (4 Etappen, Vorlage Alpen-Trekking,
 Metrik-Flags wie im Mockup), eigene Vorlage „Mallorca Frühling“, Orts-Vergleich
 „Münsterland“ (Münster, Telgte, Tecklenburg; Morgen-Briefing 07:00) und alle vier Kanäle
-(E-Mail, SMS, Telegram, Premium-SMS) mit fiktiven Testwerten. An echte Geräte geht nichts:
+(E-Mail, SMS, Telegram, Premium-SMS) mit fiktiven Testwerten. Seit #3154 schreibt der Seed außerdem
+die Tabelle „Was steht wo“ von Trip (`kind=route`) und Orts-Vergleich (`kind=vergleich`) mit den
+Mockup-Zeilen; der Orts-Vergleich enthält dafür Temperatur Max und Min. An echte Geräte geht nichts:
 Telegram und Premium-SMS verbinden mit fiktiven Werten ohne Versand; der SMS-Bestätigungscode,
 den die Go-API im Premium-Tarif beim Eintragen der Nummer auslöst, läuft über den
 Sandbox-Schlüssel von Staging (siehe „Sperre gegen echten SMS-Versand“), bestätigt wird mit dem
@@ -34,7 +36,10 @@ cd frontend && GZ_AUTH_USER="$GZ_PRUEFKONTO_USER" GZ_AUTH_PASS="$GZ_PRUEFKONTO_P
 ```
 
 Der Abgleich meldet sich mit `GZ_AUTH_USER`/`GZ_AUTH_PASS` an; für den Seed-Stand müssen diese
-auf die Prüfkonto-Werte zeigen, sonst liest er das Konto `default` (ohne die Seed-IDs).
+auf die Prüfkonto-Werte zeigen, sonst liest er das Konto `default` (ohne die Seed-IDs). Dann
+meldet er Scheinabweichungen (fehlende Trip- und Orte-Elemente, fehlende Tabelle „Was steht wo“),
+die mit dem Mockup nichts zu tun haben. Abgleich nur mit Prüfkonto-Login und den Seed-IDs
+`ELEMENTLISTE_TRIP_ID` / `ELEMENTLISTE_ORTE_ID` aus dem Seed-Lauf starten.
 
 Optionen: `--basis-url URL` (nur `https://staging.gregor20.henemm.com`), `--intern-url URL`
 (nur `http://localhost:8091`), `--env-datei PFAD` (Standard `/home/hem/gregor_zwanzig_staging/.env`).
@@ -72,6 +77,10 @@ Optionen: `--basis-url URL` (nur `https://staging.gregor20.henemm.com`), `--inte
   dem letzten Lauf verbrauchter Zähler steht danach wieder auf 0.
 - **E-Mail-Empfänger:** Konto-Adresse plus eine fiktive `.invalid`-Adresse. Hat das Konto keine
   Mail-Adresse, endet der Lauf mit Exit 1 vor dem ersten Schreibzugriff (nie ein leerer Empfänger).
+- **Tabelle „Was steht wo“ (#3154):** je Zeile per GET vergleichen, nur bei Abweichung PUT auf
+  `/api/briefings/{id}/placements?kind=…`. Der PUT ersetzt nur `display_config.placements`; andere
+  Felder des Abos bleiben. Ein zweiter Lauf schreibt nichts. Eine Umrechnung ohne gespeicherten
+  Stand wird nicht übernommen.
 - **Gespeicherte Form:** die Go-API speichert das Morgen-Briefing als `07:00:00`; das Skript
   vergleicht mit genau dieser Form, damit der zweite Lauf den Vergleich nicht neu schreibt.
 - **Kanalauswahl (#3151, Mockup `mockup-hub-fassung4.html` Z.373-374):** Trip und Vergleich

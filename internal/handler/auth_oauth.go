@@ -11,6 +11,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	neturl "net/url"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -65,10 +66,51 @@ func GoogleOAuthInitHandler(cfg *config.Config) http.HandlerFunc {
 			Secure:   secure,
 		})
 
+		// Issue #3281: Ruecksprung der Anmeldeseite (z. B. Autorisierung des
+		// MCP-Konnektors) neben dem state merken -- nur zulaessige Ziele.
+		if ziel := sichererRuecksprung(r.URL.Query().Get("redirect")); ziel != "" {
+			http.SetCookie(w, &http.Cookie{Name: oauthRuecksprungCookie, Value: neturl.QueryEscape(ziel), Path: "/",
+				HttpOnly: true, SameSite: http.SameSiteLaxMode, MaxAge: 600, Secure: secure})
+		}
+
 		oauthCfg := buildGoogleOAuthConfig(cfg)
 		url := oauthCfg.AuthCodeURL(state)
 		http.Redirect(w, r, url, http.StatusFound)
 	}
+}
+
+// oauthRuecksprungCookie traegt den Ruecksprung der Anmeldeseite durch den
+// Google-Login (Issue #3281).
+const oauthRuecksprungCookie = "gz_oauth_redirect"
+
+// sichererRuecksprung laesst nur relative Pfade derselben Seite zu (Regeln
+// wie safeRedirectPath im Frontend): genau ein fuehrender Slash, danach kein
+// Slash/Backslash, nirgends Backslash oder Steuerzeichen. Sonst "".
+func sichererRuecksprung(roh string) string {
+	if len(roh) < 1 || len(roh) > 2048 || roh[0] != '/' || (len(roh) > 1 && (roh[1] == '/' || roh[1] == '\\')) {
+		return ""
+	}
+	for _, c := range roh {
+		if c == '\\' || c < 0x20 || c == 0x7f {
+			return ""
+		}
+	}
+	return roh
+}
+
+// oauthRuecksprung liest und loescht den gemerkten Ruecksprung; "/" ohne
+// (zulaessigen) Wert.
+func oauthRuecksprung(w http.ResponseWriter, r *http.Request) string {
+	c, err := r.Cookie(oauthRuecksprungCookie)
+	if err != nil {
+		return "/"
+	}
+	http.SetCookie(w, &http.Cookie{Name: oauthRuecksprungCookie, Value: "", Path: "/", MaxAge: -1})
+	wert, err := neturl.QueryUnescape(c.Value)
+	if ziel := sichererRuecksprung(wert); err == nil && ziel != "" {
+		return ziel
+	}
+	return "/"
 }
 
 func GoogleOAuthCallbackHandler(cfg *config.Config, s *store.Store) http.HandlerFunc {
@@ -206,7 +248,7 @@ func googleOAuthCallbackHandlerInternal(cfg *config.Config, s *store.Store, user
 			return
 		}
 
-		http.Redirect(w, r, "/", http.StatusFound)
+		http.Redirect(w, r, oauthRuecksprung(w, r), http.StatusFound)
 	}
 }
 

@@ -1,0 +1,30 @@
+##### Lauf: adversary #####
+=== Basislauf Kern (unverändert) ===
+1 passed, 12 deselected in 0.76s
+=== M1: Grenze leicht/mäßig 'if mm_per_h < 1.0:' -> 'if mm_per_h < 3.0:' ===
+Ersetzungen: 1
+FAILED tests/tdd/test_feature_660_convective_stage.py::test_ac1_intensity_non_convective_unchanged
+1 failed, 12 deselected in 0.84s
+=== M2: Default 'is_convective: bool = False' -> True ===
+Ersetzungen: 1
+FAILED tests/tdd/test_feature_660_convective_stage.py::test_ac1_intensity_non_convective_unchanged
+1 failed, 12 deselected in 0.82s
+=== Basislauf Live (unverändert, -m live) ===
+1 passed, 11 deselected in 1.30s
+=== M3a: RADOLAN-Box '_RADOLAN_LAT_MIN = 47.0' -> 53.0 (Berlin faellt aus der Box) ===
+Ersetzungen: 1
+FAILED tests/tdd/test_feature_734_arome_france_nowcast.py::test_ac2_chain_routing_berlin_radar_atlantic_global
+1 failed, 11 deselected in 1.00s
+=== M3b: Global-Fallback 'return frames, "minutely_15"' -> "global" ===
+Ersetzungen: 1
+FAILED tests/tdd/test_feature_734_arome_france_nowcast.py::test_ac2_chain_routing_berlin_radar_atlantic_global
+1 failed, 11 deselected in 1.92s
+=== Wiederhergestellt ===
+byte-identisch zur Sicherung
+kein Diff gegen origin/main
+16 passed, 6 deselected, 3 xfailed in 2.22s
+=== collect (vier Dateien) ===
+tests/tdd/test_feature_660_convective_stage.py::test_ac1_intensity_non_convective_unchanged
+tests/tdd/test_feature_734_arome_france_nowcast.py::test_ac2_chain_routing_berlin_radar_atlantic_global
+tests/tdd/test_feature_761_icon_d2_nowcast.py::test_ac2_chain_routing_precedence
+25 tests collected in 1.23s

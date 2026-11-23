@@ -15,3 +15,10 @@ func ParseAdminUserIDs(raw string) map[string]struct{} {
 	}
 	return admins
 }
+
+// ParseMCPUserIDs liest GZ_MCP_USER_IDS (Issue #3281, ADR-0128) nach
+// denselben Regeln wie ParseAdminUserIDs: getrimmt, leere Eintraege
+// verworfen, exakter Vergleich, leerer Wert = niemand (fail-closed).
+func ParseMCPUserIDs(raw string) map[string]struct{} {
+	return ParseAdminUserIDs(raw)
+}

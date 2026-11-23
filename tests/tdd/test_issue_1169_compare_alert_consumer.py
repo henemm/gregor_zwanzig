@@ -71,7 +71,9 @@ from tests.helpers.compare_briefings import write_compare_briefings
 
 # Issue #1210 B1: echte IMAP-Zustellung -> addopts-wirksamer Marker statt nur
 # Credential-Skip (primaere Ausschlussmechanik, nicht Defense-in-Depth).
-pytestmark = pytest.mark.email
+# Issue #3209: beruehrt den ECHTEN data/users-Baum (DATA_ROOT) -- unter xdist
+# in der seriellen Echtdaten-Gruppe.
+pytestmark = [pytest.mark.email, pytest.mark.xdist_group("echtdaten")]
 
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 

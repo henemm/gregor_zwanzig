@@ -26,6 +26,13 @@ import importlib.util
 import subprocess
 from pathlib import Path
 
+import pytest
+
+# Issue #3209: das Modul beruehrt den ECHTEN data/users-Baum (REPO_ROOT /
+# "data" / "users", innere pytest-Laeufe) -- unter xdist laeuft es in der
+# seriellen Echtdaten-Gruppe; Isolation und Per-Test-Waechter bleiben aktiv.
+pytestmark = pytest.mark.xdist_group("echtdaten")
+
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]

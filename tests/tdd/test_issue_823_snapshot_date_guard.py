@@ -35,13 +35,21 @@ from app.trip import Stage, Trip, Waypoint
 
 # ────────────────────────── Fixtures ────────────────────────────────────────
 
+def _user_dir(user_id: str) -> Path:
+    """Nutzerverzeichnis unter der (pro Test isolierten) Datenbasis -- dieselbe
+    Quelle wie `WeatherSnapshotService` (Issue #3209 Fix-Loop 2: nicht mehr
+    der echte data/users-Baum)."""
+    from app.loader import get_data_dir
+    return get_data_dir(user_id)
+
+
 @pytest.fixture()
 def clean_user_dirs():
     created: list[str] = []
 
     def _register(user_id: str) -> str:
         created.append(user_id)
-        path = Path(f"data/users/{user_id}")
+        path = _user_dir(user_id)
         if path.exists():
             shutil.rmtree(path)
         return user_id
@@ -49,7 +57,7 @@ def clean_user_dirs():
     yield _register
 
     for user_id in created:
-        path = Path(f"data/users/{user_id}")
+        path = _user_dir(user_id)
         if path.exists():
             shutil.rmtree(path)
 

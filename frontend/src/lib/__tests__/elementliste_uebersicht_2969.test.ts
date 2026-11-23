@@ -86,12 +86,34 @@ const ausnahmen = (): Ausnahme[] => logik.leseAusnahmen(readFileSync(BESITZER, '
 // Zurücksetzen-Zeile. Liste neu erzeugt: genau 4 neue Einträge (Trip/Orte je „1 Abweichung“, Stand ohne
 // Auswahlpfeil wie live, und „Auf „{vorlage}“ zurücksetzen“); alle übrigen Einträge byte-gleich, keine ID
 // entfallen (Diff je ID geprüft). Anzahl 2756.
-const ALT_ANZAHL = 2756;
+const ALT_ANZAHL_3251 = 2756;
 // #3251 Fix-Loop 2 (21.11.; vorher 7d0365c3…3c8a4): die zwei Einträge „1 Abweichung“ führen die Zahl als
 // Katalog-Mehrzahl-Muster („{count} Abweichungen“ / „{count} changes“, Schlüssel .other), weil der Prüf-Datensatz
 // live 14 bzw. 8 Abweichungen zeigt. ID, text_de und alle übrigen Einträge byte-gleich (Diff je ID geprüft).
-const ALT_SHA = 'e31b8c1d520ad7a6e0cc589d547bb18cb6d918e65550085b78ff3f5cadac10d5';
-const MOCKUP_HASH = 'sha256:c2347e0876a30710b2d56f6c1561b13668cb48089802558eaeaec0de30d8e6be';
+// #3258: Legende „Kürzel erklärt“ (22.11.; vorher e31b8c1d…cadac10d5, Mockup-Hash c2347e08…30d8e6be, Anzahl
+// 2756). Mockup Fassung 4 zeigt unter der SMS-Beispielzeile den Aufklapper „Kürzel erklärt“ wie live (je aktiver
+// SMS-Metrik Kürzel und Bedeutung, dann die festen Einträge aus wetter.wsw.legende.*, bei Orten O1); der
+// Generator liest Kürzel (dt, sprachneutral) und Bedeutung (dd; EN aus wetter.wsw.legende.*, sonst aus dem
+// Server-Katalog-Schnappschuss daten/kuerzel_bedeutung.json, Fix-Loop 1 F002: keine EN-Lücke in der Legende).
+// Liste neu erzeugt: 184 neue Einträge, nur Abschnitt was-steht-wo im Reiter Wetter (Trip 55, Orte 37, je Zustand
+// normal/luecken); die folgenden Einträge desselben Abschnitts ändern nur ordnung. Keine ID entfallen, alle
+// übrigen Einträge byte-gleich (Diff je ID geprüft).
+// #3154: Abnahme-Abgleich „Was steht wo“ (22.11.; vorher 95e04d79…0a269b12a5, Mockup-Hash c347e818…9503cdb972,
+// Anzahl 2940). Mockup Fassung 4 an freigegebene Entscheidungen angeglichen: die sechs Fensterzeilen sind in
+// E-Mail und 3-Tages-Ausblick gesperrt mit Grund („keine eigene Spalte“, „kein Tageswert“) statt Haken,
+// Gewitter-Einfach nur in der E-Mail (dort nur der Ampelpunkt ohne Text, wie live), Regenwahrscheinlichkeit mit
+// Roh/Einfach-Knopf (Spec #3122 Teil A Nr. 4), Orte-SMS als Token-Zeile (ADR-0125) ohne „+N“ und ohne
+// „Dafür steht …“, gekürzte SMS-Zellen nur mit Marke, Zeichenzahl als eigenes Element, Ausblick-Schalter vor dem
+// Titel (Titel aria-hidden wie live). Generator: Beispieltexte (Rolle beispiel) als Muster {wert}, je Zelle ein
+// Element; EN-Metriknamen aus daten/metrik_namen.json; SMS-Kürzungshinweis als Regel g (E1–E4). Liste neu
+// erzeugt: im Abschnitt was-steht-wo (Trip/Orte, je Zustand normal/luecken) 180 IDs entfallen und 174 neu
+// (Haken → Sperr-Grund, Beispiele mit Rolle beispiel, Darstellungs-Knöpfe Regenwahrscheinlichkeit, Orte-SMS/
+// Hinweis), 294 ändern nur ordnung, 10 Inhalt (EN der Zeilennamen); außerhalb von was-steht-wo ändern genau 10
+// Einträge im Abschnitt metriken (Zeilennamen Regenwahrscheinlichkeit, Tiefe Wolken, UV-Index, Bewölkung je
+// Zustand) nur EN (Lücke → Server-EN). Alle übrigen Einträge byte-gleich (Diff je ID geprüft).
+const ALT_ANZAHL = ALT_ANZAHL_3251 + 184 - 180 + 174;
+const ALT_SHA = '2d92d626780a7faf915d4fba7869672a5aed7ec4f7433222764ba5ed0bf0d059';
+const MOCKUP_HASH = 'sha256:fbb04f549d974116e70c0e89facac657cf5ab13a31e267eb00882ad7e6496ec6';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {
 	const e = uebersicht();

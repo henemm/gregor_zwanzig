@@ -9,7 +9,9 @@ from typing import get_type_hints
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-TRIP_FILE = Path(__file__).parent.parent.parent / "data/users/default/trips/gr221-mallorca.json"
+# Issue #3209: committete Quelle statt der materialisierten Kopie im echten
+# data/users-Baum (parallel zur seriellen Echtdaten-Gruppe lesbar).
+TRIP_FILE = Path(__file__).parent.parent / "fixtures/data_root/users/default/trips/gr221-mallorca.json"
 
 
 def _make_forecast_dp(hour: int, temp: float = 12.0, wind: float = 15.0,

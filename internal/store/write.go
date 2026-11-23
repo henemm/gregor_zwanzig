@@ -9,6 +9,11 @@ import (
 	"github.com/henemm/gregor-api/internal/fsmode"
 )
 
+// WriteFileAtomic ist writeFileLogged fuer Ablagen ausserhalb dieses Pakets
+// (OAuth-Ablage des MCP-Konnektors, Issue #3281): atomar, Dateimodus
+// fsmode.FileMode, Schreibfehler geloggt.
+func WriteFileAtomic(path string, data []byte) error { return writeFileLogged(path, data) }
+
 // writeFileLogged schreibt data nach path und loggt einen Schreibfehler
 // serverseitig mit Pfad + Ursache (Issue #1066). Der Rückgabefehler trägt
 // via %w Pfad-Kontext; die HTTP-Schicht gibt weiterhin nur generisch

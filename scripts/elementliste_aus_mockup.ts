@@ -300,7 +300,30 @@ export function ermittleEn(textDe: string, katalog: Katalog, bekannte: Bekannte 
 	const bisher = zeichenEn(t, katalog) ?? segmenteEn(t, katalog, bekannte);
 	if (bisher && !bisher.luecke) return bisher;
 	// #3194 Regel g: erst nach a–f und nur für bisherige Lücken — ältere Zuordnungen bleiben unverändert.
-	return zusammengesetztEn(t, katalog) ?? luecke();
+	// #3154: danach der Metrikname aus dem Schnappschuss (Zeilennamen der Tabelle „Was steht wo“).
+	return zusammengesetztEn(t, katalog) ?? metrikNameEn(t) ?? luecke();
+}
+
+const metrikNamenCache = new Map<string, Map<string, string>>();
+
+/**
+ * #3154 (AC-10): DE→EN der Metriknamen aus dem Schnappschuss daten/metrik_namen.json (label_de/label_en aus
+ * src/app/metric_catalog.py, wie kuerzel_bedeutung.json #3258). Live steht der Zeilenname in der Sprache des
+ * Nutzers aus dem Server-Katalog. Kein Python-Aufruf zur Laufzeit.
+ */
+export function ladeMetrikNamen(datenDir: string = STANDARD_DATEN): Map<string, string> {
+	const vorhanden = metrikNamenCache.get(datenDir);
+	if (vorhanden) return vorhanden;
+	const roh = JSON.parse(readFileSync(join(datenDir, 'metrik_namen.json'), 'utf8')) as { namen: Array<{ de: string; en: string }> };
+	const m = new Map(roh.namen.filter((n) => n.de && n.en).map((n) => [norm(n.de), n.en] as [string, string]));
+	metrikNamenCache.set(datenDir, m);
+	return m;
+}
+
+/** #3154: EN eines Metriknamens aus dem Schnappschuss; null = kein Metrikname. */
+export function metrikNameEn(textDe: string, namen: Map<string, string> = ladeMetrikNamen()): EnErgebnis | null {
+	const en = namen.get(norm(textDe));
+	return en ? { i18n_key: null, text_en: en, muster: null, luecke: false } : null;
 }
 
 /**
@@ -316,7 +339,12 @@ export const ZUSAMMENGESETZT: readonly ZusammengesetztZeile[] = [
 	{ name: 'B Grünhinweis + abweichend', schluessel: ['wetter.grenzen.hinweis', 'wetter.grenzen.abweichend'], fuge: ' ' },
 	{ name: 'C Gewitter-Hinweis + abweichend', schluessel: ['wetter.gewitter.keins_gruen', 'wetter.grenzen.abweichend'], fuge: ' ' },
 	{ name: 'D1 Rumpf Trip', schluessel: ['wetter.vorlage.ersetzt_route', 'wetter.vorlage.bleibt'], fuge: ' ' },
-	{ name: 'D2 Rumpf Orte', schluessel: ['wetter.vorlage.ersetzt_vergleich', 'wetter.vorlage.bleibt'], fuge: ' ' }
+	{ name: 'D2 Rumpf Orte', schluessel: ['wetter.vorlage.ersetzt_vergleich', 'wetter.vorlage.bleibt'], fuge: ' ' },
+	// #3154: SMS-Hinweis der Karte „Was steht wo“ (wasStehtWoAnsicht.ts smsAus: Kürzungssatz + „Zieh nach oben …“).
+	{ name: 'E1 SMS gekürzt Trip', schluessel: ['wetter.wsw.sms_passt_nicht.other', 'wetter.wsw.sms.hochziehen'], fuge: ' ' },
+	{ name: 'E2 SMS gekürzt Trip, eine', schluessel: ['wetter.wsw.sms_passt_nicht.one', 'wetter.wsw.sms.hochziehen'], fuge: ' ' },
+	{ name: 'E3 SMS gekürzt Orte', schluessel: ['wetter.wsw.sms_orte_passt_nicht.other', 'wetter.wsw.sms.hochziehen'], fuge: ' ' },
+	{ name: 'E4 SMS gekürzt Orte, eine', schluessel: ['wetter.wsw.sms_orte_passt_nicht.one', 'wetter.wsw.sms.hochziehen'], fuge: ' ' }
 ];
 
 const REGEX_ZEICHEN = /[.*+?^${}()|[\]\\]/g;
@@ -421,6 +449,41 @@ export function abweichungsZahlAlsMuster(abschnitt: string, en: EnErgebnis, kata
 	return { ...en, i18n_key: mehrzahl, muster: katalog.de[mehrzahl], text_en: katalog.en[mehrzahl], luecke: false };
 }
 
+/** #3258: Katalog-Präfix der festen Legenden-Einträge (Kürzel erklärt). */
+export const LEGENDE_PRAEFIX = 'wetter.wsw.legende.';
+
+const bedeutungCache = new Map<string, Map<string, string>>();
+
+/**
+ * #3258 (Fix-Loop 1, F002): DE→EN der Kürzel-Bedeutungen aus dem Schnappschuss daten/kuerzel_bedeutung.json
+ * (Server-Katalog kuerzel_bedeutung_de/en und vergleich.sms.ort_nummer; Drift-Test
+ * tests/test_3258_kuerzel_bedeutung_schnappschuss.py). Kein Python-Aufruf zur Laufzeit.
+ */
+export function ladeKuerzelBedeutungen(datenDir: string = STANDARD_DATEN): Map<string, string> {
+	const vorhanden = bedeutungCache.get(datenDir);
+	if (vorhanden) return vorhanden;
+	const roh = JSON.parse(readFileSync(join(datenDir, 'kuerzel_bedeutung.json'), 'utf8')) as { bedeutungen: Array<{ de: string; en: string }> };
+	const m = new Map(roh.bedeutungen.map((p) => [norm(p.de), p.en] as [string, string]));
+	bedeutungCache.set(datenDir, m);
+	return m;
+}
+
+/**
+ * #3258: EN der Legende „Kürzel erklärt“. Kürzel sind Protokoll-Token und werden nie übersetzt (ADR-0104):
+ * EN = DE-Muster (sprachneutral). Eine Bedeutung trägt EN aus dem Katalog `wetter.wsw.legende.*` (feste
+ * Einträge), sonst aus dem Server-Katalog (`ladeKuerzelBedeutungen`, Metrik-Bedeutungen und O1); nie aus
+ * einem zufälligen Treffer im übrigen Frontend-Katalog („Böen“ → „Wind gusts“, live „gusts“). Ohne Treffer
+ * Lücke. null = keine Legenden-Rolle.
+ */
+export function legendeEn(rolle: string, textDe: string, katalog: Katalog, bedeutungen: Map<string, string> = ladeKuerzelBedeutungen()): EnErgebnis | null {
+	if (rolle === 'kuerzel') return neutral(norm(textDe));
+	if (rolle !== 'bedeutung') return null;
+	const en = ermittleEn(textDe, katalog);
+	if (en.i18n_key?.startsWith(LEGENDE_PRAEFIX)) return en;
+	const server = bedeutungen.get(norm(textDe));
+	return server ? { i18n_key: null, text_en: server, muster: null, luecke: false } : luecke();
+}
+
 /** Katalogschlüssel der „+ Metrik“-Chips in „Nicht im Briefing“. */
 export const CHIP_SCHLUESSEL = 'wetter.nicht_im_briefing.hinzufuegen';
 
@@ -494,10 +557,15 @@ function ausleseImBrowser(arg: AusleseArg): Roh[] {
 			if (b.classList.contains('chip')) return 'chip';
 			return 'knopf';
 		}
+		// #3154: Beispieltext einer Zelle bzw. SMS-Beispielzeile (Mockup-Haken data-beispiel).
+		if (el.closest('[data-beispiel]')) return 'beispiel';
 		if (el.closest('.pill')) return 'status';
 		if (el.closest('h1,h2,h3')) return 'ueberschrift';
 		if (el.closest('summary')) return 'aufklapper';
 		if (el.closest('[role="menuitem"]')) return 'menuepunkt';
+		// #3258: Legende „Kürzel erklärt“ (Definitionsliste): Kürzel und Bedeutung.
+		if (el.closest('dt')) return 'kuerzel';
+		if (el.closest('dd')) return 'bedeutung';
 		if (el.closest('[role="alert"],.warnbox,.err')) return 'hinweis';
 		if (el.closest('label,th,.eyebrow,.gh,.vg,.sub')) return 'beschriftung';
 		if (el.closest('.kz')) return 'kuerzel';
@@ -543,6 +611,18 @@ function ausleseImBrowser(arg: AusleseArg): Roh[] {
 const ZAHL = /\d+([.,]\d+)?/g;
 const zahlNeutral = (t: string) => t.replace(ZAHL, '#');
 
+/** #3154: Roh-Rolle eines Beispieltexts (Zelle der Tabelle „Was steht wo“, SMS-Beispielzeile). */
+export const BEISPIEL = 'beispiel';
+
+/**
+ * #3154 (AC-7): Beispieltexte hängen am festen Beispiel-Datensatz der App (`placements_beispiel.py`), nicht
+ * am Mockup; geprüft wird nur, dass an der Stelle ein Beispiel steht. Muster `{wert}` (beliebiger Text außer
+ * einem Zellennamen, siehe Abgleich), sprachneutral, ohne Katalogschlüssel.
+ */
+function beispielEn(): EnErgebnis {
+	return { i18n_key: null, text_en: '{wert}', muster: '{wert}', luecke: false, sprachneutral: true };
+}
+
 export type Rohgruppe = { ctx: string; reiter: string; zustand: string; segment: string | null; roh: Roh[] };
 
 /**
@@ -558,6 +638,7 @@ export function baueElemente(gruppen: Rohgruppe[], katalog: Katalog): ListenEint
 			// Werte-Varianten (Texte, die sich nur in Zahlen unterscheiden) → EIN Element mit Muster
 			const varianten = new Map<string, Set<string>>();
 			for (const r of liste) {
+				if (r.rolle === BEISPIEL) continue; // #3154: Beispiele werden nie zusammengefasst
 				const k = zahlNeutral(r.text);
 				varianten.set(k, (varianten.get(k) ?? new Set<string>()).add(r.text));
 			}
@@ -566,7 +647,7 @@ export function baueElemente(gruppen: Rohgruppe[], katalog: Katalog): ListenEint
 			let ordnung = 0;
 			for (const r of liste) {
 				const k = zahlNeutral(r.text);
-				if ((varianten.get(k)?.size ?? 0) > 1) {
+				if (r.rolle !== BEISPIEL && (varianten.get(k)?.size ?? 0) > 1) {
 					if (zusammengefasst.has(k)) continue;
 					zusammengefasst.add(k);
 				}
@@ -578,7 +659,7 @@ export function baueElemente(gruppen: Rohgruppe[], katalog: Katalog): ListenEint
 					[g.ctx, g.reiter, g.zustand, g.segment ?? '-', abschnitt].join('.') +
 					'.' +
 					createHash('sha256').update(identitaet + '|' + nr).digest('hex').slice(0, 10);
-				const en = abweichungsZahlAlsMuster(abschnitt, chipEn(r.rolle, r.text, katalog) ?? listenzeileEn(g.reiter, abschnitt, r.text, katalog, ermittleEn(r.text, katalog)), katalog);
+				const en = r.rolle === BEISPIEL ? beispielEn() : abweichungsZahlAlsMuster(abschnitt, chipEn(r.rolle, r.text, katalog) ?? legendeEn(r.rolle, r.text, katalog) ?? listenzeileEn(g.reiter, abschnitt, r.text, katalog, ermittleEn(r.text, katalog)), katalog);
 				// Muster: aus dem Katalog (Platzhalter) oder, ohne Katalogtreffer, Zahlen als {zahl}.
 				// Ein exakter Katalogtreffer ist fester Text (z. B. „3-Tages-Ausblick“), kein Muster.
 				const zahlMuster = !en.i18n_key && /\d/.test(r.text) ? r.text.replace(ZAHL, '{zahl}') : null;

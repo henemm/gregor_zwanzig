@@ -2,10 +2,11 @@ import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
 import { trFor } from '$lib/i18n/index.js';
+import { safeRedirectPath } from '$lib/utils/safeRedirect.js';
 
 
 export const actions = {
-	default: async ({ request, locals }) => {
+	default: async ({ request, locals, url }) => {
 		const data = await request.formData();
 		const email = data.get('email')?.toString() ?? '';
 
@@ -21,6 +22,7 @@ export const actions = {
 			body: JSON.stringify({ email })
 		}).catch(() => {});
 
-		return { sent: true, email };
+		// Issue #3281: der Ruecksprung der Anmeldeseite reist zur Code-Eingabe mit.
+		return { sent: true, email, redirect: safeRedirectPath(url.searchParams.get('redirect'), '') };
 	}
 } satisfies Actions;

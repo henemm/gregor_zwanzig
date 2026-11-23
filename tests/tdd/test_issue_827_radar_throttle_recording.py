@@ -21,6 +21,13 @@ from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_d
 
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
+# Issue #3209: das Modul beruehrt den ECHTEN data/users-Baum (Konstante oben)
+# -- unter xdist laeuft es in der seriellen Echtdaten-Gruppe; Datenwurzel-
+# Isolation und Per-Test-Waechter bleiben unveraendert aktiv.
+import pytest  # noqa: E402
+
+pytestmark = pytest.mark.xdist_group("echtdaten")
+
 # Koordinaten im GR20-Gebiet (Korsika)
 LAT, LON = 42.20, 9.10
 

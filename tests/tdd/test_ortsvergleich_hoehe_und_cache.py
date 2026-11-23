@@ -33,6 +33,13 @@ from __future__ import annotations
 import json
 from datetime import date, datetime, timezone
 from pathlib import Path
+
+import pytest
+
+# Issue #3209: das Modul beruehrt den ECHTEN data/users-Baum (_clean_user) --
+# unter xdist laeuft es in der seriellen Echtdaten-Gruppe; Datenwurzel-
+# Isolation und Per-Test-Waechter bleiben unveraendert aktiv.
+pytestmark = pytest.mark.xdist_group("echtdaten")
 from typing import List
 from urllib.parse import parse_qs
 

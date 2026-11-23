@@ -35,7 +35,7 @@ type finding struct {
 }
 
 var (
-	hgScanDirs    = []string{"internal/handler", "internal/mail", "internal/notify", "internal/store", "internal/middleware", "internal/resolver"}
+	hgScanDirs    = []string{"internal/handler", "internal/mail", "internal/notify", "internal/store", "internal/middleware", "internal/resolver", "internal/mcp"}
 	hgUmlaut      = regexp.MustCompile(`[äöüÄÖÜß]|&(auml|ouml|uuml|Auml|Ouml|Uuml|szlig);`)
 	hgSignalwort  = regexp.MustCompile(`(?i)\b(nicht|fehlt|bitte|hallo|ignoriere|bestaetig\w*|zurueck\w*|abgelaufen|fehlgeschlagen)\b`)
 	hgMindestDats = 80 // heute 92 Nicht-Test-Dateien; darunter ist der Messaufbau kaputt

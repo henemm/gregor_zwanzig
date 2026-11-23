@@ -145,7 +145,7 @@ class _Fake:
             headers = {k.lower(): v for k, v in (headers or {}).items()}
             host, _, rest = url.partition("//")[2].partition("/")
             pfad, _, query = ("/" + rest).partition("?")
-            self.aufrufe.append({"methode": methode, "host": host, "pfad": pfad,
+            self.aufrufe.append({"methode": methode, "host": host, "pfad": pfad, "query": query,
                                  "headers": headers, "body": copy.deepcopy(body)})
             if (methode, pfad) in self.stoerung:
                 return self.stoerung[(methode, pfad)]
@@ -153,7 +153,7 @@ class _Fake:
                 return self._intern(methode, pfad, headers, body or {})
             if host != "staging.gregor20.henemm.com":
                 return 599, {"error": "fremder_host_im_fake"}
-            return self._oeffentlich(sitzung, methode, pfad, body or {})
+            return self._oeffentlich(sitzung, methode, pfad, body or {}, query)
 
         return rufe
 
@@ -194,7 +194,7 @@ class _Fake:
         return 404, {"error": "not_found"}
 
     # --- oeffentliche Routen (Sitzung) ----------------------------------------
-    def _oeffentlich(self, s, methode, pfad, body):
+    def _oeffentlich(self, s, methode, pfad, body, query=""):
         if (methode, pfad) == ("POST", "/api/auth/login"):
             if self.passwoerter.get(body.get("username")) != body.get("password"):
                 return 401, {"error": "invalid_credentials"}
@@ -205,7 +205,33 @@ class _Fake:
             return 401, {"error": "unauthorized"}
         if pfad.startswith("/api/auth/"):
             return self._auth(uid, methode, pfad, body)
+        if pfad.startswith("/api/briefings/") and pfad.endswith("/placements"):
+            return self._placements(uid, methode, pfad, query, body)
         return self._daten(uid, methode, pfad, body)
+
+    def _placements(self, uid, methode, pfad, query, body):
+        """#3154: GET/PUT /api/briefings/{id}/placements?kind=route|vergleich
+        (internal/handler/placements.go): Abo dieses Nutzers der genannten Art, sonst 404;
+        PUT ersetzt nur display_config.placements (Read-Modify-Write)."""
+        kind = dict(t.split("=", 1) for t in query.split("&") if "=" in t).get("kind")
+        bid = pfad.strip("/").split("/")[2]
+        ablage = {"route": "trips", "vergleich": "compare"}.get(kind)
+        if ablage is None:
+            return 400, {"error": "kind_required"}
+        abo = self.konten[uid]["daten"][ablage].get(bid)
+        if abo is None:
+            return 404, {"error": "not_found"}
+        dc = abo.get("display_config") or {}
+        if methode == "GET":
+            if isinstance(dc.get("placements"), dict):
+                return 200, {"kind": kind, "stored": True,
+                             "placements": copy.deepcopy(dc["placements"])}
+            return 200, {"kind": kind, "stored": False,
+                         "placements": {"version": 1, "rows": [], "outlook_reports": ["morning"]}}
+        if methode == "PUT":
+            abo.setdefault("display_config", {})["placements"] = copy.deepcopy(body)
+            return 200, {"placements": copy.deepcopy(body)}
+        return 405, {"error": "method_not_allowed"}
 
     def _auth(self, uid, methode, pfad, body):
         konto = self.konten[uid]
@@ -1053,6 +1079,8 @@ def test_fr42_gleichnamige_vergleichsvorlage_bleibt_route_vorlage_wird_angelegt(
 # Mockup ORTE_METRICS mit der Aggregation der Go-Grundauswahl
 # (internal/handler/vergleich_grundauswahl.go).
 ORTE_SOLL = [{"metric_id": "temperature", "aggregation": "max"},
+             # #3154 (AC-2): Mockup zeigt Max und Min („13°C / 4°C“).
+             {"metric_id": "temperature", "aggregation": "min"},
              {"metric_id": "wind", "aggregation": "max"},
              {"metric_id": "gust", "aggregation": "max"},
              {"metric_id": "precipitation", "aggregation": "sum"},
@@ -1293,3 +1321,64 @@ def test_3151_ac4_zweiter_nutzer_mit_kanalfeldern_bleibt_byte_gleich(fake):
     assert vgl.get("alert_channel_thresholds") == SCHWELLEN_3151
     assert server.zustand("nutzer-b") == vorher
     assert server.zustand("default") == vorher_default
+
+
+# --- #3154 Fix-Loop 1: Tabelle „Was steht wo“ im Gesamtlauf (F001, F003) -----------
+
+def _tabellen_puts(server):
+    return [a for a in server.aufrufe
+            if a["methode"] == "PUT" and a["pfad"].startswith("/api/briefings/")
+            and a["pfad"].endswith("/placements")]
+
+
+def test_3154_f001_seed_schreibt_beide_tabellen_genau_einmal(fake, capsys):
+    mod = _modul()
+    server, env = fake
+    assert _lauf(mod, server, env) == 0
+    trip_id, orte_id = _ausgabe_ids(capsys.readouterr().out)
+    puts = _tabellen_puts(server)
+    assert [(a["pfad"], a["query"]) for a in puts] == [
+        (f"/api/briefings/{trip_id}/placements", "kind=route"),
+        (f"/api/briefings/{orte_id}/placements", "kind=vergleich")]
+    assert puts[0]["body"] == mod.tabelle_trip_soll()
+    assert puts[1]["body"] == mod.tabelle_orte_soll()
+    d = _seed_daten(server)
+    assert d["trips"][trip_id]["display_config"]["placements"] == mod.tabelle_trip_soll()
+    assert d["compare"][orte_id]["display_config"]["placements"] == mod.tabelle_orte_soll()
+    server.aufrufe.clear()
+    assert _lauf(mod, server, env) == 0
+    assert _tabellen_puts(server) == [], "zweiter Lauf schreibt die Tabelle erneut"
+
+
+def test_3154_f003_tabelle_nur_ueber_den_tabellen_endpunkt(fake):
+    """Kein anderer Schreibweg traegt ``placements``; der Tabellen-PUT traegt nur die Tabelle."""
+    mod = _modul()
+    server, env = fake
+    assert _lauf(mod, server, env) == 0
+    for a in server.aufrufe:
+        if a["methode"] in ("POST", "PUT", "PATCH") and a not in _tabellen_puts(server):
+            assert "placements" not in json.dumps(a["body"] or {}), (a["methode"], a["pfad"])
+    for a in _tabellen_puts(server):
+        assert set(a["body"]) == {"version", "rows", "outlook_reports"}
+
+
+def test_3154_f003_gespeicherte_tabelle_mit_abwahl_und_zusatzschluessel(fake, capsys):
+    """Gespeicherte Tabelle mit abgewaehltem Haken: der Seed stellt das Soll her (alle Haken
+    an), behaelt aber unbekannte Schluessel oben (Merge) und die uebrigen Abo-Felder."""
+    mod = _modul()
+    server, env = fake
+    assert _lauf(mod, server, env) == 0
+    trip_id, _ = _ausgabe_ids(capsys.readouterr().out)
+    trip = _seed_daten(server)["trips"][trip_id]
+    alt = mod.tabelle_trip_soll()
+    alt["rows"][0]["places"] = {"email": False}
+    alt["zukunft"] = {"x": 1}
+    trip["display_config"]["placements"] = alt
+    vorher_rest = {k: v for k, v in trip["display_config"].items() if k != "placements"}
+    server.aufrufe.clear()
+    assert _lauf(mod, server, env) == 0
+    puts = _tabellen_puts(server)
+    assert len(puts) == 1 and puts[0]["query"] == "kind=route"
+    neu = trip["display_config"]["placements"]
+    assert neu == {**mod.tabelle_trip_soll(), "zukunft": {"x": 1}}
+    assert {k: v for k, v in trip["display_config"].items() if k != "placements"} == vorher_rest

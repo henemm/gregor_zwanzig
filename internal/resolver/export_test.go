@@ -114,3 +114,12 @@ func KomootAPIAuf(t *testing.T, basis string) {
 
 // KomootAPIStandard liefert die in Produktion genutzte Komoot-API-Vorlage.
 func KomootAPIStandard() string { return komootAPIURLFormat }
+
+// ErlaubeClientDokumentHost laesst zusaetzlich host als Quelle eines
+// Client-ID-Metadaten-Dokuments zu (Issue #3281).
+func ErlaubeClientDokumentHost(t *testing.T, host string) {
+	t.Helper()
+	orig := clientDokumentHostErlaubt
+	t.Cleanup(func() { clientDokumentHostErlaubt = orig })
+	clientDokumentHostErlaubt = func(h string) bool { return h == host || orig(h) }
+}

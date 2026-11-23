@@ -813,6 +813,11 @@ def test_ac6_deviation_gate_passes_but_no_channel_delivered_leaves_counter_uncha
 # ohne `reason=` aufrufen (Altverhalten = volles Limit statt Reserve).
 
 _COMPARE_DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
+
+# Issue #3209: das Modul beruehrt den ECHTEN data/users-Baum (Konstante oben)
+# -- unter xdist laeuft es in der seriellen Echtdaten-Gruppe; Datenwurzel-
+# Isolation und Per-Test-Waechter bleiben unveraendert aktiv.
+pytestmark = pytest.mark.xdist_group("echtdaten")
 # Pfadregel #1409: compare_alert.py::_load_presets() ruft load_compare_presets()
 # OHNE data_root auf -> Default "data" (bewusster Bypass der _DATA_ROOT-
 # Testisolation, dokumentiert in app.loader.get_data_root()). ComparePreset-

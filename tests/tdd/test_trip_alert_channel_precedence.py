@@ -20,8 +20,8 @@ nicht-leere `rule.channels`-Overrides (#638) und das SMS-Tier-Gate bleiben
 unveraendert.
 
 Mock-frei: echte `Trip`-/`AlertRule`-/`TripReportConfig`-Objekte, echter
-`TripAlertService`, echter `sms_allowed()`-Tier-Lookup ueber echte
-`data/users/<id>/user.json` (Vorbild:
+`TripAlertService`, echter `sms_allowed()`-Tier-Lookup ueber eine echte
+`<get_data_dir(id)>/user.json` in der isolierten Datenbasis (Vorbild:
 tests/tdd/test_issue_1069_tier_channel_gating.py, Klasse
 `TestAC8AlertChannelsRespectTier` + Helper `_make_alert_trip`/`clean_user_dirs`).
 """
@@ -39,14 +39,23 @@ import pytest
 # Fixtures (Vorbild: test_issue_1069_tier_channel_gating.py)
 # ---------------------------------------------------------------------------
 
+def _user_dir(user_id: str) -> Path:
+    """Nutzerverzeichnis unter der (pro Test isolierten) Datenbasis --
+    dieselbe Quelle, aus der `services.user_tier` die user.json liest
+    (Issue #3209 Fix-Loop 2: nicht mehr der echte data/users-Baum)."""
+    from app.loader import get_data_dir
+    return get_data_dir(user_id)
+
+
 @pytest.fixture()
 def clean_user_dirs():
-    """Raeumt echte data/users/tdd-1258-s3-*-Verzeichnisse vor und nach dem Test."""
+    """Raeumt die tdd-1258-s3-*-Verzeichnisse der isolierten Datenbasis vor
+    und nach dem Test."""
     created: list[str] = []
 
     def _register(user_id: str) -> str:
         created.append(user_id)
-        path = Path(f"data/users/{user_id}")
+        path = _user_dir(user_id)
         if path.exists():
             shutil.rmtree(path)
         return user_id
@@ -54,13 +63,13 @@ def clean_user_dirs():
     yield _register
 
     for user_id in created:
-        path = Path(f"data/users/{user_id}")
+        path = _user_dir(user_id)
         if path.exists():
             shutil.rmtree(path)
 
 
 def _write_user_json(user_id: str, tier: str | None) -> None:
-    path = Path(f"data/users/{user_id}")
+    path = _user_dir(user_id)
     path.mkdir(parents=True, exist_ok=True)
     data = {"id": user_id}
     if tier is not None:

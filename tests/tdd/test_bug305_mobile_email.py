@@ -262,7 +262,7 @@ class TestMobileLayoutPlaywright:
         p.write_text(html, encoding="utf-8")
         return str(p)
 
-    def test_table_has_no_internal_overflow_at_375px(self, html_path):
+    def test_table_has_no_internal_overflow_at_375px(self, html_path, tmp_path):
         """
         AC-5: Tabelle darf bei 375 px keinen internen Overflow haben.
 
@@ -272,10 +272,12 @@ class TestMobileLayoutPlaywright:
 
         Aktuell: scrollWidth=674px >> clientWidth=335px
         -> 339px versteckter Inhalt -> auf iOS Mail als horizontaler Scroll sichtbar.
-        Screenshot gespeichert nach /tmp/bug305_mobile_375px_ist.png
+        Screenshot gespeichert nach <tmp_path>/bug305_mobile_375px_ist.png
+        (Issue #3209: je Test eigener Pfad, parallel kollisionsfrei).
         """
         from playwright.sync_api import sync_playwright
 
+        screenshot = tmp_path / "bug305_mobile_375px_ist.png"
         with sync_playwright() as p:
             browser = p.chromium.launch()
             context = browser.new_context(
@@ -294,7 +296,7 @@ class TestMobileLayoutPlaywright:
                     overflow: t.scrollWidth - t.clientWidth,
                 }));
             }""")
-            page.screenshot(path="/tmp/bug305_mobile_375px_ist.png", full_page=False)
+            page.screenshot(path=str(screenshot), full_page=False)
             browser.close()
 
         assert metrics, "Keine table.resp-Elemente im gerenderten HTML gefunden"
@@ -302,7 +304,7 @@ class TestMobileLayoutPlaywright:
             assert tbl["scrollWidth"] <= tbl["clientWidth"], (
                 f"Tabelle {i}: interner Overflow von {tbl['overflow']}px bei 375px Viewport.\n"
                 f"  scrollWidth={tbl['scrollWidth']}px, clientWidth={tbl['clientWidth']}px\n"
-                f"  Screenshot: /tmp/bug305_mobile_375px_ist.png\n"
+                f"  Screenshot: {screenshot}\n"
                 f"  Dieser Overflow entspricht dem Screenshot in Bug #305:\n"
                 f"  15 Spalten (Time, Temp, Feels, Wind, Gust, Rain, Rain%,\n"
                 f"  Sicherheit, Thunder, SnowL, Cloud, CldLow, Visib, UV, 0 Grad-Line)\n"
@@ -523,7 +525,7 @@ class TestMobileCompactLayoutPlaywright:
             "CSS '.desktop-only { display:none !important }' fehlt oder greift nicht."
         )
 
-    def test_mobile_compact_visible_at_375px(self, html_path):
+    def test_mobile_compact_visible_at_375px(self, html_path, tmp_path):
         """
         AC-12: .mobile-compact-Elemente müssen bei 375px Viewport sichtbar sein.
 
@@ -533,6 +535,7 @@ class TestMobileCompactLayoutPlaywright:
         """
         from playwright.sync_api import sync_playwright
 
+        screenshot = tmp_path / "bug305v2_mobile_375px.png"
         with sync_playwright() as p:
             browser = p.chromium.launch()
             context = browser.new_context(viewport={"width": 375, "height": 812})
@@ -543,7 +546,7 @@ class TestMobileCompactLayoutPlaywright:
                 return Array.from(document.querySelectorAll(".mobile-compact"))
                     .map(el => ({ tag: el.tagName, height: el.offsetHeight }));
             }""")
-            page.screenshot(path="/tmp/bug305v2_mobile_375px.png", full_page=True)
+            page.screenshot(path=str(screenshot), full_page=True)
             browser.close()
 
         assert heights, "Keine .mobile-compact-Elemente gefunden — AC-8 muss zuerst grün sein."
@@ -551,7 +554,7 @@ class TestMobileCompactLayoutPlaywright:
         assert visible, (
             "Kein .mobile-compact-Element sichtbar bei 375px.\n"
             "CSS '.mobile-compact { display:block !important }' fehlt oder greift nicht.\n"
-            "Screenshot: /tmp/bug305v2_mobile_375px.png"
+            f"Screenshot: {screenshot}"
         )
 
     def test_mobile_compact_no_overflow_at_375px(self, html_path):
@@ -585,7 +588,7 @@ class TestMobileCompactLayoutPlaywright:
             assert el["scrollWidth"] <= el["clientWidth"], (
                 f"mobile-compact[{i}]: Overflow {el['overflow']}px bei 375px.\n"
                 f"  scrollWidth={el['scrollWidth']}px, clientWidth={el['clientWidth']}px\n"
-                f"  Screenshot: /tmp/bug305v2_mobile_375px.png"
+                "  (Screenshot: siehe test_mobile_compact_visible_at_375px)"
             )
 
 

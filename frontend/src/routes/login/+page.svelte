@@ -26,8 +26,12 @@
 	import { abmeldungLiegtVor, raeumeGeraetespeicher, vergissAbmeldung } from '$lib/pwa/geraetespeicher';
 	import { isWebAuthnSupported, loginWithPasskey, loginWithDiscoverablePasskey } from '$lib/passkey';
 	import { t } from '$lib/i18n';
+	import { loginFormAktion, mitRuecksprung } from '$lib/utils/safeRedirect.js';
 
 	let { form, data }: { form: ActionData; data: { googleEnabled: boolean; sitzungAktiv?: boolean } } = $props();
+	// Issue #3281: der Ruecksprung (`redirect`) reist mit dem Formular mit.
+	const ruecksprung = $derived($page.url.searchParams.get('redirect'));
+	const loginAktion = $derived(loginFormAktion(ruecksprung));
 	const registered = $derived($page.url.searchParams.get('registered') === '1');
 	// Issue #1006 — Sitzung abgelaufen (zentraler 401-Redirect aus api.ts).
 	const sessionExpired = $derived($page.url.searchParams.get('expired') === '1');
@@ -263,7 +267,7 @@
 
 		<!-- Issue #2271: `action="?/login"` ist Pflicht — die Seite hat seit dem
 		     Resend-Formular zwei benannte Actions und keine `default` mehr. -->
-		<form method="POST" action="?/login" class="space-y-4">
+		<form method="POST" action={loginAktion} class="space-y-4">
 			<div class="space-y-2">
 				<!-- Issue #2194: Kennung ist die E-Mail-Adresse. `name`/`id` bleiben
 				     `username` (Vertrag mit Go-API, E2E-Selektoren); `type="text"`,
@@ -309,7 +313,7 @@
 				</div>
 			</div>
 			<a
-				href="/api/auth/google/init"
+				href={mitRuecksprung('/api/auth/google/init', ruecksprung)}
 				class="desktop:order-2 inline-flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground ring-offset-background hover:bg-[var(--g-accent-deep)] hover:text-[var(--g-on-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
 				{$t('auth.login.google_knopf')}
@@ -323,7 +327,7 @@
 			<a href="/forgot-password" class="block py-3 text-center text-sm text-muted-foreground hover:underline">
 				{$t('auth.login.zu_passwort_vergessen')}
 			</a>
-			<a href="/magic-link" class="block py-3 text-center text-sm text-muted-foreground hover:underline">
+			<a href={mitRuecksprung('/magic-link', ruecksprung)} class="block py-3 text-center text-sm text-muted-foreground hover:underline">
 				{$t('auth.login.zu_magic_link')}
 			</a>
 		</div>

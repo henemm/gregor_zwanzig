@@ -22,6 +22,11 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
+# Issue #3209: das Modul beruehrt den ECHTEN data/users-Baum (repo_root /
+# "data" / "users") -- unter xdist laeuft es in der seriellen Echtdaten-Gruppe;
+# Datenwurzel-Isolation und Per-Test-Waechter bleiben unveraendert aktiv.
+pytestmark = pytest.mark.xdist_group("echtdaten")
+
 from services.official_alerts.models import OfficialAlert
 
 

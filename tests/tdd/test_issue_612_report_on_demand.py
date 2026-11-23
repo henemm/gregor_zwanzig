@@ -12,10 +12,9 @@ from __future__ import annotations
 
 import shutil
 from datetime import datetime, timedelta, date, timezone
-from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from app.loader import get_briefings_dir, save_trip
+from app.loader import get_briefings_dir, get_data_dir, save_trip
 from app.trip import Stage, Trip, Waypoint
 from services.trip_command_processor import InboundMessage, TripCommandProcessor
 
@@ -138,7 +137,9 @@ def _cleanup_user_trip() -> None:
     trip_path = get_briefings_dir(_TEST_USER_ID) / f"{_TEST_TRIP_ID}.json"
     if trip_path.exists():
         trip_path.unlink()
-    user_dir = Path("data/users") / _TEST_USER_ID
+    # Issue #3209: isolierte Testwurzel (dort legt save_trip an), nicht der
+    # echte data/users-Baum.
+    user_dir = get_data_dir(_TEST_USER_ID)
     if user_dir.exists():
         shutil.rmtree(user_dir, ignore_errors=True)
 

@@ -19,9 +19,11 @@ from services.gpx_processing import (
     segments_to_trip,
 )
 
-DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "users" / "default" / "gpx"
+# Issue #3209: committete Quelle statt der materialisierten Kopie im echten
+# data/users-Baum (parallel zur seriellen Echtdaten-Gruppe lesbar).
+DATA_DIR = Path(__file__).resolve().parent.parent / "fixtures" / "data_root" / "users" / "default" / "gpx"
 GPX_TAG4 = DATA_DIR / "2026-01-17_2753228656_Tag 4_ von Tossals Verds nach Lluc.gpx"
-GPX_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "users" / "default" / "gpx"
+GPX_DIR = DATA_DIR
 
 
 # --- Test 1: Valid GPX returns GPXTrack with correct name ---

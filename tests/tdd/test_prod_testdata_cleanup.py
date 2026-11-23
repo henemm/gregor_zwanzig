@@ -35,6 +35,11 @@ from pathlib import Path
 
 import pytest
 
+# Issue #3209: die Waechter-Selbsttests schreiben (in inneren pytest-Laeufen)
+# absichtlich in den ECHTEN data/users-Baum -- unter xdist laeuft das Modul in
+# der seriellen Echtdaten-Gruppe (die inneren Laeufe erben deren Journal).
+pytestmark = pytest.mark.xdist_group("echtdaten")
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # Die vier echten Test-Presets aus der PO-bestätigten Positivliste (Spec

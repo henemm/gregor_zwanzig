@@ -5,6 +5,7 @@ import { verifySession } from '$lib/auth.js';
 import { assertSessionSecretConfigured } from '$lib/sessionSecretGate.js';
 import { resolveLang } from '$lib/i18n/resolveLang.js';
 import { sicherheitsKopfzeilenSetzen } from '$lib/server/sicherheitsKopfzeilen.js';
+import { OAUTH_METADATEN_PFADE } from '$lib/server/oauthMetadaten.js';
 
 assertSessionSecretConfigured(env.GZ_SESSION_SECRET, env.GZ_TEST_FIXTURE_DIR);
 
@@ -35,7 +36,8 @@ const kern: Handle = async ({ event, resolve: weiter }) => {
 		weiter(ev, { transformPageChunk: ({ html }) => html.replace('%lang%', ev.locals.lang) });
 
 	const publicPaths = ['/login', '/register', '/logout', '/forgot-password', '/reset-password', '/verify-email', '/magic-link', '/magic-link/verify', '/lang'];
-	if (publicPaths.includes(event.url.pathname)) {
+	// Issue #3281: OAuth-Metadaten des MCP-Konnektors (Claude-App ohne Sitzung).
+	if (publicPaths.includes(event.url.pathname) || OAUTH_METADATEN_PFADE.has(event.url.pathname)) {
 		const response = await resolve(event);
 		const ct = response.headers.get('content-type') ?? '';
 		if (ct.includes('text/html')) {

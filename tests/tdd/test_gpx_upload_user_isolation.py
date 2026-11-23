@@ -12,7 +12,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_SAMPLE_DIR = _REPO_ROOT / "data" / "users" / "default" / "gpx"
+# Issue #3209: committete Quelle statt der materialisierten Kopie im echten
+# data/users-Baum (parallel zur seriellen Echtdaten-Gruppe lesbar).
+_SAMPLE_DIR = _REPO_ROOT / "tests" / "fixtures" / "data_root" / "users" / "default" / "gpx"
 # Zwei verschiedene reale Komoot-Exporte -- nur LESEN, nie ueberschreiben.
 _SAMPLE_A = _SAMPLE_DIR / "2026-01-17_2753214331_Tag 1_ von Valldemossa nach Deià.gpx"
 _SAMPLE_B = _SAMPLE_DIR / "2026-01-17_2753216748_Tag 2_ von Deià nach Sóller.gpx"
