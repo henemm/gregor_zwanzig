@@ -13,11 +13,12 @@ import os
 import socket
 import stat
 import subprocess
+import sys
 import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-HOOK = REPO / ".claude" / "hooks" / "mq_check_messages.sh"
+HOOK = REPO / ".claude" / "hooks" / "mq_check_messages.py"
 
 
 def _fake_script(tmp_path: Path, text: str = "=== 1 OFFENE NACHRICHT(EN) FÜR gregor ===") -> Path:
@@ -35,7 +36,7 @@ def _env(**extra: str) -> dict[str, str]:
 def test_ac4_vorhandenes_server_skript_wird_durchgereicht(tmp_path: Path) -> None:
     fake = _fake_script(tmp_path)
     res = subprocess.run(
-        ["bash", str(HOOK)],
+        ["python3", str(HOOK)],
         env=_env(GZ_MQ_CHECK_SCRIPT=str(fake), GZ_MQ_SSH_HOST="gz-nicht-vorhanden.invalid"),
         capture_output=True, text=True, timeout=30,
     )
@@ -46,7 +47,7 @@ def test_ac4_vorhandenes_server_skript_wird_durchgereicht(tmp_path: Path) -> Non
 def test_ac5_ohne_skript_und_ohne_server_still_und_schnell(tmp_path: Path) -> None:
     start = time.monotonic()
     res = subprocess.run(
-        ["bash", str(HOOK)],
+        ["python3", str(HOOK)],
         env=_env(
             GZ_MQ_CHECK_SCRIPT=str(tmp_path / "gibt-es-nicht.sh"),
             GZ_MQ_SSH_HOST="gz-nicht-vorhanden.invalid",
@@ -109,7 +110,7 @@ def _run_hook(tmp_path: Path, bindir: Path | None = None, **extra: str) -> subpr
     env = _env(**extra)
     if bindir is not None:
         env["PATH"] = f"{bindir}{os.pathsep}{env['PATH']}"
-    return subprocess.run(["bash", str(HOOK)], env=env, cwd=str(tmp_path),
+    return subprocess.run(["python3", str(HOOK)], env=env, cwd=str(tmp_path),
                           capture_output=True, text=True, timeout=60)
 
 
@@ -166,3 +167,24 @@ def test_f001_haengender_server_blockiert_den_start_nicht(tmp_path: Path) -> Non
     assert res.returncode == 0
     assert res.stdout == ""
     assert dauer < 10, f"Hook hing {dauer:.1f} s am hängenden Server"
+
+
+def test_f_r3_1_ohne_ssh_im_path_still_und_exit_0(tmp_path: Path) -> None:
+    """Adversary Runde 3 (F-R3-1): Rechner ohne ssh-Programm -> still, Exit 0."""
+    leer = tmp_path / "leerer-path"
+    leer.mkdir()
+    env = _env(GZ_MQ_CHECK_SCRIPT=str(tmp_path / "fehlt.sh"), PATH=str(leer))
+    res = subprocess.run([sys.executable, str(HOOK)], env=env, cwd=str(tmp_path),
+                         capture_output=True, text=True, timeout=30)
+    assert res.returncode == 0
+    assert res.stdout == ""
+    assert res.stderr == ""
+
+
+def test_f_r3_4_ssh_optionen_exakt(tmp_path: Path) -> None:
+    """Adversary Runde 3 (F-R3-4): Optionswerte exakt, nicht nur als Teilstring."""
+    bindir, log = _fake_ssh(tmp_path, "x", 0)
+    _run_hook(tmp_path, bindir, GZ_MQ_CHECK_SCRIPT=str(tmp_path / "fehlt.sh"), GZ_MQ_SSH_HOST="h")
+    tokens = log.read_text(encoding="utf-8").split()
+    for option in ("ConnectTimeout=3", "BatchMode=yes", "ServerAliveInterval=2", "ServerAliveCountMax=2"):
+        assert option in tokens, f"{option} fehlt exakt: {tokens}"

@@ -880,7 +880,7 @@ liegen **nicht** in `.claude/hooks/`.
 | Stop | `terminology_gate.py` | weist eine Antwort mit „Tour"/„Touren" zurück (Exit 2; Zitatzeilen `>` ausgenommen; fail-open) | Produktbegriffe Trip/Etappe/Ortsvergleich/Briefing |
 | Stop | `track_token_usage.py` | schreibt Token-Verbrauch ins Workflow-State-JSON (`token_usage`); immer Exit 0 | #829 |
 | Stop | `notify_sound.py` | Benachrichtigungston | — |
-| SessionStart | `.claude/hooks/mq_check_messages.sh` | MQ-Posteingang prüfen: auf dem Server direkt `/home/hem/claude-mq/check-messages.sh`, auf anderen Rechnern (iMac) per `ssh henemm`; nicht erreichbar → still Exit 0 (#3294) | `~/.claude/CLAUDE.md` |
+| SessionStart | `.claude/hooks/mq_check_messages.py` | MQ-Posteingang prüfen: auf dem Server direkt `/home/hem/claude-mq/check-messages.sh`, auf anderen Rechnern (iMac) per `ssh henemm`; nicht erreichbar → still Exit 0 (#3294) | `~/.claude/CLAUDE.md` |
 
 **Nicht in `settings.json` verdrahtet**, aber in `.claude/hooks/` vorhanden und manuell bzw. von
 Skripten/Skills aufgerufen: `staging_gate.py`, `prod_selftest.py`, `briefing_mail_validator.py`,

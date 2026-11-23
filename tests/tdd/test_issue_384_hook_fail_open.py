@@ -41,11 +41,10 @@ _HOOK_RE = re.compile(r"\.claude/hooks/[A-Za-z0-9_]+\.py")
 # Uebereinstimmung des ganzen Command-Strings — Teilstring-Vergleich wuerde die
 # Umgehung sofort wieder oeffnen. Die Ausnahme verhindert nichts, sie macht die
 # Entscheidung zitierbar (Muster: `gz-main-path`, #1409).
-_GUARD_EXEMPT_COMMANDS = frozenset({
-    # Externes Skript ausserhalb .claude/hooks/, kein Waechter dieses Repos: es kann
-    # nichts blockieren, sein Fehlen loest keinen Tool-Lockout aus (#1307 A).
-    "bash /home/hem/claude-mq/check-messages.sh",
-})
+# Derzeit leer: die fruehere Ausnahme fuer `bash /home/hem/claude-mq/check-messages.sh`
+# (#1307 A) entfiel mit #3294 — der MQ-Abruf laeuft jetzt ueber den fail-open-
+# gewrappten Repo-Hook `.claude/hooks/mq_check_messages.py`.
+_GUARD_EXEMPT_COMMANDS: frozenset[str] = frozenset()
 
 
 # --------------------------------------------------------------------------- #
