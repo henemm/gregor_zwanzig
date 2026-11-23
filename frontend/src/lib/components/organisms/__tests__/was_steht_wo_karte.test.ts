@@ -12,7 +12,7 @@
 import { test, describe, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { register } from 'node:module';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
@@ -366,5 +366,145 @@ describe('Englisch (AC-33)', () => {
 		} finally {
 			locale.set('de');
 		}
+	});
+});
+
+// ── #3283: Optik-Befunde der Bildprüfung (Spec docs/specs/modules/fix_3283_was_steht_wo_optik.md, B1/B2/B6/B7) ──
+// Markup per Server-Render der echten Karte (Antwort -> wasStehtWoAnsicht -> EinstellTabelle). Maße und Farben,
+// die nur im <style> der echten Dateien stehen, aus dem CSS-Baum des Svelte-Parsers mit aufgelösten Tokens aus
+// app.css (doc-compliance-test: CSS-Werte sind im Server-Render nicht sichtbar; die berechneten Stile und das
+// Bild prüft frontend/e2e/was-steht-wo-bildabgleich.staging.spec.ts).
+const { parse: svelteParse } = await import('svelte/compiler');
+
+/** Werte der Design-Tokens (erste Definition = Hellmodus) aus app.css. */
+function tokens(): Map<string, string> {
+	const css = readFileSync(path.join(FRONTEND, 'src', 'app.css'), 'utf8');
+	const aus = new Map<string, string>();
+	for (const m of css.matchAll(/(--g-[\w-]+)\s*:\s*([^;]+);/g)) if (!aus.has(m[1])) aus.set(m[1], m[2].trim());
+	return aus;
+}
+const TOKEN = tokens();
+const aufloesen = (wert: string): string => wert.replace(/var\((--g-[\w-]+)\)/g, (_, n: string) => aufloesen(TOKEN.get(n) ?? `?${n}`));
+/** Oberste Regeln (nicht in @media) einer Svelte-Datei: Selektor-Text und Deklarationen. */
+function regeln(datei: string): { selektor: string; decl: Record<string, string> }[] {
+	const quelle = readFileSync(datei, 'utf8');
+	const ast: J = svelteParse(quelle, { modern: true });
+	return (ast.css?.children ?? [])
+		.filter((c: J) => c.type === 'Rule')
+		.map((c: J) => ({
+			selektor: quelle.slice(c.prelude.start, c.prelude.end).replace(/\s+/g, ' ').trim(),
+			decl: Object.fromEntries(c.block.children.filter((d: J) => d.type === 'Declaration').map((d: J) => [d.property, String(d.value).trim()]))
+		}));
+}
+const TABELLE_DATEI = path.resolve(HERE, '..', '..', 'molecules', 'EinstellTabelle.svelte');
+
+function trip3283(): J {
+	const a = trip();
+	a.rows = [
+		{ metric_id: 'temperature', name: 'Temp-T', position: 0, parent: null, cells: {
+			email: z('on', { example: 'Temp 14.4' }), telegram: z('on', { example: 'T 14.3-18.5' }), sms: z('on', { example: 'N14 D14/18' }), outlook: z('on', { example: '12/25' }) } },
+		{ metric_id: 'cloud_total', name: 'Wolke-T', position: 1, parent: null, cells: {
+			email: z('on', { format: 'simplified', example: '⛅' }), telegram: z('on', { format: 'simplified', example: 'CT ⛅-🌥️@15' }), sms: z('on', { example: 'CT:BKN@15' }), outlook: z('on', { format: 'simplified', example: '⛅' }) } },
+		{ metric_id: 'gust', name: 'Boe-T', position: 2, parent: null, cells: {
+			email: z('on', { format: 'raw', example: 'Gust 38' }), telegram: z('on', { format: 'raw', example: 'G 26-59@15' }), sms: z('on', { example: 'G32@6(59@15)' }), outlook: z('on', { format: 'raw', example: '85 km/h' }) } }
+	];
+	return a;
+}
+const beispiele = (h: string, metrik: string, stelle: string) => elemente(zelle(h, metrik, stelle).innen, 'data-slot="et-beispiel"');
+const rasterVon = (h: string) =>
+	(attr(eins(h, 'data-slot="et-kopf"').auf, 'style') ?? '')
+		.replace(/^.*grid-template-columns:\s*/, '')
+		.replace(/;.*$/, '')
+		.trim();
+
+describe('#3283 B2: Zusatzspalten zeigen nur Haken und Roh/Einfach, keinen Beispielwert (AC-2)', () => {
+	test('Trip: Ausblick ohne Beispielwert, obwohl die Antwort einen liefert; Kanalspalten behalten ihn', async () => {
+		locale.set('de');
+		const h = await karte(trip3283(), { context: 'route' });
+		assert.equal(beispiele(h, 'gust', 'outlook').length, 0, 'Ausblick zeigt „85 km/h“');
+		assert.doesNotMatch(text(zelle(h, 'gust', 'outlook').innen), /85 km\/h/);
+		assert.equal(hatKnopf(h, 'gust', 'outlook'), true, 'Roh/Einfach bleibt im Ausblick');
+		assert.equal(text(beispiele(h, 'gust', 'telegram')[0]?.innen ?? ''), 'G 26-59@15');
+		assert.equal(text(beispiele(h, 'temperature', 'sms')[0]?.innen ?? ''), 'N14 D14/18');
+	});
+	for (const anzahl of [3, 1]) {
+		test(`Orte (${anzahl}): Stundenverlauf und Ausblick ohne Beispielwert, E-Mail mit`, async () => {
+			const o = await karte(orte(anzahl), { context: 'vergleich' });
+			assert.equal(beispiele(o, 'wind', 'hourly').length, 0, 'Stundenverlauf zeigt „28“');
+			assert.equal(beispiele(o, 'wind', 'outlook').length, 0, 'Ausblick zeigt „60 km/h“');
+			assert.equal(hatKnopf(o, 'wind', 'hourly'), true, 'Roh/Einfach bleibt im Stundenverlauf');
+			assert.equal(text(beispiele(o, 'wind', 'email')[0]?.innen ?? ''), '43 km/h');
+		});
+	}
+});
+
+describe('#3283 B1: Spaltenbreiten nach Soll-Bild, kein abgeschnittener Beispielwert (AC-1)', () => {
+	const KANAL = 'minmax(var(--g-size-150px), 1fr)';
+	const ZUSATZ = 'var(--g-size-118px)';
+	const VORN = ['var(--g-size-22px)', 'minmax(var(--g-size-130px), 0.9fr)'];
+	test('Trip: drei Kanalspalten mindestens 150 px, Ausblick 118 px', async () => {
+		const h = await karte(trip3283(), { context: 'route' });
+		assert.equal(rasterVon(h), [...VORN, KANAL, KANAL, KANAL, ZUSATZ].join(' '));
+	});
+	test('Orte: drei Kanalspalten mindestens 150 px, Stundenverlauf und Ausblick je 118 px', async () => {
+		const o = await karte(orte(3), { context: 'vergleich' });
+		assert.equal(rasterVon(o), [...VORN, KANAL, KANAL, KANAL, ZUSATZ, ZUSATZ].join(' '));
+	});
+	test('Tokens 150px/118px existieren; Beispielwert ohne Auslassungspunkte (doc-compliance-test)', () => {
+		// doc-compliance-test: Token-Werte und text-overflow sind im Server-Render nicht sichtbar.
+		assert.equal(TOKEN.get('--g-size-150px'), '150px');
+		assert.equal(TOKEN.get('--g-size-118px'), '118px');
+		const r = regeln(TABELLE_DATEI).find((x) => x.selektor === '.et-beispiel');
+		assert.ok(r, 'Regel .et-beispiel fehlt');
+		assert.notEqual(r.decl['text-overflow'], 'ellipsis', 'Beispielwert wird mit „…“ abgeschnitten');
+	});
+});
+
+describe('#3283 B6: Einfach-Symbol als E-Mail-Beispiel lesbar (AC-8)', () => {
+	test('reines Symbol trägt das Kennzeichen data-art="symbol", Text mit Buchstaben oder Ziffern nicht', async () => {
+		const h = await karte(trip3283(), { context: 'route' });
+		const wolke = eins(zelle(h, 'cloud_total', 'email').innen, 'data-slot="et-beispiel"');
+		assert.equal(text(wolke.innen), '⛅');
+		assert.equal(attr(wolke.auf, 'data-art'), 'symbol', 'Symbol ohne Kennzeichen');
+		const temp = eins(zelle(h, 'temperature', 'email').innen, 'data-slot="et-beispiel"');
+		assert.equal(text(temp.innen), 'Temp 14.4');
+		assert.equal(attr(temp.auf, 'data-art'), null, 'Text mit Ziffern ist kein Symbol');
+		const tg = eins(zelle(h, 'cloud_total', 'telegram').innen, 'data-slot="et-beispiel"');
+		assert.equal(attr(tg.auf, 'data-art'), null, '„CT ⛅-🌥️@15“ enthält Buchstaben');
+	});
+	test('Symbol in --g-text-sm und --g-ink, Kontrast AA gegen die Karte (doc-compliance-test)', () => {
+		// doc-compliance-test: Größe und Farbe stehen nur im <style>; berechnet im Staging-Bildabgleich.
+		const r = regeln(TABELLE_DATEI).find((x) => x.selektor.includes('et-beispiel') && x.selektor.includes('symbol'));
+		assert.ok(r, 'keine Regel für das Symbol-Beispiel');
+		assert.equal(aufloesen(r.decl['font-size'] ?? ''), aufloesen('var(--g-text-sm)'));
+		assert.equal(r.decl.color, 'var(--g-ink)');
+		const lum = (hex: string) => {
+			const [rr, gg, bb] = [1, 3, 5]
+				.map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+				.map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+			return 0.2126 * rr + 0.7152 * gg + 0.0722 * bb;
+		};
+		const [hell, dunkel] = [lum(aufloesen('var(--g-card)')), lum(aufloesen('var(--g-ink)'))].sort((a, b) => b - a);
+		assert.ok((hell + 0.05) / (dunkel + 0.05) >= 4.5, 'Kontrast unter WCAG AA');
+	});
+});
+
+describe('#3283 B7: Legende als Raster, Kürzel mono ohne Fettdruck (AC-9)', () => {
+	test('dl: Grid auto 1fr, Abstand 4px/14px; dt: Mono, normales Gewicht, keine Mindestbreite (doc-compliance-test)', () => {
+		// doc-compliance-test: Raster und Schriftgewicht stehen nur im <style>; berechnet im Staging-Bildabgleich.
+		const alle = regeln(DATEI);
+		const dl = alle.find((x) => x.selektor === '.wsw-legende');
+		assert.ok(dl, 'Regel .wsw-legende fehlt');
+		assert.equal(dl.decl.display, 'grid', 'Legende ist kein Grid');
+		assert.equal(dl.decl['grid-template-columns'], 'auto 1fr');
+		assert.equal(aufloesen(dl.decl.gap ?? ''), '4px 14px');
+		const dt = alle.find((x) => x.selektor === '.wsw-legende dt');
+		assert.ok(dt, 'Regel .wsw-legende dt fehlt');
+		assert.equal(dt.decl['font-family'], 'var(--g-font-mono)');
+		assert.ok(!dt.decl['font-weight'] || ['400', 'normal'].includes(dt.decl['font-weight']), `dt fett: ${dt.decl['font-weight']}`);
+		assert.equal(dt.decl['min-width'], undefined, 'dt mit Mindestbreite');
+		// Eine Hülle je Eintrag darf das Raster nicht brechen.
+		const huelle = alle.find((x) => x.selektor === '.wsw-legende-eintrag');
+		if (huelle) assert.equal(huelle.decl.display, 'contents', 'Hülle je Eintrag bricht das Raster');
 	});
 });

@@ -251,6 +251,11 @@ def _sms_an(antwort) -> list[str]:
 # AC-16: Zeilen, Zustaende, Formen, Beispielwerte, "nur Tageswert"
 # ---------------------------------------------------------------------------
 
+#: #3283 B2 (Soll-Bild Fassung 4): abgeleitete SMS-Fenster-Kinder zeigen in der
+#: SMS-Spalte kein Beispiel (Ausnahme ``temperature_night`` -> ``N…``).
+_SMS_FENSTER_KINDER = ("temperature_day_low", "temperature_day_high",
+                       "wind_chill_night", "wind_chill_day_low", "wind_chill_day_high")
+
 TRIP_PLACEMENTS = {
     "version": 1,
     "rows": [
@@ -291,6 +296,8 @@ def test_ac16_trip_jede_metrik_in_einer_folge_mit_zustand_form_und_beispiel(clie
                 continue
             if stelle == "outlook" and zeile["metric_id"] in ():
                 continue  # Ausblick ohne Tageswert-Spalte im heutigen Renderer
+            if stelle == "sms" and zeile["metric_id"] in _SMS_FENSTER_KINDER:
+                continue  # #3283 B2: abgeleitete Fenster-Kinder ohne SMS-Beispiel
             assert zelle["example"] or zelle["ampel"], f"{zeile['metric_id']}/{stelle}: Beispielwert fehlt"
 
 
@@ -303,9 +310,9 @@ def test_ac16_trip_beispielwerte_aus_dem_renderer(client):
     wind = _zeile(antwort, "wind")["cells"]
     assert wind["sms"]["example"].startswith("W") and wind["sms"]["example"] in sms.split(" ")
     assert wind["telegram"]["example"].startswith("W ")
-    # Zahl ohne Ampel in der Stundentabelle (Temperatur hat nur eine Form)
+    # Zahl ohne Ampel in der Stundentabelle, mit Spaltenkuerzel davor (#3283 B3)
     temp = _zeile(antwort, "visibility")["cells"]["email"]
-    assert re.fullmatch(r"\d+(\.\d)?", temp["example"]) and temp["ampel"] is None
+    assert re.fullmatch(r"Visib \d+(\.\d)?", temp["example"]) and temp["ampel"] is None
     # Einfach in der HTML-Mail: Ampelpunkt mit Stufe
     assert wind["email"]["ampel"] in ("green", "yellow", "orange", "red")
     # Ausblick: Zelle der ersten Ausblick-Zeile
@@ -735,8 +742,9 @@ def test_f003_ueberlange_kennung_ist_kein_serverfehler(client):
 
 def test_f004_verschmolzenes_token_steht_bei_beiden_haelften(client):
     """``L``/``D`` und ``FL``/``FD`` verschmelzen in der SMS zu EINEM Bereichs-
-    Token unter dem Hoechstwert-Kuerzel; die Tiefstwert-Zeile zeigt dieses
-    Token und gilt nicht als 'passt nicht mehr' -- auch als letzte SMS-Zeile."""
+    Token unter dem Hoechstwert-Kuerzel; die Tiefstwert-Zeile gilt nicht als
+    'passt nicht mehr' -- auch als letzte SMS-Zeile. #3283 B2: die Fenster-
+    Kinder zeigen in der Karte kein Beispiel mehr (Soll-Bild Fassung 4)."""
     _trip(NUTZER_A, "t-f004", grund=["temperature", "wind_chill", "wind"],
           placements={"version": 1, "rows": [
               {"metric_id": "temperature_day_high"}, {"metric_id": "wind_chill_day_high"},
@@ -751,7 +759,8 @@ def test_f004_verschmolzenes_token_steht_bei_beiden_haelften(client):
                             ("wind_chill_day_low", "wind_chill_day_high", "FD")):
         for mid in (tief, hoch):
             zelle = _zeile(antwort, mid)["cells"]["sms"]
-            assert (zelle["state"], zelle["example"], zelle["mark"]) == ("on", bereich[sym], None), mid
+            assert bereich[sym] in token, "Vorbedingung: SMS traegt das Bereichs-Token"
+            assert (zelle["state"], zelle["example"], zelle["mark"]) == ("on", None, None), mid
     assert _markiert(antwort) == set()
 
 
