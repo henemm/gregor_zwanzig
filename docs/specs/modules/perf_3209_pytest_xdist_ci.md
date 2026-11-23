@@ -149,3 +149,4 @@ Entscheidung (Tech Lead, Analyse `docs/context/perf-3209-pytest-laufzeit.md`): V
 ## Changelog
 
 - 2026-11-22: Initial spec created (Workflow perf-3209-pytest-laufzeit, Issue #3209)
+- 2026-11-23: Umsetzung größer als geschätzt (70 Dateien, +2789/-130, davon 0 Produktcode); zusätzlich tests/helpers/echtbaum_ratsche.py und tests/probes_xdist/* (Subprozess-Sonden); einige Lesetests lesen die committete Quelle tests/fixtures/data_root statt der materialisierten Kopie; test_issue_1013 nutzt xdist_group("echtdaten") direkt (gleiche Wirkung wie real_data_root).
