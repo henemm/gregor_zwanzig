@@ -1,0 +1,18 @@
+### go test ./internal/handler/ -run 3304 -v
+# github.com/henemm/gregor-api/internal/handler [github.com/henemm/gregor-api/internal/handler.test]
+internal/handler/placements_vorschau_3304_test.go:68:27: undefined: BriefingPlacementsPreviewHandler
+FAIL	github.com/henemm/gregor-api/internal/handler [build failed]
+FAIL
+
+### go test ./internal/router/ -run 3304 -v
+=== RUN   TestPlacementsVorschauRouteAmEchtenRouter3304
+2026/11/23 18:03:52 [coreauth] GZ_CORE_SHARED_SECRET nicht gesetzt — /api/internal/* ist gesperrt (503).
+2026/11/23 18:03:52 [auth] GZ_STATUS_TOKEN nicht gesetzt — /api/scheduler/status ist für alle Anfragen gesperrt.
+2026/11/23 18:03:52 "POST http://example.com/api/briefings/placements/vorschau?kind=route HTTP/1.1" from 192.0.2.1:1234 - 401 112B in 48.281µs
+2026/11/23 18:03:52 "POST http://example.com/api/briefings/placements/vorschau?kind=route&user_id=userB HTTP/1.1" from 192.0.2.1:1234 - 404 19B in 120.92µs
+    placements_vorschau_route_3304_test.go:73: Vorschau route: 404 404 page not found
+2026/11/23 18:03:52 [scheduler] Stopped
+--- FAIL: TestPlacementsVorschauRouteAmEchtenRouter3304 (0.01s)
+FAIL
+FAIL	github.com/henemm/gregor-api/internal/router	0.023s
+FAIL

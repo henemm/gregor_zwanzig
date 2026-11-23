@@ -72,7 +72,11 @@ def outcome_from_result(result) -> str:
     return "sent"
 
 
-def error_body(code: str, *, lang: Lang = "de", **values: str) -> tuple[int, dict]:
-    """(HTTP-Status, ``{"detail": <Text in lang>, "code": <code>}``) aus dem Vokabular."""
+def error_body(code: str, *, lang: Lang = "de", text_key: str | None = None,
+               **values: str) -> tuple[int, dict]:
+    """(HTTP-Status, ``{"detail": <Text in lang>, "code": <code>}``) aus dem Vokabular.
+
+    ``text_key`` ersetzt nur den Katalogtext, Status und Code bleiben die des
+    Codes (#3304: unlesbarer Vorschau-Entwurf, Code ``invalid_preset``)."""
     status, key = SEND_OUTCOMES[code]
-    return status, {"detail": t(key, lang, **values), "code": code}
+    return status, {"detail": t(text_key or key, lang, **values), "code": code}

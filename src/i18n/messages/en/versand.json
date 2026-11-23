@@ -31,6 +31,7 @@
   "versand.ergebnis.invalid_report_type": "Invalid report type {report_type} (allowed: morning, evening)",
   "versand.ergebnis.smtp_not_configured": "Email delivery (SMTP) is not set up for this user",
   "versand.ergebnis.invalid_preset": "Locations subscription cannot be sent: {reason}",
+  "versand.vorschau.entwurf_unlesbar":"Draft could not be read — please check the details",
   "versand.ergebnis.send_failed": "Delivery failed — internal error, please try again later",
   "versand.ergebnis.kontingent_erschoepft": "No briefing sent — your daily request quota is used up. It resets at midnight (UTC); scheduled briefings and alerts continue.",
   "versand.scheduler.nachgeliefert": "Delivered late — the weather service was unavailable at {stunde}",

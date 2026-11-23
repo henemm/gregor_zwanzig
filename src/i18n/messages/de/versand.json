@@ -31,6 +31,7 @@
   "versand.ergebnis.invalid_report_type": "Ungültiger Berichtstyp {report_type} (erlaubt: morning, evening)",
   "versand.ergebnis.smtp_not_configured": "E-Mail-Versand (SMTP) ist für diesen Nutzer nicht eingerichtet",
   "versand.ergebnis.invalid_preset": "Orte-Abo nicht versendbar: {reason}",
+  "versand.vorschau.entwurf_unlesbar":"Entwurf nicht lesbar — bitte die Angaben prüfen",
   "versand.ergebnis.send_failed": "Versand fehlgeschlagen — interner Fehler, bitte später erneut versuchen",
   "versand.ergebnis.kontingent_erschoepft": "Kein Briefing versendet — dein Tageskontingent für Abrufe ist aufgebraucht. Ab Mitternacht (UTC) geht es wieder; automatische Briefings und Alarme laufen weiter.",
   "versand.scheduler.nachgeliefert": "Nachgeliefert — der Wetterdienst war um {stunde} nicht erreichbar",

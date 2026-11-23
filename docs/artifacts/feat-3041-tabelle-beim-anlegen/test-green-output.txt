@@ -1,0 +1,44 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl
+configfile: pyproject.toml
+plugins: xdist-3.8.0, timeout-2.4.0, anyio-4.14.2, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 260 items
+
+tests/tdd/test_3304_placements_vorschau.py ..........................    [ 10%]
+tests/tdd/test_3237_placements_aus_grundauswahl.py ..................... [ 18%]
+....................................                                     [ 31%]
+tests/test_versand_zweisprachig.py ..................................... [ 46%]
+....                                                                     [ 47%]
+tests/test_i18n_api_katalog_paritaet.py ................................ [ 60%]
+.............................                                            [ 71%]
+tests/test_i18n_doku_vollstaendig.py ...........                         [ 75%]
+tests/tdd/test_briefings_send_endpoint.py .............................. [ 86%]
+..................................                                       [100%]
+
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  /home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+tests/tdd/test_briefings_send_endpoint.py::test_ac1_neuer_endpoint_stellt_beide_arten_zu[vergleich]
+tests/tdd/test_briefings_send_endpoint.py::test_ac3_fremde_id_liefert_404_not_found_und_loest_bei_a_nichts_aus[vergleich]
+tests/tdd/test_briefings_send_endpoint.py::test_ac10_erfolgsform_vergleich_traegt_fehlende_orte_und_keinen_report_type
+tests/tdd/test_briefings_send_endpoint.py::test_ac10_vergleich_ohne_fehlende_orte_hat_genau_die_grundform
+tests/tdd/test_briefings_send_endpoint.py::test_ac13_alt_route_liefert_dieselbe_erfolgsantwort[vergleich]
+tests/tdd/test_briefings_send_endpoint.py::test_ac13_alt_route_liefert_dieselbe_erfolgsantwort[vergleich]
+  /home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/src/services/scheduler_dispatch_service.py:616: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    entry["letzter_versand"] = _datetime.utcnow().isoformat() + "Z"
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 260 passed, 8 warnings in 18.95s =======================
