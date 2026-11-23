@@ -20,7 +20,7 @@ OpenSpec-Workflow mit Adversary Verification (Einstiege: `/00-intake` — auch B
 
 **Freigabepflichtig ist allein die Spec.** Deploy läuft ohne Halt durch: nach dem Merge zieht die Kette Staging-Poll → `/e2e-verify` → `deploy-gregor-prod.sh` → `prod_selftest.py` → Issue-Close **am Stück**. Der PO liest das Ergebnis danach, nicht vorher als Freigabe. Ein selbst formulierter „Tech-Lead-Brief" mit anschließender Bitte um 'go' ist dieselbe verbotene Prozessfrage in Freitextform. Einzige erlaubte Unterbrechung: ein echtes Hard Gate scheitert (Staging-Verdict BROKEN, Selftest-Exit ≠ 0) — dann eskalieren mit konkretem Befund.
 
-**Herkunft der Befehle:** `/00-…` bis `/60-…` kommen aus dem Plugin agent-os-openspec; projekteigen in `.claude/commands/` sind nur `/70-deploy` (ersetzt das Plugin-Template), `/e2e-verify`, `/next-ticket`, `/radar`.
+**Herkunft der Befehle:** `/00-…` bis `/60-…` kommen aus dem Plugin agent-os-openspec, in `.claude/commands/` liegen dafür nur generierte Kurzbefehle (Marker `openspec-alias`, Auffrischen per `setup.py . --refresh-aliases`); projekteigen in `.claude/commands/` sind nur `/70-deploy` (ersetzt das Plugin-Template), `/e2e-verify`, `/next-ticket`, `/radar`.
 
 **Rückfragen an den PO IMMER über das `AskUserQuestion`-Tool** — nie als Freitext-Frage am Ende einer Antwort (PO-Vorgabe 2026-10-08). Gilt auch für Spec-Freigaben.
 
