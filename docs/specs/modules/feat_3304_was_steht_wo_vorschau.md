@@ -3,7 +3,7 @@ entity_id: feat_3304_was_steht_wo_vorschau
 type: module
 created: 2026-11-23
 updated: 2026-11-23
-status: draft
+status: approved
 version: "1.0"
 workflow: feat-3041-tabelle-beim-anlegen
 tags: [was-steht-wo, placements, vorschau, anlegen, epic-3122]
@@ -13,7 +13,7 @@ tags: [was-steht-wo, placements, vorschau, anlegen, epic-3122]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (automatisch, Ampel grün, 2026-11-23)
 
 ## Purpose
 
