@@ -649,8 +649,14 @@ def test_legende_hat_jedes_gesendete_kuerzel_mit_bedeutung(client, kind, lang):
     if kind == "route":
         assert "T" not in in_legende, "Temperatur sendet kein T in der Trip-SMS"
     else:
-        assert {"D", "L"} <= in_legende, "Orte senden Hoechst/Tiefst als D/L"
+        # #3284: Hoechst+Tiefst verschmelzen in der SMS zum Bereichs-Token D13/27
+        assert "D" in in_legende and "L" not in in_legende, "Orte senden Bereich als D"
+    # #3284: Bereichs-Token traegt die zusammengesetzte Bedeutung Tief/Hoch.
+    bereich = {"de": "Tagestiefstwert/Tageshöchstwert", "en": "day min/day max"}[lang]
     for e in legende:
+        if e["kuerzel"] == "D" and "L" not in in_legende:
+            assert e["meaning"] == bereich, e
+            continue
         # Kuerzel unuebersetzt, Bedeutung in der Sprache des Nutzers aus dem Katalog
         katalog = {}
         for m in (e["metric_id"], *_kuerzel_quellen(e["metric_id"])):

@@ -98,6 +98,11 @@ OFFICIAL_ALERT_PRIORITY = 11
 UNAVAILABLE_SYMBOL = "X?"
 UNAVAILABLE_PRIORITY = OFFICIAL_ALERT_PRIORITY + 1
 
+# Issue #1824 (A) / #3284: Temperatur-Paare (Tiefst-, Hoechstwert-Kuerzel), die
+# zum Bereichs-Token unter dem Hoechstwert-Kuerzel verschmelzen ('D13/27').
+# Einzige Quelle fuer Builder, Orte-SMS und Kuerzel-Legende ("Was steht wo").
+BEREICH_PAARE: tuple[tuple[str, str], ...] = (("L", "D"), ("FL", "FD"))
+
 # (symbol, category) -> §2 POSITIONAL index. Vigilance shares 'TH:' symbol.
 POSITIONAL = [
     # Issue #1410 §3a: gemessenes Trio, dann gefuehltes Trio (Paritaet
@@ -475,7 +480,7 @@ def build_token_line(
     # tourenentscheidungs-relevanten Kanal Falschinformation.
     # Nebeneffekt (Spec Known Limitations): der Bereich faellt beim Kuerzen als
     # EINE Einheit, weil das 'K'-Token gar nicht erst in der Liste steht.
-    for cold_sym, warm_sym in (("L", "D"), ("FL", "FD")):
+    for cold_sym, warm_sym in BEREICH_PAARE:
         cold = next((t for t in tokens if t.symbol == cold_sym), None)
         warm = next((t for t in tokens if t.symbol == warm_sym), None)
         if cold is None or warm is None:

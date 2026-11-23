@@ -89,6 +89,24 @@ def _trip_antwort(client, kennung, grund, lang):
     return _ok(client, kennung, "route")
 
 
+#: Orte-Auswahl (Kennung + Aggregation) fuer die Faelle ueber die Temperatur hinaus.
+ORTE_GEFUEHLT = [
+    {"metric_id": "wind_chill", "aggregation": "min"},
+    {"metric_id": "wind_chill", "aggregation": "max"},
+    {"metric_id": "wind", "aggregation": "max"},
+]
+ORTE_NUR_TIEF = [
+    {"metric_id": "temperature", "aggregation": "min"},
+    {"metric_id": "wind", "aggregation": "max"},
+]
+
+
+def _orte_antwort(client, kennung, grund, lang):
+    _sprache(NUTZER_A, lang)
+    _orte(NUTZER_A, kennung, anzahl=1, grund=grund)
+    return _ok(client, kennung, "vergleich")
+
+
 # ---------------------------------------------------------------------------
 # AC-1/AC-2: Orte, Tiefst + Hoechst -> nur D (Bereich), kein L
 # ---------------------------------------------------------------------------
@@ -139,17 +157,32 @@ def test_trip_gefuehlt_bereich_ohne_fl(client, lang):
     assert legende.get("FD") == BEREICH[lang]["FD"], legende
 
 
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_orte_gefuehlt_bereich_ohne_fl(client, lang):
+    antwort = _orte_antwort(client, f"o-3284-f-{lang}", ORTE_GEFUEHLT, lang)
+    sms = antwort["sms_example"]["text"]
+
+    assert _hat_bereich(sms, "FD"), sms
+    assert "FL" not in _roh_gesendet(sms), sms
+    legende = _legende(antwort)
+    assert "FL" not in legende, legende
+    assert legende.get("FD") == BEREICH[lang]["FD"], legende
+
+
 # ---------------------------------------------------------------------------
 # AC-5: jedes Legenden-Kuerzel wird wirklich gesendet, keines doppelt
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("lang", ["de", "en"])
-@pytest.mark.parametrize("fall", ["orte", "trip", "trip_gefuehlt", "trip_nur_tief"])
+@pytest.mark.parametrize("fall", ["orte", "orte_gefuehlt", "orte_nur_tief",
+                                  "trip", "trip_gefuehlt", "trip_nur_tief"])
 def test_legende_nennt_nur_gesendete_kuerzel(client, fall, lang):
-    if fall == "orte":
-        _sprache(NUTZER_A, lang)
-        _orte(NUTZER_A, f"o-3284-g-{lang}", anzahl=1)
-        antwort = _ok(client, f"o-3284-g-{lang}", "vergleich")
+    if fall.startswith("orte"):
+        from tests.tdd.test_placements_tabelle_endpoint import ORTE_GRUND
+
+        grund = {"orte": ORTE_GRUND, "orte_gefuehlt": ORTE_GEFUEHLT,
+                 "orte_nur_tief": ORTE_NUR_TIEF}[fall]
+        antwort = _orte_antwort(client, f"o-3284-g-{fall}-{lang}", grund, lang)
     else:
         grund = {
             "trip": ["temperature_day_low", "temperature_day_high", "wind", "gust"],
@@ -169,6 +202,18 @@ def test_legende_nennt_nur_gesendete_kuerzel(client, fall, lang):
 @pytest.mark.parametrize("lang", ["de", "en"])
 def test_nur_tiefstwert_behaelt_l(client, lang):
     antwort = _trip_antwort(client, f"t-3284-t-{lang}", ["temperature_day_low", "wind"], lang)
+    sms = antwort["sms_example"]["text"]
+
+    assert "L" in _roh_gesendet(sms), sms
+    assert not _hat_bereich(sms, "D"), sms
+    legende = _legende(antwort)
+    assert legende.get("L") == {"de": "Tagestiefstwert", "en": "day min"}[lang], legende
+    assert "D" not in legende, legende
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_orte_nur_tiefstwert_behaelt_l(client, lang):
+    antwort = _orte_antwort(client, f"o-3284-t-{lang}", ORTE_NUR_TIEF, lang)
     sms = antwort["sms_example"]["text"]
 
     assert "L" in _roh_gesendet(sms), sms
