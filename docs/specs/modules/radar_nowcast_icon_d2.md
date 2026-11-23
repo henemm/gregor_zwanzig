@@ -103,7 +103,7 @@ lon > 10, Slowenien, Tschechien, Ost-Alpen). DE/AT treffen ihr Radar weiterhin z
   - Test: Echter HTTP-Call gegen Open-Meteo `models=icon_d2` mit fester Dolomiten-Koordinate; assert `source=="ICON-D2"`, ≥1 Frame, Raten numerisch ≥ 0. Kein Mock.
 
 - **AC-2:** Given die Bbox- und Ketten-Logik / When Koordinaten verschiedener Regionen geroutet werden / Then liegt eine Zentraleuropa-Koordinate außerhalb DE/AT/FR (Dolomiten/Slowenien) in der ICON-D2-Box; Berlin wird zuvor von RADOLAN abgefangen (`source=="radar"`); eine West-Überlappungs-Koordinate in der AROME-Box (z.B. Schweiz-West) wird von AROME-FR vor ICON-D2 bedient (`source=="AROME-FR"`); der Nord-Atlantik liegt in keiner Box und fällt auf `minutely_15` zurück.
-  - Test: Deterministischer Test auf `_within_icon_d2` + echte Ketten-Calls für Berlin (`radar`), Schweiz-West (`AROME-FR`), Atlantik (`minutely_15`). Mock-frei.
+  - Test: Deterministischer Test auf `_within_icon_d2` (`test_feature_761_icon_d2_nowcast.py::test_ac2_within_icon_d2_bbox`) + echte Ketten-Calls für Schweiz-West (`AROME-FR`) und Slowenien in `test_ac2_chain_routing_precedence`. Berlin (`radar`) und Atlantik (`minutely_15`) prüft `test_feature_734_arome_france_nowcast.py::test_ac2_chain_routing_berlin_radar_atlantic_global`. Mock-frei.
 
 - **AC-3:** Given eine reale Koordinate INNERHALB der ICON-D2-Bbox, aber AUSSERHALB des rotierten ICON-D2-Gitters (z.B. Polen-Tatra ~49.2 N / 20.0 E, das all-None liefert) / When `_fetch_icon_d2` bzw. `get_nowcast` aufgerufen wird / Then liefert der ICON-D2-Fetch `[]` (All-None-Guard) und die Kette fällt sauber auf `minutely_15` zurück — KEIN fälschliches `source=="ICON-D2"` mit Schein-Null-Frames.
   - Test: Echter HTTP-Call gegen eine all-None-Koordinate; assert `_fetch_icon_d2(...) == []` UND `get_nowcast(...).source == "minutely_15"`. Mock-frei (Open-Meteo liefert real all-None außerhalb der Domäne).
@@ -141,3 +141,4 @@ Testdatei: `tests/tdd/test_feature_761_icon_d2_nowcast.py` (mock-frei).
 ## Changelog
 
 - 2026-06-11: Initial spec created (Issue #761) — ICON-D2 explizit für Zentraleuropa/Alpen; baut auf #734-Mechanik auf, All-None-Guard für rotiertes Gitter
+- 2026-11-23: Testverweis AC-2 angepasst (Doppelung bereinigt, #3264): Berlin- und Atlantik-Assert stehen nur noch in #734 (`test_ac2_chain_routing_berlin_radar_atlantic_global`); Anforderung unverändert

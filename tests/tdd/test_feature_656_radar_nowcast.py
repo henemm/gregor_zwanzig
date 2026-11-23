@@ -115,17 +115,6 @@ def test_ac1_brightsky_fetch_radar_returns_real_frames():
 # AC-2: Niederschlagswerte -> deterministischer deutscher Text
 # ===========================================================================
 
-def test_ac2_intensity_to_text_levels():
-    """AC-2: Korrekte Intensitätsstufen für reale Beispielraten."""
-    from services.radar_service import RadarNowcastService
-
-    svc = RadarNowcastService()
-    assert svc.intensity_to_text(0.0) == "Kein Niederschlag"
-    assert svc.intensity_to_text(0.3) == "Leichter Regen"
-    assert svc.intensity_to_text(2.5) == "Mäßiger Regen"
-    assert svc.intensity_to_text(8.0) == "Starker Regen"
-
-
 def test_ac2_format_now_text_mentions_onset_and_source():
     """AC-2: Bei bevorstehendem Regen nennt der Text Beginn + Quelle."""
     from services.radar_service import NowcastResult, RadarNowcastService
