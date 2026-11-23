@@ -98,6 +98,8 @@ function zelleAus(stelle: string, z: ApiZelle, t: Uebersetzer): EinstellZelle {
 		// Roh/Einfach nie in der SMS (Spec Teil A Nr. 4), sonst nur, wo die Antwort zwei Formen meldet.
 		format: stelle === 'sms' ? null : (z.format ?? null),
 		beispiel: z.example ?? undefined,
+		// #3283 B6: reines Symbol (kein Buchstabe, keine Ziffer), etwa die Einfach-Form der Bewölkung.
+		symbol: z.example ? !/[\p{L}\p{N}]/u.test(z.example) : undefined,
 		ampel: z.ampel && AMPEL[z.ampel] ? { farbe: z.ampel, name: t(AMPEL[z.ampel]) } : undefined,
 		marke
 	};

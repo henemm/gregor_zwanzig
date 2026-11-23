@@ -367,14 +367,41 @@ def _trip_muster(trip, dc, vm, report_type: str, lang: str) -> _Muster:
     return _Muster(
         sms=bericht.sms_text,
         beispiele={
-            "email": _html_stundentabelle(bericht.email_html, ids),
+            "email": _mit_kuerzel(_html_stundentabelle(bericht.email_html, ids)),
             "telegram": _telegram_kurzuebersicht(bericht.telegram_bubbles, ids, lang),
-            "sms": {m: (t, None) for m, t in sms_werte.items()},
+            # #3283 B2: abgeleitete Fenster-Kinder ohne eigenes Beispiel in der
+            # Karte (Soll-Bild Fassung 4); ``sms_werte`` bleibt vollstaendig,
+            # damit "passt nicht mehr" (``_trip_sms_fehlt``) richtig rechnet.
+            "sms": {m: (t, None) for m, t in sms_werte.items()
+                    if m not in _sms_fenster_kinder()},
             "outlook": _trip_ausblick(trend, outlook_rows, ids),
         },
         sms_fehlt=_trip_sms_fehlt(vm, sms_werte),
         tageswert=_trip_nur_tageswert(dc, vm, report_type),
     )
+
+
+def _sms_fenster_kinder() -> set[str]:
+    """Abgeleitete SMS-Fenster-Kinder ohne Beispiel in der SMS-Spalte der
+    Karte (#3283 B2). Ausnahme ``temperature_night``: sie traegt ihr eigenes
+    Token (``N10``) und behaelt es."""
+    from app.loader import _DERIVED_METRIC_RULES
+
+    return {kind for kind, _elter, _agg in _DERIVED_METRIC_RULES} - {"temperature_night"}
+
+
+def _mit_kuerzel(beispiele: dict) -> dict:
+    """Trip-E-Mail: Spaltenkuerzel vor dem Wert (``Temp 14.4``, #3283 B3),
+    wie der Kopf der Stundentabelle; reine Symbole ohne Buchstabe und Ziffer
+    bleiben ohne Kuerzel. ``col_label`` ist sprachunabhaengig."""
+    from app.metric_catalog import get_metric
+
+    out = {}
+    for mid, (text, ampel) in beispiele.items():
+        if text and any(c.isalnum() for c in text):
+            text = f"{get_metric(mid).col_label} {text}"
+        out[mid] = (text, ampel)
+    return out
 
 
 def _trip_sms_symbole() -> dict[str, str]:

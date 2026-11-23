@@ -152,6 +152,8 @@ Reine Maße, **Light = Dark** (kein Wert im Dark-Block). Regel: Ein Maß im 4px-
 | `--g-size-130px` | 130 px | Spalten-Mindestbreite Metrik-Name (Mockup `.mr`) |
 | `--g-size-160px` | 160 px | Mindestbreite Mittelspalte (Ampel-Leiste + Erklärung) |
 | `--g-size-190px` | 190 px | Spalten-Höchstbreite Metrik-Name (Mockup `.mr`) |
+| `--g-size-150px` | 150 px | Mindestbreite Kanalspalte der Einstell-Tabelle „Was steht wo“ (#3283) |
+| `--g-size-118px` | 118 px | Breite der Zusatzspalten Stundenverlauf/Ausblick der Einstell-Tabelle (#3283) |
 | `--g-size-5px` | 5 px | Radius halbhoher Balken (Ampel-Leiste) |
 | `--g-size-6px` | 6 px | enge Abstände/Polster |
 | `--g-size-10px` | 10 px | Abstände/Polster, Balkenhöhe |
