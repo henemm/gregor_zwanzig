@@ -205,6 +205,22 @@ def _core_auth_secret_configured():
     yield
 
 
+@pytest.fixture(autouse=True)
+def _e2e_nachweis_nicht_veroeffentlichen():
+    """#3289: ``staging_gate.py --write-verdict`` veroeffentlicht den Nachweis als
+    Git-Note nach ``origin``. Tests duerfen nie nach GitHub pushen, und viele
+    Bestands-Tests rufen ``write_verdict`` in Repos ohne erreichbaren Remote auf.
+    Sicherheitsnetz: ``GZ_E2E_PUBLISH=0`` fuer jeden Test (auch fuer daraus
+    gestartete Subprozesse). Tests, die das Veroeffentlichen pruefen
+    (``tests/test_e2e_nachweis_transport.py``), bauen ihre Umgebung selbst ohne
+    ``GZ_*``-Variablen und gegen einen lokalen Wegwerf-Remote.
+
+    Bewusst ohne ``monkeypatch`` (Begruendung wie ``_core_auth_secret_configured``).
+    """
+    os.environ["GZ_E2E_PUBLISH"] = "0"
+    yield
+
+
 _REPO_DATA_USERS = root / "data" / "users"
 
 # Issue #1624: die frueher unter ``<repo>/data/users`` COMMITTETEN

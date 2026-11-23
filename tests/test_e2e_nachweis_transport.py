@@ -293,6 +293,68 @@ def test_ac1_zweite_sitzung_ueberschreibt_fremde_note_nicht(welt: Welt):
     assert note_b is not None and json.loads(note_b)["verified_commit"] == sha_b
 
 
+def test_ac1_wettlauf_fremde_note_zwischen_holen_und_push_bleibt_erhalten(welt: Welt):
+    """Adversary F002+F003: Zwischen dem Holen der Notes-Ref und dem Push legt eine
+    andere Sitzung eine Note fuer einen ANDEREN Commit auf origin ab. Der erste
+    Push muss daran scheitern (kein Force), der zweite Versuch holt neu und geht
+    durch: Exit 0, eigene Note da UND die fremde Note bleibt erhalten.
+
+    Ausgeloest wird die fremde Note durch einen echten ``reference-transaction``-Hook
+    im Sitzungs-Klon: beim ersten Anlegen der Hilfs-Ref (Note anlegen; Loeschen zaehlt
+    nicht) pusht er einmalig aus einem dritten Klon eine fremde Note nach origin. Fangen soll
+    das sowohl einen Force-Push (fremde Note waere weg) als auch nur einen
+    einzigen Versuch (Exit != 0)."""
+    other = welt.clone("session_fremd")
+    fremd_sha = welt.land("src/fremd.py", "F = 1\n", repo=other)
+    fremd_text = json.dumps({"verified_commit": fremd_sha, "fremd": True})
+    fremd_file = welt.root / "fremd-note.json"
+    fremd_file.write_text(fremd_text, encoding="utf-8")
+
+    sha = welt.land("src/app.py", "X = 80\n")
+    marker = welt.root / "fremde-note-gepusht"
+    hook = welt.session / ".git" / "hooks" / "reference-transaction"
+    hook.write_text(
+        "#!/bin/sh\n"
+        "[ \"$1\" = committed ] || exit 0\n"
+        f"[ -e '{marker}' ] && exit 0\n"
+        "treffer=0\n"
+        "while read old new ref; do\n"
+        "  case \"$new\" in *[!0]*) ;; *) continue;; esac\n"
+        "  case \"$ref\" in refs/notes/e2e-verified-publish-*) treffer=1;; esac\n"
+        "done\n"
+        "[ \"$treffer\" = 1 ] || exit 0\n"
+        f": > '{marker}'\n"
+        "unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR\n"
+        f"git -C '{other}' notes --ref e2e-verified add -f -F '{fremd_file}' {fremd_sha} >/dev/null 2>&1\n"
+        f"git -C '{other}' push -q origin {NOTES_REF} >/dev/null 2>&1\n"
+        "exit 0\n",
+        encoding="utf-8",
+    )
+    hook.chmod(0o755)
+
+    proc = welt.write_verdict()
+
+    assert marker.exists(), "Test-Aufbau: der Hook hat die fremde Note nicht ausgeloest"
+    assert proc.returncode == 0, (
+        f"zweiter Versuch nach abgelehntem Push muss gelingen: stdout={proc.stdout} stderr={proc.stderr}"
+    )
+    fremd = welt.remote_note(fremd_sha)
+    assert fremd is not None and json.loads(fremd) == json.loads(fremd_text), (
+        "fremde Note eines anderen Commits wurde ueberschrieben (Force-Push?)"
+    )
+    note = welt.remote_note(sha)
+    assert note is not None and json.loads(note) == welt.local_proof(sha)
+    assert "Versuch 1/" in proc.stdout + proc.stderr, (
+        f"der erste Push haette wegen der fremden Note scheitern muessen (kein Force): {proc.stdout}{proc.stderr}"
+    )
+
+
+def test_publish_ist_in_gewoehnlichen_tests_abgeschaltet():
+    """Adversary F004: Sicherheitsnetz aus tests/conftest.py — kein Test darf
+    versehentlich nach GitHub veroeffentlichen."""
+    assert os.environ.get("GZ_E2E_PUBLISH") == "0"
+
+
 # --- AC-2: Holen, fail-closed, Gate unveraendert -----------------------------
 
 

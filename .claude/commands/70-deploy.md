@@ -76,6 +76,37 @@ git merge-base --is-ancestor <eigener-sha> <live-sha> && echo "eigene Arbeit ist
 git log --oneline <eigener-sha>..<live-sha>   # was fuhr sonst mit?
 ```
 
+**Pull-Deploy (#3289, ADR-0129):** Der Server liefert Prod auch selbst aus. Der Timer
+`henemm-infra/scripts/pull-deploy-gregor-prod.sh` prueft alle 5 Minuten `origin/main`; liegt
+ein Nachweis vor (Git-Note `refs/notes/e2e-verified`, von `--write-verdict` veroeffentlicht),
+deployt er, faehrt den Selbsttest und setzt am Ziel-Commit den Status `deploy/prod`. Auf dem
+Server bleibt der direkte Weg oben erlaubt (schneller, `flock`-serialisiert, idempotent).
+
+### Schritt 4 außerhalb des Servers (iMac, Cloud: kein Prod-Checkout)
+
+Nicht selbst deployen und keinen Selbsttest starten — das macht der Server-Timer. Stattdessen
+auf den Commit-Status `deploy/prod` am Ziel-Commit (`origin/main` nach dem Merge) warten:
+
+```bash
+SHA=$(git rev-parse origin/main)
+gh api repos/henemm/gregor_zwanzig/commits/$SHA/status \
+  --jq '.statuses[] | select(.context=="deploy/prod") | "\(.state) \(.description)"'
+```
+
+Mit Wecker (Hintergrund-`sleep`) alle paar Minuten selbst nachsehen; der Timer laeuft alle
+5 Minuten, Deploy und Selbsttest brauchen einige Minuten mehr.
+
+- **kein Status:** der Server wartet noch (Nachweis fehlt oder Lauf steht aus). Pruefen, ob
+  der Nachweis als Note auf `origin` liegt (`/e2e-verify` Schritt 5), dann weiter warten.
+- **`success`:** Stand ist live **und** der Selbsttest bestand mit Exit 0 (Beschreibung nennt
+  die Live-SHA). Erst jetzt Schritt 5 — Issue schließen (`gh issue close <N>`).
+- **`failure`:** Deploy oder Selbsttest ist gescheitert; der Server hat bereits einmal Alarm
+  gesendet und versucht diese SHA nicht erneut. Befund ans Issue, Ursache beheben (neuer
+  Stand auf `main` loest einen neuen Versuch aus); Issue bleibt offen. Ein bewusster
+  Wiederholversuch derselben SHA geht nur auf dem Server mit `GZ_FORCE_REDEPLOY=1`.
+
+Schritt 4b entfaellt hier (der Timer hat ihn gefahren, `success` ist sein Ergebnis).
+
 ## Schritt 4b — Post-Deploy-Selbsttest (hartes Tor)
 
 ```bash
