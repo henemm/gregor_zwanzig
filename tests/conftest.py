@@ -1,8 +1,10 @@
 # ensures the 'src' directory is on sys.path for imports like 'from app import ...'
+import dataclasses
 import json
 import os
-import shutil
 import sys
+import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -243,11 +245,29 @@ def _redirect_data_root_session(tmp_path_factory):
 
     from app import loader
 
+    _journal_festlegen(tmp_path_factory)
+
     _ORIGINAL_DATA_ROOT = getattr(loader, "_DATA_ROOT", None)
     _SESSION_DATA_ROOT = str(tmp_path_factory.mktemp("gz-data-root-session"))
     loader._DATA_ROOT = _SESSION_DATA_ROOT
     yield
     loader._DATA_ROOT = _ORIGINAL_DATA_ROOT
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _importbindung_vorladen():
+    """Issue #3209: ``services.position_fix`` bindet ``load_all_trips`` beim
+    IMPORT (``from app.loader import load_all_trips``) und wird von
+    ``trip_segments`` erst bei Bedarf importiert. Laeuft dieser Erstimport
+    zufaellig waehrend eines Tests, der ``app.loader.load_all_trips`` per
+    ``monkeypatch`` ersetzt (z. B. ``tests/unit/test_alert_channel_premium_sms.py``),
+    behaelt das Modul den Ersatz fuer den REST des Prozesses -- und
+    ``tests/unit/test_position_fix_snapping.py`` scheitert im selben Prozess.
+    Seriell verdeckte die feste Reihenfolge das; unter xdist entscheidet die
+    Verteilung (nachgemessen mit ``-n 4``). Einmal zu Sessionbeginn laden,
+    damit die echte Funktion gebunden ist."""
+    import services.position_fix  # noqa: F401
+    yield
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -290,21 +310,40 @@ def _guard_repo_data_users_session(_materialize_real_data_root_fixtures):
     Befund bei JEDEM Lauf auf einem frischen Checkout (z. B. CI). Deshalb
     haengt diese Fixture explizit von der Materialisierung ab, statt beide
     unabhaengig als Session-Fixtures zu deklarieren.
+
+    Issue #3209 (xdist): in einem Worker sieht ein Session-Vergleich auch die
+    Schreibzugriffe ANDERER Worker und koennte sie keinem Test zuordnen --
+    der letzte Test jedes Workers wuerde faelschlich rot. Unter xdist macht
+    deshalb der CONTROLLER denselben Netto-Vergleich ueber den ganzen Lauf
+    (``pytest_sessionstart``/``pytest_sessionfinish`` unten), nachdem alle
+    Worker fertig sind: gleich scharf (jede bleibende Aenderung ist ein
+    Fehler, ohne Ausnahme), nur ohne falsche Zuordnung.
     """
-    before = _snapshot_repo_data_users()
+    if _xdist_worker_id():
+        yield
+        return
+    beginn = _echte_uhr()
+    before = _detail_snapshot_repo_data_users()
     yield
-    after = _snapshot_repo_data_users()
-    if after != before:
-        pytest.fail(
-            "Issue #2226: der echte "
-            f"{_REPO_DATA_USERS}-Baum hat sich waehrend der GESAMTEN "
-            f"Session veraendert (vorher: {before}, nachher: {after}). "
-            "Ein Test/eine Fixture hat -- unabhaengig vom Scope -- direkt "
-            "oder ueber app.loader in den echten Baum geschrieben, ohne "
-            "@pytest.mark.real_data_root zu tragen, oder ein "
-            "real_data_root-Test hat seine Spur nicht vollstaendig "
-            "entfernt."
-        )
+    after = _detail_snapshot_repo_data_users()
+    # Ohne Journal (normaler serieller Lauf) zaehlt jede Aenderung. Nur ein
+    # Kind-Prozess eines xdist-Workers zieht Schreibzugriffe der parallel
+    # laufenden Echtdaten-Gruppe des AEUSSEREN Laufs ab.
+    if after != before and _unerklaerte_aenderungen(before, after, beginn):
+        pytest.fail(_session_waechter_meldung(_aggregat(before), _aggregat(after)))
+
+
+def _session_waechter_meldung(before: dict, after: dict) -> str:
+    return (
+        "Issue #2226: der echte "
+        f"{_REPO_DATA_USERS}-Baum hat sich waehrend der GESAMTEN "
+        f"Session veraendert (vorher: {before}, nachher: {after}). "
+        "Ein Test/eine Fixture hat -- unabhaengig vom Scope -- direkt "
+        "oder ueber app.loader in den echten Baum geschrieben, ohne "
+        "@pytest.mark.real_data_root zu tragen, oder ein "
+        "real_data_root-Test hat seine Spur nicht vollstaendig "
+        "entfernt."
+    )
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -332,27 +371,83 @@ def _materialize_real_data_root_fixtures(_redirect_data_root_session) -> None:
     ausschliesslich ``briefings/``, nie ``trips/`` direkt. Ersetzt die
     fruehere, gleichwertige Fixture in ``tests/integration/conftest.py``
     (deren Quell-Glob nach dem Umzug leer gelaufen waere).
-    """
-    for src_file in sorted(_REAL_DATA_FIXTURE_SRC.rglob("*")):
-        if not src_file.is_file():
-            continue
-        target = root / "data" / src_file.relative_to(_REAL_DATA_FIXTURE_SRC)
-        if target.exists():
-            continue
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(src_file, target)
 
-    for trips_json in sorted(_REPO_DATA_USERS.glob("*/trips/*.json")):
-        briefings_dir = trips_json.parent.parent / "briefings"
-        briefings_target = briefings_dir / trips_json.name
-        if briefings_target.exists():
-            continue
-        trip = json.loads(trips_json.read_text(encoding="utf-8"))
-        trip.setdefault("kind", "route")
-        briefings_dir.mkdir(parents=True, exist_ok=True)
-        briefings_target.write_text(
-            json.dumps(trip, indent=2, ensure_ascii=False), encoding="utf-8"
-        )
+    Issue #3209: unter xdist starten mehrere Worker (und der Controller)
+    gleichzeitig -- ``_materialisiere_echtdaten`` laeuft deshalb unter einer
+    Dateisperre und schreibt jede Kopie atomar.
+    """
+    _materialisiere_echtdaten()
+
+
+# Unter ``data/cache/`` (gitignored, ausserhalb von ``data/users``) -- taucht
+# weder in ``git status`` noch im Waechter-Fingerprint auf.
+_MATERIALISIERUNGS_SPERRE = root / "data" / "cache" / ".gz-materialisierung.lock"
+
+
+def _materialisiere_echtdaten(
+    quelle: Path | None = None,
+    data_wurzel: Path | None = None,
+    sperrdatei: Path | None = None,
+) -> None:
+    """Additive Materialisierung (Rumpf siehe Fixture oben), genau einmal je
+    fehlender Datei ueber alle gleichzeitig startenden Prozesse hinweg.
+
+    Die Parameter (Standard: committete Quelle, ``<repo>/data``, Sperre unter
+    ``data/cache``) existieren nur, damit
+    ``tests/tdd/test_xdist_materialisierung_parallel.py`` die Funktion aus
+    mehreren gleichzeitigen Prozessen gegen ein Wegwerf-Ziel pruefen kann.
+
+    * Dateisperre (``fcntl.flock``) auf ``data/cache/.gz-materialisierung.lock``
+      (ausserhalb von ``data/users``, also nicht im Waechter-Fingerprint):
+      der erste Prozess kopiert, alle weiteren warten und finden danach
+      jede Datei vor -- kein Race "Ziel existiert schon, ist aber erst halb
+      geschrieben".
+    * Jede Kopie wird in eine Nachbardatei geschrieben und per
+      ``os.replace`` atomar an ihren Platz gelegt -- ein Leser sieht nie eine
+      halbe Datei, auch kein Prozess ohne Sperre.
+    """
+    import fcntl
+
+    quelle = quelle or _REAL_DATA_FIXTURE_SRC
+    data_wurzel = data_wurzel or (root / "data")
+    sperrdatei = sperrdatei or _MATERIALISIERUNGS_SPERRE
+    sperrdatei.parent.mkdir(parents=True, exist_ok=True)
+    with open(sperrdatei, "a+") as sperre:
+        fcntl.flock(sperre.fileno(), fcntl.LOCK_EX)
+        try:
+            for src_file in sorted(quelle.rglob("*")):
+                if not src_file.is_file():
+                    continue
+                target = data_wurzel / src_file.relative_to(quelle)
+                if target.exists():
+                    continue
+                target.parent.mkdir(parents=True, exist_ok=True)
+                _atomar_schreiben(target, src_file.read_bytes())
+
+            for trips_json in sorted((data_wurzel / "users").glob("*/trips/*.json")):
+                briefings_dir = trips_json.parent.parent / "briefings"
+                briefings_target = briefings_dir / trips_json.name
+                if briefings_target.exists():
+                    continue
+                trip = json.loads(trips_json.read_text(encoding="utf-8"))
+                trip.setdefault("kind", "route")
+                briefings_dir.mkdir(parents=True, exist_ok=True)
+                _atomar_schreiben(
+                    briefings_target,
+                    json.dumps(trip, indent=2, ensure_ascii=False).encode("utf-8"),
+                )
+        finally:
+            fcntl.flock(sperre.fileno(), fcntl.LOCK_UN)
+
+
+def _atomar_schreiben(ziel: Path, inhalt: bytes) -> None:
+    zwischen = ziel.with_name(f".{ziel.name}.{os.getpid()}.tmp")
+    try:
+        zwischen.write_bytes(inhalt)
+        os.replace(zwischen, ziel)
+    finally:
+        if zwischen.exists():
+            zwischen.unlink()
 
 
 def _snapshot_repo_data_users() -> dict[str, int]:
@@ -361,25 +456,583 @@ def _snapshot_repo_data_users() -> dict[str, int]:
     Snapshot (Performance), erkennt aber auch In-Place-Content-Mutationen
     bestehender Dateien (die Top-Level-Verzeichnis-mtime ändert sich NICHT,
     wenn eine bestehende Datei per ``write_text``/``open(..., 'w')``
-    überschrieben wird -- Adversary-Repro)."""
+    überschrieben wird -- Adversary-Repro).
+
+    Issue #3209: die Waechter vergleichen inzwischen den Fingerprint JE DATEI
+    (``_detail_snapshot_repo_data_users``, strenger); diese Aggregat-Form
+    bleibt fuer die Meldungen und ist daraus abgeleitet."""
+    return _aggregat(_detail_snapshot_repo_data_users())
+
+
+def _detail_snapshot_repo_data_users() -> dict[str, tuple[int, int]]:
+    """Issue #3209: Fingerprint JE DATEI (relativer Pfad -> Groesse, mtime_ns).
+
+    Strenger als der Aggregat-Fingerprint oben (jede einzelne Datei zaehlt)
+    und Voraussetzung dafuer, unter xdist eine Aenderung einem Pfad -- und
+    damit der seriellen Echtdaten-Gruppe oder eben NICHT -- zuzuordnen."""
+    ergebnis: dict[str, tuple[int, int]] = {}
     if not _REPO_DATA_USERS.exists():
-        return {}
-    file_count = 0
-    max_mtime_ns = 0
-    total_size = 0
+        return ergebnis
+    basis = str(_REPO_DATA_USERS)
     try:
-        for dirpath, _dirnames, filenames in os.walk(_REPO_DATA_USERS):
+        for dirpath, _dirnames, filenames in os.walk(basis):
             for fname in filenames:
+                voll = os.path.join(dirpath, fname)
                 try:
-                    st = (Path(dirpath) / fname).stat()
+                    st = os.stat(voll)
                 except OSError:
                     continue
-                file_count += 1
-                max_mtime_ns = max(max_mtime_ns, st.st_mtime_ns)
-                total_size += st.st_size
+                ergebnis[os.path.relpath(voll, basis).replace(os.sep, "/")] = (
+                    st.st_size, st.st_mtime_ns,
+                )
     except OSError:
         return {}
-    return {"file_count": file_count, "max_mtime_ns": max_mtime_ns, "total_size": total_size}
+    return ergebnis
+
+
+def _aggregat(detail: dict[str, tuple[int, int]]) -> dict[str, int]:
+    """Aggregat-Darstellung (wie ``_snapshot_repo_data_users``) fuer Meldungen."""
+    if not detail:
+        return {}
+    return {
+        "file_count": len(detail),
+        "max_mtime_ns": max(m for _s, m in detail.values()),
+        "total_size": sum(s for s, _m in detail.values()),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Issue #3209: parallele Laeufe (pytest-xdist, CI ``-n 4 --dist loadgroup``)
+# ---------------------------------------------------------------------------
+#
+# Serielle Echtdaten-Gruppe: jeder ``real_data_root``-Test bekommt automatisch
+# ``xdist_group("echtdaten")`` (``pytest_collection_modifyitems`` unten); mit
+# ``--dist loadgroup`` laufen alle Gruppen-Tests nacheinander in EINEM Worker.
+#
+# Waechter worker-fest, nicht lockerer (Mechanismus "Gruppen-Journal"):
+#
+# * Der Worker der Gruppe protokolliert, WAEHREND ein Gruppen-Test laeuft
+#   (Setup, Aufruf, Teardown), jeden Schreibzugriff auf den echten
+#   ``data/users``-Baum VOR seiner Ausfuehrung in ein Journal des Laufs
+#   (Python-Audit-Hook: ``open`` zum Schreiben, ``os.remove``, ``os.rename``,
+#   ``os.replace``, ``os.utime``, ``os.truncate``, ``shutil.rmtree`` ...).
+#   Kind-Prozesse eines Gruppen-Tests, die diese conftest laden (innere
+#   pytest-Laeufe), erben das Journal ueber ``GZ_ECHTDATEN_JOURNALE`` und
+#   protokollieren dort jeden ihrer Schreibzugriffe. Kind-Prozesse JEDES
+#   Workers erben es zusaetzlich ueber ``GZ_ECHTDATEN_BEOBACHTUNG`` nur zum
+#   Lesen (ein serieller innerer Lauf laeuft ja ebenfalls parallel zur
+#   Gruppe); wer in ein Journal schreibt, liest es nie zur Entschuldigung.
+# * Der Per-Test-Waechter eines Tests AUSSERHALB der Gruppe vergleicht den
+#   Fingerprint je Datei und zieht nur die Pfade ab, die ein ANDERER Prozess
+#   der Gruppe im Zeitfenster dieses Tests journalisiert hat. Jede andere
+#   Aenderung bleibt ein Fehler -- auch wenn die Gruppe gerade gleichzeitig
+#   schreibt (AC-3). Eigene Schreibzugriffe werden nie entschuldigt.
+# * Der Session-Vergleich laeuft unter xdist im Controller nach dem Ende aller
+#   Worker (Netto-Vergleich ohne jede Ausnahme).
+# * Ohne xdist (lokaler Volllauf, Gate-Form) gibt es kein Journal: jede
+#   Aenderung ist wie bisher ein Fehler (Fingerprint je Datei, also eher
+#   strenger als der fruehere Aggregat-Vergleich).
+
+_ECHTDATEN_GRUPPE = "echtdaten"
+_JOURNAL_ENV = "GZ_ECHTDATEN_JOURNALE"
+# Journale aeusserer Laeufe, die ein Kind-Prozess eines xdist-Workers nur
+# LESEN darf (zum Abzug fremder Gruppen-Schreibzugriffe), siehe
+# ``_erklaerende_journale``.
+_BEOBACHTUNG_ENV = "GZ_ECHTDATEN_BEOBACHTUNG"
+# [Journal, PID] des xdist-Workers, aus dem ein Kind-Prozess stammt (CI-Befund
+# 2026-11-23, siehe ``_fremdlauf``).
+_ELTERN_WORKER_ENV = "GZ_ECHTDATEN_ELTERN_WORKER"
+# Karenz fuer die Reihenfolge "Journal-Eintrag" -> "Schreibzugriff" -> "Vorher-
+# Fingerprint des Beobachters" (Eintrag liegt minimal VOR dem Testbeginn).
+_JOURNAL_KARENZ_S = 1.0
+
+# Eigenes Journal dieses Laufs (nur in einem xdist-Worker gesetzt, siehe
+# ``_redirect_data_root_session``).
+_EIGENES_JOURNAL: Path | None = None
+# Von einem Gruppen-Test eines AEUSSEREN Laufs geerbte Journale:
+# [(journal, quelle_pid), ...] -- hier wird JEDER Schreibzugriff dieses
+# Prozesses auf den echten Baum protokolliert.
+_GEERBTE_JOURNALE: list[tuple[str, int]] = []
+_GRUPPE_AKTIV = False
+_HOOK_INSTALLIERT = False
+
+_SCHREIB_EVENTS = frozenset({
+    "open", "os.remove", "os.rmdir", "os.rename", "os.replace", "os.utime",
+    "os.truncate", "os.link", "os.symlink", "shutil.rmtree", "shutil.copyfile",
+    "shutil.copytree", "shutil.move",
+})
+_SCHREIB_FLAGS = os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_TRUNC | os.O_APPEND
+
+
+def _echte_uhr() -> float:
+    """Wanduhr, die freezegun NICHT verstellt (``time.time`` waere unter
+    ``freeze_time`` eingefroren -- Journal-Zeitfenster zwischen Workern muessen
+    aber auf derselben echten Uhr liegen)."""
+    return time.clock_gettime(time.CLOCK_REALTIME)
+
+
+# Wird in ``pytest_configure`` gesetzt: ``config.workerinput`` existiert nur im
+# xdist-Worker selbst. NICHT ``PYTEST_XDIST_WORKER`` aus der Umgebung lesen --
+# die Variable erbt jeder Kindprozess eines Workers (z. B. ein serieller
+# innerer pytest-Lauf), der sich sonst faelschlich fuer einen Worker hielte
+# und seinen Session-Waechter abschaltete.
+_XDIST_WORKER_ID: str | None = None
+
+
+def _xdist_worker_id() -> str | None:
+    return _XDIST_WORKER_ID
+
+
+def _ist_echtdaten_test(node) -> bool:
+    if node.get_closest_marker("real_data_root"):
+        return True
+    for mark in node.iter_markers("xdist_group"):
+        name = mark.args[0] if mark.args else mark.kwargs.get("name")
+        if name == _ECHTDATEN_GRUPPE:
+            return True
+    return False
+
+
+def _journal_festlegen(tmp_path_factory) -> None:
+    """Gemeinsames Gruppen-Journal des Laufs, nur in einem xdist-Worker. Das
+    basetemp eines Workers ist ``<basetemp des Controllers>/popen-gwN`` -- der
+    Elternordner ist je Lauf eindeutig und allen Workern gemein."""
+    global _EIGENES_JOURNAL
+    if _EIGENES_JOURNAL is None and _xdist_worker_id():
+        _EIGENES_JOURNAL = (
+            tmp_path_factory.getbasetemp().parent / "gz-echtdaten-journal.jsonl"
+        )
+        # Kind-Prozesse dieses Workers (z. B. ein serieller innerer pytest-Lauf
+        # eines Tests AUSSERHALB der Gruppe) laufen ebenfalls parallel zur
+        # Gruppe und duerfen deren Schreibzugriffe nicht sich selbst anlasten.
+        os.environ[_BEOBACHTUNG_ENV] = json.dumps(
+            sorted({*_GEERBTE_BEOBACHTUNG, str(_EIGENES_JOURNAL)})
+        )
+        os.environ[_ELTERN_WORKER_ENV] = json.dumps([str(_EIGENES_JOURNAL), os.getpid()])
+
+
+def _lies_geerbte_journale() -> list[tuple[str, int]]:
+    roh = os.environ.get(_JOURNAL_ENV, "")
+    if not roh:
+        return []
+    try:
+        return [(str(j), int(q)) for j, q in json.loads(roh)]
+    except (ValueError, TypeError):
+        return []
+
+
+def _pfad_text(wert) -> str | None:
+    if isinstance(wert, int) or wert is None:
+        return None
+    try:
+        return os.fsdecode(wert)
+    except TypeError:
+        return None
+
+
+def _rel_im_echtbaum(wert, dir_fd=None) -> str | None:
+    text = _pfad_text(wert)
+    # Audit-Events melden "kein dir_fd" als -1 (bzw. AT_FDCWD -100), nicht None.
+    ohne_dir_fd = dir_fd is None or dir_fd in (-1, -100)
+    if text is None or (not ohne_dir_fd and not os.path.isabs(text)):
+        return None
+    voll = os.path.abspath(text)
+    basis = str(_REPO_DATA_USERS)
+    if voll == basis:
+        return "."
+    if voll.startswith(basis + os.sep):
+        return voll[len(basis) + 1:].replace(os.sep, "/")
+    return None
+
+
+def _schreibziele(event: str, args: tuple) -> list[tuple[str, str]]:
+    """[(art, relativer Pfad)] eines Audit-Events; art "datei" oder "baum"."""
+    if event == "open":
+        pfad, modus, flags = (tuple(args) + (None, None, None))[:3]
+        schreibend = (
+            any(c in modus for c in "wax+") if isinstance(modus, str)
+            else isinstance(flags, int) and bool(flags & _SCHREIB_FLAGS)
+        )
+        if not schreibend:
+            return []
+        rel = _rel_im_echtbaum(pfad)
+        return [("datei", rel)] if rel else []
+    if event in ("os.remove", "os.utime", "os.truncate"):
+        dir_fd = args[-1] if event != "os.truncate" and len(args) > 1 else None
+        rel = _rel_im_echtbaum(args[0] if args else None, dir_fd)
+        return [("datei", rel)] if rel else []
+    if event == "os.rmdir":
+        # Verzeichnisse zaehlen im Fingerprint nicht; ein (evtl. scheiterndes)
+        # rmdir darf keinen ganzen Teilbaum entschuldigen.
+        rel = _rel_im_echtbaum(args[0] if args else None, args[1] if len(args) > 1 else None)
+        return [("datei", rel)] if rel else []
+    if event == "shutil.rmtree":
+        rel = _rel_im_echtbaum(args[0] if args else None, args[1] if len(args) > 1 else None)
+        return [("baum", rel)] if rel else []
+    # Zwei-Pfad-Events: Quelle und Ziel (os.rename/os.replace/os.link tragen
+    # danach je ein dir_fd fuer Quelle und Ziel)
+    ziele = []
+    fds = list(args[2:4]) if event in ("os.rename", "os.replace", "os.link") else []
+    fds += [None, None]
+    for wert, dir_fd in zip(args[:2], fds):
+        rel = _rel_im_echtbaum(wert, dir_fd)
+        if rel:
+            ziele.append(("baum" if event in ("shutil.copytree", "shutil.move") else "datei", rel))
+    return ziele
+
+
+_HOOK_ZUSTAND = threading.local()
+
+
+def _journal_hook(event: str, args: tuple) -> None:
+    if event not in _SCHREIB_EVENTS:
+        return
+    if not (_GRUPPE_AKTIV or _GEERBTE_JOURNALE):
+        return
+    if getattr(_HOOK_ZUSTAND, "drin", False):
+        return
+    _HOOK_ZUSTAND.drin = True
+    try:
+        ziele = _schreibziele(event, args)
+        if not ziele:
+            return
+        jetzt = _echte_uhr()
+        ausgaben = list(_GEERBTE_JOURNALE)
+        if _GRUPPE_AKTIV and _EIGENES_JOURNAL is not None:
+            ausgaben.append((str(_EIGENES_JOURNAL), os.getpid()))
+        for journal, quelle in ausgaben:
+            zeilen = "".join(
+                json.dumps({"t": jetzt, "quelle": quelle, "art": art, "pfad": rel}) + "\n"
+                for art, rel in ziele
+            )
+            try:
+                fd = os.open(journal, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+                try:
+                    os.write(fd, zeilen.encode("utf-8"))
+                finally:
+                    os.close(fd)
+            except OSError:
+                pass
+    except Exception:  # noqa: BLE001 -- ein Audit-Hook darf nie werfen
+        pass
+    finally:
+        _HOOK_ZUSTAND.drin = False
+
+
+def _hook_installieren() -> None:
+    global _HOOK_INSTALLIERT
+    if not _HOOK_INSTALLIERT:
+        sys.addaudithook(_journal_hook)
+        _HOOK_INSTALLIERT = True
+
+
+# Kind-Prozess eines Gruppen-Tests (innerer pytest-Lauf): ab dem Import dieser
+# conftest jeden Schreibzugriff auf den echten Baum ins aeussere Journal.
+_GEERBTE_JOURNALE = _lies_geerbte_journale()
+if _GEERBTE_JOURNALE:
+    _hook_installieren()
+
+
+def _lies_geerbte_beobachtung() -> list[str]:
+    try:
+        return [str(j) for j in json.loads(os.environ.get(_BEOBACHTUNG_ENV, "") or "[]")]
+    except (ValueError, TypeError):
+        return []
+
+
+_GEERBTE_BEOBACHTUNG = _lies_geerbte_beobachtung()
+
+
+def _lies_eltern_worker() -> tuple[str, int] | None:
+    try:
+        journal, pid = json.loads(os.environ.get(_ELTERN_WORKER_ENV, "") or "null")
+        return str(journal), int(pid)
+    except (ValueError, TypeError):
+        return None
+
+
+# Beim IMPORT lesen: ein innerer xdist-Worker ueberschreibt die Variable spaeter
+# fuer seine eigenen Kinder (``_journal_festlegen``).
+_ELTERN_WORKER = _lies_eltern_worker()
+
+
+def _fremdlauf() -> bool:
+    """CI-Befund 2026-11-23: dieser Prozess ist ein innerer pytest-Lauf, den
+    ein Test AUSSERHALB der Echtdaten-Gruppe in einem xdist-Worker gestartet
+    hat (``test_issue_1014_live_optin.py`` fuehrte so ``test_issue_1001``
+    samt Budget-Spur unter ``data/users/default`` aus). Erkennbar daran, dass
+    das Journal des startenden Workers NICHT unter den geerbten
+    Gruppen-Journalen ist -- nur ein laufender Gruppen-Test vererbt es.
+    Seine Schreibzugriffe stuenden in keinem Journal und liefen parallel zur
+    seriellen Gruppe: der Waechter eines Unbeteiligten schluege an."""
+    if _ELTERN_WORKER is None:
+        return False
+    return _ELTERN_WORKER[0] not in {j for j, _q in _GEERBTE_JOURNALE}
+
+
+def _melde_fremdlauf(nodeid: str) -> None:
+    """Meldung ins Journal des startenden Workers -- dessen Test wird rot,
+    auch wenn er den Exit-Code seines inneren Laufs ignoriert."""
+    journal, ziel = _ELTERN_WORKER
+    zeile = json.dumps({
+        "t": _echte_uhr(), "quelle": os.getpid(), "art": "fremdlauf",
+        "ziel": ziel, "test": nodeid,
+    }) + "\n"
+    try:
+        fd = os.open(journal, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+        try:
+            os.write(fd, zeile.encode("utf-8"))
+        finally:
+            os.close(fd)
+    except OSError:
+        pass
+
+
+def _fremdlauf_meldungen(seit: float) -> list[str]:
+    """Tests, die ein Kind-Prozess DIESES Workers seit ``seit`` als
+    Fremdlauf abgewiesen hat."""
+    if _EIGENES_JOURNAL is None:
+        return []
+    try:
+        zeilen = _EIGENES_JOURNAL.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    tests = []
+    for zeile in zeilen:
+        try:
+            eintrag = json.loads(zeile)
+        except ValueError:
+            continue
+        if (eintrag.get("art") == "fremdlauf" and eintrag.get("ziel") == os.getpid()
+                and eintrag.get("t", 0) >= seit):
+            tests.append(str(eintrag.get("test")))
+    return tests
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_setup(item):
+    """Vor JEDER Fixture (auch modul-scope): ein ``real_data_root``-Test laeuft
+    in einem Fremdlauf nicht -- er schriebe ungeordnet neben der seriellen
+    Gruppe in den echten Baum."""
+    if item.get_closest_marker("real_data_root") and _fremdlauf():
+        _melde_fremdlauf(item.nodeid)
+        pytest.fail(
+            "Issue #3209: real_data_root-Test in einem inneren pytest-Lauf, den "
+            "ein Test AUSSERHALB der seriellen Echtdaten-Gruppe gestartet hat -- "
+            "er wird nicht ausgefuehrt. Abhilfe: den startenden Test mit "
+            '@pytest.mark.xdist_group("echtdaten") markieren.',
+            pytrace=False,
+        )
+
+
+def _erklaerende_journale() -> list[str]:
+    """Journale, deren Eintraege eine Aenderung am echten Baum erklaeren:
+    das eigene Lauf-Journal (xdist-Worker) und die geerbten Beobachtungs-
+    Journale -- AUSSER denen, in die dieser Prozess selbst schreibt (ein
+    Kind-Prozess eines Gruppen-Tests darf seine eigenen Schreibzugriffe nie
+    entschuldigen; er bleibt so streng wie ein serieller Lauf)."""
+    selbst = {j for j, _q in _GEERBTE_JOURNALE}
+    journale = [str(_EIGENES_JOURNAL)] if _EIGENES_JOURNAL is not None else []
+    journale += [j for j in _GEERBTE_BEOBACHTUNG if j not in selbst and j not in journale]
+    return journale
+
+
+def _journal_erklaert(seit: float) -> tuple[set[str], list[str]]:
+    """(exakte Pfade, Teilbaum-Praefixe), die ANDERE Prozesse einer
+    Echtdaten-Gruppe seit ``seit`` (minus Karenz) journalisiert haben."""
+    dateien: set[str] = set()
+    baeume: list[str] = []
+    grenze = seit - _JOURNAL_KARENZ_S
+    eigene_pid = os.getpid()
+    for journal in _erklaerende_journale():
+        try:
+            zeilen = Path(journal).read_text(encoding="utf-8").splitlines()
+        except OSError:
+            continue
+        for zeile in zeilen:
+            try:
+                eintrag = json.loads(zeile)
+            except ValueError:
+                continue
+            if eintrag.get("t", 0) < grenze or eintrag.get("quelle") == eigene_pid:
+                continue
+            if eintrag.get("art") == "baum":
+                baeume.append(eintrag["pfad"])
+            elif eintrag.get("art") == "datei":
+                dateien.add(eintrag["pfad"])
+    return dateien, baeume
+
+
+def _unerklaerte_aenderungen(
+    vorher: dict[str, tuple[int, int]], nachher: dict[str, tuple[int, int]], seit: float,
+) -> list[str]:
+    """Geaenderte Pfade, die NICHT der Echtdaten-Gruppe eines anderen Prozesses
+    zuzuordnen sind. Ohne Journal (normaler serieller Lauf) ist jede Aenderung
+    unerklaert."""
+    geaendert = sorted(p for p in vorher.keys() | nachher.keys() if vorher.get(p) != nachher.get(p))
+    if not geaendert or not _erklaerende_journale():
+        return geaendert
+    dateien, baeume = _journal_erklaert(seit)
+    return [
+        p for p in geaendert
+        if p not in dateien
+        and not any(b == "." or p == b or p.startswith(b + "/") for b in baeume)
+    ]
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_collection_modifyitems(config, items):
+    """Issue #3209: jeder ``real_data_root``-Test gehoert automatisch zur
+    seriellen ``xdist_group("echtdaten")``. ``tryfirst``, damit xdist (das die
+    Gruppe in die Knoten-ID schreibt) die Markierung bereits sieht. Eine
+    zusaetzliche FREMDE Gruppe wuerde xdist zu einer eigenen Gruppe
+    zusammensetzen und den Test aus der seriellen Gruppe holen -- das ist ein
+    Widerspruch und bricht die Sammlung ab."""
+    for item in items:
+        if not item.get_closest_marker("real_data_root"):
+            continue
+        fremde = sorted({
+            str(m.args[0] if m.args else m.kwargs.get("name", "default"))
+            for m in item.iter_markers("xdist_group")
+        } - {_ECHTDATEN_GRUPPE})
+        if fremde:
+            raise pytest.UsageError(
+                f"Issue #3209: {item.nodeid} traegt real_data_root UND die "
+                f"fremde xdist_group {fremde} -- real_data_root-Tests laufen "
+                f"ausschliesslich in der seriellen Gruppe '{_ECHTDATEN_GRUPPE}'."
+            )
+        if not any(
+            (m.args[0] if m.args else m.kwargs.get("name")) == _ECHTDATEN_GRUPPE
+            for m in item.iter_markers("xdist_group")
+        ):
+            item.add_marker(pytest.mark.xdist_group(_ECHTDATEN_GRUPPE))
+
+
+class _XdistGruppenSuffix:
+    """Issue #3209: ``--dist loadgroup`` gruppiert nach dem Suffix ``@<gruppe>``
+    in der Knoten-ID, den pytest-xdist (3.8.0) im Worker ueber
+    ``item._nodeid`` setzt. Seit pytest 9 liest ``item.nodeid`` aber
+    ``item._id`` (strukturierte ``NodeId``) -- die Zuweisung von xdist ist
+    wirkungslos, JEDER Test wird zu einer eigenen Arbeitseinheit und
+    ``xdist_group`` faellt still aus (nachgemessen: auch eine nackte Datei
+    ohne diese conftest verteilt eine Gruppe auf zwei Worker).
+
+    Dieses Plugin setzt den Suffix deshalb selbst -- ``trylast``, also nach
+    allen Abwahlen (``--deselect``, ``-k``, ``-m``) und nach dem xdist-Hook.
+    Traegt die Knoten-ID schon einen Suffix (aeltere pytest-Version, bei der
+    xdist selbst greift), bleibt sie unveraendert."""
+
+    @pytest.hookimpl(trylast=True)
+    def pytest_collection_modifyitems(self, config, items):
+        if not getattr(config.option, "loadgroup", False):
+            return
+        for item in items:
+            namen = sorted({
+                str(m.args[0] if m.args else m.kwargs.get("name", "default"))
+                for m in item.iter_markers("xdist_group")
+            })
+            if not namen:
+                continue
+            nodeid = item.nodeid
+            if nodeid.rfind("@") > nodeid.rfind("]"):
+                continue
+            _knoten_id_setzen(item, f"{nodeid}@{'_'.join(namen)}")
+
+
+def _knoten_id_setzen(item, neu: str) -> None:
+    alt = getattr(item, "_id", None)
+    if alt is None:  # pytest < 9
+        item._nodeid = neu
+        return
+    kopie = dataclasses.replace(alt)
+    # ``NodeId`` ist eingefroren; ``__str__`` liefert den zwischengespeicherten
+    # Text, Vergleich/Hash ignorieren ihn (``compare=False``).
+    object.__setattr__(kopie, "_str_cache", neu)
+    item._id = kopie
+
+
+def pytest_configure(config):
+    global _XDIST_WORKER_ID
+    workerinput = getattr(config, "workerinput", None)
+    _XDIST_WORKER_ID = workerinput.get("workerid") if workerinput else None
+    if not config.pluginmanager.has_plugin("gz-xdist-gruppen-suffix"):
+        config.pluginmanager.register(_XdistGruppenSuffix(), "gz-xdist-gruppen-suffix")
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_protocol(item, nextitem):
+    """Issue #3209: im xdist-Worker der Echtdaten-Gruppe das Journal waehrend
+    des GESAMTEN Testprotokolls (Setup, Aufruf, Teardown) fuehren und an
+    Kind-Prozesse vererben."""
+    global _GRUPPE_AKTIV
+    if not (_xdist_worker_id() and _ist_echtdaten_test(item)):
+        yield
+        return
+    # Der erste Test eines Workers laeuft VOR jeder Session-Fixture -- das
+    # Journal deshalb hier schon festlegen.
+    _journal_festlegen(item.config._tmp_path_factory)
+    _hook_installieren()
+    alt = os.environ.get(_JOURNAL_ENV)
+    os.environ[_JOURNAL_ENV] = json.dumps(
+        [*_GEERBTE_JOURNALE, (str(_EIGENES_JOURNAL), os.getpid())]
+    )
+    _GRUPPE_AKTIV = True
+    try:
+        yield
+    finally:
+        _GRUPPE_AKTIV = False
+        if alt is None:
+            os.environ.pop(_JOURNAL_ENV, None)
+        else:
+            os.environ[_JOURNAL_ENV] = alt
+
+
+def _ist_xdist_controller(config) -> bool:
+    return (
+        not hasattr(config, "workerinput")
+        and config.pluginmanager.hasplugin("dsession")
+    )
+
+
+_CONTROLLER_VORHER: dict | None = None
+_CONTROLLER_BEGINN = 0.0
+
+
+def pytest_sessionstart(session):
+    """Issue #3209: Session-Waechter des xdist-Controllers -- Materialisierung
+    (unter Sperre) und Vorher-Fingerprint, bevor ein Worker einen Test
+    ausfuehrt."""
+    global _CONTROLLER_VORHER, _CONTROLLER_BEGINN
+    if not _ist_xdist_controller(session.config):
+        return
+    _materialisiere_echtdaten()
+    _CONTROLLER_BEGINN = _echte_uhr()
+    _CONTROLLER_VORHER = _detail_snapshot_repo_data_users()
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Issue #3209: Netto-Vergleich nach dem Ende ALLER Worker; jede bleibende
+    Aenderung am echten Baum laesst den Lauf scheitern (wie der serielle
+    Session-Waechter ``_guard_repo_data_users_session``). Das eigene
+    Gruppen-Journal des Laufs zaehlt hier NICHT (der Controller hat keins):
+    auch eine Spur, die die Gruppe selbst hinterlassen hat, ist ein Fehler."""
+    if _CONTROLLER_VORHER is None or not _ist_xdist_controller(session.config):
+        return
+    nachher = _detail_snapshot_repo_data_users()
+    if nachher == _CONTROLLER_VORHER or not _unerklaerte_aenderungen(
+        _CONTROLLER_VORHER, nachher, _CONTROLLER_BEGINN,
+    ):
+        return
+    meldung = "ERROR (xdist-Controller) " + _session_waechter_meldung(
+        _aggregat(_CONTROLLER_VORHER), _aggregat(nachher),
+    )
+    reporter = session.config.pluginmanager.get_plugin("terminalreporter")
+    if reporter is not None:
+        reporter.write_sep("=", "Echtbaum-Waechter (Issue #2226/#3209)", red=True)
+        reporter.write_line(meldung, red=True)
+    else:
+        print(meldung)
+    session.exitstatus = pytest.ExitCode.TESTS_FAILED
 
 
 _BUDGET_SPUR_MUSTER = "*/diagnostics/forecast_budget.json*"
@@ -525,22 +1178,39 @@ def _isolate_data_root(request, tmp_path_factory):
     isolated_root = tmp_path_factory.mktemp("data_root")
     loader._DATA_ROOT = str(isolated_root)
 
-    before_snapshot = _snapshot_repo_data_users()
+    # Issue #3209: Fingerprint je Datei; Startzeit auf der echten Uhr fuer das
+    # Zeitfenster im Gruppen-Journal (nur unter xdist relevant).
+    beginn = _echte_uhr()
+    before_snapshot = _detail_snapshot_repo_data_users()
     yield
     loader._DATA_ROOT = before
 
-    after_snapshot = _snapshot_repo_data_users()
-    if after_snapshot != before_snapshot:
+    abgewiesen = _fremdlauf_meldungen(beginn)
+    if abgewiesen:
         pytest.fail(
-            "Issue #1265 Teil C (F003-Fix): dieser Test hat unter dem "
-            f"ECHTEN {_REPO_DATA_USERS} geschrieben (vorher: "
-            f"{before_snapshot}, nachher: {after_snapshot}). "
-            "Kern-Tests duerfen nur ueber die isolierte "
-            "app.loader.get_data_dir()-Basis bzw. tmp_path schreiben. "
-            "Abhilfe: Pfad-Quelle auf get_data_dir()/tmp_path umstellen, "
-            "oder falls der Test bewusst den echten Baum braucht: "
-            "@pytest.mark.real_data_root setzen."
+            "Issue #3209: dieser Test startet einen inneren pytest-Lauf mit "
+            f"real_data_root-Tests ({abgewiesen[:3]}), gehoert aber nicht zur "
+            "seriellen Echtdaten-Gruppe -- unter xdist schrieben sie parallel zur "
+            "Gruppe ohne Journal in den echten Baum. Abhilfe: "
+            '@pytest.mark.xdist_group("echtdaten") an diesem Test.'
         )
+
+    after_snapshot = _detail_snapshot_repo_data_users()
+    if after_snapshot != before_snapshot:
+        unerklaert = _unerklaerte_aenderungen(before_snapshot, after_snapshot, beginn)
+        if unerklaert:
+            pytest.fail(
+                "Issue #1265 Teil C (F003-Fix): dieser Test hat unter dem "
+                f"ECHTEN {_REPO_DATA_USERS} geschrieben (vorher: "
+                f"{_aggregat(before_snapshot)}, nachher: "
+                f"{_aggregat(after_snapshot)}; geaenderte Pfade: "
+                f"{unerklaert[:10]}). "
+                "Kern-Tests duerfen nur ueber die isolierte "
+                "app.loader.get_data_dir()-Basis bzw. tmp_path schreiben. "
+                "Abhilfe: Pfad-Quelle auf get_data_dir()/tmp_path umstellen, "
+                "oder falls der Test bewusst den echten Baum braucht: "
+                "@pytest.mark.real_data_root setzen."
+            )
 
 
 _EGRESS_SETTINGS = None

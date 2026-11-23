@@ -21,6 +21,13 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 MIGRATION_SCRIPT = PROJECT_ROOT / "scripts" / "migrate_start_time_canonical.py"
 
+# Issue #3209: Die Migration legt Backups fest unter PROJECT_ROOT/.backups/ an
+# (nicht konfigurierbar). Die Tests vergleichen Archiv-Mengen vorher/nachher
+# und raeumen per autouse-Fixture auf -- parallel auf mehreren xdist-Workern
+# saehen bzw. loeschten sie die Archive des Nachbarn. Daher eine gemeinsame
+# serielle Gruppe fuer alle Tests am geteilten Repo-Ordner .backups/.
+pytestmark = pytest.mark.xdist_group("repo_backups")
+
 
 @pytest.fixture(autouse=True)
 def _cleanup_test_backups():

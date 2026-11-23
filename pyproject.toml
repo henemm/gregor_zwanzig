@@ -87,4 +87,5 @@ dev = [
     "playwright>=1.57.0",
     "pytest-socket>=0.8.0",
     "freezegun>=1.5.0",
+    "pytest-xdist>=3.8.0",
 ]

@@ -10,7 +10,9 @@ from pathlib import Path
 
 import pytest
 
-DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "users" / "default" / "gpx"
+# Issue #3209: committete Quelle statt der materialisierten Kopie im echten
+# data/users-Baum (parallel zur seriellen Echtdaten-Gruppe lesbar).
+DATA_DIR = Path(__file__).resolve().parent.parent / "fixtures" / "data_root" / "users" / "default" / "gpx"
 GPX_TAG1 = DATA_DIR / "2026-01-17_2753214331_Tag 1_ von Valldemossa nach Deià.gpx"
 GPX_TAG4 = DATA_DIR / "2026-01-17_2753228656_Tag 4_ von Tossals Verds nach Lluc.gpx"
 
@@ -139,10 +141,7 @@ class TestGpxToStageDataInvalid:
 
 # Real GPX files from the worktree — used for Multi-Import tests below.
 # These exist at data/users/default/gpx/ in the worktree.
-REAL_GPX_DIR = (
-    Path(__file__).resolve().parent.parent.parent
-    / "data" / "users" / "default" / "gpx"
-)
+REAL_GPX_DIR = DATA_DIR  # Issue #3209: committete Quelle (siehe oben)
 REAL_GPX_TAG1 = REAL_GPX_DIR / "2026-01-17_2753214331_Tag 1_ von Valldemossa nach Deià.gpx"
 REAL_GPX_TAG2 = REAL_GPX_DIR / "2026-01-17_2753216748_Tag 2_ von Deià nach Sóller.gpx"
 REAL_GPX_TAG3 = REAL_GPX_DIR / "2026-01-17_2753225520_Tag 3_ von Sóller nach Tossals Verds.gpx"

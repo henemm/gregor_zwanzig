@@ -138,6 +138,12 @@ def test_ac5_no_web_main_in_hooks():
     )
 
 
+# Issue #3209 (CI-Befund 2026-11-23, Parallel-Last in CI): der Test sammelt per
+# Subprozess die GANZE Suite; seriell ca. 16 s (lokal gemessen 2026-11-23), unter
+# `-n 4` teilt er sich die 4 Kerne des CI-Runners mit drei Workern und riss den
+# globalen `timeout = 30`. 120 s = ca. 7x serielle Laufzeit (Faktor ~4 fuer die
+# Kernteilung plus Wachstum der Sammlung). Die Zusicherung bleibt unveraendert.
+@pytest.mark.timeout(120)
 def test_ac7_collection_clean():
     """AC-7: pytest --collect-only laeuft ohne Collection-Errors.
 

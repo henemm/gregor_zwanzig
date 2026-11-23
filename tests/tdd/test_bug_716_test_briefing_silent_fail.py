@@ -32,6 +32,11 @@ from pathlib import Path
 
 import pytest
 
+# Issue #3209: das Modul beruehrt den ECHTEN data/users-Baum (REPO_ROOT /
+# "data" / "users") -- unter xdist laeuft es in der seriellen Echtdaten-Gruppe;
+# Datenwurzel-Isolation und Per-Test-Waechter bleiben unveraendert aktiv.
+pytestmark = pytest.mark.xdist_group("echtdaten")
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 

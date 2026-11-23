@@ -22,6 +22,13 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
+import pytest
+
+# Issue #3209: das Modul beruehrt den ECHTEN data/users-Baum (Path(__file__)
+# ... / "data" / "users") -- unter xdist laeuft es in der seriellen
+# Echtdaten-Gruppe; Datenwurzel-Isolation und Per-Test-Waechter bleiben aktiv.
+pytestmark = pytest.mark.xdist_group("echtdaten")
+
 from app.config import Settings
 from app.models import TripReportConfig
 from app.trip import Stage, Trip, Waypoint

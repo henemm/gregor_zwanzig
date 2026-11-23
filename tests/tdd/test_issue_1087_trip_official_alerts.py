@@ -34,7 +34,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # Issue #1210 B1: echter Versand + IMAP-Verifikation -> addopts-wirksamer
 # Marker statt nur Credential-Skip (primaere Ausschlussmechanik).
-pytestmark = pytest.mark.email
+# Issue #3209: beruehrt den ECHTEN data/users-Baum (REPO_ROOT / "data" /
+# "users") -- unter xdist in der seriellen Echtdaten-Gruppe.
+pytestmark = [pytest.mark.email, pytest.mark.xdist_group("echtdaten")]
 
 
 # Issue #1196 Klasse B: kein modulweites `load_dotenv()` mehr (lief beim

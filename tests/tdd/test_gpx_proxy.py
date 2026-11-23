@@ -8,8 +8,12 @@ SPEC: docs/specs/modules/gpx_proxy.md
 """
 from pathlib import Path
 
-# Sample GPX file for testing (real Komoot GPX from data/)
-_SAMPLE_GPX = Path("data/users/default/gpx/2026-01-17_2753214331_Tag 1_ von Valldemossa nach Deià.gpx")
+# Sample GPX file for testing (real Komoot GPX). Issue #3209: committete
+# Quelle statt der materialisierten Kopie im echten data/users-Baum.
+_SAMPLE_GPX = (
+    Path(__file__).resolve().parents[1] / "fixtures" / "data_root" / "users" / "default" / "gpx"
+    / "2026-01-17_2753214331_Tag 1_ von Valldemossa nach Deià.gpx"
+)
 
 
 # ============================================================================

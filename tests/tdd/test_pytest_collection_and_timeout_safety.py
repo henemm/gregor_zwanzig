@@ -364,6 +364,10 @@ def test_default_selection_excludes_b1_live_leak_files(
         )
 
 
+# Issue #3209: liest mtimes im ECHTEN data/users-Baum -- unter xdist in der
+# seriellen Echtdaten-Gruppe (dort entfernt ein Gruppen-Test die
+# materialisierten Kopien kurzzeitig).
+@pytest.mark.xdist_group("echtdaten")
 def test_friendly_format_footgun_not_collected_by_default(default_collect):
     """GIVEN test_e2e_friendly_format_config.py (Docstring: NICHT als pytest)
     WHEN Standardselektion sammelt THEN keine Test-ID (AC-3, Collection-Teil)

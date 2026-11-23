@@ -26,6 +26,13 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 SPEC = REPO / "docs/specs/modules/external_validator_auth.md"
 
+# Issue #3209: ``hide_validator_env`` benennt die feste Repo-Datei
+# .claude/validator.env voruebergehend um. Zwei Tests dieser Datei nutzen das;
+# parallel auf zwei xdist-Workern stellte der eine die Datei wieder her,
+# waehrend der andere noch "ohne Credentials" prueft. Daher eine gemeinsame
+# serielle Gruppe fuer alle Tests an dieser geteilten Datei.
+pytestmark = pytest.mark.xdist_group("repo_validator_env")
+
 
 @pytest.fixture
 def hide_validator_env():
