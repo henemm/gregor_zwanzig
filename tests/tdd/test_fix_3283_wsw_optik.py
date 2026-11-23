@@ -18,9 +18,13 @@ import re
 
 import pytest
 
-from tests.tdd.test_placements_tabelle_endpoint import (  # noqa: F401  (Fixture)
-    NUTZER_A, NUTZER_B, _ok, _orte, _sprache, _trip, _zeile, client,
+from tests.tdd import test_placements_tabelle_endpoint as _endpoint
+from tests.tdd.test_placements_tabelle_endpoint import (
+    NUTZER_A, NUTZER_B, _ok, _orte, _sprache, _trip, _zeile,
 )
+
+# Fixture des Endpoint-Tests wiederverwenden (pytest findet sie über den Modulnamen).
+client = _endpoint.client
 
 NUTZER = (NUTZER_A, NUTZER_B)
 
