@@ -151,7 +151,7 @@ HomeHero*- und Kachel-Paare mit dem Löschen der Dateien. S3 hat nichts mehr zu 
 ersetzt die Inline-Heros durch das neutrale `routes/_home/HomeHero.svelte`, benennt
 `shared/CompareOutlookLayoutControls` neutral in `shared/OutlookLayoutControls` um und verschiebt
 die compare-eigene Stundenverlauf-Steuerung nach `compare/CompareHourlyLayoutControls.svelte`
-(mit `gz-eigenstaendig:`-Kopfzeile) — `shared/` enthält keine `Compare*`-Komponente mehr.
+(mit `gz-eigenstaendig:`-Kopfzeile; seit #3276 gelöscht) — `shared/` enthält keine `Compare*`-Komponente mehr.
 
 **Beleg:** 8 Paare außerhalb der alten Reichweite (Aufmaß 2026-10-23, nachgemessen Adversary F003),
 die die Ordner-Erkennung nicht fangen konnte.
