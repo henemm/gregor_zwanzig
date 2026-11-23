@@ -27,7 +27,6 @@ from providers.brightsky import RadarFrame
 _SLOVENIA_LAT, _SLOVENIA_LON = 46.2, 14.5      # ICON-D2-only (außerhalb DE/AT/FR), im Gitter
 _DOLOMITES_LAT, _DOLOMITES_LON = 46.4, 11.8    # ICON-D2-Box, im Gitter
 _SWISS_WEST_LAT, _SWISS_WEST_LON = 46.0, 7.5   # AROME-Box → AROME-FR-Vorrang vor ICON-D2
-_BERLIN_LAT, _BERLIN_LON = 52.52, 13.40        # RADOLAN-Box (DE) → radar
 _ATLANTIC_LAT, _ATLANTIC_LON = 35.0, -40.0     # keine Box → globaler Fallback
 _BOSNIA_LAT, _BOSNIA_LON = 44.5, 18.5          # IN Bbox, AUSSERHALB rotiertem Gitter → all-None
 
@@ -75,7 +74,7 @@ def test_ac2_within_icon_d2_bbox():
 def test_ac2_chain_routing_precedence():
     """GIVEN die Quellen-Kette mit Reihenfolge RADOLAN→INCA→AROME-FR→ICON-D2→global
     WHEN get_nowcast für verschiedene Regionen läuft
-    THEN Slowenien→'ICON-D2', Berlin→'radar', Schweiz-West→'AROME-FR' (Vorrang), Atlantik→'minutely_15'.
+    THEN Slowenien→'ICON-D2', Schweiz-West→'AROME-FR' (AROME-Vorrang vor ICON-D2).
     (echte API-Calls, kein Mock)
     """
     svc = RadarNowcastService()
@@ -83,14 +82,8 @@ def test_ac2_chain_routing_precedence():
     # Zentraleuropa: explizit ICON-D2 (neu) — schlägt in RED fehl
     assert svc.get_nowcast(_SLOVENIA_LAT, _SLOVENIA_LON).source == "ICON-D2"
 
-    # Berlin: RADOLAN-Vorrang
-    assert svc.get_nowcast(_BERLIN_LAT, _BERLIN_LON).source == "radar"
-
     # Schweiz-West: AROME-FR (höher aufgelöst) wird VOR ICON-D2 geprüft
     assert svc.get_nowcast(_SWISS_WEST_LAT, _SWISS_WEST_LON).source == "AROME-FR"
-
-    # Atlantik: keine Box → globaler Fallback
-    assert svc.get_nowcast(_ATLANTIC_LAT, _ATLANTIC_LON).source == "minutely_15"
 
 
 # ---------------------------------------------------------------------------

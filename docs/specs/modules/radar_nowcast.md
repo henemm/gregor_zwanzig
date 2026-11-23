@@ -99,7 +99,7 @@ def select_nowcast_source(lat, lon):
 | AC | Testfunktion |
 |----|--------------|
 | AC-1 | `test_ac1_brightsky_fetch_radar_returns_real_frames` |
-| AC-2 | `test_ac2_intensity_to_text_levels`, `test_ac2_format_now_text_mentions_onset_and_source`, `test_ac2_format_now_text_dry` |
+| AC-2 | `tests/tdd/test_feature_660_convective_stage.py::test_ac1_intensity_non_convective_unchanged`, `test_ac2_format_now_text_mentions_onset_and_source`, `test_ac2_format_now_text_dry` |
 | AC-3 | `test_ac3_now_command_returns_nowcast_under_10s`, `test_ac3_now_command_without_today_stage_gives_clear_message` |
 | AC-4 | `test_ac4_radar_alert_due_pure_logic`, `test_ac4_check_radar_alerts_sends_once_then_throttles` |
 
