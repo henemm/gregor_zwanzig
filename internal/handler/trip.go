@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -150,11 +152,27 @@ func etappenTempoUngueltig(stages []model.Stage) bool {
 	return false
 }
 
+// feldpfadOhneIndex entfernt rein numerische Segmente aus einem JSON-Feldpfad
+// (Issue #3294): Go 1.25 meldet in UnmarshalTypeError.Field
+// "stages.grundtempo_kmh", Go 1.27 mit Array-Index "stages.1.grundtempo_kmh".
+// Ohne Index vergleichen macht die 422-Erkennung versionsunabhaengig.
+func feldpfadOhneIndex(feld string) string {
+	teile := strings.Split(feld, ".")
+	behalten := teile[:0]
+	for _, t := range teile {
+		if _, err := strconv.Atoi(t); err == nil {
+			continue
+		}
+		behalten = append(behalten, t)
+	}
+	return strings.Join(behalten, ".")
+}
+
 // writeTripDecodeError: falscher Typ fuer stages[].grundtempo_kmh ("3", true)
 // -> 422 (Issue #3197, AC-8); jeder andere Dekodierfehler bleibt 400.
 func writeTripDecodeError(w http.ResponseWriter, r *http.Request, err error) {
 	var te *json.UnmarshalTypeError
-	if errors.As(err, &te) && te.Field == "stages.grundtempo_kmh" {
+	if errors.As(err, &te) && feldpfadOhneIndex(te.Field) == "stages.grundtempo_kmh" {
 		WriteError(w, r, http.StatusUnprocessableEntity, "invalid_params", nil)
 		return
 	}

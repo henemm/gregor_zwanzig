@@ -15,17 +15,44 @@ import (
 	"github.com/henemm/gregor-api/internal/resolver"
 )
 
+// lauscheAufNichtFreigegebenemLoopback lauscht auf "<host>:0" fuer den ersten
+// nutzbaren Kandidaten und gibt Listener und Host zurueck (Issue #3294).
+// Hintergrund: macOS kennt auf lo0 nur 127.0.0.1 und ::1, 127.0.0.2 fehlt dort;
+// 127.0.0.1 taugt nicht, weil der Egress-Waechter es freigibt. Ist kein
+// Kandidat nutzbar, wird der Test mit Begruendung uebersprungen.
+func lauscheAufNichtFreigegebenemLoopback(t *testing.T, kandidaten ...string) (net.Listener, string) {
+	t.Helper()
+	var fehler []string
+	for _, host := range kandidaten {
+		ln, err := net.Listen("tcp", net.JoinHostPort(host, "0"))
+		if err == nil {
+			return ln, host
+		}
+		fehler = append(fehler, host+": "+err.Error())
+	}
+	t.Skipf("Messaufbau: keine nicht freigegebene Loopback-Adresse nutzbar (%v)", fehler)
+	return nil, ""
+}
+
 // F5a: Auf Staging fragt der abgeschottete Client den Egress-Waechter je
 // Abruf; ein dort nicht freigegebener Host wird nicht abgerufen. Der
-// Ziel-Server lauscht auf 127.0.0.2 (Loopback, aber nicht in der Freigabe
-// des Waechters, die nur localhost/127.0.0.1 kennt); der Kontrollabruf ohne
+// Ziel-Server lauscht auf einer Loopback-Adresse, die der Waechter nicht
+// freigibt (er kennt nur localhost/127.0.0.1): unter Linux 127.0.0.2, unter
+// macOS (lo0 ohne 127.0.0.2) ::1 (Issue #3294). Der Kontrollabruf ohne
 // Waechter erreicht denselben Server.
 func TestLinkAbruf_EgressWaechterWirdJeAbrufGefragt(t *testing.T) {
+	pruefeEgressWaechterJeAbruf(t, egressLoopbackKandidaten...)
+}
+
+// egressLoopbackKandidaten: nicht freigegebene Loopback-Adressen in
+// Vorzugsreihenfolge (Linux 127.0.0.2, macOS ::1). Festgeschrieben in
+// TestLoopbackAuswahl3294_EgressTestLaeuftOhne127002 (Issue #3294, F003).
+var egressLoopbackKandidaten = []string{"127.0.0.2", "::1"}
+
+func pruefeEgressWaechterJeAbruf(t *testing.T, kandidaten ...string) {
+	t.Helper()
 	resolver.OhneNachschlagDienste(t)
-	ln, err := net.Listen("tcp", "127.0.0.2:0")
-	if err != nil {
-		t.Fatalf("Messaufbau: 127.0.0.2 nicht nutzbar: %v", err)
-	}
+	ln, host := lauscheAufNichtFreigegebenemLoopback(t, kandidaten...)
 	var e empfang
 	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		e.mu.Lock()
@@ -37,7 +64,7 @@ func TestLinkAbruf_EgressWaechterWirdJeAbrufGefragt(t *testing.T) {
 	srv.Start()
 	t.Cleanup(srv.Close)
 	link := srv.URL + "/maps?q=.google."
-	resolver.ErlaubeTestHosts(t, "127.0.0.2")
+	resolver.ErlaubeTestHosts(t, host)
 	resolver.ErlaubeHTTPSchema(t)
 	resolver.ErlaubeLoopbackVerbindung(t)
 
@@ -55,7 +82,7 @@ func TestLinkAbruf_EgressWaechterWirdJeAbrufGefragt(t *testing.T) {
 		egress.Uninstall()
 		http.DefaultTransport = orig
 	})
-	_, err = resolver.Resolve(link)
+	_, err := resolver.Resolve(link)
 	erwarteNichtAufloesbar(t, link, err)
 	if e.anzahl() != 1 {
 		t.Fatalf("nicht freigegebener Host trotz Waechter abgerufen (%d)", e.anzahl())

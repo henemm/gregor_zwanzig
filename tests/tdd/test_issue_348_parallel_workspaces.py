@@ -32,7 +32,12 @@ GZ_WORKSPACE = REPO_ROOT / ".claude" / "tools" / "gz-workspace"
 # String NICHT in settings.json steht; worktree-relativ waere die Aussage entwertet.
 HARDCODED_PREFIX = "/home/hem/gregor_zwanzig/.claude/hooks"
 PROJECT_DIR_VAR = "${CLAUDE_PROJECT_DIR}"
-MQ_COMMAND = "bash /home/hem/claude-mq/check-messages.sh"
+# #3294: der MQ-Hook liegt jetzt im Repo und laeuft auf Server und iMac; das
+# geteilte Server-Skript /home/hem/claude-mq/check-messages.sh bleibt dahinter.
+MQ_COMMAND = (
+    'if [ -f "${CLAUDE_PROJECT_DIR}/.claude/hooks/mq_check_messages.py" ]; '
+    'then python3 "${CLAUDE_PROJECT_DIR}/.claude/hooks/mq_check_messages.py"; fi'
+)
 
 
 # ---------------------------------------------------------------------------
@@ -137,7 +142,7 @@ def test_settings_hooks_use_project_dir_var():
 
 
 # ---------------------------------------------------------------------------
-# AC-2 — settings.json valides JSON + claude-mq-Pfad bleibt absolut
+# AC-2 — settings.json valides JSON + claude-mq-Hook im Repo (fail-open, #3294)
 # ---------------------------------------------------------------------------
 
 
@@ -145,8 +150,10 @@ def test_settings_valid_json_and_mq_absolute():
     """
     GIVEN die echte .claude/settings.json
     WHEN  sie geparst wird
-    THEN  ist sie valides JSON UND der claude-mq SessionStart-command bleibt
-          exakt der absolute Pfad (geteilte externe Infra)
+    THEN  ist sie valides JSON UND der claude-mq SessionStart-command ist exakt
+          der fail-open-gewrappte Repo-Hook mq_check_messages.py (#3294: der
+          Hook liegt im Repo und laeuft auf Server und iMac; das geteilte
+          Server-Skript /home/hem/claude-mq/check-messages.sh bleibt dahinter)
     """
     data = json.loads(SETTINGS_JSON.read_text())
     commands = _collect_hook_commands(data)

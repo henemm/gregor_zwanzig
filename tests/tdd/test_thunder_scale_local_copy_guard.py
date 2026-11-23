@@ -1341,6 +1341,10 @@ def tests_baum_scan():
     )
 
 
+# Baumlauf ueber tests/**/*.py (ein gemeinsamer Modul-Fixture-Lauf) braucht mit
+# wachsendem Testbestand > 30 s (CI seit 2026-11-23 rot, lokal 30 s+); deklarierte
+# Ausnahme vom globalen Haenger-Netz (pyproject, Issue #1210), kein Aufweichen.
+@pytest.mark.timeout(180)
 def test_regel_d_ueber_den_echten_tests_baum_meldet_keine_unerfuellte_behauptung(
     tests_baum_scan,
 ):
@@ -1353,6 +1357,10 @@ def test_regel_d_ueber_den_echten_tests_baum_meldet_keine_unerfuellte_behauptung
     )
 
 
+# Baumlauf ueber tests/**/*.py (ein gemeinsamer Modul-Fixture-Lauf) braucht mit
+# wachsendem Testbestand > 30 s (CI seit 2026-11-23 rot, lokal 30 s+); deklarierte
+# Ausnahme vom globalen Haenger-Netz (pyproject, Issue #1210), kein Aufweichen.
+@pytest.mark.timeout(180)
 def test_regel_d_nullbefund_ist_nicht_trivial_der_lauf_erreicht_die_testdateien(
     tests_baum_scan,
 ):
