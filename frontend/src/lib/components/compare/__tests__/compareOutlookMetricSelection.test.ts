@@ -88,62 +88,20 @@ function displayConfigOf(body: ComparePreset): Record<string, unknown> {
 
 // ─── AC-12: Auswahl uebersteht Speichern + Neuladen, Reihenfolge bleibt ──────
 
-describe('AC-12 — Ausblick-Metriken: Roundtrip Speichern → Neuladen', () => {
-	test('die gewaehlte Teilmenge landet als display_config.outlook_metrics im Kennungsformat', () => {
-		// #1848 A2: die Bedienflaeche liefert Kennungen, gespeichert werden
-		// Kennungen. Die Zusicherung ist unveraendert — die Auswahl erreicht die
-		// Persistenz im vereinbarten Format —, nur das Format ist ein anderes.
-		const { body } = buildComparePresetSavePayload(
-			makePreset(),
-			baseEdits({ outlookMetricKeys: ['temperature', 'precipitation'] })
-		);
-
-		assert.deepEqual(
-			displayConfigOf(body).outlook_metrics,
-			['temperature', 'precipitation'],
-			'Die Ausblick-Auswahl erreicht die Persistenz nicht: display_config.outlook_metrics ' +
-				`fehlt oder hat das falsche Format (erhalten: ${JSON.stringify(displayConfigOf(body).outlook_metrics)})`
-		);
-	});
-
-	test('Speichern → Laden liefert exakt dieselbe Auswahl in derselben Reihenfolge', () => {
-		const gewaehlt = ['precipitation', 'gust', 'temperature'];
-
-		const { body } = buildComparePresetSavePayload(
-			makePreset(),
-			baseEdits({ outlookMetricKeys: gewaehlt })
-		);
-		// #1848 A2: eigener Leser fuer den Ausblick — `active_metrics` behaelt
-		// seinen (compareMetricSelection.ts). Die bewusst unsortierte Auswahl
-		// faengt eine `set`-basierte Zwischenstufe unveraendert ab.
-		const wiederGeladen = normalizeStoredOutlookMetrics(
-			displayConfigOf(body).outlook_metrics,
-			CATALOG
-		);
-
-		assert.deepEqual(
-			wiederGeladen,
-			gewaehlt,
-			'Nach Speichern und Neuladen zeigt die Bedienflaeche nicht mehr dieselbe ' +
-				`Ausblick-Auswahl/Reihenfolge (erhalten: ${JSON.stringify(wiederGeladen)})`
-		);
-	});
-
-	test('bewusste Leerauswahl wird als [] persistiert, nicht geloescht', () => {
-		// Der Server-Merge (mergeConfigMap, config_merge.go) ueberschreibt Keys nur,
-		// loescht sie nie — ein weggelassener Key bliebe wirkungslos (analog
-		// active_metrics/#1191 und hourly_metrics/#1299).
-		const { body } = buildComparePresetSavePayload(
-			makePreset(),
-			baseEdits({ outlookMetricKeys: [] })
-		);
-
-		assert.deepEqual(
-			displayConfigOf(body).outlook_metrics,
-			[],
-			'Eine bewusst geleerte Ausblick-Auswahl muss explizit als [] gespeichert werden'
-		);
-	});
+// Issue #3276 (Spec-AC-38, AC-2): `outlook_metrics` ist Altschluessel. Der Ortsvergleich schreibt
+// die Ausblick-Auswahl nicht mehr (Einstellung nur in „Was steht wo"). Die drei Schreib-Tests
+// (Teilmenge im Kennungsformat, Speichern→Laden, bewusste Leerauswahl []) sind durch die
+// Gegenprobe ersetzt: ein Editor-Wert erreicht den Rumpf nicht, auch nicht als [].
+describe('AC-12 — Ausblick-Metriken (seit #3276: nur Bestand, kein Schreiben)', () => {
+	for (const auswahl of [['temperature', 'precipitation'], []]) {
+		test(`Editor-Wert ${JSON.stringify(auswahl)} wird nicht als display_config.outlook_metrics geschrieben`, () => {
+			const { body } = buildComparePresetSavePayload(makePreset(), baseEdits({ outlookMetricKeys: auswahl }));
+			assert.ok(
+				!('outlook_metrics' in displayConfigOf(body)),
+				`#3276: outlook_metrics im Rumpf: ${JSON.stringify(displayConfigOf(body).outlook_metrics)}`
+			);
+		});
+	}
 
 	test('unangetastete Ausblick-Auswahl bleibt per Read-Modify-Write erhalten', () => {
 		// Bewusst in der PAAR-ALTFORM abgelegt: genau so liegen Bestandsdaten
@@ -165,22 +123,16 @@ describe('AC-12 — Ausblick-Metriken: Roundtrip Speichern → Neuladen', () => 
 		);
 	});
 
-	test('Ausblick-Auswahl und Stundenverlauf-Auswahl bleiben getrennte Felder', () => {
-		// #1848 A2: beide Felder sind jetzt Zeichenketten-Listen. Damit „getrennt"
-		// nachweisbar bleibt, tragen sie bewusst UNTERSCHIEDLICHE Werte — sonst
-		// waere ein Feld, das versehentlich aus dem anderen befuellt wird, nicht
-		// mehr von der richtigen Zuordnung zu unterscheiden.
+	// #3276: „Ausblick- und Stundenverlauf-Auswahl bleiben getrennte Felder" entfaellt — beide
+	// werden nicht mehr geschrieben; der Bestand beider Felder bleibt unveraendert.
+	test('Ausblick- und Stundenverlauf-Bestand bleiben unveraendert, auch gegen Editor-Werte', () => {
 		const { body } = buildComparePresetSavePayload(
 			makePreset(),
-			baseEdits({
-				outlookMetricKeys: ['temperature'],
-				hourlyMetricKeys: ['temp_c', 'wind_kmh']
-			})
+			baseEdits({ outlookMetricKeys: ['temperature'], hourlyMetricKeys: ['visibility_m'] })
 		);
 		const dc = displayConfigOf(body);
-
 		assert.deepEqual(dc.hourly_metrics, ['temp_c', 'wind_kmh']);
-		assert.deepEqual(dc.outlook_metrics, ['temperature']);
+		assert.ok(!('outlook_metrics' in dc));
 	});
 });
 
@@ -205,24 +157,8 @@ describe('AC-12 — Ausblick-Metriken: Roundtrip Speichern → Neuladen', () => 
 //       docs/specs/modules/feat_1848_a2_ausblick_kennungen.md § AC-1/AC-8
 
 describe('AC-6 [#1848 A2] — Persistenz-Roundtrip bleibt zeichengleich, unabhaengig von der Auswahl-Block-Markup-Form', () => {
-	test('Temperatur ist EIN Eintrag: display_config.outlook_metrics fuehrt die Kennung genau einmal', () => {
-		const { body } = buildComparePresetSavePayload(
-			makePreset(),
-			baseEdits({ outlookMetricKeys: ['temperature', 'precipitation'] })
-		);
-
-		assert.deepEqual(
-			displayConfigOf(body).outlook_metrics,
-			['temperature', 'precipitation'],
-			'AC-6 FAIL: display_config.outlook_metrics weicht ab (erhalten: ' +
-				`${JSON.stringify(displayConfigOf(body).outlook_metrics)}). Seit #1848 A2 traegt der ` +
-				'Ausblick reine Kennungen; Tief und Hoch derselben Groesse sind EIN Eintrag und ' +
-				'ergeben EINE Spannen-Spalte. Ein Auswahl-Block-Umbau darf daran nichts aendern — ' +
-				'weicht es doch ab, ist AC-6 nicht mehr deterministisch belegbar und die ' +
-				'Staging-Mail-Verifikation (email_spec_validator.py) muss nachgeholt werden.'
-		);
-	});
-
+	// #3276: der Schreib-Teil (Temperatur als EIN Eintrag im Rumpf) entfaellt — der Ortsvergleich
+	// schreibt `outlook_metrics` nicht mehr. Der Lese-Teil (Bestand) bleibt unten.
 	test('Roundtrip: eine BESTANDS-Mehrfachauswahl (max+min) kommt als EIN Eintrag zurueck', () => {
 		// Die Gegenrichtung zum Test darueber: so liegt die Auswahl in
 		// Bestandsdaten auf der Platte. Der Leser darf sie nicht als zwei

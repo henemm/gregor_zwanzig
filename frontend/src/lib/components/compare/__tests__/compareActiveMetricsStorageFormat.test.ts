@@ -31,11 +31,7 @@ import {
 	toStoredActiveMetrics,
 	type CompareSelectionEntry
 } from '../../shared/weather-metrics-tab/compareMetricSelection.ts';
-import {
-	hydrateWeatherMetricsFromPreset,
-	flushPendingWeatherMetricsSave,
-	type WeatherMetricsSnapshot
-} from '../../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
+import { hydrateWeatherMetricsFromPreset } from '../../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
 import type { ComparePreset } from '../../../types.ts';
 
 // Auszug der echten Antwort von GET /api/compare/metrics (Scheibe A ergaenzte
@@ -73,7 +69,6 @@ beforeEach(() => {
 const TEMP_MAX = { metric_id: 'temperature', aggregation: 'max' };
 const TEMP_MIN = { metric_id: 'temperature', aggregation: 'min' };
 const WIND_CHILL_MIN = { metric_id: 'wind_chill', aggregation: 'min' };
-const WIND_MAX = { metric_id: 'wind', aggregation: 'max' };
 
 function makePreset(displayConfig: Record<string, unknown>): ComparePreset {
 	return {
@@ -294,10 +289,10 @@ describe('AC-12 (seit #2375): Speichern eines ANDEREN Reiters beruehrt die Auswa
 // GELTUNGSBEREICH — bitte nicht mehr hineinlesen, als hier steht: geprueft
 // werden AUSSCHLIESSLICH die reinen Funktionen
 // `hydrateWeatherMetricsFromPreset`, `hydrateAlarmFieldsFromPreset`,
-// `hydrateHubFieldsFromPreset`, `flushPendingWeatherMetricsSave` und
-// `buildCompareCorridorSavePayload`. Ihr Vertrag: mit geladener Katalogantwort
-// liefert die Hydration Auswahl-Schluessel (nie die Rohform), und der
-// Dirty-Guard erzeugt nur bei echter Aenderung einen PUT.
+// `hydrateHubFieldsFromPreset` und `buildCompareCorridorSavePayload`. Ihr Vertrag:
+// mit geladener Katalogantwort liefert die Hydration Auswahl-Schluessel (nie die
+// Rohform). #3276 (F005): der Dirty-Guard `flushPendingWeatherMetricsSave` ist ohne
+// Produktions-Aufrufer entfernt (die Auswahl speichert der WetterTab-Speicherer).
 //
 // AUSDRUECKLICH NICHT geprueft ist die Verdrahtung in `CompareTabs.svelte`
 // (Reihenfolge "Katalog abwarten -> hydrieren -> Grundzustand aufnehmen" und
@@ -307,7 +302,7 @@ describe('AC-12 (seit #2375): Speichern eines ANDEREN Reiters beruehrt die Auswa
 // `frontend/e2e/compare-active-metrics-format.staging.spec.ts`: echter Klick,
 // echter PUT-Zaehler, echtes Route-Abfangen gegen Staging.
 
-describe('Vertrag: Hydration liefert Auswahl-Schluessel, Dirty-Guard schreibt nur bei echter Aenderung', () => {
+describe('Vertrag: Hydration liefert Auswahl-Schluessel', () => {
 	const STORED = [TEMP_MAX, TEMP_MIN, WIND_CHILL_MIN];
 	const RESOLVED = ['temp_max_c', 'temp_min_c', 'wind_chill_min_c'];
 
@@ -315,30 +310,11 @@ describe('Vertrag: Hydration liefert Auswahl-Schluessel, Dirty-Guard schreibt nu
 		return makePreset({ region: 'Korsika', active_metrics: STORED });
 	}
 
-	function snapshot(keys: string[]): WeatherMetricsSnapshot {
-		return {
-			activeMetricKeys: [...keys],
-			// Issue #1703 S8: kein Kanal je editiert — alle drei folgen der
-			// Grundauswahl (unveraendertes Verhalten fuer diesen Test).
-			channelActiveMetricKeys: { email: null, telegram: null, sms: null },
-			officialAlertsEnabled: true,
-			dayWindowStartHour: 4,
-			dayWindowEndHour: 19
-		};
-	}
-
-	test('mit geladenem Katalog hydriert: Auswahl-Schluessel, und ohne Aenderung kein PUT', () => {
+	test('mit geladenem Katalog hydriert: Auswahl-Schluessel', () => {
 		const preset = makeMigratedPreset();
 		const catalog = loadCatalog();
 
 		const keys = hydrateWeatherMetricsFromPreset(preset, catalog)!; // gespeichertes active_metrics -> nie null (#3047 J1)
-		// Grundzustand und laufender Zustand werden aus DEMSELBEN hydrierten
-		// Ergebnis gebildet — so nimmt der Aufrufer sie auf
-		// (CompareTabs.svelte::hydrateWetterMetrikenTab). Der Test sagt nichts
-		// darueber, WANN der Aufrufer das tut (s. Geltungsbereich oben).
-		const current = snapshot(keys);
-		const baseline = snapshot(keys);
-
 		assert.deepEqual(keys, RESOLVED,
 			'die gespeicherte Auswahl muss als Auswahl-Schluessel hydriert werden, nicht als Rohform'
 		);
@@ -347,53 +323,6 @@ describe('Vertrag: Hydration liefert Auswahl-Schluessel, Dirty-Guard schreibt nu
 			true,
 			'kein rohes Objekt im hydrierten Zustand — sonst passt kein Haekchen'
 		);
-		assert.equal(
-			flushPendingWeatherMetricsSave(preset, current, baseline),
-			null,
-			'ohne Nutzeraenderung darf der Dirty-Guard keinen PUT ergeben'
-		);
-	});
-
-	test('eine Aenderung ergibt genau EINEN PUT — der Ruecksetzwert traegt Auswahl-Schluessel', () => {
-		const preset = makeMigratedPreset();
-		const catalog = loadCatalog();
-
-		const hydrated = hydrateWeatherMetricsFromPreset(preset, catalog)!;
-		const baseline = snapshot(hydrated);
-		let puts = 0;
-
-		// Eine Aenderung an der Auswahl (wie sie die Grundauswahl-Checkbox macht).
-		const geaendert = snapshot([...hydrated, 'wind_max_kmh']);
-
-		const payload = flushPendingWeatherMetricsSave(preset, geaendert, baseline);
-		assert.ok(payload, 'eine echte Aenderung MUSS einen PUT ergeben');
-		puts += 1;
-		assert.deepEqual(
-			(payload!.body.display_config as Record<string, unknown>).active_metrics,
-			[TEMP_MAX, TEMP_MIN, WIND_CHILL_MIN, WIND_MAX],
-			'der PUT schreibt die vollstaendige Auswahl im neuen Speicherformat'
-		);
-
-		// Bei einem fehlgeschlagenen PUT setzt der Aufrufer auf genau diesen
-		// Grundzustand zurueck (CompareTabs.svelte, Zweig `catch` im
-		// Wetter-Metriken-Commit). Geprueft wird hier NUR, dass dieser Wert
-		// Auswahl-Schluessel traegt — dass der Aufrufer ihn wirklich verwendet,
-		// deckt der Playwright-Nachweis ab.
-		assert.deepEqual(baseline.activeMetricKeys, RESOLVED,
-			'der Ruecksetzwert darf nicht die unaufgeloeste Rohform sein'
-		);
-		for (const key of RESOLVED) {
-			assert.ok(
-				baseline.activeMetricKeys.includes(key),
-				`nach dem Ruecksetzen muss ${key} weiterhin als angehakt erkennbar sein`
-			);
-		}
-
-		// Deckungsgleicher Zustand: kein weiterer PUT.
-		if (flushPendingWeatherMetricsSave(preset, snapshot(baseline.activeMetricKeys), baseline)) {
-			puts += 1;
-		}
-		assert.equal(puts, 1, 'genau EIN PUT fuer eine Aenderung — kein Nachschlag');
 	});
 
 	test('Alarme-Reiter als Deep-Link: Empfindlichkeits-Tabelle sieht dieselbe Auswahl', () => {
@@ -446,22 +375,14 @@ describe('Vertrag: Hydration liefert Auswahl-Schluessel, Dirty-Guard schreibt nu
 		);
 	});
 
-	test('ohne Katalog bleibt die Hydration verlustfrei und erzeugt ebenfalls keinen PUT', () => {
+	test('ohne Katalog bleibt die Hydration verlustfrei', () => {
 		// Fehlerfall (Katalog-Fetch gescheitert, hydrateWetterMetrikenTab faengt ab
 		// und hydriert mit []): die Auswahl bleibt in der Rohform stehen — nicht
-		// schoen, aber verlustfrei, und Grundzustand und laufender Zustand sind
-		// deckungsgleich, es entsteht also weiterhin kein PUT ohne Aenderung.
+		// schoen, aber verlustfrei.
 		const preset = makeMigratedPreset();
 		const keys = hydrateWeatherMetricsFromPreset(preset, [])!;
-		const current = snapshot(keys);
-		const baseline = snapshot(keys);
 
 		assert.deepEqual(keys, STORED as unknown as string[], 'verlustfrei: nichts verworfen');
-		assert.equal(
-			flushPendingWeatherMetricsSave(preset, current, baseline),
-			null,
-			'kein PUT ohne Nutzergeste, auch im Katalog-Fehlerfall'
-		);
 	});
 });
 

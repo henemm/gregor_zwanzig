@@ -536,7 +536,6 @@ const BESTAND: string[] = [
 	'lib/components/compare-new/CompareNewEditor.svelte',
 	'lib/components/compare/AddReportCard.svelte',
 	'lib/components/compare/CompareDetail.svelte',
-	'lib/components/compare/CompareHourlyLayoutControls.svelte',
 	'lib/components/compare/CompareTabs.svelte',
 	'lib/components/compare/CreateGroupDialog.svelte',
 	'lib/components/compare/LocationNewModal.svelte',
@@ -725,7 +724,8 @@ const BESTAND: string[] = [
 // #2794 S3a Teil-PR 4a: 204 → 199 (CorridorEditor, CorridorEditorMobile, MetricCheckbox,
 // MetricGroup, HorizonChip entfernt).
 // #3047 Runde 7 (p11): AlarmeScheduleTab.svelte entfernt (→ 197).
-const BESTAND_OBERGRENZE = 196; // #3190: SavePresetDialog.svelte nach SEITEN_SCOPE (Inline-Karte aus Bausteinen)
+// #3190: SavePresetDialog.svelte nach SEITEN_SCOPE (Inline-Karte aus Bausteinen) (→ 196).
+const BESTAND_OBERGRENZE = 195; // #3276: CompareHourlyLayoutControls.svelte geloescht
 
 /** Token-Verstöße je Baustein-Datei (Ist-Stand 2026-11-10, ADR-0112). Darf nur sinken. */
 const AUSNAHMEN: Ausnahmen = {

@@ -419,7 +419,7 @@ describe('AC-6: der Trips-Editor speist die Kurzform-Marke aus /api/sms-symbols'
 // Merkmals: Kommentar ueber layoutKontext().
 const VERGLEICHSFLAECHEN = [
 	['Vergleichs-Uebersicht', 'WeatherMetricsTab.svelte', imKontext('vergleich')],
-	['Vergleichs-Stundenverlauf', '../compare/CompareHourlyLayoutControls.svelte', dieEinzige],
+	// Issue #3276: 'Vergleichs-Stundenverlauf' (CompareHourlyLayoutControls.svelte) ist geloescht.
 	['Vergleichs-Ausblick', 'OutlookLayoutControls.svelte', dieEinzige]
 ] as const;
 

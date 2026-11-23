@@ -136,6 +136,14 @@ export function wetterMetrikenBedienung(ws: Record<string, unknown>) {
 		hourlyDragEnd(order: string[]): void {
 			ws.hourlyMetricKeys = [...order];
 		},
+		// Issue #3276: Stundenverlauf/Ausblick-Listen sendet der Speicherer nicht mehr; seine
+		// verbliebenen eigenen Felder sind die beiden Schalter.
+		hourlyEnabledToggle(): void {
+			ws.hourlyEnabled = !((ws.hourlyEnabled as boolean | undefined) ?? true);
+		},
+		outlookEnabledToggle(): void {
+			ws.outlookEnabled = !((ws.outlookEnabled as boolean | undefined) ?? true);
+		},
 		outlookSelect(order: string[]): void {
 			ws.outlookMetricKeys = [...order];
 		},

@@ -137,7 +137,6 @@ const K = {
 	StatusSchild: await komp(path.join(KOMP, 'shared/status-schild/StatusSchild.svelte')),
 	AddReportCard: await komp(cmp('AddReportCard.svelte')),
 	LocationPreviewMap: await komp(cmp('LocationPreviewMap.svelte')),
-	CompareHourly: await komp(cmp('CompareHourlyLayoutControls.svelte')),
 	LocationNewModal: await komp(cmp('LocationNewModal.svelte')),
 	LocationNewModalErkannt: await variante(cmp('LocationNewModal.svelte'), [
 		['let resolvedPreview: ResolveResult | null = $state(null);', "let resolvedPreview: ResolveResult | null = $state({ lat: 47.0789, lon: 11.6856, elevation_m: 3250, timezone: 'Europe/Vienna', region: 'Tirol', source_type: 'komoot' });"],
@@ -227,14 +226,8 @@ export function hubSeiteRendern(): string {
 	].join('\n');
 }
 
-/** Transponierte Uebersicht: Stundenverlauf-Steuerung (Schalter, Auswahl, Reihenfolge, Hinweis). */
-export function stundenverlaufRendern(): string {
-	return [
-		html(K.CompareHourly, { metricKeys: null, onMetricKeys: () => {}, catalog: VERGLEICHS_KATALOG, enabled: true, onEnabledChange: () => {} }),
-		html(K.CompareHourly, { metricKeys: ['cloud_total'], onMetricKeys: () => {}, catalog: VERGLEICHS_KATALOG, register: REGISTER }),
-		html(K.CompareHourly, { metricKeys: [], onMetricKeys: () => {}, catalog: [] })
-	].join('\n');
-}
+// Issue #3276: der Fall „Stundenverlauf" (CompareHourlyLayoutControls) entfaellt mit dem
+// Bauteil; Stundenverlauf wird im Ortsvergleich nur noch in „Was steht wo" eingestellt.
 
 /** Kleinbausteine: Status-Pille, Neuer Auto-Report, Kartenvorschau. */
 export function bausteineRendern(): string {
@@ -326,7 +319,6 @@ export function htmlFaelle(): Record<string, () => string> {
 		hub_uebersicht: hubUebersichtRendern,
 		hub_orte: hubOrteRendern,
 		hub_seite: hubSeiteRendern,
-		stundenverlauf: stundenverlaufRendern,
 		bausteine: bausteineRendern,
 		ort_neu: ortNeuRendern,
 		orte_schritt: orteSchrittRendern

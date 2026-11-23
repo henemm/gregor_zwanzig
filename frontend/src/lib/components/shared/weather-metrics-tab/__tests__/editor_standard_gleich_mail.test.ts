@@ -7,10 +7,14 @@
 // Python-Seite (tests/tdd/test_einstellung_gleich_mail_editor_standard.py) aus
 // tests/fixtures/einstellung_gleich_mail/editor_standard.json und wird gegen die
 // dort von Hand gesetzte Folge verglichen:
-//   * Ausblick (Trip und Orte) und Orte-Stundenverlauf: die geteilten Komponenten
-//     OutlookLayoutControls.svelte / CompareHourlyLayoutControls.svelte werden mit
+//   * Ausblick (Trip): die geteilte Komponente OutlookLayoutControls.svelte wird mit
 //     svelte/server gerendert, die aktive Folge wird aus dem DOM gelesen
 //     (`wm2-reihenfolge-row`, WeatherV2Reihenfolge).
+//   * Issue #3276: Orte-Stundenverlauf und Orte-Ausblick haben im Frontend keinen eigenen
+//     Editor mehr (CompareHourlyLayoutControls.svelte geloescht, Ausblick-Mount des
+//     Vergleichs entfernt) — eingestellt wird beides in „Was steht wo". Die Frontend-Faelle
+//     orte_stundenverlauf/orte_ausblick entfallen (auch in fallliste_editor.json); die
+//     Python-Seite (Mail-Standard) bleibt.
 //   * Ladepfade: dieselben exportierten Helfer, die WeatherMetricsTab.svelte
 //     aufruft (computeInitialBuckets :477, channelOverrideFromMetrics :505,
 //     normalizeStoredOutlookMetrics :512; hydrate*FromPreset fuer den Vergleich).
@@ -59,7 +63,6 @@ register(pathToFileURL(path.join(FRONTEND, 'test-svelte-ssr-hooks.mjs')).href, p
 const { render } = await import('svelte/server');
 const komp = async (datei: string) => (await import(pathToFileURL(datei).href)).default;
 const OutlookLayoutControls = await komp(path.join(SHARED, 'OutlookLayoutControls.svelte'));
-const CompareHourlyLayoutControls = await komp(path.join(SHARED, '..', 'compare', 'CompareHourlyLayoutControls.svelte'));
 const GrundauswahlLeerHinweis = await komp(path.join(SHARED, '..', 'molecules', 'GrundauswahlLeerHinweis.svelte'));
 const { locale } = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/i18n/index.ts')).href);
 locale.set('de');
@@ -194,8 +197,6 @@ function frontendTripAusblick(eingabe: Zustand['eingabe']): string[] {
 // die zweite ist der Trip). Beide Hydrierer teilen seit #3047 J1/J5 dieselbe
 // Funktion (`hydrateWeatherMetricsFromPreset`, `null` = nie eingestellt) -- so
 // bleibt eine BEWUSST gespeicherte Vollauswahl vom Altbestand unterscheidbar.
-const AUSBLICK_EINBETTUNGEN = findeKomponenten(TAB_AST as never, 'OutlookLayoutControls');
-const ORTE_GRUNDAUSWAHL_AUSDRUCK = attributAusdruck(AUSBLICK_EINBETTUNGEN[0], TAB_QUELLE, 'grundauswahl');
 function hubActiveMetricKeys(preset: unknown): string[] | null {
 	const wizardState: Record<string, unknown> = {};
 	hydrateAlarmFieldsFromPreset(wizardState as never, preset as never, ORTE_KATALOG);
@@ -205,40 +206,17 @@ function orteEditor(eingabe: Zustand['eingabe']) {
 	const preset = { id: 'pruef-3047', ...eingabe } as never;
 	const activeMetricKeys = hubActiveMetricKeys(preset);
 	const materializedActiveMetricKeys = materializeActiveMetricKeys(activeMetricKeys ?? null);
-	assert.ok(ORTE_GRUNDAUSWAHL_AUSDRUCK, 'Messaufbau: grundauswahl-Attribut der Vergleichs-Einbettung fehlt');
-	const grundauswahl = werte(stripTypeScriptTypes(ORTE_GRUNDAUSWAHL_AUSDRUCK), {
-		activeMetricKeys, materializedActiveMetricKeys
-	}) as string[] | null;
 	const channelActiveMetricKeys = hydrateChannelActiveMetricsFromPreset(preset, ORTE_KATALOG);
-	const layout = hydrateLayoutFieldsFromPreset(preset, ORTE_KATALOG);
 	const { compareChannelPrimary } = tabFunktionen(['compareChannelPrimary'], {
 		channelActiveMetricKeys, materializedActiveMetricKeys
 	});
-	// #3047 J1/#3061: Stundenverlauf und Ausblick bekommen die UNmaterialisierte Grundauswahl
-	// (`null` = nie eingestellt), wie WeatherMetricsTab.svelte sie durchreicht.
-	return { activeMetricKeys, materializedActiveMetricKeys, grundauswahl, layout, kanalListe: compareChannelPrimary as (ch: string) => string[] };
+	return { activeMetricKeys, materializedActiveMetricKeys, kanalListe: compareChannelPrimary as (ch: string) => string[] };
 }
 function frontendOrteVergleichstabelle(eingabe: Zustand['eingabe']): string[] {
 	const ed = orteEditor(eingabe);
 	// WeatherMetricsTab.svelte:1236-1238 (compareChannelSections fuer den E-Mail-Reiter)
 	return channelLayouts.splitChannelMetricsForDisplay(ed.materializedActiveMetricKeys, ed.kanalListe('email')).active;
 }
-function frontendOrteStundenverlauf(eingabe: Zustand['eingabe']): string[] {
-	const ed = orteEditor(eingabe);
-	return aktiveFolge(rendern(CompareHourlyLayoutControls, {
-		metricKeys: ed.layout.hourlyMetricKeys, onMetricKeys: nix, catalog: ORTE_KATALOG,
-		// #3047 H1/J1: dieselbe Grundauswahl wie der Ausblick-Mount (WeatherMetricsTab.svelte)
-		grundauswahl: ed.activeMetricKeys
-	}));
-}
-function frontendOrteAusblick(eingabe: Zustand['eingabe']): string[] {
-	const ed = orteEditor(eingabe);
-	return aktiveFolge(rendern(OutlookLayoutControls, {
-		metricKeys: ed.layout.outlookMetricKeys, catalog: ORTE_KATALOG,
-		grundauswahl: ed.grundauswahl, onMetricKeys: nix
-	}));
-}
-
 function pruefe(seite: (e: Zustand['eingabe']) => string[], liste: string, z: Zustand): void {
 	assert.deepEqual(seite(z.eingabe), z.erwartet,
 		`Frontend-Seite ${liste}/${z.id}: Editor zeigt eine andere Folge als editor_standard.json erwartet`);
@@ -278,46 +256,8 @@ describe('#3047 Editor-Standard = Mail-Standard (Frontend-Seite)', () => {
 		test(`frontend_seite_orte_vergleichstabelle_gespeichert ${z.id}`, () =>
 			pruefe(frontendOrteVergleichstabelle, 'orte_vergleichstabelle', z));
 
-	// #3047 O2 behoben (F4)
-	test('frontend_seite_orte_stundenverlauf_standard', () =>
-		pruefe(frontendOrteStundenverlauf, 'orte_stundenverlauf', zustand('orte_stundenverlauf', 'nie_eingestellt')));
-	// #3047 H1 (Konzept §5.8): nie eingestellt mit Grundauswahl
-	test('frontend_seite_orte_stundenverlauf_standard_mit_grundauswahl', () =>
-		pruefe(frontendOrteStundenverlauf, 'orte_stundenverlauf', zustand('orte_stundenverlauf', 'nie_eingestellt_mit_grundauswahl')));
-	// #3047 J1: gespeicherte Grundauswahl = Vorgabe ist gespeichert (Grundauswahl-Regel wie die Mail)
-	test('frontend_seite_orte_stundenverlauf_grundauswahl_gleich_vorgabe', () =>
-		pruefe(frontendOrteStundenverlauf, 'orte_stundenverlauf', zustand('orte_stundenverlauf', 'grundauswahl_gleich_vorgabe')));
-	// #3047 N2: `active_metrics: []` -> der Stundenverlauf entfaellt (nicht die Vorgabemenge)
-	test('frontend_seite_orte_stundenverlauf_grundauswahl_bewusst_leer', () =>
-		pruefe(frontendOrteStundenverlauf, 'orte_stundenverlauf', zustand('orte_stundenverlauf', 'grundauswahl_bewusst_leer')));
-	for (const z of gespeicherte('orte_stundenverlauf'))
-		test(`frontend_seite_orte_stundenverlauf_gespeichert ${z.id}`, () =>
-			pruefe(frontendOrteStundenverlauf, 'orte_stundenverlauf', z));
-	// #3047 H1: die Zeile ausserhalb der Grundauswahl ist gesperrt und nennt den Grund
-	// (Katalogtext vergleich.stundenverlauf.nicht_in_grundauswahl, im Hub-Golden nicht erreichbar).
-	test('frontend_seite_orte_stundenverlauf_gesperrt_nennt_grund', () => {
-		const ed = orteEditor(zustand('orte_stundenverlauf', 'gespeichert_ausserhalb_grundauswahl').eingabe);
-		const html = rendern(CompareHourlyLayoutControls, {
-			metricKeys: ed.layout.hourlyMetricKeys, onMetricKeys: nix, catalog: ORTE_KATALOG,
-			grundauswahl: ed.activeMetricKeys
-		});
-		const grund = /data-testid="compare-layout-hourly-reason-visibility"[^>]*>([^<]*)</.exec(html);
-		assert.equal(grund?.[1], 'gesperrt: nicht in der Grundauswahl oben');
-	});
-
-	// #3047 O4 behoben (F4)
-	test('frontend_seite_orte_ausblick_standard', () =>
-		pruefe(frontendOrteAusblick, 'orte_ausblick', zustand('orte_ausblick', 'nie_eingestellt')));
-	test('frontend_seite_orte_ausblick_standard_mit_grundauswahl', () =>
-		pruefe(frontendOrteAusblick, 'orte_ausblick', zustand('orte_ausblick', 'nie_eingestellt_mit_grundauswahl')));
-	// #3047 J1: gespeicherte Grundauswahl = Vorgabe ist gespeichert (Grundauswahl-Regel wie die Mail)
-	test('frontend_seite_orte_ausblick_grundauswahl_gleich_vorgabe', () =>
-		pruefe(frontendOrteAusblick, 'orte_ausblick', zustand('orte_ausblick', 'grundauswahl_gleich_vorgabe')));
-	// #3047 N2 (loest J4/D4 ab): `active_metrics: []` ist bewusst leer -> der Ausblick entfaellt, wie beim Trip
-	test('frontend_seite_orte_ausblick_grundauswahl_bewusst_leer', () =>
-		pruefe(frontendOrteAusblick, 'orte_ausblick', zustand('orte_ausblick', 'grundauswahl_bewusst_leer')));
-	for (const z of gespeicherte('orte_ausblick'))
-		test(`frontend_seite_orte_ausblick_gespeichert ${z.id}`, () => pruefe(frontendOrteAusblick, 'orte_ausblick', z));
+	// Issue #3276: frontend_seite_orte_stundenverlauf_* und frontend_seite_orte_ausblick_*
+	// entfallen — der Vergleich hat dafuer keinen eigenen Editor mehr (nur „Was steht wo").
 });
 
 // ── AC-16: Vorlage anwenden behaelt die Vorlagen-Folge (Befund T4) ─────────────

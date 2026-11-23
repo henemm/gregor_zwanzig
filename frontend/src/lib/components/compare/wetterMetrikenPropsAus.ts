@@ -57,18 +57,14 @@ export interface WetterMetrikenZustandsQuelle {
 	officialAlertsEnabled?: boolean;
 	dayWindowStartHour?: number;
 	dayWindowEndHour?: number;
-	hourlyMetricKeys?: string[] | null;
-	hourlyEnabled?: boolean;
-	outlookMetricKeys?: string[] | null;
-	outlookMetricFormats?: Record<string, boolean> | null;
-	outlookEnabled?: boolean;
-	// Issue #3097: Roh/Einfach je Stundenverlauf-Groesse.
-	hourlyMetricFormats?: Record<string, boolean> | null;
+	// Issue #3276: hourly*/outlook*-Felder entfallen (Bedienflaechen Stundenverlauf/
+	// Ausblick des Vergleichs entfernt, Einstellung nur noch in „Was steht wo").
 }
 
 /**
- * Das Prop-Bündel für `WeatherMetricsTab` im Vergleichs-Zweig: zehn Werte
- * (die einzige Feldklasse dieser Scheibe) und neun Gesten-Rückrufe — einer
+ * Das Prop-Bündel für `WeatherMetricsTab` im Vergleichs-Zweig: fünf Werte
+ * (die einzige Feldklasse dieser Scheibe; #3276: Stundenverlauf/Ausblick entfallen)
+ * und vier Gesten-Rückrufe — einer
  * davon (`onVergleichsMetrikenChange`) gekoppelt für die beiden Felder der
  * Metrik-Auswahl.
  */
@@ -79,12 +75,6 @@ export function wetterMetrikenPropsAus(wiz: WetterMetrikenZustandsQuelle) {
 		officialAlertsEnabled: wiz.officialAlertsEnabled ?? true,
 		dayWindowStartHour: wiz.dayWindowStartHour ?? DEFAULT_DAY_WINDOW_START_HOUR,
 		dayWindowEndHour: wiz.dayWindowEndHour ?? DEFAULT_DAY_WINDOW_END_HOUR,
-		hourlyMetricKeys: wiz.hourlyMetricKeys ?? null,
-		hourlyEnabled: wiz.hourlyEnabled ?? true,
-		outlookMetricKeys: wiz.outlookMetricKeys ?? null,
-		outlookMetricFormats: wiz.outlookMetricFormats ?? null,
-		outlookEnabled: wiz.outlookEnabled ?? true,
-		hourlyMetricFormats: wiz.hourlyMetricFormats ?? null,
 		onVergleichsMetrikenChange: (active: string[] | null, channelActive: CompareChannelActiveMetrics) => {
 			wiz.activeMetricKeys = active;
 			wiz.channelActiveMetricKeys = channelActive;
@@ -97,24 +87,6 @@ export function wetterMetrikenPropsAus(wiz: WetterMetrikenZustandsQuelle) {
 		},
 		onDayWindowEndHourChange: (v: number) => {
 			wiz.dayWindowEndHour = v;
-		},
-		onHourlyMetricKeysChange: (keys: string[] | null) => {
-			wiz.hourlyMetricKeys = keys;
-		},
-		onHourlyEnabledChange: (an: boolean) => {
-			wiz.hourlyEnabled = an;
-		},
-		onOutlookMetricKeysChange: (keys: string[] | null) => {
-			wiz.outlookMetricKeys = keys;
-		},
-		onOutlookMetricFormatsChange: (formats: Record<string, boolean> | null) => {
-			wiz.outlookMetricFormats = formats;
-		},
-		onOutlookEnabledChange: (an: boolean) => {
-			wiz.outlookEnabled = an;
-		},
-		onHourlyMetricFormatsChange: (formats: Record<string, boolean> | null) => {
-			wiz.hourlyMetricFormats = formats;
 		}
 	};
 }

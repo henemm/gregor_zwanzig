@@ -29,7 +29,6 @@
 
 import { test, afterEach, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeStoredActiveMetrics } from '../../shared/weather-metrics-tab/compareMetricSelection.ts';
 import type { CompareChannelActiveMetrics } from '../../shared/weather-metrics-tab/compareChannelMetricLayouts.ts';
 import {
 	VERTRAG_FEHLT_EDITOR,
@@ -86,32 +85,19 @@ test('Anlegen: sendPremiumSms=true landet als send_premium_sms:true im tatsaechl
 	assert.strictEqual(body.send_sms, false, 'Premium-SMS darf nicht ueber das SMS-Feld reisen (Verwechslung)');
 });
 
-test('Anlegen: Kanal-Overrides der Uebersichtstabelle landen als display_config.channel_active_metrics im tatsaechlich gesendeten POST-Body', async () => {
+// Issue #3276 (Spec-AC-38, AC-1): `channel_active_metrics` ist Altschluessel. Vorher: die
+// Kanal-Overrides landen im POST-Body (telegram im Speicherformat, sms als [], email fehlt).
+// Jetzt: der tatsaechlich gesendete POST-Body traegt den Schluessel in keiner Form.
+test('#3276 Anlegen: Kanal-Overrides landen NICHT als display_config.channel_active_metrics im gesendeten POST-Body', async () => {
 	const body = await anlegen(false, {
-		email: null, // nie editiert -> folgt der Grundauswahl, kein Eintrag
-		telegram: ['temp_max_c'], // abgewaehlt bis auf eine Groesse
-		sms: [] // bewusste Leerauswahl -> MUSS als [] mitreisen
+		email: null,
+		telegram: ['temp_max_c'],
+		sms: []
 	});
-	const dc = body.display_config as Record<string, unknown> | undefined;
-	const channels = dc?.channel_active_metrics as Record<string, unknown[]> | undefined;
+	const dc = (body.display_config as Record<string, unknown> | undefined) ?? {};
 	assert.ok(
-		channels,
-		'display_config.channel_active_metrics fehlt im gesendeten Body — der Editor reicht ' +
-			`channelActiveMetricKeys nicht weiter, die Kanal-Reiter im Anlege-Editor waeren eine Attrappe. display_config: ${JSON.stringify(dc)}`
-	);
-	assert.deepStrictEqual(
-		normalizeStoredActiveMetrics(channels.telegram),
-		['temp_max_c'],
-		`erwartet telegram-Override ['temp_max_c'] im gesendeten Body, erhalten: ${JSON.stringify(channels.telegram)}`
-	);
-	assert.ok(
-		Object.prototype.hasOwnProperty.call(channels, 'sms'),
-		`bewusste Leerauswahl von SMS muss als expliziter Eintrag mitreisen (weggelassen = alter Stand bleibt stehen), erhalten: ${JSON.stringify(channels)}`
-	);
-	assert.deepStrictEqual(channels.sms, [], 'SMS-Leerauswahl muss als [] gesendet werden');
-	assert.ok(
-		!Object.prototype.hasOwnProperty.call(channels, 'email'),
-		`nie editierter Kanal darf NICHT als Leerauswahl gesendet werden ("fehlend != leer"), erhalten: ${JSON.stringify(channels.email)}`
+		!Object.prototype.hasOwnProperty.call(dc, 'channel_active_metrics'),
+		`channel_active_metrics im POST-Body: ${JSON.stringify(dc)}`
 	);
 });
 

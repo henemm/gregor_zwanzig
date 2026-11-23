@@ -239,43 +239,27 @@ describe('AC-3: Umleitung des alten Layout-Deep-Links', () => {
 
 // ── AC-2-Fundament: neue Heimat samt Speicherweg ────────────────────────────
 
-describe('Stundenverlauf-Steuerung: neue Heimat + Speicherweg', () => {
-	// #2794 S3a: der Abschnitt „Reihenfolge" heisst jetzt `layout_kanal` (Layout je Kanal).
-	test("der Abschnitt 'stundenverlauf' liegt im Vergleich zwischen Layout je Kanal und Amtlichen Warnungen", () => {
-		const sections = weatherMetricsTabSections('vergleich');
-		assert.ok(sections.includes('stundenverlauf'), `Abschnitt fehlt: ${sections.join(', ')}`);
-		assert.ok(sections.includes('layout_kanal'), `Abschnitt layout_kanal fehlt: ${sections.join(', ')}`);
-		assert.ok(
-			sections.indexOf('layout_kanal') < sections.indexOf('stundenverlauf'),
-			'erst welche Tageswerte und in welcher Folge, dann der Stundenverlauf'
-		);
-		assert.ok(
-			sections.indexOf('stundenverlauf') < sections.indexOf('official_alerts'),
-			"'stundenverlauf' muss VOR 'official_alerts' liegen (Spec § Implementation Details 2)"
-		);
+describe('Stundenverlauf-Steuerung: Heimat allein „Was steht wo“ (#3276)', () => {
+	// Issue #3276 (Spec-AC-38): die Stundenverlauf-Steuerung des Ortsvergleichs (Abschnitt
+	// 'stundenverlauf', Komponente CompareHourlyLayoutControls) ist ersatzlos entfernt; die
+	// Einstellung lebt allein in „Was steht wo". Vorher: Abschnitt zwischen Layout je Kanal und
+	// Amtlichen Warnungen, genau EINE Instanz in WeatherMetricsTab. Jetzt: beides abwesend.
+	test("#3276: weder Vergleich noch Trip fuehren den Abschnitt 'stundenverlauf'", () => {
+		for (const ctx of ['vergleich', 'route'] as const) {
+			const sections = weatherMetricsTabSections(ctx);
+			assert.ok(!sections.includes('stundenverlauf'), `${ctx}: ${sections.join(', ')}`);
+		}
+		assert.ok(weatherMetricsTabSections('vergleich').includes('layout_kanal'));
 	});
 
-	test('der Trip bekommt in dieser Scheibe keinen Stundenverlauf', () => {
-		assert.ok(
-			!weatherMetricsTabSections('route').includes('stundenverlauf'),
-			'Spec § Known Limitations: geteilt vorbereitet, aber nur im Vergleich aktiv'
-		);
-	});
-
-	test('WeatherMetricsTab hängt die GETEILTE Steuerung ein (kein Compare-Eigenbau)', () => {
-		const mounts = findComponents(ast(METRICS_TAB), 'CompareHourlyLayoutControls');
-		assert.equal(
-			mounts.length,
-			1,
-			'WeatherMetricsTab.svelte muss genau EINE <CompareHourlyLayoutControls>-Instanz ' +
-				'mounten (Trip/Compare-Teilungs-Invariante: geteilt ist die Steuerung)'
-		);
+	test('#3276: WeatherMetricsTab mountet keine CompareHourlyLayoutControls mehr', () => {
+		assert.equal(findComponents(ast(METRICS_TAB), 'CompareHourlyLayoutControls').length, 0);
 	});
 
 	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md §3): der Stundenverlauf war ein Zustellungs-Block.
 	// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 14): im Hub bedient ihn allein die Karte
 	// „Was steht wo“ im Reiter Wetter (Spalte und Schalter „Stundenverlauf“); der Uebergangsblock des Reiters
-	// Zustellung traegt keine Metrik-Oberflaeche mehr. Die geteilte Steuerung oben bleibt fuer das Anlegen.
+	// Zustellung traegt keine Metrik-Oberflaeche mehr. (#3276: auch beim Anlegen gibt es keine eigene Steuerung mehr.)
 	test('im Hub liegt die Steuerung in der Karte „Was steht wo“ im Reiter Wetter, nicht mehr im Zustellungs-Panel', () => {
 		const panel = findTabPanelFragment(ast(HUB), 'zustellung');
 		assert.notEqual(panel, null, "Panel `activeTab === 'zustellung'` nicht gefunden");

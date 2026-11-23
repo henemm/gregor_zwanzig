@@ -95,28 +95,10 @@ function alarmHydrierer(wizardState: Record<string, unknown>, p: ComparePreset):
 	hydrateAlarmFieldsFromPreset(wizardState as never, p, KATALOG);
 }
 
-/** Grundauswahl, die WeatherMetricsTab der Vergleichs-Einbettung reicht. */
-function vergleichGrundauswahl(activeMetricKeys: string[] | null): string[] | null {
-	const ausdruck = attributAusdruck(EINBETTUNGEN[0], TAB_QUELLE, 'grundauswahl');
-	assert.ok(ausdruck, 'Messaufbau: grundauswahl-Attribut der Vergleichs-Einbettung fehlt');
-	return werte(stripTypeScriptTypes(ausdruck), {
-		activeMetricKeys,
-		materializedActiveMetricKeys: materializeActiveMetricKeys(activeMetricKeys ?? null)
-	}) as string[] | null;
-}
-
-function aktiveFolge(html: string): string[] {
-	const zeilen = html.match(/<div[^>]*data-testid="wm2-reihenfolge-row"[^>]*>/g) ?? [];
-	return zeilen.map((tag) => /data-metric-id="([^"]+)"/.exec(tag)![1]);
-}
-function ausblickImEditor(wizardState: Record<string, unknown>, p: ComparePreset): string[] {
-	const layout = hydrateLayoutFieldsFromPreset(p, KATALOG);
-	const grundauswahl = vergleichGrundauswahl((wizardState.activeMetricKeys as string[] | null | undefined) ?? null);
-	const html = render(OutlookLayoutControls as never, {
-		props: { metricKeys: layout.outlookMetricKeys, catalog: KATALOG, grundauswahl, onMetricKeys: () => {} }
-	} as never).body;
-	return aktiveFolge(html);
-}
+// Issue #3276: die Ausblick-Einbettung des Vergleichs (OutlookLayoutControls im
+// Vergleichs-Zweig von WeatherMetricsTab) ist entfernt — Ausblick stellt der Ortsvergleich
+// nur noch in „Was steht wo" ein. Die Hilfen `vergleichGrundauswahl`/`ausblickImEditor`
+// entfallen mit ihr; die verbliebene Einbettung ist die des Trips (bis #3297).
 
 describe('#3061 Hub-Hydrierer behalten „nie eingestellt"', () => {
 	test('AC-2: Alarm-Hydrierer laesst activeMetricKeys bei Altbestand null', () => {
@@ -146,35 +128,19 @@ describe('#3061 Hub-Hydrierer behalten „nie eingestellt"', () => {
 	});
 });
 
-describe('#3061 Ausblick im Editor = Mail', () => {
-	test('AC-1: gespeicherte Vollauswahl ohne outlook_metrics zeigt alle darstellbaren Groessen', () => {
-		const s: Record<string, unknown> = {};
-		alarmHydrierer(s, VOLLAUSWAHL());
-		const ist = ausblickImEditor(s, VOLLAUSWAHL());
-		const soll = DATEN.listen.orte_ausblick.zustaende.find(
-			(z: { id: string }) => z.id === 'gespeichert_vollauswahl_ohne_ausblick'
-		).erwartet;
-		assert.deepEqual(ist, soll, `Editor zeigt ${JSON.stringify(ist)}, die Mail zeigt ${JSON.stringify(soll)}`);
-	});
-
-	test('AC-2: Altbestand zeigt weiter die festen Vorgabe-Spalten', () => {
-		const s: Record<string, unknown> = {};
-		alarmHydrierer(s, ALTBESTAND());
-		assert.deepEqual(ausblickImEditor(s, ALTBESTAND()), DEFAULT_SPALTEN);
-	});
-
+// Issue #3276: „Ausblick im Editor = Mail" fuer den Ortsvergleich entfaellt mit der Bedienflaeche
+// (AC-1/AC-2 dieses Blocks pruefen den entfernten Ausblick-Block). Bestehen bleibt die
+// Reiter-Reihenfolge-Unabhaengigkeit der Hydrierer samt Alarm-Tabelle (AC-3).
+describe('#3061 Hydrier-Reihenfolge (Ausblick-Block entfernt, #3276)', () => {
 	for (const [name, p] of [['Altbestand', ALTBESTAND], ['Vollauswahl', VOLLAUSWAHL]] as const) {
-		test(`AC-3: ${name} -- Reiter-Reihenfolge aendert das Ausblick-Ergebnis nicht, Alarm-Tabelle hat Metriken`, async () => {
+		test(`AC-3: ${name} -- Reiter-Reihenfolge aendert die Grundauswahl nicht, Alarm-Tabelle hat Metriken`, async () => {
 			const alarmZuerst: Record<string, unknown> = {};
 			alarmHydrierer(alarmZuerst, p());
 			await wetterHydrierer(alarmZuerst, p());
 			const wetterZuerst: Record<string, unknown> = {};
 			await wetterHydrierer(wetterZuerst, p());
 			alarmHydrierer(wetterZuerst, p());
-			assert.deepEqual(ausblickImEditor(alarmZuerst, p()), ausblickImEditor(wetterZuerst, p()));
 			assert.deepEqual(alarmZuerst.activeMetricKeys, wetterZuerst.activeMetricKeys);
-			const soll = name === 'Altbestand' ? DEFAULT_SPALTEN : null;
-			if (soll) assert.deepEqual(ausblickImEditor(alarmZuerst, p()), soll);
 			// #1320: die Empfindlichkeits-Tabelle (CompareTabs `beispielAlarmRegeln`) materialisiert selbst.
 			for (const s of [alarmZuerst, wetterZuerst]) {
 				const zeilen = deriveActiveAlertMetricsFromCatalog(
@@ -264,25 +230,7 @@ describe('#3061 Speichern und Trip bleiben unveraendert', () => {
 		Object.assign(s, layout);
 		// Baseline wie im Hub: Stand nach BEIDEN Hydrationen.
 		const vorher = wetterMetrikenSnapshotAus(s);
-		// Oeffnen = Ausblick-Block mounten; jeder Schreibversuch des Bausteins landet im Zustand.
-		const schreibversuche: unknown[] = [];
-		const grundauswahl = vergleichGrundauswahl((s.activeMetricKeys as string[] | null | undefined) ?? null);
-		assert.equal(grundauswahl, null, 'Altbestand muss als „nie eingestellt" (null) beim Ausblick ankommen');
-		// `.body` ist Pflicht: svelte/server rendert lazy, erst der Zugriff fuehrt den Baustein aus
-		// (sonst vakuum-gruen, Adversary F003). Restluecke: ein Schreiben aus `$effect` laeuft
-		// unter SSR nie und ist hier nicht beobachtbar.
-		void render(OutlookLayoutControls as never, {
-			props: {
-				metricKeys: layout.outlookMetricKeys,
-				catalog: KATALOG,
-				grundauswahl,
-				onMetricKeys: (k: string[]) => {
-					schreibversuche.push(k);
-					s.outlookMetricKeys = k;
-				}
-			}
-		} as never).body;
-		assert.deepEqual(schreibversuche, [], 'Ausblick-Block schreibt beim reinen Oeffnen eine Auswahl');
+		// #3276: der Ausblick-Block des Vergleichs ist entfernt; „Oeffnen" mountet ihn nicht mehr.
 		assert.equal(s.activeMetricKeys, null, 'activeMetricKeys nach dem Oeffnen nicht mehr „nie eingestellt"');
 		const nachher = wetterMetrikenSnapshotAus(s);
 		assert.equal(flushPendingWetterMetrikenSave(ALTBESTAND(), nachher, vorher), null, 'Scheindifferenz nach reinem Oeffnen');
@@ -292,12 +240,14 @@ describe('#3061 Speichern und Trip bleiben unveraendert', () => {
 		assert.ok(nutzlast, 'Messaufbau: echte Geste muss eine Nutzlast liefern');
 		const dc = (nutzlast!.body.display_config ?? {}) as Record<string, unknown>;
 		assert.equal('active_metrics' in dc, false, `Nutzlast schreibt active_metrics: ${JSON.stringify(dc.active_metrics)}`);
-		assert.equal('outlook_metrics' in dc && dc.outlook_metrics != null, false, `Nutzlast schreibt outlook_metrics: ${JSON.stringify(dc.outlook_metrics)}`);
+		// #3276: kein Altschluessel, auch nicht als Bestand.
+		assert.equal('outlook_metrics' in dc, false, `Nutzlast schreibt outlook_metrics: ${JSON.stringify(dc.outlook_metrics)}`);
 	});
 
 	test('AC-5: Trip-Einbettung reicht weiter buckets.primary, nie null als Altbestand-Signal', () => {
-		assert.equal(EINBETTUNGEN.length, 2, 'Messaufbau: genau zwei Ausblick-Einbettungen (Vergleich, Trip) erwartet');
-		const trip = attributAusdruck(EINBETTUNGEN[1], TAB_QUELLE, 'grundauswahl');
+		// #3276: die Vergleichs-Einbettung ist entfernt, es bleibt die des Trips.
+		assert.equal(EINBETTUNGEN.length, 1, 'Messaufbau: genau eine Ausblick-Einbettung (Trip) erwartet');
+		const trip = attributAusdruck(EINBETTUNGEN[0], TAB_QUELLE, 'grundauswahl');
 		assert.equal(trip, 'buckets.primary', `Trip-Grundauswahl ist ${trip} statt buckets.primary`);
 		const liste = ['temperature', 'wind'];
 		assert.deepEqual(

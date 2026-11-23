@@ -18,10 +18,7 @@ import type { SaveFn, SaveStatus } from '../../stores/saveStatusStore.svelte.ts'
 import { merkeNutzlast } from '../../stores/nutzlastStand.ts';
 import type { PutClient } from './tripSpeicherung.ts';
 import { buildComparePresetSavePayload, waehleEigenfelder } from '../compare/compareEditorSave.ts';
-import {
-	normalizeStoredActiveMetrics,
-	normalizeStoredOutlookMetrics
-} from './weather-metrics-tab/compareMetricSelection.ts';
+import { normalizeStoredActiveMetrics } from './weather-metrics-tab/compareMetricSelection.ts';
 
 /** Plain-Snapshot der 11 persistenzrelevanten Versand-Felder (OHNE sendEmail —
  * `ComparePreset` kennt kein `send_email`-Feld, s. `hydrateVersandFieldsFromPreset`).
@@ -159,7 +156,6 @@ export function baueVersandNutzlast(
 		region: (displayConfig.region as string) ?? '',
 		idealRanges: (displayConfig.ideal_ranges as Record<string, IdealRange>) ?? {},
 		activeMetricKeys: normalizeStoredActiveMetrics(displayConfig.active_metrics) ?? undefined,
-		channelActiveMetricKeys: undefined,
 		metricAlertLevels: displayConfig.metric_alert_levels as Record<string, string> | undefined,
 		channelThresholds: preset.alert_channel_thresholds as Record<string, string> | undefined,
 		corridors: preset.corridors,
@@ -171,11 +167,8 @@ export function baueVersandNutzlast(
 		eveningEnabled: current.eveningEnabled,
 		eveningTime: current.eveningTime,
 		endDate: current.endDate,
-		hourlyMetricKeys: displayConfig.hourly_metrics as string[] | null | undefined,
+		// #3276: keine Altschluessel (hourly_/outlook_*) mehr durchreichen.
 		hourlyEnabled: preset.hourly_enabled,
-		outlookMetricKeys: normalizeStoredOutlookMetrics(displayConfig.outlook_metrics) ?? undefined,
-		outlookMetricFormats:
-			(displayConfig.outlook_metric_formats as Record<string, boolean> | undefined) ?? undefined,
 		outlookEnabled: preset.outlook_enabled,
 		dayWindowStartHour: preset.day_window_start_hour ?? undefined,
 		dayWindowEndHour: preset.day_window_end_hour ?? undefined

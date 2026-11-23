@@ -11,9 +11,13 @@
 //   F003: der Umschalter im Stundenverlauf-Editor arbeitet Read-Modify-Write —
 //         eine umgeschaltete Zeile verliert die Einstellung der anderen nicht.
 //
-// Kein Mock: echte ComparePreset-Objekte durch die echten Funktionen; F003
-// wertet das ECHTE Instanz-Skript von CompareHourlyLayoutControls.svelte aus
-// (svelteInstanzPruefstand) und ruft dessen Handler auf.
+// Issue #3276 (Spec-AC-38): `hourly_metric_formats` ist Altschluessel. F001 prueft jetzt
+// das Gegenteil (der Hub-Speicherweg sendet das Feld NICHT mehr, der Bestand bleibt ueber
+// den Go-Merge stehen); F003 entfaellt mit CompareHourlyLayoutControls.svelte (geloescht,
+// Stundenverlauf-Formate stellt der Nutzer in „Was steht wo" ein). F002 (Lesen fuer die
+// Vorlagen-Uebernahme) bleibt.
+//
+// Kein Mock: echte ComparePreset-Objekte durch die echten Funktionen.
 //
 // Ausfuehrung:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
@@ -21,8 +25,6 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import {
 	baueWetterMetrikenNutzlast,
@@ -30,11 +32,7 @@ import {
 	hydrateLayoutFieldsFromPreset,
 	type WetterMetrikenLayoutSnapshot
 } from '../../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
-import { umgebungFuer, werte, type Knoten } from '../../shared/__tests__/svelteInstanzPruefstand.ts';
 import type { ComparePreset } from '../../../types.ts';
-
-const HIER = dirname(fileURLToPath(import.meta.url));
-const KIND = join(HIER, '..', 'CompareHourlyLayoutControls.svelte');
 
 function makePreset(dc: Record<string, unknown> = {}): ComparePreset {
 	return {
@@ -83,27 +81,17 @@ function snapshot(zusatz: Partial<WetterMetrikenLayoutSnapshot> = {}): WetterMet
 
 const dc = (body: ComparePreset) => body.display_config as Record<string, unknown>;
 
-describe('#3097 F001 — Hub-Speicherweg sendet hourly_metric_formats', () => {
-	test('gesetztes Feld im Snapshot -> im PUT, eigene Nachbarfelder unveraendert, fremde nicht gesendet', () => {
+describe('#3097 F001 / #3276 AC-2 — Hub-Speicherweg sendet hourly_metric_formats NICHT mehr', () => {
+	test('gesetztes Feld im Snapshot -> kein display_config im PUT, nur die eigenen Schalter', () => {
 		const { body } = baueWetterMetrikenNutzlast(makePreset(), snapshot({ hourlyMetricFormats: { wind: true } }));
-		assert.deepEqual(dc(body).hourly_metric_formats, { wind: true }, 'hourly_metric_formats fehlt im Hub-PUT');
-		assert.deepEqual(dc(body).hourly_metrics, ['wind', 'temperature', 'precipitation']);
-		assert.deepEqual(dc(body).outlook_metric_formats, { gust: true });
-		assert.ok(!('metric_alert_levels' in dc(body)), 'fremdes Feld darf nicht mitgesendet werden');
+		assert.equal(dc(body), undefined, `display_config im Zustellungs-PUT: ${JSON.stringify(dc(body))}`);
+		assert.deepEqual(Object.keys(body).sort(), ['hourly_enabled', 'outlook_enabled']);
 	});
 
-	test('reine Umschaltung im Stundenverlauf erzeugt einen PUT mit dem Feld', () => {
+	test('reine Umschaltung im Stundenverlauf erzeugt keinen PUT (kein Altschluessel-Schreiben)', () => {
 		const vorher = snapshot();
-		const jetzt = snapshot({ hourlyMetricFormats: { wind: true } });
-		const payload = flushPendingWetterMetrikenSave(makePreset(), jetzt, vorher);
-		assert.ok(payload, 'Roh/Einfach-Umschaltung im Stundenverlauf wird nie gespeichert');
-		assert.deepEqual(dc(payload.body).hourly_metric_formats, { wind: true });
-	});
-
-	test('nie eingestellt (null) -> gespeicherter Stand round-trippt, wird nicht verworfen', () => {
-		const preset = makePreset({ hourly_metric_formats: { precipitation: true } });
-		const { body } = baueWetterMetrikenNutzlast(preset, snapshot({ hourlyMetricFormats: null }));
-		assert.deepEqual(dc(body).hourly_metric_formats, { precipitation: true });
+		const nachher = snapshot({ hourlyMetricFormats: { wind: true } });
+		assert.equal(flushPendingWetterMetrikenSave(makePreset(), nachher, vorher), null);
 	});
 });
 
@@ -115,39 +103,5 @@ describe('#3097 F002 — Laden hydriert hourly_metric_formats', () => {
 
 	test('ohne Feld -> null (nie eingestellt)', () => {
 		assert.equal(hydrateLayoutFieldsFromPreset(makePreset(), []).hourlyMetricFormats, null);
-	});
-});
-
-describe('#3097 F003 — Umschalter im Stundenverlauf-Editor ist Read-Modify-Write', () => {
-	async function umschalten(metricFormats: Record<string, boolean> | null, id: string, einfach: boolean) {
-		const gemeldet: Record<string, boolean>[] = [];
-		const { u } = await umgebungFuer(KIND, {
-			metricKeys: ['wind', 'gust', 'temperature'],
-			onMetricKeys: () => {},
-			catalog: [],
-			smsSymbols: {},
-			enabled: true,
-			metricFormats,
-			onMetricFormats: (f: Record<string, boolean>) => gemeldet.push(f)
-		} as Knoten);
-		const handler = werte('onHourlyMode', u) as (id: string, v: boolean) => void;
-		assert.equal(typeof handler, 'function', 'onHourlyMode laesst sich nicht herleiten');
-		handler(id, einfach);
-		return gemeldet;
-	}
-
-	test('Wind auf Einfach umschalten erhaelt Boeen=Einfach und Niederschlag=Roh', async () => {
-		const gemeldet = await umschalten({ gust: true, precipitation: false }, 'wind', true);
-		assert.deepEqual(gemeldet, [{ gust: true, precipitation: false, wind: true }]);
-	});
-
-	test('Zuruecksetzen auf Roh schreibt false und erhaelt die uebrigen Eintraege', async () => {
-		const gemeldet = await umschalten({ gust: true, wind: true }, 'wind', false);
-		assert.deepEqual(gemeldet, [{ gust: true, wind: false }]);
-	});
-
-	test('ohne gespeicherte Zuordnung (null) entsteht genau der eine Eintrag', async () => {
-		const gemeldet = await umschalten(null, 'gust', true);
-		assert.deepEqual(gemeldet, [{ gust: true }]);
 	});
 });

@@ -17,13 +17,8 @@
 // Vorgabewert, WeatherV2Reihenfolge.svelte:43-44). Deshalb prueft diese Datei
 // beide Richtungen an EINER Stelle:
 //   1. die Uebersicht (vergleich-Zweig von WeatherMetricsTab.svelte) TRAEGT beide,
-//   2. Ausblick und Stundenverlauf tragen sie WEITERHIN NICHT (AC-S8-14).
-//
-// Punkt 2 wird zusaetzlich von den beiden unveraenderten Geschwister-Waechtern
-// `compare_outlook_metric_selection_structure.test.ts` und
-// `compare_hourly_layout_controls_structure.test.ts` bewacht. Die Doppelung ist
-// Absicht (Gegenprobe M9): wer diese Datei ersatzlos loescht, statt sie
-// umzuschreiben, wuerde sonst die Abgrenzungs-Zusicherung mit ihr verlieren.
+//   2. der Ausblick traegt sie seit #1848 A3 ebenfalls (umgedreht, s. unten);
+//      die Stundenverlauf-Steuerung des Vergleichs ist seit #3276 entfernt.
 //
 // Grund fuer AST statt DOM: dieses Repo hat kein vitest/jsdom (package.json
 // "test": node --test). Der Test parst die Komponenten mit dem ECHTEN
@@ -47,7 +42,6 @@ import { parse } from 'svelte/compiler';
 const here = dirname(fileURLToPath(import.meta.url));
 const SHARED_FILE = join(here, '..', 'WeatherMetricsTab.svelte');
 const OUTLOOK_FILE = join(here, '..', 'OutlookLayoutControls.svelte');
-const HOURLY_FILE = join(here, '..', '..', 'compare', 'CompareHourlyLayoutControls.svelte');
 
 function findAttr(node: any, name: string): any {
 	return (node?.attributes ?? []).find((a: any) => a.type === 'Attribute' && a.name === name);
@@ -271,43 +265,9 @@ describe('AC-S8-14 (a): die Vergleichs-UEBERSICHT traegt jetzt offColumns UND on
 // Ablösung betrifft AC-13 aus fix_1719_s3, s.
 // compare_outlook_metric_selection_structure.test.ts.
 //
-// Der STUNDENVERLAUF bleibt unveraendert: er hat weiterhin seine eigene
-// Kaestchenliste und damit einen funktionierenden Rueckweg — dort waere eine
-// zweite Aus-Gruppe genau die bedeutungslose Doppelung, die S8 ausschloss.
-describe('AC-S8-14 (b): der Stundenverlauf bleibt ohne Kanal-Ebene', () => {
-	for (const [label, file] of [
-		['Stundenverlauf (CompareHourlyLayoutControls)', HOURLY_FILE]
-	] as [string, string][]) {
-		test(
-			`${label} uebergibt WEDER offColumns NOCH onRestore`,
-			{ skip: !exists(file) },
-			() => {
-				const ast = parse(readFileSync(file, 'utf-8'), { modern: true });
-				const rows = findComponentsNamed(ast.fragment, 'WeatherV2Reihenfolge');
-				assert.equal(
-					rows.length,
-					1,
-					`Erwartet genau einen WeatherV2Reihenfolge-Aufruf in ${label}, gefunden ${rows.length} — ` +
-						'Test ist blind geworden oder die Struktur hat sich geaendert.'
-				);
-				if (rows.length !== 1) return;
-				assert.equal(
-					findAttr(rows[0], 'offColumns'),
-					undefined,
-					`AC-S8-14 FAIL: ${label} uebergibt jetzt \`offColumns\` — Scheibe 8 gibt AUSDRUECKLICH ` +
-						'nur der Uebersichtstabelle eine Kanal-Ebene; hier entstuende eine Aus-Gruppe ohne ' +
-						'Kanal-Reiter, also ohne Bedeutung.'
-				);
-				assert.equal(
-					findAttr(rows[0], 'onRestore'),
-					undefined,
-					`AC-S8-14 FAIL: ${label} uebergibt jetzt \`onRestore\` — siehe offColumns-Befund oben, ` +
-						'dieselbe Naht.'
-				);
-			}
-		);
-	}
-
+// Die STUNDENVERLAUF-Steuerung des Vergleichs (CompareHourlyLayoutControls) ist mit
+// #3276 entfernt; ihr Waechter entfaellt mit ihr.
+describe('AC-S8-14 (b): Ausblick mit Rueckweg', () => {
 	test('der Ausblick uebergibt offColumns UND onRestore (#1848 A3, umgedreht)', () => {
 		const ast = parse(readFileSync(OUTLOOK_FILE, 'utf-8'), { modern: true });
 		const rows = findComponentsNamed(ast.fragment, 'WeatherV2Reihenfolge');

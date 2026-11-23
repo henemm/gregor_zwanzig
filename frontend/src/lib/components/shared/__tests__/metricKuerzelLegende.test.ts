@@ -1096,29 +1096,11 @@ const EINBETTUNGEN = [
 			$locale: 'de',
 			register: {}
 		})
-	},
-	{
-		name: 'Stundenverlauf (CompareHourlyLayoutControls)',
-		datei: () => join(SHARED, '..', 'compare', 'CompareHourlyLayoutControls.svelte'),
-		waehle: () => true,
-		// #2232: s. Ausblick oben — Marken als Prop, nicht selbst geladen.
-		// #2276 S6b: die Flaeche arbeitet auf Wertprops statt auf `wiz` —
-		// `metricKeys: null` ist dasselbe „nie eingestellt", nur ohne
-		// Zustandsobjekt.
-		saat: () => ({
-			catalog: toCompareSelectionEntries({ metrics: live().compare } as never),
-			metricKeys: null,
-			// #3047 H1: wie beim Ausblick reicht WeatherMetricsTab.svelte die
-			// Vergleichs-Grundauswahl als Prop `grundauswahl` durch.
-			grundauswahl: gerendertVergleich(),
-			smsSymbols: tripKuerzelById(),
-			$locale: 'de',
-			register: {}
-		})
 	}
+	// Issue #3276: 'Stundenverlauf (CompareHourlyLayoutControls)' entfaellt mit dem Bauteil.
 ] as const;
 
-describe('F007: alle VIER Einbettungen reichen brauchbare Props durch', () => {
+describe('F007: alle DREI Einbettungen reichen brauchbare Props durch (#3276: vorher vier)', () => {
 	for (const fall of EINBETTUNGEN) {
 		test(`${fall.name}: die echte Herleitung liefert Marken UND Legende`, async () => {
 			const datei = fall.datei();
