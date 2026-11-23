@@ -152,23 +152,13 @@ describe('#1401b AC-2: der Vergleich laedt das Metrik-Register fuer die Beschrif
 		);
 	});
 
-	test('Die Stundenverlauf-Steuerung haengt an keinem Katalog-Gate (bleibt erreichbar)', () => {
+	// Issue #3276 (Spec-AC-38): die Stundenverlauf-Steuerung des Ortsvergleichs ist ersatzlos
+	// entfernt (Einstellung nur noch in „Was steht wo"). Die beiden Tests „haengt an keinem
+	// Katalog-Gate" und „bekommt das Register als catalog-Attribut" pruefen eine Flaeche, die es
+	// nicht mehr gibt — ersetzt durch die Zusicherung, dass sie nicht zurueckkehrt.
+	test('#3276: es gibt keinen `sections.includes("stundenverlauf")`-Block mehr', () => {
 		const ast = parseComponent();
-		const hourly = findSectionBlockWithAncestors(ast.fragment, 'stundenverlauf');
-		assert.ok(hourly, 'Kein `{#if sections.includes("stundenverlauf")}`-Block gefunden.');
-
-		const gateNames = ['catalogLoaded', 'compareCatalogLoaded', 'compareCatalogError', 'loadError'];
-		const ownTest = identifiers(hourly!.block.test);
-		const ancestorNames = new Set(hourly!.ancestorTests.flatMap((t) => [...identifiers(t)]));
-		for (const gate of gateNames) {
-			assert.equal(ownTest.has(gate), false, `Stundenverlauf-Block ist an \`${gate}\` gekoppelt.`);
-			assert.equal(
-				ancestorNames.has(gate),
-				false,
-				`Stundenverlauf-Block liegt innerhalb eines \`${gate}\`-Gates — ein ` +
-					'fehlgeschlagener Katalog-Abruf wuerde die Steuerung unerreichbar machen (AC-2/AC-7).'
-			);
-		}
+		assert.equal(findSectionBlockWithAncestors(ast.fragment, 'stundenverlauf'), null);
 	});
 
 	test('Gegenprobe: der Ausblick-Block IST bewusst an compareCatalogLoaded gekoppelt', () => {
@@ -178,37 +168,5 @@ describe('#1401b AC-2: der Vergleich laedt das Metrik-Register fuer die Beschrif
 		const outlook = findSectionBlockWithAncestors(ast.fragment, 'ausblick');
 		assert.ok(outlook, 'Kein `{#if sections.includes("ausblick")}`-Block gefunden.');
 		assert.ok(identifiers(outlook!.block.test).has('compareCatalogLoaded'));
-	});
-
-	test('Der Stundenverlauf bekommt das Register als `catalog`-Attribut gereicht', () => {
-		const ast = parseComponent();
-		const hourly = findSectionBlockWithAncestors(ast.fragment, 'stundenverlauf');
-		assert.ok(hourly, 'Kein Stundenverlauf-Block gefunden.');
-
-		let passed = false;
-		function visit(node: unknown): void {
-			if (passed || node === null || typeof node !== 'object') return;
-			if (Array.isArray(node)) {
-				node.forEach(visit);
-				return;
-			}
-			const n = node as Record<string, any>;
-			if (n.type === 'Component' && n.name === 'CompareHourlyLayoutControls') {
-				passed = (n.attributes ?? []).some(
-					(a: any) => a.type === 'Attribute' && a.name === 'catalog'
-				);
-				if (passed) return;
-			}
-			for (const key of Object.keys(n)) {
-				if (key === 'parent') continue;
-				visit(n[key]);
-			}
-		}
-		visit(hourly!.block.consequent);
-		assert.ok(
-			passed,
-			'`CompareHourlyLayoutControls` bekommt kein `catalog`-Attribut — die geladene ' +
-				'Registerantwort erreicht die Checkboxen dann nicht (#1401b AC-2).'
-		);
 	});
 });

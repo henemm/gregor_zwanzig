@@ -1,8 +1,8 @@
 // #3047 F5 T3 Orte (AC-10): eine in die Grundauswahl des Ortsvergleichs
 // aufgenommene Metrik steht danach in JEDER bereits gespeicherten Liste, hinten
-// angehaengt: Kanal-Listen (`channel_active_metrics`), Ausblick
-// (`outlook_metrics`) und Stundenverlauf (`hourly_metrics`, nur stuendlich
-// waehlbare Groessen). Gegenstueck zu neue_metrik_in_allen_listen.test.ts (Trip).
+// angehaengt: Kanal-Listen (`channel_active_metrics`). Seit #3276 werden Ausblick
+// (`outlook_metrics`) und Stundenverlauf (`hourly_metrics`) im Ortsvergleich nicht mehr
+// gepflegt (Altschluessel). Gegenstueck zu neue_metrik_in_allen_listen.test.ts (Trip).
 //
 // SPEC: docs/specs/modules/feat_3047_einstellung_gleich_mail_pruefkatalog.md (AC-10)
 // Konzept: docs/context/einstellungen_neu.md §5 Punkt 6/8.
@@ -85,24 +85,18 @@ describe('#3047 AC-10 Orte: neue Metrik in allen bereits gespeicherten Listen', 
 		assert.equal(kanal.telegram, null, 'nie bearbeitete Liste bleibt ohne eigenen Eintrag');
 	});
 
-	test('Einwahl haengt die Metrik an gespeicherten Ausblick und Stundenverlauf hinten an', () => {
-		const { zustand, aufrufe } = lage();
-		toggleCompareMetric(zustand)('uv_index_max');
-		assert.deepEqual(aufrufe.outlook, [[['wind', 'temperature', 'uv_index']]], 'Ausblick-Liste ohne neue Metrik');
-		assert.deepEqual(aufrufe.hourly, [[['temp_c', 'wind', 'uv_index']]], 'Stundenverlauf ohne neue Metrik');
-	});
-
-	test('Stundenverlauf nur fuer stuendlich waehlbare Groessen; keine Dublette ueber Alt-Kurzschluessel', () => {
-		const sonne = lage();
-		toggleCompareMetric(sonne.zustand)('sunny_hours_h');
-		assert.deepEqual(sonne.aufrufe.hourly, [], 'Sonnenstunden sind stuendlich nicht waehlbar');
-		assert.deepEqual(sonne.aufrufe.outlook, [[['wind', 'temperature', 'sunshine']]]);
-
-		// temp_min_c teilt die Groesse Temperatur, die als Alt-Kurzschluessel temp_c schon drin ist
-		const tief = lage();
-		toggleCompareMetric(tief.zustand)('temp_min_c');
-		assert.deepEqual(tief.aufrufe.hourly, [], 'Temperatur steht schon (als temp_c) im Stundenverlauf');
-		assert.deepEqual(tief.aufrufe.outlook, [], 'Temperatur steht schon im Ausblick');
+	// Issue #3276 (Spec-AC-38): Ausblick- und Stundenverlauf-Liste sind im Ortsvergleich
+	// Altschluessel — der Editor pflegt sie nicht mehr. Vorher: „Einwahl haengt die Metrik an
+	// gespeicherten Ausblick und Stundenverlauf hinten an" und „Stundenverlauf nur fuer stuendlich
+	// waehlbare Groessen". Jetzt: die Einwahl beruehrt beide Listen nicht (Bestand bleibt).
+	test('#3276: Einwahl beruehrt Ausblick und Stundenverlauf nicht', () => {
+		for (const metrik of ['uv_index_max', 'sunny_hours_h', 'temp_min_c']) {
+			const { zustand, aufrufe } = lage();
+			toggleCompareMetric(zustand)(metrik);
+			assert.equal(aufrufe.vergleich.length, 1, `${metrik}: die Kanal-Listen werden weiter gekoppelt`);
+			assert.deepEqual(aufrufe.outlook, [], `${metrik}: Ausblick-Liste beruehrt`);
+			assert.deepEqual(aufrufe.hourly, [], `${metrik}: Stundenverlauf-Liste beruehrt`);
+		}
 	});
 
 	test('nie eingestellte Listen (null) bleiben null', () => {

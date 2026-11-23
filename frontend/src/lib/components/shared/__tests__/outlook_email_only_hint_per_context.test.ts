@@ -140,10 +140,11 @@ describe('#1720 S2 AC-6 — der E-Mail-only-Hinweis haengt am Kontext', () => {
 	test('Gegeben die Trip-Einbindung, dann schaltet sie den Hinweis mit showEmailOnlyHint={false} ab', () => {
 		const ast = parseComponent(TAB);
 		const mounts = findComponentsNamed(ast.fragment, 'OutlookLayoutControls');
+		// Issue #3276: die Ortsvergleich-Einbindung ist entfernt — es bleibt genau die Trip-Einbindung.
 		assert.equal(
 			mounts.length,
-			2,
-			`REGRESSION: erwartet genau zwei Einbindungen (Trip + Vergleich), gefunden ${mounts.length}.`
+			1,
+			`REGRESSION: erwartet genau eine Einbindung (Trip; Vergleich seit #3276 entfernt), gefunden ${mounts.length}.`
 		);
 		const trip = mounts.find((m) => staticAttrText(m, 'title') === TRIP_TITLE);
 		assert.ok(
@@ -166,21 +167,11 @@ describe('#1720 S2 AC-6 — der E-Mail-only-Hinweis haengt am Kontext', () => {
 		);
 	});
 
-	test('Gegeben die Ortsvergleich-Einbindung, dann laesst sie die Vorgabe unangetastet', () => {
+	// Issue #3276 (Spec-AC-38): die Ortsvergleich-Einbindung des Ausblicks ist ersatzlos entfernt
+	// (Einstellung nur noch in „Was steht wo"). Vorher: sie liess die Vorgabe des Hinweises stehen.
+	test('#3276: es gibt keine Ortsvergleich-Einbindung mehr', () => {
 		const ast = parseComponent(TAB);
 		const mounts = findComponentsNamed(ast.fragment, 'OutlookLayoutControls');
-		const vergleich = mounts.filter((m) => staticAttrText(m, 'title') !== TRIP_TITLE);
-		assert.equal(
-			vergleich.length,
-			1,
-			`REGRESSION: erwartet genau eine Vergleichs-Einbindung, gefunden ${vergleich.length}.`
-		);
-		assert.equal(
-			findAttr(vergleich[0], PROP),
-			undefined,
-			`AC-6 FAIL: die Ortsvergleich-Einbindung uebergibt \`${PROP}\` — der Compare-` +
-				'Ausblick erscheint weiterhin ausschliesslich in der E-Mail, der Hinweis ' +
-				'ist dort richtig und muss unveraendert stehen bleiben.'
-		);
+		assert.equal(mounts.filter((m) => staticAttrText(m, 'title') !== TRIP_TITLE).length, 0);
 	});
 });

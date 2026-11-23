@@ -95,8 +95,9 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 		assert.equal(P.funktionsTabelle() + '\n', golden);
 	});
 	test('Messaufbau: Golden enthaelt die deutschen Texte der Flaechen', () => {
+		// #3276: 'Erscheint nur in der E-Mail.' stand nur in den entfernten Flaechen Stundenverlauf/Ausblick.
 		const alle = [...Object.keys(FAELLE).map((f) => `${f}.de.html`), 'funktionen.de.txt'].map((f) => readFileSync(path.join(P.GOLDEN_DIR, f), 'utf-8')).join('');
-		for (const s of ['Läuft automatisch', 'Läuft autom.', 'Verglichene Orte', 'Ort hinzufügen', 'Nächster Versand', 'Zuletzt raus', '3 Kandidaten', 'Bearbeiten →', 'Orts-Vergleiche', 'Laufzeit überschritten', 'Setup abschließen', 'Stundenverlauf', 'Erscheint nur in der E-Mail.', 'Neuer Ort', 'Erkannt · Vorschau', 'min. 2 erforderlich', 'viel — Empfehlung 3–5', 'Eckdaten', 'noch 1 Ort nötig', 'noch 2 Orte nötig', 'erst Vergleich benennen', 'Gesperrt — erst Vergleich benennen', 'Keine weiteren gespeicherten Orte verfügbar.', 'Status-Änderung fehlgeschlagen', 'Täglich 7–9 Uhr', 'vor 1 Woche', 'vor 2 Wochen', 'Neuer Auto-Report'])
+		for (const s of ['Läuft automatisch', 'Läuft autom.', 'Verglichene Orte', 'Ort hinzufügen', 'Nächster Versand', 'Zuletzt raus', '3 Kandidaten', 'Bearbeiten →', 'Orts-Vergleiche', 'Laufzeit überschritten', 'Setup abschließen', 'Stundenverlauf', 'Neuer Ort', 'Erkannt · Vorschau', 'min. 2 erforderlich', 'viel — Empfehlung 3–5', 'Eckdaten', 'noch 1 Ort nötig', 'noch 2 Orte nötig', 'erst Vergleich benennen', 'Gesperrt — erst Vergleich benennen', 'Keine weiteren gespeicherten Orte verfügbar.', 'Status-Änderung fehlgeschlagen', 'Täglich 7–9 Uhr', 'vor 1 Woche', 'vor 2 Wochen', 'Neuer Auto-Report'])
 			assert.ok(alle.includes(s), s);
 	});
 	test('Messaufbau: jeder deutsche Anker-Text (Festteile) steht im Golden oder in der Funktionstabelle', () => {
@@ -106,11 +107,8 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 			// #2794 Fix-Loop B4: die Karte „Wetter" zählt erst mit im Browser geladenen Vorlagen;
 			// im SSR-Golden steht „—". Die Zahl prüft shared/__tests__/s3a2794_teil4b_befunde.test.ts.
 			'vergleich.hub.wertebereiche_kurz.one', 'vergleich.hub.wertebereiche_kurz.other',
-			'vergleich.hub.wertebereiche_lang.one', 'vergleich.hub.wertebereiche_lang.other',
-			// #3047 H1: gesperrte Stundenverlauf-Zeile erscheint nur im Reiter Wetter (nicht im
-			// Hub-Golden); den Text am Bauteil prueft editor_standard_gleich_mail.test.ts
-			// (frontend_seite_orte_stundenverlauf_gesperrt_nennt_grund).
-			'vergleich.stundenverlauf.nicht_in_grundauswahl']);
+			'vergleich.hub.wertebereiche_lang.one', 'vergleich.hub.wertebereiche_lang.other']);
+			// #3276: 'vergleich.stundenverlauf.nicht_in_grundauswahl' entfiel mit CompareHourlyLayoutControls.
 		const fehlt: string[] = [];
 		for (const [k, de] of F10_ANKER) {
 			if (UNERREICHT.has(k)) continue;
@@ -300,27 +298,10 @@ describe('AC-7: Groessennamen im Alarme-Reiter des Vergleichs (Register-Ergaenzu
 	});
 });
 
-describe('AC-7: Stundenverlauf (transponierte Uebersicht): Name aus dem Register, col_label unveraendert', () => {
-	test('mit Register: label_en englisch, ohne label_en deutsch; Kurzform bleibt', () => {
-		const { de, en: e } = deDannEn(() => P.stundenverlaufRendern());
-		const zweiter = (h: string) => sichtbar(h.split('\n')[1]);
-		hat(zweiter(e), 'Temperature');
-		hat(zweiter(e), 'Sunshine hours');
-		hat(zweiter(e), 'Bewölkung'); // kein label_en im Register
-		hat(zweiter(e), 'Hourly view');
-		hat(zweiter(e), 'Appears only in the email.');
-		hat(zweiter(de), 'Temperatur');
-		hat(zweiter(de), 'Sonnenstunden');
-		hatNicht(zweiter(e), 'Temperatur ');
-		for (const c of P.COL_LABELS.slice(0, 3)) {
-			const zaehle = (h: string) => (h.match(new RegExp(`>${c}<`, 'g')) ?? []).length;
-			assert.equal(zaehle(e), zaehle(de), c);
-		}
-	});
-	test('ohne Register (nicht geladen): die Namen der Vergleichs-Antwort bleiben, keine Leerstellen', () => {
-		const { en: e } = deDannEn(() => sichtbar(P.stundenverlaufRendern().split('\n')[0]));
-		for (const n of ['Temperatur', 'Wind', 'Bewölkung', 'Sonnenstunden']) hat(e, n);
-	});
+describe('AC-7: Anlege-Flaechen englisch', () => {
+	// Issue #3276: die beiden Stundenverlauf-Faelle (transponierte Uebersicht,
+	// CompareHourlyLayoutControls) entfallen mit dem Bauteil — Stundenverlauf stellt
+	// der Ortsvergleich nur noch in „Was steht wo" ein (eigene Sprachtests dort).
 	// #2880: mobil MField mit Hinweis rechts (vorher handgeschriebenes „Region (optional)")
 	test('Anlegen: Texte englisch, ohne Profil-Kacheln (#3198)', () => {
 		const { en: e } = deDannEn(() => sichtbar(P.ANLEGE_FAELLE.anlegen_vergleich.map(P.anlegenRendern).join('\n')));

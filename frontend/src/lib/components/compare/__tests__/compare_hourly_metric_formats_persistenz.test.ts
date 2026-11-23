@@ -61,7 +61,9 @@ const UNBETEILIGTE_FELDER: Record<string, unknown> = {
 };
 
 describe('#3097 AC-8 — Speichern von hourly_metric_formats (Read-Modify-Write)', () => {
-	test('nur hourlyMetricFormats editiert -> Feld im Payload, alle uebrigen Felder unveraendert', () => {
+	// Issue #3276 (Spec-AC-38, AC-2): `hourly_metric_formats` ist Altschluessel. Vorher: Editor-Wert
+	// landet im Payload. Jetzt: Editor-Wert wird nicht geschrieben, alle Bestandsfelder bleiben.
+	test('#3276: hourlyMetricFormats editiert -> Feld NICHT im Payload, alle uebrigen Felder unveraendert', () => {
 		const original = makePreset();
 		const { body } = buildComparePresetSavePayload(original, {
 			name: original.name,
@@ -70,9 +72,9 @@ describe('#3097 AC-8 — Speichern von hourly_metric_formats (Read-Modify-Write)
 			region: 'Dolomiten',
 			idealRanges: {},
 			hourlyMetricFormats: { wind: true }
-		});
+		} as Parameters<typeof buildComparePresetSavePayload>[1]);
 		const dc = body.display_config as Record<string, unknown>;
-		assert.deepEqual(dc.hourly_metric_formats, { wind: true }, 'Stundenverlauf-Zuordnung fehlt im Payload');
+		assert.ok(!('hourly_metric_formats' in dc), '#3276: hourly_metric_formats im Payload');
 		for (const [key, wert] of Object.entries(UNBETEILIGTE_FELDER)) {
 			assert.deepEqual(dc[key], wert, `display_config.${key} ging verloren (Read-Modify-Write verletzt)`);
 		}
@@ -91,7 +93,9 @@ describe('#3097 AC-8 — Speichern von hourly_metric_formats (Read-Modify-Write)
 		assert.deepEqual((body.display_config as Record<string, unknown>).hourly_metric_formats, { wind: true });
 	});
 
-	test('reine Umschaltung im Stundenverlauf gilt als Aenderung (PUT entsteht)', () => {
+	// #3276: vorher „reine Umschaltung gilt als Aenderung (PUT entsteht)" — das Feld wird nicht mehr
+	// geschrieben, eine reine Umschaltung loest keinen PUT aus.
+	test('#3276: reine Umschaltung im Stundenverlauf loest keinen PUT aus', () => {
 		const basis = {
 			hourlyMetricKeys: ['wind', 'temperature'],
 			hourlyEnabled: true,
@@ -101,12 +105,7 @@ describe('#3097 AC-8 — Speichern von hourly_metric_formats (Read-Modify-Write)
 			outlookEnabled: true
 		} as unknown as LayoutSnapshot;
 		const jetzt = { ...basis, hourlyMetricFormats: { wind: true } } as unknown as LayoutSnapshot;
-		const payload = flushPendingLayoutSave(makePreset(), jetzt, basis);
-		assert.ok(payload, 'reine Roh/Einfach-Umschaltung im Stundenverlauf wird nie gespeichert');
-		assert.deepEqual(
-			(payload.body.display_config as Record<string, unknown>).hourly_metric_formats,
-			{ wind: true }
-		);
+		assert.equal(flushPendingLayoutSave(makePreset(), jetzt, basis), null);
 	});
 });
 

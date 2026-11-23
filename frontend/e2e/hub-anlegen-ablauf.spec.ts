@@ -381,13 +381,7 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 				await expect(sel.inhalt.wertebereiche(page), 'AN-6: Wertebereiche-Inhalt fehlt').toBeVisible({ timeout: 15_000 });
 
 				await schrittOeffnen(page, kind, 'zustellung');
-				// Compare-eigen (Kind-Kontraste AN-12/AN-6): Stundenverlauf steht nur im
-				// Vergleich (COMPARE_ONLY_SECTIONS, #2346 S3) — der Trip hat keinen Zweig.
-				if (kind === 'vergleich') {
-					const stunde = page.locator('.cm-desktop [data-testid="compare-layout-hourly-metric-temperature"] input').first();
-					await expect(stunde).toBeVisible({ timeout: 10_000 });
-					await stunde.click();
-				}
+				// #3276: die Stundenverlauf-Auswahl des Vergleichs ist entfernt (nur noch Karte „Was steht wo“).
 				const hoch = page.locator('[data-testid="alert-channel-threshold-telegram-HIGH"]:visible').first();
 				await expect(hoch, 'AN-6: Kanal-Stufe im Zustellungs-Schritt fehlt').toBeVisible({ timeout: 15_000 });
 				await hoch.click();
@@ -415,8 +409,11 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 				expect((rumpf.corridors as unknown[] | undefined)?.length ?? 0, 'AN-6: Wertebereiche fehlen im POST').toBeGreaterThan(0);
 				expect(schwellen(rumpf).telegram, 'AN-6: Kanal-Stufe fehlt im POST').toBe('HIGH');
 				if (kind === 'vergleich') {
-					const stunden = (rumpf.display_config as Rumpf | undefined)?.hourly_metrics as unknown[] | undefined;
-					expect(stunden?.length ?? 0, 'AN-6: Stundenverlauf-Auswahl fehlt im POST').toBeGreaterThan(0);
+					// #3276 AC-1: der Anlege-POST traegt keinen Stundenverlauf-Altschluessel mehr.
+					expect(
+						(rumpf.display_config as Rumpf | undefined)?.hourly_metrics,
+						'AN-6: Anlege-POST des Vergleichs traegt wieder hourly_metrics'
+					).toBeUndefined();
 					// Alt slice4 AC-11 (Kind-Kontrast AN-12): im Vergleich ist `channel_layouts`
 					// Ballast (#1351) — der Anlege-POST darf die Attrappe nicht wieder senden.
 					// Beim Trip ist das Feld eine echte Kanal-Auswahl (#1575), daher kein Zweig.
@@ -441,7 +438,7 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 				expect((s.corridors as unknown[] | undefined)?.length ?? 0, 'AN-6: Roundtrip verliert die Wertebereiche').toBeGreaterThan(0);
 				expect(schwellen(s).telegram, 'AN-6: Roundtrip verliert die Kanal-Stufe').toBe('HIGH');
 				if (kind === 'vergleich') {
-					expect((s.display_config as Rumpf).hourly_metrics).toEqual((rumpf.display_config as Rumpf).hourly_metrics);
+					// #3276: kein hourly_metrics-Roundtrip mehr (Stundenverlauf nur noch in „Was steht wo“).
 					// Rumpf-Abgleich compare-layout-tab-dissolution AC-6 (#1360 F002): das Feld
 					// des abgeschafften Layout-Reiters taucht am Anlege-Pfad nicht wieder auf.
 					expect(
@@ -777,23 +774,21 @@ for (const kind of HUB_KINDS) {
 // COMPARE_ONLY_SECTIONS (#2346 S3), Temperatur Max/Min ist Vergleichs-Vokabular
 // (Trip führt eine Zeile `temperature`), die Layout-Attrappe war Vergleichs-
 // spezifisch (#1301). Der Trip hat keinen Zweig.
-test('AN-12 (vergleich): Stundenverlauf-Schalter da, keine Layout-Attrappe, Temperatur als eine Zeile ohne Aggregationswahl', async ({
+test('AN-12 (vergleich): kein eigener Stundenverlauf-Schalter (#3276), keine Layout-Attrappe, Temperatur als eine Zeile ohne Aggregationswahl', async ({
 	page
 }) => {
 	const kind: HubKind = 'vergleich';
 	await page.setViewportSize(DESKTOP);
 	await anlegenPflicht(page, kind, { name: einName('AN12') });
-	// #2794 S3a: der Stundenverlauf steht im Schritt Zustellung; Temperatur Max/Min (Metrik-Auswahl)
-	// im Schritt Wetter — beide Blöcke werden unten je im eigenen Schritt geprüft.
 	// Die Kette ist gesperrt: Zustellung öffnet erst nach dem Besuch von Wetter.
 	await schrittOeffnen(page, kind, 'wetter');
 	await schrittOeffnen(page, kind, 'zustellung');
 
-	await expect(page.locator('[data-testid="compare-layout-hourly-enabled-toggle"]:visible').first()).toBeVisible({
-		timeout: 15_000
-	});
-	// Rumpf-Abgleich compare-flow-navigation AC-8: auch die Metrik-Auswahl des Stundenverlaufs ist da.
-	await expect(page.locator('[data-testid="compare-layout-hourly-metrics"]:visible').first()).toBeVisible();
+	// #3276 (Spec feat_3276_vergleich_altfelder_entfernen.md AC-3/AC-6): die Stundenverlauf-Steuerung
+	// des Vergleichs ist entfernt; eingestellt wird nur noch in der Karte „Was steht wo“.
+	await expect(page.locator('[data-testid="compare-layout-hourly-enabled-toggle"]')).toHaveCount(0);
+	await expect(page.locator('[data-testid="compare-layout-hourly-metrics"]')).toHaveCount(0);
+	await expect(page.locator('[data-testid="weather-metrics-stundenverlauf"]')).toHaveCount(0);
 
 	// Alt slice4 AC-11 / flow Slice 4 AC-9 „keine channel_layouts-Attrappe". Die frühere
 	// DOM-Aussage `channel-tab-email` count 0 ist seit #1703 S8 überholt: der geteilte

@@ -112,7 +112,9 @@ const ALT_ANZAHL_3251 = 2756;
 // Einträge im Abschnitt metriken (Zeilennamen Regenwahrscheinlichkeit, Tiefe Wolken, UV-Index, Bewölkung je
 // Zustand) nur EN (Lücke → Server-EN). Alle übrigen Einträge byte-gleich (Diff je ID geprüft).
 const ALT_ANZAHL = ALT_ANZAHL_3251 + 184 - 180 + 174;
-const ALT_SHA = '2d92d626780a7faf915d4fba7869672a5aed7ec4f7433222764ba5ed0bf0d059';
+// #3276: 6 Einträge „Stundenverlauf“ (was-steht-wo, orte) ändern nur i18n_key vergleich.stundenverlauf.titel →
+// wetter.wsw.bloecke.stundenverlauf (alter Schlüssel mit der Compare-Stundenverlauf-Steuerung entfernt; EN gleich).
+const ALT_SHA = '77d90fe757eded7a4d08af48b7e17687e60da63c0dbe6d3b01ff35913bbcc7cf';
 const MOCKUP_HASH = 'sha256:fbb04f549d974116e70c0e89facac657cf5ab13a31e267eb00882ad7e6496ec6';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {

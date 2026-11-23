@@ -56,7 +56,6 @@ function fullFields(): NewComparePresetFields {
 		region: 'Salzburger Land',
 		idealRanges: { wind_max_kmh: { min: 0, max: 30 } },
 		activeMetricKeys: ['wind_max_kmh', 'temp_max_c'],
-		hourlyMetricKeys: ['temp_c'],
 		metricAlertLevels: { wind_max_kmh: 'sensibel' },
 		telegramStyle: 'rich'
 	};
@@ -81,7 +80,8 @@ describe('buildNewComparePresetPayload — Issue #1360 F002: top_n ersatzlos ent
 
 		assert.equal(displayConfig.region, 'Salzburger Land');
 		assert.deepEqual(displayConfig.active_metrics, ['wind_max_kmh', 'temp_max_c']);
-		assert.deepEqual(displayConfig.hourly_metrics, ['temp_c']);
+		// Issue #3276: hourly_metrics ist Altschluessel und wird beim Anlegen nicht gesendet.
+		assert.ok(!('hourly_metrics' in displayConfig));
 		assert.deepEqual(displayConfig.ideal_ranges, { wind_max_kmh: { min: 0, max: 30 } });
 		assert.deepEqual(displayConfig.metric_alert_levels, { wind_max_kmh: 'sensibel' });
 	});

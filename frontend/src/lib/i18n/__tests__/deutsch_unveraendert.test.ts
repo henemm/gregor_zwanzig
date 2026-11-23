@@ -237,8 +237,8 @@ const NEU_IN_FOLGEPAKETEN = [
 	'wetter.kopf.fehler_verbindung',
 	// #3047 R8 (AC-24): Orts-Vergleich-Telegram — alle Zeilen, ab Platz 8 zweite Zeile je Ort.
 	'layout.kappung.zeilen_umbruch', 'layout.kappung.zeilen_eine', 'versand.briefing.sub.telegram_vergleich',
-	// #3047 H1: 'vergleich.stundenverlauf.nicht_in_grundauswahl' steht als fester
-	// Anker in F10_ANKER (vergleich.json = F9 + F10-Anker) und zaehlt ueber NEU_IN_F10.
+	// #3047 H1 / #3276: 'vergleich.stundenverlauf.nicht_in_grundauswahl' ist mit
+	// CompareHourlyLayoutControls entfallen (stand als Anker in F10_ANKER).
 	// #2999 Datumsfeld: Meldung bei einem Datum, das es nicht gibt
 	'bausteine.datum.ungueltig',
 	// #2961 Welle 2 (ADR-0116) Premium-SMS-Verbindung trennen

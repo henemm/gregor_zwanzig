@@ -270,89 +270,33 @@ describe('Lesepfad — gespeicherte Paare werden zu je einer Kennung', () => {
 
 // ─── Schreiben: reine Kennungen, kein Paar-Objekt ────────────────────────────
 
-describe('Schreibpfad — display_config.outlook_metrics fuehrt reine Kennungen', () => {
-	// 🔴 Beide Eingabeformen in EINEM Test: der Schreibweg reicht eine bereits
-	// kennungsfoermige Auswahl heute schon unveraendert durch (weil kein
-	// Katalog-Eintrag auf sie passt) — dieser Teil allein bewiese nichts. Die
-	// Aussage von A2 ist, dass der Ausblick-Schreibweg UEBERHAUPT KEIN
-	// Paar-Objekt mehr konstruiert, egal was er bekommt. Er muss die
-	// Paar-Uebersetzung verlassen, so wie `hourly_metrics` es laengst getan hat
-	// (compareEditorSave.ts:167 schreibt dort ungewandelte Zeichenketten).
-	test('Hub-Speichern konstruiert kein Paar-Objekt — und laesst active_metrics unberuehrt', () => {
+// Issue #3276 (Spec-AC-38, AC-1/AC-2): `outlook_metrics` ist Altschluessel. Der Schreibpfad
+// (Hub-Speichern und Neuanlage) schreibt den Ausblick nicht mehr — weder als Kennungen noch als
+// Paar-Objekte noch als []. Vorher: „Schreibpfad fuehrt reine Kennungen" (#1848 A2). Die
+// Gegenprobe zu `active_metrics` (Paar-Format bleibt, ADR-0037) bleibt erhalten.
+describe('Schreibpfad — display_config.outlook_metrics wird nicht mehr geschrieben (#3276)', () => {
+	test('Hub-Speichern schreibt keinen Ausblick — und laesst active_metrics im Paar-Format', () => {
 		const { body } = buildComparePresetSavePayload(
-			makePreset({}),
-			baseEdits({ outlookMetricKeys: ['temperature', 'precipitation'] })
-		);
-		assert.deepEqual(
-			displayConfigOf(body).outlook_metrics,
-			['temperature', 'precipitation'],
-			`Gespeichert wurde ${JSON.stringify(displayConfigOf(body).outlook_metrics)} statt ` +
-				"['temperature', 'precipitation'] (AC-1)."
-		);
-
-		const { body: altBody } = buildComparePresetSavePayload(
 			makePreset({}),
 			baseEdits({
 				activeMetricKeys: ['temp_max_c', 'precip_sum_mm'],
 				outlookMetricKeys: ['temp_max_c', 'precip_sum_mm']
 			})
 		);
-		const ausblick = displayConfigOf(altBody).outlook_metrics as unknown[];
-		assert.ok(
-			Array.isArray(ausblick) && ausblick.every((e) => typeof e === 'string'),
-			`Der Ausblick-Schreibweg hat aus der Auswahl Paar-Objekte gebaut: ` +
-				`${JSON.stringify(ausblick)}. Nach A2 speichert der Ausblick ausschliesslich ` +
-				'Zeichenketten — die Auswertung leitet der Katalog serverseitig ab (AC-1).'
-		);
-
-		// Gegenprobe: A2 aendert das Format des AUSBLICKS. Die Uebersichts-
-		// Grundauswahl `active_metrics` behaelt ihr Paar-Format (ADR-0037) — wer
-		// einfach `toStoredActiveMetrics()` umbaut, aendert unbeabsichtigt auch sie.
-		assert.deepEqual(
-			displayConfigOf(altBody).active_metrics,
-			[
-				{ metric_id: 'temperature', aggregation: 'max' },
-				{ metric_id: 'precipitation', aggregation: 'sum' }
-			],
-			'Die Uebersichts-Grundauswahl `active_metrics` hat ihr Paar-Format verloren: ' +
-				`${JSON.stringify(displayConfigOf(altBody).active_metrics)}. A2 stellt nur den ` +
-				'Ausblick um.'
-		);
+		assert.ok(!('outlook_metrics' in displayConfigOf(body)), '#3276: outlook_metrics im Hub-PUT');
+		assert.deepEqual(displayConfigOf(body).active_metrics, [
+			{ metric_id: 'temperature', aggregation: 'max' },
+			{ metric_id: 'precipitation', aggregation: 'sum' }
+		]);
 	});
 
-	test('Neuanlage konstruiert kein Paar-Objekt und haelt die Drei-Werte-Semantik', () => {
-		const gefuellt = buildNewComparePresetPayload(
-			newPresetFields({ outlookMetricKeys: ['temperature', 'gust'] })
-		);
-		assert.deepEqual(
-			displayConfigOf(gefuellt).outlook_metrics,
-			['temperature', 'gust'],
-			`Die Neuanlage speicherte ${JSON.stringify(displayConfigOf(gefuellt).outlook_metrics)} ` +
-				"statt ['temperature', 'gust'] (AC-1)."
-		);
-
-		const ausKatalogschluesseln = buildNewComparePresetPayload(
-			newPresetFields({ outlookMetricKeys: ['temp_max_c', 'gust_max_kmh'] })
-		);
-		const ausblick = displayConfigOf(ausKatalogschluesseln).outlook_metrics as unknown[];
-		assert.ok(
-			Array.isArray(ausblick) && ausblick.every((e) => typeof e === 'string'),
-			`Die Neuanlage hat Paar-Objekte gebaut: ${JSON.stringify(ausblick)} (AC-1).`
-		);
-
-		assert.ok(
-			!(
-				'outlook_metrics' in
-				displayConfigOf(buildNewComparePresetPayload(newPresetFields({ outlookMetricKeys: null })))
-			),
-			'„Nie eingestellt" muss den Schluessel weglassen (Resolver erkennt „Feld fehlt" = ' +
-				'sieben feste Spalten) (AC-7).'
-		);
-		assert.deepEqual(
-			displayConfigOf(buildNewComparePresetPayload(newPresetFields({ outlookMetricKeys: [] })))
-				.outlook_metrics,
-			[],
-			'Eine bewusst geleerte Auswahl muss als [] gesendet werden (Block entfaellt) (AC-7).'
-		);
+	test('Neuanlage schreibt keinen Ausblick — weder gefuellt, noch null, noch []', () => {
+		for (const outlookMetricKeys of [['temperature', 'gust'], null, []]) {
+			const dc = displayConfigOf(buildNewComparePresetPayload(newPresetFields({ outlookMetricKeys })));
+			assert.ok(
+				!('outlook_metrics' in dc),
+				`#3276: outlook_metrics bei Eingabe ${JSON.stringify(outlookMetricKeys)} im POST`
+			);
+		}
 	});
 });

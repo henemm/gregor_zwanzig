@@ -19,17 +19,10 @@ import {
 // Auswertung. Die Übersetzung kommt aus der bereits geladenen Antwort von
 // GET /api/compare/metrics (Scheibe A liefert metric_id/aggregation je Eintrag) —
 // keine zweite Tabelle im Frontend, keine zusätzliche Anfrage.
-import {
-	toStoredActiveMetrics,
-	type StoredActiveMetric
-} from '../shared/weather-metrics-tab/compareMetricSelection.ts';
-// Issue #1703 Scheibe 8: kanal-eigene Auswahl der Uebersichtstabelle — der
-// RMW-Merge ueber ALLE Kanaele lebt im geteilten Modul, nicht hier.
-import {
-	emptyCompareChannelActiveMetrics,
-	mergeAllCompareChannelActiveMetricsForSave,
-	type CompareChannelActiveMetrics
-} from '../shared/weather-metrics-tab/compareChannelMetricLayouts.ts';
+import { toStoredActiveMetrics } from '../shared/weather-metrics-tab/compareMetricSelection.ts';
+// Issue #1703 Scheibe 8: Typ der Kanal-Ebene des Feldsatzes (Hub-Hydration);
+// geschrieben wird `channel_active_metrics` seit #3276 nicht mehr.
+import type { CompareChannelActiveMetrics } from '../shared/weather-metrics-tab/compareChannelMetricLayouts.ts';
 import { baueDiff, type KanalMap } from '../shared/alarme-tab/alertMetricChannels.ts';
 import { STANDARD_VORLAGE } from '../shared/wetter-tab/ampelModell.ts';
 
@@ -47,25 +40,11 @@ export interface CompareEditorEdits {
 	idealRanges: Record<string, IdealRange>;
 	// Issue #680: Slice 3 — aktive Metriken (AC-10). Optional → rückwärtskompatibel.
 	activeMetricKeys?: string[];
-	// Issue #1703 Scheibe 8: kanal-eigene Auswahl DERSELBEN Übersichtstabelle.
-	// `undefined` = Feld nicht editiert (Round-Trip aus original.display_config);
-	// je Kanal `null` = nie editiert, `[]` = bewusste Leerauswahl.
-	channelActiveMetricKeys?: CompareChannelActiveMetrics;
-	// Issue #1106: Slice C — Stundenverlauf-Metriken. Optional → rückwärtskompatibel.
-	// Issue #1366 F001: `null` möglich (Hub reicht den unangetasteten Editor-
-	// Zustand „nie eingestellt" durch) — wird wie ein Wert behandelt (RMW-Merge
-	// überschreibt), nicht wie „Feld nicht editiert" (das ist `undefined`).
-	hourlyMetricKeys?: string[] | null;
-	// Issue #1361/#1368: Spalten des 3-Tages-Ausblicks. Gespeichert wird das
-	// Neuformat (Größe + Auswertung) über dieselbe Katalogantwort wie
-	// active_metrics — kein viertes Vokabular. undefined = Feld nicht editiert.
-	outlookMetricKeys?: string[] | null;
-	// Issue #2049: Roh/Einfach je Ausblick-Größe (`true` = Einfach), paralleles
-	// Feld zu outlookMetricKeys. undefined = Feld nicht editiert.
-	outlookMetricFormats?: Record<string, boolean> | null;
-	// Issue #3097: Roh/Einfach je Stundenverlauf-Größe (`true` = Einfach),
-	// paralleles Feld zu hourlyMetricKeys. undefined = Feld nicht editiert.
-	hourlyMetricFormats?: Record<string, boolean> | null;
+	// Issue #3276 (Spec-AC-38, Epic #3122): `channelActiveMetricKeys`,
+	// `hourlyMetricKeys`, `outlookMetricKeys`, `outlookMetricFormats`,
+	// `hourlyMetricFormats` sind entfallen. Der Ortsvergleich schreibt die
+	// Altschluessel nicht mehr; die Tabelle „Was steht wo" (`placements`) ist
+	// die einzige Quelle (ADR-0124).
 	// Issue #1361/#1368: 3-Tages-Ausblick-Sektion ein/aus (Top-Level, analog
 	// hourlyEnabled). Optional → rückwärtskompatibel.
 	outlookEnabled?: boolean;
@@ -166,57 +145,11 @@ export function buildComparePresetSavePayload(
 		displayConfig.active_metrics = toStoredActiveMetrics(edits.activeMetricKeys);
 	}
 
-	if (edits.channelActiveMetricKeys !== undefined) {
-		// Issue #1703 Scheibe 8 (AC-S8-10/AC-S8-11): Read-Modify-Write ueber ALLE
-		// drei Kanaele. `mergeConfigMap` (config_merge.go:11-22) ersetzt diesen
-		// Top-Level-Key als GANZES und loescht nie einen Key — ein nicht
-		// mitgesendeter Kanal ginge lautlos verloren (M4), eine geleerte Auswahl
-		// als weggelassener Schluessel bliebe wirkungslos (M5, analog #1191/#1299).
-		displayConfig.channel_active_metrics = mergeAllCompareChannelActiveMetricsForSave(
-			baseDisplayConfig.channel_active_metrics as
-				| Record<string, StoredActiveMetric[]>
-				| undefined,
-			edits.channelActiveMetricKeys
-		);
-	}
-
-	if (edits.hourlyMetricKeys !== undefined) {
-		// Bug #1299/C2 (Staging-Fund F005): Leere Auswahl EXPLIZIT als [] persistieren —
-		// NICHT den Key loeschen. Der Server-Merge (mergeConfigMap, config_merge.go, #1159)
-		// ueberschreibt Keys nur, loescht sie nie; ein weggelassener Key bliebe wirkungslos
-		// (alter Wert bleibt). Seit Issue #1366 (F001) bedeutet [] „bewusst leer" —
-		// resolve_hourly_metrics laesst den Stundenblock dann entfallen; nur ein
-		// FEHLENDES Feld liefert weiterhin alle 9 Spalten. Analog active_metrics (#1191/#1366).
-		displayConfig.hourly_metrics = edits.hourlyMetricKeys;
-	}
-
-	if (edits.outlookMetricKeys !== undefined && edits.outlookMetricKeys !== null) {
-		// Issue #1361/#1368: Leere Auswahl EXPLIZIT als [] persistieren — der
-		// Server-Merge (mergeConfigMap) überschreibt Keys nur, löscht sie nie;
-		// ein weggelassener Key bliebe wirkungslos (analog #1191/#1299).
-		//
-		// Issue #1848 A2: ungewandelt als reine Kennungen, genau wie
-		// `hourly_metrics` eine Zeile weiter oben. Der Ausblick war das letzte
-		// Feld, das noch durch die Paar-Übersetzung `toStoredActiveMetrics()`
-		// lief; `active_metrics` behält sie (ADR-0037).
-		displayConfig.outlook_metrics = edits.outlookMetricKeys;
-	}
-
-	if (edits.outlookMetricFormats !== undefined && edits.outlookMetricFormats !== null) {
-		// Issue #2049: paralleles Feld, dieselbe Regel wie eine Zeile darüber —
-		// explizit schreiben, damit ein Zurücksetzen auf „Roh" den Server
-		// erreicht (mergeConfigMap überschreibt Keys nur, löscht sie nie).
-		// `null` (nie eingestellt) bleibt ungesendet und round-trippt über
-		// `...original.display_config`.
-		displayConfig.outlook_metric_formats = edits.outlookMetricFormats;
-	}
-
-	if (edits.hourlyMetricFormats !== undefined && edits.hourlyMetricFormats !== null) {
-		// Issue #3097: dieselbe Regel wie outlook_metric_formats -- explizit
-		// schreiben (mergeConfigMap löscht nie), `null` bleibt ungesendet und
-		// round-trippt über `...original.display_config` (Read-Modify-Write).
-		displayConfig.hourly_metric_formats = edits.hourlyMetricFormats;
-	}
+	// Issue #3276: die sechs Altschluessel (`channel_layouts`, `outlook_metrics`,
+	// `outlook_metric_formats`, `channel_active_metrics`, `hourly_metrics`,
+	// `hourly_metric_formats`) werden hier nie gesetzt. Bestandswerte reisen nur
+	// ueber den `...baseDisplayConfig`-Spread oben unveraendert mit (Read-Modify-
+	// Write); die Teilfeld-Speicherer schneiden sie ohnehin heraus.
 
 	// Issue #1170: metric_alert_levels lebt in display_config (analog Trip).
 	if (edits.metricAlertLevels !== undefined) {
@@ -419,28 +352,10 @@ export interface NewComparePresetFields {
 	// eingestellt" -- der Schluessel `active_metrics` wird dann gar nicht
 	// gesendet (Default bleibt „alle").
 	activeMetricKeys: string[] | null;
-	// Issue #1703 Scheibe 8: kanal-eigene Auswahl DERSELBEN Uebersichtstabelle.
-	// `/compare/new` mountet denselben `WeatherMetricsTab context="vergleich"`
-	// wie der Hub (CompareNewEditor.svelte:394/491), die Kanal-Reiter sind dort
-	// also bedienbar — ohne dieses Feld ginge die Einstellung beim „Briefing
-	// aktivieren" lautlos verloren (Attrappen-Verbot). Optional →
-	// rueckwaertskompatibel; je Kanal `null` = nie editiert, `[]` = bewusste
-	// Leerauswahl.
-	channelActiveMetricKeys?: CompareChannelActiveMetrics;
-	// Issue #1366 F001: `null` = „nie eingestellt" -- der Schluessel
-	// `hourly_metrics` wird dann gar nicht gesendet (Default bleibt „alle").
-	hourlyMetricKeys: string[] | null;
-	// Issue #1361/#1368: `null` = „nie eingestellt" -- der Schluessel
-	// `outlook_metrics` wird dann gar nicht gesendet (Default bleibt „die
-	// bisherigen sieben Spalten"), analog hourlyMetricKeys.
-	outlookMetricKeys?: string[] | null;
-	// Issue #2049: `null` = „nie eingestellt" -- der Schluessel
-	// `outlook_metric_formats` wird dann gar nicht gesendet (Default: alles
-	// Roh), analog outlookMetricKeys.
-	outlookMetricFormats?: Record<string, boolean> | null;
-	// Issue #3097: `null` = „nie eingestellt" -- `hourly_metric_formats` wird
-	// dann gar nicht gesendet (Default: alles Roh), analog outlookMetricFormats.
-	hourlyMetricFormats?: Record<string, boolean> | null;
+	// Issue #3276: `channelActiveMetricKeys`, `hourlyMetricKeys`,
+	// `outlookMetricKeys`, `outlookMetricFormats`, `hourlyMetricFormats` sind
+	// entfallen -- die Neuanlage traegt keinen Altschluessel mehr, die Tabelle
+	// „Was steht wo" ergaenzt der Server aus der Grundauswahl (#3237).
 	metricAlertLevels: Record<string, string>;
 	// Issue #1461 S3b-2b: Kanal-Schwelle beim Anlegen (PO-Entscheid 2026-08-06,
 	// Spec v1.3) — nur nicht-leere Werte werden gesendet (analog
@@ -457,15 +372,6 @@ export interface NewComparePresetFields {
  * kommen direkt aus dem Wizard-Zustand.
  */
 export function buildNewComparePresetPayload(fields: NewComparePresetFields): Record<string, unknown> {
-	// Issue #1703 Scheibe 8: dieselbe Schreib-Naht wie im Edit-Pfad (oben), nur
-	// ohne `prevStored` — bei der Neuanlage gibt es keinen Bestand zum Merken.
-	// Ein bewusst geleerter Kanal reist damit als `[]` mit (nie als
-	// weggelassener Schluessel, analog #1191/#1366); ein nie editierter Kanal
-	// bleibt draussen und folgt weiter der Grundauswahl.
-	const channelActiveMetrics = mergeAllCompareChannelActiveMetricsForSave(
-		undefined,
-		fields.channelActiveMetricKeys ?? emptyCompareChannelActiveMetrics()
-	);
 	return {
 		name: fields.name,
 		location_ids: fields.pickedIds,
@@ -544,33 +450,9 @@ export function buildNewComparePresetPayload(fields: NewComparePresetFields): Re
 			...(fields.activeMetricKeys !== null
 				? { active_metrics: toStoredActiveMetrics(fields.activeMetricKeys) }
 				: {}),
-			// Issue #1703 Scheibe 8: kanal-eigene Auswahl der Uebersichtstabelle.
-			// Ohne jeden Override bleibt der Schluessel weg (kein leeres Objekt
-			// im frisch angelegten Vergleich).
-			...(Object.keys(channelActiveMetrics).length > 0
-				? { channel_active_metrics: channelActiveMetrics }
-				: {}),
-			// Issue #1366 F001: anders als frueher NICHT unbedingt gesetzt -- `null`
-			// (Stundenverlauf-Tab nie geoeffnet/beruehrt) laesst den Schluessel ganz
-			// weg, damit der Resolver „Feld fehlt" (= alle Spalten) erkennt statt
-			// einer faelschlich gesendeten Leerauswahl.
-			...(fields.hourlyMetricKeys !== null ? { hourly_metrics: fields.hourlyMetricKeys } : {}),
-			// Issue #1361/#1368: analog hourly_metrics -- `null` laesst den
-			// Schluessel weg (Resolver erkennt "Feld fehlt" = sieben Spalten),
-			// eine echte Leerauswahl (`[]`) wird gesendet.
-			// Issue #1848 A2: reine Kennungen, ungewandelt (s. Hub-Speicherweg).
-			...(fields.outlookMetricKeys != null
-				? { outlook_metrics: fields.outlookMetricKeys }
-				: {}),
-			// Issue #2049: analog outlook_metrics -- `null` laesst den
-			// Schluessel weg ("nie eingestellt" = alles Roh).
-			...(fields.outlookMetricFormats != null
-				? { outlook_metric_formats: fields.outlookMetricFormats }
-				: {}),
-			// Issue #3097: analog -- `null` laesst den Schluessel weg (alles Roh).
-			...(fields.hourlyMetricFormats != null
-				? { hourly_metric_formats: fields.hourlyMetricFormats }
-				: {}),
+			// Issue #3276: keiner der sechs Altschluessel (`channel_layouts`,
+			// `outlook_metrics`, `outlook_metric_formats`, `channel_active_metrics`,
+			// `hourly_metrics`, `hourly_metric_formats`) -- auch nicht leer.
 			...(Object.keys(fields.metricAlertLevels).length > 0
 				? { metric_alert_levels: fields.metricAlertLevels }
 				: {}),
@@ -695,4 +577,72 @@ export function compareFeldsatzStandard(): CompareFeldsatz {
 		dayWindowStartHour: 4,
 		dayWindowEndHour: 19
 	};
+}
+
+/**
+ * Issue #3276 (Fix-Loop F002): POST-Rumpf des Anlege-Editors (CompareNewEditor.svelte) aus
+ * dem Feldsatz und dem Stand des Reiters Wetter. Keine Altschluessel (Kanal-Overrides,
+ * Stundenverlauf, Ausblick) -- die Tabelle „Was steht wo" ergaenzt der Server (#3237).
+ */
+export function baueVergleichAnlegeRumpf(
+	wiz: CompareFeldsatz,
+	wetter: { ampel?: object; auswahl?: unknown } = {}
+): Record<string, unknown> {
+	const payload = buildNewComparePresetPayload({
+		name: wiz.name,
+		pickedIds: wiz.pickedIds,
+		vorlageId: wiz.vorlageId, // Issue #3198: angezeigte Vorlage (profil ist konstant)
+		schedule: wiz.schedule,
+		officialAlertsEnabled: wiz.officialAlertsEnabled, // Issue #1040
+		radarAlertEnabled: wiz.radarAlertEnabled, // Issue #1041 Slice 2
+		hourlyEnabled: wiz.hourlyEnabled, // Issue #1107
+		outlookEnabled: wiz.outlookEnabled, // Issue #1361/#1368
+		officialAlertTriggersEnabled: wiz.officialAlertTriggersEnabled, // Issue #1216 Slice 2b
+		sendTelegram: wiz.sendTelegram,
+		sendSms: wiz.sendSms,
+		sendPremiumSms: wiz.sendPremiumSms, // Issue #1745 A (AC-11) / #2293 S2
+		alertChannels: wiz.channels, // Issue #2293 Scheibe S2 (Abschnitt 1/7)
+		officialWarningsEnabled: wiz.officialWarningsEnabled, // Issue #1258 S4
+		morningEnabled: wiz.morningEnabled, // Issue #1232 Scheibe 2b
+		morningTime: wiz.morningTime,
+		eveningEnabled: wiz.eveningEnabled,
+		eveningTime: wiz.eveningTime,
+		endDate: wiz.endDate,
+		// Issue #1361/#1372 S1b: Tagesfenster gehört von Anfang an zur Bedienfläche.
+		dayWindowStartHour: wiz.dayWindowStartHour,
+		dayWindowEndHour: wiz.dayWindowEndHour,
+		alertCooldownMinutes: wiz.alertCooldownMinutes, // Issue #1170
+		alertQuietFrom: wiz.alertQuietFrom,
+		alertQuietTo: wiz.alertQuietTo,
+		corridors: wiz.corridors, // Issue #1231 Slice 4
+		region: wiz.region,
+		idealRanges: wiz.idealRanges,
+		activeMetricKeys: wiz.activeMetricKeys,
+		metricAlertLevels: wiz.metricAlertLevels, // Issue #1170
+		channelThresholds: wiz.channelThresholds, // Issue #1461 S3b-2b
+		alertMetricChannels: wiz.alertMetricChannels, // Issue #1895 S3b1
+		telegramStyle: wiz.telegramStyle // Issue #1260 S5
+	});
+	// #2794 S3a Teil-PR 3: Abo-Ampel und Auswahl aus dem Reiter Wetter in display_config
+	// (additiv; AC-37: active_metrics im Speicherformat, konsistent mit der Ampel).
+	if (wetter.ampel)
+		payload.display_config = {
+			...((payload.display_config as object) ?? {}),
+			ampel: wetter.ampel,
+			...(wetter.auswahl ? { active_metrics: wetter.auswahl } : {})
+		};
+	return payload;
+}
+
+/**
+ * Issue #3276 (Fix-Loop 2, F-ADV1): der gesamte Anlege-Schritt -- Rumpf bauen und
+ * POST /api/compare/presets absenden -- in einer Funktion, damit zwischen Rumpf-Bau und
+ * Versand kein Altschluessel mehr unbemerkt eingebaut werden kann. Liefert die neue id.
+ */
+export async function legeVergleichAn(
+	api: { post<T>(url: string, body: unknown): Promise<T> },
+	wiz: CompareFeldsatz,
+	wetter: { ampel?: object; auswahl?: unknown } = {}
+): Promise<{ id: string }> {
+	return api.post<{ id: string }>('/api/compare/presets', baueVergleichAnlegeRumpf(wiz, wetter));
 }

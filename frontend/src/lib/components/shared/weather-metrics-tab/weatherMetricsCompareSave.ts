@@ -6,12 +6,8 @@
 // beide Domaenen sind zu EINER kombinierten Orchestrierung zusammengefuehrt
 // (Design-Entscheidung 1 — zwei unabhaengige Selbst-Speicherer auf demselben
 // Reiter wuerden sich in derselben Event-Tick gegenseitig ueberschreiben,
-// Kontext-Dokument Abschnitt 1.7). `flushPendingWeatherMetricsSave` ist auf
-// `buildComparePresetSavePayload` (Voll-Spread, Go-Merge-Kernel mergt
-// display_config nur auf Ebene 1) umgestellt — der Laufzeit-Import der
-// Hub-PUT-Erzeugerin aus der ehemaligen Compare-Hub-Klebeschicht entfaellt
-// (AC-9: dieses Modul laedt zur Laufzeit KEIN Modul aus `compare/` mehr,
-// ausser Typen).
+// Kontext-Dokument Abschnitt 1.7). #3276 (F005): `flushPendingWeatherMetricsSave`
+// (ohne Produktions-Aufrufer) ist entfernt.
 //
 // Spec: docs/specs/modules/rework_2276_s4_wetter_metriken.md
 //   (Implementation Details Abschnitt 2, AC-1 .. AC-13)
@@ -100,89 +96,6 @@ export function hydrateChannelActiveMetricsFromPreset(
 	);
 }
 
-/**
- * D2-Fix-Loop 2 (AC-6, Staging-Befund BROKEN): der Amtliche-Warnungen-Toggle
- * ist fuer bestehende Vergleiche nur noch ueber diesen Hub-Tab erreichbar
- * (der Alarm-Tab-Toggle entfaellt mit D2) — der Snapshot traegt ihn neben
- * `activeMetricKeys`, damit ein reiner Toggle-Klick (ohne Metrik-Aenderung)
- * ebenfalls als dirty erkannt wird.
- * Spec: d2_1301_official_alerts_single_control.md § Punkt 6, AC-6.
- *
- * Bleibt als eigenstaendiger Typ bestehen (Legacy-Zusicherung,
- * compare_hub_wizard_bridge.test.ts) — die PRODUKTIVE Verdrahtung nutzt seit
- * Scheibe S4 ausschliesslich `WetterMetrikenLayoutSnapshot` weiter unten.
- */
-export interface WeatherMetricsSnapshot {
-	activeMetricKeys: string[];
-	// Issue #1703 Scheibe 8: die Kanal-Ebene derselben Uebersichtstabelle gehoert
-	// in DENSELBEN Snapshot — ein reiner Kanal-Edit (Grundauswahl unveraendert)
-	// waere sonst kein Diff und wuerde nie gespeichert.
-	channelActiveMetricKeys: CompareChannelActiveMetrics;
-	officialAlertsEnabled: boolean;
-	// Issue #1361/#1372 S1b: Tagesfenster — Teil desselben Snapshots, damit ein
-	// reiner Von/Bis-Wechsel (ohne Metrik-/Toggle-Aenderung) ebenfalls als dirty
-	// erkannt wird (analog officialAlertsEnabled oben).
-	dayWindowStartHour: number;
-	dayWindowEndHour: number;
-}
-
-/**
- * Diff-Guard analog `flushPendingVersandSave` (ehemalige Compare-Hub-Klebeschicht):
- * liefert `null`, wenn sich weder Metrik-Auswahl noch Amtliche-Warnungen-
- * Toggle noch Tagesfenster seit dem letzten persistierten Stand veraendert
- * haben (kein Schreiben ohne Nutzer-Geste, AC-4) — sonst den fertigen
- * PUT-Payload ueber `buildComparePresetSavePayload` (Voll-Spread, Issue
- * #2276 S4: die Hub-PUT-Erzeugerin entfaellt, `region` wird deshalb explizit
- * aus dem Bestand zurueckgelesen, damit der unbedingte Region-Schreibpfad von
- * `buildComparePresetSavePayload` den Bestand nicht auf "" zuruecksetzt).
- */
-export function flushPendingWeatherMetricsSave(
-	preset: ComparePreset,
-	current: WeatherMetricsSnapshot,
-	before: WeatherMetricsSnapshot | null
-): { url: string; body: ComparePreset } | null {
-	const baseline = before ?? current;
-	// Issue #1359 Scheibe 1: KEIN `.sort()` mehr. Die Listenposition IST die
-	// Metrik-Reihenfolge (kein eigenes order-Feld) — sortiert verglichen galten
-	// zwei Listen mit derselben MENGE in anderer Reihenfolge als identisch,
-	// `flushPendingWeatherMetricsSave` lieferte `null` und eine reine
-	// Umsortierung wurde nie gespeichert. Die AC-4-Zusage "kein Schreiben ohne
-	// Nutzer-Geste" bleibt gewahrt: der Guard entscheidet nur, OB ein
-	// Unterschied vorliegt — ausgeloest wird weiterhin nur von einer echten
-	// Geste (Checkbox-Toggle bzw. Drag-Ende).
-	const norm = (s: WeatherMetricsSnapshot) => ({
-		activeMetricKeys: [...s.activeMetricKeys],
-		// Issue #1703 Scheibe 8: feste Kanalfolge statt Objekt-Spread — der
-		// JSON.stringify-Vergleich ist schluesselreihenfolge-abhaengig, und ein
-		// per Copy-on-write neu gebautes Objekt kann eine andere Folge haben als
-		// der Grundzustand (Scheindiff bei jeder Geste).
-		channelActiveMetricKeys: [
-			s.channelActiveMetricKeys?.email ?? null,
-			s.channelActiveMetricKeys?.telegram ?? null,
-			s.channelActiveMetricKeys?.sms ?? null
-		],
-		officialAlertsEnabled: s.officialAlertsEnabled,
-		dayWindowStartHour: s.dayWindowStartHour,
-		dayWindowEndHour: s.dayWindowEndHour
-	});
-	if (JSON.stringify(norm(current)) === JSON.stringify(norm(baseline))) return null;
-	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
-	const voll = buildComparePresetSavePayload(preset, {
-		name: preset.name,
-		activityProfile: (preset.profil as ActivityProfile) ?? null,
-		pickedIds: preset.location_ids ?? [],
-		region: (displayConfig.region as string) ?? '',
-		idealRanges: {},
-		activeMetricKeys: current.activeMetricKeys,
-		channelActiveMetricKeys: current.channelActiveMetricKeys,
-		officialAlertsEnabled: current.officialAlertsEnabled,
-		dayWindowStartHour: current.dayWindowStartHour,
-		dayWindowEndHour: current.dayWindowEndHour
-	});
-	// Issue #2375: nur die Eigenfelder dieser Geste.
-	return waehleEigenfelder(voll, ['official_alerts_enabled', 'day_window_start_hour', 'day_window_end_hour'], ['active_metrics', 'channel_active_metrics']);
-}
-
 // ─── Issue #2276 S4: Layout-Haelfte (Stundenverlauf/Ausblick) — umgezogen aus
 // der ehemaligen Compare-Hub-Klebeschicht, auf buildComparePresetSavePayload umgestellt ──
 
@@ -241,14 +154,8 @@ export function flushPendingLayoutSave(
 	before: LayoutSnapshot | null
 ): { url: string; body: ComparePreset } | null {
 	const baseline = before ?? current;
-	const norm = (s: LayoutSnapshot) => ({
-		hourlyMetricKeys: s.hourlyMetricKeys === null ? null : [...s.hourlyMetricKeys],
-		hourlyEnabled: s.hourlyEnabled,
-		outlookMetricKeys: s.outlookMetricKeys == null ? null : [...s.outlookMetricKeys],
-		outlookMetricFormats: s.outlookMetricFormats == null ? null : { ...s.outlookMetricFormats },
-		outlookEnabled: s.outlookEnabled,
-		hourlyMetricFormats: s.hourlyMetricFormats == null ? null : { ...s.hourlyMetricFormats }
-	});
+	// #3276: nur die gesendeten Felder zaehlen — eine Aenderung an Altfeldern loest keinen PUT aus.
+	const norm = (s: LayoutSnapshot) => ({ hourlyEnabled: s.hourlyEnabled, outlookEnabled: s.outlookEnabled });
 	if (JSON.stringify(norm(current)) === JSON.stringify(norm(baseline))) return null;
 	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
 	const voll = buildComparePresetSavePayload(preset, {
@@ -257,15 +164,12 @@ export function flushPendingLayoutSave(
 		pickedIds: preset.location_ids ?? [],
 		region: (displayConfig.region as string) ?? '',
 		idealRanges: {},
-		hourlyMetricKeys: current.hourlyMetricKeys,
 		hourlyEnabled: current.hourlyEnabled,
-		outlookMetricKeys: current.outlookMetricKeys,
-		outlookMetricFormats: current.outlookMetricFormats,
-		outlookEnabled: current.outlookEnabled,
-		hourlyMetricFormats: current.hourlyMetricFormats
+		outlookEnabled: current.outlookEnabled
 	});
-	// Issue #2375: nur die Layout-Eigenfelder.
-	return waehleEigenfelder(voll, ['hourly_enabled', 'outlook_enabled'], ['hourly_metrics', 'outlook_metrics', 'outlook_metric_formats', 'hourly_metric_formats']);
+	// Issue #2375: nur die Layout-Eigenfelder. #3276: ohne die Altschluessel
+	// `hourly_metrics`/`outlook_metrics`/`outlook_metric_formats`/`hourly_metric_formats`.
+	return waehleEigenfelder(voll, ['hourly_enabled', 'outlook_enabled']);
 }
 
 /**
@@ -355,25 +259,18 @@ export function wetterMetrikenSnapshotAus(zustand: WetterMetrikenZustand): Wette
 // die Felder des Reiters Wetter (`active_metrics`, `ampel`, `official_alerts_enabled`,
 // `official_warnings`, `radar_alert_enabled`, `day_window_*`) schreibt allein der
 // WetterTab-Speicherer; hier stehen sie weder im Rumpf noch im Aenderungs-Vergleich.
+// Issue #3276 (Spec-AC-38): die display_config-Eigenfelder (`channel_active_metrics`,
+// `hourly_metrics`, `outlook_metrics`, `outlook_metric_formats`, `hourly_metric_formats`)
+// sind Altschluessel und entfallen ersatzlos; die Tabelle „Was steht wo" ist die Quelle.
 const WETTER_TOP = ['hourly_enabled', 'outlook_enabled'] as const;
-const WETTER_DISPLAY = [
-	'channel_active_metrics',
-	'hourly_metrics',
-	'outlook_metrics',
-	'outlook_metric_formats',
-	// Issue #3097: Roh/Einfach je Stundenverlauf-Zeile.
-	'hourly_metric_formats'
-] as const;
 
 /**
  * EINZIGE Erzeugerin der kombinierten Nutzlast (Issue #2375: Teilfeld-Nutzlast):
  * die zehn eigenen Felder aus `current` — `activeMetricKeys` LIVE aus dem
  * Zustand (AC-4), nie aus einer eingefrorenen Preset-Kopie; gesendet werden nur
  * diese Eigenfelder, der Server mergt fehlende Felder als „unverändert".
- * `hourlyMetricKeys`/`outlookMetricKeys`/`outlookMetricFormats` fallen bei
- * `null` ("nie eingestellt") auf den bereits gespeicherten Preset-Stand zurueck
- * (Rundlauf-Sicherung) — eine bewusste Leerauswahl (`[]`) bleibt davon
- * unberuehrt (nur `??`, kein `||`).
+ * Issue #3276: seit dem Wegfall der Altschluessel sind das nur noch
+ * `hourly_enabled`/`outlook_enabled`.
  */
 export function baueWetterMetrikenNutzlast(
 	preset: ComparePreset,
@@ -387,49 +284,27 @@ export function baueWetterMetrikenNutzlast(
 		region: (displayConfig.region as string) ?? '',
 		idealRanges: {},
 		activeMetricKeys: current.activeMetricKeys,
-		channelActiveMetricKeys: current.channelActiveMetricKeys,
 		officialAlertsEnabled: current.officialAlertsEnabled,
-		hourlyMetricKeys: current.hourlyMetricKeys ?? (displayConfig.hourly_metrics as string[] | null | undefined),
 		hourlyEnabled: current.hourlyEnabled,
-		outlookMetricKeys:
-			current.outlookMetricKeys ?? normalizeStoredOutlookMetrics(displayConfig.outlook_metrics) ?? undefined,
-		outlookMetricFormats:
-			current.outlookMetricFormats ?? (displayConfig.outlook_metric_formats as Record<string, boolean> | undefined),
-		hourlyMetricFormats:
-			current.hourlyMetricFormats ?? (displayConfig.hourly_metric_formats as Record<string, boolean> | undefined),
 		outlookEnabled: current.outlookEnabled,
 		dayWindowStartHour: current.dayWindowStartHour,
 		dayWindowEndHour: current.dayWindowEndHour
 	});
 	// Issue #2375: nur die Wetter-Metriken-Eigenfelder (Feld-Besitz-Tabelle).
-	return waehleEigenfelder(voll, WETTER_TOP, WETTER_DISPLAY);
+	return waehleEigenfelder(voll, WETTER_TOP);
 }
 
 /** Die Felder, die dieser Speicherer besitzt, normiert fuer den Vergleich. #2794 F006: Felder
  *  des Reiters Wetter zaehlen hier nicht als Aenderung (AC-38). */
 function zustellungsStand(s: WetterMetrikenLayoutSnapshot) {
-	return {
-		channelActiveMetricKeys: [
-			s.channelActiveMetricKeys?.email ?? null,
-			s.channelActiveMetricKeys?.telegram ?? null,
-			s.channelActiveMetricKeys?.sms ?? null
-		],
-		hourlyMetricKeys: s.hourlyMetricKeys === null ? null : [...s.hourlyMetricKeys],
-		hourlyEnabled: s.hourlyEnabled,
-		outlookMetricKeys: s.outlookMetricKeys == null ? null : [...s.outlookMetricKeys],
-		outlookMetricFormats: s.outlookMetricFormats == null ? null : { ...s.outlookMetricFormats },
-		outlookEnabled: s.outlookEnabled,
-		hourlyMetricFormats: s.hourlyMetricFormats == null ? null : { ...s.hourlyMetricFormats }
-	};
+	// #3276: nur noch die gesendeten Felder -- eine Aenderung an Altfeldern loest keinen PUT aus.
+	return { hourlyEnabled: s.hourlyEnabled, outlookEnabled: s.outlookEnabled };
 }
 
 /**
  * Liefert `null`, wenn sich der kombinierte Snapshot seit dem letzten
  * gespeicherten Stand NICHT veraendert hat (kein unnoetiger PUT), sonst die
  * fertige Nutzlast. `before === null` ⇒ der aktuelle Stand ist die Baseline.
- * Design-Entscheidung 6: `outlookMetricFormats` behaelt die
- * `== null ? null : {...}`-Semantik — sonst Scheindiff zwischen „Schluessel
- * fehlt" und „Schluessel ist null".
  */
 export function flushPendingWetterMetrikenSave(
 	preset: ComparePreset,
@@ -454,15 +329,8 @@ export function rollbackWetterMetrikenSnapshot(
 	const target = felder(zustand);
 	const aktuell = wetterMetrikenSnapshotAus(zustand);
 	// #2794 F006: nur die Felder, die dieser Speicherer sendet (Wetter-Felder gehoeren dem WetterTab).
-	const felderListe = [
-		'channelActiveMetricKeys',
-		'hourlyMetricKeys',
-		'hourlyEnabled',
-		'outlookMetricKeys',
-		'outlookMetricFormats',
-		'outlookEnabled',
-		'hourlyMetricFormats'
-	] as const;
+	// #3276: Altfelder werden nicht mehr gesendet, also auch nicht zurueckgerollt.
+	const felderListe = ['hourlyEnabled', 'outlookEnabled'] as const;
 	for (const field of felderListe) {
 		if (JSON.stringify(aktuell[field]) === JSON.stringify(attempted[field])) {
 			target[field] = before[field];

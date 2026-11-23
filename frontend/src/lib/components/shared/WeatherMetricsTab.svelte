@@ -118,9 +118,8 @@
 	// mehr — der Vergleichs-Zweig arbeitet nur noch auf Wertprops + Rueckrufen,
 	// das Buendel baut `compare/wetterMetrikenPropsAus.ts`.
 	import { weatherMetricsTabSections, type WeatherMetricsContext, type WeatherMetricsBereich } from './weather-metrics-tab/weatherMetricsTabSections.ts';
-	// Issue #1360: geteilte Stundenverlauf-Steuerung (Hub + Anlege-Seite),
-	// unveraendert uebernommen aus dem aufgeloesten Layout-Reiter.
-	import CompareHourlyLayoutControls from '$lib/components/compare/CompareHourlyLayoutControls.svelte';
+	// Issue #3276: die Stundenverlauf-Steuerung des Ortsvergleichs ist entfernt
+	// (nur noch „Was steht wo"); OutlookLayoutControls bedient bis #3297 nur den Trip.
 	import OutlookLayoutControls from '$lib/components/shared/OutlookLayoutControls.svelte';
 	// Issue #1350 Teil 2: Vergleich-Auswahlliste kommt jetzt aus GET
 	// /api/compare/metrics statt aus COMPARE_METRIC_DEFS (bleibt fuer
@@ -194,13 +193,8 @@
 		officialAlertsEnabled?: boolean;
 		dayWindowStartHour?: number;
 		dayWindowEndHour?: number;
-		hourlyMetricKeys?: string[] | null;
-		hourlyEnabled?: boolean;
-		outlookMetricKeys?: string[] | null;
-		outlookMetricFormats?: Record<string, boolean> | null;
-		outlookEnabled?: boolean;
-		/** Issue #3097: Roh/Einfach je Stundenverlauf-Groesse (`display_config.hourly_metric_formats`). */
-		hourlyMetricFormats?: Record<string, boolean> | null;
+		// Issue #3276: hourly*/outlook*-Wertprops und -Rueckrufe sind entfallen
+		// (Bedienflaechen Stundenverlauf/Ausblick des Vergleichs entfernt).
 		/** Gekoppelter Rueckruf (Spec Design-Entscheidung 3): `toggleCompareMetric`
 		 *  schreibt `activeMetricKeys` UND (bei globaler Abwahl mit vorhandenen
 		 *  Kanal-Overrides) `channelActiveMetricKeys` in EINEM synchronen Aufruf —
@@ -210,12 +204,6 @@
 		onOfficialAlertsEnabledChange?: (checked: boolean) => void;
 		onDayWindowStartHourChange?: (v: number) => void;
 		onDayWindowEndHourChange?: (v: number) => void;
-		onHourlyMetricKeysChange?: (keys: string[] | null) => void;
-		onHourlyEnabledChange?: (checked: boolean) => void;
-		onOutlookMetricKeysChange?: (keys: string[] | null) => void;
-		onOutlookMetricFormatsChange?: (formats: Record<string, boolean> | null) => void;
-		onOutlookEnabledChange?: (checked: boolean) => void;
-		onHourlyMetricFormatsChange?: (formats: Record<string, boolean> | null) => void;
 		// Issue #2276 S4: der vergleich-Zweig speichert selbst (Hub), analog
 		// AlarmeTab/CorridorEditor — ersetzt `onCompareCommit`/`onHourlyCommit`/
 		// `onOutlookCommit` (Wrapper-Bubble entfaellt). Ohne `preset` oder
@@ -228,10 +216,7 @@
 		context = 'route', bereich = 'alles', trip, createMode = false, onChannelsChange, onWeatherMetricsChange,
 		onTripUpdate, saveController,
 		activeMetricKeys, channelActiveMetricKeys, officialAlertsEnabled, dayWindowStartHour, dayWindowEndHour,
-		hourlyMetricKeys, hourlyEnabled, outlookMetricKeys, outlookMetricFormats, outlookEnabled, hourlyMetricFormats,
 		onVergleichsMetrikenChange, onOfficialAlertsEnabledChange, onDayWindowStartHourChange, onDayWindowEndHourChange,
-		onHourlyMetricKeysChange, onHourlyEnabledChange, onOutlookMetricKeysChange, onOutlookMetricFormatsChange,
-		onOutlookEnabledChange, onHourlyMetricFormatsChange,
 		preset, onCompareUpdate, enqueueHubWrite, showInfobox = false, profil
 	}: Props = $props();
 
@@ -1164,18 +1149,12 @@
 		// Metrik weiter (M3), auch wenn die Anzeige sie schon filtert.
 		// #3047 T3 (AC-10, Konzept §5 Punkt 6/8, loest die fruehere Regel
 		// „Einwahl schreibt nicht durch" ab): eine EINWAHL steht danach in
-		// JEDER bereits gespeicherten Liste hinten — Kanal-Listen,
-		// `outlook_metrics` und `hourly_metrics` (nur stuendlich waehlbar).
+		// JEDER bereits gespeicherten Kanal-Liste hinten. (#3276: Ausblick- und
+		// Stundenverlauf-Listen fuehrt der Vergleich nicht mehr.)
 		// Nie eingestellte Listen (`null`) folgen ohnehin der Grundauswahl.
 		// EINE geteilte Funktion (compareChannelMetricLayouts.ts), die auch der
 		// Test aufruft; unveraenderte Listen behalten ihre Referenz.
-		const folgen = compareToggleFolgen(metric, wasOn, {
-			channelActive: channelActiveMetricKeys,
-			outlookKeys: outlookMetricKeys,
-			hourlyKeys: hourlyMetricKeys
-		}, compareCatalog);
-		if (folgen.outlookKeys !== outlookMetricKeys) onOutlookMetricKeysChange?.(folgen.outlookKeys ?? null);
-		if (folgen.hourlyKeys !== hourlyMetricKeys) onHourlyMetricKeysChange?.(folgen.hourlyKeys ?? null);
+		const folgen = compareToggleFolgen(metric, wasOn, { channelActive: channelActiveMetricKeys });
 		// Grundauswahl + Kanal-Listen weiter in EINEM gekoppelten Rueckruf.
 		const nextChannelActive = folgen.channelActive;
 		onVergleichsMetrikenChange?.(nextActive, nextChannelActive as CompareChannelActiveMetrics);
@@ -1288,27 +1267,6 @@
 	// (Safari-Factory-Muster).
 	function noopMode() {}
 
-	// Issue #1720 S1: der Ausblick-Block bekommt flache Props (Issue #2276 S6g:
-	// jetzt Wertprops statt `wiz`-Bindung, dasselbe Bauteil bedient weiterhin
-	// auch den Trip). Diese Handler reichen exakt das weiter, was die Komponente
-	// bis dahin selbst schrieb — Verhalten des Ortsvergleichs unveraendert.
-	// Named functions statt Inline-Closures (Safari-Factory-Muster).
-	function onCompareOutlookMetricKeys(keys: string[]) {
-		onOutlookMetricKeysChange?.(keys);
-	}
-
-	// Issue #2049: Roh/Einfach der Ortsvergleichs-Vorschau — derselbe
-	// Speicherweg wie die Auswahl darueber, persistiert vom Commit-Wrapper in
-	// CompareTabs. Read-Modify-Write passiert bereits in
-	// OutlookLayoutControls; hier kommt die fertige Zuordnung an.
-	function onCompareOutlookMetricFormats(formats: Record<string, boolean>) {
-		onOutlookMetricFormatsChange?.(formats);
-	}
-
-	function onCompareOutlookEnabled(checked: boolean) {
-		onOutlookEnabledChange?.(checked);
-	}
-
 	// D2-Fix-Loop 2 (AC-6, Staging-Befund BROKEN): Amtliche-Warnungen-Toggle im
 	// Vergleich-Zweig — kein Self-Save (analog toggleCompareMetric oben),
 	// CompareTabs.svelte (`.hub-wetter-metriken-wrap` onchange-Bubble) persistiert
@@ -1339,13 +1297,7 @@
 			channelActiveMetricKeys,
 			officialAlertsEnabled,
 			dayWindowStartHour,
-			dayWindowEndHour,
-			hourlyMetricKeys,
-			hourlyEnabled,
-			outlookMetricKeys,
-			outlookMetricFormats,
-			outlookEnabled,
-			hourlyMetricFormats
+			dayWindowEndHour
 		}),
 		(feld, wert) => {
 			switch (feld) {
@@ -1371,24 +1323,6 @@
 					break;
 				case 'dayWindowEndHour':
 					onDayWindowEndHourChange?.(wert as number);
-					break;
-				case 'hourlyMetricKeys':
-					onHourlyMetricKeysChange?.(wert as string[] | null);
-					break;
-				case 'hourlyEnabled':
-					onHourlyEnabledChange?.(wert as boolean);
-					break;
-				case 'outlookMetricKeys':
-					onOutlookMetricKeysChange?.(wert as string[] | null);
-					break;
-				case 'outlookMetricFormats':
-					onOutlookMetricFormatsChange?.(wert as Record<string, boolean> | null);
-					break;
-				case 'outlookEnabled':
-					onOutlookEnabledChange?.(wert as boolean);
-					break;
-				case 'hourlyMetricFormats':
-					onHourlyMetricFormatsChange?.(wert as Record<string, boolean> | null);
 					break;
 			}
 		}
@@ -1576,72 +1510,9 @@
 			</LayoutTab>
 			{/if}
 		{/if}
-		<!-- Issue #1360 (Scheibe S1a von Epic #1372): neue Heimat der
-		     Stundenverlauf-Steuerung — der Reiter "Layout" ist aufgeloest.
-		     Position laut Spec: nach 'reihenfolge', vor 'official_alerts' (erst
-		     welche Tageswerte und in welcher Folge, dann der Stundenverlauf).
-		     Die GETEILTE Komponente wird unveraendert eingehaengt; die
-		     Persistenz-Kopplung bleibt beim Aufrufer (Teilungs-Invariante):
-		     im Hub der Bubble-Wrapper `.hub-layout-hourly-wrap`, auf der
-		     Anlege-Seite der lokale Speicherpfad.
-		     Bewusst — wie der Amtliche-Warnungen-Toggle — AUSSERHALB des
-		     Metrik-Katalog-Fetch-Zweigs: ein fehlgeschlagener Katalog-Abruf darf
-		     die Stundenverlauf-Steuerung nicht unerreichbar machen. -->
-		{#if sections.includes('stundenverlauf') && hourlyMetricKeys !== undefined}
-			<div data-testid="weather-metrics-stundenverlauf">
-				<!-- #1406 B: dieselbe Katalogantwort (GET /api/compare/metrics) wie
-				     Uebersicht und Ausblick — bis dahin bekam der Block hier das
-				     Register-Objekt `metricById` (GET /api/metrics) und damit eine
-				     andere Datenform als die, ueber die groupCompareCatalog()
-				     gruppiert. -->
-				<!-- Issue #2276 S6b/S6g: flache Wertprops statt `wiz`-Bindung (dasselbe
-				     Muster wie der Ausblick-Mount darunter, #1720 S1). Die beiden
-				     Adapter schreiben exakt das, was die Komponente bis dahin selbst
-				     schrieb — und NUR das eine Feld. -->
-				<CompareHourlyLayoutControls
-					metricKeys={hourlyMetricKeys}
-					onMetricKeys={(keys) => onHourlyMetricKeysChange?.(keys)}
-					metricFormats={hourlyMetricFormats ?? null}
-					onMetricFormats={(formats) => onHourlyMetricFormatsChange?.(formats)}
-					enabled={hourlyEnabled}
-					onEnabledChange={(checked) => onHourlyEnabledChange?.(checked)}
-					catalog={compareCatalog}
-					smsSymbols={metricSymbols}
-					register={metricById}
-					grundauswahl={activeMetricKeys ?? null}
-				/>
-			</div>
-		{/if}
-		<!-- Issue #1361 Befund 2/#1368: Bedienflaeche des 3-Tages-Ausblicks.
-		     Dieselbe Bauart wie der Stundenverlauf-Block darueber (geteilte
-		     Komponente, Persistenz-Kopplung beim Aufrufer). Der Metrik-Pool ist
-		     die BEREITS geladene Katalogantwort (compareCatalog) — kein
-		     zweiter Abruf, kein zweites Vokabular. Anders als der
-		     Stundenverlauf haengt der Block damit am Katalog-Fetch; ohne
-		     Katalog bleibt wenigstens der Schalter unerreichbar statt eine
-		     leere Liste zu zeigen (bewusst, s. Spec). -->
-		{#if sections.includes('ausblick') && outlookMetricKeys !== undefined && compareCatalogLoaded}
-			<div data-testid="weather-metrics-ausblick">
-				<!-- Issue #1720 S1: dasselbe Bauteil, flach parametrisiert. Der
-				     Vergleich fuehrt zusaetzlich den Ein/Aus-Schalter
-				     (outlook_enabled); der Trip nicht (AC-13). -->
-				<!-- Issue #1848 A3 (AC-2/AC-6): die Ortsvergleich-eigene
-				     Grundauswahl — DIESELBE Quelle wie die Uebersichts-Kopplung
-				     der Kanal-Reiter, unmaterialisiert: `null` = nie eingestellt (#3047 J1, #3061). -->
-				<OutlookLayoutControls
-					metricKeys={outlookMetricKeys}
-					catalog={compareCatalog}
-					grundauswahl={activeMetricKeys ?? null}
-					onMetricKeys={onCompareOutlookMetricKeys}
-					metricFormats={outlookMetricFormats}
-					onMetricFormats={onCompareOutlookMetricFormats}
-					enabled={outlookEnabled}
-					onEnabledChange={onCompareOutlookEnabled}
-					smsSymbols={metricSymbols}
-					register={metricById}
-				/>
-			</div>
-		{/if}
+		<!-- Issue #3276 (Spec-AC-38): die Bedienflaechen Stundenverlauf und Ausblick
+		     des Vergleichs sind entfernt — eingestellt wird beides nur noch in der
+		     Tabelle „Was steht wo" (Reiter Wetter, ADR-0124). -->
 		<!-- Issue #1350 Teil 2: Amtliche-Warnungen-Toggle haengt nicht am
 		     Metrik-Katalog-Fetch (Known Limitations: "nur die Auswahl-UI ist
 		     betroffen") — bleibt unabhaengig vom Lade-/Fehlerzustand sichtbar. -->

@@ -52,11 +52,13 @@ import type {
 	StoredActiveMetric
 } from '../weather-metrics-tab/compareMetricSelection.ts';
 
-const {
-	compareChannelActiveMetricsFromStored,
-	mergeAllCompareChannelActiveMetricsForSave,
-	startCompareChannelOverride
-} = await import('../weather-metrics-tab/compareChannelMetricLayouts.ts');
+// Issue #3276 (Spec-AC-38): `mergeAllCompareChannelActiveMetricsForSave` ist mit dem Schreiben von
+// `channel_active_metrics` entfallen (Altschluessel). Die beiden Bloecke AC-S8-10/AC-S8-11, die nur
+// diese Schreib-Naht prueften, sind entfernt; dass der Ortsvergleich den Schluessel weder beim
+// Anlegen noch beim Speichern sendet, prueft compare/feat3276_vergleich_ohne_altfelder.test.ts.
+const { compareChannelActiveMetricsFromStored, startCompareChannelOverride } = await import(
+	'../weather-metrics-tab/compareChannelMetricLayouts.ts'
+);
 
 // Echte Katalogzeilen (Beleg: src/output/renderers/compare_metric_catalog.py).
 const catalog: CompareSelectionEntry[] = [
@@ -68,79 +70,6 @@ const catalog: CompareSelectionEntry[] = [
 const stored = (metric_id: string, aggregation: string): StoredActiveMetric => ({
 	metric_id,
 	aggregation
-});
-const persistedEmail: StoredActiveMetric[] = [stored('temperature', 'max')];
-const persistedTelegram: StoredActiveMetric[] = [stored('wind', 'max')];
-
-describe('AC-S8-10: beim Speichern gehen ALLE editierten Kanaele mit', () => {
-	test('drei nacheinander editierte Kanaele stehen alle im Ergebnis, nicht nur der letzte', () => {
-		const overrides: Record<ChannelId, string[] | null> = {
-			email: ['temp_max_c'],
-			telegram: ['wind_max_kmh'],
-			sms: ['precip_sum_mm', 'temp_max_c']
-		};
-
-		const next = mergeAllCompareChannelActiveMetricsForSave(undefined, overrides, catalog);
-
-		assert.deepEqual(next.email, [stored('temperature', 'max')], 'AC-S8-10 FAIL: email fehlt');
-		assert.deepEqual(next.telegram, [stored('wind', 'max')], 'AC-S8-10 FAIL: telegram fehlt');
-		assert.deepEqual(
-			next.sms,
-			[stored('precipitation', 'sum'), stored('temperature', 'max')],
-			'AC-S8-10 FAIL: der zuletzt editierte Kanal darf nicht der einzige serialisierte sein ' +
-				'(M4) — und die Reihenfolge des Kanals bleibt positionsgetreu'
-		);
-	});
-
-	test('nie editierter Kanal (null) behaelt seinen gespeicherten Stand, prevStored wird nicht mutiert', () => {
-		const prev = { email: persistedEmail, telegram: persistedTelegram };
-		const overrides: Record<ChannelId, string[] | null> = {
-			email: null,
-			telegram: null,
-			sms: ['temp_max_c']
-		};
-
-		const next = mergeAllCompareChannelActiveMetricsForSave(prev, overrides, catalog);
-
-		assert.deepEqual(
-			next.email,
-			persistedEmail,
-			'AC-S8-10 FAIL: config_merge.go ersetzt channel_active_metrics als GANZES — ein ' +
-				'nicht mitgesendeter Kanal geht lautlos verloren (BUG-DATALOSS-GR221-Muster)'
-		);
-		assert.deepEqual(next.telegram, persistedTelegram, 'AC-S8-10 FAIL: telegram ging verloren');
-		assert.deepEqual(next.sms, [stored('temperature', 'max')]);
-		assert.deepEqual(
-			prev,
-			{ email: persistedEmail, telegram: persistedTelegram },
-			'AC-S8-10 FAIL: der uebergebene Server-Vorstand wurde mutiert'
-		);
-	});
-});
-
-describe('AC-S8-11: eine bewusst geleerte Kanal-Auswahl reist als [] mit', () => {
-	test('leerer SMS-Override erzeugt sms: [], keinen weggelassenen Schluessel', () => {
-		const prev = { sms: [stored('temperature', 'max')] };
-		const overrides: Record<ChannelId, string[] | null> = {
-			email: null,
-			telegram: null,
-			sms: []
-		};
-
-		const next = mergeAllCompareChannelActiveMetricsForSave(prev, overrides, catalog);
-
-		assert.ok(
-			Object.prototype.hasOwnProperty.call(next, 'sms'),
-			'AC-S8-11 FAIL: der sms-Schluessel fehlt im Payload — config_merge.go loescht Keys NIE, ' +
-				'ein weggelassener Schluessel laesst den alten Stand stehen (M5)'
-		);
-		assert.deepEqual(
-			next.sms,
-			[],
-			'AC-S8-11 FAIL: die bewusste Leerauswahl muss als [] persistiert werden, nicht als ' +
-				'Rueckfall auf die globale Liste'
-		);
-	});
 });
 
 describe('Hydration: gespeicherter Stand -> Kanal-Overrides', () => {

@@ -5,7 +5,7 @@
 	// Struktureller Spiegel von trip-new/TripNewEditor.svelte (#622): eigene
 	// Anlege-Shell je Domäne (ADR-0029), zusammengesetzt aus den GETEILTEN
 	// Organismen (Step2Orte, WetterTab, WeatherMetricsTab, AlarmeTab, VersandTab;
-	// Stundenverlauf jetzt via WeatherMetricsTab, #1360). Die Wertebereiche-Vorbelegung
+	// Stundenverlauf/Ausblick seit #3276 nur in „Was steht wo“). Die Wertebereiche-Vorbelegung
 	// ist seit #2794 S3a Teil-PR 4a eine reine Funktion (shared/wetter-tab/anlegeVorbelegung.ts).
 	// Reine Freischalt-Logik
 	// im geteilten Kern shared/anlegeLockEngine.ts (#2277 S4). Lokaler Feldsatz `wiz` ($state, #2727), EIN POST bei
@@ -22,7 +22,7 @@
 	import { Field } from '$lib/components/molecules';
 	import { type ComparePreset, type Location, type Group } from '$lib/types';
 	import {
-		buildNewComparePresetPayload,
+		legeVergleichAn,
 		compareFeldsatzStandard,
 		type CompareFeldsatz
 	} from '../compare/compareEditorSave.ts';
@@ -322,58 +322,9 @@
 	// Legt das neue Preset via POST /api/compare/presets an und navigiert zum Hub.
 	// Ein Fehlschlag bleibt still (Verhalten unveraendert, Nebenbefund #1199).
 	async function speichereNeuenVergleich(): Promise<void> {
-		const payload = buildNewComparePresetPayload({
-			name: wiz.name,
-			pickedIds: wiz.pickedIds,
-			vorlageId: wiz.vorlageId, // Issue #3198: angezeigte Vorlage (profil ist konstant)
-			schedule: wiz.schedule,
-			officialAlertsEnabled: wiz.officialAlertsEnabled, // Issue #1040
-			radarAlertEnabled: wiz.radarAlertEnabled, // Issue #1041 Slice 2
-			hourlyEnabled: wiz.hourlyEnabled, // Issue #1107
-			outlookEnabled: wiz.outlookEnabled, // Issue #1361/#1368
-			officialAlertTriggersEnabled: wiz.officialAlertTriggersEnabled, // Issue #1216 Slice 2b
-			sendTelegram: wiz.sendTelegram,
-			sendSms: wiz.sendSms,
-			sendPremiumSms: wiz.sendPremiumSms, // Issue #1745 A (AC-11) / #2293 S2
-			alertChannels: wiz.channels, // Issue #2293 Scheibe S2 (Abschnitt 1/7)
-			officialWarningsEnabled: wiz.officialWarningsEnabled, // Issue #1258 S4
-			morningEnabled: wiz.morningEnabled, // Issue #1232 Scheibe 2b
-			morningTime: wiz.morningTime,
-			eveningEnabled: wiz.eveningEnabled,
-			eveningTime: wiz.eveningTime,
-			endDate: wiz.endDate,
-			// Issue #1361/#1372 S1b: Tagesfenster gehört von Anfang an zur Bedienfläche.
-			dayWindowStartHour: wiz.dayWindowStartHour,
-			dayWindowEndHour: wiz.dayWindowEndHour,
-			alertCooldownMinutes: wiz.alertCooldownMinutes, // Issue #1170
-			alertQuietFrom: wiz.alertQuietFrom,
-			alertQuietTo: wiz.alertQuietTo,
-			corridors: wiz.corridors, // Issue #1231 Slice 4
-			region: wiz.region,
-			idealRanges: wiz.idealRanges,
-			activeMetricKeys: wiz.activeMetricKeys,
-			// Issue #1703 Scheibe 8: Kanal-Overrides der Uebersichtstabelle — Kopie,
-			// damit der gesendete Stand nicht spaeter noch mitmutiert.
-			channelActiveMetricKeys: { ...wiz.channelActiveMetricKeys },
-			hourlyMetricKeys: wiz.hourlyMetricKeys,
-			outlookMetricKeys: wiz.outlookMetricKeys, // Issue #1361/#1368
-			outlookMetricFormats: wiz.outlookMetricFormats, // Issue #2049
-			hourlyMetricFormats: wiz.hourlyMetricFormats, // Issue #3097
-			metricAlertLevels: wiz.metricAlertLevels, // Issue #1170
-			channelThresholds: wiz.channelThresholds, // Issue #1461 S3b-2b
-			alertMetricChannels: wiz.alertMetricChannels, // Issue #1895 S3b1
-			telegramStyle: wiz.telegramStyle // Issue #1260 S5
-		});
-		// #2794 S3a Teil-PR 3: Abo-Ampel und Auswahl aus dem Reiter Wetter in display_config
-		// (additiv; AC-37: active_metrics im Speicherformat, konsistent mit der Ampel).
-		if (wetterAmpel)
-			payload.display_config = {
-				...((payload.display_config as object) ?? {}),
-				ampel: wetterAmpel,
-				...(wetterAuswahl ? { active_metrics: wetterAuswahl } : {})
-			};
+		// Issue #3276 F002/F-ADV1: Rumpf-Bau und POST als eine getestete Funktion (keine Altschluessel).
 		try {
-			const created = await api.post<{ id: string }>('/api/compare/presets', payload);
+			const created = await legeVergleichAn(api, wiz, { ampel: wetterAmpel, auswahl: wetterAuswahl });
 			await goto('/compare/' + created.id);
 		} catch {
 			/* Nebenbefund #1199: Fehlermeldung wird (wie bisher) nicht angezeigt */

@@ -10,7 +10,7 @@
 //   routes/_home/homeHeroChannels.ts   homeHeroChannels(kind, sub): string[]
 //     -> Trip: heroKanaele(report_config) (Slot-Regel); Vergleich: presetChannels(sub) (Flags) — nie aus empfaenger.
 //   shared/OutlookLayoutControls.svelte (umbenannt aus CompareOutlookLayoutControls);
-//   compare/CompareHourlyLayoutControls.svelte (verschoben, Kopfzeile gz-eigenstaendig:).
+//   compare/CompareHourlyLayoutControls.svelte (verschoben, Kopfzeile gz-eigenstaendig:; #3276 geloescht).
 //
 // Pfadregel #1409: relativ zu DIESER Datei.
 // Ausfuehrung:
@@ -141,11 +141,10 @@ describe('AC-4: shared/ ohne Compare*-Komponenten (Struktur)', () => {
 		assert.ok(existsSync(path.join(COMPONENTS, 'shared/OutlookLayoutControls.svelte')), 'shared/OutlookLayoutControls.svelte fehlt (RED)');
 	});
 
-	test('CompareHourlyLayoutControls liegt in compare/ mit gz-eigenstaendig-Kopfzeile und Begruendung', () => {
-		const p = path.join(COMPONENTS, 'compare/CompareHourlyLayoutControls.svelte');
-		assert.ok(existsSync(p), 'compare/CompareHourlyLayoutControls.svelte fehlt (RED)');
-		const kopf = readFileSync(p, 'utf8').split('\n').slice(0, 6).join('\n');
-		const m = kopf.match(/gz-eigenstaendig:\s*(.+)/);
-		assert.ok(m && m[1].trim().length >= 15, 'Kopfzeile gz-eigenstaendig: mit Begruendung (>=15 Zeichen) fehlt');
+	// Issue #3276: CompareHourlyLayoutControls.svelte ist geloescht (Stundenverlauf des
+	// Ortsvergleichs nur noch in „Was steht wo"); die Lage-Pruefung entfaellt.
+	test('CompareHourlyLayoutControls kehrt nicht zurueck (#3276)', () => {
+		assert.ok(!existsSync(path.join(COMPONENTS, 'compare/CompareHourlyLayoutControls.svelte')));
+		assert.ok(!existsSync(path.join(COMPONENTS, 'shared/CompareHourlyLayoutControls.svelte')));
 	});
 });
