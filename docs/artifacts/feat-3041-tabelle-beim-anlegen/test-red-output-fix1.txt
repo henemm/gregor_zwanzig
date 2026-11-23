@@ -1,0 +1,513 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl
+configfile: pyproject.toml
+plugins: xdist-3.8.0, timeout-2.4.0, anyio-4.14.2, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 33 items
+
+tests/tdd/test_3304_placements_vorschau.py ..........................F.F [ 87%]
+.F..                                                                     [100%]
+
+=================================== FAILURES ===================================
+____ test_fix1_trip_entwurf_ohne_kennung_gleich_get_ansicht[standard-fehlt] ____
+
+client = <starlette.testclient.TestClient object at 0x718e7f161100>, rc = None
+leer = None
+
+    @pytest.mark.parametrize("leer", [None, ""], ids=["fehlt", "leer"])
+    @pytest.mark.parametrize("rc", [None, _rc_beide()], ids=["standard", "beide_briefings"])
+    def test_fix1_trip_entwurf_ohne_kennung_gleich_get_ansicht(client, rc, leer):
+        """AC-1 (Staging-Befund): GIVEN ein Trip-Entwurf in Anlage-Form ohne
+        Kennung (Etappen mit Wegpunkten, ``display_config.metrics``) WHEN Vorschau
+        (kind=route) THEN 200, ``stored=false`` und dieselbe Ansicht wie das GET
+        eines gleich konfigurierten gespeicherten Trips. Keine Ausnahme noetig:
+        die Antwort traegt kein kennungsabhaengiges Feld (AC-4 -- weder ``id``
+        noch ``entity_id``/``briefing_id``), daher Vergleich aller Felder ausser
+        ``stored``."""
+        datei = _trip(NUTZER_A, "ohne3304-trip", rc=rc)
+        gespeichert = _get_ok(client, "ohne3304-trip", "route")
+        entwurf = _ohne_kennung(_entwurf(datei))
+        if leer is not None:
+            entwurf["id"] = leer
+        unveraendert = copy.deepcopy(entwurf)
+        vorher = _baum()
+    
+>       vorschau = _vorschau_ok(client, "route", entwurf)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_3304_placements_vorschau.py:433: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+client = <starlette.testclient.TestClient object at 0x718e7f161100>
+kind = 'route'
+entwurf = {'name': 'Trip ohne3304-trip', 'kind': 'route', 'stages': [{'id': 'T1', 'name': 'Etappe 1', 'date': '2026-07-14', 'way...n': 11.4, ...}, {'id': 'W2', 'name': 'Ziel', 'lat': 47.29, 'lon': 11.42, ...}]}], 'official_alerts_enabled': True, ...}
+user = 'p3304-a'
+
+    def _vorschau_ok(client, kind, entwurf, user=NUTZER_A) -> dict:
+        antwort = _vorschau(client, kind, entwurf, user)
+>       assert antwort.status_code == 200, antwort.text
+E       AssertionError: {"detail":"Entwurf nicht lesbar — bitte die Angaben prüfen","code":"invalid_preset"}
+E       assert 422 == 200
+E        +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+
+tests/tdd/test_3304_placements_vorschau.py:67: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+_ test_fix1_trip_entwurf_ohne_kennung_gleich_get_ansicht[beide_briefings-fehlt] _
+
+client = <starlette.testclient.TestClient object at 0x718e7ed0b6e0>
+rc = {'morning_enabled': True, 'evening_enabled': True, 'send_email': True}
+leer = None
+
+    @pytest.mark.parametrize("leer", [None, ""], ids=["fehlt", "leer"])
+    @pytest.mark.parametrize("rc", [None, _rc_beide()], ids=["standard", "beide_briefings"])
+    def test_fix1_trip_entwurf_ohne_kennung_gleich_get_ansicht(client, rc, leer):
+        """AC-1 (Staging-Befund): GIVEN ein Trip-Entwurf in Anlage-Form ohne
+        Kennung (Etappen mit Wegpunkten, ``display_config.metrics``) WHEN Vorschau
+        (kind=route) THEN 200, ``stored=false`` und dieselbe Ansicht wie das GET
+        eines gleich konfigurierten gespeicherten Trips. Keine Ausnahme noetig:
+        die Antwort traegt kein kennungsabhaengiges Feld (AC-4 -- weder ``id``
+        noch ``entity_id``/``briefing_id``), daher Vergleich aller Felder ausser
+        ``stored``."""
+        datei = _trip(NUTZER_A, "ohne3304-trip", rc=rc)
+        gespeichert = _get_ok(client, "ohne3304-trip", "route")
+        entwurf = _ohne_kennung(_entwurf(datei))
+        if leer is not None:
+            entwurf["id"] = leer
+        unveraendert = copy.deepcopy(entwurf)
+        vorher = _baum()
+    
+>       vorschau = _vorschau_ok(client, "route", entwurf)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_3304_placements_vorschau.py:433: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+client = <starlette.testclient.TestClient object at 0x718e7ed0b6e0>
+kind = 'route'
+entwurf = {'name': 'Trip ohne3304-trip', 'kind': 'route', 'stages': [{'id': 'T1', 'name': 'Etappe 1', 'date': '2026-07-14', 'way...n': 11.4, ...}, {'id': 'W2', 'name': 'Ziel', 'lat': 47.29, 'lon': 11.42, ...}]}], 'official_alerts_enabled': True, ...}
+user = 'p3304-a'
+
+    def _vorschau_ok(client, kind, entwurf, user=NUTZER_A) -> dict:
+        antwort = _vorschau(client, kind, entwurf, user)
+>       assert antwort.status_code == 200, antwort.text
+E       AssertionError: {"detail":"Entwurf nicht lesbar — bitte die Angaben prüfen","code":"invalid_preset"}
+E       assert 422 == 200
+E        +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+
+tests/tdd/test_3304_placements_vorschau.py:67: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+______ test_fix1_trip_entwurf_ohne_kennung_direkt_am_dienst_unveraendert _______
+
+kind = 'route'
+draft = {'name': 'Trip dienst3304', 'kind': 'route', 'stages': [{'id': 'T1', 'name': 'Etappe 1', 'date': '2026-07-14', 'waypoi...n': 11.4, ...}, {'id': 'W2', 'name': 'Ziel', 'lat': 47.29, 'lon': 11.42, ...}]}], 'official_alerts_enabled': True, ...}
+user_id = 'p3304-a'
+
+    def build_placements_preview(kind: str, draft, user_id: str) -> dict:
+        """#3304: Ansicht wie ``build_placements_view`` fuer einen NICHT
+        gespeicherten Entwurf (Koerper der Anlage). Schreibt nichts; ``stored``
+        ist immer ``False``. Orte nur aus dem Bestand von ``user_id`` (fremde und
+        unbekannte IDs entfallen still); die ``id`` des Entwurfs laedt nichts.
+        ``ValueError`` bei unbekanntem ``kind``, ``EntwurfUnlesbar`` bei einem
+        Entwurf, der kein lesbares Objekt ist."""
+        from i18n import resolve_user_lang
+    
+        if kind not in KINDS:
+            raise ValueError(kind)
+        if not isinstance(draft, dict):
+            raise EntwurfUnlesbar(type(draft).__name__)
+        lang = resolve_user_lang(user_id)
+        try:
+            if kind == "route":
+>               abo, muster_fn = _trip_abo_aus(_entwurf_trip(draft), lang)
+                                               ^^^^^^^^^^^^^^^^^^^^
+
+src/services/placements_view_service.py:118: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/services/placements_view_service.py:130: in _entwurf_trip
+    return load_trip(draft)
+           ^^^^^^^^^^^^^^^^
+src/app/loader.py:472: in load_trip
+    return _parse_trip(source.get("trip", source))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+data = {'name': 'Trip dienst3304', 'kind': 'route', 'stages': [{'id': 'T1', 'name': 'Etappe 1', 'date': '2026-07-14', 'waypoi...n': 11.4, ...}, {'id': 'W2', 'name': 'Ziel', 'lat': 47.29, 'lon': 11.42, ...}]}], 'official_alerts_enabled': True, ...}
+
+    def _parse_trip(data: Dict[str, Any]) -> Trip:
+        """Parse trip data from dictionary."""
+        stages = []
+        # Issue #1244: explizites JSON-null bei "stages"/"waypoints" faellt bei
+        # .get(default) NICHT auf den Default zurueck -> or []
+        for stage_data in data.get("stages") or []:
+            waypoints = []
+            for wp_data in stage_data.get("waypoints") or []:
+                time_window = None
+                if "time_window" in wp_data:
+                    time_window = TimeWindow.from_string(wp_data["time_window"])
+    
+                waypoint = Waypoint(
+                    id=wp_data["id"],
+                    name=wp_data["name"],
+                    lat=wp_data["lat"],
+                    lon=wp_data["lon"],
+                    elevation_m=wp_data["elevation_m"],
+                    time_window=time_window,
+                    # Issue #296 — persistierte Naismith-Ankunftszeit erhalten (Datenverlust-Regel)
+                    arrival_calculated=wp_data.get("arrival_calculated"),
+                    # Issue #303 — Vorschlags-Metadaten + Override (Datenverlust-Regel)
+                    origin=wp_data.get("origin"),
+                    confirmed=wp_data.get("confirmed"),
+                    suggestion_reason=wp_data.get("suggestion_reason"),
+                    arrival_override=wp_data.get("arrival_override"),
+                    # Issue #2036 — gemessene Wegstrecke erhalten. Fehlender
+                    # Schluessel -> None ("nicht gemessen"), NICHT 0.0.
+                    distance_from_start_km=wp_data.get("distance_from_start_km"),
+                )
+                waypoints.append(waypoint)
+    
+            # Parse start_time if present
+            start_time_val = None
+            if "start_time" in stage_data:
+                from datetime import time as _time
+                start_time_val = _time.fromisoformat(stage_data["start_time"])
+    
+            stage = Stage(
+                id=stage_data["id"],
+                name=stage_data["name"],
+                date=date.fromisoformat(stage_data["date"]),
+                waypoints=waypoints,
+                start_time=start_time_val,
+                # Issue #3197: ungueltiger Wert wird ignoriert (Trip-Tempo gilt).
+                grundtempo_kmh=_stage_grundtempo_from_data(stage_data.get("grundtempo_kmh")),
+            )
+            stages.append(stage)
+    
+        # Parse aggregation config if present.
+        # Default (kein aggregation-Block im JSON) ist ALLGEMEIN — Spec
+        # docs/specs/modules/loader_display_config_default.md. Wir nutzen NICHT
+        # den DTO-Default `AggregationConfig()` (= WINTERSPORT), weil dann der
+        # else-Branch fuer den display_config-Default unten faelschlicherweise
+        # ein wintersport-Template waehlen wuerde.
+        aggregation = AggregationConfig.for_profile(ActivityProfile.ALLGEMEIN)
+        if "aggregation" in data:
+            agg_data = data["aggregation"]
+            # Issue #111 Validator-Finding: agg_data.get("profile") kann None sein
+            # (Key vorhanden, aber Wert null). Defensiv auf ALLGEMEIN mappen.
+            profile_str = agg_data.get("profile") or "allgemein"
+            try:
+                profile = ActivityProfile(profile_str)
+            except ValueError:
+                # Unbekannter Profile-String -> ALLGEMEIN-Fallback (kein Crash)
+                profile = ActivityProfile.ALLGEMEIN
+            aggregation = AggregationConfig.for_profile(profile)
+    
+            # Apply overrides
+            if "overrides" in agg_data:
+                overrides = agg_data["overrides"]
+                for key, value in overrides.items():
+                    if hasattr(aggregation, key):
+                        if isinstance(value, list):
+                            setattr(aggregation, key, [AggregationFunc(v) for v in value])
+                        else:
+                            setattr(aggregation, key, AggregationFunc(value))
+    
+        # Parse weather config if present (Feature 2.6 legacy)
+        weather_config = None
+        if "weather_config" in data:
+            from app.models import TripWeatherConfig
+            from datetime import datetime
+            wc_data = data["weather_config"]
+            weather_config = TripWeatherConfig(
+                trip_id=wc_data["trip_id"],
+                enabled_metrics=wc_data["enabled_metrics"],
+                updated_at=datetime.fromisoformat(wc_data["updated_at"])
+            )
+    
+        # Parse unified display config (Feature 2.6 v2) or migrate from old weather_config
+        display_config = None
+        # Issue #3122 B2b: Das Speichern der Tabelle "Was steht wo" (Go
+        # ``store.SaveBriefingPlacements``) legt bei einem Trip ohne
+        # ``display_config`` eines NUR mit ``placements`` an. Das ist keine
+        # Anzeige-Einstellung: die Grundauswahl "nie eingestellt" bleibt die des
+        # fehlenden Schluessels (Profil-Default bzw. weather_config), sonst
+        # tauschte das erste Speichern der Tabelle die Metriken des Briefings aus.
+        nur_tabelle = _nur_placements(data.get("display_config"))
+        if "display_config" in data and not nur_tabelle:
+            # Issue #1244: "display_config": null (explizites JSON-null) darf
+            # nicht crashen -- fail-soft heisst hier: valider Default statt
+            # AttributeError in _parse_display_config.
+            display_config = _parse_display_config(
+                data["display_config"] or {}, data.get("id", ""), trip_standard_bei_leer=True
+            )
+        elif weather_config is not None:
+            display_config = _migrate_weather_config(weather_config)
+        else:
+            # Issue #111: kein display_config + kein weather_config -> profil-abhaengiger Default
+            from app.metric_catalog import build_default_display_config_for_profile
+            profile = (
+                aggregation.profile
+                if aggregation is not None and getattr(aggregation, "profile", None) is not None
+                else ActivityProfile.ALLGEMEIN
+            )
+            display_config = build_default_display_config_for_profile(data["id"], profile)
+        if nur_tabelle:
+            display_config.placements = copy.deepcopy(data["display_config"]["placements"])
+    
+        # Parse report config if present (Feature 3.5)
+        report_config = None
+        if "report_config" in data:
+            from app.models import TripReportConfig
+            from datetime import datetime, time
+            rc_data = data["report_config"]
+            dc_data = data.get("display_config") or {}
+            _dw_start, _dw_end = _clamped_day_window(
+                rc_data.get("day_window_start_hour"), rc_data.get("day_window_end_hour"),
+            )
+            report_config = TripReportConfig(
+                trip_id=rc_data.get("trip_id", data["id"]),
+                enabled=rc_data.get("enabled", True),
+                # Issue #2422 S3: nur echte bool, alles andere = "nicht gesetzt".
+                morning_enabled=_bool_oder_none(rc_data.get("morning_enabled")),
+                evening_enabled=_bool_oder_none(rc_data.get("evening_enabled")),
+                morning_time=time.fromisoformat(rc_data.get("morning_time", "07:00:00")),
+                evening_time=time.fromisoformat(rc_data.get("evening_time", "18:00:00")),
+                send_email=rc_data.get("send_email", True),
+                send_sms=rc_data.get("send_sms", False),
+                send_telegram=rc_data.get("send_telegram", False),
+                # Issue #1676 S2a (Spec D8): der Go-Handler legt das Flag als
+                # freien Schluessel in `report_config` ab — hier wird es gelesen.
+                send_premium_sms=rc_data.get("send_premium_sms", False),
+                alert_on_changes=rc_data.get("alert_on_changes", True),
+                change_threshold_temp_c=rc_data.get("change_threshold_temp_c", 5.0),
+                change_threshold_wind_kmh=rc_data.get("change_threshold_wind_kmh", 20.0),
+                change_threshold_precip_mm=rc_data.get("change_threshold_precip_mm", 10.0),
+                wind_exposition_min_elevation_m=rc_data.get("wind_exposition_min_elevation_m"),
+                show_compact_summary=rc_data.get(
+                    "show_compact_summary",
+                    dc_data.get("show_compact_summary", True),
+                ),
+                multi_day_trend_reports=rc_data.get(
+                    "multi_day_trend_reports",
+                    dc_data.get("multi_day_trend_reports", ["evening"]),
+                ),
+                show_stage_stats=rc_data.get("show_stage_stats", True),
+                show_quick_take_tags=rc_data.get("show_quick_take_tags", True),
+                show_stability=rc_data.get("show_stability", True),
+                show_highlights=rc_data.get("show_highlights", True),
+                daily_summary_metrics=rc_data.get(
+                    "daily_summary_metrics",
+                    ["precipitation", "wind", "visibility", "thunder"],
+                ),
+                show_metrics_summary=rc_data.get("show_metrics_summary", False),
+                show_outlook=rc_data.get("show_outlook", True),
+                email_format=rc_data.get("email_format", "full"),
+                telegram_style=rc_data.get("telegram_style", "rich"),
+                show_yesterday_comparison=rc_data.get("show_yesterday_comparison", True),
+                day_window_start_hour=_dw_start,
+                day_window_end_hour=_dw_end,
+                paused_until=datetime.fromisoformat(rc_data["paused_until"]) if rc_data.get("paused_until") else None,
+                skip_next=rc_data.get("skip_next", False),
+                updated_at=datetime.fromisoformat(rc_data["updated_at"]) if "updated_at" in rc_data else datetime.now(),
+            )
+    
+        # Issue #205: Alert Rules — either directly from JSON or migrated from legacy.
+        alert_rules = _migrate_legacy_alert_rules(data)
+    
+        # Issue #2795 (Spec §4.3): „Kanaele je Wettergroesse" entfaellt. Die
+        # Lade-Migration aus #1895 S2 (Regel-Kanaele -> alert_metric_channels)
+        # entfaellt mit; ein vorhandener Wert wird nur lesetolerant durchgereicht
+        # (kein Datenverlust), aber nicht mehr aus alert_rules erzeugt -- sonst
+        # belebte save_trip den Schluessel nach der Migration wieder.
+        bestehend = data.get("alert_metric_channels")
+        alert_metric_channels = dict(bestehend) if isinstance(bestehend, dict) and bestehend else None
+    
+        # Issue #1231 (Slice 1): Corridors — additiv neben alert_rules, kein
+        # Legacy-Migrationspfad in Slice 1 (s. scripts/migrate_1231_corridors.py, Slice 2).
+        corridors = [_corridor_from_dict(c) for c in (data.get("corridors") or [])]
+    
+        # Issue #1250 Scheibe 4: additive flache Slot-/Kanal-Felder aus dem bereits
+        # geparsten `report_config` ABLEITEN (Dual-Read). Issue #2422 S3: die
+        # *_enabled-Felder folgen `slot_aktiv()` — derselben Regel, mit der
+        # trip_report_scheduler den Versand je Slot entscheidet (`enabled` ist
+        # Master, sonst der Einzel-Schalter, fehlt er: aktiv). Ohne report_config
+        # bleiben sie None. report_config bleibt Single Source.
+        from app.models import slot_aktiv
+        morning_time = report_config.morning_time.isoformat() if report_config else None
+        evening_time = report_config.evening_time.isoformat() if report_config else None
+        morning_enabled = slot_aktiv(report_config, "morning") if report_config else None
+        evening_enabled = slot_aktiv(report_config, "evening") if report_config else None
+        send_email = report_config.send_email if report_config else None
+        send_sms = report_config.send_sms if report_config else None
+        send_telegram = report_config.send_telegram if report_config else None
+    
+        # Issue #991: unbekannte Top-Level-Keys generisch auffangen (roundtrip-erhalten),
+        # statt pro Feld ein weiteres Einzelattribut anzubauen.
+        KNOWN_TOP_LEVEL = {
+            "id", "name", "stages", "avalanche_regions", "aggregation", "shortcode", "activity",
+            "tempo",  # Issue #3196: benanntes Feld, nicht im extra-Auffangnetz
+            "region", "archived_at", "paused_at", "official_alerts_enabled",
+            "radar_alert_enabled",
+            "official_alert_triggers_enabled", "official_warnings", "weather_config",
+            "display_config", "report_config", "alert_rules", "corridors", "alert_cooldown_minutes",
+            "alert_quiet_from", "alert_quiet_to", "trip",
+            # Issue #1258 S3: additives Trip-Kanal-Set (D2), None = Legacy.
+            "alert_channels",
+            # Issue #1461 S3b-2a: additives Geschwisterfeld, None = Startwert LOW.
+            "alert_channel_thresholds",
+            # Issue #1895 S1: metrik-genaue Kanal-Schicht (ADR-0077), None = erbt
+            # den Abo-weiten Kanal-Satz. Ohne diesen Eintrag landet der Key im
+            # generischen extra-Auffangnetz und das benannte Feld bliebe leer.
+            "alert_metric_channels",
+            # Issue #1250 Scheibe 4 Fix-Loop F002 (Adversary BROKEN): diese Top-
+            # Level-Keys sind ABGELEITET (nicht autoritativ). Fehlten sie in
+            # KNOWN_TOP_LEVEL, wuerde ein zuvor persistierter Alt-Wert ueber den
+            # `extra`-Mechanismus (setdefault, s.u.) als "fremdes Feld" konserviert
+            # und einen stalen Stand vortaeuschen, obwohl die Quelle (report_config/
+            # Stages) laengst verschwunden ist.
+            "end_date", "morning_time", "evening_time", "morning_enabled",
+            "evening_enabled", "send_email", "send_sms", "send_telegram",
+            # Issue #1250 Scheibe 5: additiver Diskriminator (roundtrip-erhalten,
+            # nicht via extra) — s. Trip.kind.
+            "kind",
+        }
+        extra = {k: v for k, v in data.items() if k not in KNOWN_TOP_LEVEL}
+    
+        trip = Trip(
+>           id=data["id"],
+               ^^^^^^^^^^
+            name=data["name"],
+            stages=stages,
+            avalanche_regions=data.get("avalanche_regions") or [],
+            aggregation=aggregation,
+            weather_config=weather_config,
+            display_config=display_config,
+            report_config=report_config,
+            alert_rules=alert_rules,
+            corridors=corridors,  # Issue #1231, Slice 1
+            alert_cooldown_minutes=data.get("alert_cooldown_minutes"),
+            alert_quiet_from=data.get("alert_quiet_from"),
+            alert_quiet_to=data.get("alert_quiet_to"),
+            shortcode=data.get("shortcode", ""),
+            activity=data.get("activity") or "",  # Issue #802
+            # Issue #3196: Lazy-Ableitung aus activity, wenn die Datei kein tempo traegt.
+            tempo=_tempo_from_data(data),
+            region=data.get("region", ""),  # Issue #805
+            archived_at=data.get("archived_at"),  # Issue #805
+            paused_at=data.get("paused_at"),  # Issue #995: Go-Feld paused_at — roundtrip-erhalten
+            official_alerts_enabled=data.get("official_alerts_enabled"),  # Issue #1087
+            radar_alert_enabled=data.get("radar_alert_enabled"),  # Issue #2800
+            official_alert_triggers_enabled=data.get("official_alert_triggers_enabled"),  # Issue #1088
+            # Issue #1258: explizit durchreichen (auch als None) -> unterscheidet
+            # geladenen Bestandstrip (noch nicht migriert) von einer Neuanlage.
+            official_warnings=data.get("official_warnings"),
+            # Issue #1258 S3 (D2): explizit durchreichen (auch als None) -> None
+            # bleibt Legacy-Verhalten (s. Trip.alert_channels Docstring).
+            alert_channels=data.get("alert_channels"),
+            # Issue #1461 S3b-2a: explizit durchreichen (auch als None) -> None
+            # bleibt Startwert "LOW" je Kanal (s. Trip.alert_channel_thresholds).
+            alert_channel_thresholds=data.get("alert_channel_thresholds"),
+            # Issue #1895 S1: explizit durchreichen (auch als None) -> None bleibt
+            # "erbt den Abo-weiten Kanal-Satz" (s. Trip.alert_metric_channels).
+            # S2: der Wert ist bereits um die Regel-Kanaele ergaenzt (s.o.).
+            alert_metric_channels=alert_metric_channels,
+            extra=extra,  # Issue #991: unmodellierte Top-Level-Keys
+            # Issue #1250 Scheibe 4: abgeleitete flache Slot-/Kanal-Felder (Dual-Read)
+            morning_time=morning_time,
+            evening_time=evening_time,
+            morning_enabled=morning_enabled,
+            evening_enabled=evening_enabled,
+            send_email=send_email,
+            send_sms=send_sms,
+            send_telegram=send_telegram,
+            # Issue #1250 Scheibe 5: explizit durchreichen (auch als None) —
+            # Parität zu compare_preset_from_dict.kind.
+            kind=data.get("kind"),
+        )
+E       KeyError: 'id'
+
+src/app/loader.py:753: KeyError
+
+The above exception was the direct cause of the following exception:
+
+    def test_fix1_trip_entwurf_ohne_kennung_direkt_am_dienst_unveraendert():
+        """Kopie statt Veraenderung: der Dienst ergaenzt die Platzhalter-Kennung
+        nur intern; das uebergebene Woerterbuch bleibt ohne ``id``."""
+        from services.placements_view_service import build_placements_preview
+    
+        entwurf = _ohne_kennung(_entwurf(_trip(NUTZER_A, "dienst3304")))
+        unveraendert = copy.deepcopy(entwurf)
+>       antwort = build_placements_preview("route", entwurf, NUTZER_A)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_3304_placements_vorschau.py:450: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+kind = 'route'
+draft = {'name': 'Trip dienst3304', 'kind': 'route', 'stages': [{'id': 'T1', 'name': 'Etappe 1', 'date': '2026-07-14', 'waypoi...n': 11.4, ...}, {'id': 'W2', 'name': 'Ziel', 'lat': 47.29, 'lon': 11.42, ...}]}], 'official_alerts_enabled': True, ...}
+user_id = 'p3304-a'
+
+    def build_placements_preview(kind: str, draft, user_id: str) -> dict:
+        """#3304: Ansicht wie ``build_placements_view`` fuer einen NICHT
+        gespeicherten Entwurf (Koerper der Anlage). Schreibt nichts; ``stored``
+        ist immer ``False``. Orte nur aus dem Bestand von ``user_id`` (fremde und
+        unbekannte IDs entfallen still); die ``id`` des Entwurfs laedt nichts.
+        ``ValueError`` bei unbekanntem ``kind``, ``EntwurfUnlesbar`` bei einem
+        Entwurf, der kein lesbares Objekt ist."""
+        from i18n import resolve_user_lang
+    
+        if kind not in KINDS:
+            raise ValueError(kind)
+        if not isinstance(draft, dict):
+            raise EntwurfUnlesbar(type(draft).__name__)
+        lang = resolve_user_lang(user_id)
+        try:
+            if kind == "route":
+                abo, muster_fn = _trip_abo_aus(_entwurf_trip(draft), lang)
+            else:
+                abo, muster_fn = _orte_abo_aus(_entwurf_preset(draft), user_id, lang)
+        except (LookupError, TypeError, ValueError, AttributeError) as e:
+>           raise EntwurfUnlesbar(str(e)) from e
+E           services.placements_view_service.EntwurfUnlesbar: 'id'
+
+src/services/placements_view_service.py:122: EntwurfUnlesbar
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  /home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/tdd/test_3304_placements_vorschau.py::test_fix1_trip_entwurf_ohne_kennung_gleich_get_ansicht[standard-fehlt]
+FAILED tests/tdd/test_3304_placements_vorschau.py::test_fix1_trip_entwurf_ohne_kennung_gleich_get_ansicht[beide_briefings-fehlt]
+FAILED tests/tdd/test_3304_placements_vorschau.py::test_fix1_trip_entwurf_ohne_kennung_direkt_am_dienst_unveraendert
+=================== 3 failed, 30 passed, 2 warnings in 6.13s ===================
