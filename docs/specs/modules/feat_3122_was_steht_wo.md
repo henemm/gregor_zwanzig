@@ -362,3 +362,4 @@ Die Tabelle „Übersicht“ steht auch bei genau einem Ort in der Mail (Soll-Bi
 - 2026-11-17: Vom PO freigegeben.
 - 2026-11-21: Nachtrag Prod-Probelauf (AC-11) und Verschiebung der Altfeld-Entfernung (Nr. 8, #3237).
 - 2026-11-22: Nachtrag Erstanlage mit voller Tabelle und Rückbau des Altpfads im Backend (Nr. 8, #3275/#3237).
+- 2026-11-23: Nr. 12 / AC-31 (Kürzel-Legende) präzisiert durch #3284: Sind Tages-Tief und Tages-Hoch mit SMS-Haken gewählt, steht in der Legende nur das Bereichs-Kürzel `D` bzw. `FD` mit „Tagestiefstwert/Tageshöchstwert“ (bzw. gefühlt); `L` und `FL` entfallen dort, weil die SMS sie als Bereich `D13/27` sendet. Nur Tiefstwert gewählt: `L` bleibt. Details: `docs/specs/modules/fix_3284_legende_bereich_ohne_l.md`.

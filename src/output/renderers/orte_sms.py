@@ -36,7 +36,7 @@ from output.renderers.email.compare_html import _daily_summary, _metric_value, l
 from output.renderers.sms_trip import (
     _dominant_precip_type_code, _dominant_wind_sector, sms_format_fields,
 )
-from output.tokens.builder import build_token_line
+from output.tokens.builder import BEREICH_PAARE, build_token_line
 from output.tokens.dto import DailyForecast, HourlyValue, MetricSpec, NormalizedForecast, Token
 from output.tokens.render import _drop_last_list_row, _fuse
 from utils.timezone import local_hour, location_tz, resolve_location_tz
@@ -76,7 +76,7 @@ _STUNDENFELD: dict[str, str] = {
 }
 _LISTEN_KATEGORIEN = ("forecast", "wintersport")
 #: Bereichs-Token (``D-5/0``): Hoechstwert-Kuerzel -> Tiefstwert-Kuerzel.
-_BEREICH = {"D": "L", "FD": "FL"}
+_BEREICH = {hoch: tief for tief, hoch in BEREICH_PAARE}
 
 
 # ---------------------------------------------------------------------------
