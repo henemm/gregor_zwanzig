@@ -75,10 +75,7 @@ export const F10_ANKER: [schluessel: string, de: string, en: string][] = [
 	['vergleich.hub.delete_titel', 'Vergleich endgültig löschen?', 'Delete comparison permanently?'],
 	['vergleich.hub.nicht_gefunden', 'Orts-Vergleich nicht gefunden', 'Location comparison not found'],
 
-	// ── vergleich.stundenverlauf.* — transponierte Uebersicht (CompareHourlyLayoutControls) ──
-	['vergleich.stundenverlauf.titel', 'Stundenverlauf', 'Hourly view'],
-	// #3047 H1: Zeile ausserhalb der Grundauswahl gesperrt (Konzept §5.8, WV9-Muster)
-	['vergleich.stundenverlauf.nicht_in_grundauswahl', 'gesperrt: nicht in der Grundauswahl oben', 'locked: not in the basic selection above'],
+	// Issue #3276: vergleich.stundenverlauf.* entfallen mit CompareHourlyLayoutControls.
 
 	// ── vergleich.orte.* — Orte-Schritt beim Anlegen (Step2Orte) und Orts-Gruppen ──
 	['vergleich.orte.weitere', 'Weitere', 'Other'],

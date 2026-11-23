@@ -22,6 +22,11 @@
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types --test \
 //     src/lib/components/compare/__tests__/compare_hub_layout_save.test.ts
 
+// Issue #3276 (Spec-AC-38, AC-2): `hourly_metrics` ist Altschluessel. `flushPendingLayoutSave`
+// schreibt es nicht mehr und wertet Aenderungen daran nicht mehr als Aenderung; gesendet werden
+// nur noch die Schalter `hourly_enabled`/`outlook_enabled`. Die Tests unten sind entsprechend
+// umgestellt (Listen-Aenderung -> kein PUT; Datenerhalt: kein display_config im Rumpf).
+
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -58,20 +63,12 @@ function makePresetWithFullDisplayConfig(): ComparePreset {
 }
 
 describe('C2 AC-2: flushPendingLayoutSave — geänderter Snapshot → PUT-Payload', () => {
-	test('geänderte hourlyMetricKeys landen als display_config.hourly_metrics im Body', () => {
-		// GIVEN: ein Preset + letzter persistierter Snapshot mit nur "temp_c"
-		// WHEN: der Nutzer "wind_kmh" zusaetzlich anhakt (current != before)
-		// THEN: der PUT-Payload setzt display_config.hourly_metrics auf beide Keys
-		// RED heute: Import schlaegt fehl (flushPendingLayoutSave existiert nicht).
+	test('#3276: geänderte hourlyMetricKeys loesen keinen PUT mehr aus (Altschluessel)', () => {
 		const preset = makePresetWithFullDisplayConfig();
 		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
 		const current: LayoutSnapshot = { hourlyMetricKeys: ['temp_c', 'wind_kmh'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
 
-		const payload = flushPendingLayoutSave(preset, current, before);
-
-		assert.ok(payload, 'flushPendingLayoutSave darf bei geaendertem Snapshot nicht null liefern');
-		const displayConfig = payload!.body.display_config as Record<string, unknown>;
-		assert.deepEqual(displayConfig.hourly_metrics, ['temp_c', 'wind_kmh']);
+		assert.equal(flushPendingLayoutSave(preset, current, before), null);
 	});
 
 	test('geänderter hourlyEnabled-Schalter landet als hourly_enabled im Body', () => {
@@ -89,34 +86,15 @@ describe('C2 AC-2: flushPendingLayoutSave — geänderter Snapshot → PUT-Paylo
 		assert.equal(payload!.body.hourly_enabled, false);
 	});
 
-	// Issue #1361 (S1-Rest von Epic #1372, Adversary-Fund BROKEN): dieser Test
-	// verlangte bis #1299/C2 ausdruecklich, dass eine reine Umsortierung als
-	// "keine Aenderung" gilt (sortierter Vergleich in flushPendingLayoutSave).
-	// Das war richtig, SOLANGE die Reihenfolge bedeutungslos war. Seit #1335
-	// Scheibe 1 folgt der Renderer (_visible_hour_metrics, compare_html.py:
-	// 610-623) exakt der gespeicherten Reihenfolge — #1361 fuehrt eine
-	// ziehbare Reihenfolge-Liste ein, die #1299-Altregel wuerde eine reine
-	// Ziehgeste STILL verwerfen (kein PUT, aber "gespeichert" angezeigt). Die
-	// Aussage "identischer Snapshot -> null" bleibt richtig (s. eigener Test
-	// unten); falsch war nur die Gleichsetzung "umsortiert = identisch".
-	test('Issue #1361: umsortierter Snapshot (gleiche Menge, neue Reihenfolge) → PUT mit der neuen Reihenfolge (loest die #1299-No-Op-Regel ab)', () => {
-		// GIVEN: current und before enthalten dieselben Keys, nur in anderer Reihenfolge
-		// WHEN: flushPendingLayoutSave aufgerufen wird
-		// THEN: die Reihenfolge ist bedeutungstragend -> ein PUT mit der NEUEN
-		// Reihenfolge muss ausgeloest werden, kein No-Op mehr.
+	// Issue #1361: eine reine Umsortierung loeste einen PUT mit der neuen Reihenfolge aus.
+	// #3276: die Reihenfolge des Stundenverlaufs stellt der Nutzer in „Was steht wo" ein;
+	// `hourly_metrics` wird nicht mehr geschrieben, eine Umsortierung loest keinen PUT aus.
+	test('#3276: umsortierter Snapshot → kein PUT (Reihenfolge nur noch in „Was steht wo")', () => {
 		const preset = makePresetWithFullDisplayConfig();
 		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c', 'wind_kmh'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
 		const current: LayoutSnapshot = { hourlyMetricKeys: ['wind_kmh', 'temp_c'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
 
-		const payload = flushPendingLayoutSave(preset, current, before);
-
-		assert.ok(payload, 'Issue #1361: eine reine Ziehgeste (Umsortierung) MUSS einen PUT ausloesen, nicht null');
-		const displayConfig = payload!.body.display_config as Record<string, unknown>;
-		assert.deepEqual(
-			displayConfig.hourly_metrics,
-			['wind_kmh', 'temp_c'],
-			'der PUT muss die NEUE (gezogene) Reihenfolge tragen, nicht die alte'
-		);
+		assert.equal(flushPendingLayoutSave(preset, current, before), null);
 	});
 
 	test('wirklich identischer Snapshot (gleiche Reihenfolge, gleiche Werte) → null (No-Op-Guard bleibt bestehen)', () => {
@@ -134,35 +112,18 @@ describe('C2 AC-2: flushPendingLayoutSave — geänderter Snapshot → PUT-Paylo
 	});
 });
 
-describe('C2 AC-5: leere hourlyMetricKeys werden als [] persistiert (Default "alle sichtbar")', () => {
-	// Staging-Fund F005 (Bug #1299/C2): der Server-Merge (mergeConfigMap,
-	// config_merge.go, #1159-Datenverlust-Schutz) kann Keys nur ueberschreiben,
-	// nie loeschen. Ein weggelassener "hourly_metrics"-Key bliebe daher auf dem
-	// alten Wert stehen -> "alle abwaehlen" sprang nach Reload nicht zurueck.
-	// Fix: [] wird EXPLIZIT persistiert (analog active_metrics, #1191). Die
-	// Renderer-Seite (resolve_hourly_metrics) deckt separat ab, dass [] wie
-	// "kein Schluessel gesetzt" behandelt wird -> alle 9 Spalten sichtbar:
-	// tests/tdd/test_issue_1106_hourly_metrics_config.py::test_empty_list_returns_none.
-	test('current.hourlyMetricKeys = [] → display_config.hourly_metrics ist [] (kein geloeschter Schluessel)', () => {
-		// GIVEN: ein Preset mit gespeicherter Auswahl ["temp_c"], letzter Snapshot ebenso
-		// WHEN: der Nutzer alle Metriken abwaehlt (current.hourlyMetricKeys = [])
-		// THEN: der resultierende PUT-Body enthaelt display_config.hourly_metrics als
-		//       leeres Array — NICHT als fehlenden Schluessel (der Server-Merge kann
-		//       fehlende Keys nicht als "loeschen" interpretieren).
+// C2 AC-5 (leere hourlyMetricKeys als [] persistieren, Bug #1299/C2) entfaellt mit #3276:
+// `hourly_metrics` wird weder als Liste noch als [] geschrieben (Spec #3276: nie leer senden).
+describe('C2 AC-5 / #3276: leere hourlyMetricKeys werden NICHT als [] gesendet', () => {
+	test('current.hourlyMetricKeys = [] (mit Schalter-Aenderung) → kein display_config im PUT', () => {
 		const preset = makePresetWithFullDisplayConfig();
 		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
-		const current: LayoutSnapshot = { hourlyMetricKeys: [], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
+		const current: LayoutSnapshot = { hourlyMetricKeys: [], hourlyEnabled: false, outlookMetricKeys: null, outlookEnabled: false };
 
 		const payload = flushPendingLayoutSave(preset, current, before);
 
-		assert.ok(payload, 'flushPendingLayoutSave darf bei geaendertem Snapshot nicht null liefern');
-		const displayConfig = payload!.body.display_config as Record<string, unknown>;
-		assert.deepEqual(
-			displayConfig.hourly_metrics,
-			[],
-			`display_config.hourly_metrics muss nach Leerauswahl [] sein (nicht geloescht), ` +
-				`ist aber: ${JSON.stringify(displayConfig.hourly_metrics)}`
-		);
+		assert.ok(payload, 'die Schalter-Aenderung muss gespeichert werden');
+		assert.equal(payload!.body.display_config, undefined, 'display_config (hourly_metrics: []) im PUT');
 	});
 });
 
@@ -183,7 +144,8 @@ describe('C2 AC-3 (PFLICHT Datenerhalt): top_n/metric_alert_levels/forecast_hour
 
 		assert.ok(payload, 'flushPendingLayoutSave darf bei geaendertem Snapshot nicht null liefern');
 		const body = payload!.body;
-		const displayConfig = body.display_config as Record<string, unknown>;
+		// #3276: der Layout-Rumpf traegt gar kein display_config mehr.
+		const displayConfig = (body.display_config ?? {}) as Record<string, unknown>;
 
 		// Seit #2375 bleiben die Bestandsfelder erhalten, weil der Layout-Body sie
 		// GAR NICHT sendet (Server-Abgleich laesst fehlende Felder unveraendert) —
@@ -194,6 +156,7 @@ describe('C2 AC-3 (PFLICHT Datenerhalt): top_n/metric_alert_levels/forecast_hour
 		for (const k of ['forecast_hours', 'hour_from', 'hour_to']) {
 			assert.ok(!(k in roh), `${k} darf nicht mitgesendet werden`);
 		}
-		assert.deepEqual(displayConfig.hourly_metrics, ['wind_kmh'], 'die Eigenfelder kommen an');
+		assert.equal(body.hourly_enabled, false, 'das Eigenfeld kommt an');
+		assert.ok(!('hourly_metrics' in displayConfig), '#3276: hourly_metrics ist Altschluessel');
 	});
 });

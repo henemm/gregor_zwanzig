@@ -18,11 +18,9 @@ import type { ChannelId } from '$lib/components/shared/layout-tab/ltChannels';
 import {
 	normalizeStoredActiveMetrics,
 	registeredCompareMetricCatalog,
-	toStoredActiveMetrics,
 	type CompareSelectionEntry,
 	type StoredActiveMetric
 } from './compareMetricSelection.ts';
-import { appendNewMetricsToOutlook } from './channelMetricLayouts.ts';
 
 /** Die drei Metrik-Kanaele des Compare-Briefings. Premium-SMS ist seit #2275
  *  auch Versandkanal des Vergleichs-Briefings, traegt aber den SMS-Inhalt und
@@ -59,35 +57,9 @@ export function compareChannelActiveMetricsFromStored(
 	return result;
 }
 
-/**
- * Schreib-Naht (AC-S8-10, Gegenprobe M4/M5): serialisiert JEDEN nicht-`null`-
- * Eintrag, nicht nur den zuletzt sichtbaren Kanal-Reiter — Compare-Pendant zu
- * `mergeAllChannelLayoutsForSave` (Trip-Lehre #1719 S3).
- *
- * `internal/handler/config_merge.go:11-22` ersetzt jeden display_config-
- * Top-Level-Key als GANZES und loescht nie einen Key. Daraus folgen zwei
- * Pflichten: (1) nie editierte Kanaele muessen aus `prevStored` mitreisen,
- * sonst gehen sie lautlos verloren (BUG-DATALOSS-GR221-Muster); (2) eine
- * bewusst geleerte Auswahl muss als `[]` mitreisen — ein weggelassener
- * Schluessel laesst serverseitig den ALTEN Stand stehen (M5).
- *
- * Mutiert `prevStored` nicht.
- */
-export function mergeAllCompareChannelActiveMetricsForSave(
-	prevStored: Record<string, StoredActiveMetric[]> | undefined,
-	channelOverrides: CompareChannelActiveMetrics,
-	catalog: CompareSelectionEntry[] = registeredCompareMetricCatalog()
-): Record<string, StoredActiveMetric[]> {
-	let next: Record<string, StoredActiveMetric[]> = { ...(prevStored ?? {}) };
-	for (const ch of COMPARE_CHANNEL_IDS) {
-		const override = channelOverrides?.[ch];
-		// `== null` deckt „nie editiert" (null) UND ein fehlendes Feld (undefined)
-		// ab; `[]` faellt bewusst NICHT darunter und wird serialisiert.
-		if (override == null) continue;
-		next = { ...next, [ch]: toStoredActiveMetrics(override, catalog) };
-	}
-	return next;
-}
+// Issue #3276 (Spec-AC-38): die Schreib-Naht `mergeAllCompareChannelActiveMetricsForSave`
+// ist entfallen — der Ortsvergleich sendet `channel_active_metrics` nicht mehr
+// (Altschluessel, Tabelle „Was steht wo" ist die Quelle, ADR-0124).
 
 /**
  * Copy-on-write-Startpunkt des ersten Kanal-Edits: Klon der globalen
@@ -99,40 +71,29 @@ export function startCompareChannelOverride(globalKeys: readonly string[]): stri
 	return [...globalKeys];
 }
 
-/** Die gespeicherten Listen des Vergleichs, die eine globale Umschaltung
- *  beruehrt (`null`/`undefined` = nie eingestellt, folgt der Grundauswahl). */
+/** Die gespeicherten Kanal-Listen des Vergleichs, die eine globale Umschaltung
+ *  beruehrt (`null`/`undefined` = nie eingestellt, folgt der Grundauswahl).
+ *  Issue #3276: Ausblick-/Stundenverlauf-Listen fuehrt der Vergleich nicht mehr. */
 export interface CompareGespeicherteListen {
 	channelActive: CompareChannelActiveMetrics | null | undefined;
-	outlookKeys: string[] | null | undefined;
-	hourlyKeys: string[] | null | undefined;
 }
 
 /**
  * #3047 T3 Orte (AC-10, Konzept einstellungen_neu.md §5 Punkt 6/8): Folgen der
  * globalen Umschaltung von `metric` (Auswahl-Schluessel) fuer die bereits
- * gespeicherten Listen -- Compare-Seite von `toggleGlobalMetric`/
- * `appendNewMetricsToOutlook` (channelMetricLayouts.ts, Trip).
+ * gespeicherten Kanal-Listen -- Compare-Seite von `toggleGlobalMetric` (Trip).
  *  - ABWAHL (`wasOn`): wie seit #1703 S8 (ADR-0050 Regel 3) sofort aus jeder
- *    gespeicherten Kanal-Liste; Ausblick/Stundenverlauf schneidet der Versand.
- *  - EINWAHL: hinten an jede gespeicherte Kanal-Liste, an `outlook_metrics`
- *    (Kennung, ueber die geteilte Trip-Funktion) und an `hourly_metrics`
- *    (Kennung, nur wenn stuendlich waehlbar; ein Alt-Kurzschluessel derselben
- *    Groesse zaehlt als vorhanden). Bestehende Folge und Abwahlen bleiben.
+ *    gespeicherten Kanal-Liste.
+ *  - EINWAHL: hinten an jede gespeicherte Kanal-Liste. Bestehende Folge und
+ *    Abwahlen bleiben.
  * Unveraenderte Listen behalten ihre Referenz (Aufrufer erkennt „nichts zu tun").
  */
 export function compareToggleFolgen(
 	metric: string,
 	wasOn: boolean,
-	listen: CompareGespeicherteListen,
-	catalog: CompareSelectionEntry[]
+	listen: CompareGespeicherteListen
 ): CompareGespeicherteListen {
-	const channelActive = kanalFolgen(listen.channelActive, metric, wasOn);
-	if (wasOn) return { ...listen, channelActive };
-	return {
-		channelActive,
-		outlookKeys: listen.outlookKeys == null ? listen.outlookKeys : appendNewMetricsToOutlook(listen.outlookKeys, [metric], catalog),
-		hourlyKeys: stundenFolge(listen.hourlyKeys, metric, catalog)
-	};
+	return { channelActive: kanalFolgen(listen.channelActive, metric, wasOn) };
 }
 
 function kanalFolgen(
@@ -150,16 +111,4 @@ function kanalFolgen(
 		changed = true;
 	}
 	return changed ? next : channelActive;
-}
-
-function stundenFolge(
-	hourlyKeys: string[] | null | undefined,
-	metric: string,
-	catalog: CompareSelectionEntry[]
-): string[] | null | undefined {
-	if (hourlyKeys == null) return hourlyKeys;
-	const eintrag = catalog.find((e) => e.metric === metric);
-	if (!eintrag?.metric_id || eintrag.hourlySelectable === false) return hourlyKeys;
-	const vorhanden = new Set([eintrag.metric_id, ...(eintrag.hourly_legacy_keys ?? [])]);
-	return hourlyKeys.some((k) => vorhanden.has(k)) ? hourlyKeys : [...hourlyKeys, eintrag.metric_id];
 }

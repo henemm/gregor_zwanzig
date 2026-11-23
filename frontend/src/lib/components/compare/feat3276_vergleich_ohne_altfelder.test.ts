@@ -22,9 +22,12 @@ import assert from 'node:assert/strict';
 
 import {
 	buildComparePresetSavePayload,
+	baueVergleichAnlegeRumpf,
+	legeVergleichAn,
 	buildNewComparePresetPayload,
 	compareFeldsatzStandard,
 	type CompareEditorEdits,
+	type CompareFeldsatz,
 	type NewComparePresetFields
 } from './compareEditorSave.ts';
 import { baueWetterMetrikenNutzlast } from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
@@ -221,5 +224,73 @@ describe('#3276 AC-3/AC-6: keine alte Bedienflaeche Stundenverlauf/Ausblick im V
 
 	test('Trip unveraendert: Ausblick bleibt im Bereich Zustellung (Rueckbau Trip ist #3297)', () => {
 		assert.ok(weatherMetricsTabSections('route', 'zustellung').includes('ausblick'));
+	});
+});
+
+describe('#3276 F002: Rumpf des Anlege-Editors (CompareNewEditor) ohne Altschluessel', () => {
+	// Feldsatz, wie ihn der Anlege-Editor haelt, mit befuellten Alt-Feldern.
+	function wizMitAltwerten(): CompareFeldsatz {
+		return {
+			...compareFeldsatzStandard(),
+			name: 'Neu 3276 Editor',
+			pickedIds: ['loc-1', 'loc-2'],
+			region: 'Dolomiten',
+			activeMetricKeys: ['temp_max_c'],
+			channelActiveMetricKeys: { email: ['temp_max_c'], telegram: ['wind_max_kmh'], sms: [] },
+			hourlyMetricKeys: ['temp_c', 'wind_kmh'],
+			outlookMetricKeys: ['temp_max_c', 'precip_sum_mm'],
+			outlookMetricFormats: { temp_max_c: true },
+			hourlyMetricFormats: { temp_c: true }
+		};
+	}
+	const AMPEL = { template: 'wandern', overrides: {} };
+	const AUSWAHL = [{ metric_id: 'temp', aggregation: 'max' }];
+
+	test('kein Altschluessel top-level oder in display_config; Ampel und Auswahl reisen mit', () => {
+		const body = baueVergleichAnlegeRumpf(wizMitAltwerten(), { ampel: AMPEL, auswahl: AUSWAHL });
+		assert.deepEqual(altschluesselIn(body), [], 'top-level');
+		const dc = body.display_config as Record<string, unknown>;
+		assert.deepEqual(altschluesselIn(dc), [], 'display_config');
+		assert.deepEqual(dc.ampel, AMPEL);
+		assert.deepEqual(dc.active_metrics, AUSWAHL);
+		assert.equal(dc.region, 'Dolomiten');
+		assert.deepEqual(body.location_ids, ['loc-1', 'loc-2']);
+	});
+
+	test('auch mit leeren Alt-Feldern und ohne Wetter-Stand kein Altschluessel (nicht einmal leer)', () => {
+		const wiz: CompareFeldsatz = {
+			...wizMitAltwerten(),
+			channelActiveMetricKeys: { email: [], telegram: [], sms: [] },
+			hourlyMetricKeys: [],
+			outlookMetricKeys: [],
+			outlookMetricFormats: {},
+			hourlyMetricFormats: {}
+		};
+		const body = baueVergleichAnlegeRumpf(wiz);
+		assert.deepEqual(altschluesselIn(body), [], 'top-level');
+		assert.deepEqual(altschluesselIn(body.display_config), [], 'display_config');
+	});
+
+	// F-ADV1: der ganze Anlege-Schritt (Rumpf + POST) -- geprueft wird der Koerper, der
+	// tatsaechlich an der Netzgrenze ankommt (Aufzeichnungs-Objekt statt Mock-Framework).
+	test('legeVergleichAn: genau ein POST an /api/compare/presets, Koerper ohne Altschluessel, id zurueck', async () => {
+		const gesendet: { url: string; body: Record<string, unknown> }[] = [];
+		const api = {
+			async post<T>(url: string, body: unknown): Promise<T> {
+				gesendet.push({ url, body: body as Record<string, unknown> });
+				return { id: 'x' } as T;
+			}
+		};
+		const created = await legeVergleichAn(api, wizMitAltwerten(), { ampel: AMPEL, auswahl: AUSWAHL });
+		assert.deepEqual(created, { id: 'x' });
+		assert.equal(gesendet.length, 1, 'genau ein POST');
+		assert.equal(gesendet[0].url, '/api/compare/presets');
+		const body = gesendet[0].body;
+		assert.deepEqual(altschluesselIn(body), [], 'top-level');
+		const dc = body.display_config as Record<string, unknown>;
+		assert.deepEqual(altschluesselIn(dc), [], 'display_config');
+		assert.deepEqual(dc.ampel, AMPEL);
+		assert.deepEqual(dc.active_metrics, AUSWAHL);
+		assert.deepEqual(body.location_ids, ['loc-1', 'loc-2']);
 	});
 });

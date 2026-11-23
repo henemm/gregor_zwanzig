@@ -104,7 +104,8 @@ describe('F006/AC-38: echter Speicherweg (Hub-Schlange, Go-Merge-Server)', () =>
 		const vorher = server.stand(ID);
 		wetterMetrikenBedienung(ws).toggleMetric('gust_max_kmh');
 		wetterMetrikenBedienung(ws).setDayWindow(6, 21);
-		wetterMetrikenBedienung(ws).hourlyDragEnd(['temp_max_c', 'wind_max_kmh']);
+		// #3276: Zustellungs-Geste ist der Stundenverlauf-Schalter (die Liste ist Altschluessel).
+		wetterMetrikenBedienung(ws).hourlyEnabledToggle();
 		sp.aenderungMelden();
 		await ctl.flush();
 		const puts = server.putRuempfe();
@@ -115,6 +116,7 @@ describe('F006/AC-38: echter Speicherweg (Hub-Schlange, Go-Merge-Server)', () =>
 		const dcV = vorher.display_config as Record<string, unknown>;
 		const dcN = nachher.display_config as Record<string, unknown>;
 		for (const k of WETTER_DC) assert.deepEqual(dcN[k], dcV[k], `display_config.${k} veraendert`);
-		assert.deepEqual(dcN.hourly_metrics, ['temp_max_c', 'wind_max_kmh'], 'die Zustellungs-Geste selbst wurde nicht gespeichert');
+		assert.equal(nachher.hourly_enabled, false, 'die Zustellungs-Geste selbst wurde nicht gespeichert');
+		assert.deepEqual(dcN.hourly_metrics, dcV.hourly_metrics, '#3276: Bestand hourly_metrics veraendert');
 	});
 });

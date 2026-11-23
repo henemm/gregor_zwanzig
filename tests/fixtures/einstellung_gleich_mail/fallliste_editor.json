@@ -1,5 +1,5 @@
 {
- "_hinweis": "#3047 Paket D: Faelle Editor-Standard = Mail-Standard. Eingaben und Soll in editor_standard.json; Python-Seite tests/tdd/test_einstellung_gleich_mail_editor_standard.py, Frontend-Seite frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts (node:test, Testname = erstes Argument von test/rotErwartet). N1/N2 sind neue Befunde dieses Pakets (nicht im Issue-Wortlaut).",
+ "_hinweis": "#3047 Paket D: Faelle Editor-Standard = Mail-Standard. Eingaben und Soll in editor_standard.json; Python-Seite tests/tdd/test_einstellung_gleich_mail_editor_standard.py, Frontend-Seite frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts (node:test, Testname = erstes Argument von test/rotErwartet). N1/N2 sind neue Befunde dieses Pakets (nicht im Issue-Wortlaut). #3276: die Frontend-Faelle orte_stundenverlauf/orte_ausblick entfallen -- der Ortsvergleich hat dafuer keinen eigenen Editor mehr (Einstellung nur in der Tabelle 'Was steht wo').",
  "dimensionen": {},
  "faelle": [
   {
@@ -304,20 +304,6 @@
    "zustand": "nie_eingestellt"
   },
   {
-   "id": "D-orte_stundenverlauf-nie_eingestellt-frontend",
-   "liste": "orte_stundenverlauf",
-   "kontext": "orte",
-   "format": "editor",
-   "pruefung": "standard",
-   "test": "frontend_seite_orte_stundenverlauf_standard",
-   "ac": "AC-13, AC-6",
-   "befund": "O2",
-   "status": "gruen",
-   "seite": "frontend",
-   "zustand": "nie_eingestellt",
-   "verweis": "frontend/src/lib/components/compare/CompareHourlyLayoutControls.svelte (O2 behoben; #3047 H1: Grundauswahl nie eingestellt -> HOURLY_DEFAULT-Folge)"
-  },
-  {
    "id": "D-orte_stundenverlauf-gespeichert_folge-python",
    "liste": "orte_stundenverlauf",
    "kontext": "orte",
@@ -328,19 +314,6 @@
    "befund": "",
    "status": "gruen",
    "seite": "python",
-   "zustand": "gespeichert_folge"
-  },
-  {
-   "id": "D-orte_stundenverlauf-gespeichert_folge-frontend",
-   "liste": "orte_stundenverlauf",
-   "kontext": "orte",
-   "format": "editor",
-   "pruefung": "reihenfolge",
-   "test": "frontend_seite_orte_stundenverlauf_gespeichert",
-   "ac": "AC-13, AC-6",
-   "befund": "",
-   "status": "gruen",
-   "seite": "frontend",
    "zustand": "gespeichert_folge"
   },
   {
@@ -357,19 +330,6 @@
    "zustand": "gespeichert_umgekehrt"
   },
   {
-   "id": "D-orte_stundenverlauf-gespeichert_umgekehrt-frontend",
-   "liste": "orte_stundenverlauf",
-   "kontext": "orte",
-   "format": "editor",
-   "pruefung": "reihenfolge",
-   "test": "frontend_seite_orte_stundenverlauf_gespeichert",
-   "ac": "AC-13, AC-6",
-   "befund": "",
-   "status": "gruen",
-   "seite": "frontend",
-   "zustand": "gespeichert_umgekehrt"
-  },
-  {
    "id": "D-orte_stundenverlauf-nie_eingestellt_mit_grundauswahl-python",
    "liste": "orte_stundenverlauf",
    "kontext": "orte",
@@ -380,19 +340,6 @@
    "befund": "#3047 H1",
    "status": "gruen",
    "seite": "python",
-   "zustand": "nie_eingestellt_mit_grundauswahl"
-  },
-  {
-   "id": "D-orte_stundenverlauf-nie_eingestellt_mit_grundauswahl-frontend",
-   "liste": "orte_stundenverlauf",
-   "kontext": "orte",
-   "format": "editor",
-   "pruefung": "standard",
-   "test": "frontend_seite_orte_stundenverlauf_standard_mit_grundauswahl",
-   "ac": "AC-13, AC-10, AC-6",
-   "befund": "#3047 H1",
-   "status": "gruen",
-   "seite": "frontend",
    "zustand": "nie_eingestellt_mit_grundauswahl"
   },
   {
@@ -409,19 +356,6 @@
    "zustand": "gespeichert_ausserhalb_grundauswahl"
   },
   {
-   "id": "D-orte_stundenverlauf-gespeichert_ausserhalb_grundauswahl-frontend",
-   "liste": "orte_stundenverlauf",
-   "kontext": "orte",
-   "format": "editor",
-   "pruefung": "grundauswahl",
-   "test": "frontend_seite_orte_stundenverlauf_gespeichert",
-   "ac": "AC-13, AC-10, AC-6",
-   "befund": "#3047 H1",
-   "status": "gruen",
-   "seite": "frontend",
-   "zustand": "gespeichert_ausserhalb_grundauswahl"
-  },
-  {
    "id": "D-orte_ausblick-nie_eingestellt-python",
    "liste": "orte_ausblick",
    "kontext": "orte",
@@ -435,20 +369,6 @@
    "zustand": "nie_eingestellt"
   },
   {
-   "id": "D-orte_ausblick-nie_eingestellt-frontend",
-   "liste": "orte_ausblick",
-   "kontext": "orte",
-   "format": "editor",
-   "pruefung": "standard",
-   "test": "frontend_seite_orte_ausblick_standard",
-   "ac": "AC-13, AC-21",
-   "befund": "O4",
-   "status": "gruen",
-   "seite": "frontend",
-   "zustand": "nie_eingestellt",
-   "verweis": "frontend/src/lib/components/shared/OutlookLayoutControls.svelte:171-176 mit WeatherMetricsTab.svelte:1619 (grundauswahl = COMPARE_METRIC_KEYS)"
-  },
-  {
    "id": "D-orte_ausblick-nie_eingestellt_mit_grundauswahl-python",
    "liste": "orte_ausblick",
    "kontext": "orte",
@@ -459,19 +379,6 @@
    "befund": "",
    "status": "gruen",
    "seite": "python",
-   "zustand": "nie_eingestellt_mit_grundauswahl"
-  },
-  {
-   "id": "D-orte_ausblick-nie_eingestellt_mit_grundauswahl-frontend",
-   "liste": "orte_ausblick",
-   "kontext": "orte",
-   "format": "editor",
-   "pruefung": "standard",
-   "test": "frontend_seite_orte_ausblick_standard_mit_grundauswahl",
-   "ac": "AC-13, AC-21",
-   "befund": "",
-   "status": "gruen",
-   "seite": "frontend",
    "zustand": "nie_eingestellt_mit_grundauswahl"
   },
   {
@@ -488,19 +395,6 @@
    "zustand": "gespeichert_folge"
   },
   {
-   "id": "D-orte_ausblick-gespeichert_folge-frontend",
-   "liste": "orte_ausblick",
-   "kontext": "orte",
-   "format": "editor",
-   "pruefung": "reihenfolge",
-   "test": "frontend_seite_orte_ausblick_gespeichert",
-   "ac": "AC-13, AC-21",
-   "befund": "",
-   "status": "gruen",
-   "seite": "frontend",
-   "zustand": "gespeichert_folge"
-  },
-  {
    "id": "D-orte_ausblick-gespeichert_ausserhalb_grundauswahl-python",
    "liste": "orte_ausblick",
    "kontext": "orte",
@@ -511,19 +405,6 @@
    "befund": "",
    "status": "gruen",
    "seite": "python",
-   "zustand": "gespeichert_ausserhalb_grundauswahl"
-  },
-  {
-   "id": "D-orte_ausblick-gespeichert_ausserhalb_grundauswahl-frontend",
-   "liste": "orte_ausblick",
-   "kontext": "orte",
-   "format": "editor",
-   "pruefung": "grundauswahl",
-   "test": "frontend_seite_orte_ausblick_gespeichert",
-   "ac": "AC-13, AC-21",
-   "befund": "",
-   "status": "gruen",
-   "seite": "frontend",
    "zustand": "gespeichert_ausserhalb_grundauswahl"
   },
   {
@@ -593,19 +474,6 @@
    "zustand": "grundauswahl_gleich_vorgabe"
   },
   {
-   "id": "D-orte_stundenverlauf-grundauswahl_gleich_vorgabe-frontend",
-   "liste": "orte_stundenverlauf",
-   "kontext": "orte",
-   "format": "editor",
-   "pruefung": "grundauswahl",
-   "test": "frontend_seite_orte_stundenverlauf_grundauswahl_gleich_vorgabe",
-   "ac": "AC-13, AC-6",
-   "befund": "#3047 J1",
-   "status": "gruen",
-   "seite": "frontend",
-   "zustand": "grundauswahl_gleich_vorgabe"
-  },
-  {
    "id": "D-orte_ausblick-grundauswahl_gleich_vorgabe-python",
    "liste": "orte_ausblick",
    "kontext": "orte",
@@ -619,19 +487,6 @@
    "zustand": "grundauswahl_gleich_vorgabe"
   },
   {
-   "id": "D-orte_ausblick-grundauswahl_gleich_vorgabe-frontend",
-   "liste": "orte_ausblick",
-   "kontext": "orte",
-   "format": "editor",
-   "pruefung": "grundauswahl",
-   "test": "frontend_seite_orte_ausblick_grundauswahl_gleich_vorgabe",
-   "ac": "AC-13, AC-21",
-   "befund": "#3047 J1",
-   "status": "gruen",
-   "seite": "frontend",
-   "zustand": "grundauswahl_gleich_vorgabe"
-  },
-  {
    "id": "D-orte_ausblick-grundauswahl_bewusst_leer-python",
    "liste": "orte_ausblick",
    "kontext": "orte",
@@ -642,19 +497,6 @@
    "befund": "#3047 N2",
    "status": "gruen",
    "seite": "python",
-   "zustand": "grundauswahl_bewusst_leer"
-  },
-  {
-   "id": "D-orte_ausblick-grundauswahl_bewusst_leer-frontend",
-   "liste": "orte_ausblick",
-   "kontext": "orte",
-   "format": "editor",
-   "pruefung": "grundauswahl",
-   "test": "frontend_seite_orte_ausblick_grundauswahl_bewusst_leer",
-   "ac": "AC-10",
-   "befund": "#3047 N2",
-   "status": "gruen",
-   "seite": "frontend",
    "zustand": "grundauswahl_bewusst_leer"
   },
   {
@@ -801,19 +643,6 @@
    "zustand": "gespeichert_totalschnitt"
   },
   {
-   "id": "D-orte_stundenverlauf-gespeichert_totalschnitt-frontend",
-   "liste": "orte_stundenverlauf",
-   "kontext": "orte",
-   "format": "editor",
-   "pruefung": "grundauswahl",
-   "test": "frontend_seite_orte_stundenverlauf_gespeichert",
-   "ac": "AC-10",
-   "befund": "#3047 N1",
-   "status": "gruen",
-   "seite": "frontend",
-   "zustand": "gespeichert_totalschnitt"
-  },
-  {
    "id": "D-orte_ausblick-gespeichert_totalschnitt-python",
    "liste": "orte_ausblick",
    "kontext": "orte",
@@ -824,19 +653,6 @@
    "befund": "#3047 N1",
    "status": "gruen",
    "seite": "python",
-   "zustand": "gespeichert_totalschnitt"
-  },
-  {
-   "id": "D-orte_ausblick-gespeichert_totalschnitt-frontend",
-   "liste": "orte_ausblick",
-   "kontext": "orte",
-   "format": "editor",
-   "pruefung": "grundauswahl",
-   "test": "frontend_seite_orte_ausblick_gespeichert",
-   "ac": "AC-10",
-   "befund": "#3047 N1",
-   "status": "gruen",
-   "seite": "frontend",
    "zustand": "gespeichert_totalschnitt"
   },
   {
@@ -876,19 +692,6 @@
    "befund": "#3047 N2",
    "status": "gruen",
    "seite": "python",
-   "zustand": "grundauswahl_bewusst_leer"
-  },
-  {
-   "id": "D-orte_stundenverlauf-grundauswahl_bewusst_leer-frontend",
-   "liste": "orte_stundenverlauf",
-   "kontext": "orte",
-   "format": "editor",
-   "pruefung": "grundauswahl",
-   "test": "frontend_seite_orte_stundenverlauf_grundauswahl_bewusst_leer",
-   "ac": "AC-10",
-   "befund": "#3047 N2",
-   "status": "gruen",
-   "seite": "frontend",
    "zustand": "grundauswahl_bewusst_leer"
   },
   {

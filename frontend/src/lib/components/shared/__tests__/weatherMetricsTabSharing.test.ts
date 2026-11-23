@@ -164,7 +164,7 @@ describe('AC-1/AC-8: weatherMetricsTabSections(context) — reine Funktion (Vorb
 		// der Abschnitt echte Mail-Wirkung und ist keine Attrappe.
 		// Spec: compare_metric_order.md § "Abgeloeste Festlegung".
 		// 'sms_schwellen'/'report_config' bleiben route-exklusiv.
-		'vergleich: grundauswahl + reihenfolge + stundenverlauf + official_alerts — keine Buckets/Horizonte/SMS-Schwellen/Report-Config (AC-1, AC-8 Attrappen-Verbot)',
+		'vergleich: grundauswahl + reihenfolge + official_alerts (#3276 ohne Stundenverlauf/Ausblick) — keine Buckets/Horizonte/SMS-Schwellen/Report-Config (AC-1, AC-8 Attrappen-Verbot)',
 		async () => {
 			let mod: typeof import('../weather-metrics-tab/weatherMetricsTabSections.ts');
 			try {
@@ -189,8 +189,8 @@ describe('AC-1/AC-8: weatherMetricsTabSections(context) — reine Funktion (Vorb
 				[
 					'grundauswahl',
 					'layout_kanal', // #2794 S3a: vormals 'reihenfolge'
-					'stundenverlauf',
-					'ausblick',
+					// Issue #3276 (Spec-AC-38): 'stundenverlauf' und 'ausblick' entfallen im
+					// Ortsvergleich ersatzlos — Einstellung nur noch in „Was steht wo".
 					'official_alerts'
 				],
 				'AC-1/AC-8/AC-6 FAIL: der vergleich-Kontext zeigt mehr/weniger als Grundauswahl+Reihenfolge+Stundenverlauf+Amtliche-Warnungen — ' +

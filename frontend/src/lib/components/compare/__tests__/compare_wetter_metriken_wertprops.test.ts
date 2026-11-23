@@ -10,7 +10,7 @@
 //         KEIN Text-Grep — die Datei traegt viele Kommentare mit „wiz", ein
 //         Text-Grep bliebe nach korrektem GREEN rot)
 //   AC-2  alle drei Vergleichs-Mounts streuen `{...wetterMetrikenPropsAus(x)}`
-//         IM Markup-Ausdruck; das Buendel traegt alle 19 Namen
+//         IM Markup-Ausdruck; das Buendel traegt alle 9 Namen (#3276: vorher 19)
 //   AC-3  Wirkort-Guard: der Selbst-Speicher-Effekt wirkt nur an Flaeche B (Hub)
 //   AC-7  `weatherMetricsCompareSave.ts` ist `wiz`-frei (Datei-weiter Grep)
 //   AC-9  gekoppelter Rueckruf `onVergleichsMetrikenChange(active, channelActive)`
@@ -73,28 +73,34 @@ const FRONTEND = resolve(HIER, '..', '..', '..', '..', '..');
 
 // ── Freigegebene Namen (Spec AC-1, Design-Entscheidung 1/3) ───────────────────
 
-/** Die zehn Wertprops. */
+/** Die fuenf Wertprops. Issue #3276: die sechs Stundenverlauf/Ausblick-Wertprops
+ *  (`hourlyMetricKeys`, `hourlyEnabled`, `outlookMetricKeys`, `outlookMetricFormats`,
+ *  `outlookEnabled`, `hourlyMetricFormats`) samt Rueckrufen sind mit den Bedienflaechen
+ *  entfallen — siehe ENTFALLEN unten (Rueckkehr-Sperre). */
 const WERTPROPS = [
 	'activeMetricKeys',
 	'channelActiveMetricKeys',
 	'officialAlertsEnabled',
 	'dayWindowStartHour',
-	'dayWindowEndHour',
+	'dayWindowEndHour'
+] as const;
+
+/** Die vier Rueckrufe — `onVergleichsMetrikenChange` ist der gekoppelte. */
+const RUECKRUFE = [
+	'onVergleichsMetrikenChange',
+	'onOfficialAlertsEnabledChange',
+	'onDayWindowStartHourChange',
+	'onDayWindowEndHourChange'
+] as const;
+
+/** Issue #3276: Namen, die weder als Prop gebunden noch im Buendel stehen duerfen. */
+const ENTFALLEN = [
 	'hourlyMetricKeys',
 	'hourlyEnabled',
 	'outlookMetricKeys',
 	'outlookMetricFormats',
 	'outlookEnabled',
-	// Issue #3097: Roh/Einfach je Stundenverlauf-Groesse.
-	'hourlyMetricFormats'
-] as const;
-
-/** Die neun Rueckrufe — `onVergleichsMetrikenChange` ist der gekoppelte. */
-const RUECKRUFE = [
-	'onVergleichsMetrikenChange',
-	'onOfficialAlertsEnabledChange',
-	'onDayWindowStartHourChange',
-	'onDayWindowEndHourChange',
+	'hourlyMetricFormats',
 	'onHourlyMetricKeysChange',
 	'onHourlyEnabledChange',
 	'onOutlookMetricKeysChange',
@@ -107,13 +113,7 @@ const RUECKRUFE = [
 const EINFELD_RUECKRUF: [string, string][] = [
 	['onOfficialAlertsEnabledChange', 'officialAlertsEnabled'],
 	['onDayWindowStartHourChange', 'dayWindowStartHour'],
-	['onDayWindowEndHourChange', 'dayWindowEndHour'],
-	['onHourlyMetricKeysChange', 'hourlyMetricKeys'],
-	['onHourlyEnabledChange', 'hourlyEnabled'],
-	['onOutlookMetricKeysChange', 'outlookMetricKeys'],
-	['onOutlookMetricFormatsChange', 'outlookMetricFormats'],
-	['onOutlookEnabledChange', 'outlookEnabled'],
-	['onHourlyMetricFormatsChange', 'hourlyMetricFormats']
+	['onDayWindowEndHourChange', 'dayWindowEndHour']
 ];
 
 /** Unveraenderte Props — die Flaeche A (Trip) darf nichts verlieren (AC-6). */
@@ -256,7 +256,7 @@ function aufrufSchluessel(knoten: unknown, quelle: string, name: string): string
 	return treffer;
 }
 
-/** Wertprops fuer den Vergleichs-Zweig — ALLE zehn nicht-`undefined`, damit
+/** Wertprops fuer den Vergleichs-Zweig — ALLE fuenf nicht-`undefined`, damit
  *  GREEN in der Wahl seines Praesenz-Guards frei bleibt (Spec DE-7). */
 function wertpropsStand(): Knoten {
 	return {
@@ -264,13 +264,7 @@ function wertpropsStand(): Knoten {
 		channelActiveMetricKeys: { email: null, telegram: null, sms: null },
 		officialAlertsEnabled: true,
 		dayWindowStartHour: 5,
-		dayWindowEndHour: 18,
-		hourlyMetricKeys: [ANDERE],
-		hourlyEnabled: true,
-		outlookMetricKeys: [ANDERE],
-		outlookMetricFormats: {},
-		outlookEnabled: true,
-		hourlyMetricFormats: {}
+		dayWindowEndHour: 18
 	};
 }
 
@@ -310,9 +304,13 @@ const PRESET = { id: 'p-2276-s6g', name: 'x', location_ids: [], display_config: 
 // ── AC-1 ─────────────────────────────────────────────────────────────────────
 
 describe('AC-1: WeatherMetricsTab leitet den Vergleichs-Zweig aus Wertprops her', () => {
-	test('die Prop-Schnittstelle bindet alle zehn Wertprops, alle neun Rueckrufe und die unveraenderten Props — kein `wiz`', () => {
+	test('die Prop-Schnittstelle bindet alle fuenf Wertprops, alle vier Rueckrufe und die unveraenderten Props — kein `wiz`', () => {
 		const { ast, quelle } = tabAst();
 		const namen = gebundeneProps(ast, quelle);
+		// Issue #3276: Stundenverlauf/Ausblick-Wertprops des Vergleichs kehren nicht zurueck.
+		for (const weg of ENTFALLEN) {
+			assert.ok(!namen.includes(weg), `#3276 FAIL: die Komponente bindet wieder \`${weg}\`.`);
+		}
 		for (const pflicht of [...WERTPROPS, ...RUECKRUFE]) {
 			assert.ok(
 				namen.includes(pflicht),
@@ -404,20 +402,14 @@ function einbettungen(datei: string): { quelle: string; treffer: Knoten[] } {
 	return { quelle, treffer: [...findeKomponenten(ast, 'WetterMetrikenVersandPanel'), ...findeKomponenten(ast, 'ZustellungTab')] };
 }
 
-/** Eine vollstaendig besetzte, unterscheidbare Quelle (alle zehn Felder). */
+/** Eine vollstaendig besetzte, unterscheidbare Quelle (alle fuenf Felder). */
 function quellStand(): Knoten {
 	return {
 		activeMetricKeys: [M, ANDERE],
 		channelActiveMetricKeys: { email: [M], telegram: null, sms: [ANDERE] },
 		officialAlertsEnabled: false,
 		dayWindowStartHour: 6,
-		dayWindowEndHour: 20,
-		hourlyMetricKeys: ['temperature'],
-		hourlyEnabled: false,
-		outlookMetricKeys: [ANDERE],
-		outlookMetricFormats: { [ANDERE]: true },
-		outlookEnabled: false,
-		hourlyMetricFormats: { wind: true }
+		dayWindowEndHour: 20
 	};
 }
 
@@ -466,7 +458,7 @@ describe('AC-2: alle Vergleichs-Mounts mit Metrik-Oberflaeche speisen dasselbe B
 			}
 		});
 
-		test(`${was}: das gestreute Buendel traegt alle zehn Werte und alle neun Rueckrufe aus dem Zustand`, async () => {
+		test(`${was}: das gestreute Buendel traegt alle fuenf Werte und alle vier Rueckrufe aus dem Zustand`, async () => {
 			const { quelle: q0, treffer } = einbettungen(datei);
 			const gestreut = treffer.map((e) => streuung(e, q0));
 			assert.ok(
@@ -508,10 +500,12 @@ describe('AC-2: alle Vergleichs-Mounts mit Metrik-Oberflaeche speisen dasselbe B
 });
 
 describe('AC-2: `wetterMetrikenPropsAus` selbst (Fake-Quelle)', () => {
-	test('liefert alle 19 Schluessel — genau die zehn Werte der Quelle und neun Funktionen', async () => {
+	test('liefert alle 9 Schluessel — genau die fuenf Werte der Quelle und vier Funktionen', async () => {
 		const wetterMetrikenPropsAus = await ladeBuendel();
 		const quelle = quellStand();
 		const buendel = wetterMetrikenPropsAus(quelle);
+		// Issue #3276: keine Stundenverlauf/Ausblick-Werte oder -Rueckrufe mehr im Buendel.
+		for (const weg of ENTFALLEN) assert.ok(!(weg in buendel), `#3276 FAIL: \`${weg}\` steht wieder im Buendel.`);
 		for (const feld of WERTPROPS) {
 			assert.ok(feld in buendel, `AC-2 FAIL: dem Buendel fehlt der Wert \`${feld}\`.`);
 			assert.deepStrictEqual(
@@ -534,13 +528,7 @@ describe('AC-2: `wetterMetrikenPropsAus` selbst (Fake-Quelle)', () => {
 			channelActiveMetricKeys: { email: null, telegram: null, sms: null },
 			officialAlertsEnabled: true,
 			dayWindowStartHour: 4,
-			dayWindowEndHour: 19,
-			hourlyMetricKeys: null,
-			hourlyEnabled: true,
-			outlookMetricKeys: null,
-			outlookMetricFormats: null,
-			outlookEnabled: true,
-			hourlyMetricFormats: null
+			dayWindowEndHour: 19
 		};
 		for (const feld of WERTPROPS) {
 			assert.deepStrictEqual(
@@ -637,7 +625,8 @@ describe('AC-3 Wirkort-Guard: der Selbst-Speicher-Effekt wirkt nur an Flaeche B 
 		const { u, optionen } = await effektAufbauen({
 			preset: PRESET,
 			saveController: controller(),
-			onHourlyEnabledChange: (v: unknown) => gesetzt.push(['onHourlyEnabledChange', v])
+			// #3276: Stellvertreter-Feld ist `officialAlertsEnabled` (hourlyEnabled ist keine Wertprop mehr).
+			onOfficialAlertsEnabledChange: (v: unknown) => gesetzt.push(['onOfficialAlertsEnabledChange', v])
 		});
 		assert.strictEqual(optionen.length, 1, 'AC-3 FAIL: siehe Positivfall — keine Fabrik-Optionen.');
 		const opt = optionen[0];
@@ -649,19 +638,19 @@ describe('AC-3 Wirkort-Guard: der Selbst-Speicher-Effekt wirkt nur an Flaeche B 
 			'AC-3 FAIL: die Bruecke liest `activeMetricKeys` nicht aus der Wertprop.'
 		);
 		// Lebendig, nicht eingefroren (Spec DE-5: `werte()` liest bei JEDEM Zugriff frisch).
-		u.hourlyEnabled = false;
+		u.officialAlertsEnabled = false;
 		assert.strictEqual(
-			opt.zustand.hourlyEnabled,
+			opt.zustand.officialAlertsEnabled,
 			false,
 			'AC-3 FAIL: die Bruecke ist eine eingefrorene Kopie — nach einer Prop-Aenderung liest ' +
 				'der Speicherweg den alten Wert (Snapshot/Diff sehen die Geste nie).'
 		);
 		// Rueckschreiben (Rollback) laeuft ueber den Rueckruf des Feldes.
-		opt.zustand.hourlyEnabled = true;
+		opt.zustand.officialAlertsEnabled = true;
 		assert.deepStrictEqual(
 			gesetzt,
-			[['onHourlyEnabledChange', true]],
-			'AC-3 FAIL: ein Schreiben auf die Bruecke (Rollback) erreicht `onHourlyEnabledChange` nicht.'
+			[['onOfficialAlertsEnabledChange', true]],
+			'AC-3 FAIL: ein Schreiben auf die Bruecke (Rollback) erreicht `onOfficialAlertsEnabledChange` nicht.'
 		);
 	});
 

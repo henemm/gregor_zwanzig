@@ -199,9 +199,11 @@ test('#2727 AC-21: das Anlegen postet aus dem Editor — kein saveNewPreset, Pay
 	const { namen, importe } = bezeichnerImSkript(NEW_EDITOR_FILE);
 	assert.ok(namen.has('handleActivate'), 'Positivkontrolle: handleActivate fehlt im Anlege-Editor');
 	assert.strictEqual(namen.has('saveNewPreset'), false, 'CompareNewEditor ruft noch saveNewPreset() an einem Zustandsobjekt auf');
+	// #3276 F002/F-ADV1: Rumpf-Bau und POST liegen seither in `legeVergleichAn` (ruft
+	// baueVergleichAnlegeRumpf → buildNewComparePresetPayload), ohne Svelte-Transform testbar.
 	assert.ok(
-		/compareEditorSave(\.ts)?$/.test(importe.get('buildNewComparePresetPayload') ?? ''),
-		'CompareNewEditor baut den Create-Payload nicht selbst (Import buildNewComparePresetPayload aus compareEditorSave fehlt)'
+		/compareEditorSave(\.ts)?$/.test(importe.get('legeVergleichAn') ?? ''),
+		'CompareNewEditor baut den Create-Payload nicht selbst (Import legeVergleichAn aus compareEditorSave fehlt)'
 	);
 });
 

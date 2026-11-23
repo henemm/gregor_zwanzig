@@ -157,53 +157,23 @@ describe('AC-1 [#1848 A3]: OutlookLayoutControls.svelte zeigt keine eigene Metri
 // Grundauswahl durch — keine einseitige Verdrahtung.
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe('AC-2 [#1848 A3]: beide Mountpunkte (Trip UND Ortsvergleich) reichen ihre Grundauswahl an OutlookLayoutControls durch', () => {
-	test('WeatherMetricsTab.svelte mountet OutlookLayoutControls genau zweimal, BEIDE mit einer `grundauswahl`-Prop', () => {
-		// Technical Approach der Spec ("Teil (a) — Liste begrenzen"): EINE Prop
-		// `grundauswahl: string[] | null`, zwei Mountpunkte (Ortsvergleich
-		// `:1403`, Trip `:1786`) — die Fallunterscheidung liegt allein im
-		// uebergebenen Wert, nicht im Bauteil. M-6: wird die Prop nur an EINEM
-		// Mount gesetzt, bleibt die andere Flaeche ungeschnitten.
+// Issue #3276 (Spec-AC-38): der Ortsvergleich-Mount des Ausblicks ist ersatzlos entfernt
+// (Einstellung nur noch in „Was steht wo"). Vorher: zwei Mounts, beide mit `grundauswahl`, der
+// Vergleich mit `activeMetricKeys`. Jetzt: genau der Trip-Mount, weiter mit seiner Grundauswahl.
+describe('AC-2 [#1848 A3] / #3276: der verbliebene Trip-Mount reicht seine Grundauswahl an OutlookLayoutControls durch', () => {
+	test('WeatherMetricsTab.svelte mountet OutlookLayoutControls genau einmal (Trip), mit `grundauswahl`-Prop aus `buckets`', () => {
 		const ast = parseComponent(WEATHER_METRICS_TAB);
 		const mounts = findComponentsNamed(ast.fragment, 'OutlookLayoutControls');
-		assert.equal(
-			mounts.length,
-			2,
-			`Erwartet genau zwei OutlookLayoutControls-Mounts (Ortsvergleich + Trip), gefunden ${mounts.length}.`
-		);
-		const ohneGrundauswahl = mounts.filter((m) => !findAttr(m, 'grundauswahl'));
-		assert.equal(
-			ohneGrundauswahl.length,
-			0,
-			`AC-2 FAIL (RED): ${ohneGrundauswahl.length} von ${mounts.length} Mountpunkten uebergeben keine ` +
-				'`grundauswahl`-Prop an OutlookLayoutControls — ohne sie bleibt Teil (a) an dieser ' +
-				'Flaeche wirkungslos (M-6: "Grundauswahl-Prop nur am Trip-Mount, nicht am Ortsvergleich-Mount").'
-		);
-	});
-
-	// #3047 J1: die COMPARE-Grundauswahl geht unmaterialisiert durch (`activeMetricKeys ?? null`),
-	// damit „nie eingestellt" (`null`) von einer gespeicherten Liste gleich der Vorgabe unterscheidbar bleibt.
-	test('der Ortsvergleich-Mount referenziert die COMPARE-Grundauswahl (activeMetricKeys), der Trip-Mount die TRIP-Grundauswahl (buckets.primary)', () => {
-		const ast = parseComponent(WEATHER_METRICS_TAB);
-		const mounts = findComponentsNamed(ast.fragment, 'OutlookLayoutControls');
-		assert.ok(mounts.length >= 1, 'Vorbedingung: kein OutlookLayoutControls-Mount gefunden.');
-
-		const referenziertCompareGrundauswahl = mounts.some((m) =>
-			attributeReferencesIdentifier(findAttr(m, 'grundauswahl'), 'activeMetricKeys')
+		assert.equal(mounts.length, 1, `Erwartet genau einen Mount (Trip), gefunden ${mounts.length}.`);
+		const attr = findAttr(mounts[0], 'grundauswahl');
+		assert.ok(attr, 'AC-2 FAIL: der Trip-Mount uebergibt keine `grundauswahl`-Prop.');
+		assert.ok(
+			attributeReferencesIdentifier(attr, 'buckets'),
+			'AC-2/AC-3 FAIL: die `grundauswahl`-Prop referenziert nicht die Trip-Grundauswahl (`buckets.primary`).'
 		);
 		assert.ok(
-			referenziertCompareGrundauswahl,
-			'AC-2/AC-6 FAIL (RED): kein Mount uebergibt `grundauswahl={activeMetricKeys ?? null}` — die ' +
-				'Ortsvergleich-eigene Grundauswahl (dieselbe Quelle wie die Uebersichts-Kopplung, ' +
-				'WeatherMetricsTab.svelte:1083).'
-		);
-		const referenziertTripGrundauswahl = mounts.some((m) =>
-			attributeReferencesIdentifier(findAttr(m, 'grundauswahl'), 'buckets')
-		);
-		assert.ok(
-			referenziertTripGrundauswahl,
-			'AC-2/AC-3 FAIL (RED): kein Mount uebergibt eine `grundauswahl`-Prop, die `buckets` referenziert ' +
-				'(die Trip-Grundauswahl, WeatherMetricsTab.svelte:221/285 `buckets.primary`).'
+			!attributeReferencesIdentifier(attr, 'activeMetricKeys'),
+			'#3276: der verbliebene Mount darf nicht die Compare-Grundauswahl tragen'
 		);
 	});
 });

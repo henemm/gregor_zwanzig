@@ -22,9 +22,6 @@
     "frontend/src/lib/components/alerts-tab/alertPreviewHelpers.ts": {
       "FRONTEND_LISTE": 1
     },
-    "frontend/src/lib/components/compare/CompareHourlyLayoutControls.svelte": {
-      "FRONTEND_LISTE": 1
-    },
     "frontend/src/lib/components/molecules/AlertRow.svelte": {
       "FRONTEND_LISTE": 2
     },
@@ -253,5 +250,5 @@
       "VERARBEITUNG_AUSSEN": 1
     }
   },
-  "hoechststand": 435
+  "hoechststand": 434
 }

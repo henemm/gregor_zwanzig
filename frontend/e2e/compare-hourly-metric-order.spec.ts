@@ -5,18 +5,11 @@
 // Spec: Auftrag "S1-Rest #1361 umsetzen" (kein eigenes Spec-Dokument -- direkte
 // Team-Lead-Vorgabe, siehe AC-1..AC-5 dort).
 //
-// Warum Live-Schicht: analog hub-metrik-reihenfolge-ziehen.spec.ts (#1359) — eine
-// Ziehgeste im DnD-Zonen-Widget lässt sich nicht sinnvoll ohne echten Browser
-// nachweisen, UND der eigentliche Beweis ist der PUT, nicht die Bildschirm-
-// Optik (Fallstrick 1 aus dem Auftrag): der Hub speichert über Event-Bubbling
-// am Wrapper `.hub-layout-hourly-wrap` (CompareTabs.svelte) — eine Ziehgeste
-// löst `click`/`change` am Wrapper oft NICHT zuverlässig aus. Deshalb ruft
-// `handleHourlyDndReorder` in CompareHourlyLayoutControls.svelte den direkten
-// `onHourlyCommit`-Callback (analog `onCompareCommit`, #1359) — dieser Test
-// beweist, dass dieser Callback tatsächlich beim Hub UND bei der Anlege-Seite
-// ankommt (PUT-Zähler > 0), nicht nur, dass sich die Liste optisch verschiebt.
+// Warum Live-Schicht: die Karte „Was steht wo“ und die Anlege-Seite lassen sich nur
+// im echten Browser gegen den echten Server nachweisen. Die frühere eigene
+// Stundenverlauf-Liste des Vergleichs ist seit #3276 entfernt.
 //
-// AC-3 → Hub (seit #3154 Karte „Was steht wo“, AC-1/AC-2 gestrichen, s. unten). AC-4 → Anlege-Seite (`/compare/new`). AC-5 (keine
+// AC-3 → Hub (seit #3154 Karte „Was steht wo“, AC-1/AC-2 gestrichen, s. unten). AC-4 → Anlege-Seite (`/compare/new`), seit #3276 Negativ-Zusicherung. AC-5 (keine
 // Regression der An/Aus-Auswahl) ist bereits durch
 // hub-wetter-metriken-speichert-selbst.spec.ts MS-2 + compare-stundenverlauf-wertprops.spec.ts
 // abgedeckt (Toggle + PUT; vormals compare-layout-tab-dissolution AC-2, #2347 S4) — hier
@@ -40,15 +33,10 @@
 // liegt daneben (1:1 nach playwright.compare-layout-tab-dissolution.staging.config.ts).
 // Anmeldung über gespeicherten Sitzungszustand (storageState), NICHT per
 // Test-Login (Token-Bucket 30/h, reference_staging_e2e_storagestate_login_rate_limit).
-// Testids `wm2-reihenfolge-row` kommen im Reiter Wetter-Metriken ZWEIMAL vor
-// (Übersichts-Reihenfolge #1359 UND Stundenverlauf-Reihenfolge hier) — deshalb
-// überall auf den Container `weather-metrics-stundenverlauf` scopen, NICHT
-// pauschal `:visible` (beide Blöcke sind gleichzeitig sichtbar).
+// #3276: die Vergleichs-Fläche `weather-metrics-stundenverlauf` ist entfernt (AC-4 prüft ihr Fehlen).
 
 import { test, expect, type Page } from '@playwright/test';
-// `dragDndZoneItem` ist seit #1771 S1 geteilt (war hier lokal kopiert) und
-// wartet auf das echte `finalize`-Ereignis statt auf eine feste Frist.
-import { createTestLocation, dragDndZoneItem } from './helpers';
+import { createTestLocation } from './helpers';
 import { oeffneKarte } from './was-steht-wo.helpers';
 
 let createdPresetIds: string[] = [];
@@ -139,132 +127,32 @@ test.describe('Issue #1361 Befund 4/5: Reihenfolge des Stundenverlaufs im Ortsve
 		}
 	});
 
-	// ── AC-4: Anlege-Seite verhält sich identisch ──────────────────────────────
-	test('AC-4: auf /compare/new sortiert sich der Stundenverlauf identisch, Reihenfolge landet im neuen Vergleich', async ({
-		page
-	}) => {
+	// ── AC-4: Anlege-Seite ────────────────────────────────────────────────────
+	// #3276 (Spec feat_3276_vergleich_altfelder_entfernen.md AC-3/AC-6): die eigene Stundenverlauf-Liste
+	// der Anlege-Seite ist entfernt; Reihenfolge und Stellen stehen nur noch in der Karte „Was steht wo“
+	// (Ersatz: was-steht-wo-karte.spec.ts WS-2). Die frühere Ziehgesten-Zusicherung wird zur Negativ-Zusicherung.
+	test('AC-4 (#3276): auf /compare/new gibt es keine eigene Stundenverlauf-Liste mehr', async ({ page }) => {
 		const suffix = Date.now();
-		// Test-Bug (Team-Lead-Fund): `createLocation()` liefert nur die ID
-		// (Promise<string>) — für die Orte-Bibliothek wird hier aber der
-		// ANZEIGENAME zum Anklicken gebraucht. Deshalb direkt `createTestLocation`
-		// (liefert {id, name}), analog hub-anlegen-ablauf.spec.ts (anlegenPflicht, Orte aus der Bibliothek).
-		const locA = await createTestLocation(page.request, {
-			name: `E2E 1361 New A ${suffix}`,
-			lat: 47.5,
-			lon: 11.5
-		});
+		const locA = await createTestLocation(page.request, { name: `E2E 1361 New A ${suffix}`, lat: 47.5, lon: 11.5 });
 		createdLocationIds.push(locA.id);
-		const locB = await createTestLocation(page.request, {
-			name: `E2E 1361 New B ${suffix}`,
-			lat: 47.6,
-			lon: 11.6
-		});
+		const locB = await createTestLocation(page.request, { name: `E2E 1361 New B ${suffix}`, lat: 47.6, lon: 11.6 });
 		createdLocationIds.push(locB.id);
 
 		await page.goto('/compare/new');
 		await page.waitForLoadState('networkidle');
-		await expect(page.locator('[data-testid="compare-editor"]:visible').first()).toBeVisible({
-			timeout: 15_000
-		});
-		await page
-			.locator('[data-testid="compare-editor-name"]:visible')
-			.first()
-			.fill(`E2E 1361 New ${suffix}`);
-
+		await expect(page.locator('[data-testid="compare-editor"]:visible').first()).toBeVisible({ timeout: 15_000 });
+		await page.locator('[data-testid="compare-editor-name"]:visible').first().fill(`E2E 1361 New ${suffix}`);
 		await page.locator('[data-testid="compare-editor-tab-orte"]:visible').first().click();
 		const lib = page.locator('[data-testid="compare-step2-library"]:visible').first();
 		await lib.waitFor({ timeout: 10_000 });
 		for (const n of [locA.name, locB.name]) {
 			await lib.getByText(n, { exact: true }).click();
 		}
-
-		// Testfehler (Team-Lead-Fund, zweite Runde): `compare-detail-panel-
-		// wetter-metriken` ist ein HUB-Testid (CompareTabs.svelte) — die
-		// Anlege-Seite (CompareNewEditor.svelte) hat keinen solchen Panel-
-		// Wrapper, sie rendert WeatherMetricsTab direkt im `metriken`-Tab-
-		// Zweig. Analog hub-anlegen-ablauf.spec.ts AN-12: direkt
-		// auf der Seite scopen, nicht über einen nicht existierenden Panel-Testid.
-		// #2794 S3a: Wetter besuchen schaltet Zustellung frei; der Stundenverlauf steht im Schritt Zustellung.
 		await page.locator('[data-testid="compare-editor-tab-wetter"]:visible').first().click();
-		await page.locator('[data-testid="compare-editor-tab-zustellung"]:visible').first().click();
-		const hourly = page.locator('[data-testid="weather-metrics-stundenverlauf"]:visible').first();
-		await expect(hourly).toBeVisible({ timeout: 10_000 });
-
-		// Default-Auswahl der Anlege-Seite ist DEFAULT_HOURLY_METRIC_KEYS (9 ohne
-		// wind_dir_deg) — die Reihenfolge-Liste ist also von Anfang an gefüllt.
-		const rows = hourly.locator('[data-testid="wm2-reihenfolge-row"]');
-		await expect(rows).toHaveCount(9, { timeout: 10_000 });
-
-		const before = await rows.evaluateAll((els) => els.map((el) => el.getAttribute('data-metric-id')));
-		const first = before[0]!;
-		const second = before[1]!;
-		const source = hourly.locator(`[data-testid="wm2-reihenfolge-row"][data-metric-id="${first}"]`);
-		const target = hourly.locator(`[data-testid="wm2-reihenfolge-row"][data-metric-id="${second}"]`);
-		await dragDndZoneItem(page, source, target);
-
-		const expectedOrder = [second, first, ...before.slice(2)];
-		await expect
-			.poll(
-				async () => rows.evaluateAll((els) => els.map((el) => el.getAttribute('data-metric-id'))),
-				{ message: 'AC-4: die Ziehgeste muss auf der Anlege-Seite identisch wirken', timeout: 5_000 }
-			)
-			.toEqual(expectedOrder);
-		// Fund (reproduzierbare Flake-Analyse, 3/3 Läufe ohne diese Wartezeit
-		// scheiterten am fehlenden `hourly_metrics` im POST-Body): der DOM-Beweis
-		// oben (Zeilen zeigen die neue Reihenfolge) kann bereits aus dem
-		// `consider`-Event von svelte-dnd-action stammen (Live-Vorschau während
-		// der Ziehgeste) — der eigentliche State-Schreibvorgang passiert erst in
-		// `handleDndFinalize` -> `onDndReorder` -> `wiz.hourlyMetricKeys = ...`
-		// (SortableList.svelte), zeitlich gekoppelt an `flipDurationMs` (200ms,
-		// SortableList.svelte:46). Die drei schnellen Tab-Klicks direkt danach
-		// (idealwerte/alarme/versand) liefen ohne Wartezeit manchmal schneller ab
-		// als dieser Commit — die Anlege-Seite (anders als der Hub, s. AC-1/AC-2)
-		// hat keinen sofortigen Speicher-Commit nach dem Drag, sondern liest
-		// `wiz.hourlyMetricKeys` erst ganz am Ende bei „Aktivieren". Wartezeit >
-		// flipDurationMs schafft hier Verlässlichkeit; 7/7 Läufe seither grün.
-		await page.waitForTimeout(400);
-
-		// #2794 S3a: Reiterwechsel Wetter → Zustellung (letzter Schritt) vor dem Aktivieren.
-		await page.locator('[data-testid="compare-editor-tab-wetter"]:visible').first().click();
-		await page.locator('[data-testid="compare-editor-tab-zustellung"]:visible').first().click();
-
-		const [response] = await Promise.all([
-			page.waitForResponse(
-				(res) => res.url().includes('/api/compare/presets') && res.request().method() === 'POST'
-			),
-			page.locator('[data-testid="compare-editor-activate"]:visible').first().click()
-		]);
-		const created = (await response.json()) as { id: string; display_config?: { hourly_metrics?: string[] } };
-		createdPresetIds.push(created.id);
-
-		// Primärnachweis: der POST-Response-Body IST das gerade gespeicherte
-		// Preset (Go-Handler antwortet synchron NACH dem Schreiben, s.
-		// CreateComparePresetHandler compare_preset.go:253-257) — kein
-		// Nachlade-Risiko, da hier keine zweite Anfrage nötig ist.
-		expect(
-			created.display_config?.hourly_metrics,
-			'AC-4: die POST-Antwort beim Anlegen muss bereits die gezogene Reihenfolge tragen'
-		).toEqual(expectedOrder);
-
-		// Gegenprobe: ein separater GET direkt danach muss dieselbe Reihenfolge
-		// liefern. Beobachtung (2 von 5 Staging-Läufen): ein SOFORTIGER GET
-		// direkt nach der POST-Antwort lieferte einmalig `hourly_metrics:
-		// undefined`, obwohl die POST-Antwort selbst bereits korrekt war — auf
-		// Polling gehärtet, um reinen Übernahme-Zeitversatz von einem echten
-		// Persistenz-Fehler zu unterscheiden (an Team-Lead gemeldet, nicht in
-		// eigener Verantwortung "stillschweigend" weich gemacht).
-		await expect
-			.poll(
-				async () => {
-					const readRes = await page.request.get(`/api/compare/presets/${created.id}`);
-					const dc = ((await readRes.json()).display_config ?? {}) as { hourly_metrics?: string[] };
-					return dc.hourly_metrics;
-				},
-				{
-					message: 'AC-4: ein GET direkt nach dem Anlegen muss dieselbe Reihenfolge liefern wie die POST-Antwort',
-					timeout: 8_000
-				}
-			)
-			.toEqual(expectedOrder);
+		const zustellung = page.locator('[data-testid="compare-editor-tab-zustellung"]:visible').first();
+		await zustellung.click();
+		await expect(zustellung).toHaveAttribute('data-active', 'true', { timeout: 10_000 });
+		await expect(page.locator('[data-testid="weather-metrics-stundenverlauf"]'), 'AC-4: alte Stundenverlauf-Liste im Vergleich').toHaveCount(0);
+		await expect(page.locator('[data-testid="compare-layout-hourly-metrics"]'), 'AC-4: alte Stundenverlauf-Auswahl im Vergleich').toHaveCount(0);
 	});
 });

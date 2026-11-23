@@ -305,6 +305,7 @@ Die Tabelle „Übersicht“ steht auch bei genau einem Ort in der Mail (Soll-Bi
 
 - **AC-38:** Given alle Abos sind migriert / When Altfelder nachträglich in ein Abo geschrieben werden und das Briefing erzeugt wird / Then haben sie keine Wirkung auf irgendeine Ausgabe, und die Oberfläche bietet keine Bedienung mehr für sie.
   - Test: Ausgabe mit und ohne nachträglich gesetzte Altfelder ist gleich; Rückbau der Bausteine in #3036 und #3020.
+  - Nachtrag 2026-11-23: Der Ortsvergleich-Teil der Oberfläche ist mit #3276 erledigt (Anlegen und Speichern senden keine Altschlüssel mehr, die Bedienflächen Stundenverlauf und Ausblick sind entfernt); offen bleiben der Trip-Pfad (#3297) sowie Typen und Sperrtest (#3298).
 
 ## Definition of Done
 

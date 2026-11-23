@@ -41,7 +41,6 @@ function fullFields(): NewComparePresetFields {
 		region: 'Salzburger Land',
 		idealRanges: {},
 		activeMetricKeys: [],
-		hourlyMetricKeys: [],
 		metricAlertLevels: {},
 		telegramStyle: 'rich'
 	};
@@ -100,28 +99,17 @@ describe('buildNewComparePresetPayload — active_metrics: "nie eingestellt" vs.
 	});
 });
 
-describe('buildNewComparePresetPayload — hourly_metrics: "nie eingestellt" vs. bewusst leer (F001-Folgefix)', () => {
-	test('hourlyMetricKeys=null (nie eingestellt) -> Schluessel hourly_metrics fehlt (Default bleibt "alle")', () => {
-		const fields = fullFields();
-		fields.hourlyMetricKeys = null;
-		const payload = buildNewComparePresetPayload(fields);
-		const displayConfig = payload.display_config as Record<string, unknown>;
-
-		assert.equal(
-			Object.prototype.hasOwnProperty.call(displayConfig, 'hourly_metrics'),
-			false,
-			'ein nie beruehrter Stundenverlauf-Tab darf beim Anlegen keine Leerauswahl senden'
-		);
-	});
-
-	test('hourlyMetricKeys=[] (bewusst leer) -> hourly_metrics wird explizit als [] gesendet', () => {
-		const fields = fullFields();
-		fields.hourlyMetricKeys = [];
-		const payload = buildNewComparePresetPayload(fields);
-		const displayConfig = payload.display_config as Record<string, unknown>;
-
-		assert.deepEqual(displayConfig.hourly_metrics, []);
-	});
+// Issue #3276 (Spec-AC-38, AC-1): `hourly_metrics` ist Altschluessel. Vorher unterschied die
+// Neuanlage „nie eingestellt" (Schluessel fehlt) von „bewusst leer" ([] gesendet). Jetzt sendet
+// der POST den Schluessel in KEINEM Fall — auch nicht als [] (Spec: nie leer senden).
+describe('buildNewComparePresetPayload — hourly_metrics wird nie gesendet (#3276)', () => {
+	for (const wert of [null, [], ['temp_c']]) {
+		test(`hourlyMetricKeys=${JSON.stringify(wert)} -> Schluessel hourly_metrics fehlt`, () => {
+			const fields = { ...fullFields(), hourlyMetricKeys: wert } as ReturnType<typeof fullFields>;
+			const displayConfig = buildNewComparePresetPayload(fields).display_config as Record<string, unknown>;
+			assert.equal(Object.prototype.hasOwnProperty.call(displayConfig, 'hourly_metrics'), false);
+		});
+	}
 });
 
 describe('applyHourlyMetricToggle — AC-8: aus echter Leerauswahl heraus anhaken', () => {

@@ -10,6 +10,11 @@
 // SMS-Budget-DnD, Channel-Tabs) wurde vom Compare-Renderpfad NIE gelesen
 // (#1301-Grundbefund) — die neue Seite bildet diese Funktion bewusst nicht nach.
 //
+// #3276 (Spec feat_3276_vergleich_altfelder_entfernen.md AC-3/AC-6): auch die
+// Stundenverlauf-Steuerung (compare-layout-hourly-*, CompareHourlyLayoutControls)
+// ist entfernt; AC-7 sichert jetzt ihr Fehlen zu, Bereitschafts-Marker ist der
+// aktive Schritt Zustellung.
+//
 // Ausführen:
 //   cd frontend && npx playwright test e2e/layout-tab-vergleich.spec.ts
 
@@ -51,54 +56,26 @@ async function openLayoutTab(page: Page, orteNamen: string[]): Promise<void> {
 	const layoutTab = page.locator('[data-testid="compare-editor-tab-zustellung"]:visible').first();
 	await expect(async () => {
 		await layoutTab.click();
-		await expect(
-			page.locator('[data-testid="compare-layout-hourly-enabled-toggle"]:visible').first()
-		).toBeVisible({ timeout: 5_000 });
+		await expect(layoutTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
 	}).toPass({ timeout: 30_000 });
 }
 
-test.describe('F2a: Layout-Tab (/compare/new) = Stundenverlauf-Steuerung', () => {
+test.describe('F2a: Layout-Tab (/compare/new), seit #3276 ohne Stundenverlauf-Steuerung', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.setViewportSize({ width: 1280, height: 900 });
 	});
 
-	// ── AC-7: Layout-Tab zeigt Stundenverlauf-Toggle + Metrik-Auswahl ──────────
-	test('AC-7: Layout-Tab rendert Stundenverlauf-Toggle und Metrik-Checkboxen', async ({ page }) => {
+	// ── AC-7 (#3276): keine Stundenverlauf-Steuerung mehr im Vergleich ─────────
+	test('AC-7 (#3276): Schritt Zustellung zeigt weder Stundenverlauf-Schalter noch Metrik-Auswahl', async ({ page }) => {
 		const nameA = 'E2E-GZ-LT-Ort-A-' + Date.now();
 		const nameB = 'E2E-GZ-LT-Ort-B-' + Date.now();
 		await createLocation(page, nameA);
 		await createLocation(page, nameB);
 		await openLayoutTab(page, [nameA, nameB]);
 
-		await expect(
-			page.locator('[data-testid="compare-layout-hourly-enabled-toggle"]:visible').first()
-		).toBeVisible();
-		await expect(
-			page.locator('[data-testid="compare-layout-hourly-metrics"]:visible').first()
-		).toBeVisible();
-		// Mindestens eine Metrik-Checkbox aus dem Katalog (z.B. Temperatur).
-		await expect(
-			page.locator('[data-testid="compare-layout-hourly-metric-temp_c"]:visible').first()
-		).toBeVisible();
-	});
-
-	// ── AC-7: Eine Metrik umschalten bleibt bedienbar (kein Crash) ─────────────
-	test('AC-7: Metrik-Checkbox lässt sich umschalten', async ({ page }) => {
-		const nameA = 'E2E-GZ-LT-Toggle-A-' + Date.now();
-		const nameB = 'E2E-GZ-LT-Toggle-B-' + Date.now();
-		await createLocation(page, nameA);
-		await createLocation(page, nameB);
-		await openLayoutTab(page, [nameA, nameB]);
-
-		const metric = page
-			.locator('[data-testid="compare-layout-hourly-metric-wind_kmh"]:visible input')
-			.first();
-		await expect(metric).toBeVisible({ timeout: 8_000 });
-		await metric.click();
-		// Klick darf den Editor nicht wegwerfen — der Layout-Tab bleibt aktiv.
-		await expect(
-			page.locator('[data-testid="compare-editor-tab-zustellung"]:visible').first()
-		).toHaveAttribute('data-active', 'true');
+		await expect(page.locator('[data-testid="compare-layout-hourly-enabled-toggle"]')).toHaveCount(0);
+		await expect(page.locator('[data-testid="compare-layout-hourly-metrics"]')).toHaveCount(0);
+		await expect(page.locator('[data-testid="weather-metrics-stundenverlauf"]')).toHaveCount(0);
 	});
 
 	// ── AC-11: Die alte channel_layouts-Attrappe ist verschwunden ──────────────
@@ -127,9 +104,7 @@ test.describe('F2a: Layout-Tab (/compare/new) = Stundenverlauf-Steuerung', () =>
 		// #2880: gesperrte Reiter tragen aria-disabled="true" — Playwright klickt sie nur mit force
 		// (der Nutzer kann sie weiterhin antippen; der Klick wechselt nicht).
 		await layoutTab.click({ force: true });
-		await expect(
-			page.locator('[data-testid="compare-layout-hourly-enabled-toggle"]:visible')
-		).toHaveCount(0);
+		await expect(layoutTab).not.toHaveAttribute('data-active', 'true');
 	});
 
 	// ── AC-8: Mobile — Layout-Tab ohne horizontales Scrollen ───────────────────
@@ -143,8 +118,8 @@ test.describe('F2a: Layout-Tab (/compare/new) = Stundenverlauf-Steuerung', () =>
 		await page.setViewportSize({ width: 390, height: 844 });
 
 		await expect(
-			page.locator('[data-testid="compare-layout-hourly-enabled-toggle"]:visible').first()
-		).toBeVisible({ timeout: 8_000 });
+			page.locator('[data-testid="compare-editor-tab-zustellung"]').first()
+		).toHaveAttribute('data-active', 'true', { timeout: 8_000 });
 		const overflowsX = await page.evaluate(
 			() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 4
 		);

@@ -8,9 +8,7 @@ import {
 	materializeActiveMetricKeys,
 	toggleCompareMetricKeyFromState
 } from '../weather-metrics-tab/compareMetricOrder.ts';
-import { flushPendingWeatherMetricsSave } from '../weather-metrics-tab/weatherMetricsCompareSave.ts';
 import { COMPARE_METRIC_KEYS } from '../wetter-tab/corridorEditorState.ts';
-import type { ComparePreset } from '../../../types.ts';
 
 describe('Issue #1359 Scheibe 1: Reihenfolge-Abschnitt im Vergleich', () => {
 	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md §3): der Abschnitt heisst jetzt 'layout_kanal'.
@@ -115,53 +113,5 @@ describe('toggleCompareMetricKeyFromState — echter Bedienpfad (Issue #1366 F00
 	});
 });
 
-// AC-3 (Kern-Anteil): der Diff-Guard vor dem PUT muss eine REINE Umsortierung
-// als Aenderung erkennen. Vorher normalisierte er mit `.sort()` — gleiche
-// Menge in anderer Reihenfolge galt als identisch, `flushPendingWeatherMetrics
-// Save` lieferte `null`, es wurde nie gespeichert. Das ist der versteckte
-// Blocker, an dem der ganze Fix sonst unsichtbar scheitert.
-describe('Issue #1359 Scheibe 1: Diff-Guard erkennt reine Umsortierung (AC-3)', () => {
-	const preset = { id: 'p-1359', display_config: {} } as unknown as ComparePreset;
-
-	test('AC-3: nur umsortiert -> Speicher-Payload mit der NEUEN Reihenfolge', () => {
-		const payload = flushPendingWeatherMetricsSave(
-			preset,
-			{
-				activeMetricKeys: ['wind_max_kmh', 'temp_max_c'],
-				// Issue #1703 S8: kein Kanal je editiert (dieser Test prueft die
-				// GRUNDauswahl-Reihenfolge) — alle drei folgen ihr.
-				channelActiveMetricKeys: { email: null, telegram: null, sms: null },
-				officialAlertsEnabled: true,
-				dayWindowStartHour: 4,
-				dayWindowEndHour: 19
-			},
-			{
-				activeMetricKeys: ['temp_max_c', 'wind_max_kmh'],
-				channelActiveMetricKeys: { email: null, telegram: null, sms: null },
-				officialAlertsEnabled: true,
-				dayWindowStartHour: 4,
-				dayWindowEndHour: 19
-			}
-		);
-		assert.ok(payload, 'AC-3 FAIL: reine Umsortierung wurde als "keine Aenderung" verworfen');
-		assert.deepEqual(payload!.body.display_config?.active_metrics, [
-			'wind_max_kmh',
-			'temp_max_c'
-		]);
-	});
-
-	test('AC-3: unveraenderte Reihenfolge schreibt weiterhin NICHT', () => {
-		const snapshot = {
-			activeMetricKeys: ['temp_max_c', 'wind_max_kmh'],
-			channelActiveMetricKeys: { email: null, telegram: null, sms: null },
-			officialAlertsEnabled: true,
-			dayWindowStartHour: 4,
-			dayWindowEndHour: 19
-		};
-		assert.equal(
-			flushPendingWeatherMetricsSave(preset, { ...snapshot }, { ...snapshot }),
-			null,
-			'AC-3 FAIL: ohne Unterschied darf kein Schreibvorgang entstehen'
-		);
-	});
-});
+// AC-3 (Kern-Anteil, Diff-Guard `flushPendingWeatherMetricsSave`) entfaellt mit #3276 (F005):
+// die Funktion hatte keinen Produktions-Aufrufer mehr.

@@ -36,7 +36,7 @@ from tests.helpers.katalog_verarbeitung_scan import (
 )
 
 #: Festgeschriebener Hoechststand (Regel d). Wird nur gesenkt, nie erhoeht.
-HOECHSTSTAND = 435
+HOECHSTSTAND = 434  # #3276: -1 (CompareHourlyLayoutControls.svelte geloescht)
 
 #: Arten ohne Fund im heutigen Bestand. Ihre Wirksamkeit belegen allein die
 #: Gegenproben unten (Go haelt heute keinen festen Messwert-Vergleich).

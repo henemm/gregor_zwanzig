@@ -19,6 +19,12 @@
 //        geaendert", es wird nie ein PUT gesendet -- der Schalter laesst sich
 //        umlegen und bleibt folgenlos.
 //
+// Issue #3276 (Spec-AC-38, AC-2): `outlook_metric_formats` ist Altschluessel. Die
+// Umschaltung hat im Ortsvergleich keine eigene Bedienflaeche mehr (nur „Was steht wo").
+// F004 bleibt als Datenerhalt-Waechter (RMW: nichts geht verloren, der Bestand bleibt
+// auch gegen einen Editor-Wert stehen); F005 prueft jetzt, dass eine reine Umschaltung
+// KEINEN PUT mehr ausloest (vorher: muss gesendet werden).
+//
 // Reine Verhaltenstests, kein Mock: echte ComparePreset-Objekte durch die
 // echten Pure Functions, geprueft wird der erzeugte PUT-Payload.
 //
@@ -72,7 +78,7 @@ const UNBETEILIGTE_FELDER: Record<string, unknown> = {
 };
 
 describe('#2049 F004 — Umschalten darf keine anderen display_config-Felder verlieren', () => {
-	test('nur outlookMetricFormats editiert -> alle uebrigen Felder round-trippen unveraendert', () => {
+	test('nur outlookMetricFormats editiert -> kein Altschluessel geschrieben, alle uebrigen Felder round-trippen unveraendert', () => {
 		const original = makePreset();
 		const { body } = buildComparePresetSavePayload(original, {
 			name: original.name,
@@ -82,13 +88,12 @@ describe('#2049 F004 — Umschalten darf keine anderen display_config-Felder ver
 			idealRanges: {},
 			// EINZIGE Aenderung: eine Groesse auf "Einfach".
 			outlookMetricFormats: { gust: true }
-		});
+		} as never);
 
 		const dc = body.display_config as Record<string, unknown>;
-		assert.deepEqual(
-			dc.outlook_metric_formats,
-			{ gust: true },
-			'die umgeschaltete Zuordnung fehlt im Payload'
+		assert.ok(
+			!('outlook_metric_formats' in dc),
+			`#3276: outlook_metric_formats wird nicht mehr geschrieben: ${JSON.stringify(dc.outlook_metric_formats)}`
 		);
 		for (const [key, wert] of Object.entries(UNBETEILIGTE_FELDER)) {
 			assert.deepEqual(
@@ -101,11 +106,9 @@ describe('#2049 F004 — Umschalten darf keine anderen display_config-Felder ver
 		}
 	});
 
-	test('eine bestehende Zuordnung wird ueberschrieben, nicht ergaenzt', () => {
-		// Gegenprobe zur Merge-Richtung: der Editor sendet IMMER die vollstaendige
-		// Zuordnung (Read-Modify-Write passiert in der Bedienflaeche). Ein
-		// Server-seitiges Zusammenfuehren mit dem Altstand wuerde ein
-		// Zuruecksetzen auf "Roh" unmoeglich machen.
+	test('eine bestehende Zuordnung bleibt Bestand, ein Editor-Wert ueberschreibt sie nicht (#3276)', () => {
+		// #3276: vorher „wird ueberschrieben, nicht ergaenzt" — der Ortsvergleich schreibt
+		// den Altschluessel nicht mehr, der Bestand reist unveraendert per RMW mit.
 		const original = makePreset();
 		(original.display_config as Record<string, unknown>).outlook_metric_formats = {
 			gust: true,
@@ -118,10 +121,10 @@ describe('#2049 F004 — Umschalten darf keine anderen display_config-Felder ver
 			region: 'Karnischer Hauptkamm',
 			idealRanges: {},
 			outlookMetricFormats: { gust: true, sunshine: false }
-		});
+		} as never);
 		assert.deepEqual((body.display_config as Record<string, unknown>).outlook_metric_formats, {
 			gust: true,
-			sunshine: false
+			sunshine: true
 		});
 	});
 
@@ -143,7 +146,7 @@ describe('#2049 F004 — Umschalten darf keine anderen display_config-Felder ver
 	});
 });
 
-describe('#2049 F005 — eine reine Umschaltung gilt als Aenderung und wird gesendet', () => {
+describe('#2049 F005 / #3276 — eine reine Umschaltung loest keinen PUT mehr aus (Altschluessel)', () => {
 	const basis: LayoutSnapshot = {
 		hourlyMetricKeys: ['temp_c'],
 		hourlyEnabled: true,
@@ -152,33 +155,23 @@ describe('#2049 F005 — eine reine Umschaltung gilt als Aenderung und wird gese
 		outlookEnabled: true
 	};
 
-	test('NUR outlookMetricFormats geaendert -> Payload entsteht (kein null)', () => {
+	test('NUR outlookMetricFormats geaendert -> kein PUT (null)', () => {
 		const current: LayoutSnapshot = { ...basis, outlookMetricFormats: { gust: true } };
-		const payload = flushPendingLayoutSave(makePreset(), current, basis);
-
-		assert.ok(
-			payload,
-			'flushPendingLayoutSave meldet "nichts geaendert" fuer eine reine ' +
-				'Roh/Einfach-Umschaltung -- der Schalter laesst sich umlegen und wird ' +
-				'nie gespeichert (F005, exakt der Bug aus #2049 eine Ebene tiefer).'
-		);
-		assert.deepEqual(
-			(payload.body.display_config as Record<string, unknown>).outlook_metric_formats,
-			{ gust: true },
-			'der erzeugte PUT traegt die neue Zuordnung nicht'
-		);
+		assert.equal(flushPendingLayoutSave(makePreset(), current, basis), null);
 	});
 
-	test('Zuruecknehmen auf Roh ist ebenfalls eine Aenderung', () => {
+	test('Zuruecknehmen auf Roh loest ebenfalls keinen PUT aus', () => {
 		const vorher: LayoutSnapshot = { ...basis, outlookMetricFormats: { gust: true } };
 		const jetzt: LayoutSnapshot = { ...basis, outlookMetricFormats: { gust: false } };
-		const payload = flushPendingLayoutSave(makePreset(), jetzt, vorher);
+		assert.equal(flushPendingLayoutSave(makePreset(), jetzt, vorher), null);
+	});
 
-		assert.ok(payload, 'das Zuruecksetzen auf "Roh" gilt faelschlich als "nichts geaendert"');
-		assert.deepEqual(
-			(payload.body.display_config as Record<string, unknown>).outlook_metric_formats,
-			{ gust: false }
-		);
+	test('der Ausblick-Schalter (eigenes Feld) wird weiter gesendet, ohne display_config', () => {
+		const jetzt: LayoutSnapshot = { ...basis, outlookEnabled: false };
+		const payload = flushPendingLayoutSave(makePreset(), jetzt, basis);
+		assert.ok(payload, 'outlook_enabled wird nicht mehr gespeichert');
+		assert.equal((payload.body as unknown as Record<string, unknown>).outlook_enabled, false);
+		assert.equal(payload.body.display_config, undefined);
 	});
 
 	test('unveraenderter Snapshot bleibt null (kein PUT ohne Aenderung)', () => {

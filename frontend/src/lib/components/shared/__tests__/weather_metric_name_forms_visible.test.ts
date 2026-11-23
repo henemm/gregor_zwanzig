@@ -72,7 +72,7 @@ const KURZFORM_QUELLEN = ['sms_code', 'kuerzelById', 'sms_symbols'];
 const EDITOREN: { name: string; datei: string }[] = [
 	{ name: 'Trips-Editor (context="route")', datei: 'WeatherMetricsTab.svelte' },
 	{ name: 'Compare-Uebersicht (context="vergleich")', datei: 'WeatherMetricsTab.svelte' },
-	{ name: 'Compare-Stundenverlauf', datei: '../compare/CompareHourlyLayoutControls.svelte' },
+	// Issue #3276: 'Compare-Stundenverlauf' (CompareHourlyLayoutControls.svelte) ist geloescht.
 	{ name: 'Compare-Ausblick', datei: 'OutlookLayoutControls.svelte' }
 ];
 
@@ -194,7 +194,7 @@ function eintragsLiterale(ast: any): any[] {
 describe('AC-7: die Metrik-Eintraege der Compare-Editoren fuehren alle drei Formen', () => {
 	for (const datei of [
 		'WeatherMetricsTab.svelte',
-		'../compare/CompareHourlyLayoutControls.svelte',
+		// Issue #3276: '../compare/CompareHourlyLayoutControls.svelte' geloescht.
 		'OutlookLayoutControls.svelte'
 	]) {
 		test(`${datei}: jedes gebaute Metrik-Objekt traegt Kurzform und SMS-Kuerzel`, () => {

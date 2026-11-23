@@ -20,10 +20,7 @@ import type { PutClient } from './tripSpeicherung.ts';
 import type { AlertChannelState } from './alarme-tab/alertChannelState.ts';
 import { baueDiff, type KanalMap } from './alarme-tab/alertMetricChannels.ts';
 import { buildComparePresetSavePayload, waehleEigenfelder } from '../compare/compareEditorSave.ts';
-import {
-	normalizeStoredActiveMetrics,
-	normalizeStoredOutlookMetrics
-} from './weather-metrics-tab/compareMetricSelection.ts';
+import { normalizeStoredActiveMetrics } from './weather-metrics-tab/compareMetricSelection.ts';
 
 /** Plain-Snapshot der persistenzrelevanten Alarme-Reiter-Felder.
  * `corridors` ist bewusst NICHT Teil des Snapshots — die Korridor-Persistenz
@@ -155,7 +152,6 @@ export function baueAlarmNutzlast(
 		region: (displayConfig.region as string) ?? '',
 		idealRanges: (displayConfig.ideal_ranges as Record<string, IdealRange>) ?? {},
 		activeMetricKeys: normalizeStoredActiveMetrics(displayConfig.active_metrics) ?? undefined,
-		channelActiveMetricKeys: undefined,
 		metricAlertLevels:
 			current.metricAlertLevels ?? (displayConfig.metric_alert_levels as Record<string, string> | undefined),
 		channelThresholds:
@@ -170,11 +166,8 @@ export function baueAlarmNutzlast(
 		officialWarnings: { enabled: current.officialWarningsEnabled },
 		radarAlertEnabled: current.radarAlertEnabled,
 		telegramStyle: current.telegramStyle,
-		hourlyMetricKeys: displayConfig.hourly_metrics as string[] | null | undefined,
+		// #3276: keine Altschluessel (hourly_/outlook_*) mehr durchreichen.
 		hourlyEnabled: preset.hourly_enabled,
-		outlookMetricKeys: normalizeStoredOutlookMetrics(displayConfig.outlook_metrics) ?? undefined,
-		outlookMetricFormats:
-			(displayConfig.outlook_metric_formats as Record<string, boolean> | undefined) ?? undefined,
 		outlookEnabled: preset.outlook_enabled,
 		dayWindowStartHour: preset.day_window_start_hour ?? undefined,
 		dayWindowEndHour: preset.day_window_end_hour ?? undefined

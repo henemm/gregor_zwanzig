@@ -70,13 +70,11 @@ function reicherVergleich(): ComparePreset {
 	} as Partial<ComparePreset>);
 }
 
-const WETTER_METRIKEN_FELDER_DC = new Set([
-	'active_metrics',
-	'channel_active_metrics',
-	'hourly_metrics',
-	'outlook_metrics',
-	'outlook_metric_formats'
-]);
+// Issue #3276: der Zustellungs-Speicherer schreibt keinen display_config-Schluessel mehr
+// (`channel_active_metrics`, `hourly_metrics`, `outlook_metrics`, `outlook_metric_formats`
+// waren Altschluessel; `active_metrics` gehoert seit #2794 F006 dem Reiter Wetter). Jeder
+// display_config-Schluessel muss nach dem Speichern byte-gleich zum Bestand sein.
+const WETTER_METRIKEN_FELDER_DC = new Set<string>([]);
 const WETTER_METRIKEN_FELDER_TOP = new Set([
 	'official_alerts_enabled',
 	'hourly_enabled',
@@ -117,16 +115,20 @@ function assertNurEigenfelderGesendet(body: unknown): void {
 describe('AC-12 (Kern, seit #2375 Teilfeld): baueWetterMetrikenNutzlast — nur die eigenen Felder im Rumpf', () => {
 	// #2794 S3a Teil 3 (F006, AC-38): Metrikauswahl, Amtliche Warnungen und Tagesfenster gehoeren
 	// dem Reiter Wetter — sie stehen auch dann nicht im Rumpf, wenn sie sich in der Kopie aendern.
-	test('Kanal-Auswahl geändert → der Rumpf trägt nur Eigenfelder, die Kanal-Auswahl ist neu', () => {
+	// Issue #3276 (AC-2): vorher „die Kanal-Auswahl ist neu" — `channel_active_metrics` ist
+	// Altschluessel und reist nicht mehr mit, der Bestand bleibt ueber den Go-Merge stehen.
+	test('Kanal-Auswahl geändert → der Rumpf trägt nur Eigenfelder, keinen Altschluessel (#3276)', () => {
 		const preset = reicherVergleich();
 		const ws = hydrierterWs(preset);
 		ws.channelActiveMetricKeys = { email: ['wind_max_kmh'], telegram: null, sms: null };
+		ws.hourlyEnabled = false;
 
 		const { url, body } = baueWetterMetrikenNutzlast(preset, wetterMetrikenSnapshotAus(ws));
 
 		assert.equal(url, `/api/compare/presets/${PRESET_ID}`);
 		assertNurEigenfelderGesendet(body);
-		assert.ok(JSON.stringify(dc(body).channel_active_metrics).includes('wind_max_kmh'));
+		assert.ok(!('display_config' in (body as unknown as Record<string, unknown>)), 'display_config im Zustellungs-PUT');
+		assert.equal((body as unknown as Record<string, unknown>).hourly_enabled, false);
 	});
 
 	test('Tagesfenster und Metrikauswahl in der Kopie geändert → weder sie noch Wertebereiche/Alarme/Versand stehen im Rumpf', () => {
@@ -147,51 +149,25 @@ describe('AC-12 (Kern, seit #2375 Teilfeld): baueWetterMetrikenNutzlast — nur 
 	});
 });
 
-describe('AC-12 (Rueckfall): current.<feld> == null faellt auf den Preset-Bestand zurueck, nie auf null im PUT', () => {
-	test('hourlyMetricKeys == null im Snapshot → PUT traegt display_config.hourly_metrics aus dem Bestand', () => {
-		const preset = reicherVergleich();
-		const ws = hydrierterWs(preset);
-		ws.hourlyMetricKeys = null;
-		wetterMetrikenBedienung(ws).setDayWindow(6, 21);
+// Issue #3276 (AC-2): die drei Rueckfall-Tests („current.<feld> == null → PUT traegt den Bestand")
+// pruefen jetzt das Gegenteil: der Rumpf traegt die Altschluessel gar nicht mehr, weder als
+// Bestand noch als null — der Go-Merge laesst den Bestand unberuehrt (siehe Orchestrierung unten).
+describe('AC-12 (Rueckfall, #3276): Altfelder == null oder gesetzt — der PUT traegt keinen Altschluessel', () => {
+	for (const feld of ['hourlyMetricKeys', 'outlookMetricKeys', 'outlookMetricFormats'] as const) {
+		test(`${feld} == null im Snapshot → kein display_config im PUT (weder Bestand noch null)`, () => {
+			const preset = reicherVergleich();
+			const ws = hydrierterWs(preset);
+			ws[feld] = null;
+			ws.outlookEnabled = false;
 
-		const { body } = baueWetterMetrikenNutzlast(preset, wetterMetrikenSnapshotAus(ws));
+			const { body } = baueWetterMetrikenNutzlast(preset, wetterMetrikenSnapshotAus(ws));
 
-		assert.deepEqual(
-			dc(body).hourly_metrics,
-			(preset.display_config as Record<string, unknown>).hourly_metrics,
-			'hourly_metrics darf beim Rueckfall NICHT auf null geschrieben werden'
-		);
-	});
-
-	test('outlookMetricKeys == null im Snapshot → PUT traegt display_config.outlook_metrics aus dem Bestand', () => {
-		const preset = reicherVergleich();
-		const ws = hydrierterWs(preset);
-		ws.outlookMetricKeys = null;
-		wetterMetrikenBedienung(ws).setDayWindow(6, 21);
-
-		const { body } = baueWetterMetrikenNutzlast(preset, wetterMetrikenSnapshotAus(ws));
-
-		assert.deepEqual(
-			dc(body).outlook_metrics,
-			(preset.display_config as Record<string, unknown>).outlook_metrics,
-			'outlook_metrics darf beim Rueckfall NICHT auf null geschrieben werden'
-		);
-	});
-
-	test('outlookMetricFormats == null im Snapshot → PUT traegt display_config.outlook_metric_formats aus dem Bestand', () => {
-		const preset = reicherVergleich();
-		const ws = hydrierterWs(preset);
-		ws.outlookMetricFormats = null;
-		wetterMetrikenBedienung(ws).setDayWindow(6, 21);
-
-		const { body } = baueWetterMetrikenNutzlast(preset, wetterMetrikenSnapshotAus(ws));
-
-		assert.deepEqual(
-			dc(body).outlook_metric_formats,
-			(preset.display_config as Record<string, unknown>).outlook_metric_formats,
-			'outlook_metric_formats darf beim Rueckfall NICHT auf null geschrieben werden'
-		);
-	});
+			for (const k of ['hourly_metrics', 'outlook_metrics', 'outlook_metric_formats', 'hourly_metric_formats', 'channel_active_metrics']) {
+				assert.ok(!(k in dc(body)), `${k} im Zustellungs-PUT`);
+			}
+			assert.equal((body as unknown as Record<string, unknown>).outlook_enabled, false);
+		});
+	}
 });
 
 describe('AC-12 (Rueckfall via Orchestrierung): erstelleWetterMetrikenVergleichSpeicherung schreibt den echten Bestand, nicht null', () => {
@@ -258,7 +234,10 @@ describe('AC-12 (Rundlauf): gespeichert und neu geladen — nur die Wetter-Metri
 
 	const puts = () => server.putRuempfe();
 
-	test('Stundenverlauf-Reihenfolge ändern → speichern → Server-Stand trägt alle übrigen Einstellungen unverändert', async () => {
+	// Issue #3276: die Stundenverlauf-Reihenfolge (`hourly_metrics`) ist Altschluessel; gemessen
+	// wird mit dem verbliebenen eigenen Feld `hourly_enabled`. Alle display_config-Schluessel
+	// (inkl. der Altfelder im Bestand) muessen danach unveraendert stehen.
+	test('Stundenverlauf-Schalter ändern → speichern → Server-Stand trägt alle übrigen Einstellungen unverändert', async () => {
 		const preset = reicherVergleich();
 		let basis = preset;
 		const ws = hydrierterWs(basis);
@@ -275,14 +254,15 @@ describe('AC-12 (Rundlauf): gespeichert und neu geladen — nur die Wetter-Metri
 			saveController: ctl
 		});
 
-		wetterMetrikenBedienung(ws).hourlyDragEnd(['temp_max_c', 'wind_max_kmh']);
+		wetterMetrikenBedienung(ws).hourlyEnabledToggle();
 		speicherung.aenderungMelden();
 		await ctl.flush();
 
 		assert.equal(puts().length, 1);
 		const stand = server.stand(PRESET_ID);
 		assertNurWetterMetrikenFelderGeaendert(preset, stand);
-		assert.deepEqual(dc(stand).hourly_metrics, ['temp_max_c', 'wind_max_kmh']);
+		assert.equal(stand.hourly_enabled, false);
+		assert.deepEqual(dc(stand).hourly_metrics, ['wind_max_kmh', 'temp_max_c'], 'Bestand hourly_metrics veraendert');
 		assert.equal(stand.name, 'Dolomiten Vergleich', 'der Name darf nicht verloren gehen');
 		assert.deepEqual(stand.location_ids, ['loc-a', 'loc-b', 'loc-c', 'loc-d']);
 		assert.equal(stand.send_premium_sms, true);

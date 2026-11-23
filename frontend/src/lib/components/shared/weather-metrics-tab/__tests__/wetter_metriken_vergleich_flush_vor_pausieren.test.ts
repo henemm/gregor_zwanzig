@@ -25,7 +25,7 @@ import { createGoMergeServer, type GoMergeServer } from '../../__tests__/goMerge
 import type { ComparePreset } from '../../../../types.ts';
 import { buildToggleActivePutPayload, createPutQueue } from '../../../compare/compareHubPersistenz.ts';
 import { erstelleWetterMetrikenVergleichSpeicherung } from '../weatherMetricsCompareSave.ts';
-import { createController, dc, hydrierterWs, makePreset, wetterMetrikenBedienung } from './wetterMetrikenVergleichPruefstand.ts';
+import { createController, hydrierterWs, makePreset, wetterMetrikenBedienung } from './wetterMetrikenVergleichPruefstand.ts';
 
 const PRESET_ID = 'cp-2276-s4-pause';
 
@@ -76,8 +76,9 @@ describe('AC-8: Pausieren direkt nach einer Wetter-Metriken-Änderung verliert s
 	test('Änderung im Entprell-Fenster, sofort pausieren → Wetter-Metriken-PUT zuerst, Pausier-PUT trägt die Änderung', async () => {
 		const { ctl, speicherung, bedienung, pausieren } = hub();
 
-		// #2794 F006: Metrikauswahl gehoert dem Reiter Wetter — gemessen mit der Stundenverlauf-Geste.
-		bedienung.hourlyDragEnd(['temp_max_c', 'wind_max_kmh']);
+		// #2794 F006: Metrikauswahl gehoert dem Reiter Wetter. #3276: gemessen mit dem
+		// Stundenverlauf-Schalter (die Liste ist Altschluessel).
+		bedienung.hourlyEnabledToggle();
 		speicherung.aenderungMelden();
 		assert.equal(ctl.hasPending, true, 'Vorbedingung: Änderung wartet im Entprell-Fenster');
 
@@ -85,7 +86,7 @@ describe('AC-8: Pausieren direkt nach einer Wetter-Metriken-Änderung verliert s
 
 		assert.equal(puts().length, 2, 'erst die Wetter-Metriken-Änderung, dann das Pausieren');
 		const [erster, zweiter] = puts();
-		assert.deepEqual(dc(erster).hourly_metrics, ['temp_max_c', 'wind_max_kmh'], 'erster PUT = Wetter-Metriken-Änderung');
+		assert.equal((erster as Record<string, unknown>).hourly_enabled, false, 'erster PUT = Wetter-Metriken-Änderung');
 		assert.ok(!('schedule' in erster), 'erster PUT darf den Zeitplan nicht senden (also auch nicht pausieren)');
 		assert.deepEqual(
 			zweiter,
@@ -94,7 +95,7 @@ describe('AC-8: Pausieren direkt nach einer Wetter-Metriken-Änderung verliert s
 		);
 		const stand = server.stand(PRESET_ID);
 		assert.equal(stand.schedule, 'manual');
-		assert.deepEqual(dc(stand).hourly_metrics, ['temp_max_c', 'wind_max_kmh']);
+		assert.equal(stand.hourly_enabled, false);
 		assert.equal(ctl.hasPending, false, 'nach dem Pausieren darf nichts mehr ausstehen');
 	});
 });

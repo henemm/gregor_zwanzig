@@ -376,6 +376,10 @@ test('AC-3 Create-Payload aus dem vollen Feldsatz traegt Vorlagenwerte, aber kei
 	assert.deepEqual(body.alert_channels, { email: false, telegram: true, sms: false, premium_sms: true });
 	const dc = body.display_config as Record<string, unknown>;
 	assert.equal(dc.region, 'Korsika');
-	const kanal = dc.channel_active_metrics as Record<string, unknown> | undefined;
-	assert.ok(kanal && 'telegram' in kanal, 'Telegram-Kanalauswahl der Vorlage muss im Payload stehen');
+	// Issue #3276 (Spec-AC-38, AC-1): `channel_active_metrics` ist Altschluessel — vorher musste die
+	// Telegram-Kanalauswahl der Vorlage im Payload stehen, jetzt sendet die Neuanlage keinen der
+	// sechs Altschluessel (auch nicht aus einer Vorlage).
+	for (const alt of ['channel_layouts', 'outlook_metrics', 'outlook_metric_formats', 'channel_active_metrics', 'hourly_metrics', 'hourly_metric_formats']) {
+		assert.ok(!(alt in dc), `#3276: ${alt} aus der Vorlage im Create-Payload`);
+	}
 });

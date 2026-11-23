@@ -298,7 +298,6 @@ describe('context route (Trip-Hub): Wetter-Metriken und Versand an einem Control
 // ─────────────────────────── context = vergleich (Ortsvergleich-Hub) ───────────────────────────
 
 const ID = 'cp-1743-panel';
-const NEUE_METRIK = 'gust_max_kmh';
 
 describe('context vergleich (Ortsvergleich-Hub): Wetter-Metriken und Versand an einem Controller', () => {
 	let server: GoMergeServer;
@@ -320,11 +319,11 @@ describe('context vergleich (Ortsvergleich-Hub): Wetter-Metriken und Versand an 
 
 	const puts = () => server.mitschnitt.filter((e) => e.method === 'PUT');
 	// #2794 S3a Teil 3 (F006, AC-38): die Metrikauswahl (`active_metrics`) gehoert dem Reiter Wetter.
-	// Der Wetter-Metriken-Schreiber dieses Panels (Reiter Zustellung) wird deshalb ueber sein eigenes
-	// Feld Stundenverlauf (`hourly_metrics`) gemessen; die Mechanik (zwei Besitzer, ein Controller)
-	// bleibt dieselbe.
-	const aktiveMetriken = (body: unknown): string[] =>
-		(((body as Record<string, unknown>)?.display_config as Record<string, unknown>)?.hourly_metrics as string[]) ?? [];
+	// Issue #3276: `hourly_metrics` ist Altschluessel und wird nicht mehr gesendet. Der Wetter-
+	// Metriken-Schreiber dieses Panels (Reiter Zustellung) wird deshalb ueber sein verbliebenes
+	// eigenes Feld `hourly_enabled` gemessen (Ausgangsstand true, Geste schaltet aus); die Mechanik
+	// (zwei Besitzer, ein Controller) bleibt dieselbe.
+	const wetterGeaendert = (body: unknown): boolean => (body as Record<string, unknown>)?.hourly_enabled === false;
 
 	/** EIN wizardState, EIN Controller, EINE Queue, EINE Basis — wie CompareTabs. */
 	function panel() {
@@ -350,10 +349,9 @@ describe('context vergleich (Ortsvergleich-Hub): Wetter-Metriken und Versand an 
 		const versand = erstelleVersandVergleichSpeicherung(gemeinsam as never);
 		const wb = wetterMetrikenBedienung(zustand);
 		const vb = versandBedienung(zustand);
-		/** NEUE_METRIK im Stundenverlauf an/aus (eigenes Feld des Wetter-Metriken-Schreibers). */
+		/** Stundenverlauf-Schalter um (eigenes Feld des Wetter-Metriken-Schreibers, #3276). */
 		const stundenMetrikUmschalten = () => {
-			const cur = (zustand.hourlyMetricKeys as string[] | null) ?? [];
-			wb.hourlyDragEnd(cur.includes(NEUE_METRIK) ? cur.filter((k) => k !== NEUE_METRIK) : [...cur, NEUE_METRIK]);
+			wb.hourlyEnabledToggle();
 		};
 		return {
 			zustand,
@@ -382,7 +380,7 @@ describe('context vergleich (Ortsvergleich-Hub): Wetter-Metriken und Versand an 
 
 	function beideImBackend(): void {
 		assert.ok(
-			puts().some((p) => p.status === 200 && aktiveMetriken(p.anfrage).includes(NEUE_METRIK)),
+			puts().some((p) => p.status === 200 && wetterGeaendert(p.anfrage)),
 			`kein PUT traegt die Wetter-Metrik-Aenderung (Koerper: ${JSON.stringify(puts().map((p) => p.anfrage))})`
 		);
 		assert.ok(
@@ -390,7 +388,7 @@ describe('context vergleich (Ortsvergleich-Hub): Wetter-Metriken und Versand an 
 			'kein PUT traegt die Versandzeit'
 		);
 		const s = server.stand(ID);
-		assert.ok(aktiveMetriken(s).includes(NEUE_METRIK), 'Wetter-Metrik-Aenderung fehlt auf dem Server');
+		assert.ok(wetterGeaendert(s), 'Wetter-Metrik-Aenderung fehlt auf dem Server');
 		assert.ok(String(s.morning_time).startsWith('07:15'), 'Versandzeit fehlt auf dem Server');
 	}
 
@@ -418,7 +416,7 @@ describe('context vergleich (Ortsvergleich-Hub): Wetter-Metriken und Versand an 
 		beideImBackend();
 		assert.equal(p.ctl.state, 'idle');
 		const neu = neuGeladen();
-		assert.ok((neu.wetter.hourlyMetricKeys as string[]).includes(NEUE_METRIK), 'UI nach Re-Hydration: Wetter-Metrik fehlt');
+		assert.ok(neu.wetter.hourlyEnabled === false, 'UI nach Re-Hydration: Wetter-Metrik fehlt');
 		assert.equal(neu.versand.morningTime, '07:15');
 	});
 
@@ -430,7 +428,7 @@ describe('context vergleich (Ortsvergleich-Hub): Wetter-Metriken und Versand an 
 		beideImBackend();
 		assert.equal(p.ctl.state, 'idle');
 		const neu = neuGeladen();
-		assert.ok((neu.wetter.hourlyMetricKeys as string[]).includes(NEUE_METRIK));
+		assert.ok(neu.wetter.hourlyEnabled === false);
 		assert.equal(neu.versand.morningTime, '07:15', 'UI nach Re-Hydration: Versandzeit fehlt');
 	});
 
@@ -440,10 +438,10 @@ describe('context vergleich (Ortsvergleich-Hub): Wetter-Metriken und Versand an 
 		p.versandzeitAendern();
 		await laufendenAbschliessen(p.ctl);
 		assert.ok(
-			aktiveMetriken(server.stand(ID)).includes(NEUE_METRIK),
+			wetterGeaendert(server.stand(ID)),
 			'der Wetter-PUT muss abgeschlossen sein, waehrend die Versandzeit noch aussteht'
 		);
-		assert.ok(aktiveMetriken(p.basis()).includes(NEUE_METRIK), 'Messaufbau: die Server-Antwort ist neue Basis');
+		assert.ok(wetterGeaendert(p.basis()), 'Messaufbau: die Server-Antwort ist neue Basis');
 		assert.equal(p.zustand.morningTime, '07:15', 'die neue Basis hat die Versand-Eingabe ueberschrieben');
 		await leeren(p.ctl);
 		assert.ok(String(server.stand(ID).morning_time).startsWith('07:15'), 'die Versandzeit wurde danach nicht mehr gespeichert');
@@ -458,15 +456,15 @@ describe('context vergleich (Ortsvergleich-Hub): Wetter-Metriken und Versand an 
 			String(server.stand(ID).morning_time).startsWith('07:15'),
 			'der Versand-PUT muss abgeschlossen sein, waehrend die Wetter-Metrik noch aussteht'
 		);
-		assert.ok((p.zustand.hourlyMetricKeys as string[]).includes(NEUE_METRIK), 'die neue Basis hat die Wetter-Eingabe ueberschrieben');
+		assert.ok(p.zustand.hourlyEnabled === false, 'die neue Basis hat die Wetter-Eingabe ueberschrieben');
 		await leeren(p.ctl);
-		assert.ok(aktiveMetriken(server.stand(ID)).includes(NEUE_METRIK), 'die Wetter-Metrik wurde danach nicht mehr gespeichert');
+		assert.ok(wetterGeaendert(server.stand(ID)), 'die Wetter-Metrik wurde danach nicht mehr gespeichert');
 	});
 
 	test('AC-15: erster Schreiber scheitert (500), zweiter klappt ⇒ Anzeige „Fehler", nicht „Gespeichert"', async () => {
 		const p = panel();
-		// der PUT des Wetter-Schreibers (traegt hourly_metrics) scheitert
-		fehler = (m, _p, body) => m === 'PUT' && body.includes('hourly_metrics') && (wetterPutGesehen = true);
+		// der PUT des Wetter-Schreibers (traegt hourly_enabled, #3276) scheitert
+		fehler = (m, _p, body) => m === 'PUT' && body.includes('hourly_enabled') && (wetterPutGesehen = true);
 		p.metrikAendern();
 		p.versandzeitAendern();
 		await leeren(p.ctl);
@@ -487,7 +485,7 @@ describe('context vergleich (Ortsvergleich-Hub): Wetter-Metriken und Versand an 
 		p.versandzeitZuruecksetzen();
 		assert.equal(p.ctl.hasPending, false, 'der zurueckgenommene Versand-Slot steht noch aus (cancel ohne Besitzer?)');
 		await leeren(p.ctl);
-		assert.ok(aktiveMetriken(server.stand(ID)).includes(NEUE_METRIK), 'der Wetter-Slot des anderen Besitzers kam nicht an');
+		assert.ok(wetterGeaendert(server.stand(ID)), 'der Wetter-Slot des anderen Besitzers kam nicht an');
 		assert.ok(String(server.stand(ID).morning_time).startsWith('06:30'), 'die zurueckgenommene Versandzeit wurde gespeichert');
 		assert.ok(
 			!puts().some((x) => String((x.anfrage as Record<string, unknown>)?.morning_time ?? '').startsWith('07:15')),
@@ -504,9 +502,9 @@ describe('context vergleich (Ortsvergleich-Hub): Wetter-Metriken und Versand an 
 		assert.equal(p.ctl.hasPending, false, 'der zurueckgenommene Wetter-Slot steht noch aus (cancel ohne Besitzer?)');
 		await leeren(p.ctl);
 		assert.ok(String(server.stand(ID).morning_time).startsWith('07:15'), 'der Versand-Slot des anderen Besitzers kam nicht an');
-		assert.ok(!aktiveMetriken(server.stand(ID)).includes(NEUE_METRIK), 'die zurueckgenommene Metrik wurde gespeichert');
+		assert.ok(!wetterGeaendert(server.stand(ID)), 'die zurueckgenommene Metrik wurde gespeichert');
 		assert.ok(
-			!puts().some((x) => aktiveMetriken(x.anfrage).includes(NEUE_METRIK)),
+			!puts().some((x) => wetterGeaendert(x.anfrage)),
 			'ein PUT traegt die zurueckgenommene Metrik'
 		);
 		assert.equal(p.ctl.state, 'idle');

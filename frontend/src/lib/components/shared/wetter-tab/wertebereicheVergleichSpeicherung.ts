@@ -18,7 +18,6 @@ import type { SaveFn, SaveStatus } from '../../../stores/saveStatusStore.svelte.
 import { merkeNutzlast } from '../../../stores/nutzlastStand.ts';
 import type { PutClient } from '../tripSpeicherung.ts';
 import { buildComparePresetSavePayload, waehleEigenfelder } from '../../compare/compareEditorSave.ts';
-import { normalizeStoredOutlookMetrics } from '../weather-metrics-tab/compareMetricSelection.ts';
 import { materializeActiveMetricKeys } from '../weather-metrics-tab/compareMetricOrder.ts';
 
 /** Plain-Snapshot der 4 persistenzrelevanten Wertebereiche-Felder. */
@@ -70,15 +69,11 @@ export function baueWertebereichNutzlast(
 		region: (displayConfig.region as string) ?? '',
 		idealRanges: current.idealRanges,
 		activeMetricKeys: current.activeMetricKeys,
-		channelActiveMetricKeys: undefined,
 		metricAlertLevels: current.metricAlertLevels,
 		channelThresholds: preset.alert_channel_thresholds as Record<string, string> | undefined,
 		corridors: current.corridors,
-		hourlyMetricKeys: displayConfig.hourly_metrics as string[] | null | undefined,
+		// #3276: keine Altschluessel (hourly_/outlook_*) mehr durchreichen.
 		hourlyEnabled: preset.hourly_enabled,
-		outlookMetricKeys: normalizeStoredOutlookMetrics(displayConfig.outlook_metrics) ?? undefined,
-		outlookMetricFormats:
-			(displayConfig.outlook_metric_formats as Record<string, boolean> | undefined) ?? undefined,
 		outlookEnabled: preset.outlook_enabled,
 		dayWindowStartHour: preset.day_window_start_hour ?? undefined,
 		dayWindowEndHour: preset.day_window_end_hour ?? undefined

@@ -39,8 +39,6 @@
 	"vergleich.hub.delete_fehler": "Löschen fehlgeschlagen.",
 	"vergleich.hub.delete_titel": "Vergleich endgültig löschen?",
 	"vergleich.hub.nicht_gefunden": "Orts-Vergleich nicht gefunden",
-	"vergleich.stundenverlauf.titel": "Stundenverlauf",
-	"vergleich.stundenverlauf.nicht_in_grundauswahl": "gesperrt: nicht in der Grundauswahl oben",
 	"vergleich.orte.weitere": "Weitere",
 	"vergleich.hub.kopf.orte_erklaer": "Ein Ort ergibt ein Orts-Briefing. Ab zwei Orten kommt die Vergleichstabelle dazu, ohne Rangfolge.",
 	"vergleich.hub.kopf.ort_hinzufuegen": "+ Ort hinzufügen",

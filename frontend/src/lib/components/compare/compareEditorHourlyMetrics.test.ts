@@ -158,61 +158,39 @@ describe('applyHourlyReorder — Ziehgeste baut die vollstaendige Liste neu (Iss
 		assert.ok(!result.includes('wind_dir_deg'));
 	});
 
-	test('Round-Trip: das Ergebnis landet unveraendert im Save-Payload (hourly_metrics)', () => {
-		const materialized = ['temp_c', 'wind_dir_deg', 'wind_kmh', 'uv_index'];
-		const reordered = applyHourlyReorder(
-			materialized, ['uv_index', 'wind_kmh', 'temp_c'], SERVER_MERGE_ONLY_KEYS
-		);
-		const { body } = buildComparePresetSavePayload(makePreset(), {
-			name: 'Hourly Metrics Test',
-			activityProfile: 'wintersport',
-			pickedIds: ['loc-a', 'loc-b'],
-			region: 'Hochkönig',
-			idealRanges: {},
-			hourlyMetricKeys: reordered
-		});
-		assert.deepEqual(
-			(body.display_config as Record<string, unknown>).hourly_metrics,
-			['uv_index', 'wind_kmh', 'temp_c', 'wind_dir_deg']
-		);
-	});
+	// Issue #3276: der Round-Trip in den Save-Payload entfaellt — `hourly_metrics` ist
+	// Altschluessel und wird vom Ortsvergleich nicht mehr geschrieben (s. unten).
 });
 
-describe('buildComparePresetSavePayload — hourly_metrics (Issue #1106)', () => {
-	test('hourlyMetricKeys wird als display_config.hourly_metrics uebergeben', () => {
+// Issue #3276 (Spec-AC-38, AC-2): `hourly_metrics` ist Altschluessel. Der Speicher-Payload setzt
+// das Feld nie mehr aus dem Editor; ein vorhandener Bestandswert reist nur ueber den
+// Read-Modify-Write-Spread unveraendert mit (vorher: #1106 schrieb `hourlyMetricKeys`,
+// #1299/C2 auch `[]` — beides entfaellt, die drei Schreib-Tests sind durch diese ersetzt).
+describe('buildComparePresetSavePayload — hourly_metrics (Issue #1106, seit #3276 nur Bestand)', () => {
+	test('ein Editor-Wert hourlyMetricKeys ueberschreibt den Bestand nicht mehr', () => {
 		const { body } = buildComparePresetSavePayload(makePreset(), {
 			name: 'Hourly Metrics Test',
 			activityProfile: 'wintersport',
 			pickedIds: ['loc-a', 'loc-b'],
 			region: 'Hochkönig',
 			idealRanges: {},
-			hourlyMetricKeys: ['temp_c', 'wind_kmh', 'thunder_level']
-		});
-		assert.deepEqual(
-			(body.display_config as Record<string, unknown>).hourly_metrics,
-			['temp_c', 'wind_kmh', 'thunder_level'],
-			'hourly_metrics fehlt im display_config'
-		);
+			hourlyMetricKeys: ['visibility_m', 'temp_c']
+		} as never);
+		assert.deepEqual((body.display_config as Record<string, unknown>).hourly_metrics, ['temp_c', 'wind_kmh']);
 	});
 
-	test('leere hourlyMetricKeys -> hourly_metrics als [] im Payload (Default = alle, Bug #1299/C2)', () => {
-		// Server-Merge (mergeConfigMap, config_merge.go) kann Keys nur ueberschreiben,
-		// nie loeschen -> [] muss explizit gesendet werden (analog active_metrics,
-		// #1191). Renderer-seitig bedeutet [] "kein Filter gesetzt" -> alle sichtbar.
-		const { body } = buildComparePresetSavePayload(makePreset(), {
+	test('ohne Bestand entsteht kein hourly_metrics (auch nicht als [])', () => {
+		const preset = makePreset();
+		delete (preset.display_config as Record<string, unknown>).hourly_metrics;
+		const { body } = buildComparePresetSavePayload(preset, {
 			name: 'Hourly Metrics Test',
 			activityProfile: 'wintersport',
 			pickedIds: ['loc-a', 'loc-b'],
 			region: 'Hochkönig',
 			idealRanges: {},
 			hourlyMetricKeys: []
-		});
-		const dc = body.display_config as Record<string, unknown>;
-		assert.deepEqual(
-			dc.hourly_metrics,
-			[],
-			'leere Auswahl soll hourly_metrics als [] persistieren, nicht loeschen'
-		);
+		} as never);
+		assert.ok(!('hourly_metrics' in (body.display_config as Record<string, unknown>)));
 	});
 
 	test('bestehendes display_config.hourly_metrics bleibt per RMW erhalten, wenn hourlyMetricKeys fehlt', () => {
@@ -228,20 +206,5 @@ describe('buildComparePresetSavePayload — hourly_metrics (Issue #1106)', () =>
 			const dc = body.display_config as Record<string, unknown>;
 			assert.deepEqual(dc.hourly_metrics, ['temp_c', 'wind_kmh']);
 		});
-	});
-
-	test('Reihenfolge der Auswahl bleibt im Payload erhalten (Renderer sortiert kanonisch, nicht der Editor)', () => {
-		const { body } = buildComparePresetSavePayload(makePreset(), {
-			name: 'Hourly Metrics Test',
-			activityProfile: 'wintersport',
-			pickedIds: ['loc-a', 'loc-b'],
-			region: 'Hochkönig',
-			idealRanges: {},
-			hourlyMetricKeys: ['visibility_m', 'temp_c']
-		});
-		assert.deepEqual(
-			(body.display_config as Record<string, unknown>).hourly_metrics,
-			['visibility_m', 'temp_c']
-		);
 	});
 });

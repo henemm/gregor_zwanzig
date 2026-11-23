@@ -349,49 +349,30 @@ describe('buildNewComparePresetPayload — Kanal-Auswahl der Uebersicht (#1703 S
 			region: 'Salzburger Land',
 			idealRanges: {},
 			activeMetricKeys: ['temp_max_c', 'wind_max_kmh'],
-			hourlyMetricKeys: null,
 			metricAlertLevels: {},
 			telegramStyle: 'rich'
 		};
 	}
 
-	test('editierte Kanaele stehen im POST-Body, ein bewusst geleerter Kanal als [] (nicht als weggelassener Schluessel)', () => {
+	// Issue #3276 (Spec-AC-38, AC-1): `channel_active_metrics` ist Altschluessel. Vorher: editierte
+	// Kanaele im POST-Body, geleerter Kanal als []. Jetzt: der POST traegt den Schluessel nie.
+	test('#3276: editierte Kanaele stehen NICHT im POST-Body (auch kein geleerter Kanal als [])', () => {
 		const payload = buildNewComparePresetPayload({
 			...newFields(),
-			channelActiveMetricKeys: {
-				email: null, // nie editiert -> folgt der Grundauswahl
-				telegram: ['temp_max_c'], // eigene, kuerzere Auswahl
-				sms: [] // bewusst geleert
-			}
-		});
-
+			channelActiveMetricKeys: { email: null, telegram: ['temp_max_c'], sms: [] }
+		} as NewComparePresetFields);
 		const dc = payload.display_config as Record<string, unknown>;
-		const channels = dc.channel_active_metrics as Record<string, unknown[]> | undefined;
-		assert.ok(
-			channels,
-			'display_config.channel_active_metrics fehlt — die im Anlege-Editor ' +
-				'eingestellten Kanal-Abwahlen gehen beim „Briefing aktivieren" lautlos verloren'
-		);
-		assert.deepEqual(channels.telegram, ['temp_max_c']);
-		assert.equal(
-			Object.prototype.hasOwnProperty.call(channels, 'sms'),
-			true,
-			'Ein bewusst geleerter Kanal muss als [] mitreisen — ein weggelassener ' +
-				'Schluessel ist von „nie editiert" nicht unterscheidbar (analog #1191/#1366)'
-		);
-		assert.deepEqual(channels.sms, []);
-		assert.equal(
-			Object.prototype.hasOwnProperty.call(channels, 'email'),
-			false,
-			'Ein nie editierter Kanal darf keinen Eintrag bekommen — er folgt der Grundauswahl'
-		);
+		assert.equal(Object.prototype.hasOwnProperty.call(dc, 'channel_active_metrics'), false);
 	});
 });
 
 // ─── Issue #3039 Fix-Loop 3 (F007): Teil-Edit EINES Kanals erhaelt die anderen
 // gespeicherten Kanal-Auswahlen UND channel_layouts (Read-Modify-Write). ──
-describe('buildComparePresetSavePayload — Teil-Edit eines Kanals (#3039 F007)', () => {
-	test('nur telegram editiert: email und sms bleiben unveraendert, channel_layouts bleibt', () => {
+// Issue #3276: vorher „Teil-Edit eines Kanals erhaelt die anderen Kanaele". Der PUT schreibt
+// `channel_active_metrics` nicht mehr — der Bestand (alle Kanaele, channel_layouts) bleibt per
+// Read-Modify-Write unveraendert, ein Kanal-Edit erreicht ihn nicht.
+describe('buildComparePresetSavePayload — Kanal-Edit erreicht den Bestand nicht (#3039 F007 / #3276)', () => {
+	test('telegram editiert: alle Kanaele und channel_layouts bleiben unveraendert', () => {
 		const stored = {
 			email: [{ metric_id: 'temperature', aggregation: 'max' }],
 			telegram: [{ metric_id: 'wind', aggregation: 'max' }],
@@ -415,18 +396,12 @@ describe('buildComparePresetSavePayload — Teil-Edit eines Kanals (#3039 F007)'
 			pickedIds: original.location_ids,
 			region: 'Salzburger Land',
 			idealRanges: {},
-			// Grundauswahl mit derselben Kennung: ihr Speicherformat ist die
-			// Soll-Form des Telegram-Edits (dieselbe Uebersetzung im Speicherweg).
 			activeMetricKeys: ['cloud_avg_pct'],
 			channelActiveMetricKeys: { email: null, telegram: ['cloud_avg_pct'], sms: null }
-		});
+		} as Parameters<typeof buildComparePresetSavePayload>[1]);
 
 		const dc = body.display_config as Record<string, unknown>;
-		const cam = dc.channel_active_metrics as Record<string, unknown>;
-		assert.deepEqual(cam.email, stored.email, 'email muss unveraendert bleiben');
-		assert.deepEqual(cam.sms, stored.sms, 'sms muss unveraendert bleiben');
-		assert.deepEqual(cam.telegram, dc.active_metrics, 'telegram traegt den neuen Wert');
-		assert.notDeepEqual(cam.telegram, stored.telegram);
+		assert.deepEqual(dc.channel_active_metrics, stored, 'Kanal-Bestand muss unveraendert bleiben');
 		assert.deepEqual(dc.channel_layouts, channelLayouts, 'channel_layouts muss erhalten bleiben');
 	});
 });
