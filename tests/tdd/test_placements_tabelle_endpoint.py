@@ -613,16 +613,14 @@ def _trip_kuerzel_in_sms(sms: str) -> set[str]:
 def _orte_kuerzel_in_sms(sms: str) -> set[str]:
     """Metrik-Kuerzel der Orte-SMS (#3172: Token-Zeile wie im Trip, laengstes
     passendes Symbol, ohne Doppelpunkt, Warnblock ausgenommen). Ein Bereich
-    ``D15/19`` sendet Tageshoechst UND -tiefst (``D``/``L``)."""
+    ``D15/19`` zaehlt nur als ``D`` -- ein eigenes ``L`` sendet die SMS dann
+    nicht, die Legende nennt es nicht (#3284)."""
     alle = _orte_symbole()
     out = set()
     for tok in sms.split(" "):
         treffer = [s for s in alle if tok.startswith(s)]
         if treffer and not tok.startswith("!"):
-            symbol = max(treffer, key=len)
-            out.add(symbol.rstrip(":"))
-            if symbol in ("D", "FD") and "/" in tok:
-                out.add({"D": "L", "FD": "FL"}[symbol])
+            out.add(max(treffer, key=len).rstrip(":"))
     return out
 
 
