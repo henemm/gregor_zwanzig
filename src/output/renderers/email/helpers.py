@@ -1286,9 +1286,13 @@ def telegram_metric_configs(rows, dc: UnifiedWeatherDisplayConfig) -> list:
 
     ``narrow.py``, ``build_friendly_keys`` und ``build_format_modes`` brauchen
     ``MetricConfig``. Nur ``enabled``-Zeilen, unbekannte IDs entfallen,
-    ``enabled=True``. ``bucket``/``sms_threshold`` aus dem Quell-Eintrag der
-    Grundauswahl (``ChannelRow`` traegt sie nicht); ``order`` = Resolver-Folge,
-    damit die Sortierung in ``render_for_channel`` ihr entspricht. Format:
+    ``enabled=True``. ``sms_threshold`` aus dem Quell-Eintrag der
+    Grundauswahl (``ChannelRow`` traegt ihn nicht); ``order`` = Resolver-Folge,
+    damit die Sortierung in ``render_for_channel`` ihr entspricht. ``bucket``
+    ist immer ``"primary"`` (#3283 B4): der Altwert der Grundauswahl
+    (``secondary``) wird nicht geerbt, sonst bekaeme eine Metrik vor der
+    achten Position keine Spalte; es gilt allein die Zaehlregel "ab der achten
+    Metrik" (ADR-0124 Nr. 3) ueber die Resolver-Folge. Format:
     ``None`` = Katalog-Standard: Quell-Eintrag unveraendert, sofern er den
     Katalog-Standard zeigt, sonst auf ihn zurueckgesetzt (nie als Roh gedeutet);
     ``raw`` -> ``format_mode="raw"`` + ``use_friendly_format=False``; sonst
@@ -1305,7 +1309,7 @@ def telegram_metric_configs(rows, dc: UnifiedWeatherDisplayConfig) -> list:
         except KeyError:
             continue
         quelle = grund.get(row.metric_id) or MetricConfig(metric_id=row.metric_id)
-        mc = dataclasses.replace(quelle, enabled=True, order=i)
+        mc = dataclasses.replace(quelle, enabled=True, order=i, bucket="primary")
         if row.format is None and _effective_format_mode(mc) != standard:
             # Katalog-Standard der Kanal-Zeile: ein abweichendes Format der
             # Grundauswahl (z. B. Roh) wird nicht geerbt.

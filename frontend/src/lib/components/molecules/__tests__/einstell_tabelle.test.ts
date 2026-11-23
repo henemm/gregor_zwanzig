@@ -286,3 +286,37 @@ describe('B3b: Ampelpunkt', () => {
 		assert.equal(elemente(zelle(ruht, 'gust', 'email').innen, 'data-slot="et-ampel"').length, 0);
 	});
 });
+
+// Issue #3283 B2/B1 (Spec docs/specs/modules/fix_3283_was_steht_wo_optik.md, AC-1/AC-2): schmale Zusatzspalten
+// (Stundenverlauf, Ausblick) zeigen nur Haken und Roh/Einfach, keinen Beispielwert; Raster 150 px/118 px aus Tokens.
+describe('#3283: schmale Zusatzspalten ohne Beispielwert, Raster nach Soll-Bild', () => {
+	const MIT_ZUSATZ = [
+		{
+			id: 'gust',
+			name: 'Böen',
+			zellen: {
+				email: an({ format: 'raw', beispiel: 'Gust 38' }),
+				telegram: an({ format: 'raw', beispiel: 'G 26-59@15' }),
+				sms: an({ beispiel: 'G32@6(59@15)' }),
+				hourly: an({ format: 'raw', beispiel: '28' }),
+				outlook: an({ format: 'raw', beispiel: '85 km/h' })
+			}
+		}
+	];
+	test('Stundenverlauf und Ausblick (schmal): kein et-beispiel, Knopf bleibt; Kanalspalten zeigen ihn', async () => {
+		const h = html(await lade(), props({ metriken: MIT_ZUSATZ }));
+		for (const stelle of ['hourly', 'outlook']) {
+			assert.equal(elemente(zelle(h, 'gust', stelle).innen, 'data-slot="et-beispiel"').length, 0, `${stelle}: Beispielwert in schmaler Spalte`);
+			assert.match(zelle(h, 'gust', stelle).innen, /<button\b/, `${stelle}: Roh/Einfach fehlt`);
+		}
+		for (const [stelle, wert] of [['email', 'Gust 38'], ['telegram', 'G 26-59@15'], ['sms', 'G32@6(59@15)']])
+			assert.equal(text(eins(zelle(h, 'gust', stelle).innen, 'data-slot="et-beispiel"').innen), wert);
+	});
+	test('Raster: Kanalspalten minmax(150px, 1fr), schmale Spalten 118px, nur über Tokens', async () => {
+		const h = html(await lade(), props());
+		const stil = attr(eins(h, 'data-slot="et-kopf"').auf, 'style') ?? '';
+		const spalten = stil.replace(/^.*grid-template-columns:\s*/, '').replace(/;.*$/, '').trim();
+		const kanal = 'minmax(var(--g-size-150px), 1fr)';
+		assert.equal(spalten, ['var(--g-size-22px)', 'minmax(var(--g-size-130px), 0.9fr)', kanal, kanal, kanal, 'var(--g-size-118px)', 'var(--g-size-118px)'].join(' '));
+	});
+});

@@ -213,6 +213,9 @@
     --g-size-130px:     130px;
     --g-size-160px:     160px;
     --g-size-190px:     190px;
+    /* #3283 B1: Einstell-Tabelle „Was steht wo“ (Mockup Fassung 4): Kanalspalten mindestens 150 px, Zusatzspalten 118 px. */
+    --g-size-150px:     150px;
+    --g-size-118px:     118px;
 
     /* #2913 Teil 2 (AC-11, K-3): Ampelfarben des Wetter-Reiters (Mockup Fassung 3). Grafische
        Elemente, je >= 3:1 gegen --g-card. Gelb ist gegenüber dem Mockup (#d69500, nur 2,6:1 auf Weiß)

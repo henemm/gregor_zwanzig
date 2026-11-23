@@ -287,7 +287,12 @@ test.describe('Karte „Was steht wo“', () => {
 				gespeichert = tabelleGespeichert(page, abo);
 				await zeile(karte, nachTaste[0]).scrollIntoViewIfNeeded();
 				const von = await mitte(zeile(karte, nachTaste[2]).getByTestId('drag-handle'));
-				const nach = await mitte(zeile(karte, nachTaste[0]).getByTestId('drag-handle'));
+				// Ziel im oberen Viertel der ersten Zeile, nicht in ihrer Mitte: die Ablage richtet sich nach der
+				// Mitte der gezogenen Zeile, und die kann höher sein als die Zielzeile (#3283: Fenster-Kinder wie
+				// „Tages-Höchsttemperatur“ ohne SMS-Beispiel liegen jetzt im gezogenen Paar, 63 statt 49 px).
+				// Über die Griffmitte landete deren Mitte knapp unter der Zielzeile, also eine Stelle zu tief.
+				const ziel = (await zeile(karte, nachTaste[0]).boundingBox())!;
+				const nach = { x: von.x, y: ziel.y + ziel.height / 4 };
 				await page.mouse.move(von.x, von.y);
 				await page.mouse.down();
 				await page.mouse.move(von.x, von.y - 12, { steps: 6 });
