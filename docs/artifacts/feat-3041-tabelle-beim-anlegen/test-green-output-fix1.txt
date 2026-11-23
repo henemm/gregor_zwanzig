@@ -1,0 +1,826 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl
+configfile: pyproject.toml
+plugins: xdist-3.8.0, timeout-2.4.0, anyio-4.14.2, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 131 items
+
+tests/tdd/test_3304_placements_vorschau.py ............................. [ 22%]
+....                                                                     [ 25%]
+tests/tdd/test_3237_placements_aus_grundauswahl.py ..................... [ 41%]
+....................................                                     [ 68%]
+tests/tdd/test_placements_tabelle_endpoint.py .......................... [ 88%]
+...............                                                          [100%]
+
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  /home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+==================================== PASSES ====================================
+_____ test_ac1_trip_vorschau_gleich_get_ansicht_nur_stored_false[standard] _____
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+_ test_ac1_trip_vorschau_gleich_get_ansicht_nur_stored_false[beide_briefings] __
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+_________ test_ac3_entwurf_ohne_rows_traegt_erstanlage_tabelle[route] __________
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+_________ test_ac3_entwurf_mit_rows_behaelt_genau_diese_zeilen[route] __________
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+__________ test_ac4_vorschau_schreibt_nichts_kein_etag_keine_kennung ___________
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+__________ test_ac9_regression_get_und_erstanlage_unveraendert[route] __________
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+____ test_fix1_trip_entwurf_ohne_kennung_gleich_get_ansicht[standard-fehlt] ____
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+____ test_fix1_trip_entwurf_ohne_kennung_gleich_get_ansicht[standard-leer] _____
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+_ test_fix1_trip_entwurf_ohne_kennung_gleich_get_ansicht[beide_briefings-fehlt] _
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+_ test_fix1_trip_entwurf_ohne_kennung_gleich_get_ansicht[beide_briefings-leer] _
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+______ test_fix1_trip_entwurf_ohne_kennung_direkt_am_dienst_unveraendert _______
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+__________ test_ac3_karte_ohne_rows_zeigt_grundauswahl_tabelle[route] __________
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+___ test_ac4_trip_anlage_tabelle_aendert_grosswetterlage_nicht[ohne_wunsch] ____
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+_ test_ac4_trip_anlage_tabelle_aendert_grosswetterlage_nicht[stabilitaet_aus] __
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+_ test_ac4_trip_anlage_tabelle_aendert_grosswetterlage_nicht[stabilitaet_an_altfeld_aus] _
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+_ test_ac4_trip_anlage_tabelle_aendert_grosswetterlage_nicht[stabilitaet_aus_altfeld_an] _
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+_______ test_f001_karte_und_erstanlage_zeigen_morgen_only_groesse[karte] _______
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+___ test_ac16_trip_jede_metrik_in_einer_folge_mit_zustand_form_und_beispiel ____
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+________________ test_ac16_trip_beispielwerte_aus_dem_renderer _________________
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+__________ test_ac16_trip_nur_tageswert_ab_der_achten_telegram_metrik __________
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+____________ test_ac17_trip_sms_beispiel_gleich_versand_und_marken _____________
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+_____________________ test_ac17_hochziehen_aendert_marken ______________________
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+_______ test_ac7_jede_gesperrte_kombination_als_locked_mit_grund[route] ________
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+_______ test_ac9_vorbelegung_ausblick_trip_und_orte[True-True-erwartet0] _______
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+______ test_ac9_vorbelegung_ausblick_trip_und_orte[True-False-erwartet1] _______
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+____________________ test_bloecke_trip_und_orte_aus_dem_abo ____________________
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+________ test_ac18_feste_zeile_nur_bei_eingeschalteten_warnungen[True] _________
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+________ test_ac18_feste_zeile_nur_bei_eingeschalteten_warnungen[False] ________
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+_______ test_legende_kuerzel_genau_der_sms_metriken_und_feste_eintraege ________
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+___________________________ test_get_schreibt_nichts ___________________________
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+______________________ test_fremdes_abo_ist_nicht_lesbar _______________________
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+_______ test_legende_hat_jedes_gesendete_kuerzel_mit_bedeutung[route-de] _______
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+_______ test_legende_hat_jedes_gesendete_kuerzel_mit_bedeutung[route-en] _______
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+_ test_f001_etappenname_mit_trennzeichen_verfaelscht_nichts[Tag 1: SU7-Tag 1: SU7 ] _
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+_ test_f001_etappenname_mit_trennzeichen_verfaelscht_nichts[W: G5 R1-W: G5 R1 ] _
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+________________ test_t2_t6_echte_app_route_und_kern_geheimnis _________________
+----------------------------- Captured stderr call -----------------------------
+2026-11-23 15:46:22,074 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+2026-11-23 15:46:22,074 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+2026-11-23 15:46:22,074 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+2026-11-23 15:46:22,074 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+2026-11-23 15:46:22,074 WARNING app.loader: Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+2026-11-23 15:46:22,074 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+2026-11-23 15:46:22,074 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+2026-11-23 15:46:22,074 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+2026-11-23 15:46:22,074 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+2026-11-23 15:46:22,074 WARNING app.loader: Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+__________ test_t7_antwort_haengt_nicht_am_tag_des_abrufs[route-t-t7] __________
+----------------------------- Captured stderr call -----------------------------
+2026-01-05 04:00:00,000 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+2026-01-05 04:00:00,000 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+2026-01-05 04:00:00,000 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+2026-01-05 04:00:00,000 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+2026-01-05 04:00:00,000 WARNING app.loader: Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+2026-01-05 04:00:00,000 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+2026-01-05 04:00:00,000 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+2026-01-05 04:00:00,000 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+2026-01-05 04:00:00,000 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+2026-01-05 04:00:00,000 WARNING app.loader: Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+2027-08-21 19:40:00,000 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+2027-08-21 19:40:00,000 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+2027-08-21 19:40:00,000 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+2027-08-21 19:40:00,000 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+2027-08-21 19:40:00,000 WARNING app.loader: Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+2027-08-21 19:40:00,000 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+2027-08-21 19:40:00,000 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+2027-08-21 19:40:00,000 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+2027-08-21 19:40:00,000 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+2027-08-21 19:40:00,000 WARNING app.loader: Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+________________ test_t8_metrik_name_in_der_sprache_des_nutzers ________________
+----------------------------- Captured stderr call -----------------------------
+2026-11-23 15:46:22,880 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+2026-11-23 15:46:22,880 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+2026-11-23 15:46:22,880 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+2026-11-23 15:46:22,880 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+2026-11-23 15:46:22,880 WARNING app.loader: Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+2026-11-23 15:46:22,880 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+2026-11-23 15:46:22,880 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+2026-11-23 15:46:22,880 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+2026-11-23 15:46:22,880 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+2026-11-23 15:46:22,880 WARNING app.loader: Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+2026-11-23 15:46:22,930 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+2026-11-23 15:46:22,930 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+2026-11-23 15:46:22,930 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+2026-11-23 15:46:22,930 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+2026-11-23 15:46:22,930 WARNING app.loader: Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+2026-11-23 15:46:22,930 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+2026-11-23 15:46:22,930 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+2026-11-23 15:46:22,930 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+2026-11-23 15:46:22,930 WARNING app.loader: Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+2026-11-23 15:46:22,930 WARNING app.loader: Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_low'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_mid'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_high'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'sunshine'; falling back to default 'symbol'
+=========================== short test summary info ============================
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac1_trip_vorschau_gleich_get_ansicht_nur_stored_false[standard]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac1_trip_vorschau_gleich_get_ansicht_nur_stored_false[beide_briefings]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac1_trip_mit_tabelle_vorschau_gleich_get_aber_stored_false
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac2_orte_vorschau_gleich_get_ansicht_inklusive_ortsanzahl
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac3_entwurf_ohne_rows_traegt_erstanlage_tabelle[route]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac3_entwurf_ohne_rows_traegt_erstanlage_tabelle[vergleich]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac3_entwurf_mit_rows_behaelt_genau_diese_zeilen[route]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac3_entwurf_mit_rows_behaelt_genau_diese_zeilen[vergleich]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac4_vorschau_schreibt_nichts_kein_etag_keine_kennung
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac5_nur_eigene_orte_fremde_id_und_fremde_user_id_ohne_wirkung
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac5_body_user_id_waehlt_keinen_fremden_bestand
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac7_kern_ohne_gueltige_art_ist_400_kind_required[params0]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac7_kern_ohne_gueltige_art_ist_400_kind_required[params1]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac7_kern_ohne_gueltige_art_ist_400_kind_required[params2]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac8_kern_unlesbarer_entwurf_ist_422_invalid_preset[route-liste]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac8_kern_unlesbarer_entwurf_ist_422_invalid_preset[vergleich-liste]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac8_kern_unlesbarer_entwurf_ist_422_invalid_preset[route-unlesbar]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac8_kern_unlesbarer_entwurf_ist_422_invalid_preset[vergleich-text]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac8_unlesbarer_entwurf_text_ohne_platzhalter_und_ohne_orte_abo[route-de]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac8_unlesbarer_entwurf_text_ohne_platzhalter_und_ohne_orte_abo[route-en]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac8_unlesbarer_entwurf_text_ohne_platzhalter_und_ohne_orte_abo[vergleich-de]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac8_unlesbarer_entwurf_text_ohne_platzhalter_und_ohne_orte_abo[vergleich-en]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac9_regression_get_und_erstanlage_unveraendert[route]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac9_regression_get_und_erstanlage_unveraendert[vergleich]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac10_pfad_ist_vorschau_auch_bei_abo_namens_placements[route]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_ac10_pfad_ist_vorschau_auch_bei_abo_namens_placements[vergleich]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_fix1_trip_entwurf_ohne_kennung_gleich_get_ansicht[standard-fehlt]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_fix1_trip_entwurf_ohne_kennung_gleich_get_ansicht[standard-leer]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_fix1_trip_entwurf_ohne_kennung_gleich_get_ansicht[beide_briefings-fehlt]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_fix1_trip_entwurf_ohne_kennung_gleich_get_ansicht[beide_briefings-leer]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_fix1_trip_entwurf_ohne_kennung_direkt_am_dienst_unveraendert
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_fix1_orte_entwurf_ohne_kennung_gleich_get_ansicht[fehlt]
+PASSED tests/tdd/test_3304_placements_vorschau.py::test_fix1_orte_entwurf_ohne_kennung_gleich_get_ansicht[leer]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac1_ac2_volle_tabelle_aus_grundauswahl[trip-_trip_dc]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac1_ac2_volle_tabelle_aus_grundauswahl[compare-_orte_dc]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac1_outlook_reports_nach_vorbelegung[trip-None-erwartet0]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac1_outlook_reports_nach_vorbelegung[trip-enabled1-erwartet1]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac1_outlook_reports_nach_vorbelegung[trip-enabled2-erwartet2]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac1_outlook_reports_nach_vorbelegung[compare-enabled3-erwartet3]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac1_outlook_reports_nach_vorbelegung[compare-enabled4-erwartet4]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac2_orte_ausblick_ausgeschaltet_ergibt_leere_briefings
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac3_altfelder_wirken_nicht_auf_die_quelle[trip-_trip_dc-alt0]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac3_altfelder_wirken_nicht_auf_die_quelle[compare-_orte_dc-alt1]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_quelle_veraendert_die_eingabe_nicht
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac3_versandweg_ohne_rows_liest_grundauswahl_tabelle[morning-trip-_trip_dc-alt0]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac3_versandweg_ohne_rows_liest_grundauswahl_tabelle[morning-compare-_orte_dc-alt1]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac3_versandweg_ohne_rows_liest_grundauswahl_tabelle[evening-trip-_trip_dc-alt0]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac3_versandweg_ohne_rows_liest_grundauswahl_tabelle[evening-compare-_orte_dc-alt1]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac3_karte_ohne_rows_zeigt_grundauswahl_tabelle[route]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac3_karte_ohne_rows_zeigt_grundauswahl_tabelle[vergleich]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac1_ac2_ac10_erstanlage_liefert_volle_tabelle_je_nutzer[route]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac1_ac2_ac10_erstanlage_liefert_volle_tabelle_je_nutzer[route_nur_morgen]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac1_ac2_ac10_erstanlage_liefert_volle_tabelle_je_nutzer[vergleich]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac2_erstanlage_vergleich_folgt_ausblick_schalter[False-ausblick0]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac2_erstanlage_vergleich_folgt_ausblick_schalter[True-ausblick1]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_f002_erstanlage_ohne_gueltige_art_ist_400[fehlt]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_f002_erstanlage_ohne_gueltige_art_ist_400[leer]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_f002_erstanlage_ohne_gueltige_art_ist_400[unbekannt]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_f002_erstanlage_ohne_gueltige_art_ist_400[grossgeschrieben]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_f002_erstanlage_ungueltige_kennung_ist_404[punktpunkt-route]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_f002_erstanlage_ungueltige_kennung_ist_404[punktpunkt-vergleich]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_f002_erstanlage_ungueltige_kennung_ist_404[lang300-route]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_f002_erstanlage_ungueltige_kennung_ist_404[lang300-vergleich]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_f002_erstanlage_ungueltige_kennung_ist_404[lang5000-route]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_f002_erstanlage_ungueltige_kennung_ist_404[lang5000-vergleich]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_f002_erstanlage_ungueltige_user_id_ist_404[pfad-route]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_f002_erstanlage_ungueltige_user_id_ist_404[pfad-vergleich]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_f002_erstanlage_ungueltige_user_id_ist_404[leerzeichen-route]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_f002_erstanlage_ungueltige_user_id_ist_404[leerzeichen-vergleich]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_f002_erstanlage_ungueltige_user_id_ist_404[punkt-route]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_f002_erstanlage_ungueltige_user_id_ist_404[punkt-vergleich]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac4_trip_anlage_tabelle_aendert_grosswetterlage_nicht[ohne_wunsch]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac4_trip_anlage_tabelle_aendert_grosswetterlage_nicht[stabilitaet_aus]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac4_trip_anlage_tabelle_aendert_grosswetterlage_nicht[stabilitaet_an_altfeld_aus]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac4_trip_anlage_tabelle_aendert_grosswetterlage_nicht[stabilitaet_aus_altfeld_an]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac7_metrics_for_channel_quelle_tabelle_oder_grundauswahl[email]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac7_metrics_for_channel_quelle_tabelle_oder_grundauswahl[telegram]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac7_metrics_for_channel_quelle_tabelle_oder_grundauswahl[sms]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac7_metrics_for_channel_quelle_tabelle_oder_grundauswahl[outlook]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_f001_anlage_tabelle_enthaelt_morgen_only_groesse
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_f001_karte_und_erstanlage_zeigen_morgen_only_groesse[karte]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_f001_karte_und_erstanlage_zeigen_morgen_only_groesse[erstanlage]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_f001_metrics_for_channel_enthaelt_morgen_only_groesse[email]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_f001_metrics_for_channel_enthaelt_morgen_only_groesse[telegram]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_f001_metrics_for_channel_enthaelt_morgen_only_groesse[sms]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac7_f006_premium_sms_folgt_sms_unbekannter_kanal_422
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac8_orte_soll_ohne_rows_folgt_grundauswahl_nicht_altfeldern
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac8_orte_soll_mit_tabelle_ignoriert_altfelder
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac8_trip_soll_ohne_rows_folgt_grundauswahl_nicht_altfeldern[morning]
+PASSED tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac8_trip_soll_ohne_rows_folgt_grundauswahl_nicht_altfeldern[evening]
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_ac16_trip_jede_metrik_in_einer_folge_mit_zustand_form_und_beispiel
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_ac16_trip_beispielwerte_aus_dem_renderer
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_ac16_trip_nur_tageswert_ab_der_achten_telegram_metrik
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_ac16_orte_spalten_zeilen_formen_und_beispiele[3]
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_ac16_orte_spalten_zeilen_formen_und_beispiele[1]
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_ac17_trip_sms_beispiel_gleich_versand_und_marken
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_ac17_orte_sms_beispiel_gleich_versand_und_marken[3]
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_ac17_orte_sms_beispiel_gleich_versand_und_marken[1]
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_ac17_hochziehen_aendert_marken
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_ac7_jede_gesperrte_kombination_als_locked_mit_grund[route]
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_ac7_jede_gesperrte_kombination_als_locked_mit_grund[vergleich]
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_ac9_vorbelegung_ausblick_trip_und_orte[True-True-erwartet0]
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_ac9_vorbelegung_ausblick_trip_und_orte[True-False-erwartet1]
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_bloecke_trip_und_orte_aus_dem_abo
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_ac18_feste_zeile_nur_bei_eingeschalteten_warnungen[True]
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_ac18_feste_zeile_nur_bei_eingeschalteten_warnungen[False]
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_legende_kuerzel_genau_der_sms_metriken_und_feste_eintraege
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_abo_ohne_tabelle_zeigt_die_umrechnung
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_orte_ohne_tabelle_zeigt_die_umrechnung
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_get_schreibt_nichts
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_fremdes_abo_ist_nicht_lesbar
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_robustheit_kind_kennung_und_user_id
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_legende_hat_jedes_gesendete_kuerzel_mit_bedeutung[route-de]
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_legende_hat_jedes_gesendete_kuerzel_mit_bedeutung[route-en]
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_legende_hat_jedes_gesendete_kuerzel_mit_bedeutung[vergleich-de]
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_legende_hat_jedes_gesendete_kuerzel_mit_bedeutung[vergleich-en]
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_f001_etappenname_mit_trennzeichen_verfaelscht_nichts[Tag 1: SU7-Tag 1: SU7 ]
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_f001_etappenname_mit_trennzeichen_verfaelscht_nichts[W: G5 R1-W: G5 R1 ]
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_f002_ortsname_mit_trennzeichen_verfaelscht_nichts[1]
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_f002_ortsname_mit_trennzeichen_verfaelscht_nichts[3]
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_f003_ueberlange_kennung_ist_kein_serverfehler
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_f004_verschmolzenes_token_steht_bei_beiden_haelften
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_t2_t6_echte_app_route_und_kern_geheimnis
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_t5_orte_nur_aus_dem_bestand_des_nutzers
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_t7_antwort_haengt_nicht_am_tag_des_abrufs[route-t-t7]
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_t7_antwort_haengt_nicht_am_tag_des_abrufs[vergleich-o-t7]
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_t7_beispieldaten_sind_an_die_version_gebunden
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_t8_metrik_name_in_der_sprache_des_nutzers
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_t9_reines_morgen_abo_zeigt_das_morgen_briefing
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_t9_parent_nennt_die_eltern_zeile
+PASSED tests/tdd/test_placements_tabelle_endpoint.py::test_3172_f002_sms_beispielwert_folgt_der_abo_ampel
+======================= 131 passed, 2 warnings in 12.93s =======================

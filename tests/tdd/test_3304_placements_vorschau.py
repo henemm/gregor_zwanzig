@@ -395,3 +395,78 @@ def test_ac10_pfad_ist_vorschau_auch_bei_abo_namens_placements(client, kind):
     assert vorschau["stored"] is False
     assert vorschau != abo
     assert _ohne_stored(vorschau) == _ohne_stored(_get_ok(client, "anders3304", kind))
+
+
+# ---------------------------------------------------------------------------
+# Fix 1 (Staging-Befund): Entwurf in Anlage-Form OHNE Kennung
+# ---------------------------------------------------------------------------
+
+def _ohne_kennung(entwurf: dict) -> dict:
+    """Entwurf so, wie die Anlage ihn vor dem Speichern traegt: ohne ``id``
+    und ohne die daraus abgeleitete ``display_config.trip_id`` (die Kennung
+    vergibt erst die Anlage). Etappen und Wegpunkte behalten ihre Kennungen,
+    wie ``buildCreateTripPayload`` sie mitschickt."""
+    entwurf = copy.deepcopy(entwurf)
+    entwurf.pop("id", None)
+    entwurf.get("display_config", {}).pop("trip_id", None)
+    return entwurf
+
+
+@pytest.mark.parametrize("leer", [None, ""], ids=["fehlt", "leer"])
+@pytest.mark.parametrize("rc", [None, _rc_beide()], ids=["standard", "beide_briefings"])
+def test_fix1_trip_entwurf_ohne_kennung_gleich_get_ansicht(client, rc, leer):
+    """AC-1 (Staging-Befund): GIVEN ein Trip-Entwurf in Anlage-Form ohne
+    Kennung (Etappen mit Wegpunkten, ``display_config.metrics``) WHEN Vorschau
+    (kind=route) THEN 200, ``stored=false`` und dieselbe Ansicht wie das GET
+    eines gleich konfigurierten gespeicherten Trips. Keine Ausnahme noetig:
+    die Antwort traegt kein kennungsabhaengiges Feld (AC-4 -- weder ``id``
+    noch ``entity_id``/``briefing_id``), daher Vergleich aller Felder ausser
+    ``stored``."""
+    datei = _trip(NUTZER_A, "ohne3304-trip", rc=rc)
+    gespeichert = _get_ok(client, "ohne3304-trip", "route")
+    entwurf = _ohne_kennung(_entwurf(datei))
+    if leer is not None:
+        entwurf["id"] = leer
+    unveraendert = copy.deepcopy(entwurf)
+    vorher = _baum()
+
+    vorschau = _vorschau_ok(client, "route", entwurf)
+
+    assert set(vorschau) == SCHLUESSEL
+    assert vorschau["stored"] is False
+    assert _ohne_stored(vorschau) == _ohne_stored(gespeichert)
+    assert not {"id", "entity_id", "briefing_id"} & set(vorschau)
+    assert entwurf == unveraendert, "Entwurf des Aufrufers darf nicht veraendert werden"
+    assert _baum() == vorher
+
+
+def test_fix1_trip_entwurf_ohne_kennung_direkt_am_dienst_unveraendert():
+    """Kopie statt Veraenderung: der Dienst ergaenzt die Platzhalter-Kennung
+    nur intern; das uebergebene Woerterbuch bleibt ohne ``id``."""
+    from services.placements_view_service import build_placements_preview
+
+    entwurf = _ohne_kennung(_entwurf(_trip(NUTZER_A, "dienst3304")))
+    unveraendert = copy.deepcopy(entwurf)
+    antwort = build_placements_preview("route", entwurf, NUTZER_A)
+    assert antwort["stored"] is False
+    assert entwurf == unveraendert
+
+
+@pytest.mark.parametrize("leer", [None, ""], ids=["fehlt", "leer"])
+def test_fix1_orte_entwurf_ohne_kennung_gleich_get_ansicht(client, leer):
+    """AC-2 (Absicherung): GIVEN ein Orts-Vergleich-Entwurf ohne Kennung WHEN
+    Vorschau (kind=vergleich) THEN 200, ``stored=false``, gleiche Ansicht
+    wie das GET des gleich konfigurierten gespeicherten Vergleichs."""
+    datei = _orte(NUTZER_A, "ohne3304-orte", anzahl=2)
+    gespeichert = _get_ok(client, "ohne3304-orte", "vergleich")
+    entwurf = _ohne_kennung(_entwurf(datei))
+    if leer is not None:
+        entwurf["id"] = leer
+    unveraendert = copy.deepcopy(entwurf)
+
+    vorschau = _vorschau_ok(client, "vergleich", entwurf)
+
+    assert vorschau["stored"] is False
+    assert vorschau["location_count"] == 2
+    assert _ohne_stored(vorschau) == _ohne_stored(gespeichert)
+    assert entwurf == unveraendert

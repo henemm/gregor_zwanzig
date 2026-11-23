@@ -113,6 +113,7 @@ def build_placements_preview(kind: str, draft, user_id: str) -> dict:
     if not isinstance(draft, dict):
         raise EntwurfUnlesbar(type(draft).__name__)
     lang = resolve_user_lang(user_id)
+    draft = _mit_platzhalter_kennung(draft)
     try:
         if kind == "route":
             abo, muster_fn = _trip_abo_aus(_entwurf_trip(draft), lang)
@@ -121,6 +122,19 @@ def build_placements_preview(kind: str, draft, user_id: str) -> dict:
     except (LookupError, TypeError, ValueError, AttributeError) as e:
         raise EntwurfUnlesbar(str(e)) from e
     return {**_ansicht(kind, abo, muster_fn, lang), "stored": False}
+
+
+#: Kennung eines Entwurfs ohne ``id`` (die vergibt erst die Anlage). Nur
+#: intern zum Lesen; die Antwort traegt keine Kennung (AC-4).
+ENTWURF_KENNUNG = "entwurf"
+
+
+def _mit_platzhalter_kennung(draft: dict) -> dict:
+    """Flache Kopie mit Platzhalter-Kennung, wenn ``id`` fehlt oder leer ist;
+    der Entwurf des Aufrufers bleibt unveraendert."""
+    if draft.get("id"):
+        return draft
+    return {**draft, "id": ENTWURF_KENNUNG}
 
 
 def _entwurf_trip(draft: dict):
