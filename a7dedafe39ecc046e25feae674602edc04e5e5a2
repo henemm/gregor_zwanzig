@@ -1,0 +1,73 @@
+{
+  "verified_commit": "a7dedafe39ecc046e25feae674602edc04e5e5a2",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/api/briefings/placements/vorschau?kind=route",
+      "evidence": "Staging a7dedafe3, echter Login DE und EN: Trip-Entwurf ohne id -> 200, stored=false, Ansicht mit columns/blocks/legend",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "/api/briefings/placements/vorschau?kind=vergleich",
+      "evidence": "Orte-Entwurf DE und EN -> 200, stored=false",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "/api/briefings/placements/vorschau?kind=vergleich",
+      "evidence": "unbekannte Orts-ID -> location_count 0 (DE und EN); Zwei-Nutzer-Isolation zusaetzlich in Kern-Tests",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "/api/briefings/placements/vorschau",
+      "evidence": "ohne Anmeldung 401",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "/api/briefings/placements/vorschau",
+      "evidence": "ohne kind 400 kind_required, Text DE und EN aus Katalog",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-8",
+      "status": "PASS",
+      "url": "/api/briefings/placements/vorschau?kind=route",
+      "evidence": "kaputtes JSON 400, 300 KB 413, unlesbarer Entwurf 422 invalid_preset mit Katalogtext DE/EN ohne Platzhalter",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "Mailweg",
+      "evidence": "staging_mail_pruefen.py --typ beide (de) und --lang en: Trip- und Vergleichsmail zugestellt, Validatoren Exit 0",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    }
+  ],
+  "verified_at": "2026-11-23T19:53:00.125794+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Vorschau-Endpunkt auf Staging mit echtem Login DE/EN geprueft (Trip/Orte-Entwurf, 401/400/413/422), Mailweg Trip+Vergleich DE/EN Exit 0",
+  "scope": "backend",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "fix-3273-trip-grundauswahl-ohne-metrics": {
+      "verdict": "VERIFIED: Vorschau-Endpunkt auf Staging mit echtem Login DE/EN geprueft (Trip/Orte-Entwurf, 401/400/413/422), Mailweg Trip+Vergleich DE/EN Exit 0",
+      "scope": "backend",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-23T19:53:00.125794+00:00"
+    }
+  }
+}
