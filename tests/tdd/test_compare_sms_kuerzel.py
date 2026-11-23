@@ -620,6 +620,39 @@ def test_ac2_gefuehlte_hoechst_und_tiefsttemperatur_tragen_fd_und_fl():
         )
 
 
+def test_gefuehlter_bereich_ohne_werte_zeigt_fragezeichen():
+    """#3284: ``orte_sms._BEREICH`` wird jetzt aus ``BEREICH_PAARE`` (Builder)
+    abgeleitet. Fehlen an einem Ort die gefuehlten Werte, muss auch der
+    gefuehlte Bereich ``FD`` beide Haelften als ``?`` zeigen (``FD?/?``), nicht
+    ``FD-/-`` -- sonst fehlt ``FD``->``FL`` in der Bereichs-Zuordnung."""
+    loc = LocationResult(
+        location=_loc("a", "Innsbruck"), wind_chill_max=None, wind_chill_min=None,
+        hourly_data=_daily_points(),
+    )
+    sms = render_compare_sms(
+        _result([loc]), enabled_metrics=["wind_chill_max", "wind_chill_min", "wind_max"],
+    )
+    part = _location_part(sms)
+
+    assert "FD?/?" in part.split(" "), f"Ortsteil {part!r} zeigt nicht `FD?/?`. SMS: {sms!r}"
+
+
+def test_temperatur_bereich_ohne_werte_zeigt_fragezeichen():
+    """#3284: Gegenstueck fuer den gemessenen Bereich -- ``_BEREICH`` (aus
+    ``BEREICH_PAARE``) muss auch ``D``->``L`` fuehren, sonst bleibt ``D-/-``
+    statt ``D?/?`` stehen, wenn die Temperaturwerte am Ort fehlen."""
+    loc = LocationResult(
+        location=_loc("a", "Innsbruck"), temp_max=None, temp_min=None,
+        hourly_data=_daily_points(),
+    )
+    sms = render_compare_sms(
+        _result([loc]), enabled_metrics=["temp_max", "temp_min", "wind_max"],
+    )
+    part = _location_part(sms)
+
+    assert "D?/?" in part.split(" "), f"Ortsteil {part!r} zeigt nicht `D?/?`. SMS: {sms!r}"
+
+
 def test_ac1_ac2_beide_richtungen_bleiben_unterscheidbar():
     """Regressionsschutz zum ersetzten Vorzeichen-Test: der Grund fuer `+`/`-`
     war, dass `D 24 D 9` nicht zuordenbar waere. Mit eigenen Kuerzeln bleibt

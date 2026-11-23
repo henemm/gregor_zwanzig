@@ -262,7 +262,7 @@ def _legende(zeilen: list[dict], surface: str, vm, lang: str) -> dict:
     Nutzers (``None``, wo der Katalog keine fuehrt -- kein erfundener Text);
     dazu die festen Eintraege als Token mit Kennung."""
     from app.metric_catalog import kuerzel_bedeutung
-    from output.tokens.builder import UNAVAILABLE_SYMBOL
+    from output.tokens.builder import BEREICH_PAARE, UNAVAILABLE_SYMBOL
     from output.tokens.hazard_symbols import (
         HAZARD_SMS_SYMBOLS, LEVEL_LETTERS, alert_entry_token_parts,
     )
@@ -274,7 +274,18 @@ def _legende(zeilen: list[dict], surface: str, vm, lang: str) -> dict:
         for kuerzel, quelle in dict.fromkeys(_sms_kuerzel(z["metric_id"], surface, vm)):
             metriken.append({"metric_id": z["metric_id"], "kuerzel": kuerzel,
                              "meaning": kuerzel_bedeutung(quelle, kuerzel, lang)})
-    warnung = "!" + "".join(alert_entry_token_parts(
+    # #3284: Stehen Tiefst- UND Hoechstwert eines Paares in der Liste, sendet
+    # die SMS nur das Bereichs-Token unter dem Hoechstwert-Kuerzel ('D13/27',
+    # Builder #1824) -- das Tiefstwert-Kuerzel kommt nicht vor.
+    for tief, hoch in BEREICH_PAARE:
+        e_tief = next((e for e in metriken if e["kuerzel"] == tief), None)
+        e_hoch = next((e for e in metriken if e["kuerzel"] == hoch), None)
+        if e_tief is None or e_hoch is None:
+            continue
+        teile = [m for m in (e_tief["meaning"], e_hoch["meaning"]) if m]
+        e_hoch["meaning"] = "/".join(teile) if len(teile) == 2 else None
+        metriken.remove(e_tief)
+    warnung = "!" +"".join(alert_entry_token_parts(
         HAZARD_SMS_SYMBOLS["thunderstorm"], LEVEL_LETTERS[4], 14))
     lawine = "".join(alert_entry_token_parts(HAZARD_SMS_SYMBOLS["avalanche_bulletin"], "4", None))
     fest = [("@14", "zeit_ab_gelb"), (warnung, "amtliche_warnung"),
