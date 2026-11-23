@@ -225,3 +225,40 @@ func placementsRumpf(w http.ResponseWriter, r *http.Request) (json.RawMessage, b
 	}
 	return json.RawMessage(kompakt.Bytes()), true
 }
+
+// placementsVorschauMaxBytes: Grenze des Entwurfs der Vorschau (#3304, AC-8).
+const placementsVorschauMaxBytes = 256 << 10
+
+// BriefingPlacementsPreviewHandler: POST /api/briefings/placements/vorschau
+// (#3304). Tabelle "Was steht wo" fuer einen noch nicht angelegten Entwurf:
+// Anmeldung, kind, Groesse und JSON-Objekt pruefen, dann den unveraenderten
+// Entwurf an den Kern reichen. Kein Store-Zugriff, kein ETag, nichts wird
+// geschrieben; die Orte liest der Kern im Bestand des angemeldeten Nutzers.
+func BriefingPlacementsPreviewHandler(pythonURL string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if middleware.UserIDFromContext(r.Context()) == "" {
+			WriteError(w, r, http.StatusUnauthorized, "unauthorized", nil)
+			return
+		}
+		kind := r.URL.Query().Get("kind")
+		if !isValidBriefingKind(kind) {
+			WriteError(w, r, http.StatusBadRequest, "kind_required", nil)
+			return
+		}
+		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, placementsVorschauMaxBytes))
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			WriteError(w, r, http.StatusRequestEntityTooLarge, "payload_too_large", nil)
+			return
+		}
+		var objekt map[string]json.RawMessage
+		if bailIf(w, r, err != nil || json.Unmarshal(body, &objekt) != nil || objekt == nil,
+			http.StatusBadRequest, "bad_request") {
+			return
+		}
+		r.Body = io.NopCloser(bytes.NewReader(body))
+		// Nur kind geht weiter; user_id setzt forwardPreview aus der Anmeldung.
+		r.URL.RawQuery = url.Values{"kind": {kind}}.Encode()
+		forwardPreview(w, r, http.MethodPost, pythonURL+"/api/briefings/placements/vorschau", previewProxyTimeout)
+	}
+}

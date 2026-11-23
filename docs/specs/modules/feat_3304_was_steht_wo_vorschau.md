@@ -82,7 +82,7 @@ Die Karte „Was steht wo“ lädt heute nur für ein gespeichertes Abo (`GET /a
 
 **Kein Schreiben.** Der Service ruft keine Speicherfunktion und kein Anlegen. Der Router gibt weder ETag noch `If-Match`.
 
-**Python-Router.** `POST /api/briefings/placements/vorschau` wird als eigener fester Pfad registriert. Er steht in derselben Datei, aber ohne `{entity_id}`-Segment an der Stelle des Pfadteils `placements`; die bestehenden `GET /api/briefings/{entity_id}/placements(/erstanlage)` haben andere Methode und Segmentstruktur. Fehler: `kind` fehlt/unbekannt: `_error("kind_required")` (400); Entwurf kein Objekt oder von `load_trip`/`compare_preset_to_dict` nicht lesbar: `invalid_preset` (422), alle Texte über `error_body` in der Nutzersprache.
+**Python-Router.** `POST /api/briefings/placements/vorschau` wird als eigener fester Pfad registriert. Er steht in derselben Datei, aber ohne `{entity_id}`-Segment an der Stelle des Pfadteils `placements`; die bestehenden `GET /api/briefings/{entity_id}/placements(/erstanlage)` haben andere Methode und Segmentstruktur. Fehler: `kind` fehlt/unbekannt: `_error("kind_required")` (400); Entwurf kein Objekt oder von `load_trip`/`compare_preset_to_dict` nicht lesbar: `invalid_preset` (422) mit Text aus `versand.vorschau.entwurf_unlesbar` (`error_body(..., text_key=...)`), alle Texte über `error_body` in der Nutzersprache.
 
 **Go-Handler.** `BriefingPlacementsPreviewHandler(pythonURL)`: Nutzer aus `middleware.UserIDFromContext`, leer → 401 `unauthorized`; `kind` über `isValidBriefingKind`, sonst 400 `kind_required`; Körper über `http.MaxBytesReader` auf 256 KB begrenzt und vollständig gelesen: `*http.MaxBytesError` → 413 `payload_too_large`, kein gültiges JSON-Objekt → 400 `bad_request`; erst danach `forwardPreview(w, r, POST, pythonURL+"/api/briefings/placements/vorschau", previewProxyTimeout)` mit dem gelesenen Körper und nur `kind` in der Query (Client-`user_id` fällt weg, `forwardPreview` setzt die echte). Kein Store-Zugriff nötig, also kein `WithUser`; dennoch bleibt die Isolation durch die Python-Seite (Orte aus dem Bestand des Nutzers).
 
@@ -166,3 +166,4 @@ Test-Politik: kein Mock-Theater. Python-Tests nutzen echte Dateien im temporäre
 ## Changelog
 
 - 2026-11-23: Initial spec created (Teil A von #3041, Issue #3304, Epic #3122).
+- 2026-11-23: Fehlercode nach Adversary F001: Code bleibt 422 `invalid_preset` (AC-8 freigegeben), der Text kommt aber aus dem eigenen Katalogschlüssel `versand.vorschau.entwurf_unlesbar` (DE/EN) statt „Orte-Abo nicht versendbar: {reason}“ (offener Platzhalter, bei Trips falsch).

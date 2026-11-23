@@ -92,6 +92,60 @@ def build_placements_view(kind: str, entity_id: str, user_id: str) -> dict:
         abo, muster_fn = _trip_abo(entity_id, user_id, lang)
     else:
         abo, muster_fn = _orte_abo(entity_id, user_id, lang)
+    return _ansicht(kind, abo, muster_fn, lang)
+
+
+class EntwurfUnlesbar(ValueError):
+    """Der Entwurf der Vorschau ist kein lesbares Trip-/Orte-Objekt (#3304)."""
+
+
+def build_placements_preview(kind: str, draft, user_id: str) -> dict:
+    """#3304: Ansicht wie ``build_placements_view`` fuer einen NICHT
+    gespeicherten Entwurf (Koerper der Anlage). Schreibt nichts; ``stored``
+    ist immer ``False``. Orte nur aus dem Bestand von ``user_id`` (fremde und
+    unbekannte IDs entfallen still); die ``id`` des Entwurfs laedt nichts.
+    ``ValueError`` bei unbekanntem ``kind``, ``EntwurfUnlesbar`` bei einem
+    Entwurf, der kein lesbares Objekt ist."""
+    from i18n import resolve_user_lang
+
+    if kind not in KINDS:
+        raise ValueError(kind)
+    if not isinstance(draft, dict):
+        raise EntwurfUnlesbar(type(draft).__name__)
+    lang = resolve_user_lang(user_id)
+    try:
+        if kind == "route":
+            abo, muster_fn = _trip_abo_aus(_entwurf_trip(draft), lang)
+        else:
+            abo, muster_fn = _orte_abo_aus(_entwurf_preset(draft), user_id, lang)
+    except (LookupError, TypeError, ValueError, AttributeError) as e:
+        raise EntwurfUnlesbar(str(e)) from e
+    return {**_ansicht(kind, abo, muster_fn, lang), "stored": False}
+
+
+def _entwurf_trip(draft: dict):
+    from app.loader import LoaderError, load_trip
+
+    try:
+        return load_trip(draft)
+    except LoaderError as e:
+        raise EntwurfUnlesbar(str(e)) from e
+
+
+def _entwurf_preset(draft: dict) -> dict:
+    """Wie ``load_compare_presets`` eine Datei liest, nur aus dem Koerper."""
+    from app.loader import (
+        _migrate_preset_display_config, compare_preset_from_dict, compare_preset_to_dict,
+    )
+
+    if "display_config" in draft:
+        draft = {**draft, "display_config": _migrate_preset_display_config(draft["display_config"])}
+    return compare_preset_to_dict(compare_preset_from_dict(draft))
+
+
+def _ansicht(kind, abo: _Abo, muster_fn, lang) -> dict:
+    """Gemeinsamer Rest von GET und Vorschau: Tabelle aufloesen, Muster
+    rendern, Antwort bauen."""
     report_type = "morning" if abo.enabled_reports == ("morning",) else "evening"
     vm, placements, gespeichert = _tabelle_aufloesen(abo, report_type)
     muster = muster_fn(vm, report_type)
@@ -310,12 +364,19 @@ def _legende(zeilen: list[dict], surface: str, vm, lang: str) -> dict:
 
 def _trip_abo(entity_id: str, user_id: str, lang: str):
     from app.loader import get_data_root, load_trip
-    from app.models import UnifiedWeatherDisplayConfig, slot_aktiv
-    from services.amtliche_warnungen_schalter import amtliche_warnungen_an_trip
 
     trip = load_trip(entity_id, data_dir=get_data_root(), user_id=user_id)
     if trip is None:
         raise AboNichtGefunden(entity_id)
+    return _trip_abo_aus(trip, lang)
+
+
+def _trip_abo_aus(trip, lang: str):
+    """``_Abo`` und Muster-Funktion aus einem Trip-Objekt (gespeichert oder
+    Entwurf der Vorschau, #3304)."""
+    from app.models import UnifiedWeatherDisplayConfig, slot_aktiv
+    from services.amtliche_warnungen_schalter import amtliche_warnungen_an_trip
+
     dc = trip.display_config or UnifiedWeatherDisplayConfig(trip_id=trip.id)
     rc = trip.report_config
     abo = _Abo(
@@ -588,14 +649,21 @@ def _telegram_kurzuebersicht(bubbles: list[str], ids: list[str], lang: str) -> d
 
 def _orte_abo(entity_id: str, user_id: str, lang: str):
     from app.loader import compare_preset_to_dict, get_data_root, load_compare_presets
-    from services.amtliche_warnungen_schalter import amtliche_warnungen_an_preset
-    from services.compare_slot_scheduler import resolve_preset_slots
 
     treffer = next((p for p in load_compare_presets(user_id=user_id, data_root=get_data_root())
                     if p.id == entity_id), None)
     if treffer is None:
         raise AboNichtGefunden(entity_id)
-    preset = compare_preset_to_dict(treffer)
+    return _orte_abo_aus(compare_preset_to_dict(treffer), user_id, lang)
+
+
+def _orte_abo_aus(preset: dict, user_id: str, lang: str):
+    """``_Abo`` und Muster-Funktion aus einem Preset-Woerterbuch (gespeichert
+    oder Entwurf der Vorschau, #3304); Orte nur aus dem Bestand von
+    ``user_id``."""
+    from services.amtliche_warnungen_schalter import amtliche_warnungen_an_preset
+    from services.compare_slot_scheduler import resolve_preset_slots
+
     slots = resolve_preset_slots(preset)
     dc = preset.get("display_config") or {}
     orte = _orte_des_abos(preset, user_id)

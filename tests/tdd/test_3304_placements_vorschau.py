@@ -262,9 +262,11 @@ def test_ac5_nur_eigene_orte_fremde_id_und_fremde_user_id_ohne_wirkung(client):
     vorschau_b = {**vorschau_a, "user_id": NUTZER_A,
                   "location_ids": [ids_a[0], "gibt-es-nicht", *ids_b]}
     antwort_b = _vorschau_ok(client, "vergleich", vorschau_b, user=NUTZER_B)
-    text_b = json.dumps(antwort_b, ensure_ascii=False)
     assert antwort_b["location_count"] == len(ids_b) == 2
-    assert any(name in text_b for name in NAMEN_B), "B sieht seine eigenen Orte"
+    # Ortsnamen stehen in keiner Antwort (auch nicht im GET des eigenen Abos);
+    # Nachweis "B sieht seine eigenen Orte" daher ueber die GET-Ansicht von B.
+    vergleich_b = _get_ok(client, "iso3304-b", "vergleich", user=NUTZER_B)
+    assert _ohne_stored(antwort_b) == _ohne_stored(vergleich_b), "B sieht seine eigenen Orte"
 
 
 def test_ac5_body_user_id_waehlt_keinen_fremden_bestand(client):
@@ -316,6 +318,32 @@ def test_ac8_kern_unlesbarer_entwurf_ist_422_invalid_preset(client, kind, entwur
     assert antwort.status_code == 422, antwort.text
     assert antwort.json().get("code") == "invalid_preset", antwort.text
     assert _baum() == vorher
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+@pytest.mark.parametrize("kind", ["route", "vergleich"])
+def test_ac8_unlesbarer_entwurf_text_ohne_platzhalter_und_ohne_orte_abo(client, kind, lang):
+    """Adversary F001: GIVEN ein deutsch- bzw. englischsprachiger Nutzer und
+    ein unlesbarer Entwurf WHEN Vorschau THEN der Fehlertext steht in seiner
+    Sprache, enthaelt keinen offenen Platzhalter und nennt bei Trips kein
+    Orte-Abo (Code bleibt ``invalid_preset``)."""
+    from i18n import t
+    from tests.helpers.versand_fixture import nutzer_anlegen
+
+    nutzer = f"p3304-{lang}"
+    nutzer_anlegen(nutzer, lang)
+    antwort = _vorschau(client, kind, [], user=nutzer)
+    assert antwort.status_code == 422, antwort.text
+    body = antwort.json()
+    assert body["code"] == "invalid_preset"
+    text = body["detail"]
+    assert text == t("versand.vorschau.entwurf_unlesbar", lang)
+    assert "{" not in text and "}" not in text, text
+    if kind == "route":
+        assert "orte-abo" not in text.lower(), text
+        assert "locations subscription" not in text.lower(), text
+    if lang == "en":
+        assert text != t("versand.vorschau.entwurf_unlesbar", "de")
 
 
 # ---------------------------------------------------------------------------

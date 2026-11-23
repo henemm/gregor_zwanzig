@@ -229,6 +229,26 @@ func TestPlacementsVorschau3304KoerperUnterGrenzeGehtDurch(t *testing.T) {
 	}
 }
 
+// Adversary F003: der Kern erhaelt GENAU die Query-Parameter kind und
+// user_id (= angemeldeter Nutzer); weitere Client-Parameter, doppelte kind-
+// und fremde user_id-Werte kommen nicht an.
+func TestPlacementsVorschau3304KernErhaeltNurKindUndUserID(t *testing.T) {
+	kern := neuerVorschauKern3304(t)
+	r := vorschauRouter3304(t, kern.srv.URL)
+	pfad := vorschauPfad3304 + "?kind=route&user_id=fremd&x=1&kind=vergleich&user_id=nutzer-b"
+	w := doReq(r, http.MethodPost, pfad, tripEntwurf3304, "", "nutzer-a")
+	if w.Code != http.StatusOK {
+		t.Fatalf("Status %d, erwartet 200 (%.200s)", w.Code, w.Body.String())
+	}
+	if kern.zahl() != 1 {
+		t.Fatalf("Kern-Aufrufe %d, erwartet 1", kern.zahl())
+	}
+	want := map[string][]string{"kind": {"route"}, "user_id": {"nutzer-a"}}
+	if got := kern.anfragen[0].query; !reflect.DeepEqual(got, want) {
+		t.Errorf("Query zum Kern %v, erwartet genau %v", got, want)
+	}
+}
+
 // AC-8: Fehlerantworten des Kerns (422 invalid_preset) gehen unveraendert durch.
 func TestPlacementsVorschau3304KernFehlerWirdDurchgereicht(t *testing.T) {
 	kern := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

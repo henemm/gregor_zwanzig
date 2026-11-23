@@ -1,0 +1,24 @@
+=== RUN   TestPlacementsVorschau3304ReichtEntwurfMitAnmeldungWeiter
+=== RUN   TestPlacementsVorschau3304ReichtEntwurfMitAnmeldungWeiter/route
+=== RUN   TestPlacementsVorschau3304ReichtEntwurfMitAnmeldungWeiter/vergleich
+--- PASS: TestPlacementsVorschau3304ReichtEntwurfMitAnmeldungWeiter (0.00s)
+    --- PASS: TestPlacementsVorschau3304ReichtEntwurfMitAnmeldungWeiter/route (0.00s)
+    --- PASS: TestPlacementsVorschau3304ReichtEntwurfMitAnmeldungWeiter/vergleich (0.00s)
+=== RUN   TestPlacementsVorschau3304OhneAnmeldungIst401
+--- PASS: TestPlacementsVorschau3304OhneAnmeldungIst401 (0.00s)
+=== RUN   TestPlacementsVorschau3304OhneGueltigeArtIst400
+--- PASS: TestPlacementsVorschau3304OhneGueltigeArtIst400 (0.00s)
+=== RUN   TestPlacementsVorschau3304KoerperGrenzeUndKaputtesJSON
+--- PASS: TestPlacementsVorschau3304KoerperGrenzeUndKaputtesJSON (0.01s)
+=== RUN   TestPlacementsVorschau3304KoerperUnterGrenzeGehtDurch
+--- PASS: TestPlacementsVorschau3304KoerperUnterGrenzeGehtDurch (0.01s)
+=== RUN   TestPlacementsVorschau3304KernErhaeltNurKindUndUserID
+--- PASS: TestPlacementsVorschau3304KernErhaeltNurKindUndUserID (0.00s)
+=== RUN   TestPlacementsVorschau3304KernFehlerWirdDurchgereicht
+--- PASS: TestPlacementsVorschau3304KernFehlerWirdDurchgereicht (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/handler	138.233s
+=== RUN   TestPlacementsVorschauRouteAmEchtenRouter3304
+--- PASS: TestPlacementsVorschauRouteAmEchtenRouter3304 (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/router	(cached)

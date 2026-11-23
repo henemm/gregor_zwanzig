@@ -10,8 +10,9 @@ nichts; die Schreibwege (PUT, Anlage) bedient Go allein.
 from __future__ import annotations
 
 import logging
+from typing import Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Body, Query
 from fastapi.responses import JSONResponse
 
 from app.loader import InvalidUserIdError
@@ -22,8 +23,10 @@ router = APIRouter(tags=["briefings"])
 logger = logging.getLogger("placements")
 
 
-def _error(code: str, user_id: str, **values: str) -> JSONResponse:
-    status, body = error_body(code, lang=resolve_user_lang(user_id), **values)
+def _error(code: str, user_id: str, text_key: str | None = None,
+           **values: str) -> JSONResponse:
+    status, body = error_body(code, lang=resolve_user_lang(user_id),
+                              text_key=text_key, **values)
     return JSONResponse(status_code=status, content=body)
 
 
@@ -45,6 +48,28 @@ def get_briefing_placements(
         return build_placements_view(kind, entity_id, user_id)
     except (AboNichtGefunden, InvalidUserIdError):
         return _error("not_found", user_id, entity_id=entity_id)
+
+
+@router.post("/api/briefings/placements/vorschau")
+def post_placements_vorschau(
+    user_id: str = Query(...),
+    kind: str | None = Query(None),
+    entwurf: Any = Body(None),
+):
+    """#3304: Ansicht der Tabelle fuer einen noch nicht angelegten Entwurf
+    (Koerper), ``stored=false``, schreibt nichts, kein ETag. Entwurf kein
+    lesbares Objekt = 422 ``invalid_preset``."""
+    from services.placements_view_service import (
+        KINDS, EntwurfUnlesbar, build_placements_preview,
+    )
+
+    if kind not in KINDS:
+        return _error("kind_required", user_id)
+    try:
+        return build_placements_preview(kind, entwurf, user_id)
+    except EntwurfUnlesbar:
+        return _error("invalid_preset", user_id,
+                      text_key="versand.vorschau.entwurf_unlesbar")
 
 
 @router.get("/api/briefings/{entity_id}/placements/erstanlage")

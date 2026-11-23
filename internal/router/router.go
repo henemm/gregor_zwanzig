@@ -387,6 +387,9 @@ func New(deps Deps) chi.Router {
 	// Issue #3122 B2: Tabelle "Was steht wo" (Lesen ueber den Python-Kern, Schreiben nur placements).
 	r.Get("/api/briefings/{id}/placements", handler.BriefingPlacementsGetHandler(deps.Store, deps.Config.PythonCoreURL))
 	r.Put("/api/briefings/{id}/placements", handler.BriefingPlacementsPutHandler(deps.Store, deps.Config.PythonCoreURL))
+	// Issue #3304: Vorschau fuer einen noch nicht angelegten Entwurf (statischer
+	// Pfad, chi bevorzugt ihn vor {id}; nichts wird gespeichert).
+	r.Post("/api/briefings/placements/vorschau", handler.BriefingPlacementsPreviewHandler(deps.Config.PythonCoreURL))
 	r.Post("/api/briefings/{id}/alert-preview", bremsen.Vorschau(handler.BriefingAlertPreviewHandler(deps.Config.PythonCoreURL)))
 	// Issue #2280: kind-neutraler Handversand (Alt-Routen oben sind Delegates).
 	r.Post("/api/briefings/{id}/send", bremsen.Versand(handler.BriefingSendHandler(deps.Config.PythonCoreURL)))
