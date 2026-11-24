@@ -1,0 +1,36 @@
+AC-7: Vorher/Nachher je Datei, seriell, Mac, 2026-11-24. VORHER 07:22-07:25 Uhr, NACHHER zweimal:
+07:30-07:31 (zeitnah, vor den Zusatztests): wallclock 20.64s (langsamster 15.01s), uhr 3.48s (1.84s), trips 1.95s (0.87s);
+08:17 (Endstand mit Zusatztests): Werte unten.
+Befehl je Datei: uv run pytest <Datei> -o addopts= --timeout=180 --durations=15
+180 s nur auf der Kommandozeile, damit die echte Dauer sichtbar wird; im Repo bleibt timeout = 30 ([tool.pytest.ini_options]).
+-o addopts= schaltet nur -q und den Markerfilter (not email/live/staging) ab; die drei Dateien tragen keine dieser Marken.
+Last (uptime 1/5/15 min): vorher Start 8,15 5,30 4,48 (wallclock), 4,38 4,72 4,34 (uhr), 4,30 4,69 4,33 (trips);
+nachher 07:30: 4,28 4,29 4,24 bis 3,74 4,15 4,19; nachher 08:17: 3,90 3,66 3,83 bis 4,12 3,73 3,85.
+VORHER = RED-Stand 57b3dc04f; "failed" dort = die roten Tests dieser Scheibe (noch nicht umgesetzt), kein Timeout.
+In diesem Zeitfenster riss vorher nur wallclock das 30-s-Netz (35,77 s); uhr und trips lagen darunter
+(fruehere Kontext-Messung am selben Tag: gestellte_uhr 30,2 s rot, trips 17,1 s).
+
+== wallclock vorher
+35.77s call     tests/tdd/test_fixture_wallclock_ratchet.py::test_echter_testbaum_ohne_fehlalarm_der_zweiten_regel
+21.73s call     tests/tdd/test_fixture_wallclock_ratchet.py::test_keine_fixture_baut_ankunft_aus_der_rohen_wanduhr
+20.62s call     tests/tdd/test_fixture_wallclock_ratchet.py::test_known_violations_enthaelt_keine_veralteten_eintraege
+14.38s call     tests/tdd/test_fixture_wallclock_ratchet.py::test_known_violations_der_neuen_regel_ohne_veraltete_eintraege
+13.67s call     tests/tdd/test_fixture_wallclock_ratchet.py::test_known_violations_der_neuen_regel_ist_leer
+============= 5 failed, 43 passed, 2 warnings in 108.12s (0:01:48) =============
+== wallclock nachher
+7.74s call     tests/tdd/test_fixture_wallclock_ratchet.py::test_echter_testbaum_ohne_fehlalarm_der_zweiten_regel
+2.39s call     tests/tdd/test_fixture_wallclock_ratchet.py::test_keine_fixture_baut_ankunft_aus_der_rohen_wanduhr
+======================= 60 passed, 2 warnings in 11.36s ========================
+== uhr vorher
+9.94s call     tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_known_violations_enthaelt_keine_veralteten_eintraege
+9.93s call     tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_bestand_liefert_keine_neuen_funde
+=================== 4 failed, 7 passed, 2 warnings in 20.74s ===================
+== uhr nachher
+1.04s call     tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_bestand_liefert_keine_neuen_funde
+======================== 14 passed, 2 warnings in 1.89s ========================
+== trips vorher
+7.97s call     tests/test_trips_pfad_rueckbau.py::test_no_test_file_still_calls_get_trips_dir
+=================== 3 failed, 5 passed, 2 warnings in 8.53s ====================
+== trips nachher
+0.36s call     tests/test_trips_pfad_rueckbau.py::test_no_test_file_still_calls_get_trips_dir
+======================== 8 passed, 2 warnings in 0.94s =========================

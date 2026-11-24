@@ -1,0 +1,204 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.15, pytest-9.2.0, pluggy-1.6.0
+rootdir: /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo
+configfile: pyproject.toml
+plugins: socket-0.8.0, xdist-3.8.0, timeout-2.4.0, anyio-4.14.2
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 85 items / 55 deselected / 30 selected
+
+tests/tdd/test_bezeichner_vorfilter.py EEEEEEEEEEEEEEEEEF                [ 60%]
+tests/tdd/test_fixture_wallclock_ratchet.py FFFFF                        [ 76%]
+tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py FFFF         [ 90%]
+tests/test_trips_pfad_rueckbau.py FFF                                    [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of test_vorfilter_liefert_quelltext_nur_bei_treffer[x.strftime('%H')\n-alle0-eines_aus0-True] _
+tests/tdd/test_bezeichner_vorfilter.py:31: in helfer
+    from tests.helpers import bezeichner_vorfilter
+E   ImportError: cannot import name 'bezeichner_vorfilter' from 'tests.helpers' (unknown location)
+_ ERROR at setup of test_vorfilter_liefert_quelltext_nur_bei_treffer[x.\uff53\uff54\uff52\uff46\uff54\uff49\uff4d\uff45('%H')\n-alle1-eines_aus1-True] _
+tests/tdd/test_bezeichner_vorfilter.py:31: in helfer
+    from tests.helpers import bezeichner_vorfilter
+E   ImportError: cannot import name 'bezeichner_vorfilter' from 'tests.helpers' (unknown location)
+_ ERROR at setup of test_vorfilter_liefert_quelltext_nur_bei_treffer[# \xdcberschrift\nx.strftime('%H')\n-alle2-eines_aus2-True] _
+tests/tdd/test_bezeichner_vorfilter.py:31: in helfer
+    from tests.helpers import bezeichner_vorfilter
+E   ImportError: cannot import name 'bezeichner_vorfilter' from 'tests.helpers' (unknown location)
+_ ERROR at setup of test_vorfilter_liefert_quelltext_nur_bei_treffer[from a import Stage as S\n-alle3-eines_aus3-True] _
+tests/tdd/test_bezeichner_vorfilter.py:31: in helfer
+    from tests.helpers import bezeichner_vorfilter
+E   ImportError: cannot import name 'bezeichner_vorfilter' from 'tests.helpers' (unknown location)
+_ ERROR at setup of test_vorfilter_liefert_quelltext_nur_bei_treffer[x = 1\n-alle4-eines_aus4-False] _
+tests/tdd/test_bezeichner_vorfilter.py:31: in helfer
+    from tests.helpers import bezeichner_vorfilter
+E   ImportError: cannot import name 'bezeichner_vorfilter' from 'tests.helpers' (unknown location)
+_ ERROR at setup of test_vorfilter_liefert_quelltext_nur_bei_treffer[# \xdcberschrift\nx = 1\n-alle5-eines_aus5-False] _
+tests/tdd/test_bezeichner_vorfilter.py:31: in helfer
+    from tests.helpers import bezeichner_vorfilter
+E   ImportError: cannot import name 'bezeichner_vorfilter' from 'tests.helpers' (unknown location)
+_ ERROR at setup of test_vorfilter_liefert_quelltext_nur_bei_treffer[make_trip()\n-alle6-eines_aus6-False] _
+tests/tdd/test_bezeichner_vorfilter.py:31: in helfer
+    from tests.helpers import bezeichner_vorfilter
+E   ImportError: cannot import name 'bezeichner_vorfilter' from 'tests.helpers' (unknown location)
+_ ERROR at setup of test_vorfilter_liefert_quelltext_nur_bei_treffer[make_trip(); save_trip()\n-alle7-eines_aus7-True] _
+tests/tdd/test_bezeichner_vorfilter.py:31: in helfer
+    from tests.helpers import bezeichner_vorfilter
+E   ImportError: cannot import name 'bezeichner_vorfilter' from 'tests.helpers' (unknown location)
+_ ERROR at setup of test_vorfilter_liefert_quelltext_nur_bei_treffer[import alert_gate\nStage()\n-alle8-eines_aus8-True] _
+tests/tdd/test_bezeichner_vorfilter.py:31: in helfer
+    from tests.helpers import bezeichner_vorfilter
+E   ImportError: cannot import name 'bezeichner_vorfilter' from 'tests.helpers' (unknown location)
+_ ERROR at setup of test_vorfilter_liefert_quelltext_nur_bei_treffer[import q\nStage()\n-alle9-eines_aus9-False] _
+tests/tdd/test_bezeichner_vorfilter.py:31: in helfer
+    from tests.helpers import bezeichner_vorfilter
+E   ImportError: cannot import name 'bezeichner_vorfilter' from 'tests.helpers' (unknown location)
+_ ERROR at setup of test_vorfilter_liefert_quelltext_nur_bei_treffer[import alert_gate\n-alle10-eines_aus10-False] _
+tests/tdd/test_bezeichner_vorfilter.py:31: in helfer
+    from tests.helpers import bezeichner_vorfilter
+E   ImportError: cannot import name 'bezeichner_vorfilter' from 'tests.helpers' (unknown location)
+________ ERROR at setup of test_vorfilter_verschluckt_keine_lesefehler _________
+tests/tdd/test_bezeichner_vorfilter.py:31: in helfer
+    from tests.helpers import bezeichner_vorfilter
+E   ImportError: cannot import name 'bezeichner_vorfilter' from 'tests.helpers' (unknown location)
+_ ERROR at setup of test_unparsbare_datei_ergibt_befund_mit_dateiname[syntax] __
+tests/tdd/test_bezeichner_vorfilter.py:31: in helfer
+    from tests.helpers import bezeichner_vorfilter
+E   ImportError: cannot import name 'bezeichner_vorfilter' from 'tests.helpers' (unknown location)
+_ ERROR at setup of test_unparsbare_datei_ergibt_befund_mit_dateiname[nullbyte] _
+tests/tdd/test_bezeichner_vorfilter.py:31: in helfer
+    from tests.helpers import bezeichner_vorfilter
+E   ImportError: cannot import name 'bezeichner_vorfilter' from 'tests.helpers' (unknown location)
+__ ERROR at setup of test_unparsbare_datei_ergibt_befund_mit_dateiname[utf8] ___
+tests/tdd/test_bezeichner_vorfilter.py:31: in helfer
+    from tests.helpers import bezeichner_vorfilter
+E   ImportError: cannot import name 'bezeichner_vorfilter' from 'tests.helpers' (unknown location)
+_ ERROR at setup of test_unparsbare_datei_ergibt_befund_mit_dateiname[oserror] _
+tests/tdd/test_bezeichner_vorfilter.py:31: in helfer
+    from tests.helpers import bezeichner_vorfilter
+E   ImportError: cannot import name 'bezeichner_vorfilter' from 'tests.helpers' (unknown location)
+______________ ERROR at setup of test_jede_testdatei_ist_parsbar _______________
+tests/tdd/test_bezeichner_vorfilter.py:31: in helfer
+    from tests.helpers import bezeichner_vorfilter
+E   ImportError: cannot import name 'bezeichner_vorfilter' from 'tests.helpers' (unknown location)
+=================================== FAILURES ===================================
+_________________ test_cache_dateien_laufen_je_in_einem_worker _________________
+tests/tdd/test_bezeichner_vorfilter.py:105: in test_cache_dateien_laufen_je_in_einem_worker
+    assert len({worker for worker, _ in zeilen}) == 1, (
+E   AssertionError: tests/tdd/test_fixture_wallclock_ratchet.py verteilt sich auf mehrere Worker, der Cache wirkt nicht: [('gw0', 'test_scanner_meldet_das_antimuster'), ('gw1', 'test_scanner_schweigt_bei_geklemmtem_muster'), ('gw0', 'test_scanner_schweigt_ohne_etappendatum'), ('gw1', 'test_scanner_erkennt_astimezone_zwischenschritt'), ('gw0', 'test_scanner_erkennt_den_bypass_ueber_eine_zwischenvariable'), ('gw1', 'test_scanner_erkennt_die_kette_ueber_astimezone_und_namen'), ('gw1', 'test_scanner_erkennt_uhrzeiten_in_einer_tupel_rueckgabe'), ('gw0', 'test_scanner_erkennt_uhrzeiten_in_einer_liste'), ('gw1', 'test_scanner_schweigt_bei_geklemmtem_namen'), ('gw0', 'test_scanner_schweigt_bei_einem_nur_verglichenen_erwartungswert'), ('gw1', 'test_scanner_erkennt_date_today_als_etappendatum'), ('gw0', 'test_scanner_erkennt_ortstag_ohne_now_utc_als_etappendatum'), ('gw1', 'test_scanner_schweigt_bei_ortstag_mit_gepinnter_uhr'), ('gw0', 'test_scanner_erkennt_ortstag_mit_wanduhr_als_now_utc[datetime.now(timezone.utc)]'), ('gw1', 'test_scanner_erkennt_ortstag_mit_wanduhr_als_now_utc[now_utc]'), ('gw0', 'test_scanner_erkennt_ortstag_mit_wanduhr_als_now_utc[now_utc'), ('gw1', 'test_scanner_schweigt_bei_ortstag_mit_literalem_zeitpunkt'), ('gw0', 'test_scanner_erkennt_utc_tag_ohne_now_utc_als_etappendatum'), ('gw1', 'test_scanner_schweigt_bei_utc_tag_mit_gepinnter_uhr'), ('gw0', 'test_scanner_meldet_die_indirekte_variante'), ('gw1', 'test_scanner_schweigt_bei_nur_einem_wegpunkt'), ('gw0', 'test_scanner_schweigt_bei_gesetztem_arrival_calculated'), ('gw1', 'test_scanner_schweigt_bei_gesetztem_arrival_override'), ('gw0', 'test_scanner_schweigt_bei_gesetztem_stage_start_time'), ('gw0', 'test_scanner_schweigt_bei_briefing_zeiten_import'), ('gw1', 'test_scanner_schweigt_bei_arrival_window_fixtures_import'), ('gw1', 'test_scanner_schweigt_ohne_alarmpfad_import'), ('gw0', 'test_scanner_erkennt_wegpunkte_aus_einer_hilfsfunktion'), ('gw1', 'test_scanner_erkennt_stage_aus_kwargs_entpackung'), ('gw0', 'test_scanner_erkennt_wegpunkte_aus_einer_comprehension'), ('gw0', 'test_scanner_erkennt_stage_und_waypoint_hinter_import_alias'), ('gw1', 'test_scanner_erkennt_ungehaertete_funktion_trotz_dateiweitem_import'), ('gw1', 'test_scanner_schweigt_bei_literalem_etappendatum'), ('gw0', 'test_scanner_schweigt_bei_start_time_vor_unaufloesbaren_wegpunkten'), ('gw0', 'test_scanner_erkennt_alarmpfad_ueber_modulimport'), ('gw1', 'test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[direkt]'), ('gw1', 'test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[indirekt]')]
+E   assert 2 == 1
+E    +  where 2 = len({'gw0', 'gw1'})
+___ test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[direkt] ____
+tests/tdd/test_fixture_wallclock_ratchet.py:1466: in test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten
+    assert geparst == [text]
+E   AssertionError: assert ['from dateti...  return 1\n'] == ['from dateti...rn stage\n\n']
+E     
+E     Left contains one more item: 'def unbeteiligt():\n    return 1\n'
+E     Use -v to get more diff
+__ test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[indirekt] ___
+tests/tdd/test_fixture_wallclock_ratchet.py:1466: in test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten
+    assert geparst == [text]
+E   AssertionError: assert ['from dateti...  return 1\n'] == ['from dateti...urn trip\n\n']
+E     
+E     Left contains one more item: 'def unbeteiligt():\n    return 1\n'
+E     Use -v to get more diff
+_ test_echtbaum_cache_scannt_je_regel_nur_einmal[direkt-scan_wallclock_arrival_fixtures] _
+tests/tdd/test_fixture_wallclock_ratchet.py:1476: in test_echtbaum_cache_scannt_je_regel_nur_einmal
+    scan, abfrage = globals()[scan_name], globals()[f"funde_echtbaum_{regel}"]
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'funde_echtbaum_direkt'
+_ test_echtbaum_cache_scannt_je_regel_nur_einmal[indirekt-scan_indirekte_wanduhr_fixtures] _
+tests/tdd/test_fixture_wallclock_ratchet.py:1476: in test_echtbaum_cache_scannt_je_regel_nur_einmal
+    scan, abfrage = globals()[scan_name], globals()[f"funde_echtbaum_{regel}"]
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'funde_echtbaum_indirekt'
+__________________ test_echtbaum_pruefungen_nutzen_den_cache ___________________
+tests/tdd/test_fixture_wallclock_ratchet.py:1499: in test_echtbaum_pruefungen_nutzen_den_cache
+    funde_echtbaum_direkt()
+    ^^^^^^^^^^^^^^^^^^^^^
+E   NameError: name 'funde_echtbaum_direkt' is not defined
+_ test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[make_trip-\uff4d\uff41\uff4b\uff45_trip] _
+tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py:144: in test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten
+    assert geparst == [text]
+E   assert ["def test_x(..._trip('t')\n"] == ["def test_x(...ip, 'uid')\n"]
+E     
+E     Left contains one more item: "make_trip('t')\n"
+E     Use -v to get more diff
+_ test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[save_trip-\uff53\uff41\uff56\uff45_trip] _
+tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py:144: in test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten
+    assert geparst == [text]
+E   assert ["def test_x(..._trip('t')\n"] == ["def test_x(...ip, 'uid')\n"]
+E     
+E     Left contains one more item: "make_trip('t')\n"
+E     Use -v to get more diff
+____________________ test_echtbaum_cache_scannt_nur_einmal _____________________
+tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py:155: in test_echtbaum_cache_scannt_nur_einmal
+    m.setitem(globals(), "_echtbaum", functools.cache(_echtbaum.__wrapped__))
+                                                      ^^^^^^^^^
+E   NameError: name '_echtbaum' is not defined
+__________________ test_echtbaum_pruefungen_nutzen_den_cache ___________________
+tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py:166: in test_echtbaum_pruefungen_nutzen_den_cache
+    funde_echtbaum()
+    ^^^^^^^^^^^^^^
+E   NameError: name 'funde_echtbaum' is not defined
+_ test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst[get_trips_dir] _
+tests/test_trips_pfad_rueckbau.py:159: in test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst
+    assert aufrufer_von_get_trips_dir(tmp_path) == {"unter/test_attrappe.py": 2}
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   NameError: name 'aufrufer_von_get_trips_dir' is not defined
+_ test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst[\uff47\uff45\uff54_trips_dir] _
+tests/test_trips_pfad_rueckbau.py:159: in test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst
+    assert aufrufer_von_get_trips_dir(tmp_path) == {"unter/test_attrappe.py": 2}
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   NameError: name 'aufrufer_von_get_trips_dir' is not defined
+___________________ test_kaputte_kandidatendatei_bleibt_rot ____________________
+tests/test_trips_pfad_rueckbau.py:166: in test_kaputte_kandidatendatei_bleibt_rot
+    aufrufer_von_get_trips_dir(tmp_path)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   NameError: name 'aufrufer_von_get_trips_dir' is not defined
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/tdd/test_bezeichner_vorfilter.py::test_cache_dateien_laufen_je_in_einem_worker
+FAILED tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[direkt]
+FAILED tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[indirekt]
+FAILED tests/tdd/test_fixture_wallclock_ratchet.py::test_echtbaum_cache_scannt_je_regel_nur_einmal[direkt-scan_wallclock_arrival_fixtures]
+FAILED tests/tdd/test_fixture_wallclock_ratchet.py::test_echtbaum_cache_scannt_je_regel_nur_einmal[indirekt-scan_indirekte_wanduhr_fixtures]
+FAILED tests/tdd/test_fixture_wallclock_ratchet.py::test_echtbaum_pruefungen_nutzen_den_cache
+FAILED tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[make_trip-\uff4d\uff41\uff4b\uff45_trip]
+FAILED tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[save_trip-\uff53\uff41\uff56\uff45_trip]
+FAILED tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_echtbaum_cache_scannt_nur_einmal
+FAILED tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_echtbaum_pruefungen_nutzen_den_cache
+FAILED tests/test_trips_pfad_rueckbau.py::test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst[get_trips_dir]
+FAILED tests/test_trips_pfad_rueckbau.py::test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst[\uff47\uff45\uff54_trips_dir]
+FAILED tests/test_trips_pfad_rueckbau.py::test_kaputte_kandidatendatei_bleibt_rot
+ERROR tests/tdd/test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[x.strftime('%H')\n-alle0-eines_aus0-True]
+ERROR tests/tdd/test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[x.\uff53\uff54\uff52\uff46\uff54\uff49\uff4d\uff45('%H')\n-alle1-eines_aus1-True]
+ERROR tests/tdd/test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[# \xdcberschrift\nx.strftime('%H')\n-alle2-eines_aus2-True]
+ERROR tests/tdd/test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[from a import Stage as S\n-alle3-eines_aus3-True]
+ERROR tests/tdd/test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[x = 1\n-alle4-eines_aus4-False]
+ERROR tests/tdd/test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[# \xdcberschrift\nx = 1\n-alle5-eines_aus5-False]
+ERROR tests/tdd/test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[make_trip()\n-alle6-eines_aus6-False]
+ERROR tests/tdd/test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[make_trip(); save_trip()\n-alle7-eines_aus7-True]
+ERROR tests/tdd/test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[import alert_gate\nStage()\n-alle8-eines_aus8-True]
+ERROR tests/tdd/test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[import q\nStage()\n-alle9-eines_aus9-False]
+ERROR tests/tdd/test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[import alert_gate\n-alle10-eines_aus10-False]
+ERROR tests/tdd/test_bezeichner_vorfilter.py::test_vorfilter_verschluckt_keine_lesefehler
+ERROR tests/tdd/test_bezeichner_vorfilter.py::test_unparsbare_datei_ergibt_befund_mit_dateiname[syntax]
+ERROR tests/tdd/test_bezeichner_vorfilter.py::test_unparsbare_datei_ergibt_befund_mit_dateiname[nullbyte]
+ERROR tests/tdd/test_bezeichner_vorfilter.py::test_unparsbare_datei_ergibt_befund_mit_dateiname[utf8]
+ERROR tests/tdd/test_bezeichner_vorfilter.py::test_unparsbare_datei_ergibt_befund_mit_dateiname[oserror]
+ERROR tests/tdd/test_bezeichner_vorfilter.py::test_jede_testdatei_ist_parsbar
+========== 13 failed, 55 deselected, 2 warnings, 17 errors in 11.11s ===========
