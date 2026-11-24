@@ -92,3 +92,5 @@ Die Punkte, die oben unter „Folgepflichten“ und in Nr. 5 als offen für die 
 15. **Design-Charter:** §3 bekommt die Ausnahme „Einstell-Tabelle ‚Was steht wo‘“.
 
 **Weiter offen, nicht Teil des Baus zu #3122:** die Schalter der Trip-Mail ohne Platz im Soll-Bild (Kurz-Zusammenfassung, Quick-Take-Chips, Metriken-Überblick, Großwetterlage, Zusammenfassung, Tages-Summe). Sie bleiben bis #3036 im Übergangsblock bedienbar; die Frage gehört zu #3036.
+
+Nachtrag 2026-11-24 (#3036): entschieden, dass Kurz-Zusammenfassung und Großwetterlage eigene Schalter unter der Tabelle bekommen (nur ausführliche Mail, bei Kompakt gesperrt); die übrigen vier (Quick-Take-Chips, Metriken-Überblick, Zusammenfassung, Tages-Summe) bleiben wirkungslos und ohne Oberfläche. Diese Entscheidung ändert den Wortlaut oben nicht.
