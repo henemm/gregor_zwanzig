@@ -169,3 +169,5 @@ Startwarnung für `GZ_MCP_USER_IDS` ohne Konto (`cmd/server/main.go`, `warnPrivi
   nachzuweisen“ (`[-]`) stehen; Pflicht vor Schließen von #3286, sonst bleibt das Ticket offen.
 - **PO-Freigabe 2026-11-24 (Auswahldialog):** die sechs Zugangswerte (`GZ_VALIDATOR_*`, `GZ_AUTH_*` der Staging-`.env`, `GZ_STAGING_ADMIN_*`) per SSH
   nur in den Arbeitsspeicher lesen, ausschließlich für Prüfläufe gegen Staging, nicht anzeigen oder speichern. Produktion nicht betroffen.
+- **Übergabe an Phase 7:** Umsetzung hier committet und gepusht; henemm-infra-Branch `feat-gregor-3286-mcp-staging` ist committet und gepusht
+  (die Angabe „uncommittet“ oben ist überholt), PRs noch nicht angelegt. QA-Gate VERIFIED. Server, Staging und Produktion unverändert.
