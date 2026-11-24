@@ -960,6 +960,7 @@ isoliert, Kollisionen zeigen sich als Merge-Konflikt im PR.
 | `tests/unit/test_metrik_listen_register_ratchet.py` (+ `tests/helpers/metrik_listen_scan.py`) | 2026-11-15 (Stufe 1 ersetzt durch die Ratsche „Ein Katalog, eine Verarbeitung“, #3260; Stufe 2 bleibt bis zum Abbau der Listen) |
 | `tests/test_output_timezone_guard.py` | 2026-11-18 |
 | `tests/test_pii_log_guard.py` | 2026-12-26 |
+| Funktionsseiten-Prüfregeln (#3324): Drift-Test Ortsvergleich-Befehlssatz `tests/test_funktionen_befehle_drift.py` gegen `command_rows()`, Ratschlag-Erkennung im Katalogtest `frontend/src/lib/i18n/__tests__/funktionen_seite.test.ts`, Personendaten-Wächter im Renderer-Bildpfad `tests/test_funktionen_renderer_waechter.py` | 2027-02-22 | offen — Kriterium: ein Befehlswort, das im Ortsvergleich-Satz fehlt oder ein Nur-Trip-Befehl, der hineinrutscht; eine empfehlende Formulierung in `funktionen.*`; eine echt aussehende Nummer, die in einem Renderer-Bild landen würde |
 
 Am Prüfdatum gilt: kein nachweisbarer Fang → **Rückbau**. Wirkmodell:
 `docs/analysis/backlog-spirale-2026-07.md`.
