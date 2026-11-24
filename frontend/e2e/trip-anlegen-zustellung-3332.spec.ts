@@ -85,6 +85,8 @@ async function anlegeReiter(page: Page, mobil = false): Promise<Locator> {
 }
 async function zumSchrittZustellung(page: Page, name: string, mobil = false): Promise<Locator> {
 	await anlegenPflicht(page, 'route', { name, mobil, viewport: mobil ? MOBIL : DESKTOP });
+	// Der Schritt Zustellung ist bis zum ersten Öffnen von Wetter gesperrt (AN-5) — wie in #3305.
+	await schritt(page, 'wetter', mobil);
 	await schritt(page, 'zustellung', mobil);
 	return anlegeReiter(page, mobil);
 }
