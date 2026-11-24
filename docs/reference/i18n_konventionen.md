@@ -43,7 +43,7 @@ Auftraggeber eines Batches.
 
 | Schicht | Datei je Sprache | Bereiche (eine Datei je Bereich) |
 |---|---|---|
-| Frontend | `frontend/src/lib/i18n/messages/{de,en}/<bereich>.json` | `start`, `auth`, `nav`, `home`, `listen`, `konto`, `admin`, `wertebereiche`, `versand`, `alarme`, `layout`, `trip`, `vergleich`, `aktionen`, `bausteine`, `fehler`, `hilfe`, `wetter`, `zustellung` |
+| Frontend | `frontend/src/lib/i18n/messages/{de,en}/<bereich>.json` | `start`, `auth`, `nav`, `home`, `listen`, `konto`, `admin`, `wertebereiche`, `versand`, `alarme`, `layout`, `trip`, `vergleich`, `aktionen`, `bausteine`, `fehler`, `hilfe`, `wetter`, `zustellung`, `funktionen` (öffentliche Funktionsübersicht `/funktionen`, #3319) |
 | Python | `src/i18n/messages/{de,en}/<bereich>.json` | `allgemein`, `mail`, `vergleich`, `alarm`, `warnung`, `telegram`, `sms`, `versand`, `inbound`, `api` |
 | Go | `internal/i18n/messages/{de,en}/<bereich>.json` | `fehler`, `auth`, `konto`, `fach`, `mail`, `mcp` (MCP-Konnektor, #3281) |
 

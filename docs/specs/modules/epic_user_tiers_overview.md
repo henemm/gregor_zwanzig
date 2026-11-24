@@ -26,7 +26,7 @@ Zahlungsanbindung in diesem Schnitt).
 |---|---|---|---|
 | Free | E-Mail, Telegram | max. **2 pro Kalendertag** (harte Tages-Obergrenze, Mitternachts-Reset) | 3 / 2 / 10 |
 | Standard | + SMS | max. **4 pro Kalendertag** (harte Tages-Obergrenze, Mitternachts-Reset) | 15 / 10 / 50 |
-| Premium | + Premium-SMS (Garmin inReach, existiert noch nicht) | **Mindestabstand 15 Minuten** (kein Tageslimit — bei diesem Intervall ist ein Zähler kein zusätzlicher Schutz mehr) | 50 / 30 / 200 |
+| Premium | + Premium-SMS (Garmin inReach; seit ADR-0049 verfügbar, siehe Nachtrag #3319 unten) | **Mindestabstand 15 Minuten** (kein Tageslimit — bei diesem Intervall ist ein Zähler kein zusätzlicher Schutz mehr) | 50 / 30 / 200 |
 
 **Ergänzung #2482 S5 (2026-10-02) — Mengengrenzen:** Die Spalte „Mengengrenzen" begrenzt nur
 die NEUANLAGE (und das Wiederherstellen aus dem Archiv); Bestand über der Grenze bleibt voll
@@ -121,7 +121,12 @@ verbrauchten. Details, Reserve-Tabelle und Adversary-Nachweis: siehe verlinkte S
   `CompareSubscription` (`internal/store/subscription.go:1-16`) sind Orts-Vergleichs-Abos
   (Ziel-Feature #438), inhaltlich unabhängig von Nutzerleveln — Namenskollision "Subscription" ist
   rein zufällig, keine Wiederverwendung sinnvoll.
-- **Premium-SMS (Garmin inReach) existiert als Kanal noch nicht.** Bereits als Zukunfts-Feature F9
+- **Nachtrag #3319 (2026-11-24):** Die folgende Aussage ist überholt. Premium-SMS (Garmin inReach)
+  ist als vierter, gleichrangiger Kanal gebaut und im Level Premium verfügbar (ADR-0049, ADR-0095):
+  15 Premium-SMS pro Tag plus 15 Antworten auf Befehle. Die öffentlich gezeigten Level-Zahlen stehen
+  in `frontend/src/lib/level_grenzen.json` und sind per Drift-Test an Go und Python gebunden
+  (`internal/model/tier_katalog_drift_test.go`, `tests/test_level_grenzen_drift.py`).
+- *(überholt, siehe Nachtrag #3319)* **Premium-SMS (Garmin inReach) existiert als Kanal noch nicht.** Bereits als Zukunfts-Feature F9
   dokumentiert (`docs/project/strategic-directions.md:31`, `docs/features/scope.md:41`: „Garmin
   inReach Email-Bridge, geplant Q2 2026, setzt Kompakt-Summary F2 voraus"). Dieser Epic legt nur
   das *Level*-Konzept und den *Slot* für „Premium-SMS" an (als Wert im Datenmodell + gesperrter

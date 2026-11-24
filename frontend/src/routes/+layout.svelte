@@ -23,6 +23,8 @@
 	import OfflineSperre from '$lib/components/shared/OfflineSperre.svelte';
 	// Issue #2268 — app-weiter Footer mit „Impressum" und „Datenschutz".
 	import AppFooter from '$lib/components/shared/AppFooter.svelte';
+	// Issue #3319 — oeffentliche Funktionsseiten (exakte Pfade).
+	import { FUNKTIONEN_PFADE } from '$lib/funktionen_seiten';
 	// Issue #2248 — einmaliges, geraeteuebergreifend abweisbares Passkey-Angebot.
 	import {
 		ANGEBOT_MARKER,
@@ -209,8 +211,12 @@
 
 	const publicPages = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
 	// Issue #2520 — `/` ist fuer Ausgeloggte die oeffentliche Startseite (ohne Chrome).
+	// Issue #3319 — die oeffentlichen Funktionsseiten (exakte Pfade aus derselben
+	// Seitenliste wie der Auth-Hook) rendern ohne Sidebar, mit Footer.
 	const isLogin = $derived(
-		publicPages.includes(page.url.pathname) || (page.url.pathname === '/' && !data.userId)
+		publicPages.includes(page.url.pathname) ||
+			FUNKTIONEN_PFADE.has(page.url.pathname) ||
+			(page.url.pathname === '/' && !data.userId)
 	);
 	// Showcase-Route (#370): ohne App-Chrome (Sidebar/BottomNav), damit
 	// die Brand-Demos die einzigen App-Bausteine auf der Seite sind.

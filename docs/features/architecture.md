@@ -1079,6 +1079,7 @@ HTML + Client-Side Interactivity
 **Server-side Validation:**
 - `hooks.server.ts` verifies session cookie signature
 - Protected Routes: All routes except `/login`, `/register`, `/magic-link`, `/api/auth/google/*` require valid session
+- Öffentliche Seiten für Ausgeloggte (exakte Pfade, kein Präfix-Vergleich, #2520 / #3319): `/` (Startseite), `/funktionen` und die neun Unterseiten `/funktionen/<slug>` aus `frontend/src/lib/funktionen_seiten.ts`. Details: `docs/features/oeffentliche-funktionsuebersicht.md`
 - Client-side: Svelte Stores track auth state; components react to changes
 - Development: `/_design` showcase is auth-protected (development convenience)
 

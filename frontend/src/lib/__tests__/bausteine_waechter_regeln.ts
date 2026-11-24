@@ -511,7 +511,12 @@ const SEITEN_SCOPE: string[] = [
 	// #3122 B3a: Vorschauseite der Bausteine Haken, RohEinfachKnopf und EinstellTabelle.
 	'routes/_design-system/einstelltabelle/+page.svelte',
 	// #3190: Karte „Als eigene Vorlage speichern“ (Reiter Wetter) nur aus Btn, Input, Haken.
-	'lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte'
+	'lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte',
+	// #3319: oeffentliche Funktionsseiten und Level-Tabelle als duenne Seiten, Organismen in
+	// organisms/funktionen/.
+	'lib/components/shared/LevelTabelle.svelte',
+	'routes/funktionen/+page.svelte',
+	'routes/funktionen/[thema]/+page.svelte'
 ];
 
 /** Freigegebene Kompositionen außerhalb der Baustein-Ordner (Import-Ausnahme für Regel (a)). */
