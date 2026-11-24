@@ -171,3 +171,10 @@ Startwarnung für `GZ_MCP_USER_IDS` ohne Konto (`cmd/server/main.go`, `warnPrivi
   nur in den Arbeitsspeicher lesen, ausschließlich für Prüfläufe gegen Staging, nicht anzeigen oder speichern. Produktion nicht betroffen.
 - **Übergabe an Phase 7:** Umsetzung hier committet und gepusht; henemm-infra-Branch `feat-gregor-3286-mcp-staging` ist committet und gepusht
   (die Angabe „uncommittet“ oben ist überholt), PRs noch nicht angelegt. QA-Gate VERIFIED. Server, Staging und Produktion unverändert.
+
+## Stand Phase 8 (2026-11-24)
+
+- Validierung bestanden: Kern-Test und Textvertrag (37) grün, betroffene Ratschen grün (Teilmenge, volle Suite nur CI), keine AC im Code verfehlt.
+- Umfang über der Spec-Schätzung (Skript 176, Kern-Test 478, beide Repos ca. 800 statt 345 Zeilen); Claude-Entscheidung ohne vorherige Rückfrage, dem PO offengelegt.
+- **Offen, Pflicht vor Schließen von #3286:** nginx-Rollout, AC-1 bis AC-6, AC-9, AC-13 live auf Staging, dann AC-11 (PO), AC-12 (Produktion).
+  `/70-deploy`: Reihenfolge der Spec einhalten (AC-6 vor dem `.env`-Eintrag); PRs mit „Refs“ statt „Closes“.
