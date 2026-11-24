@@ -1,0 +1,124 @@
+{
+  "verified_commit": "0916b36a1a3c3c51c6278abd4d17bec8c899ea03",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/trips/<seed>#wetter",
+      "evidence": "Staging 0916b36a1: Playwright rework-3036-bloecke-schalter.spec.ts B-1 passed: Trip zeigt was-steht-wo-show_compact_summary und was-steht-wo-show_stability mit gespeichertem Startwert (fehlend = an), Orts-Vergleich zeigt keinen (7/7 passed, Exit 0)",
+      "workflow": "rework-3036-uebergangsblock-aufloesen"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "/trips/<seed>#wetter",
+      "evidence": "Playwright B-2 passed: PUT nur mit dem umgelegten Feld, Neuladen zeigt Stand, uebrige report_config-Felder inkl. vier Altfelder unveraendert, Trip eines zweiten frisch registrierten Nutzers unberuehrt",
+      "workflow": "rework-3036-uebergangsblock-aufloesen"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "Stalwart-Testpostfach",
+      "evidence": "Echt zugestellte ausfuehrliche Trip-Mails (X-GZ-Format full), briefing_mail_validator Exit 0 je Lauf. show_compact_summary aus: Kurz-Zusammenfassung fehlt in HTML und Text (DE GZM 242352-c649eeba, EN 242352-3067d1de); an: vorhanden in HTML und Text (DE 242352-fe6edf52, EN 242352-4668d0c4). show_stability aus: Block fehlt (DE+EN).",
+      "workflow": "rework-3036-uebergangsblock-aufloesen"
+    },
+    {
+      "ac": "AC-3-stability-an",
+      "status": "NICHT_HERSTELLBAR",
+      "url": "Stalwart-Testpostfach",
+      "evidence": "Grosswetterlage bei show_stability an ist auf Staging nicht herstellbar: Staging-Log meldet 'Ensemble fetch failed: httpx egress blocked for host: ensemble-api.open-meteo.com' (18x in den letzten 30 min), Mail ohne 'Wetterlage:'/'Weather pattern:' auch bei an. Issue #3348 (offen). Kein PASS.",
+      "workflow": "rework-3036-uebergangsblock-aufloesen"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "/trips/<seed>#wetter",
+      "evidence": "Playwright B-3 passed: E-Mail-Format Kompakt sperrt beide Schalter mit Hinweis 'nur ausfuehrlich', Werte bleiben",
+      "workflow": "rework-3036-uebergangsblock-aufloesen"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "/api/briefings/<id>/placements",
+      "evidence": "Startwerte der Schalter kommen aus blocks der Placements-GET (B-1 fehlendes Feld = an, B-2 gespeicherter Stand nach Neuladen) auf Staging",
+      "workflow": "rework-3036-uebergangsblock-aufloesen"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "/trips/<seed>#wetter",
+      "evidence": "Playwright B-4 passed: englischer Nutzer sieht Schalter englisch beschriftet; DE-Laeufe B-1..B-3 deutsch",
+      "workflow": "rework-3036-uebergangsblock-aufloesen"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "/trips/<seed>#zustellung, /compare/<seed>#zustellung",
+      "evidence": "Playwright B-5 route und vergleich passed: kein zustellung-uebergang, Beispiel-Alarm am Ende, bei Orten Pausieren/Aktivieren oben und bedienbar",
+      "workflow": "rework-3036-uebergangsblock-aufloesen"
+    },
+    {
+      "ac": "AC-8",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "Nachgezogene E2E-Spec gegen Staging gruen (7/7); veraltete Specs alarm-ab-nur-lesbar und s3a2794-zustellung-inventar-speicherweg im Ziel-Commit entfernt",
+      "workflow": "rework-3036-uebergangsblock-aufloesen"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "Reiter Zustellung",
+      "evidence": "npm run elementliste:abgleich -- --scope zustellung --abnahme mit Pruefkonto, Seeds gz2967-gr221-mallorca/cp-f34bc222d3d7ee82: DE Exit 0 (gefunden 366, abnahme: 0 ohne Besitzer), EN Exit 0 (gefunden 366, 0 ohne Besitzer); elementliste_besitzer.json ohne Uebergangsblock-Ausnahmen (0 Treffer #2795+zusaetzlich+Uebergang)",
+      "workflow": "rework-3036-uebergangsblock-aufloesen"
+    },
+    {
+      "ac": "AC-10",
+      "status": "PASS",
+      "url": "/trips/<seed>#wetter",
+      "evidence": "Playwright B-2 passed: show_quick_take_tags, show_metrics_summary, show_highlights, daily_summary_metrics und sms_threshold nach Schalter-PUT identisch, kein Bedienelement dafuer",
+      "workflow": "rework-3036-uebergangsblock-aufloesen"
+    },
+    {
+      "ac": "Trip-Mail DE/EN",
+      "status": "PASS",
+      "url": "Stalwart-Testpostfach",
+      "evidence": "staging_mail_pruefen.py --typ trip Exit 0 (GZM 242351-808d8730), --lang en Exit 0 (GZM 242352-46409cf4); Wegwerf-Nutzer geloescht",
+      "workflow": "rework-3036-uebergangsblock-aufloesen"
+    }
+  ],
+  "verified_at": "2026-11-24T23:53:35.592143+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: #3036 Schalter Kurz-Zusammenfassung/Grosswetterlage, Uebergangsblock aufgeloest, Playwright 7/7, Elementliste DE+EN Exit 0, Trip-Mail DE+EN und AC-3 an/aus Validator Exit 0; Grosswetterlage-an nicht herstellbar (#3348)",
+  "scope": "full-stack",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "rework-3036-uebergangsblock-aufloesen": {
+      "verdict": "VERIFIED: #3036 Schalter Kurz-Zusammenfassung/Grosswetterlage, Uebergangsblock aufgeloest, Playwright 7/7, Elementliste DE+EN Exit 0, Trip-Mail DE+EN und AC-3 an/aus Validator Exit 0; Grosswetterlage-an nicht herstellbar (#3348)",
+      "scope": "full-stack",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-24T23:53:35.592143+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
