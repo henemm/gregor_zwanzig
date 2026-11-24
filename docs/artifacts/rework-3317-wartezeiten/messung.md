@@ -39,7 +39,7 @@ Gewinn in 4 von 4 Paaren, deshalb gleichzeitig. Grenze der Aussage: die Arbeit i
 | Datei | vorher | nachher |
 |---|---|---|
 | test_epic_129a_3_ui_removed | timeout(120) x1 | keine (Test entfällt) |
-| test_dwd_thunder_parallel_fetch | timeout(30) x5, timeout(40) x10, timeout(60) x1; `<= 2.0 + 3.0`, `>= 10` je x1 | timeout(30) x5, timeout(40) x9 (10-s-Test entfällt), timeout(60) x3 (zwei neue Tests); `<= 2.0 + 3.0`, `>= 10` je x1 |
+| test_dwd_thunder_parallel_fetch | timeout(30) x5, timeout(40) x10, timeout(60) x1; `<= 2.0 + 3.0`, `>= 10` je x1 | timeout(30) x6 (neuer Namensauflösungs-Test), timeout(40) x10 (Ersatz des 10-s-Tests trägt wie sein Vorgänger 40), timeout(60) x1; `<= 2.0 + 3.0`, `>= 10` je x1 |
 | test_pytest_collection_and_timeout_safety | timeout(180) x4, timeout(300) x3, Subprozess: 120 x2, 90 x5, 60 x4, 30 x3 | timeout(180) x4, timeout(300) x1, Subprozess: 120 x2, 90 x3 (Sammlung, mtime, AC-2-Beleg neu), 60 x2, 30 x2 |
 | test_radar_nowcast_segment_wanduhr_unabhaengig | timeout(300) x1 | timeout(300) x1 |
 | wanduhr_matrix | `_SUBPROC_TIMEOUT_SEC = 120` | unverändert |
@@ -47,3 +47,10 @@ Gewinn in 4 von 4 Paaren, deshalb gleichzeitig. Grenze der Aussage: die Arbeit i
 `pyproject.toml` und `tests/conftest.py` unverändert. Der Kindprozess des Hänger-Tests hat weiter 60 s.
 
 Zählung `timeout(300)`: gezählt ist Text im Quelltext einschließlich Docstring; die Modulgrenze `pytestmark = timeout(300)` ist unverändert, entfallen ist der 30-s-Hänger-Test mit eigenem `timeout(300)` (samt Nennung im Docstring).
+
+## Nachprüfung in Phase 7 (24.11.2026)
+
+- Vier Dateien unter `-n 4` auf ruhigem Rechner: 46 grün, 2 rot (DWD `ac1` und `ac2_budgetende`), 1 übersprungen, 82,8 s. DWD seriell: 18 grün, 2 rot (dieselben), 49,7 s. Abhängige Tests (wanduhr_matrix, prozesszonen_schalter, radar_onset_threshold_variance, fixture_wallclock_ratchet, issue_822, xdist_echtbaum_ratsche) unter `-n 4`: 122 grün.
+- `test_ac2_budgetende...` ist auf diesem Mac auch im Stand von origin/main rot: allein gestartet, abwechselnd, je 40 Läufe: alt 36 rot, 3 grün, 1 Abbruch mit Signal (Rückgabecode 134); neu 39 rot, 0 grün, 1 Abbruch (134). Zusammen mit `ac1` je 6 Läufe: alt 1 rot, neu 3 rot; `ac1` in beiden 6 von 6 rot. Verschlechterung durch den Umbau damit nicht belegt, aber auch nicht ausgeschlossen; nicht Teil der in der Spec genannten lokalen Ausnahme (nur `ac1`), maßgeblich ist CI. Ursache ungeklärt.
+- Bei gleichzeitig laufenden schweren Testläufen (Last rund 10) rissen einmal der 2-s-Test und einmal die Wanduhr-Ratsche das 30-s-Limit; auf ruhigem Rechner grün.
+- Umfang: Testdateien +354/-193, die Spec schätzte +150/-110.

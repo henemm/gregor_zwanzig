@@ -638,7 +638,7 @@ def test_ac8_nicht_schreibbares_journal_bricht_den_abruf_nicht(monkeypatch):
 # Fix-Loop 1 (#2554): Zusicherungen dort pruefen, wo sie WIRKEN
 # ---------------------------------------------------------------------------
 
-@pytest.mark.timeout(60)
+@pytest.mark.timeout(30)
 def test_testserver_startet_ohne_namensaufloesung(monkeypatch):
     """#3317 AC-5: Given `socket.getfqdn` (lokal gemessen 35 s fuer 127.0.0.1),
     When der Testserver startet, Then ruft er es nicht auf."""
@@ -649,7 +649,7 @@ def test_testserver_startet_ohne_namensaufloesung(monkeypatch):
     assert aufrufe == [], f"Testserver loest Namen auf: getfqdn({aufrufe})"
 
 
-@pytest.mark.timeout(60)
+@pytest.mark.timeout(40)
 def test_ac3_default_timeout_10s_wirkt_am_gewitter_request(monkeypatch):
     """#3317 AC-5: Given der UNVERAENDERTE Default THUNDER_REQUEST_TIMEOUT und ein
     sofort antwortender Server (Budget weit weg, keine Deckelung), When der Abruf

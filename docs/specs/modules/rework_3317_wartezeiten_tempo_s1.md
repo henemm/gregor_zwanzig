@@ -139,6 +139,8 @@ Reihenfolge der Umsetzung: (1) ac7, (2) DWD, (3) Sammlung und Hänger, (4) Radar
 - Alle Einsparungen sind Ansätze, nach dem Umbau ungemessen; ein Umbau ohne messbaren Gewinn wird zurückgenommen oder begründet belassen.
 - Absolutzeiten schwanken auf dem Mac mit der Last; Vergleich nur im selben Zeitfenster. Die Top-45-Werte sind Untergrenzen.
 - DWD ac1 bleibt lokal rot (`getfqdn` 35 s, Schlafzeit-Befund); der Umbau macht ihn lokal nicht grün.
+- Nachtrag Phase 7 (24.11.2026, F005): auch `test_ac2_budgetende_laesst_nur_hintere_zeitpunkte_und_groessen_fehlen` ist auf dem Mac rot, im Stand von `origin/main` ebenso (Zahlen in `messung.md`). Vorbestand, Ursache ungeklärt, die Definition of Done nennt nur ac1; maßgeblich ist CI.
+- Umfang der Testdateien tatsächlich +354/-193 statt geschätzt +150/-110.
 
 ## Architektur-Entscheidung (ADR)
 
