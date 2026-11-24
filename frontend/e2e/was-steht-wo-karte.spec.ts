@@ -759,16 +759,22 @@ test.describe('Karte „Was steht wo“', () => {
 		});
 	}
 
-	test('WS-15 (Trip): Kompakt sperrt die drei Mail-Blöcke, gespeicherte Werte bleiben, Ausführlich gibt sie frei', async ({ page }) => {
+	test('WS-15 (Trip): Kompakt sperrt die fünf Mail-Blöcke, gespeicherte Werte bleiben, Ausführlich gibt sie frei', async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
 		const abo = await seed(page.request, FAELLE[0], {
 			oben: { report_config: { enabled: true, morning_enabled: true, morning_time: '07:00:00', email_format: 'full', show_stage_stats: true, show_yesterday_comparison: false } }
 		});
-		const BLOECKE = ['show_stage_stats', 'show_yesterday_comparison', 'show_night_block'];
+		const BLOECKE = ['show_stage_stats', 'show_yesterday_comparison', 'show_night_block', 'show_compact_summary', 'show_stability'];
 		const GRUND = 'Wirkt nur in der ausführlichen E-Mail.';
 		const felder = async () => {
 			const t = await stand(page.request, 'route', abo.id);
-			return { stage: t.report_config.show_stage_stats, vortag: t.report_config.show_yesterday_comparison, nacht: t.display_config.show_night_block ?? null };
+			return {
+				stage: t.report_config.show_stage_stats,
+				vortag: t.report_config.show_yesterday_comparison,
+				nacht: t.display_config.show_night_block ?? null,
+				kurz: t.report_config.show_compact_summary ?? null,
+				lage: t.report_config.show_stability ?? null
+			};
 		};
 		try {
 			let karte = await oeffneKarte(page, abo);
@@ -788,7 +794,7 @@ test.describe('Karte „Was steht wo“', () => {
 				await expect(sw, `${f}: bei Kompakt gesperrt`).toHaveAttribute('aria-disabled', 'true');
 				await expect(sw, `${f}: Wert bleibt sichtbar`).toHaveAttribute('aria-checked', vorherAnzeige[f]!);
 			}
-			await expect(karte.getByText(GRUND, { exact: false }), 'Grund steht an den drei Schaltern').toHaveCount(3);
+			await expect(karte.getByText(GRUND, { exact: false }), 'Grund steht an den fünf Schaltern').toHaveCount(5);
 			// Ein Klick auf einen gesperrten Schalter schreibt nichts. Statt fester Wartezeit: danach eine sicher
 			// speichernde Geste (Format „Ausführlich“) in derselben Seite — ihr PUT muss der erste seit dem Klick
 			// sein, und die gespeicherten Blöcke sind unverändert (auch ein verzögert zusammengelegtes Speichern

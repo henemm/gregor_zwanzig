@@ -15,7 +15,7 @@
 //
 // #2795 S3b Teilschritt 1b (feat_2795_s3b_teil1_zustellung.md): der Versand-Abschnitt ist durch den
 // Reiter „Zustellung“ abgelöst. VA-1 prüft dessen Reihenfolge (Spec §1: Kopf · Briefing-Zeiten ·
-// Laufzeit · Kanäle · Stille Stunden · Übergangsblock), VA-2 „jede Funktion genau einmal im Hub“
+// Laufzeit · Kanäle · Stille Stunden · Beispiel-Alarm; #3036: Orte mit Aktivierung unter dem Kopf), VA-2 „jede Funktion genau einmal im Hub“
 // (AC-31: Cooldown im Reiter Zustellung, „Alarm ab“ je Metrik nur im Reiter Wetter), VA-3 die
 // Briefing-Warnbox bei 0 Kanälen (AC-11), VA-4 den mobilen Aufbau samt Kanal-Tabelle.
 //
@@ -62,7 +62,7 @@ for (const kind of HUB_KINDS) {
 		});
 
 		// VA-1 (Alt AC-1) — fängt: fehlender/vertauschter Block bzw. Alarm-Stufen je Metrik im Reiter.
-		test(`VA-1 (${kind}): Reiter Zustellung zeigt Kopf → Briefing-Zeiten → Laufzeit → Kanäle → Stille Stunden → Übergang, keine Alarm-Stufen je Metrik`, async ({
+		test(`VA-1 (${kind}): Reiter Zustellung zeigt Kopf → (Orte: Aktivierung) → Briefing-Zeiten → Laufzeit → Kanäle → Stille Stunden → Beispiel-Alarm, keine Alarm-Stufen je Metrik`, async ({
 			page
 		}) => {
 			const hub = await seedHub(page.request, kind, { extra: va.metrikSeed });
@@ -71,8 +71,10 @@ for (const kind of HUB_KINDS) {
 				const reihe = await abschnitt(page)
 					.locator('[data-abschnitt]')
 					.evaluateAll((els) => els.map((e) => e.getAttribute('data-abschnitt')));
-				expect(reihe, 'Abschnitte in der Reihenfolge des Mockups (Spec §1)').toEqual([...MARKER]);
-				for (const m of MARKER) await expect(abschnitt(page).locator(`[data-abschnitt="${m}"]`)).toBeVisible();
+				// #3036: Orte tragen die Pausieren-Karte (Aktivierung) direkt unter dem Kopf, Trips nicht.
+				const erwartet: string[] = kind === 'vergleich' ? [MARKER[0], 'aktivierung', ...MARKER.slice(1)] : [...MARKER];
+				expect(reihe, 'Abschnitte in der Reihenfolge des Mockups (Spec §1, #3036)').toEqual(erwartet);
+				for (const m of erwartet) await expect(abschnitt(page).locator(`[data-abschnitt="${m}"]`)).toBeVisible();
 				// Der Anker #versand liegt auf den Briefing-Zeiten (Sprungziel „Bearbeiten →“, AC-39).
 				await expect(abschnitt(page).locator('#versand')).toHaveAttribute('data-abschnitt', 'briefing-zeiten');
 				await expect(abschnitt(page).locator(STUFEN_JE_METRIK), 'keine Alarm-Stufen je Metrik im Reiter Zustellung (AC-31)').toHaveCount(0);
