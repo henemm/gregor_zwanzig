@@ -272,17 +272,21 @@ describe('AC-1 (#1743 umgezogen): der Versand-Abschnitt hat keinen Sammel-Wrappe
 	});
 });
 
-describe('AC-9/AC-12: Anlege-Seite und Trip-Seite mounten VersandTab unverändert', () => {
-	test('AC-9: CompareNewEditor übergibt dem Baustein weder preset noch saveController noch enqueueHubWrite', () => {
-		// #1743: die Anlege-Seite mountet den geteilten Baustein statt VersandTab direkt.
-		const mounts = findComponents(ast(NEW_EDITOR), 'WetterMetrikenVersandPanel');
-		assert.ok(mounts.length > 0, 'Vorbedingung: die Anlege-Seite mountet WetterMetrikenVersandPanel');
+describe('AC-9/AC-12: Anlege-Seite (Reiter Zustellung, #3333) und Trip-Seite mounten ohne Hub-Speicherweg', () => {
+	test('AC-9: CompareNewEditor übergibt dem Reiter Zustellung createMode, aber weder saveController noch enqueueHubWrite', () => {
+		// #1743: die Anlege-Seite mountete den geteilten Baustein statt VersandTab direkt. #3333 (D2, AC-1/AC-6):
+		// sie mountet jetzt den Reiter Zustellung wie im Hub, im Anlege-Modus (Stub-Abo `preset` mit id '',
+		// kein PUT) — das Alt-Panel nicht mehr.
+		assert.equal(findComponents(ast(NEW_EDITOR), 'WetterMetrikenVersandPanel').length, 0, 'Alt-Panel noch im Orte-Anlegen');
+		const mounts = findComponents(ast(NEW_EDITOR), 'ZustellungTab');
+		assert.equal(mounts.length, 2, 'Vorbedingung: die Anlege-Seite mountet ZustellungTab (Desktop + Mobil)');
 		for (const mount of mounts) {
 			const props = propNamen(mount);
-			for (const verboten of ['preset', 'saveController', 'enqueueHubWrite', 'onCompareUpdate']) {
+			assert.ok(props.includes('createMode'), 'der Reiter Zustellung im Anlegen ohne createMode (würde selbst speichern)');
+			for (const verboten of ['saveController', 'enqueueHubWrite', 'onCompareUpdate']) {
 				assert.ok(
 					!props.includes(verboten),
-					`die Anlege-Seite darf „${verboten}" nicht übergeben — sonst löst sie einen PUT aus, statt über wiz.saveNewPreset() zu speichern`
+					`die Anlege-Seite darf „${verboten}" nicht übergeben — sonst löst sie einen PUT aus, statt im einen Anlege-POST zu speichern`
 				);
 			}
 		}

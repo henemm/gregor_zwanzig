@@ -414,86 +414,27 @@ function quellStand(): Knoten {
 }
 
 // #2794 S3a Teil-PR 3: der Reiter bzw. Schritt Wetter ist der WetterTab (eigener Speicherer, kein
-// Buendel); der Baustein steht nur noch im Reiter/Schritt Zustellung — Hub 1 (ZustellungTab),
-// Anlegen je Geraet 1. Jede verbleibende Einbettung streut weiter dasselbe Buendel.
+// Buendel); der Baustein stand danach nur noch im Reiter/Schritt Zustellung.
 // #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 14): der Uebergangsblock des Reiters
 // Zustellung traegt keine Metrik-Oberflaeche mehr — der Hub (Mount B) streut das Buendel nicht mehr;
 // Listen, Stundenverlauf und Ausblick bedient dort die Karte „Was steht wo“ im Reiter Wetter.
-const MOUNTS: [string, string, number][] = [['Anlege-Seite /compare/new, Desktop + Mobil (Mounts C und D)', ANLEGE, 2]];
+// #3333 (D2 von #3307, Spec feat_3333_zustellung_anlegen_orte.md AC-1/AC-13): auch die Anlege-Seite
+// (Mounts C und D) mountet statt des Alt-Panels den Reiter Zustellung wie im Hub — ohne Buendel. Damit
+// streut kein Vergleichs-Mount mehr `wetterMetrikenPropsAus(…)`; das Buendel selbst (unten) bleibt bis zum
+// Rueckbau des Panels (#3020/#3036) bewacht.
+const OHNE_BUENDEL: [string, string, number][] = [
+	['Hub /compare/[id] (Mount B, #3154)', HUB, 1],
+	['Anlege-Seite /compare/new, Desktop + Mobil (Mounts C und D, #3333)', ANLEGE, 2]
+];
 
-describe('#3154: der Hub /compare/[id] streut das Buendel nicht mehr', () => {
-	test('ZustellungTab im Hub ohne `wetterMetrikenPropsAus(…)`, kein WetterMetrikenVersandPanel', () => {
-		const { quelle, treffer } = einbettungen(HUB);
-		assert.deepEqual(treffer.map((e) => e.name), ['ZustellungTab'], 'Hub: erwartet genau die Einbettung ZustellungTab, kein Panel');
-		assert.equal(streuung(treffer[0], quelle), null, 'Hub: ZustellungTab bekommt weiter das Metrik-Buendel gestreut (#3154)');
-	});
-});
-
-describe('AC-2: alle Vergleichs-Mounts mit Metrik-Oberflaeche speisen dasselbe Buendel ein', () => {
-	for (const [was, datei, anzahl] of MOUNTS) {
-		test(`${was}: ruft \`wetterMetrikenPropsAus(<zustand>)\` IM Markup-Ausdruck auf und reicht kein \`wiz\` mehr durch`, () => {
+describe('#3154/#3333: kein Vergleichs-Mount streut das Buendel mehr', () => {
+	for (const [was, datei, anzahl] of OHNE_BUENDEL) {
+		test(`${was}: ZustellungTab ohne \`wetterMetrikenPropsAus(…)\`, kein WetterMetrikenVersandPanel, kein \`wiz\``, () => {
 			const { quelle, treffer } = einbettungen(datei);
-			assert.strictEqual(
-				treffer.length,
-				anzahl,
-				`AC-2 FAIL: ${treffer.length} WeatherMetricsTab-Einbettungen in ` +
-					`${relative(FRONTEND, datei)} statt ${anzahl}.`
-			);
-			for (const [i, einbettung] of treffer.entries()) {
-				const s = streuung(einbettung, quelle);
-				assert.ok(
-					s,
-					`AC-2 FAIL: Einbettung ${i + 1} in ${relative(FRONTEND, datei)} streut kein ` +
-						'`{...wetterMetrikenPropsAus(<zustand>)}`. 🔴 Form-Auflage der Spec (Design-' +
-						'Entscheidung 1): der Aufruf steht IM Markup-Ausdruck, nicht in einer ' +
-						'Skript-Variablen — ein einmal berechnetes, eingefrorenes Objekt bestuende ' +
-						'SSR-Pruefstand und AST-Waechter und fiele erst im Browser auf. Attribute heute: ' +
-						`${attributNamen(einbettung).join(', ') || '—'}.`
-				);
-				assert.ok(
-					!attributNamen(einbettung).includes('wiz'),
-					`AC-2 FAIL: Einbettung ${i + 1} in ${relative(FRONTEND, datei)} reicht weiterhin ` +
-						'`wiz` durch.'
-				);
-			}
-		});
-
-		test(`${was}: das gestreute Buendel traegt alle fuenf Werte und alle vier Rueckrufe aus dem Zustand`, async () => {
-			const { quelle: q0, treffer } = einbettungen(datei);
-			const gestreut = treffer.map((e) => streuung(e, q0));
-			assert.ok(
-				gestreut.length > 0 && gestreut.every((s) => s !== null),
-				`AC-2 FAIL: nicht jede WeatherMetricsTab-Einbettung in ${relative(FRONTEND, datei)} ` +
-					'streut `wetterMetrikenPropsAus(...)` — siehe vorigen Test.'
-			);
-			for (const [i, s] of gestreut.entries()) {
-				const zustand = quellStand();
-				const { u } = await umgebungFuer(datei, {
-					[s!.zustand]: zustand,
-					untrack: (fn: () => unknown) => fn()
-				});
-				const buendel = holeAusdruck(
-					u,
-					s!.ausdruck,
-					`AC-2 FAIL: \`${s!.ausdruck}\` (Einbettung ${i + 1}) laesst sich nicht auswerten.`
-				) as Knoten;
-				for (const feld of WERTPROPS) {
-					assert.deepStrictEqual(
-						buendel[feld],
-						zustand[feld],
-						`AC-2 FAIL: das Buendel traegt \`${feld}\` nicht unveraendert aus dem Zustand ` +
-							`(Einbettung ${i + 1}, ${relative(FRONTEND, datei)}).`
-					);
-				}
-				for (const r of RUECKRUFE) {
-					assert.strictEqual(
-						typeof buendel[r],
-						'function',
-						`AC-2 FAIL: dem Buendel fehlt der Rueckruf \`${r}\` (Einbettung ${i + 1}, ` +
-							`${relative(FRONTEND, datei)}). Mounts C/D sind in der CI-Ampel fuer diesen ` +
-							'Reiter strukturell unbewacht — die Geste verpuffte dort unbemerkt.'
-					);
-				}
+			assert.deepEqual(treffer.map((e) => e.name), Array(anzahl).fill('ZustellungTab'), `${relative(FRONTEND, datei)}: erwartet nur ZustellungTab, kein Panel`);
+			for (const [i, e] of treffer.entries()) {
+				assert.equal(streuung(e, quelle), null, `Einbettung ${i + 1}: ZustellungTab bekommt weiter das Metrik-Buendel gestreut`);
+				assert.ok(!attributNamen(e).includes('wiz'), `Einbettung ${i + 1} reicht \`wiz\` durch`);
 			}
 		});
 	}

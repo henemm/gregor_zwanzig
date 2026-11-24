@@ -139,10 +139,10 @@ Test-Politik: kein Mock-Theater; Kern-Tests deterministisch ohne Netz (`node --t
 
 ## Known Limitations
 
-- Bis #3307 stehen Stundenverlauf und Telegram-Kurzstil auf der Anlegeseite an zwei Stellen; maßgeblich ist, was in der Karte gegenüber ihrem Start geändert wurde.
+- Stundenverlauf und Telegram-Kurzstil standen bis #3333 (2026-11-24) an zwei Stellen (Karte und Altblock); mit #3333 ist der Altblock im Orte-Anlegen entfallen, die Karte ist die einzige Bedienstelle.
 - Die Vorschau zeigt Beispielwerte aus dem festen Datensatz, keine echten Wetterwerte (wie im Reiter Wetter); ohne gewählte Orte gibt es keine Beispielwerte.
 - Zeilen werden vom Server wie beim PUT nicht inhaltlich geprüft (ADR-0077); keine neue Lücke.
-- Das Alt-Panel im Schritt Zustellung bleibt bis #3307.
+- Das Alt-Panel im Schritt Zustellung ist mit #3333 (2026-11-24) aus dem Orte-Anlegen entfernt; die Panel-Dateien bleiben bis #3020/#3036.
 - Der Auftrag braucht keine Sperren-Aufhebung und keine Änderung der Gate-Konfiguration.
 
 ## Architektur-Entscheidung (ADR)
@@ -153,3 +153,4 @@ Test-Politik: kein Mock-Theater; Kern-Tests deterministisch ohne Netz (`node --t
 ## Changelog
 
 - 2026-11-24: Initial spec created (Teil C von #3041, Issue #3306, Epic #3122).
+- 2026-11-24: Nachtrag (docs-updater, #3333 / Teil D2 von #3307): Zustellung im Orte-Anlegen über den Reiter Zustellung, Altblock und Alt-Panel entfallen; Known Limitations zu „bis #3307“ aktualisiert. Karte und Vergleichs-Tabelle unverändert.

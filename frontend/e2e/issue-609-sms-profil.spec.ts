@@ -65,8 +65,10 @@ test.describe('Issue #609 — SMS-Profilfeld + Kanalauswahl', () => {
 		// Heuristik: data-testid des SMS-Toggles muss in Step5Versand existieren.
 		// Wenn Wizard mehrstufig: alle Steps schnell durchklicken oder Direkt-Route nutzen.
 		// Fuer RED-Phase reicht: Element exisitiert nicht → Test failed.
+		// #3333 (D2 von #3307): der Schritt Zustellung ist der Reiter Zustellung wie im Hub — die SMS-Zeile
+		// der Kanal-Tabelle ersetzt den Kanal-Schalter des Alt-Panels (`compare-step5-channel-sms`).
 		const smsToggle = page.locator(
-			'[data-testid="compare-step5-channel-sms"]'
+			'[data-testid="zustellung-tab"] [data-testid="zustellung-kanal-sms"]'
 		);
 		// Versuch: Wizard navigieren falls noetig
 		const newCompareBtn = page.locator(

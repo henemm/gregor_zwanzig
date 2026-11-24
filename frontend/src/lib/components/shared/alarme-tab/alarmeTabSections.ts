@@ -41,6 +41,6 @@ export function triggerGroupHeading(context: AlarmeContext): string {
 // Issue #3332 (D1 von #3307, AC-9): im Trip-Anlegen besitzt der Reiter Zustellung Alarm-Kanaele
 // (mit Dringlichkeit), Cooldown und Stille Stunden — der Reiter Alarme blendet sie dort aus, damit
 // jedes Feld genau eine Bedienstelle hat. Kontext-Unterschied als Daten (Ratsche
-// context_herkunft_zweige_eingefroren): im Ortsvergleich-Anlegen bleibt die Liste vollstaendig (bis D2).
+// context_herkunft_zweige_eingefroren). #3333 (D2, AC-10): ebenso im Ortsvergleich-Anlegen.
 const ZUSTELLUNGS_ABSCHNITTE: readonly string[] = ['channels', 'cooldown', 'quiet-hours'];
-export const ZUSTELLUNG_IM_ANLEGEN_AUSGELAGERT: Record<AlarmeContext, boolean> = { route: true, vergleich: false };
+export const ZUSTELLUNG_IM_ANLEGEN_AUSGELAGERT: Record<AlarmeContext, boolean> = { route: true, vergleich: true };

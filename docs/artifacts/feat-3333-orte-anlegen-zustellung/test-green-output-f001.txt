@@ -1,0 +1,34 @@
+=== F001 Kerntest: frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_alarme_createmode_3333.test.ts ===
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/components/compare-new/__tests__/vergleich_anlegen_alarme_createmode_3333.test.ts
+
+TAP version 13
+# Subtest: \#3333 F001 (AC-10): Reiter Alarme im Orte-Anlegen, gemountet wie im Editor
+    # Subtest: Desktop und Mobil: hydriert, ohne Kanäle/Cooldown/Stille; Warnungen, Radar, Metrik-Stufen bleiben
+    ok 1 - Desktop und Mobil: hydriert, ohne Kanäle/Cooldown/Stille; Warnungen, Radar, Metrik-Stufen bleiben
+      ---
+      duration_ms: 380.234718
+      type: 'test'
+      ...
+    1..1
+ok 1 - \#3333 F001 (AC-10): Reiter Alarme im Orte-Anlegen, gemountet wie im Editor
+  ---
+  duration_ms: 381.115088
+  type: 'suite'
+  ...
+1..1
+# tests 1
+# suites 1
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4157.501748
+=== Gegenprobe: createMode={true} an CompareNewEditor.svelte:573 (Desktop) entfernt -> fail 1 'Desktop: Abschnitt channels im Reiter Alarme'; an :621 (Mobil) entfernt -> fail 1 'Mobil: Abschnitt channels'; per cp aus Sicherungskopie zurueck, diff leer, wieder pass 1 ===
+=== uv run pytest tests/tdd/test_3047_p11_neuanlage_warnungen.py tests/tdd/test_einstellung_gleich_mail_validatoren.py -q -p no:warnings -rfE (Laufzeit ca. 3 min, Exit 0) ===
+........................................................................ [ 48%]
+........................................................................ [ 96%]
+......                                                                   [100%]
+EXIT 0

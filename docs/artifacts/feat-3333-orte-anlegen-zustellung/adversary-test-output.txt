@@ -1,0 +1,61 @@
+      ...
+    # Subtest: TripNewEditor importiert das Alt-Panel nicht
+    ok 2 - TripNewEditor importiert das Alt-Panel nicht
+      ---
+      duration_ms: 283.59603
+      type: 'test'
+      ...
+    # Subtest: TripNewEditor mountet das Alt-Panel nicht
+    ok 3 - TripNewEditor mountet das Alt-Panel nicht
+      ---
+      duration_ms: 122.800562
+      type: 'test'
+      ...
+    # Subtest: CompareNewEditor importiert das Alt-Panel nicht
+    ok 4 - CompareNewEditor importiert das Alt-Panel nicht
+      ---
+      duration_ms: 84.690935
+      type: 'test'
+      ...
+    # Subtest: CompareNewEditor mountet das Alt-Panel nicht
+    ok 5 - CompareNewEditor mountet das Alt-Panel nicht
+      ---
+      duration_ms: 53.694947
+      type: 'test'
+      ...
+    1..5
+ok 17 - \#3333 AC-13: Anlegeseiten ohne WetterMetrikenVersandPanel (Strukturwächter)
+  ---
+  duration_ms: 546.558987
+  type: 'suite'
+  ...
+1..17
+# tests 56
+# suites 17
+# pass 56
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5723.867101
+=== Breiter benannter Lauf: tests 3160 pass 3160 fail 0 ===
+out.a1_sendemail_weglassen.txt: # pass 99 # fail 16 
+out.a2_sendemail_true.txt: # pass 105 # fail 10 
+out.b1_helper_ohne_sendemail.txt: # pass 106 # fail 9 
+out.b2_helper_ohne_cooldown.txt: # pass 105 # fail 10 
+out.c2_raster_abend.txt: # pass 114 # fail 1 
+out.c_raster.txt: # pass 107 # fail 8 
+out.d_flag.txt: # pass 112 # fail 3 
+out.e2_createmode_mobil.txt: # pass 115 # fail 0 
+out.e_createmode_alarme.txt: # pass 115 # fail 0 
+out.f_guard.txt: # pass 114 # fail 1 
+out.g_start.txt: # pass 112 # fail 3 
+out.h_ohne_helper_aufruf.txt: # pass 103 # fail 12 
+out.i_activation.txt: # pass 112 # fail 3 
+out.j_ohne_stand_zuweisung.txt: # pass 110 # fail 5 
+out.k_stille.txt: # pass 113 # fail 2 
+out.l_thresholds.txt: # pass 106 # fail 9 
+out.m_enddate.txt: # pass 112 # fail 3 
+out.n_helper_noop_ohne_stand.txt: # pass 114 # fail 1 
+out.o_stub_name.txt: # pass 115 # fail 0 
+out.p_stubkanal.txt: # pass 115 # fail 0 
