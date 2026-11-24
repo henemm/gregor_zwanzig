@@ -58,6 +58,9 @@ _LIVE_SMS_SCHLUESSEL = "GZ_SEVEN_API_KEY"
 
 TRIP_ID = "gz2967-gr221-mallorca"
 TRIP_NAME = "GR221 Mallorca"
+# #3327: zweiter, frei erfundener Trip, der archiviert im Pruefkonto liegt (Archiv-Bild).
+ARCHIV_TRIP_ID = "gz2967-archiv-kuestenpfad"
+ARCHIV_TRIP_NAME = "Küstenpfad Probelauf"
 VORLAGE_NAME = "Mallorca Frühling"
 VERGLEICH_NAME = "Münsterland"
 # Fiktive, eindeutige Kanalwerte des Pruefkontos (kein Versand an echte Geraete).
@@ -112,6 +115,12 @@ _ETAPPEN = (
      ("Valldemossa", 39.69217, 2.57649, 420)),
     ("2026-02-26", ("Valldemossa", 39.69217, 2.57649, 420), (39.71919, 2.6108, 647),
      ("Deià", 39.74619, 2.64514, 150)),
+)
+# #3327: fiktive Etappen in der Vergangenheit (Datum, Start, Ziel).
+_ARCHIV_ETAPPEN = (
+    ("2026-06-12", ("Dünenhof", 54.1012, 8.6034, 4), ("Leuchtturm", 54.1265, 8.6511, 12)),
+    ("2026-06-13", ("Leuchtturm", 54.1265, 8.6511, 12), ("Deichkrug", 54.1508, 8.7023, 6)),
+    ("2026-06-14", ("Deichkrug", 54.1508, 8.7023, 6), ("Fährhafen", 54.1741, 8.7489, 3)),
 )
 _ORTE = (("gz2967-muenster", "Münster", 51.9607, 7.6261, 60),
          ("gz2967-telgte", "Telgte", 51.9819, 7.7856, 52),
@@ -257,6 +266,18 @@ def soll_trip() -> dict:
             _wegpunkt(sid, 1, *von), _wegpunkt(sid, 2, f"Anstieg {von[0]}", *mitte),
             _wegpunkt(sid, 3, *bis)]})
     return {"id": TRIP_ID, "name": TRIP_NAME, "region": "Mallorca", "stages": etappen}
+
+
+def soll_archiv_trip() -> dict:
+    """#3327: fiktiver Archiv-Trip ohne Kanal-/Wetter-/Tabellenkonfiguration. Nie
+    ``archived_at`` im Soll: ``_merge`` uebernimmt es aus dem Ist-Stand (PUT reaktiviert nicht)."""
+    etappen = []
+    for n, (datum, von, bis) in enumerate(_ARCHIV_ETAPPEN, start=1):
+        sid = f"{ARCHIV_TRIP_ID}-e{n}"
+        etappen.append({"id": sid, "name": f"{von[0]} → {bis[0]}", "date": datum,
+                        "waypoints": [_wegpunkt(sid, 1, *von), _wegpunkt(sid, 2, *bis)]})
+    return {"id": ARCHIV_TRIP_ID, "name": ARCHIV_TRIP_NAME, "region": "Nordsee (fiktiv)",
+            "stages": etappen}
 
 
 def soll_kanalauswahl_trip() -> dict:
@@ -407,6 +428,12 @@ class PruefkontoSeed:
             return ist
         return self._rufe("PUT", f"{sammlung}/{soll['id']}", _merge(ist, soll))[1]
 
+    def sichere_archiviert(self, trip: dict) -> None:
+        """#3327: nur ohne Archivdatum archivieren (Body ``archived``, nicht ``state``)."""
+        if trip.get("archived_at"):
+            return
+        self._rufe("PATCH", f"/api/trips/{trip['id']}/state", {"archived": True})
+
     def sichere_wetter(self, trip: dict) -> dict:
         ist = trip.get("display_config") or {}
         soll = soll_wetter()
@@ -511,6 +538,7 @@ def fuehre_seed(seed: PruefkontoSeed, nutzer: str, passwort: str) -> tuple[str, 
     empfaenger = soll_empfaenger(profil)  # vor jedem Schreibzugriff
     seed.sichere_tarif()  # vor den Datensaetzen: sonst Free-Quote (409 quota_exceeded)
     trip = seed.sichere_datensatz("/api/trips", {**soll_trip(), **soll_kanalauswahl_trip()})
+    seed.sichere_archiviert(seed.sichere_datensatz("/api/trips", soll_archiv_trip()))
     seed.sichere_vorlage(seed.sichere_wetter(trip))
     orte = [seed.sichere_datensatz("/api/locations", {
         "id": oid, "name": name, "lat": lat, "lon": lon, "elevation_m": hoehe,

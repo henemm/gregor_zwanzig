@@ -301,8 +301,11 @@ class _Fake:
             if (teile[1] == "trips" and methode == "PUT" and len(teile) == 3
                     and (ablage.get(teile[2]) or {}).get("archived_at")
                     and not body.get("archived_at") and _quote_voll(konto, "trips")):
-                # trip.go:293: PUT ohne archived_at auf archivierten Trip = Reaktivierung,
-                # Quote geprueft (der PUT selbst ersetzt und entfernt archived_at).
+                # Bewusst STRENGER als Go: der echte PUT (UpdateTripHandler) merged auf den
+                # Bestand, sein DTO kennt kein archived_at, er reaktiviert nie. Reaktivieren
+                # kann nur der POST-Upsert (CreateTripHandler, `reaktiviert := ...`, mit
+                # Quoten-Pruefung). Der Fake ersetzt beim PUT und entfernt archived_at; so
+                # faellt auf, falls der Seed archived_at je aus dem Soll verliert.
                 return 409, {"error": "quota_exceeded"}
             if teile[1] == "trips" and len(teile) == 4 and teile[3] == "weather-config":
                 trip = ablage.get(teile[2])
@@ -1321,7 +1324,8 @@ def test_3151_ac3_zweiter_lauf_schreibfrei_trotz_go_ableitung_von_alert_channels
     mod = _modul()
     server, env = fake
     assert _lauf(mod, server, env) == 0
-    (trip,) = _seed_daten(server)["trips"].values()
+    # #3327: zweiter (archivierter) Trip im Pruefkonto - den GR221-Trip per ID waehlen.
+    trip = _seed_daten(server)["trips"]["gz2967-gr221-mallorca"]
     (vgl,) = _seed_daten(server)["compare"].values()
     # Voraussetzung: Kanalauswahl steht (sonst waere "schreibfrei" trivial)
     assert vgl.get("alert_channel_thresholds") == SCHWELLEN_3151
