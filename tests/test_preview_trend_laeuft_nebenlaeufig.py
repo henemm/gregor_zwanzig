@@ -9,7 +9,9 @@ ist von beidem unabhaengig; kalt addieren sich die Wartezeiten (502 nach 30 s).
 
 Kein Mock der eigenen Annahme: die Abrufe werden durch ECHTE, kurz schlafende
 Funktionen ersetzt (je ``_DAUER`` s), die danach das Original aufrufen
-(Demo-Modus, netzfrei). Gemessen werden Gesamtzeit und Zeitstempel.
+(Demo-Modus, netzfrei). Die Gleichzeitigkeit (AC-3) wird ueber Ereignisse
+geprueft, nicht ueber Wanduhr-Ueberlappung (#3248: unter CI-Last kippte die
+Messung an der Grenze 0,30 s).
 """
 from __future__ import annotations
 
@@ -115,25 +117,82 @@ def spur(monkeypatch):
     return s
 
 
-def test_ac3_trend_laeuft_gleichzeitig_zu_hauptabruf_und_nachtwetter(spur):
-    """AC-3: Gesamtzeit nahe am laengeren Teil (2 x 0,3 s), nicht an der Summe (0,9 s)."""
-    trip, heute = _trip()
-    _PROBE.set("kontext-wert")
-    t0 = time.monotonic()
-    _bau(trip, heute)
-    gesamt = time.monotonic() - t0
+#: Wartegrenze je Treffpunkt. Im nebenlaeufigen Ablauf kommt jedes Ereignis
+#: sofort; nur ein SERIELLER Ablauf laeuft hier hinein (dann ist der Test rot).
+#: Einmal 10 s bleibt unter dem globalen ``timeout = 30``.
+_TREFF_FRIST = 10.0
 
-    assert set(spur.iv) == {"fetch", "night", "trend"}, f"Testaufbau: Zweige fehlen {spur.iv}"
-    t_start, t_ende = spur.iv["trend"]
-    haupt_start, haupt_ende = spur.iv["fetch"][0], spur.iv["night"][1]
-    ueberlappung = min(t_ende, haupt_ende) - max(t_start, haupt_start)
-    assert ueberlappung >= _DAUER, (
-        f"AC-3: Trend und Hauptabruf+Nachtwetter ueberlappen nur {ueberlappung:.2f}s "
-        f"(erwartet >= {_DAUER}s) -- der Trend laeuft noch hinter dem Nachtwetter "
-        f"(Gesamtzeit {gesamt:.2f}s)"
-    )
+
+@pytest.fixture
+def treffpunkt(monkeypatch):
+    """AC-3 ohne Wanduhr (#3248): die drei Zweige verabreden sich ueber Ereignisse.
+
+    Der Trend kehrt erst zurueck, wenn das Nachtwetter FERTIG ist; der
+    Hauptabruf beginnt erst, wenn der Trend LAEUFT. Gleichzeitig heisst damit:
+    der Trend ist beim Start des Hauptabrufs und beim Start des Nachtwetters
+    noch nicht fertig und erlebt das Ende des Nachtwetters -- er umspannt
+    Hauptabruf plus Nachtwetter ganz. Seriell (Trend davor oder dahinter)
+    wartet ein Zweig vergeblich bis ``_TREFF_FRIST``, der Befund wird rot.
+    """
+    ev = {n: threading.Event() for n in
+          ("trend_start", "trend_ende", "fetch_ende", "night_ende")}
+    befund: dict[str, object] = {"aufrufe": []}
+    monkeypatch.setattr(sw, "night_weather_needed", lambda dc: True)
+    orig_fetch = TripReportSchedulerService._fetch_weather
+    orig_trend = TripReportSchedulerService._build_stage_trend
+    orig_night = sw.fetch_night_weather
+
+    def trend(self, *a, **kw):
+        befund["aufrufe"].append("trend")
+        ev["trend_start"].set()
+        try:
+            befund["trend_erlebt_nacht_ende"] = ev["night_ende"].wait(_TREFF_FRIST)
+            return orig_trend(self, *a, **kw)
+        finally:
+            ev["trend_ende"].set()
+
+    def fetch(self, segments, provider=None):
+        befund["aufrufe"].append("fetch")
+        gestartet = ev["trend_start"].wait(_TREFF_FRIST)
+        befund["trend_laeuft_bei_fetch"] = gestartet and not ev["trend_ende"].is_set()
+        try:
+            return orig_fetch(self, segments, provider=provider)
+        finally:
+            ev["fetch_ende"].set()
+
+    def night(*a, **kw):
+        befund["aufrufe"].append("night")
+        befund["nacht_nach_fetch"] = ev["fetch_ende"].is_set()
+        befund["trend_laeuft_bei_nacht"] = (
+            ev["trend_start"].is_set() and not ev["trend_ende"].is_set())
+        try:
+            return orig_night(*a, **kw)
+        finally:
+            ev["night_ende"].set()
+
+    monkeypatch.setattr(TripReportSchedulerService, "_fetch_weather", fetch)
+    monkeypatch.setattr(TripReportSchedulerService, "_build_stage_trend", trend)
+    monkeypatch.setattr(sw, "fetch_night_weather", night)
+    return befund
+
+
+def test_ac3_trend_laeuft_gleichzeitig_zu_hauptabruf_und_nachtwetter(treffpunkt):
+    """AC-3: der Trend laeuft waehrend Hauptabruf UND Nachtwetter (Ereignisse, keine Wanduhr)."""
+    trip, heute = _trip()
+    _bau(trip, heute)
+
+    assert sorted(treffpunkt["aufrufe"]) == ["fetch", "night", "trend"], (
+        f"Testaufbau: jeder Zweig genau einmal erwartet, war {treffpunkt['aufrufe']}")
+    assert treffpunkt["trend_laeuft_bei_fetch"], (
+        "AC-3: beim Start des Hauptabrufs lief der Trend nicht (noch nicht gestartet "
+        f"binnen {_TREFF_FRIST}s oder schon fertig) -- seriell statt gleichzeitig")
+    assert treffpunkt["trend_laeuft_bei_nacht"], (
+        "AC-3: beim Start des Nachtwetters lief der Trend nicht -- seriell statt gleichzeitig")
+    assert treffpunkt["trend_erlebt_nacht_ende"], (
+        f"AC-3: der Trend wartete {_TREFF_FRIST}s vergeblich auf das Ende des "
+        "Nachtwetters -- Nachtwetter laeuft erst hinter dem Trend (seriell)")
     # Der Nachtabruf haengt vom Hauptabruf ab und bleibt danach.
-    assert spur.iv["night"][0] >= spur.iv["fetch"][1] - 0.01
+    assert treffpunkt["nacht_nach_fetch"], "Nachtwetter begann vor Ende des Hauptabrufs"
 
 
 def test_ac3_trend_zweig_sieht_dieselben_contextvar_werte(spur):
