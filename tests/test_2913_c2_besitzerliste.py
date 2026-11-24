@@ -104,12 +104,27 @@ MENUE_2797 = {
 }
 
 
+# #3036 (24.11., AC-9): Beispiel-Alarm (Trip und Orte) und Pausieren/Aktivieren-Karte (Orte) bleiben bis #2797
+# als eigene Abschnitte im Reiter Zustellung; genau diese Live-Texte (DE/EN) hängen als Text-Besitzer an #2797.
+ZUSTELLUNG_2797 = {
+    (None, "Beispiel-Warnung"), (None, "Example warning"), (None, "Vorschau laden"), (None, "Load preview"),
+    ("orte", "Pausieren"), ("orte", "Pause"),
+    ("orte", "Läuft automatisch — unbegrenzt, bis du pausierst. Das Briefing geht zu den konfigurierten Zeiten in die Kanäle."),
+    ("orte", "Runs automatically — with no end date until you pause it. The briefing goes out to the channels at the configured times."),
+}
+
+
 def test_ac12_acht_menue_eintraege_bleiben_bei_2797(daten):
-    eintraege = [b for b in daten["besitzer"] if b["verweis"] == "#2797"]
-    assert len(eintraege) == 8, f"#2797: {len(eintraege)} Einträge (erwartet 8)"
+    eintraege = [b for b in daten["besitzer"] if b["verweis"] == "#2797" and b["art"] == "abschnitt"]
+    assert len(eintraege) == 8, f"#2797: {len(eintraege)} Abschnitt-Einträge (erwartet 8)"
     assert {(b["ctx"], b["reiter"], b["abschnitt"]) for b in eintraege} == MENUE_2797
+
+
+def test_3036_beispiel_alarm_und_pausieren_haengen_an_2797(daten):
+    eintraege = [b for b in daten["besitzer"] if b["verweis"] == "#2797" and b["art"] != "abschnitt"]
     for b in eintraege:
-        assert b["art"] == "abschnitt"
+        assert b["art"] == "zusaetzlich" and b["reiter"] == "zustellung" and "muster" not in b
+    assert {(b.get("ctx"), b["text"]) for b in eintraege} == ZUSTELLUNG_2797
 
 
 def test_ac12_eintraege_anderer_scheiben_unveraendert(daten):
@@ -167,9 +182,12 @@ def test_ac12_eintraege_anderer_scheiben_unveraendert(daten):
     # „noch nicht gebaut“) sind gestrichen — die Karte ist gebaut und wird bewertet, nicht abgedeckt: #3122 14 → 12.
     # #3036 (24.11., Spec rework_3036_uebergangsblock_aufloesen.md AC-9): der Übergangsblock ist aufgelöst, seine
     # 282 Ausnahmen (#2795, art zusaetzlich, Grund „Übergangsblock …“) sind gestrichen: #2795 318 → 36.
+    # Staging-Abnahmelauf DE+EN danach: Beispiel-Alarm und Pausieren/Aktivieren bleiben bis #2797 im Reiter
+    # Zustellung (8 Texte, #2797 8 → 16); Kanalzeile E-Mail mit Prüfkonto-Adresse statt „henning@…“ ist
+    # Kontodaten-Abhängigkeit (7 Elemente + 2 Zusatztexte → #3009, 2 → 11, #3202 ist geschlossen).
     soll = {
-        "#2967": 0, "#2966": 0, "#2913-d": 0, "#2795": 36, "#2797": 8, "#2968": 0, "#3022": 62,
-        "#3111": 0, "#3194": 0, "#3241": 61, "#3009": 2, "#3151": 2, "#3122": 12, "#3202": 0, "#3203": 0, "#3204": 0,
+        "#2967": 0, "#2966": 0, "#2913-d": 0, "#2795": 36, "#2797": 16, "#2968": 0, "#3022": 62,
+        "#3111": 0, "#3194": 0, "#3241": 61, "#3009": 11, "#3151": 2, "#3122": 12, "#3202": 0, "#3203": 0, "#3204": 0,
         "#3205": 0, "#3145": 0, "#3258": 4,
     }
     ist = _verweise(daten)
