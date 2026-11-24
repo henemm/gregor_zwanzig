@@ -148,15 +148,18 @@ def vergleich_zeilen_en() -> dict[str, str]:
     return paare
 
 
-def validator_lauf(tmp_path: Path, validator: str, eml_bytes: bytes, *args: str):
+def validator_lauf(tmp_path: Path, validator: str, eml_bytes: bytes, *args: str,
+                   im_server: bool = False, ohne_installiertes_src: bool = False):
     """Startet den echten Validator als Prozess mit ``--eml`` -- aus einer
     Kopie der Hooks in einem eigenen Git-Repo (``src`` per Verweis), damit das
     YAML-Log in ``tmp_path`` landet und nie als Nachweis im echten Repo zaehlt.
-    Rueckgabe: (CompletedProcess, Log-Ordner)."""
+    Rueckgabe: (CompletedProcess, Log-Ordner). #3331: ``im_server`` = Fork-Server
+    (opt-in); ``ohne_installiertes_src`` = Prozess ohne editierbare Installation."""
     import os
     import shutil
     import subprocess
     import sys
+    import sysconfig
 
     repo_root = Path(__file__).resolve().parents[2]
     kopie = tmp_path / "repo"
@@ -169,10 +172,18 @@ def validator_lauf(tmp_path: Path, validator: str, eml_bytes: bytes, *args: str)
     eml = tmp_path / f"{validator}.eml"
     eml.write_bytes(eml_bytes)
     env = {**os.environ, "OPENSPEC_ACTIVE_WORKFLOW": "test-2663-sprache"}
-    lauf = subprocess.run(
-        [sys.executable, str(kopie / ".claude" / "hooks" / f"{validator}.py"), "--eml", str(eml), *args],
-        capture_output=True, text=True, env=env, cwd=str(kopie), timeout=180,
-    )
+    skript = str(kopie / ".claude" / "hooks" / f"{validator}.py")
+    if im_server:
+        from tests.helpers.validator_server import GEMEINSAM
+        lauf = GEMEINSAM.lauf(skript, ["--eml", str(eml), *args], env=env, cwd=str(kopie))
+    else:
+        python = [sys.executable]
+        if ohne_installiertes_src:
+            python, env["PYTHONPATH"] = [*python, "-S"], sysconfig.get_path("purelib")
+        lauf = subprocess.run(
+            [*python, skript, "--eml", str(eml), *args],
+            capture_output=True, text=True, env=env, cwd=str(kopie), timeout=180,
+        )
     return lauf, kopie / ".claude" / "workflows" / "_log"
 
 

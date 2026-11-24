@@ -6,7 +6,6 @@ Prozesse werden ueber ``ps`` gesucht. Kern-Schicht, ohne Netz.
 """
 from __future__ import annotations
 
-import importlib
 import json
 import os
 import re
@@ -20,6 +19,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.helpers import validator_server as vs
 from tests.helpers.mail_lang_fixture import validator_lauf
 from tests.tdd import test_einstellung_gleich_mail_validatoren as ziel
 
@@ -36,15 +36,27 @@ with open(sys.argv[1] + ".tmp", "w") as f:
 os.rename(sys.argv[1] + ".tmp", sys.argv[1])
 time.sleep(60)
 """
-
-
-def _vs():
-    return importlib.import_module("tests.helpers.validator_server")
+#: Vorspann: der Server stirbt, sobald sein Kind eingerichtet ist und auf das Startzeichen wartet.
+STIRBT = """
+import os, select, signal, socket
+fork, socketpair, paar = os.fork, socket.socketpair, []
+def sterbend():
+    pid = fork()
+    if pid == 0:
+        signal.alarm(45)  # kein Rest, falls das Kind faelschlich ewig wartet
+        return pid
+    with open(f"{__file__}.{pid}.pid", "w") as f:
+        f.write(str(pid))
+    select.select([paar[0]], [], [], 10)
+    os.kill(os.getpid(), signal.SIGKILL)
+socket.socketpair = lambda: paar.extend(socketpair()) or paar
+os.fork = sterbend
+"""
 
 
 @pytest.fixture
 def klient():
-    k = _vs().Klient()
+    k = vs.Klient()
     yield k
     k.verwerfen()
 
@@ -56,8 +68,7 @@ def _skript(tmp_path: Path, text: str, name: str = "skript.py") -> Path:
 
 
 def _lauf(k, tmp_path: Path, text: str, *args: str, timeout: float = 20, env=None):
-    skript = _skript(tmp_path, text)
-    return k.lauf(skript, list(args), env=dict(os.environ) if env is None else env,
+    return k.lauf(_skript(tmp_path, text), list(args), env=dict(os.environ) if env is None else env,
                   cwd=str(tmp_path), timeout=timeout)
 
 
@@ -81,9 +92,6 @@ def _pids_aus(pfad: Path, frist: float = 10) -> list[int]:
     return [int(p) for p in pfad.read_text().split()]
 
 
-# --------------------------------------------------------------------------- #
-# AC-1: Prozess und Server liefern dasselbe, auch das Log
-# --------------------------------------------------------------------------- #
 def _fall(monkeypatch, tmp_path, validator, rot):
     if validator == ziel.TRIP:
         daten = ziel._trip_daten(ziel._TRIP_FOLGE)
@@ -122,9 +130,6 @@ def test_ac1_prozess_und_server_gleich(monkeypatch, tmp_path, validator, rot):
     assert server == prozess
 
 
-# --------------------------------------------------------------------------- #
-# AC-2: der echte Prozesslauf der Zieldatei bemerkt einen fehlenden src-Pfad
-# --------------------------------------------------------------------------- #
 @pytest.mark.timeout(60)
 @pytest.mark.parametrize("validator", [ziel.TRIP, ziel.ORTE])
 def test_ac2_prozesslauf_bemerkt_fehlenden_src_pfad(monkeypatch, tmp_path, validator):
@@ -146,28 +151,24 @@ def test_ac2_prozesslauf_bemerkt_fehlenden_src_pfad(monkeypatch, tmp_path, valid
     assert code != 0, f"fehlender src-Pfad unbemerkt ({ersetzt} Stellen entfernt): {aus}"
 
 
-# --------------------------------------------------------------------------- #
-# AC-3: Umgebung, Zeitzone, Arbeitsordner, argv
-# --------------------------------------------------------------------------- #
 def test_ac3_kind_bekommt_genau_die_umgebung_des_aufrufs(monkeypatch, tmp_path, klient):
     monkeypatch.setenv("GZ_NUR_SERVER", "1")
     monkeypatch.setenv("TZ", "UTC")
-    env = {"PATH": os.environ["PATH"], "NUR_LAUF": "ja", "TZ": "Pacific/Kiritimati"}
-    text = ("import json, os, sys, time\n"
-            "print(json.dumps([dict(os.environ), time.timezone, os.getcwd(), sys.argv, sys.path[0]]))\n")
+    env = {"PATH": os.environ["PATH"], "NUR_LAUF": "ja", "TZ": "Pacific/Kiritimati", "TMPDIR": str(tmp_path)}
+    text = ("import json, os, sys, tempfile, time\n"
+            "print(json.dumps([dict(os.environ), time.timezone, os.getcwd(), sys.argv, sys.path[0],\n"
+            "                  tempfile.gettempdir(), sys.stdin.read()]))\n")
     lauf = _lauf(klient, tmp_path, text, "a", "b c", env=env)
     assert lauf.returncode == 0, lauf.stderr
-    umgebung, zone, cwd, argv, pfad0 = json.loads(lauf.stdout)
+    umgebung, zone, cwd, argv, pfad0, tmp, stdin = json.loads(lauf.stdout)
     assert umgebung == env
     assert zone == -14 * 3600
     assert os.path.realpath(cwd) == os.path.realpath(tmp_path)
     assert argv == [str(tmp_path / "skript.py"), "a", "b c"]
-    assert pfad0 == str(tmp_path)
+    assert (pfad0, tmp, stdin) == (str(tmp_path), str(tmp_path), "")
+    assert klient._kind is klient._kennung is None, "spaeteres Verwerfen traefe eine fremde Prozessgruppe"
 
 
-# --------------------------------------------------------------------------- #
-# AC-4/AC-5: Frist und Abbruch
-# --------------------------------------------------------------------------- #
 def test_ac4_frist_beendet_kind_und_enkel(tmp_path, klient):
     with pytest.raises(subprocess.TimeoutExpired):
         _lauf(klient, tmp_path, HAENGT, str(tmp_path / "pids"), timeout=2)
@@ -180,11 +181,8 @@ class _Abbruch(BaseException):
     """Wie pytest-timeout: kein ``Exception``-Nachfahre, mitten im Warten."""
 
 
-def _wirf(_sig, _frame):
-    raise _Abbruch
-
-
-def test_ac5_abbruch_im_warten_vertauscht_keine_antwort(tmp_path, klient):
+@pytest.mark.parametrize("wo", ["vor-startzeile", "vor-ergebnis"])
+def test_ac5_abbruch_im_warten_vertauscht_keine_antwort(tmp_path, klient, wo):
     assert _lauf(klient, tmp_path, "print('vorher')").stdout == "vorher\n"
     alt = klient.pid
     pids: list[int] = []
@@ -193,7 +191,16 @@ def test_ac5_abbruch_im_warten_vertauscht_keine_antwort(tmp_path, klient):
         pids.extend(_pids_aus(tmp_path / "pids"))
         os.kill(os.getpid(), signal.SIGUSR1)
 
-    vorher = signal.signal(signal.SIGUSR1, _wirf)
+    def wirf(*_):
+        raise _Abbruch
+
+    def liest_nicht(*_):
+        del klient._lies  # verwerfen liest die Startzeile wieder echt
+        time.sleep(20)
+
+    if wo == "vor-startzeile":
+        klient._lies = liest_nicht
+    vorher = signal.signal(signal.SIGUSR1, wirf)
     faden = threading.Thread(target=ausloesen)
     faden.start()
     try:
@@ -209,9 +216,9 @@ def test_ac5_abbruch_im_warten_vertauscht_keine_antwort(tmp_path, klient):
 
 
 @pytest.mark.parametrize("fremd_ab", [0, 1], ids=["startzeile", "ergebnis"])
-def test_ac5_fremde_kennung_scheitert_laut(tmp_path, fremd_ab):
+def test_ac5_fremde_kennung_scheitert_laut(tmp_path, klient, fremd_ab):
     """Ersatz-Server, der Zeilen eines anderen Laufs liefert (pid unbelegt)."""
-    server = _skript(tmp_path, f"""
+    klient.server_skript = _skript(tmp_path, f"""
 import json, sys
 for zeile in sys.stdin:
     echt = json.loads(zeile)["kennung"]
@@ -219,46 +226,42 @@ for zeile in sys.stdin:
     for i, teil in enumerate(teile):
         print(json.dumps({{**teil, "kennung": "fremd" if i >= {fremd_ab} else echt}}), flush=True)
 """, "server.py")
-    k = _vs().Klient(server)
-    try:
-        with pytest.raises(_vs().ServerFehler, match="(?i)kennung"):
-            _lauf(k, tmp_path, PROBE)
-    finally:
-        k.verwerfen()
+    with pytest.raises(vs.ServerFehler, match="(?i)kennung"):
+        _lauf(klient, tmp_path, PROBE)
 
 
-# --------------------------------------------------------------------------- #
-# AC-6: Server tot, ohne fork, mit Zusatz-Thread -- laut, kein Rueckfall
-# --------------------------------------------------------------------------- #
 def test_ac6_toter_server_scheitert_laut_und_startet_neu(tmp_path, klient):
     _lauf(klient, tmp_path, PROBE)
     alt = klient.pid
     os.kill(alt, signal.SIGKILL)
     assert _alle_weg([alt]) == []
-    with pytest.raises(_vs().ServerFehler):
+    with pytest.raises(vs.ServerFehler):
         _lauf(klient, tmp_path, PROBE)
     _kind, vater = json.loads(_lauf(klient, tmp_path, PROBE).stdout)
     assert vater == klient.pid != alt
 
 
-@pytest.mark.parametrize("vorspann,meldung", [
-    ("import os; del os.fork", "fork"),
-    ("import threading, time; threading.Thread(target=time.sleep, args=(60,), daemon=True).start()", "Thread"),
-], ids=["ohne-fork", "zusatz-thread"])
-def test_ac6_ungeeigneter_server_scheitert_laut(tmp_path, vorspann, meldung):
-    server = _skript(tmp_path, f"{vorspann}\nimport runpy\n"
-                     f"runpy.run_path({str(_vs().SERVER_SKRIPT)!r}, run_name='__main__')\n", "server.py")
-    k = _vs().Klient(server)
-    try:
-        with pytest.raises(_vs().ServerFehler, match=f"(?i){meldung}"):
-            _lauf(k, tmp_path, PROBE)
-    finally:
-        k.verwerfen()
+@pytest.mark.parametrize("vorspann,meldung,kinder", [
+    ("import os; del os.fork", "fork", 0),
+    ("import threading, time; threading.Thread(target=time.sleep, args=(60,), daemon=True).start()", "Thread", 0),
+    ("import os, sys, time; os.close(1); time.sleep(0.5); sys.exit('spaet')", "Server tot: spaet", 0),
+    (STIRBT, "Server tot", 1),
+], ids=["ohne-fork", "zusatz-thread", "meldung-nach-eof", "stirbt-vor-startzeile"])
+def test_ac6_ungeeigneter_server_scheitert_laut(tmp_path, klient, vorspann, meldung, kinder):
+    klient.server_skript = _skript(tmp_path, f"{vorspann}\nimport runpy\n"
+                     f"runpy.run_path({str(vs.SERVER_SKRIPT)!r}, run_name='__main__')\n", "server.py")
+    with pytest.raises(vs.ServerFehler, match=f"(?i){meldung}"):
+        _lauf(klient, tmp_path, "import sys; open(sys.argv[1], 'w')", str(tmp_path / "gelaufen"))
+    pids = [int(p.read_text()) for p in tmp_path.glob("*.pid")]
+    assert len(pids) == kinder and _alle_weg(pids) == []
+    assert not (tmp_path / "gelaufen").exists()
 
 
-# --------------------------------------------------------------------------- #
-# AC-7/AC-8: kein Zustand zwischen Laeufen, Exit-Regeln wie im Prozess
-# --------------------------------------------------------------------------- #
+def test_ac6_gescheiterte_einrichtung_des_kindes_ist_kein_ergebnis(tmp_path, klient):
+    with pytest.raises(vs.ServerFehler, match="(?s)FileNotFoundError.*Kind konnte nicht eingerichtet"):
+        klient.lauf(_skript(tmp_path, PROBE), [], env=dict(os.environ), cwd=tmp_path / "fehlt", timeout=20)
+
+
 def test_ac7_zweiter_lauf_sieht_keinen_zustand_des_ersten(tmp_path, klient):
     setzen = ("import os, sys, i18n\nos.environ['GZ_MARKE'] = '1'\nsys.modules['gz_marke'] = sys\n"
               "i18n.catalog.get_catalog().texte['de']['gz.marke'] = 'x'\nsys.path.append('/gz-marke')\n")
@@ -273,10 +276,10 @@ def test_ac7_zweiter_lauf_sieht_keinen_zustand_des_ersten(tmp_path, klient):
 
 @pytest.mark.parametrize("ende", [
     "raise SystemExit(3)", "raise SystemExit(None)", "raise SystemExit('Meldung')",
-    "def f():\n    raise ValueError('kaputt')\nf()",
-], ids=["zahl", "none", "text", "ausnahme"])
+    "def f():\n    raise ValueError('kaputt')\nf()", "import os; os.kill(os.getpid(), 15)",
+], ids=["zahl", "none", "text", "ausnahme", "signal"])
 def test_ac8_exit_regeln_wie_im_echten_prozess(tmp_path, klient, ende):
-    text = f"print('Ausgabe')\n{ende}\n"
+    text = f"import sys\nprint('Ausgabe', sys.path)\n{ende}\n"
     server = _lauf(klient, tmp_path, text)
     prozess = subprocess.run([sys.executable, str(tmp_path / "skript.py")], capture_output=True,
                              text=True, cwd=tmp_path)
@@ -284,9 +287,6 @@ def test_ac8_exit_regeln_wie_im_echten_prozess(tmp_path, klient, ende):
         (prozess.returncode, prozess.stdout, prozess.stderr)
 
 
-# --------------------------------------------------------------------------- #
-# AC-9: Opt-in
-# --------------------------------------------------------------------------- #
 def _mit_probe(tmp_path: Path) -> Path:
     hooks = tmp_path / "repo" / ".claude" / "hooks"
     hooks.mkdir(parents=True)
@@ -298,21 +298,17 @@ def test_ac9_ohne_opt_in_echter_prozess(tmp_path):
     lauf, _ = validator_lauf(_mit_probe(tmp_path), "probe", b"")
     assert json.loads(lauf.stdout)[1] == os.getpid()
     lauf, _ = validator_lauf(tmp_path, "probe", b"", im_server=True)
-    assert json.loads(lauf.stdout)[1] == _vs().GEMEINSAM.pid != os.getpid()
+    assert json.loads(lauf.stdout)[1] == vs.GEMEINSAM.pid != os.getpid()
 
 
 def test_ac9_zieldatei_schaltet_ein_und_kann_prozess(tmp_path):
     _mit_probe(tmp_path)
     assert json.loads(ziel._lauf(tmp_path, "probe", b"", prozess=True)[1])[1] == os.getpid()
-    assert json.loads(ziel._lauf(tmp_path, "probe", b"")[1])[1] == _vs().GEMEINSAM.pid
+    assert json.loads(ziel._lauf(tmp_path, "probe", b"")[1])[1] == vs.GEMEINSAM.pid
 
 
-# --------------------------------------------------------------------------- #
-# AC-10: nichts bleibt uebrig
-# --------------------------------------------------------------------------- #
 @pytest.mark.parametrize("art", ["normal", "kill", "kill-mit-kind"])
 def test_ac10_server_verschwindet_mit_dem_worker(tmp_path, art):
-    _vs()
     kurz, haengt = _skript(tmp_path, PROBE, "kurz.py"), _skript(tmp_path, HAENGT, "haengt.py")
     worker = _skript(tmp_path, f"""
 import os, sys, time

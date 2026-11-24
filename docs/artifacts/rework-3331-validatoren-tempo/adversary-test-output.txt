@@ -1,0 +1,251 @@
+Mi. 25 Nov. 2026 00:26:08 CET
+Stand Runde 2: unmutiert (Hashes siehe mutationen-runde2.md), keine Mutationslaeufe darin, Worktree rework-3279-testsuite-tempo, macOS
+=== 1 tests/test_validator_server.py -n 4 --dist loadgroup ===
+bringing up nodes...
+bringing up nodes...
+
+..............................                                           [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+tests/conftest.py:130
+tests/conftest.py:130
+tests/conftest.py:130
+tests/conftest.py:130
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+tests/test_validator_server.py::test_ac1_prozess_und_server_gleich[email_spec_validator-True]
+tests/test_validator_server.py::test_ac1_prozess_und_server_gleich[email_spec_validator-False]
+tests/test_validator_server.py::test_ac2_prozesslauf_bemerkt_fehlenden_src_pfad[email_spec_validator]
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/src/services/scheduler_dispatch_service.py:616: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    entry["letzter_versand"] = _datetime.utcnow().isoformat() + "Z"
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+30 passed, 13 warnings in 25.04s
+exit=0
+=== 2 tests/test_validator_server.py seriell ===
+..............................                                           [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+tests/test_validator_server.py::test_ac1_prozess_und_server_gleich[email_spec_validator-False]
+tests/test_validator_server.py::test_ac1_prozess_und_server_gleich[email_spec_validator-True]
+tests/test_validator_server.py::test_ac2_prozesslauf_bemerkt_fehlenden_src_pfad[email_spec_validator]
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/src/services/scheduler_dispatch_service.py:616: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    entry["letzter_versand"] = _datetime.utcnow().isoformat() + "Z"
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+30 passed, 5 warnings in 61.77s (0:01:01)
+exit=0
+=== 3 Zieldatei -n 4 --dist loadgroup ===
+bringing up nodes...
+bringing up nodes...
+
+........................................................................ [ 48%]
+........................................................................ [ 96%]
+.....                                                                    [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+tests/conftest.py:130
+tests/conftest.py:130
+tests/conftest.py:130
+tests/conftest.py:130
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+tests/tdd/test_einstellung_gleich_mail_validatoren.py: 72 warnings
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/src/services/scheduler_dispatch_service.py:616: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    entry["letzter_versand"] = _datetime.utcnow().isoformat() + "Z"
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+149 passed, 82 warnings in 84.79s (0:01:24)
+exit=0
+=== 4 _lauf-Importeure -n 4 ===
+bringing up nodes...
+bringing up nodes...
+
+.........................................................                [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+tests/conftest.py:130
+tests/conftest.py:130
+tests/conftest.py:130
+tests/conftest.py:130
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+tests/tdd/test_validatoren_ausblick_3155.py::test_orte_ausblick_name_alter_name_scheitert[en]
+tests/tdd/test_validatoren_ausblick_3155.py::test_orte_ausblick_name_alter_name_scheitert[de]
+tests/tdd/test_validatoren_ausblick_3155.py::test_orte_briefing_argument_und_zieltag
+tests/tdd/test_validatoren_ausblick_3155.py::test_orte_ausblick_im_falschen_briefing_scheitert
+tests/tdd/test_validatoren_ausblick_3155.py::test_orte_briefing_ohne_konfig_abgelehnt
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/src/services/scheduler_dispatch_service.py:616: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    entry["letzter_versand"] = _datetime.utcnow().isoformat() + "Z"
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+57 passed, 15 warnings in 16.52s
+exit=0
+=== 5 weitere validator_lauf-Nutzer -n 4 ===
+bringing up nodes...
+bringing up nodes...
+
+........................................................................ [ 41%]
+........................................................................ [ 82%]
+..............................                                           [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+tests/conftest.py:130
+tests/conftest.py:130
+tests/conftest.py:130
+tests/conftest.py:130
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+tests/tdd/test_validatoren_lang_verdrahtung.py::test_f001_main_mit_lang_en_prueft_die_englische_mail[official_alert_mail_validator]
+tests/tdd/test_validatoren_lang_verdrahtung.py::test_f001_main_mit_lang_en_prueft_die_englische_mail[official_alert_mail_validator]
+  /private/var/folders/9n/w5wl_q1x7j17v9y0b5nw6vj80000gn/T/pytest-of-hem/pytest-1881/popen-gw1/test_f001_main_mit_lang_en_pru0/repo/.claude/hooks/official_alert_mail_validator.py:460: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    f"validated_at: '{datetime.utcnow().isoformat()}'",
+
+tests/tdd/test_validatoren_lang_verdrahtung.py: 13 warnings
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/.claude/hooks/_validator_log.py:67: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S_%f")
+
+tests/tdd/test_validatoren_lang_verdrahtung.py::test_f001_main_mit_lang_en_prueft_die_englische_mail[radar_alert_mail_validator]
+tests/tdd/test_validatoren_lang_verdrahtung.py::test_f001_main_mit_lang_en_prueft_die_englische_mail[radar_alert_mail_validator]
+  /private/var/folders/9n/w5wl_q1x7j17v9y0b5nw6vj80000gn/T/pytest-of-hem/pytest-1881/popen-gw1/test_f001_main_mit_lang_en_pru1/repo/.claude/hooks/radar_alert_mail_validator.py:223: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    f"validated_at: '{datetime.utcnow().isoformat()}'",
+
+tests/tdd/test_validatoren_lang_verdrahtung.py::test_f001_main_mit_lang_de_prueft_die_deutsche_mail[radar_alert_mail_validator]
+  /private/var/folders/9n/w5wl_q1x7j17v9y0b5nw6vj80000gn/T/pytest-of-hem/pytest-1881/popen-gw0/test_f001_main_mit_lang_de_pru0/repo/.claude/hooks/radar_alert_mail_validator.py:223: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    f"validated_at: '{datetime.utcnow().isoformat()}'",
+
+tests/tdd/test_validatoren_lang_verdrahtung.py::test_f001_main_mit_lang_de_prueft_die_deutsche_mail[official_alert_mail_validator]
+  /private/var/folders/9n/w5wl_q1x7j17v9y0b5nw6vj80000gn/T/pytest-of-hem/pytest-1881/popen-gw2/test_f001_main_mit_lang_de_pru0/repo/.claude/hooks/official_alert_mail_validator.py:460: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    f"validated_at: '{datetime.utcnow().isoformat()}'",
+
+tests/tdd/test_validatoren_lang_verdrahtung.py::test_f001_main_mit_lang_de_prueft_die_deutsche_mail[official_alert_mail_validator]
+tests/tdd/test_validatoren_lang_verdrahtung.py::test_f001_main_reicht_to_contains_an_die_auswahl[email_spec_validator]
+tests/tdd/test_validatoren_lang_verdrahtung.py::test_f001_main_reicht_to_contains_an_die_auswahl[radar_alert_mail_validator]
+  /private/var/folders/9n/w5wl_q1x7j17v9y0b5nw6vj80000gn/T/pytest-of-hem/pytest-1881/popen-gw2/test_f001_main_mit_lang_de_pru0/repo/.claude/hooks/_validator_log.py:67: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S_%f")
+
+tests/tdd/test_validatoren_lang_verdrahtung.py::test_f001_main_reicht_to_contains_an_die_auswahl[email_spec_validator]
+  /private/var/folders/9n/w5wl_q1x7j17v9y0b5nw6vj80000gn/T/pytest-of-hem/pytest-1881/popen-gw2/test_f001_main_reicht_to_conta0/repo/.claude/hooks/email_spec_validator.py:101: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "validated_at": datetime.utcnow().isoformat(),
+
+tests/tdd/test_validatoren_lang_verdrahtung.py::test_f001_main_reicht_to_contains_an_die_auswahl[radar_alert_mail_validator]
+  /private/var/folders/9n/w5wl_q1x7j17v9y0b5nw6vj80000gn/T/pytest-of-hem/pytest-1881/popen-gw2/test_f001_main_reicht_to_conta1/repo/.claude/hooks/radar_alert_mail_validator.py:223: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    f"validated_at: '{datetime.utcnow().isoformat()}'",
+
+tests/tdd/test_validatoren_lang_verdrahtung.py::test_f001_main_mit_lang_de_prueft_die_deutsche_mail[briefing_mail_validator]
+  /private/var/folders/9n/w5wl_q1x7j17v9y0b5nw6vj80000gn/T/pytest-of-hem/pytest-1881/popen-gw1/test_f001_main_mit_lang_de_pru0/repo/.claude/hooks/briefing_mail_validator.py:1560: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "validated_at": datetime.utcnow().isoformat(),
+
+tests/tdd/test_validatoren_lang_verdrahtung.py::test_f001_main_mit_lang_de_prueft_die_deutsche_mail[email_spec_validator]
+  /private/var/folders/9n/w5wl_q1x7j17v9y0b5nw6vj80000gn/T/pytest-of-hem/pytest-1881/popen-gw1/test_f001_main_mit_lang_de_pru1/repo/.claude/hooks/email_spec_validator.py:101: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "validated_at": datetime.utcnow().isoformat(),
+
+tests/tdd/test_validatoren_lang_verdrahtung.py::test_f001_main_mit_lang_en_prueft_die_englische_mail[briefing_mail_validator]
+tests/tdd/test_validatoren_lang_verdrahtung.py::test_f001_main_mit_lang_en_prueft_die_englische_mail[briefing_mail_validator]
+  /private/var/folders/9n/w5wl_q1x7j17v9y0b5nw6vj80000gn/T/pytest-of-hem/pytest-1881/popen-gw3/test_f001_main_mit_lang_en_pru0/repo/.claude/hooks/briefing_mail_validator.py:1560: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "validated_at": datetime.utcnow().isoformat(),
+
+tests/tdd/test_validatoren_lang_verdrahtung.py::test_f001_main_mit_lang_en_prueft_die_englische_mail[email_spec_validator]
+tests/tdd/test_validatoren_lang_verdrahtung.py::test_f001_main_mit_lang_en_prueft_die_englische_mail[email_spec_validator]
+  /private/var/folders/9n/w5wl_q1x7j17v9y0b5nw6vj80000gn/T/pytest-of-hem/pytest-1881/popen-gw3/test_f001_main_mit_lang_en_pru1/repo/.claude/hooks/email_spec_validator.py:101: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "validated_at": datetime.utcnow().isoformat(),
+
+tests/tdd/test_validatoren_lang_verdrahtung.py::test_f001_main_reicht_to_contains_an_die_auswahl[briefing_mail_validator]
+  /private/var/folders/9n/w5wl_q1x7j17v9y0b5nw6vj80000gn/T/pytest-of-hem/pytest-1881/popen-gw0/test_f001_main_reicht_to_conta0/repo/.claude/hooks/briefing_mail_validator.py:1560: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "validated_at": datetime.utcnow().isoformat(),
+
+tests/tdd/test_validatoren_lang_verdrahtung.py::test_f001_main_reicht_to_contains_an_die_auswahl[official_alert_mail_validator]
+  /private/var/folders/9n/w5wl_q1x7j17v9y0b5nw6vj80000gn/T/pytest-of-hem/pytest-1881/popen-gw0/test_f001_main_reicht_to_conta1/repo/.claude/hooks/official_alert_mail_validator.py:460: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    f"validated_at: '{datetime.utcnow().isoformat()}'",
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+174 passed, 42 warnings in 29.44s
+exit=0
+=== 6 Zieldatei seriell ===
+........................................................................ [ 48%]
+........................................................................ [ 96%]
+.....                                                                    [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+tests/tdd/test_einstellung_gleich_mail_validatoren.py: 72 warnings
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/src/services/scheduler_dispatch_service.py:616: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    entry["letzter_versand"] = _datetime.utcnow().isoformat() + "Z"
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+149 passed, 74 warnings in 280.81s (0:04:40)
+exit=0
+=== 7 Reste ===
+Server:        0
+sleep60:        0
+chromium:        0
+(Ende Reste)
+Mi. 25 Nov. 2026 00:34:34 CET
+FERTIG

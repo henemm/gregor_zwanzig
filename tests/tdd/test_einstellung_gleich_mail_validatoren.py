@@ -236,8 +236,10 @@ def _ohne_block(text: str, ueberschrift: str) -> str:
     return re.sub(rf"\n{re.escape(ueberschrift)}\n.*?\n\n", "\n\n", text, flags=re.S)
 
 
-def _lauf(tmp_path, validator, eml, *args):
-    lauf, _log = validator_lauf(tmp_path, validator, eml, *args)
+def _lauf(tmp_path, validator, eml, *args, prozess=False):
+    """Fork-Server (#3331); ``prozess=True`` = echter Prozess ohne installiertes src."""
+    lauf, _log = validator_lauf(tmp_path, validator, eml, *args,
+                                im_server=not prozess, ohne_installiertes_src=prozess)
     return lauf.returncode, lauf.stdout + lauf.stderr
 
 

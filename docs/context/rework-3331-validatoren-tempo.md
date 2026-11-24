@@ -87,6 +87,8 @@ Geht bei Widerspruch dem Prototyp vor. Explore-Teilagenten ausgelassen (Context 
 - Playwright startet Chromium unter POSIX vermutlich in eigener Prozessgruppe (nicht geprueft); `test_ac10_browser_weg_nach_frist` entscheidet, ob `killpg` reicht.
 - `validator_lauf(..., im_server=False)`; `_lauf(..., prozess=False)` der Zieldatei: Standard Server, `prozess=True` = echter Prozess ohne installiertes `src`.
 
+- **Umfang:** PO hat die Obergrenze am 24.11.2026 von 400 auf 600 Zeilen angehoben (376 davon stehen mit den RED-Tests schon im Commit, zaehlen also mit).
+
 ### Affected Files
 | File | Change | Beschreibung |
 |---|---|---|
@@ -113,3 +115,18 @@ Geht bei Widerspruch dem Prototyp vor. Explore-Teilagenten ausgelassen (Context 
 ### Open Questions
 - [ ] Linux/CI-Laufzeit ungemessen: im PR belegen (Laufzeit der Datei im CI-Job `test` vorher/nachher, soweit die Ausgabe sie zeigt).
 - [ ] Nur eine Einzelperson-Messreihe auf dem Mac; Vorher/Nachher nach der Umsetzung neu messen.
+
+### Stand Phase 6b (24.11.2026, Wiedereinstieg nach /clear)
+- Implementierung fertig, **noch nicht committet** (Commit-Gate verlangt VERIFIED): `tests/helpers/validator_server.py` (neu, untracked), `mail_lang_fixture.py`, Zieldatei, `test_einstellung_gleich_mail_soll_placements.py:489` (`prozess=True`, AC-9), Doku. Umfang 600 neue + 9 entfernte Zeilen in `tests`, Obergrenze 600: kein Spielraum mehr. GREEN automatisch freigegeben.
+- Gruen gelaufen (Developer Agent): Server-Tests 25 (mehrfach), Gesamtlauf 376, Zusatz 29; nach der Nacharbeit nur Server-Tests + soll_placements (53). Linux ungetestet.
+- `test_3047_r8py_luecken.py`, `test_validatoren_ausblick_3155.py` importieren `_lauf` und laufen bewusst im Server (in der Spec nicht genannt).
+- Offen fuer den Adversary: Rest-Luecke Signal-Ausnahme zwischen read und Pufferspeichern in `_lies`; Server-cwd/-env = Testprozess; `timeout` zaehlt ab Startzeile; Serverfrist = timeout + 1 s. Nach dem Adversary-Lauf: `required-files` listete nichts, `risk` = hoch (2 Runden) wegen `.claude/gate-events.jsonl`; untracked Datei vor dem `stamp` pruefen. `adversary-dialog.md` ist als Geruest angelegt.
+- AC-12: erste Messung UNGUELTIG (`messung-ac12-UNGUELTIG-nur-server.txt`): Patch traf `tests.tdd....` statt des pytest-Moduls ohne Paketnamen, alle 8 Laeufe waren Server-Laeufe. Wiederholung mit Wegzaehler: `messung-ac12.txt` (je Zeile exit, wand, laeufe prozess/server).
+- **AC-12 erfuellt (gemessen, alle Laeufe Exit 0, 149 gruen, Wegzaehler 243/0 gegen 2/241):** `-n 4` 152 -> 99 s (35 %) und 156 -> 98 s (37 %); seriell 458 -> 231 s (50 %) und 481 -> 285 s (41 %). Last schwankte (2,0 bis 8,5), Serverlaeufe liefen je direkt nach dem Prozesslauf. "Prozess" ist nicht der alte Commit, sondern der neue Stand mit erzwungenem Prozessweg. Danach kein Server-/Chromium-Prozess uebrig. Die Zieldatei lief dabei viermal ueber den Server, jedes Mal gruen.
+- **Naechster Schritt:** `implementation-validator` starten (2 Runden, AC-11-Mutationen je Validator und je Absicherungstest, String-Ersetzung mit externer Kopie), Protokoll `docs/artifacts/rework-3331-validatoren-tempo/adversary-dialog.md` befuellen, registrieren, `git add` der neuen Datei VOR `stamp`, dann `qa_gate.py --infra --no-visual`, dann Phase 7. Messhilfe lag nur im Sitzungs-Scratchpad.
+
+### Stand nach Adversary (25.11.2026)
+- **VERIFIED nach 2 Runden** (Runde 1 BROKEN: F001 flackernder Test, F002 unbewachte Start-Absicherung; behoben). Server-Tests 30, Zieldatei 149, `_lauf`-Importeure 57, weitere Nutzer 174, alle gruen. Offen nur LOW: F007 (`aus`-fd im Kind), F008 (Fristpruefung vor dem 5-s-Warten).
+- `flacker-nachweis.txt` zaehlt unklar ("1 gruen") und gilt nicht als Beleg; massgeblich ist die Messung in `mutationen-runde2.md` (80 Laeufe unter Last, 0 rot).
+- AC-12 stammt von vor der Nacharbeit und wurde nicht neu gemessen (Nacharbeit betrifft nur den Fehlerpfad). Linux/CI offen: Laufzeit der Datei im Job `test` im PR nennen.
+- Umfang 600 von 600 Zeilen, kein Spielraum. `.claude/gate-events.jsonl` und `herdr_*` nie committen.

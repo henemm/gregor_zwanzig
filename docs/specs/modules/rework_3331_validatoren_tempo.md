@@ -157,7 +157,10 @@ Maßgeblich ist der Abschnitt „Gegenprüfung" in `docs/context/rework-3331-val
 - **Gleichheit gilt für den heutigen Stand:** sie belegt nicht, dass künftige Fehler im Server gleich auffallen; dafür gibt es je Validator den echten Prozesslauf (AC-2).
 - **Gewinn verteilt sich ungleich:** seriell etwa je zur Hälfte, `briefing` 246 auf 165 s, `email_spec` 119 auf 30 s (Rest bei `briefing` ist echter Chromium).
 - **Messung des Prototyps:** Einzelmessreihe auf einem Mac bei schwankender Last (3,5 bis 8,5); zu Beginn lief evtl. noch ein fremder Testlauf. Die Messung nach der Umsetzung ersetzt diese Werte.
-- **LoC:** die 250er-Grenze wird voraussichtlich überschritten (Obergrenze 400), siehe Estimated Scope.
+- **LoC:** die 250er-Grenze wird überschritten. Der PO hat die Obergrenze am 24.11.2026 von 400 auf 600 Zeilen in `tests/` angehoben (die Absicherung wurde größer als geschätzt); das ersetzt die Zahl in Estimated Scope. Sechste Datei: `tests/tdd/test_einstellung_gleich_mail_soll_placements.py` (eine Zeile, `prozess=True`, damit sie nach AC-9 im Prozess bleibt).
+- **Interpreter-Startparameter:** der Server läuft bereits, deshalb wirken im Kind nicht: `PYTHONIOENCODING`, `PYTHONUTF8`, `PYTHONWARNINGS`, `PYTHONHASHSEED`, `LANG`/`LC_*` für die Ausgabekodierung. Ferner abweichend: `__loader__`, ein Validator, der `sys.stdout` schließt, und Nicht-Daemon-Threads, die das Skriptende überleben (Ende per `os._exit`). Die Zieldatei nutzt heute nichts davon; wer es braucht, nimmt den echten Prozess.
+- **Abbruchfenster:** eine Signalausnahme genau zwischen dem Lesen und dem Ablegen der Startzeile im Klienten verliert die Kind-Kennung (Mikrosekunden, nicht testbar); das Kind läuft dann bis zu seinem eigenen Ende weiter, ohne Frist durch den Server.
+- **Weitere Nutzer (in Dependencies nicht genannt):** `tests/tdd/test_validatoren_lang_verdrahtung.py` ruft `validator_lauf` (Prozess); `test_3047_r8py_luecken.py` und `test_validatoren_ausblick_3155.py` importieren `_lauf` der Zieldatei und laufen daher im Server.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -167,3 +170,4 @@ Maßgeblich ist der Abschnitt „Gegenprüfung" in `docs/context/rework-3331-val
 ## Changelog
 
 - 2026-11-24: Initial spec created (Workflow rework-3331-validatoren-tempo, Issue #3331, Scheibe B)
+- 2026-11-24: Nachtrag aus der Adversary-Runde 1 (Known Limitations: Startparameter, Umfang, weitere Nutzer); ACs unverändert
