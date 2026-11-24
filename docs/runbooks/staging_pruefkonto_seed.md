@@ -17,6 +17,15 @@ den die Go-API im Premium-Tarif beim Eintragen der Nummer auslöst, läuft über
 Sandbox-Schlüssel von Staging (siehe „Sperre gegen echten SMS-Versand“), bestätigt wird mit dem
 Code der Staging-Route `staging-code`.
 
+Seit #3327 legt der Seed zusätzlich einen frei erfundenen, **archivierten** Trip „Küstenpfad
+Probelauf“ an (ID `gz2967-archiv-kuestenpfad`, Region „Nordsee (fiktiv)“, 3 Etappen am
+12.–14.06.2026, ohne Kanal-, Wetter- und Tabellenkonfiguration). Er wird nach Tarif und GR221-Trip
+angelegt und per `PATCH /api/trips/{id}/state` mit `{"archived": true}` genau einmal archiviert;
+weitere Läufe schreiben an ihm nichts, solange er archiviert ist und seinem Soll entspricht (ein PUT
+behält das Archivdatum). Er erscheint nur im Archiv, nicht in der Trip-Liste, und löst keinen Versand
+aus. `ELEMENTLISTE_TRIP_ID` bleibt der GR221-Trip. Reihenfolge für das Archiv-Bild der Funktionsseite:
+**erst Seed, dann Archiv-Bild** (`docs/runbooks/funktionen_screenshots.md`).
+
 ## Prüfkonto
 
 Eigenes Staging-Konto (Muster `GZ_E2E_EN_*`), Schlüssel in der Staging-`.env`:

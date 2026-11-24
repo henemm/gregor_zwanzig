@@ -68,7 +68,7 @@ Jedes Bild in DE und EN geöffnet und angesehen. Ergebnis: keine echten Personen
 | `trip-hub` | Trip GR221 Mallorca (Seed), Etappen Port d'Andratx → Estellencs …, Wetter, Briefings | nur Seed-Daten |
 | `trip-wetter` | Reiter Wetter, Vorlage Alpen-Trekking, Schwellen | nur Seed-Daten |
 | `trip-zustellung` | Zeiten, Laufzeit, Kanaltabelle | Adresse als `wanderer@beispiel.invalid`, Nummer als `+49 ••• •••••••` maskiert |
-| `archiv` | leeres Archiv mit Suche und Filtern | keine Personendaten |
+| `archiv` | Archiv mit einem Eintrag „Küstenpfad Probelauf“ (3 Etappen, Archivdatum), darüber Suche und Filter | keine Personendaten (fiktiver Seed-Trip) |
 | `ortsvergleich` | Ortsvergleich Münsterland (Münster, Telgte, Tecklenburg) | nur Seed-Daten |
 | `konto-kanaele` | Karte Kanäle: E-Mail, Handynummer, Telegram verbunden (…001, fiktive Chat-ID des Seeds) | Adresse und Nummer maskiert |
 | `konto-level` | Level Premium, Antrag, Mengen, SMS-Kontingent, Benachrichtigungen, Wetter-Modelle | Adresse maskiert, Telegram …001 (fiktiv) |
@@ -80,15 +80,14 @@ Jedes Bild in DE und EN geöffnet und angesehen. Ergebnis: keine echten Personen
 | `befehle-mail` | Abschnitt Antwort-Befehle der Briefing-Mail | keine Personendaten |
 | `briefing-quelle` | Fußzeile der Briefing-Mail (Zeit, openmeteo, arome_france) | keine Personendaten |
 
-Hinweise zum Bildinhalt: Das Archiv des Prüfkontos ist leer (der Seed legt keine archivierten Trips an);
-das Cockpit zeigt den beendeten Seed-Trip nicht, nur den Ortsvergleich. Die Alt-Texte beschreiben genau
-das, was zu sehen ist.
+Hinweise zum Bildinhalt: Das Cockpit zeigt den beendeten Seed-Trip nicht, nur den Ortsvergleich.
+Die Alt-Texte beschreiben genau das, was zu sehen ist.
 
-**Bekannte Schwäche Archiv-Bild:** Ein leeres Archiv zeigt die Funktion nur schwach. Ein fiktiver
-archivierter Trip ginge nur über eine Erweiterung des Prüfkonto-Seeds
-(`scripts/staging_pruefkonto_mockupdaten.py`): zweiter Trip, Archiv-Aufruf, Anpassung seiner eigenen
-Tests (`tests/tdd/test_staging_pruefkonto_mockupdaten.py`). Außerdem würde sich der Bestand des Kontos
-ändern, den der Elementlisten-Abgleich (#2913) gegen das Mockup liest. Das ist kein kleiner Umbau und
-wurde deshalb in #3319 nicht gemacht; die Erweiterung ist als eigenes Issue #3327 geplant. Wird der Seed später um einen archivierten Trip erweitert:
-`uv run python scripts/funktionen_screenshots.py --nur archiv`, Sichtprüfung, Alt-Text
-`funktionen.bild.archiv.alt` (DE/EN) anpassen.
+**Archiv-Bild und Seed-Trip (#3327):** Der Prüfkonto-Seed (`scripts/staging_pruefkonto_mockupdaten.py`)
+legt neben „GR221 Mallorca“ einen frei erfundenen zweiten Trip „Küstenpfad Probelauf“ (ID
+`gz2967-archiv-kuestenpfad`, 3 Etappen im Juni 2026) an und archiviert ihn genau einmal. Das
+Archivdatum ist der Tag des ersten Seed-Laufs und bleibt danach stabil. Reihenfolge: **erst Seed, dann
+Archiv-Bild**, also zuerst den Seed laut `docs/runbooks/staging_pruefkonto_seed.md`, danach
+`uv run python scripts/funktionen_screenshots.py --nur archiv` (und `--sprache en`), Sichtprüfung
+(ein Eintrag, „3 Etappen“, Datum lesbar) und Alt-Text `funktionen.bild.archiv.alt` (DE/EN) gegen das Bild
+prüfen. Ohne Seed-Lauf bleibt das Archiv leer und das Bild passt nicht zum Alt-Text.
