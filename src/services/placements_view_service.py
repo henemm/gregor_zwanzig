@@ -137,11 +137,35 @@ def _mit_platzhalter_kennung(draft: dict) -> dict:
     return {**draft, "id": ENTWURF_KENNUNG}
 
 
+#: #3305: Datum einer Etappe ohne gewaehltes Startdatum, nur zum Lesen fuer die
+#: Vorschau. Fest statt "heute" (deterministisch, keine Zeitzonenfrage #1402):
+#: die Tabelle haengt nicht am Datum.
+_VORSCHAU_PLATZHALTER_DATUM = "2000-01-01"
+
+
+def _mit_platzhalter_datum(draft: dict) -> dict:
+    """#3305: Beim Anlegen hat eine Etappe vor der Wahl des Startdatums noch
+    kein Datum (leer oder fehlend) -- ein legitimer Zwischenstand, kein
+    unlesbarer Entwurf. Fuer die Vorschau (die Tabelle haengt nicht am Datum)
+    traegt sie dann ein festes Platzhalter-Datum; flache Kopien, der Entwurf des
+    Aufrufers bleibt unveraendert. Ein gesetztes, unlesbares Datum bleibt
+    unlesbar."""
+    stages = draft.get("stages")
+    if not isinstance(stages, list):
+        return draft
+    def ohne(s) -> bool:
+        return isinstance(s, dict) and s.get("date") in (None, "")
+
+    if not any(ohne(s) for s in stages):
+        return draft
+    return {**draft, "stages": [{**s, "date": _VORSCHAU_PLATZHALTER_DATUM} if ohne(s) else s for s in stages]}
+
+
 def _entwurf_trip(draft: dict):
     from app.loader import LoaderError, load_trip
 
     try:
-        return load_trip(draft)
+        return load_trip(_mit_platzhalter_datum(draft))
     except LoaderError as e:
         raise EntwurfUnlesbar(str(e)) from e
 

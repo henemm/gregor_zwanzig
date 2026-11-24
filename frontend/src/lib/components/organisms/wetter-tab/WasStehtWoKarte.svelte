@@ -10,18 +10,22 @@
 	//   an ihrem heutigen Ort; der 3-Tages-Ausblick schreibt `outlook_reports` mit der Tabelle.
 	//   „−“/„+“ der Grundauswahl ruft der Reiter über die exportierten Funktionen; ohne gespeicherte Tabelle
 	//   (`stored: false`) ändern sie nichts an der Tabelle (sonst wechselte das Abo unbemerkt den Eingang).
+	//   #3305 Anlege-Modus (`createMode`): Laden über die Vorschau des Entwurfs, kein PUT; jede Bedienung meldet
+	//   den Stand per `onAnlegeStand` (auch bei `stored: false`), der Anlege-POST trägt ihn. Eine Vorschau-Antwort
+	//   ersetzt nur die Ansicht, nie den lokalen Stand.
 	import { onMount, untrack } from 'svelte';
 	import { Btn, Skelett, Switch, Segmented } from '$lib/components/atoms';
 	import { Aufklapper, EinstellTabelle, Einstellungszeile } from '$lib/components/molecules';
 	import { api } from '$lib/api';
 	import { t, tn } from '$lib/i18n';
 	import type { MessageKey } from '$lib/i18n';
+	import type { Trip } from '$lib/types';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { klon } from '../../shared/wetter-tab/klon.ts';
 	import * as S from '../../shared/wetter-tab/wasStehtWoStand.ts';
 	import type { Placements, PlacementsAntwort, Form } from '../../shared/wetter-tab/wasStehtWoStand.ts';
 	import { festeZeileAus, legendeAus, metrikenAus, smsAus, stellenAus } from '../../shared/wetter-tab/wasStehtWoAnsicht.ts';
-	import { erstelleFelderSpeicherung, erstelleTabellenSpeicherung, felderAusAntwort, type Felder } from '../../shared/wetter-tab/wasStehtWoSpeicherung.ts';
+	import { erstelleFelderSpeicherung, erstelleTabellenSpeicherung, felderAusAntwort, type Felder, type KarteAnlegeStand } from '../../shared/wetter-tab/wasStehtWoSpeicherung.ts';
 
 	type Kontext = 'route' | 'vergleich';
 	interface Props {
@@ -31,8 +35,15 @@
 		enqueueHubWrite?: <T>(fn: () => Promise<T>) => Promise<T>;
 		/** Antwort eines Schalter-PUT an die Seite (Trip bzw. Orte). */
 		onUebernahme?: (abo: unknown) => void;
+		/** #3305: Anlegen — kein PUT, Stand geht über `onAnlegeStand` an die Anlege-Seite. */
+		createMode?: boolean;
+		/** #3305: Anlege-Entwurf für die Vorschau (gelesen erst beim Senden). */
+		entwurf?: () => Trip;
+		/** #3305: zuletzt gemeldeter Stand (Neuaufbau der Ansicht, Wechsel Desktop/Mobil). */
+		start?: KarteAnlegeStand;
+		onAnlegeStand?: (s: KarteAnlegeStand) => void;
 	}
-	let { context, id, saveController, enqueueHubWrite, onUebernahme }: Props = $props();
+	let { context, id, saveController, enqueueHubWrite, onUebernahme, createMode = false, entwurf, start, onAnlegeStand }: Props = $props();
 
 	/** Kontext-Unterschiede als Daten (Ratsche context_herkunft_zweige_eingefroren). */
 	const KONTEXT: Record<Kontext, { text: MessageKey; ausblick: MessageKey; stundenverlauf: boolean; tripBloecke: boolean }> = {
@@ -54,15 +65,28 @@
 	let phase = $state<'laedt' | 'fehler' | 'bereit'>('laedt');
 	let antwort = $state<PlacementsAntwort | null>(null);
 	/** Lokaler Stand der Tabelle (Grundlage jedes PUT; gelesen erst beim Senden). */
-	let lokal = $state<Placements | null>(null);
-	let felder = $state<Felder | null>(null);
+	let lokal = $state<Placements | null>(untrack(() => (start ? klon(start.placements) : null)));
+	let felder = $state<Felder | null>(untrack(() => (start ? { ...start.felder } : null)));
+	/** #3305: Schalter beim Start der Karte (erste Vorschau-Antwort bzw. `start`). */
+	let felderStart: Felder | null = untrack(() => (start ? { ...start.felderStart } : null));
+	/** #3305: erst nach einer Bedienung meldet die Karte (unbedient = POST wie heute, ohne Tabelle). */
+	let bedient = untrack(() => Boolean(start));
 	let meldung = $state<'konflikt' | 'fehler' | null>(null);
 	let telegramVerbunden = $state(false);
 
 	function uebernehmen(a: PlacementsAntwort): void {
 		antwort = a;
-		lokal = klon(a.placements);
+		// #3305: im Anlegen ersetzt die Vorschau nur die Ansicht; der lokale Stand bleibt.
+		if (!createMode || !lokal) lokal = klon(a.placements);
+		if (createMode) felderStart ??= felderAusAntwort(a);
 		phase = 'bereit';
+	}
+	/** #3305: Stand an die Anlege-Seite (Haken, Formate, Reihenfolge, Ausblick, Schalter). */
+	function melde(): void {
+		const f = felder ?? aktFelder;
+		if (!createMode || !lokal || !f) return;
+		bedient = true;
+		onAnlegeStand?.({ placements: klon(lokal), felder: { ...f }, felderStart: { ...(felderStart ?? f) } });
 	}
 	const tabelle = untrack(() =>
 		erstelleTabellenSpeicherung({
@@ -71,7 +95,12 @@
 			id,
 			saveController,
 			placements: () => (lokal ? klon(lokal) : null),
+			entwurf: createMode ? () => (entwurf?.() ?? {}) as Record<string, unknown> : undefined,
 			uebernehmen,
+			// #3305: ohne Antwort sichtbarer Fehler wie beim ersten Laden; sonst bleibt die alte Ansicht.
+			vorschauFehler: () => {
+				if (!antwort) phase = 'fehler';
+			},
 			gemeldet: (art) => (meldung = art)
 		})
 	);
@@ -100,6 +129,7 @@
 		antwort = neuAntwort;
 		meldung = null;
 		tabelle.aenderung();
+		melde();
 	}
 	function haken(e: { metrik: string; stelle: string; an: boolean }): void {
 		if (antwort && lokal) aendern(S.mitHaken(lokal, anzeige(), e.metrik, e.stelle, e.an), S.antwortMitHaken(antwort, e.metrik, e.stelle, e.an));
@@ -123,6 +153,7 @@
 	function feld<K extends keyof Felder>(name: K, wert: Felder[K]): void {
 		if (!aktFelder) return;
 		felder = { ...aktFelder, [name]: wert };
+		if (createMode) return melde();
 		schalter ??= erstelleFelderSpeicherung({
 			client: api,
 			kind: context,
@@ -149,18 +180,25 @@
 	/** „−“, „+“ oder Vorlagenwechsel (Fix-Loop F2): Zeilen weggefallener Metriken entfallen, neue stehen hinten,
 	 *  überall angehakt — im selben Speichervorgang wie die Grundauswahl. Nur bei gespeicherter Tabelle. */
 	export function grundauswahlGeaendert(vorher: readonly string[], nachher: readonly string[]): void {
-		if (!antwort?.stored || !lokal) return;
+		if (!createMode && (!antwort?.stored || !lokal)) return;
 		const weg = vorher.filter((m) => !nachher.includes(m));
 		if (!weg.length && nachher.every((m) => vorher.includes(m))) return;
 		// #3237 Runde 13: kein eigener Tabellen-PUT — der PUT des Reiters trägt den Stand (placementsZumMitspeichern).
-		lokal = S.mitGrundauswahl(lokal, vorher, nachher);
-		antwort = weg.reduce((a, m) => S.antwortOhneZeile(a, m), antwort);
+		// #3305 F007: im Anlegen auch vor der ersten Vorschau-Antwort — die Version zählt hoch, eine ältere
+		// Antwort mit den alten Metriken verfällt; ein Startstand folgt der Auswahl sofort.
+		if (lokal) lokal = S.mitGrundauswahl(lokal, vorher, nachher);
+		if (antwort) antwort = weg.reduce((a, m) => S.antwortOhneZeile(a, m), antwort);
 		meldung = null;
 		tabelle.mitgefuehrt();
+		if (bedient) melde();
 	}
-	/** Für den PUT des Reiters: der vollständige Stand, nur wenn die Tabelle schon gespeichert ist. */
+	/** #3305: Metrikwechsel im Anlegen — Vorschau entprellt nachladen (Zeilen neuer Metriken, Beispielwerte). */
+	export function vorschauNachMetrik(): void {
+		tabelle.vorschauNachMetrik();
+	}
+	/** Für den PUT des Reiters: der vollständige Stand, nur wenn die Tabelle schon gespeichert ist (Anlegen: immer). */
 	export function placementsZumMitspeichern(): Placements | undefined {
-		return tabelle.zumMitsenden(Boolean(antwort?.stored));
+		return tabelle.zumMitsenden(createMode || Boolean(antwort?.stored));
 	}
 	/** Der Reiter hat gespeichert (`gesendet` = placements dieses PUT): Beispielwerte, Marken, feste Zeile neu holen. */
 	export function nachFremdemSpeichern(gesendet: unknown): void {
