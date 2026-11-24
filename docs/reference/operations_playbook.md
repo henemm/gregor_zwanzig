@@ -1264,6 +1264,24 @@ unveränderten Validator gegen genau diese Mail laufen (Schritt 3b in `/e2e-veri
 - **Grenze:** „Ausblick ohne Winddaten" (#1670 AC-5) ist auf Staging nicht herstellbar und bleibt
   lokal per Render-Test belegt; kein Eingriff in Wetterdaten.
 
+### Außen-Probe des MCP-Konnektors auf Staging (`staging_mcp_pruefen.py`, #3286)
+
+Prüft von außen den MCP-Konnektor „Gregor Wetter" auf Staging: Metadaten-Pfade, Registrierung,
+Zustimmungsseite mit zwei Konten, Token-Tausch, Werkzeugliste und ein Wetteraufruf. Spec:
+`docs/specs/modules/infra_3286_mcp_server_einrichtung.md`. Läuft nur außerhalb des Servers
+(auf dem Server Abbruch mit Exit 2).
+
+- **Aufruf:** `python3 .claude/tools/staging_mcp_pruefen.py` (erwartet: `GZ_AUTH_*` ist in
+  `GZ_MCP_USER_IDS` freigegeben, `GZ_STAGING_ADMIN_*` nicht) bzw. mit `--vor-freigabe` (erwartet:
+  beide Konten erhalten 403).
+- **Zugangsdaten:** `GZ_VALIDATOR_USER`/`GZ_VALIDATOR_PASS`, `GZ_AUTH_USER`/`GZ_AUTH_PASS`,
+  `GZ_STAGING_ADMIN_USER`/`GZ_STAGING_ADMIN_PASS` aus der Umgebung; nichts davon wird ausgegeben.
+- **Registrierung:** genau eine je Lauf (Kontingent 20/h je IP, `api_contract.md` Abschnitt 27).
+- **Exit-Codes:** `0` bestanden · `1` mindestens ein Soll verfehlt (je Befund eine Zeile mit Pfad) ·
+  `2` Umgebungsfehler (Variablen fehlen, Anmeldung abgelehnt, Registrierung mit 429 erschöpft).
+- **Grenze:** Die nginx-Freigabe für Staging liegt in henemm-infra (eigener PR) und nicht in diesem
+  Repo. Ein Lauf ist eine Messung zum Laufzeitpunkt, keine Abnahme.
+
 ### Staging-Messlauf auslösen (`staging_messlauf.py`, #2439)
 
 Der Treiber löst auf **Staging** seriell alle Befehlsserien aus, die

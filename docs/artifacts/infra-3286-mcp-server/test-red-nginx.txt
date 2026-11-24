@@ -1,0 +1,915 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.15, pytest-9.2.0, pluggy-1.6.0 -- /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests
+plugins: socket-0.8.0, xdist-3.8.0, timeout-2.4.0, anyio-4.14.2
+collecting ... collected 35 items
+
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_schranke_ist_aus[= /api/mcp] FAILED [  2%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_schranke_ist_aus[^~ /api/mcp/oauth/] FAILED [  5%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_schranke_ist_aus[^~ /.well-known/oauth-] FAILED [  8%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_ziel[= /api/mcp-8091] FAILED [ 11%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_ziel[^~ /api/mcp/oauth/-8091] FAILED [ 14%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_ziel[^~ /.well-known/oauth--3001] FAILED [ 17%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[= /api/mcp-proxy_set_header Host $host;] FAILED [ 20%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[= /api/mcp-proxy_set_header X-Real-IP $remote_addr;] FAILED [ 22%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[= /api/mcp-proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;] FAILED [ 25%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[= /api/mcp-proxy_set_header X-Forwarded-Proto $scheme;] FAILED [ 28%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /api/mcp/oauth/-proxy_set_header Host $host;] FAILED [ 31%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /api/mcp/oauth/-proxy_set_header X-Real-IP $remote_addr;] FAILED [ 34%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /api/mcp/oauth/-proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;] FAILED [ 37%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /api/mcp/oauth/-proxy_set_header X-Forwarded-Proto $scheme;] FAILED [ 40%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /.well-known/oauth--proxy_set_header Host $host;] FAILED [ 42%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /.well-known/oauth--proxy_set_header X-Real-IP $remote_addr;] FAILED [ 45%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /.well-known/oauth--proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;] FAILED [ 48%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /.well-known/oauth--proxy_set_header X-Forwarded-Proto $scheme;] FAILED [ 51%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[= /api/mcp-satisfy] FAILED [ 54%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[= /api/mcp-allow] FAILED [ 57%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[= /api/mcp-deny] FAILED [ 60%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[= /api/mcp-limit_req] FAILED [ 62%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[= /api/mcp-proxy_buffering] FAILED [ 65%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /api/mcp/oauth/-satisfy] FAILED [ 68%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /api/mcp/oauth/-allow] FAILED [ 71%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /api/mcp/oauth/-deny] FAILED [ 74%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /api/mcp/oauth/-limit_req] FAILED [ 77%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /api/mcp/oauth/-proxy_buffering] FAILED [ 80%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /.well-known/oauth--satisfy] FAILED [ 82%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /.well-known/oauth--allow] FAILED [ 85%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /.well-known/oauth--deny] FAILED [ 88%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /.well-known/oauth--limit_req] FAILED [ 91%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /.well-known/oauth--proxy_buffering] FAILED [ 94%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_mcp_wartet_laenger_als_der_laengste_aufruf FAILED [ 97%]
+../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_nur_die_bekannten_bloecke_sind_offen FAILED [100%]
+
+=================================== FAILURES ===================================
+______________________ test_schranke_ist_aus[= /api/mcp] _______________________
+
+name = '= /api/mcp'
+
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_schranke_ist_aus(name):
+>       assert "auth_basic off;" in _block(name)
+                                    ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:42: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '= /api/mcp'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location = /api/mcp: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+__________________ test_schranke_ist_aus[^~ /api/mcp/oauth/] ___________________
+
+name = '^~ /api/mcp/oauth/'
+
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_schranke_ist_aus(name):
+>       assert "auth_basic off;" in _block(name)
+                                    ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:42: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '^~ /api/mcp/oauth/'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location ^~ /api/mcp/oauth/: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+________________ test_schranke_ist_aus[^~ /.well-known/oauth-] _________________
+
+name = '^~ /.well-known/oauth-'
+
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_schranke_ist_aus(name):
+>       assert "auth_basic off;" in _block(name)
+                                    ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:42: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '^~ /.well-known/oauth-'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location ^~ /.well-known/oauth-: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+__________________________ test_ziel[= /api/mcp-8091] __________________________
+
+name = '= /api/mcp', port = '8091'
+
+    @pytest.mark.parametrize("name,port", BLOECKE.items())
+    def test_ziel(name, port):
+>       assert f"proxy_pass http://127.0.0.1:{port};" in _block(name)
+                                                         ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:47: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '= /api/mcp'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location = /api/mcp: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+______________________ test_ziel[^~ /api/mcp/oauth/-8091] ______________________
+
+name = '^~ /api/mcp/oauth/', port = '8091'
+
+    @pytest.mark.parametrize("name,port", BLOECKE.items())
+    def test_ziel(name, port):
+>       assert f"proxy_pass http://127.0.0.1:{port};" in _block(name)
+                                                         ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:47: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '^~ /api/mcp/oauth/'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location ^~ /api/mcp/oauth/: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+____________________ test_ziel[^~ /.well-known/oauth--3001] ____________________
+
+name = '^~ /.well-known/oauth-', port = '3001'
+
+    @pytest.mark.parametrize("name,port", BLOECKE.items())
+    def test_ziel(name, port):
+>       assert f"proxy_pass http://127.0.0.1:{port};" in _block(name)
+                                                         ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:47: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '^~ /.well-known/oauth-'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location ^~ /.well-known/oauth-: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+___________ test_kopfzeilen[= /api/mcp-proxy_set_header Host $host;] ___________
+
+name = '= /api/mcp', zeile = 'proxy_set_header Host $host;'
+
+    @pytest.mark.parametrize("zeile", KOPFZEILEN)
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_kopfzeilen(name, zeile):
+        """X-Real-IP trägt die Registrierungsbremse in Go (AC-8)."""
+>       assert zeile in _block(name)
+                        ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '= /api/mcp'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location = /api/mcp: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+_____ test_kopfzeilen[= /api/mcp-proxy_set_header X-Real-IP $remote_addr;] _____
+
+name = '= /api/mcp', zeile = 'proxy_set_header X-Real-IP $remote_addr;'
+
+    @pytest.mark.parametrize("zeile", KOPFZEILEN)
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_kopfzeilen(name, zeile):
+        """X-Real-IP trägt die Registrierungsbremse in Go (AC-8)."""
+>       assert zeile in _block(name)
+                        ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '= /api/mcp'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location = /api/mcp: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+_ test_kopfzeilen[= /api/mcp-proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;] _
+
+name = '= /api/mcp'
+zeile = 'proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;'
+
+    @pytest.mark.parametrize("zeile", KOPFZEILEN)
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_kopfzeilen(name, zeile):
+        """X-Real-IP trägt die Registrierungsbremse in Go (AC-8)."""
+>       assert zeile in _block(name)
+                        ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '= /api/mcp'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location = /api/mcp: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+___ test_kopfzeilen[= /api/mcp-proxy_set_header X-Forwarded-Proto $scheme;] ____
+
+name = '= /api/mcp', zeile = 'proxy_set_header X-Forwarded-Proto $scheme;'
+
+    @pytest.mark.parametrize("zeile", KOPFZEILEN)
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_kopfzeilen(name, zeile):
+        """X-Real-IP trägt die Registrierungsbremse in Go (AC-8)."""
+>       assert zeile in _block(name)
+                        ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '= /api/mcp'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location = /api/mcp: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+_______ test_kopfzeilen[^~ /api/mcp/oauth/-proxy_set_header Host $host;] _______
+
+name = '^~ /api/mcp/oauth/', zeile = 'proxy_set_header Host $host;'
+
+    @pytest.mark.parametrize("zeile", KOPFZEILEN)
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_kopfzeilen(name, zeile):
+        """X-Real-IP trägt die Registrierungsbremse in Go (AC-8)."""
+>       assert zeile in _block(name)
+                        ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '^~ /api/mcp/oauth/'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location ^~ /api/mcp/oauth/: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+_ test_kopfzeilen[^~ /api/mcp/oauth/-proxy_set_header X-Real-IP $remote_addr;] _
+
+name = '^~ /api/mcp/oauth/', zeile = 'proxy_set_header X-Real-IP $remote_addr;'
+
+    @pytest.mark.parametrize("zeile", KOPFZEILEN)
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_kopfzeilen(name, zeile):
+        """X-Real-IP trägt die Registrierungsbremse in Go (AC-8)."""
+>       assert zeile in _block(name)
+                        ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '^~ /api/mcp/oauth/'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location ^~ /api/mcp/oauth/: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+_ test_kopfzeilen[^~ /api/mcp/oauth/-proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;] _
+
+name = '^~ /api/mcp/oauth/'
+zeile = 'proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;'
+
+    @pytest.mark.parametrize("zeile", KOPFZEILEN)
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_kopfzeilen(name, zeile):
+        """X-Real-IP trägt die Registrierungsbremse in Go (AC-8)."""
+>       assert zeile in _block(name)
+                        ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '^~ /api/mcp/oauth/'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location ^~ /api/mcp/oauth/: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+_ test_kopfzeilen[^~ /api/mcp/oauth/-proxy_set_header X-Forwarded-Proto $scheme;] _
+
+name = '^~ /api/mcp/oauth/'
+zeile = 'proxy_set_header X-Forwarded-Proto $scheme;'
+
+    @pytest.mark.parametrize("zeile", KOPFZEILEN)
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_kopfzeilen(name, zeile):
+        """X-Real-IP trägt die Registrierungsbremse in Go (AC-8)."""
+>       assert zeile in _block(name)
+                        ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '^~ /api/mcp/oauth/'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location ^~ /api/mcp/oauth/: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+_____ test_kopfzeilen[^~ /.well-known/oauth--proxy_set_header Host $host;] _____
+
+name = '^~ /.well-known/oauth-', zeile = 'proxy_set_header Host $host;'
+
+    @pytest.mark.parametrize("zeile", KOPFZEILEN)
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_kopfzeilen(name, zeile):
+        """X-Real-IP trägt die Registrierungsbremse in Go (AC-8)."""
+>       assert zeile in _block(name)
+                        ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '^~ /.well-known/oauth-'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location ^~ /.well-known/oauth-: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+_ test_kopfzeilen[^~ /.well-known/oauth--proxy_set_header X-Real-IP $remote_addr;] _
+
+name = '^~ /.well-known/oauth-'
+zeile = 'proxy_set_header X-Real-IP $remote_addr;'
+
+    @pytest.mark.parametrize("zeile", KOPFZEILEN)
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_kopfzeilen(name, zeile):
+        """X-Real-IP trägt die Registrierungsbremse in Go (AC-8)."""
+>       assert zeile in _block(name)
+                        ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '^~ /.well-known/oauth-'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location ^~ /.well-known/oauth-: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+_ test_kopfzeilen[^~ /.well-known/oauth--proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;] _
+
+name = '^~ /.well-known/oauth-'
+zeile = 'proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;'
+
+    @pytest.mark.parametrize("zeile", KOPFZEILEN)
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_kopfzeilen(name, zeile):
+        """X-Real-IP trägt die Registrierungsbremse in Go (AC-8)."""
+>       assert zeile in _block(name)
+                        ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '^~ /.well-known/oauth-'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location ^~ /.well-known/oauth-: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+_ test_kopfzeilen[^~ /.well-known/oauth--proxy_set_header X-Forwarded-Proto $scheme;] _
+
+name = '^~ /.well-known/oauth-'
+zeile = 'proxy_set_header X-Forwarded-Proto $scheme;'
+
+    @pytest.mark.parametrize("zeile", KOPFZEILEN)
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_kopfzeilen(name, zeile):
+        """X-Real-IP trägt die Registrierungsbremse in Go (AC-8)."""
+>       assert zeile in _block(name)
+                        ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '^~ /.well-known/oauth-'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location ^~ /.well-known/oauth-: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+________ test_keine_sperren_aus_den_nachbarbloecken[= /api/mcp-satisfy] ________
+
+name = '= /api/mcp', verboten = 'satisfy'
+
+    @pytest.mark.parametrize("verboten", ["satisfy", "allow", "deny", "limit_req", "proxy_buffering"])
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_keine_sperren_aus_den_nachbarbloecken(name, verboten):
+        """satisfy any + deny all sperrt mit auth_basic off alle; limit_req: henemm-infra#397."""
+>       assert not re.search(rf"(?m)^\s*{verboten}\b", _block(name))
+                                                       ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:61: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '= /api/mcp'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location = /api/mcp: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+_________ test_keine_sperren_aus_den_nachbarbloecken[= /api/mcp-allow] _________
+
+name = '= /api/mcp', verboten = 'allow'
+
+    @pytest.mark.parametrize("verboten", ["satisfy", "allow", "deny", "limit_req", "proxy_buffering"])
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_keine_sperren_aus_den_nachbarbloecken(name, verboten):
+        """satisfy any + deny all sperrt mit auth_basic off alle; limit_req: henemm-infra#397."""
+>       assert not re.search(rf"(?m)^\s*{verboten}\b", _block(name))
+                                                       ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:61: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '= /api/mcp'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location = /api/mcp: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+_________ test_keine_sperren_aus_den_nachbarbloecken[= /api/mcp-deny] __________
+
+name = '= /api/mcp', verboten = 'deny'
+
+    @pytest.mark.parametrize("verboten", ["satisfy", "allow", "deny", "limit_req", "proxy_buffering"])
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_keine_sperren_aus_den_nachbarbloecken(name, verboten):
+        """satisfy any + deny all sperrt mit auth_basic off alle; limit_req: henemm-infra#397."""
+>       assert not re.search(rf"(?m)^\s*{verboten}\b", _block(name))
+                                                       ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:61: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '= /api/mcp'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location = /api/mcp: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+_______ test_keine_sperren_aus_den_nachbarbloecken[= /api/mcp-limit_req] _______
+
+name = '= /api/mcp', verboten = 'limit_req'
+
+    @pytest.mark.parametrize("verboten", ["satisfy", "allow", "deny", "limit_req", "proxy_buffering"])
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_keine_sperren_aus_den_nachbarbloecken(name, verboten):
+        """satisfy any + deny all sperrt mit auth_basic off alle; limit_req: henemm-infra#397."""
+>       assert not re.search(rf"(?m)^\s*{verboten}\b", _block(name))
+                                                       ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:61: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '= /api/mcp'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location = /api/mcp: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+____ test_keine_sperren_aus_den_nachbarbloecken[= /api/mcp-proxy_buffering] ____
+
+name = '= /api/mcp', verboten = 'proxy_buffering'
+
+    @pytest.mark.parametrize("verboten", ["satisfy", "allow", "deny", "limit_req", "proxy_buffering"])
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_keine_sperren_aus_den_nachbarbloecken(name, verboten):
+        """satisfy any + deny all sperrt mit auth_basic off alle; limit_req: henemm-infra#397."""
+>       assert not re.search(rf"(?m)^\s*{verboten}\b", _block(name))
+                                                       ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:61: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '= /api/mcp'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location = /api/mcp: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+____ test_keine_sperren_aus_den_nachbarbloecken[^~ /api/mcp/oauth/-satisfy] ____
+
+name = '^~ /api/mcp/oauth/', verboten = 'satisfy'
+
+    @pytest.mark.parametrize("verboten", ["satisfy", "allow", "deny", "limit_req", "proxy_buffering"])
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_keine_sperren_aus_den_nachbarbloecken(name, verboten):
+        """satisfy any + deny all sperrt mit auth_basic off alle; limit_req: henemm-infra#397."""
+>       assert not re.search(rf"(?m)^\s*{verboten}\b", _block(name))
+                                                       ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:61: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '^~ /api/mcp/oauth/'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location ^~ /api/mcp/oauth/: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+_____ test_keine_sperren_aus_den_nachbarbloecken[^~ /api/mcp/oauth/-allow] _____
+
+name = '^~ /api/mcp/oauth/', verboten = 'allow'
+
+    @pytest.mark.parametrize("verboten", ["satisfy", "allow", "deny", "limit_req", "proxy_buffering"])
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_keine_sperren_aus_den_nachbarbloecken(name, verboten):
+        """satisfy any + deny all sperrt mit auth_basic off alle; limit_req: henemm-infra#397."""
+>       assert not re.search(rf"(?m)^\s*{verboten}\b", _block(name))
+                                                       ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:61: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '^~ /api/mcp/oauth/'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location ^~ /api/mcp/oauth/: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+_____ test_keine_sperren_aus_den_nachbarbloecken[^~ /api/mcp/oauth/-deny] ______
+
+name = '^~ /api/mcp/oauth/', verboten = 'deny'
+
+    @pytest.mark.parametrize("verboten", ["satisfy", "allow", "deny", "limit_req", "proxy_buffering"])
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_keine_sperren_aus_den_nachbarbloecken(name, verboten):
+        """satisfy any + deny all sperrt mit auth_basic off alle; limit_req: henemm-infra#397."""
+>       assert not re.search(rf"(?m)^\s*{verboten}\b", _block(name))
+                                                       ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:61: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '^~ /api/mcp/oauth/'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location ^~ /api/mcp/oauth/: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+___ test_keine_sperren_aus_den_nachbarbloecken[^~ /api/mcp/oauth/-limit_req] ___
+
+name = '^~ /api/mcp/oauth/', verboten = 'limit_req'
+
+    @pytest.mark.parametrize("verboten", ["satisfy", "allow", "deny", "limit_req", "proxy_buffering"])
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_keine_sperren_aus_den_nachbarbloecken(name, verboten):
+        """satisfy any + deny all sperrt mit auth_basic off alle; limit_req: henemm-infra#397."""
+>       assert not re.search(rf"(?m)^\s*{verboten}\b", _block(name))
+                                                       ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:61: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '^~ /api/mcp/oauth/'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location ^~ /api/mcp/oauth/: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+_ test_keine_sperren_aus_den_nachbarbloecken[^~ /api/mcp/oauth/-proxy_buffering] _
+
+name = '^~ /api/mcp/oauth/', verboten = 'proxy_buffering'
+
+    @pytest.mark.parametrize("verboten", ["satisfy", "allow", "deny", "limit_req", "proxy_buffering"])
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_keine_sperren_aus_den_nachbarbloecken(name, verboten):
+        """satisfy any + deny all sperrt mit auth_basic off alle; limit_req: henemm-infra#397."""
+>       assert not re.search(rf"(?m)^\s*{verboten}\b", _block(name))
+                                                       ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:61: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '^~ /api/mcp/oauth/'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location ^~ /api/mcp/oauth/: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+__ test_keine_sperren_aus_den_nachbarbloecken[^~ /.well-known/oauth--satisfy] __
+
+name = '^~ /.well-known/oauth-', verboten = 'satisfy'
+
+    @pytest.mark.parametrize("verboten", ["satisfy", "allow", "deny", "limit_req", "proxy_buffering"])
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_keine_sperren_aus_den_nachbarbloecken(name, verboten):
+        """satisfy any + deny all sperrt mit auth_basic off alle; limit_req: henemm-infra#397."""
+>       assert not re.search(rf"(?m)^\s*{verboten}\b", _block(name))
+                                                       ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:61: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '^~ /.well-known/oauth-'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location ^~ /.well-known/oauth-: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+___ test_keine_sperren_aus_den_nachbarbloecken[^~ /.well-known/oauth--allow] ___
+
+name = '^~ /.well-known/oauth-', verboten = 'allow'
+
+    @pytest.mark.parametrize("verboten", ["satisfy", "allow", "deny", "limit_req", "proxy_buffering"])
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_keine_sperren_aus_den_nachbarbloecken(name, verboten):
+        """satisfy any + deny all sperrt mit auth_basic off alle; limit_req: henemm-infra#397."""
+>       assert not re.search(rf"(?m)^\s*{verboten}\b", _block(name))
+                                                       ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:61: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '^~ /.well-known/oauth-'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location ^~ /.well-known/oauth-: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+___ test_keine_sperren_aus_den_nachbarbloecken[^~ /.well-known/oauth--deny] ____
+
+name = '^~ /.well-known/oauth-', verboten = 'deny'
+
+    @pytest.mark.parametrize("verboten", ["satisfy", "allow", "deny", "limit_req", "proxy_buffering"])
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_keine_sperren_aus_den_nachbarbloecken(name, verboten):
+        """satisfy any + deny all sperrt mit auth_basic off alle; limit_req: henemm-infra#397."""
+>       assert not re.search(rf"(?m)^\s*{verboten}\b", _block(name))
+                                                       ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:61: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '^~ /.well-known/oauth-'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location ^~ /.well-known/oauth-: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+_ test_keine_sperren_aus_den_nachbarbloecken[^~ /.well-known/oauth--limit_req] _
+
+name = '^~ /.well-known/oauth-', verboten = 'limit_req'
+
+    @pytest.mark.parametrize("verboten", ["satisfy", "allow", "deny", "limit_req", "proxy_buffering"])
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_keine_sperren_aus_den_nachbarbloecken(name, verboten):
+        """satisfy any + deny all sperrt mit auth_basic off alle; limit_req: henemm-infra#397."""
+>       assert not re.search(rf"(?m)^\s*{verboten}\b", _block(name))
+                                                       ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:61: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '^~ /.well-known/oauth-'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location ^~ /.well-known/oauth-: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+_ test_keine_sperren_aus_den_nachbarbloecken[^~ /.well-known/oauth--proxy_buffering] _
+
+name = '^~ /.well-known/oauth-', verboten = 'proxy_buffering'
+
+    @pytest.mark.parametrize("verboten", ["satisfy", "allow", "deny", "limit_req", "proxy_buffering"])
+    @pytest.mark.parametrize("name", BLOECKE)
+    def test_keine_sperren_aus_den_nachbarbloecken(name, verboten):
+        """satisfy any + deny all sperrt mit auth_basic off alle; limit_req: henemm-infra#397."""
+>       assert not re.search(rf"(?m)^\s*{verboten}\b", _block(name))
+                                                       ^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:61: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '^~ /.well-known/oauth-'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location ^~ /.well-known/oauth-: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+_______________ test_mcp_wartet_laenger_als_der_laengste_aufruf ________________
+
+    def test_mcp_wartet_laenger_als_der_laengste_aufruf():
+        """10 s Ortssuche + 5 s Kontingent + 60 s Core = 75 s; nginx-Standard 60 s (AC-7)."""
+>       assert "proxy_read_timeout 120s;" in _block("= /api/mcp")
+                                             ^^^^^^^^^^^^^^^^^^^^
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:66: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = '= /api/mcp'
+
+    def _block(name):
+        treffer = re.findall(r"location\s+" + re.escape(name) + r"\s*\{([^{}]*)\}", _conf())
+>       assert len(treffer) == 1, f"location {name}: {len(treffer)} Blöcke, erwartet genau 1"
+E       AssertionError: location = /api/mcp: 0 Blöcke, erwartet genau 1
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:36: AssertionError
+__________________ test_nur_die_bekannten_bloecke_sind_offen ___________________
+
+    def test_nur_die_bekannten_bloecke_sind_offen():
+        """Keine Öffnung nebenbei, auch nicht von /login."""
+        offen = {n.strip() for n, b in re.findall(r"location\s+([^{]+)\{([^{}]*)\}", _conf()) if "auth_basic off" in b}
+>       assert offen == {"= /api/health", "/api/webhooks/telegram/", "/api/webhooks/sms/",
+                         "/api/webhooks/mail/", *BLOECKE}
+E       AssertionError: assert {'/api/webhoo... /api/health'} == {'/api/webhoo.../oauth-', ...}
+E         
+E         Extra items in the right set:
+E         '= /api/mcp'
+E         '^~ /api/mcp/oauth/'
+E         '^~ /.well-known/oauth-'
+E         
+E         Full diff: (-: missing in left side, +: extra in left side)...
+E         
+E         ...Full output truncated, use '-vv' to show
+
+/private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py:72: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_schranke_ist_aus[= /api/mcp]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_schranke_ist_aus[^~ /api/mcp/oauth/]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_schranke_ist_aus[^~ /.well-known/oauth-]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_ziel[= /api/mcp-8091]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_ziel[^~ /api/mcp/oauth/-8091]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_ziel[^~ /.well-known/oauth--3001]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[= /api/mcp-proxy_set_header Host $host;]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[= /api/mcp-proxy_set_header X-Real-IP $remote_addr;]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[= /api/mcp-proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[= /api/mcp-proxy_set_header X-Forwarded-Proto $scheme;]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /api/mcp/oauth/-proxy_set_header Host $host;]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /api/mcp/oauth/-proxy_set_header X-Real-IP $remote_addr;]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /api/mcp/oauth/-proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /api/mcp/oauth/-proxy_set_header X-Forwarded-Proto $scheme;]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /.well-known/oauth--proxy_set_header Host $host;]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /.well-known/oauth--proxy_set_header X-Real-IP $remote_addr;]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /.well-known/oauth--proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /.well-known/oauth--proxy_set_header X-Forwarded-Proto $scheme;]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[= /api/mcp-satisfy]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[= /api/mcp-allow]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[= /api/mcp-deny]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[= /api/mcp-limit_req]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[= /api/mcp-proxy_buffering]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /api/mcp/oauth/-satisfy]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /api/mcp/oauth/-allow]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /api/mcp/oauth/-deny]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /api/mcp/oauth/-limit_req]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /api/mcp/oauth/-proxy_buffering]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /.well-known/oauth--satisfy]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /.well-known/oauth--allow]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /.well-known/oauth--deny]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /.well-known/oauth--limit_req]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /.well-known/oauth--proxy_buffering]
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_mcp_wartet_laenger_als_der_laengste_aufruf
+FAILED ../../../../../../../private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/f8cbd080-7a28-41bc-bb6f-877117647417/scratchpad/henemm-infra/tests/test_staging_mcp_nginx.py::test_nur_die_bekannten_bloecke_sind_offen
+======================== 35 failed, 1 warning in 0.07s =========================
