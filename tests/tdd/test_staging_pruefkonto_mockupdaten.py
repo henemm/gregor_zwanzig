@@ -86,7 +86,7 @@ _SMS_TARIFE = ("standard", "premium")
 def _quote_voll(konto, art):
     grenze = _QUOTE.get(konto["profil"]["tier"], _QUOTE["free"])[art]
     aktiv = [v for v in konto["daten"][art].values()
-             if art == "locations" or not v.get("archived")]
+             if art == "locations" or not (v.get("archived") or v.get("archived_at"))]
     return len(aktiv) >= grenze
 
 
@@ -128,6 +128,9 @@ class _Fake:
         self.stoerung: dict[tuple[str, str], tuple[int, dict]] = {}
         # Fehlzuordnung des Link-Codes zu einem anderen Konto (Trockenlauf UND scharf).
         self.code_besitzer: str | None = None
+        # #3327: Uhr fuer PATCH /api/trips/{id}/state - jeder Archiv-PATCH setzt wie Go
+        # (UpdateTripStateHandler, time.Now) einen NEUEN Zeitstempel.
+        self.uhr = 0
 
     def neues_konto(self, uid, mail):
         self.passwoerter[uid] = "pw-" + uid
@@ -293,6 +296,14 @@ class _Fake:
             return 409, {"error": "quota_exceeded"}
         if len(teile) >= 2 and teile[1] in sammlung:
             ablage = d[sammlung[teile[1]]]
+            if teile[1] == "trips" and len(teile) == 4 and teile[3] == "state":
+                return self._trip_state_wie_go(konto, ablage, methode, teile[2], body)
+            if (teile[1] == "trips" and methode == "PUT" and len(teile) == 3
+                    and (ablage.get(teile[2]) or {}).get("archived_at")
+                    and not body.get("archived_at") and _quote_voll(konto, "trips")):
+                # trip.go:293: PUT ohne archived_at auf archivierten Trip = Reaktivierung,
+                # Quote geprueft (der PUT selbst ersetzt und entfernt archived_at).
+                return 409, {"error": "quota_exceeded"}
             if teile[1] == "trips" and len(teile) == 4 and teile[3] == "weather-config":
                 trip = ablage.get(teile[2])
                 if trip is None:
@@ -314,6 +325,29 @@ class _Fake:
                 body = self._trip_merge_wie_go(ablage[teile[2]], body)
             return self._crud(ablage, methode, teile[2:], body, uid)
         return 404, {"error": "not_found"}
+
+    def _trip_state_wie_go(self, konto, ablage, methode, tid, body):
+        """#3327: PATCH /api/trips/{id}/state (internal/handler/trip.go UpdateTripStateHandler):
+        nur ``paused``/``archived`` (bool) wirken, ``true`` setzt den Zeitstempel JEDES Mal
+        neu, ``false`` entfernt ihn (Wiederherstellen mit Quote). Andere Felder wirken nicht."""
+        if methode != "PATCH":
+            return 405, {"error": "method_not_allowed"}
+        trip = ablage.get(tid)
+        if trip is None:
+            return 404, {"error": "not_found"}
+        if not isinstance(body, dict):
+            return 400, {"error": "bad_request"}
+        if trip.get("archived_at") and body.get("archived") is False and _quote_voll(konto, "trips"):
+            return 409, {"error": "quota_exceeded"}
+        for feld, stempel in (("paused", "paused_at"), ("archived", "archived_at")):
+            wert = body.get(feld)
+            if isinstance(wert, bool):
+                if wert:
+                    self.uhr += 1
+                    trip[stempel] = f"2026-11-24T10:{self.uhr:02d}:00Z"
+                else:
+                    trip.pop(stempel, None)
+        return 200, copy.deepcopy(trip)
 
     @staticmethod
     def _trip_merge_wie_go(ist, body):
@@ -487,7 +521,8 @@ def test_ac4_zweiter_lauf_aendert_nichts(fake, capsys):
     assert _lauf(mod, server, env) == 0
     assert server.zustand() == vorher
     d = _seed_daten(server)
-    assert (len(d["trips"]), len(d["compare"]), len(d["locations"]), len(d["presets"])) == (1, 1, 3, 1)
+    # #3327: zweiter Trip = archivierter Kuestenpfad-Probelauf.
+    assert (len(d["trips"]), len(d["compare"]), len(d["locations"]), len(d["presets"])) == (2, 1, 3, 1)
 
 
 def _datenschreiber(server):
@@ -1382,3 +1417,174 @@ def test_3154_f003_gespeicherte_tabelle_mit_abwahl_und_zusatzschluessel(fake, ca
     neu = trip["display_config"]["placements"]
     assert neu == {**mod.tabelle_trip_soll(), "zukunft": {"x": 1}}
     assert {k: v for k, v in trip["display_config"].items() if k != "placements"} == vorher_rest
+
+
+# --- #3327: archivierter Pruefkonto-Trip fuer das Archiv-Bild ----------------------
+# Spec: docs/specs/modules/feat_3327_archiv_seed.md (AC-1..AC-5)
+
+ARCHIV_ID = "gz2967-archiv-kuestenpfad"
+ARCHIV_NAME = "Küstenpfad Probelauf"
+GR221_ID = "gz2967-gr221-mallorca"
+HEUTE = "2026-11-24"
+
+
+def _archiv_schreiber(server):
+    """Schreibende Aufrufe, die den Archiv-Trip treffen (Pfad oder POST-Rumpf)."""
+    return [a for a in server.aufrufe if a["methode"] in ("POST", "PUT", "PATCH")
+            and (a["pfad"].startswith(f"/api/trips/{ARCHIV_ID}")
+                 or (a["pfad"] == "/api/trips" and (a["body"] or {}).get("id") == ARCHIV_ID))]
+
+
+def _state_patches(server):
+    return [a for a in server.aufrufe
+            if a["methode"] == "PATCH" and a["pfad"] == f"/api/trips/{ARCHIV_ID}/state"]
+
+
+def test_3327_soll_archiv_trip_fest_fiktiv_ohne_archivfeld():
+    """Soll-Funktion ohne Netz: feste ID/Namen, 3 vergangene Etappen mit je Start und Ziel,
+    keine Kanal-/Wetter-/Tabellenkonfiguration und nie ``archived_at`` im Soll (sonst
+    ueberschreibt der Merge das echte Archivdatum)."""
+    mod = _modul()
+    assert (mod.ARCHIV_TRIP_ID, mod.ARCHIV_TRIP_NAME) == (ARCHIV_ID, ARCHIV_NAME)
+    soll = mod.soll_archiv_trip()
+    assert soll["id"] == ARCHIV_ID and soll["name"] == ARCHIV_NAME
+    assert soll["region"] == "Nordsee (fiktiv)"
+    assert [e["id"] for e in soll["stages"]] == [f"{ARCHIV_ID}-e{n}" for n in (1, 2, 3)]
+    assert [e["date"] for e in soll["stages"]] == ["2026-06-12", "2026-06-13", "2026-06-14"]
+    assert [e["name"] for e in soll["stages"]] == [
+        "Dünenhof → Leuchtturm", "Leuchtturm → Deichkrug", "Deichkrug → Fährhafen"]
+    for e in soll["stages"]:
+        assert len(e["waypoints"]) == 2
+        for w in e["waypoints"]:
+            assert {"id", "name", "lat", "lon", "elevation_m"} <= set(w)
+    verboten = {"archived_at", "paused_at", "display_config", "report_config",
+                "alert_channels", "alert_channel_thresholds"}
+    assert not verboten & set(soll)
+    # Zwei Aufrufe liefern unabhaengige Objekte (kein geteilter Zustand).
+    zweit = mod.soll_archiv_trip()
+    soll["stages"][0]["name"] = "verstellt"
+    assert zweit["stages"][0]["name"] == "Dünenhof → Leuchtturm"
+
+
+def test_3327_ac1_erster_lauf_legt_archiv_trip_an_und_archiviert_genau_einmal(fake, capsys):
+    mod = _modul()
+    server, env = fake
+    assert _lauf(mod, server, env) == 0
+    trip = _seed_trip(server, ARCHIV_ID)
+    assert trip["name"] == ARCHIV_NAME
+    assert len(trip["stages"]) == 3
+    assert all(e["date"] < HEUTE for e in trip["stages"])
+    assert trip.get("archived_at"), "Archiv-Trip muss ein Archivdatum tragen"
+    assert [p["body"] for p in _state_patches(server)] == [{"archived": True}]
+    # Tarif vor dem Trip (Quote), Anlage vor dem Archivieren.
+    pfade = [(a["methode"], a["pfad"]) for a in server.aufrufe]
+    anlage = next(i for i, a in enumerate(server.aufrufe)
+                  if a["methode"] == "POST" and a["pfad"] == "/api/trips"
+                  and (a["body"] or {}).get("id") == ARCHIV_ID)
+    assert pfade.index(("POST", "/api/auth/staging-seed")) < anlage
+    assert anlage < pfade.index(("PATCH", f"/api/trips/{ARCHIV_ID}/state"))
+    # Keine Kanal-/Wetter-/Tabellenkonfiguration am Archiv-Trip.
+    assert not {"report_config", "alert_channels", "display_config"} & set(trip)
+    assert not [a for a in server.aufrufe if a["pfad"].startswith(f"/api/briefings/{ARCHIV_ID}")]
+
+
+def test_3327_ac2_zweiter_lauf_schreibt_nichts_und_reaktiviert_nicht(fake, capsys):
+    mod = _modul()
+    server, env = fake
+    assert _lauf(mod, server, env) == 0
+    stempel = _seed_trip(server, ARCHIV_ID)["archived_at"]
+    vorher = json.dumps(_seed_trip(server, ARCHIV_ID), sort_keys=True)
+    server.aufrufe.clear()
+    assert _lauf(mod, server, env) == 0
+    assert _archiv_schreiber(server) == []
+    assert _seed_trip(server, ARCHIV_ID)["archived_at"] == stempel
+    assert json.dumps(_seed_trip(server, ARCHIV_ID), sort_keys=True) == vorher
+
+
+def test_3327_ac3_verstellter_name_wird_per_put_korrigiert_archivdatum_bleibt(fake, capsys):
+    mod = _modul()
+    server, env = fake
+    assert _lauf(mod, server, env) == 0
+    trip = _seed_trip(server, ARCHIV_ID)
+    stempel = trip["archived_at"]
+    trip["name"] = "von Hand verstellt"
+    trip["notiz"] = "Zusatzfeld bleibt"
+    server.aufrufe.clear()
+    assert _lauf(mod, server, env) == 0
+    trip = _seed_trip(server, ARCHIV_ID)
+    assert trip["name"] == ARCHIV_NAME
+    assert trip["archived_at"] == stempel, "PUT darf das Archivdatum nicht entfernen"
+    assert trip["notiz"] == "Zusatzfeld bleibt"
+    assert _state_patches(server) == [], "bereits archiviert: kein zweiter Archiv-PATCH"
+    puts = [a for a in _archiv_schreiber(server) if a["methode"] == "PUT"]
+    assert len(puts) == 1 and puts[0]["body"].get("archived_at") == stempel
+
+
+def test_3327_ac3_entarchivierter_trip_wird_erneut_archiviert(fake, capsys):
+    """Fehlt das Archivdatum (z. B. von Hand wiederhergestellt), archiviert der Seed erneut."""
+    mod = _modul()
+    server, env = fake
+    assert _lauf(mod, server, env) == 0
+    _seed_trip(server, ARCHIV_ID).pop("archived_at")
+    server.aufrufe.clear()
+    assert _lauf(mod, server, env) == 0
+    assert [p["body"] for p in _state_patches(server)] == [{"archived": True}]
+    assert _seed_trip(server, ARCHIV_ID).get("archived_at")
+
+
+def test_3327_ac4_gr221_bleibt_aktiv_und_ist_elementlisten_trip(fake, capsys):
+    mod = _modul()
+    server, env = fake
+    assert _lauf(mod, server, env) == 0
+    trip_id, _ = _ausgabe_ids(capsys.readouterr().out)
+    assert trip_id == GR221_ID != ARCHIV_ID
+    gr221 = _seed_trip(server, GR221_ID)
+    assert "archived_at" not in gr221 and "paused_at" not in gr221
+    assert _seed_trip(server, ARCHIV_ID).get("archived_at")
+    assert not [a for a in server.aufrufe
+                if a["pfad"] == f"/api/trips/{GR221_ID}/state"], "GR221 nie per PATCH schalten"
+    vorher = json.dumps(gr221, sort_keys=True)
+    assert _lauf(mod, server, env) == 0
+    assert json.dumps(_seed_trip(server, GR221_ID), sort_keys=True) == vorher
+
+
+def test_3327_ac5_archiv_trip_faellt_aus_trip_liste_und_briefing_auswahl(fake, tmp_path,
+                                                                          monkeypatch):
+    """Die vom Seed erzeugten Trips laufen durch die echte Trip-Auswahl des Cores
+    (``load_all_trips``, Grundlage von Briefing- und Alarm-Planung) und durch den Filter
+    der Trip-Liste (``archived_at == null``, frontend/src/routes/trips/+page.server.ts)."""
+    import sys
+    sys.path.insert(0, str(SKRIPT.parents[1] / "src"))
+    from app import loader
+
+    mod = _modul()
+    server, env = fake
+    assert _lauf(mod, server, env) == 0
+    daten = _seed_daten(server)["trips"]
+    assert ARCHIV_ID in daten
+    monkeypatch.setattr(loader, "_DATA_ROOT", str(tmp_path / "daten"))
+    ordner = loader.get_briefings_dir(PRUEF["user"])
+    ordner.mkdir(parents=True)
+    for tid, trip in daten.items():
+        (ordner / f"{tid}.json").write_text(json.dumps(trip, ensure_ascii=False),
+                                            encoding="utf-8")
+    aktiv = {t.id for t in loader.load_all_trips(PRUEF["user"])}
+    alle = {t.id for t in loader.load_all_trips(PRUEF["user"], include_archived=True)}
+    assert alle == {GR221_ID, ARCHIV_ID}
+    assert aktiv == {GR221_ID}
+    trip_liste = [t["id"] for t in daten.values() if t.get("archived_at") is None]
+    assert trip_liste == [GR221_ID]
+
+
+def test_3327_archiv_trip_nur_im_pruefkonto(fake):
+    """Zwei-Nutzer-Probe: der Archiv-Trip entsteht nur beim Pruefkonto."""
+    mod = _modul()
+    server, env = fake
+    b = server.neues_konto("nutzer-b", "b@example.invalid")
+    b["daten"]["trips"]["b-trip"] = {"id": "b-trip", "name": "B", "stages": [],
+                                     "archived_at": "2026-01-01T00:00:00Z"}
+    vorher = server.zustand("nutzer-b")
+    assert _lauf(mod, server, env) == 0
+    assert ARCHIV_ID in _seed_daten(server)["trips"]
+    assert server.zustand("nutzer-b") == vorher
+    assert ARCHIV_ID not in server.konten["default"]["daten"]["trips"]
