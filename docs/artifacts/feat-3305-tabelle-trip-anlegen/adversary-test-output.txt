@@ -1,0 +1,394 @@
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/components/shared/wetter-tab/__tests__/was_steht_wo_anlegen_3305.test.ts src/lib/components/organisms/__tests__/was_steht_wo_karte_anlegen_3305.test.ts src/lib/components/organisms/__tests__/was_steht_wo_karte_anlegen_3305_fixloop1.test.ts src/lib/components/trip-new/__tests__/trip_anlegen_karte_payload_3305.test.ts src/lib/components/trip-new/__tests__/trip_anlegen_karte_verdrahtung_3305.test.ts
+
+TAP version 13
+# (node:3062093) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: \#3305 Test 1 (AC-2, AC-4): Anlege-Modus meldet den Stand auch bei stored=false, kein PUT
+    # Subtest: Haken: onAnlegeStand meldet die Änderung in placements; kein Schreibaufruf
+    ok 1 - Haken: onAnlegeStand meldet die Änderung in placements; kein Schreibaufruf
+      ---
+      duration_ms: 10369.603209
+      type: 'test'
+      ...
+    # Subtest: Format und Reihenfolge: gemeldeter Stand trägt beides
+    ok 2 - Format und Reihenfolge: gemeldeter Stand trägt beides
+      ---
+      duration_ms: 142.372884
+      type: 'test'
+      ...
+    # Subtest: Schalter (Nacht-Block): gemeldet mit felder und felderStart, kein Teilfeld-PUT
+    ok 3 - Schalter (Nacht-Block): gemeldet mit felder und felderStart, kein Teilfeld-PUT
+      ---
+      duration_ms: 66.808114
+      type: 'test'
+      ...
+    # Subtest: placementsZumMitspeichern: lokaler Stand ohne stored-Bedingung
+    ok 4 - placementsZumMitspeichern: lokaler Stand ohne stored-Bedingung
+      ---
+      duration_ms: 92.905694
+      type: 'test'
+      ...
+    1..4
+ok 1 - \#3305 Test 1 (AC-2, AC-4): Anlege-Modus meldet den Stand auch bei stored=false, kein PUT
+  ---
+  duration_ms: 10672.774182
+  type: 'suite'
+  ...
+# Subtest: \#3305 Test 6 (AC-10): Kartenbedienung ohne Metrikänderung lädt keine Vorschau nach
+    # Subtest: Haken, Format, Reihenfolge, Ausblick; Zeitgeber läuft ab: weiterhin genau ein Vorschau-Aufruf
+    ok 1 - Haken, Format, Reihenfolge, Ausblick; Zeitgeber läuft ab: weiterhin genau ein Vorschau-Aufruf
+      ---
+      duration_ms: 48.96083
+      type: 'test'
+      ...
+    1..1
+ok 2 - \#3305 Test 6 (AC-10): Kartenbedienung ohne Metrikänderung lädt keine Vorschau nach
+  ---
+  duration_ms: 49.14336
+  type: 'suite'
+  ...
+# Subtest: \#3305 Test 2 (AC-5): Metrik hinzu/weg — Zeilen ergänzt/entfernt, Einstellungen bleiben
+    # Subtest: Haken/Format/Reihenfolge bleiben nach grundauswahlGeaendert und nach der folgenden Vorschau-Antwort
+    ok 1 - Haken/Format/Reihenfolge bleiben nach grundauswahlGeaendert und nach der folgenden Vorschau-Antwort
+      ---
+      duration_ms: 79.138453
+      type: 'test'
+      ...
+    1..1
+ok 3 - \#3305 Test 2 (AC-5): Metrik hinzu/weg — Zeilen ergänzt/entfernt, Einstellungen bleiben
+  ---
+  duration_ms: 82.573876
+  type: 'suite'
+  ...
+# (node:3062094) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: \#3305 F007: Metrikwechsel vor der ersten Vorschau-Antwort verfälscht den Stand nicht
+    # Subtest: ohne Startstand: ältere Antwort (alte Metriken) wird verworfen, der Stand trägt die neue Auswahl
+    ok 1 - ohne Startstand: ältere Antwort (alte Metriken) wird verworfen, der Stand trägt die neue Auswahl
+      ---
+      duration_ms: 11136.970933
+      type: 'test'
+      ...
+    # Subtest: ältere Antwort NACH der neueren: bleibt verworfen
+    ok 2 - ältere Antwort NACH der neueren: bleibt verworfen
+      ---
+      duration_ms: 161.882929
+      type: 'test'
+      ...
+    # Subtest: nach Neuaufbau mit Startstand: Haken bleibt, entfernte Zeile entfällt, neue kommt hinzu, Stand wird gemeldet
+    ok 3 - nach Neuaufbau mit Startstand: Haken bleibt, entfernte Zeile entfällt, neue kommt hinzu, Stand wird gemeldet
+      ---
+      duration_ms: 80.266214
+      type: 'test'
+      ...
+    1..3
+ok 4 - \#3305 F007: Metrikwechsel vor der ersten Vorschau-Antwort verfälscht den Stand nicht
+  ---
+  duration_ms: 11380.229107
+  type: 'suite'
+  ...
+# Subtest: \#3305 M8/M13 (AC-7): eine nie bediente Karte meldet auch nach einem Metrikwechsel nichts
+    # Subtest: geladen, nicht bedient, Metrik weg/hinzu: kein gemeldeter Stand (POST bleibt ohne rows)
+    ok 1 - geladen, nicht bedient, Metrik weg/hinzu: kein gemeldeter Stand (POST bleibt ohne rows)
+      ---
+      duration_ms: 158.566567
+      type: 'test'
+      ...
+    1..1
+ok 5 - \#3305 M8/M13 (AC-7): eine nie bediente Karte meldet auch nach einem Metrikwechsel nichts
+  ---
+  duration_ms: 158.757727
+  type: 'suite'
+  ...
+# Subtest: \#3305 Fix-Loop 1: gescheitertes Nachladen der Vorschau lässt die Karte nicht endlos laden
+    # Subtest: noch keine Antwort (erste verworfen), entprelltes Nachladen scheitert: sichtbarer Fehlerzustand
+    ok 1 - noch keine Antwort (erste verworfen), entprelltes Nachladen scheitert: sichtbarer Fehlerzustand
+      ---
+      duration_ms: 136.070908
+      type: 'test'
+      ...
+    # Subtest: Antwort schon da, Nachladen scheitert: alte Ansicht bleibt stehen
+    ok 2 - Antwort schon da, Nachladen scheitert: alte Ansicht bleibt stehen
+      ---
+      duration_ms: 95.790397
+      type: 'test'
+      ...
+    1..2
+ok 6 - \#3305 Fix-Loop 1: gescheitertes Nachladen der Vorschau lässt die Karte nicht endlos laden
+  ---
+  duration_ms: 232.213336
+  type: 'suite'
+  ...
+# Subtest: \#3305 Fix-Loop 2 (F-A3b): Start der Schalter bleibt der Start der Karte
+    # Subtest: spätere Vorschau mit anderen Schalterwerten (Zustellung: Kompakt) verschiebt felderStart nicht
+    ok 1 - spätere Vorschau mit anderen Schalterwerten (Zustellung: Kompakt) verschiebt felderStart nicht
+      ---
+      duration_ms: 64.216012
+      type: 'test'
+      ...
+    1..1
+ok 7 - \#3305 Fix-Loop 2 (F-A3b): Start der Schalter bleibt der Start der Karte
+  ---
+  duration_ms: 64.628792
+  type: 'suite'
+  ...
+# Subtest: \#3305 Fix-Loop 3 (F-B1, AC-5): Metrik entfernt, keine neue Vorschau — Ansicht und Klick bringen die Zeile nicht zurück
+    # Subtest: Ansicht ohne die Zeile; ein Haken danach meldet einen Stand ohne die entfernte Metrik
+    ok 1 - Ansicht ohne die Zeile; ein Haken danach meldet einen Stand ohne die entfernte Metrik
+      ---
+      duration_ms: 62.357581
+      type: 'test'
+      ...
+    1..1
+ok 8 - \#3305 Fix-Loop 3 (F-B1, AC-5): Metrik entfernt, keine neue Vorschau — Ansicht und Klick bringen die Zeile nicht zurück
+  ---
+  duration_ms: 62.476949
+  type: 'suite'
+  ...
+# (node:3062095) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: \#3305 Anlege-Variante: Laden über die Vorschau (kein GET, kein PUT)
+    # Subtest: laden(): genau ein POST auf die Vorschau mit dem Entwurf als Rumpf; Antwort wird übernommen
+    ok 1 - laden(): genau ein POST auf die Vorschau mit dem Entwurf als Rumpf; Antwort wird übernommen
+      ---
+      duration_ms: 14.793203
+      type: 'test'
+      ...
+    # Subtest: laden() mit lokalem Stand: display_config.placements trägt ihn, metrics/channels des Entwurfs bleiben
+    ok 2 - laden() mit lokalem Stand: display_config.placements trägt ihn, metrics/channels des Entwurfs bleiben
+      ---
+      duration_ms: 4.970874
+      type: 'test'
+      ...
+    # Subtest: zumMitsenden: im Anlegen der lokale Stand auch ohne gespeicherte Tabelle (Datenverlust-Schutz)
+    ok 3 - zumMitsenden: im Anlegen der lokale Stand auch ohne gespeicherte Tabelle (Datenverlust-Schutz)
+      ---
+      duration_ms: 0.552831
+      type: 'test'
+      ...
+    1..3
+ok 9 - \#3305 Anlege-Variante: Laden über die Vorschau (kein GET, kein PUT)
+  ---
+  duration_ms: 22.073307
+  type: 'suite'
+  ...
+# Subtest: \#3305 AC-4/AC-10 (Test 6): Kartenbedienung ohne Metrikänderung lädt nichts und schreibt nichts
+    # Subtest: mehrere Änderungen, Zeitgeber läuft ab: null Aufrufe (kein PUT, keine Vorschau)
+    ok 1 - mehrere Änderungen, Zeitgeber läuft ab: null Aufrufe (kein PUT, keine Vorschau)
+      ---
+      duration_ms: 1.16785
+      type: 'test'
+      ...
+    # Subtest: Metrikwechsel: genau EINE entprellte Vorschau, erst nach dem Zeitgeber
+    ok 2 - Metrikwechsel: genau EINE entprellte Vorschau, erst nach dem Zeitgeber
+      ---
+      duration_ms: 4.173043
+      type: 'test'
+      ...
+    # Subtest: die entprellte Vorschau liest den Entwurf beim Senden (neue Metrik steht im Rumpf)
+    ok 3 - die entprellte Vorschau liest den Entwurf beim Senden (neue Metrik steht im Rumpf)
+      ---
+      duration_ms: 1.045421
+      type: 'test'
+      ...
+    1..3
+ok 10 - \#3305 AC-4/AC-10 (Test 6): Kartenbedienung ohne Metrikänderung lädt nichts und schreibt nichts
+  ---
+  duration_ms: 6.635606
+  type: 'suite'
+  ...
+# Subtest: \#3305 AC-6 (Test 3): späte Vorschau-Antworten überschreiben keinen neueren Stand
+    # Subtest: Antwort, die nach einem Klick eintrifft, wird verworfen
+    ok 1 - Antwort, die nach einem Klick eintrifft, wird verworfen
+      ---
+      duration_ms: 7.662806
+      type: 'test'
+      ...
+    # Subtest: Antwort, die nach einem Metrikwechsel eintrifft, wird verworfen; die neuere gilt
+    ok 2 - Antwort, die nach einem Metrikwechsel eintrifft, wird verworfen; die neuere gilt
+      ---
+      duration_ms: 0.745531
+      type: 'test'
+      ...
+    # Subtest: ältere Antwort NACH der neueren: bleibt verworfen
+    ok 3 - ältere Antwort NACH der neueren: bleibt verworfen
+      ---
+      duration_ms: 3.806633
+      type: 'test'
+      ...
+    1..3
+ok 11 - \#3305 AC-6 (Test 3): späte Vorschau-Antworten überschreiben keinen neueren Stand
+  ---
+  duration_ms: 12.582171
+  type: 'suite'
+  ...
+# Subtest: \#3305 Test 4 (AC-2, AC-3): karte gesetzt — placements und Schalter-Differenz im POST
+    # Subtest: Tabelle der Karte steht unverändert in display_config.placements (Reihenfolge, Haken, Formate)
+    ok 1 - Tabelle der Karte steht unverändert in display_config.placements (Reihenfolge, Haken, Formate)
+      ---
+      duration_ms: 6.391895
+      type: 'test'
+      ...
+    # Subtest: alle fünf Schalter geändert: Werte an ihrem Ort, sonst weicht nichts ab (Versandzeiten, Kanäle gleich)
+    ok 2 - alle fünf Schalter geändert: Werte an ihrem Ort, sonst weicht nichts ab (Versandzeiten, Kanäle gleich)
+      ---
+      duration_ms: 0.81648
+      type: 'test'
+      ...
+    # Subtest: nur gegenüber dem Kartenstart Geändertes wird angewandt (zwei Bedienstellen bis \#3307)
+    ok 3 - nur gegenüber dem Kartenstart Geändertes wird angewandt (zwei Bedienstellen bis \#3307)
+      ---
+      duration_ms: 0.4096
+      type: 'test'
+      ...
+    # Subtest: Tabelle bedient, Schalter unverändert: keine Schalterfelder im POST
+    ok 4 - Tabelle bedient, Schalter unverändert: keine Schalterfelder im POST
+      ---
+      duration_ms: 0.39587
+      type: 'test'
+      ...
+    # Subtest: ohne reportConfig im Zustand: Schalter-Differenz legt report_config an
+    ok 5 - ohne reportConfig im Zustand: Schalter-Differenz legt report_config an
+      ---
+      duration_ms: 0.28958
+      type: 'test'
+      ...
+    # Subtest: der Eingabezustand bleibt unverändert (reine Funktion)
+    ok 6 - der Eingabezustand bleibt unverändert (reine Funktion)
+      ---
+      duration_ms: 0.346031
+      type: 'test'
+      ...
+    1..6
+ok 12 - \#3305 Test 4 (AC-2, AC-3): karte gesetzt — placements und Schalter-Differenz im POST
+  ---
+  duration_ms: 14.354541
+  type: 'suite'
+  ...
+# Subtest: \#3305 Test 5 (AC-7): karte nicht gesetzt — Rumpf wie heute (Regressionsschutz)
+    # Subtest: keine placements und keine Schalterfelder aus der Karte
+    ok 1 - keine placements und keine Schalterfelder aus der Karte
+      ---
+      duration_ms: 0.29866
+      type: 'test'
+      ...
+    # Subtest: karte: undefined ist bitgleich zu einem Zustand ohne das Feld
+    ok 2 - karte: undefined ist bitgleich zu einem Zustand ohne das Feld
+      ---
+      duration_ms: 0.404111
+      type: 'test'
+      ...
+    1..2
+ok 13 - \#3305 Test 5 (AC-7): karte nicht gesetzt — Rumpf wie heute (Regressionsschutz)
+  ---
+  duration_ms: 0.950921
+  type: 'suite'
+  ...
+# (node:3062153) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: \#3305 M4 (AC-2): Kartenbedienung -> Editor -> genau der Anlege-POST trägt die Tabelle
+    # Subtest: Haken in der Karte steht im POST display_config.placements
+    ok 1 - Haken in der Karte steht im POST display_config.placements
+      ---
+      duration_ms: 11462.668191
+      type: 'test'
+      ...
+    # Subtest: Karte nie bedient: POST ohne placements (AC-7, Gegenprobe)
+    ok 2 - Karte nie bedient: POST ohne placements (AC-7, Gegenprobe)
+      ---
+      duration_ms: 566.650113
+      type: 'test'
+      ...
+    1..2
+ok 14 - \#3305 M4 (AC-2): Kartenbedienung -> Editor -> genau der Anlege-POST trägt die Tabelle
+  ---
+  duration_ms: 12030.294305
+  type: 'suite'
+  ...
+# Subtest: \#3305 M5 (AC-1): Neuaufbau beim Wechsel Desktop <-> Mobil behält den Kartenstand
+    # Subtest: Desktop -> Mobil
+    ok 1 - Desktop -> Mobil
+      ---
+      duration_ms: 679.147633
+      type: 'test'
+      ...
+    # Subtest: Mobil -> Desktop
+    ok 2 - Mobil -> Desktop
+      ---
+      duration_ms: 972.485008
+      type: 'test'
+      ...
+    1..2
+ok 15 - \#3305 M5 (AC-1): Neuaufbau beim Wechsel Desktop <-> Mobil behält den Kartenstand
+  ---
+  duration_ms: 1651.980322
+  type: 'suite'
+  ...
+# Subtest: \#3305 M6 (AC-10): Metrikwechsel lädt die Vorschau der Karte nach — nach dem Melden an den Editor
+    # Subtest: Metrik entfernt: genau ein Nachladen, Editor kennt die neue Auswahl schon; Nicht-Metrik-Änderung lädt nichts
+    ok 1 - Metrik entfernt: genau ein Nachladen, Editor kennt die neue Auswahl schon; Nicht-Metrik-Änderung lädt nichts
+      ---
+      duration_ms: 300.34321
+      type: 'test'
+      ...
+    1..1
+ok 16 - \#3305 M6 (AC-10): Metrikwechsel lädt die Vorschau der Karte nach — nach dem Melden an den Editor
+  ---
+  duration_ms: 311.524999
+  type: 'suite'
+  ...
+# Subtest: \#3305 M10: die Karte steht im Anlegen nur mit Rückkanal
+    # Subtest: Orte-Anlegen ohne onAnlegeKarte: keine Karte (ihr Stand käme nicht in den POST)
+    ok 1 - Orte-Anlegen ohne onAnlegeKarte: keine Karte (ihr Stand käme nicht in den POST)
+      ---
+      duration_ms: 76.369511
+      type: 'test'
+      ...
+    # Subtest: Trip-Anlegen mit Rückkanal: Karte
+    ok 2 - Trip-Anlegen mit Rückkanal: Karte
+      ---
+      duration_ms: 60.084468
+      type: 'test'
+      ...
+    # Subtest: Hub (gespeicherter Trip): Karte
+    ok 3 - Hub (gespeicherter Trip): Karte
+      ---
+      duration_ms: 72.687369
+      type: 'test'
+      ...
+    1..3
+ok 17 - \#3305 M10: die Karte steht im Anlegen nur mit Rückkanal
+  ---
+  duration_ms: 209.961108
+  type: 'suite'
+  ...
+# Subtest: \#3305 Fix-Loop 2 (AC-5, AC-10): Metrikwechsel im Reiter -> Karte -> Vorschau und POST, über die echten Einbettungen
+    # Subtest: F-A1/F-A2: Metrik entfernen — Zeile entfällt im Kartenstand und im POST, Haken bleibt; Vorschau-Rumpf trägt die neue Auswahl
+    ok 1 - F-A1/F-A2: Metrik entfernen — Zeile entfällt im Kartenstand und im POST, Haken bleibt; Vorschau-Rumpf trägt die neue Auswahl
+      ---
+      duration_ms: 432.762697
+      type: 'test'
+      ...
+    # Subtest: F-A3: eine Kartenmeldung baut den Reiter Wetter nicht neu auf
+    ok 2 - F-A3: eine Kartenmeldung baut den Reiter Wetter nicht neu auf
+      ---
+      duration_ms: 628.391693
+      type: 'test'
+      ...
+    1..2
+ok 18 - \#3305 Fix-Loop 2 (AC-5, AC-10): Metrikwechsel im Reiter -> Karte -> Vorschau und POST, über die echten Einbettungen
+  ---
+  duration_ms: 1061.414489
+  type: 'suite'
+  ...
+1..18
+# tests 41
+# suites 18
+# pass 41
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 18366.559788

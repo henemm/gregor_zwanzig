@@ -30,12 +30,26 @@ export const FELDER_OWNER = 'was-steht-wo-schalter';
 
 export interface LeseSchreibClient extends PutClient {
 	get<T>(path: string): Promise<T>;
+	/** #3305: nur im Anlege-Modus (Vorschau des Entwurfs). */
+	post?<T>(path: string, body: unknown): Promise<T>;
 }
 export interface Planer {
 	schedule(fn: SaveFn, ms?: number, owner?: string): void;
 }
 
 export const tabellenPfad = (kind: Kind, id: string) => `/api/briefings/${encodeURIComponent(id)}/placements?kind=${kind}`;
+/** #3305: Vorschau eines noch nicht angelegten Entwurfs (#3304, `stored=false`, schreibt nichts). */
+export const vorschauPfad = (kind: Kind) => `/api/briefings/placements/vorschau?kind=${kind}`;
+/** #3305: Entprellung des Nachladens nach einem Metrikwechsel im Anlegen. */
+const VORSCHAU_MS = 400;
+
+/** #3305: Stand der Karte im Anlegen — geht mit dem einen Anlege-POST, nie per PUT. */
+export interface KarteAnlegeStand {
+	placements: Placements;
+	felder: Felder;
+	/** Schalter beim Start der Karte; der POST wendet nur die Differenz dazu an. */
+	felderStart: Felder;
+}
 
 export interface TabellenOptionen {
 	client: LeseSchreibClient;
@@ -47,6 +61,10 @@ export interface TabellenOptionen {
 	/** Frische Antwort in die Karte. */
 	uebernehmen: (a: PlacementsAntwort) => void;
 	gemeldet?: (art: 'konflikt' | 'fehler', e: unknown) => void;
+	/** #3305 Anlege-Modus: Entwurf für die Vorschau (gelesen erst beim Senden). Gesetzt = kein GET, kein PUT. */
+	entwurf?: () => Record<string, unknown>;
+	/** #3305: entprelltes Nachladen der Vorschau ist gescheitert. */
+	vorschauFehler?: (e: unknown) => void;
 }
 
 export interface TabellenSpeicherung {
@@ -67,7 +85,16 @@ export interface TabellenSpeicherung {
 	/** Der Reiter-PUT ist gespeichert. `gesendet` = das placements-Objekt, das dieser PUT wirklich trug:
 	 *  nur dessen Stand gilt als gespeichert; danach neu laden, wenn nichts ungespeichert ist. */
 	nachReiterSpeichern(gesendet?: unknown): void;
+	/** #3305 Anlege-Modus: Metrikwechsel — Vorschau entprellt neu laden (mehrere Aufrufe = ein POST). */
+	vorschauNachMetrik(): void;
 	readonly ungespeichert: boolean;
+}
+
+/** #3305: Vorschau-Rumpf = Entwurf; ein lokaler Stand steht in `display_config.placements`. */
+function vorschauRumpf(entwurf: Record<string, unknown>, p: Placements | null): Record<string, unknown> {
+	if (!p) return entwurf;
+	const dc = (entwurf.display_config ?? {}) as Record<string, unknown>;
+	return { ...entwurf, display_config: { ...dc, placements: p } };
 }
 
 export function erstelleTabellenSpeicherung(o: TabellenOptionen): TabellenSpeicherung {
@@ -78,10 +105,16 @@ export function erstelleTabellenSpeicherung(o: TabellenOptionen): TabellenSpeich
 	let uebernommen = 0;
 	/** Versionsmarke je mitgesendetem placements-Objekt (#3237 Runde 14). */
 	const marken = new WeakMap<object, number>();
+	const anlegen = Boolean(o.entwurf);
+	let vorschauUhr: ReturnType<typeof setTimeout> | undefined;
+	const holen = (): Promise<PlacementsAntwort> =>
+		o.entwurf
+			? o.client.post!<PlacementsAntwort>(vorschauPfad(o.kind), vorschauRumpf(o.entwurf(), o.placements()))
+			: o.client.get<PlacementsAntwort>(pfad);
 
 	async function laden(): Promise<void> {
 		const ticket = { nr: ++ausgegeben, version };
-		const a = await o.client.get<PlacementsAntwort>(pfad);
+		const a = await holen();
 		if (ticket.nr < uebernommen || ticket.version !== version) return;
 		uebernommen = ticket.nr;
 		o.uebernehmen(a);
@@ -109,6 +142,8 @@ export function erstelleTabellenSpeicherung(o: TabellenOptionen): TabellenSpeich
 	return {
 		aenderung() {
 			version += 1;
+			// #3305: im Anlegen kein PUT, kein Planen — der Stand geht mit dem Anlege-POST.
+			if (anlegen) return;
 			if (o.saveController) o.saveController.schedule(vorgang, 700, TABELLE_OWNER);
 			else void vorgang().catch(() => {});
 		},
@@ -120,7 +155,8 @@ export function erstelleTabellenSpeicherung(o: TabellenOptionen): TabellenSpeich
 			version += 1;
 		},
 		zumMitsenden(tabelleGespeichert: boolean) {
-			const p = tabelleGespeichert ? o.placements() : null;
+			// #3305: im Anlegen gibt es nie eine gespeicherte Tabelle — der lokale Stand zählt immer.
+			const p = tabelleGespeichert || anlegen ? o.placements() : null;
 			if (!p) return undefined;
 			// Eigene Identität je Auswertung: der Speicherer liest mehrfach, gespeichert gilt nur, was gesendet wurde.
 			const objekt = { ...p };
@@ -131,6 +167,11 @@ export function erstelleTabellenSpeicherung(o: TabellenOptionen): TabellenSpeich
 			const v = gesendet && typeof gesendet === 'object' ? marken.get(gesendet) : undefined;
 			if (v !== undefined) gespeichert = Math.max(gespeichert, v);
 			if (version === gespeichert) ladenStill();
+		},
+		vorschauNachMetrik() {
+			if (!anlegen) return;
+			clearTimeout(vorschauUhr);
+			vorschauUhr = setTimeout(() => void laden().catch((e) => o.vorschauFehler?.(e)), VORSCHAU_MS);
 		},
 		get ungespeichert() {
 			return version !== gespeichert;

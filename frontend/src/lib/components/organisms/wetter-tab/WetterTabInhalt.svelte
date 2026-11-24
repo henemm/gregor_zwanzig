@@ -33,6 +33,7 @@
 	import { eigeneVorlageAus, ladeWetterDaten, ortAnzahlVon, vorlageHerkunft, type WetterDaten } from '../../shared/wetter-tab/wetterTabLaden.ts';
 	import { SPEICHERER, anlegeSpeicherer, type SpeicherOptionen } from '../../shared/wetter-tab/wetterTabSpeicherung.ts';
 	import * as Z from '../../shared/wetter-tab/wetterZustand.ts';
+	import type { KarteAnlegeStand } from '../../shared/wetter-tab/wasStehtWoSpeicherung.ts';
 
 	interface Props {
 		context: Kontext;
@@ -45,8 +46,11 @@
 		onTripUpdate?: (t: Trip) => void;
 		onCompareUpdate?: (p: ComparePreset) => void;
 		onAnlegeStand?: (nutzlast: unknown) => void;
+		/** #3305: Stand der Karte „Was steht wo“ im Anlegen (Start nach Neuaufbau, eigener Rückkanal). */
+		karteStart?: KarteAnlegeStand;
+		onAnlegeKarte?: (s: KarteAnlegeStand) => void;
 	}
-	let { context, trip, preset, createMode = false, saveController, enqueueHubWrite, onTripUpdate, onCompareUpdate, onAnlegeStand }: Props = $props();
+	let { context, trip, preset, createMode = false, saveController, enqueueHubWrite, onTripUpdate, onCompareUpdate, onAnlegeStand, karteStart, onAnlegeKarte }: Props = $props();
 
 	/** Kontext-Unterschiede als Daten (Ratsche context_herkunft_zweige_eingefroren). */
 	// #2800 (S8): Radar-Regen auch im Trip; der Hinweis nennt dort „deine Etappe".
@@ -134,11 +138,15 @@
 	function aendern(neu: Z.WetterStand): void {
 		// #3122 B3b (Spec Nr. 13, Fix-Loop F2): „−“, „+“ und Vorlagenwechsel schreiben die Tabelle im selben Vorgang mit.
 		if (stand) karte?.grundauswahlGeaendert(stand.auswahl, neu.auswahl);
+		const metrikVorher = JSON.stringify(stand?.auswahl ?? []);
 		stand = neu;
 		const sig = signatur(neu);
 		if (sig === gemeldet) return;
 		gemeldet = sig;
 		melden();
+		// #3305 (AC-10): im Anlegen lädt die Vorschau der Karte nur nach einer Metrikänderung nach — nach dem
+		// Melden, damit der Entwurf die neue Auswahl trägt. Der Kartenstand fließt nie in den Entwurf zurück.
+		if (createMode && JSON.stringify(neu.auswahl) !== metrikVorher) karte?.vorschauNachMetrik();
 	}
 	function neuGeladen(frisch: Z.AboSicht): void {
 		if (!daten) return;
@@ -310,8 +318,20 @@
 			onWarnungen={(an) => aendern({ ...stand!, warnungenAn: an })}
 			onRadar={(an) => aendern({ ...stand!, radarAn: an })}
 		/>
-		{#if !createMode && aboId}
-			<WasStehtWoKarte bind:this={karte} {context} id={aboId} {saveController} {enqueueHubWrite} onUebernahme={(a) => uebernahme[context](a)} />
+		<!-- #3305: im Anlegen nur mit Rückkanal (sonst ginge der Kartenstand nicht in den POST; Orte folgen in #3306). -->
+		{#if createMode ? !!onAnlegeKarte : aboId}
+			<WasStehtWoKarte
+				bind:this={karte}
+				{context}
+				id={createMode ? '' : aboId}
+				{saveController}
+				{enqueueHubWrite}
+				onUebernahme={(a) => uebernahme[context](a)}
+				{createMode}
+				entwurf={() => abo() as unknown as Trip}
+				start={karteStart}
+				onAnlegeStand={onAnlegeKarte}
+			/>
 		{/if}
 		<AnpassenKarte
 			tagesfenster={stand.tagesfenster}

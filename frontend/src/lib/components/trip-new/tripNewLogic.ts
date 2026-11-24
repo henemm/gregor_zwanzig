@@ -22,6 +22,8 @@ import { fmtDate } from '../../i18n/format.ts';
 import type { Lang } from '../../i18n/index.ts';
 import { baueReportConfigPayload, ladeReportZustand } from '../shared/versand-tab/reportConfigPayload.ts';
 import { ladeMailZustand } from '../shared/mailInhaltZustand.ts';
+import { felderNutzlast, type KarteAnlegeStand } from '../shared/wetter-tab/wasStehtWoSpeicherung.ts';
+export type { KarteAnlegeStand };
 
 // ── TabId ────────────────────────────────────────────────────────────────────
 
@@ -154,6 +156,8 @@ export interface CreateTripState {
 	// Fix-Loop 2 (F-A1, AC-20): Schalter „Amtliche Warnungen" aus dem Reiter Wetter; gesetzt
 	// landet er in `official_alerts_enabled` (official_warnings.enabled kommt ueber `alarm`).
 	officialAlertsEnabled?: boolean;
+	// #3305: Stand der Karte „Was steht wo“ — nur gesetzt, wenn der Nutzer sie bedient hat.
+	karte?: KarteAnlegeStand;
 }
 
 // ── Alarm-Schatten-State (Issue #2277 S1) ────────────────────────────────────
@@ -335,8 +339,17 @@ export function buildCreateTripPayload(state: CreateTripState): Trip {
 	if (alarmPayload.display_config) {
 		trip.display_config = { ...(bisherigeDc ?? {}), ...(alarmPayload.display_config as object) };
 	}
+	if (state.karte) mitKarte(trip, state.karte);
 
 	return trip;
+}
+
+/** #3305 (AC-2, AC-3): Tabelle der Karte und die gegenüber ihrem Start geänderten Schalter in den POST;
+ *  Versandzeiten, Kanäle und Metriken bleiben. Read-Modify-Write auf dem gebauten Rumpf. */
+function mitKarte(trip: Trip, karte: KarteAnlegeStand): void {
+	const diff = felderNutzlast('route', karte.felder, karte.felderStart) as { display_config?: object; report_config?: object };
+	trip.display_config = { ...(trip.display_config ?? {}), ...(diff.display_config ?? {}), placements: karte.placements } as unknown as Trip['display_config'];
+	if (diff.report_config) trip.report_config = { ...(trip.report_config ?? {}), ...diff.report_config } as ReportConfig;
 }
 
 // ── Standard-Versandeinstellungen im Speicherweg (Issue #1743, AC-21) ───────

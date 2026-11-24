@@ -63,6 +63,7 @@
 		editorEtappenAusAnlage,
 		anlageAusEditorEtappen,
 		tempoImAnlegenWechseln,
+		type KarteAnlegeStand,
 	} from './tripNewLogic.ts';
 	import { canFinishMitStandardwerten } from '$lib/components/shared/anlegeLockEngine';
 	import StandardwerteSpeichernKnopf from '$lib/components/shared/StandardwerteSpeichernKnopf.svelte';
@@ -468,6 +469,10 @@
 	// (warnungenNachWetterBericht), eine Geste in der Zustellung baut ihn neu auf (wetterNeuaufbau).
 	let wetterWarnungenGemeldet: boolean | undefined = undefined;
 	let wetterNeuaufbau = $state(0);
+	// #3305: Stand der Karte „Was steht wo“ — hier, damit er Neuaufbau und Wechsel Desktop/Mobil übersteht;
+	// fließt nie in wetterAnlegeTrip zurück (Schleifenschutz), nur in den Anlege-POST.
+	let karteStand = $state<KarteAnlegeStand | undefined>(undefined);
+	function handleKarteStand(k: KarteAnlegeStand) { karteStand = k; }
 	const wetterAnlegeTrip = $derived<Trip>({
 		...stubTrip,
 		official_alerts_enabled: alarm.officialWarningsEnabled,
@@ -553,6 +558,7 @@
 				ampel: wetterAmpel,
 				// C3: derselbe Eigentuemer wie official_warnings.enabled (ueber `alarm`), AC-20.
 				officialAlertsEnabled: alarm.officialWarningsEnabled,
+				karte: karteStand,
 			};
 			const payload = buildCreateTripPayload(state);
 			const created = await api.post<Trip>('/api/trips', payload);
@@ -929,7 +935,7 @@
 		{#if !isMobileViewport}
 		<div style:display={activeTab === 'wetter' ? '' : 'none'}>
 			{#key wetterNeuaufbau}
-				<WetterTab context="route" trip={wetterAnlegeTrip} createMode={true} onAnlegeStand={handleWetterAnlegeStand} />
+				<WetterTab context="route" trip={wetterAnlegeTrip} createMode={true} onAnlegeStand={handleWetterAnlegeStand} karteStart={karteStand} onAnlegeKarte={handleKarteStand} />
 			{/key}
 			<!-- #2347 S4 (AC-20): Weiter-Fuß wie compare-editor-continue-zustellung im Vergleich. -->
 			<div style="padding: 0 40px 60px; display: flex; justify-content: flex-end;">
@@ -1185,7 +1191,7 @@
 			{#if isMobileViewport}
 			<div style:display={activeTab === 'wetter' ? '' : 'none'}>
 				{#key wetterNeuaufbau}
-					<WetterTab context="route" trip={wetterAnlegeTrip} createMode={true} onAnlegeStand={handleWetterAnlegeStand} />
+					<WetterTab context="route" trip={wetterAnlegeTrip} createMode={true} onAnlegeStand={handleWetterAnlegeStand} karteStart={karteStand} onAnlegeKarte={handleKarteStand} />
 				{/key}
 			</div>
 			{/if}
