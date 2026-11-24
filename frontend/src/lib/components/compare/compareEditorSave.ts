@@ -25,6 +25,7 @@ import { toStoredActiveMetrics } from '../shared/weather-metrics-tab/compareMetr
 import type { CompareChannelActiveMetrics } from '../shared/weather-metrics-tab/compareChannelMetricLayouts.ts';
 import { baueDiff, type KanalMap } from '../shared/alarme-tab/alertMetricChannels.ts';
 import { STANDARD_VORLAGE } from '../shared/wetter-tab/ampelModell.ts';
+import { felderNutzlast, type KarteAnlegeStand } from '../shared/wetter-tab/wasStehtWoSpeicherung.ts';
 
 /** Issue #1895 S3b1: `{alert_metric_channels: Diff}` oder `{}` (kein Diff ⇒ Feld fehlt). */
 function kanalDiffFeld(basis: KanalMap | undefined, aktuell: KanalMap | undefined): { alert_metric_channels?: KanalMap } {
@@ -586,7 +587,7 @@ export function compareFeldsatzStandard(): CompareFeldsatz {
  */
 export function baueVergleichAnlegeRumpf(
 	wiz: CompareFeldsatz,
-	wetter: { ampel?: object; auswahl?: unknown } = {}
+	wetter: { ampel?: object; auswahl?: unknown; karte?: KarteAnlegeStand } = {}
 ): Record<string, unknown> {
 	const payload = buildNewComparePresetPayload({
 		name: wiz.name,
@@ -631,7 +632,16 @@ export function baueVergleichAnlegeRumpf(
 			ampel: wetter.ampel,
 			...(wetter.auswahl ? { active_metrics: wetter.auswahl } : {})
 		};
+	if (wetter.karte) mitKarte(payload, wetter.karte);
 	return payload;
+}
+
+/** #3306 (AC-2, AC-3): Tabelle der Karte und die gegenüber ihrem Start geänderten Schalter in den POST
+ *  (hourly_enabled top-level, display_config.telegram_style); alles andere bleibt. Read-Modify-Write. */
+function mitKarte(payload: Record<string, unknown>, karte: KarteAnlegeStand): void {
+	const { display_config: dcDiff, ...rest } = felderNutzlast('vergleich', karte.felder, karte.felderStart) as { display_config?: object };
+	Object.assign(payload, rest);
+	payload.display_config = { ...((payload.display_config as object) ?? {}), ...(dcDiff ?? {}), placements: karte.placements };
 }
 
 /**
@@ -642,7 +652,7 @@ export function baueVergleichAnlegeRumpf(
 export async function legeVergleichAn(
 	api: { post<T>(url: string, body: unknown): Promise<T> },
 	wiz: CompareFeldsatz,
-	wetter: { ampel?: object; auswahl?: unknown } = {}
+	wetter: { ampel?: object; auswahl?: unknown; karte?: KarteAnlegeStand } = {}
 ): Promise<{ id: string }> {
 	return api.post<{ id: string }>('/api/compare/presets', baueVergleichAnlegeRumpf(wiz, wetter));
 }
