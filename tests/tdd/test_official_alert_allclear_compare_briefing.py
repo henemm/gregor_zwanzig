@@ -20,9 +20,16 @@ import pytest
 
 from tests.helpers.transport_mitschrift import ALLE_KANAELE, aufzeichner_installieren
 from tests.tdd._official_alert_allclear_fixtures import (
-    IBK, Szenario, Warnquelle, basis_jetzt, compare_briefing, entwarnungen_gesamt,
+    IBK, Szenario, Warnquelle, basis_jetzt, compare_briefing, feste_uhr, entwarnungen_gesamt,
     entwarnungs_sendungen, lauf_erstwarnung, quellen, schnappschuss, warnung,
 )
+
+
+@pytest.fixture(autouse=True)
+def _feste_uhr():
+    """Ganzer Test unter fester Uhr (``BASIS``), nicht unter der Wanduhr."""
+    with feste_uhr():
+        yield
 
 
 @pytest.fixture

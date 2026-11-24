@@ -31,12 +31,19 @@ from tests.helpers.transport_mitschrift import ALLE_KANAELE, aufzeichner_install
 from tests.tdd._official_alert_allclear_fixtures import (
     AUSFALLARTEN, FLAECHEN, LAT, LAT_B, LON, LON_B, Szenario, Warnquelle,
     amtliche_eintraege, basis_jetzt, compare_lauf, compare_nutzer, entwarnungen_gesamt,
-    entwarnungs_sendungen, fehlschlag_installieren, geometrie_zwei_segmente,
+    entwarnungs_sendungen, fehlschlag_installieren, feste_uhr, geometrie_zwei_segmente,
     lauf_erstwarnung, quellen, trip_briefing, warnung,
 )
 
 #: "Stufe 4 -> 2" -- alte und neue Stufe als Uebergang (Spec Abschnitt 7).
 VIER_AUF_ZWEI = re.compile(r"4\s*(?:→|->|>)\s*2")
+
+
+@pytest.fixture(autouse=True)
+def _feste_uhr():
+    """Ganzer Test unter fester Uhr (``BASIS``), nicht unter der Wanduhr."""
+    with feste_uhr():
+        yield
 
 
 @pytest.fixture

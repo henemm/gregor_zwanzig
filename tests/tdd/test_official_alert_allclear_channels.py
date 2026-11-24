@@ -29,7 +29,7 @@ from output.tokens.hazard_symbols import sms_symbol_for
 from tests.helpers.transport_mitschrift import ALLE_KANAELE, aufzeichner_installieren
 from tests.tdd._official_alert_allclear_fixtures import (
     EMPFEHLUNGS_WOERTER, FLAECHEN, Szenario, basis_jetzt,
-    entwarnungs_sendungen, lauf_erstwarnung, quellen,
+    entwarnungs_sendungen, feste_uhr, lauf_erstwarnung, quellen,
 )
 
 VIER_AUF_ZWEI = re.compile(r"4\s*(?:→|->|>)\s*2")
@@ -37,6 +37,13 @@ HT = sms_symbol_for("extreme_heat")  # "HT"
 TS = sms_symbol_for("thunderstorm")  # "TS"
 #: Renderer-Grenzen (Spec v1.1): Standalone-SMS 140, Premium-SMS 153 (channel_layout).
 _LIMIT = {"sms": 140, "premium_sms": 153}
+
+
+@pytest.fixture(autouse=True)
+def _feste_uhr():
+    """Ganzer Test unter fester Uhr (``BASIS``), nicht unter der Wanduhr."""
+    with feste_uhr():
+        yield
 
 
 @pytest.fixture
@@ -185,12 +192,12 @@ def test_ac12_von_der_sms_kuerzung_verdraengte_entwarnung_gilt_als_nicht_zugeste
                 "extreme_cold", "wildfire_risk")
     with quellen(sz.x):
         lauf_erstwarnung(sz, kanaele=("sms",))
-        # Beginn/Ende fest auf Minute :07 (#3047 p9): mit der echten Jetzt-Minute
-        # :00 kuerzt das Produkt -- korrekt -- auf volle Stunden (`TS:M 12-Mi09`),
-        # dann passten alle acht Warnungen UND die Entwarnung ins Budget und die
-        # Vorbedingung "verdraengt" war wanduhrabhaengig rot. Mit Minuten traegt
-        # jede Warnung `HH:MM-WdHH:MM` und acht fuellen die 140 Zeichen sicher.
-        von, bis = sz.von.replace(minute=7), sz.bis.replace(minute=7)
+        # Beginn/Ende tragen die Minute der festen BASIS (:17). Zur vollen Stunde
+        # kuerzt das Produkt -- korrekt -- auf `TS:M 13-Mi10`, dann passten alle
+        # acht Warnungen UND die Entwarnung ins Budget (#2911/#3054). Mit Minuten
+        # traegt jede Warnung `HH:MM-WdHH:MM` und acht fuellen die 140 Zeichen.
+        assert sz.von.minute and sz.bis.minute, "Vorbedingung: Zeitraum mit Minute != 0"
+        von, bis = sz.von, sz.bis
         neue = [sz.warnung(3, hazard=h, region=f"Region-{h}", von=von, bis=bis)
                 for h in gefahren]
         sz.x.alerts = [sz.warnung(2)] + neue
