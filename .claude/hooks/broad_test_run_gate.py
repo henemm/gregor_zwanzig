@@ -32,11 +32,12 @@ Erlaubt ist ein pytest-Aufruf, wenn mindestens eines zutrifft:
    (Node-IDs mit ``::`` sind eingeschlossen). Der Normalfall.
 2. **Nichts wird ausgefuehrt** — ``--collect-only`` / ``--co`` / ``--version`` /
    ``--help``.
-3. **Sicherer Offline-Volllauf** (Issue #1755) — genau diese Zeile,
-   einzeilig, woertlich (``--ignore=tests/red/`` darf fehlen, optional
-   gefolgt von genau `` > <pfad> 2>&1``)::
+3. **Sicherer Offline-Volllauf** (Issue #1755, parallel #3278) — genau eine
+   dieser zwei Zeilen, einzeilig, woertlich (``--ignore=tests/red/`` darf nur
+   bei der seriellen fehlen, optional gefolgt von genau `` > <pfad> 2>&1``)::
 
        uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+       nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
 
    ``--disable-socket`` allein ist NICHT mehr frei: es sperrt auch lokale
    Test-Doubles (Lauf unbenutzbar), und die naheliegende Reparatur
@@ -91,7 +92,9 @@ _OFFLINE_BASE_CALL = (
     "--allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports"
 )
 OFFLINE_CALL = _OFFLINE_BASE_CALL + " --ignore=tests/red/"
-_OFFLINE_CALLS = (_OFFLINE_BASE_CALL, OFFLINE_CALL)
+# Parallele Form (#3278): ein vollstaendiges Literal, keine weitere Variante.
+OFFLINE_PARALLEL_CALL = "nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/"
+_OFFLINE_CALLS = (_OFFLINE_BASE_CALL, OFFLINE_CALL, OFFLINE_PARALLEL_CALL)
 # Einzig erlaubter Zusatz: genau `` > <pfad> 2>&1``, Pfad ohne Shell-Zeichen.
 _OFFLINE_REDIRECT_RE = re.compile(r" > ([A-Za-z0-9_./-]+) 2>&1")
 
@@ -341,8 +344,9 @@ def _block(detail: str) -> None:
     print("Erlaubte Wege:", file=sys.stderr)
     print("  1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py", file=sys.stderr)
     print("  2. Nur sammeln:       uv run pytest --collect-only ...", file=sys.stderr)
-    print("  3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:", file=sys.stderr)
+    print("  3. Sicherer Offline-Volllauf (#1755, parallel #3278), einzeilig, woertlich:", file=sys.stderr)
     print(f"       {OFFLINE_CALL}", file=sys.stderr)
+    print(f"       {OFFLINE_PARALLEL_CALL}", file=sys.stderr)
     print("     optional dahinter genau ' > datei 2>&1'; jede andere Abweichung", file=sys.stderr)
     print("     blockt. (--disable-socket allein reicht NICHT mehr.)", file=sys.stderr)
     print("", file=sys.stderr)

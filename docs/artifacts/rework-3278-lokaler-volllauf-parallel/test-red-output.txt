@@ -1,0 +1,2329 @@
+Using CPython 3.12.15 interpreter at: /opt/homebrew/opt/python@3.12/bin/python3.12
+Creating virtual environment at: .venv
+   Building gregor-zwanzig @ file:///Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull
+      Built gregor-zwanzig @ file:///Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull
+Installed 59 packages in 103ms
+============================= test session starts ==============================
+platform darwin -- Python 3.12.15, pytest-9.2.0, pluggy-1.6.0
+rootdir: /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull
+configfile: pyproject.toml
+plugins: socket-0.8.0, xdist-3.8.0, timeout-2.4.0, anyio-4.14.2
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 267 items
+
+tests/tdd/test_broad_test_run_gate_offline_form.py ..................... [  7%]
+........................................................................ [ 34%]
+...............................................FF....FFFFFFFFFFFFFFFFFFF [ 61%]
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF        [ 86%]
+tests/tdd/test_xdist_worker_sicherheit.py .........FFFFFFFFFFFFFFFFFFFFF [ 97%]
+FFFFF..                                                                  [100%]
+
+=================================== FAILURES ===================================
+E   AssertionError: ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 2 == 0
+     +  where 2 = CompletedProcess(args=['.venv/bin/pytho...eine Gesamtaussage brauchst, frag den User.\n======================================================================\n").returncode
+tests/tdd/test_broad_test_run_gate_offline_form.py:602: AssertionError: ======================================================================
+E   AssertionError: ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 2 == 0
+     +  where 2 = CompletedProcess(args=['.venv/bin/pytho...eine Gesamtaussage brauchst, frag den User.\n======================================================================\n").returncode
+tests/tdd/test_broad_test_run_gate_offline_form.py:602: AssertionError: ======================================================================
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 3 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 20 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...pback-own-ports --ignore=tests/red/', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n auto --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...pback-own-ports --ignore=tests/red/', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest --numprocesses 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest --numprocesses=2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...pback-own-ports --ignore=tests/red/', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 -n 2 --dist loadgroup --disable-socket --allow-unix-socket
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...-disable-socket --allow-unix-socket', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...pback-own-ports --ignore=tests/red/', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist load --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist each --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist=loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...pback-own-ports --ignore=tests/red/', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...pback-own-ports --ignore=tests/red/', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...pback-own-ports --ignore=tests/red/', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --loopback-own-ports --ignore=tests/red/
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...pback-own-ports --ignore=tests/red/', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost,8.8.8.8 --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...alhost,8.8.8.8 --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --ignore=tests/red/
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...1,::1,localhost --ignore=tests/red/', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --ignore=tests/red/
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...-disable-socket --ignore=tests/red/', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest --dist loadgroup -n 2 --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/ -n
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...ck-own-ports --ignore=tests/red/ -n', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      Kommando nicht verlaesslich zerlegbar (verschachtelte Shell oder Quotes) und nicht jeder pytest-Aufruf ist frei.
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...nicht jeder pytest-Aufruf ist frei.', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...pback-own-ports --ignore=tests/red/', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest tests/
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...konkrete Testdateien: pytest tests/', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      Kommando nicht verlaesslich zerlegbar (verschachtelte Shell oder Quotes) und nicht jeder pytest-Aufruf ist frei.
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...nicht jeder pytest-Aufruf ist frei.', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest (keine Argumente)
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...stdateien: pytest (keine Argumente)', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...pback-own-ports --ignore=tests/red/', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...teien: pytest -n 2 --dist loadgroup', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...,::1,localhost --loopback-own-ports', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AttributeError: module 'broad_test_run_gate' has no attribute 'OFFLINE_PARALLEL_CALL'. Did you mean: '_OFFLINE_BASE_CALL'?
+tests/tdd/test_broad_test_run_gate_offline_form.py:707: AttributeError: module 'broad_test_run_gate' has no attribute 'OFFLINE_PARALLEL_CALL'. Did you mean: '_OFFLINE_BASE_CALL'?
+E   AssertionError: parallele Form fehlt in der Meldung
+      ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest (keine Argumente)
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 'nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/' in ['======================================================================', 'BLOCKED — Breiter Testlauf (Vorfall 2026-0...stdateien: pytest (keine Argumente)', '', 'Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.', ...]
+tests/tdd/test_broad_test_run_gate_offline_form.py:594: AssertionError: parallele Form fehlt in der Meldung
+E   AssertionError: ======================================================================
+      BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)
+      ======================================================================
+      pytest-Aufruf ohne konkrete Testdateien: pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports
+
+      Ein Testlauf ohne benannte Dateien zieht ungemarkerte Live-Tests mit.
+      Am 2026-08-03 gingen dadurch echte Telegram-Nachrichten an den
+      PRODUKTIV-Chat des Product Owners (Test aus #1452, ohne live-Marker,
+      Settings fallen still auf die Prod-.env im Arbeitsordner zurueck).
+
+      Erlaubte Wege:
+        1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py
+        2. Nur sammeln:       uv run pytest --collect-only ...
+        3. Sicherer Offline-Volllauf (#1755), einzeilig, woertlich:
+             uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+           optional dahinter genau ' > datei 2>&1'; jede andere Abweichung
+           blockt. (--disable-socket allein reicht NICHT mehr.)
+
+      NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um
+      weiterzukommen. Wenn du eine Gesamtaussage brauchst, frag den User.
+      ======================================================================
+
+    assert 2 == 0
+     +  where 2 = CompletedProcess(args=['.venv/bin/pytho...eine Gesamtaussage brauchst, frag den User.\n======================================================================\n").returncode
+tests/tdd/test_broad_test_run_gate_offline_form.py:723: AssertionError: ======================================================================
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+E   AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+tests/tdd/test_xdist_worker_sicherheit.py:453: AssertionError: OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  .venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac1_feste_formen_sind_frei[parallel-pur]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac1_feste_formen_sind_frei[parallel-umleitung]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[n-3]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[n-20]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[n2-geklebt]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[n-auto]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[n-fehlt]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[numprocesses]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[numprocesses-gleich]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[n-doppelt-hinten]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[n-doppelt-vorn]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[dist-fehlt]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[dist-load]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[dist-each]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[dist-gleich]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[tx]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[boxed]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[ohne-disable-socket]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[ohne-unix-socket]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[ohne-allow-hosts]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[fremder-host]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[ohne-loopback-guard]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[ohne-ignore-red]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[xdist-ohne-loopback-flags]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[umgestellt]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[n-ans-ende]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[p-no-xdist]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[p-no-guard]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[p-no-socket]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[force-enable-socket]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[o-addopts]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[c-ini]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[m-live]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[noconftest]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[k-foo]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[verzeichnis]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[argumentdatei]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[nice-fehlt]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[nice-ohne-stufe]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[nice-19]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[nice-negativ]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[nice-kurzform]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[nice-geklebt]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[nice-doppelt]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[nice-vor-timeout]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[nice-vor-nohup]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[nice-vor-sh-c]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[nice-vor-python-m]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[nice-vor-seriell]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[nice-vor-breit]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[ionice]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[sudo]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[env]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[timeout]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[env-addopts]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[addopts]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[addopts-hinter-nice]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[xdist-umgebung]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[xdist-worker]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[semikolon]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[semikolon-geklebt]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[und-und]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[und-und-davor]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[pipe]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[hintergrund]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[substitution-im-ziel]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[backtick-im-ziel]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[variable-im-ziel]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[ziel-beginnt-mit-strich]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[ziel-ohne-stderr]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[ziel-dann-flag]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[ziel-anhaengen]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[sh-c]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[raute-datei]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[nbsp-am-ende]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[nbsp-mittendrin]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[doppel-leerzeichen]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[tab]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[fortsetzung]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[fortsetzung-dann-flag]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[mehrzeiler]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[mehrzeiler-davor]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac2_jede_abweichung_ist_blockiert[doppelt-mehrzeilig]
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac5_doku_nennt_beide_formen_woertlich
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac5_blockmeldung_nennt_beide_formen
+FAILED tests/tdd/test_broad_test_run_gate_offline_form.py::test_3278_ac6_override_oeffnet_die_parallele_abweichung_nicht
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_ac7_serielle_form_frei_und_andere_n_formen_bleiben_gesperrt
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac3_paralleles_literal_traegt_alle_pflichtflags
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac3_verfaelschtes_literal_faellt_auf[fehlt-n]
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac3_verfaelschtes_literal_faellt_auf[fehlt-dist]
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac3_verfaelschtes_literal_faellt_auf[fehlt-disable-socket]
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac3_verfaelschtes_literal_faellt_auf[fehlt-allow-unix-socket]
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac3_verfaelschtes_literal_faellt_auf[fehlt-allow-hosts]
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac3_verfaelschtes_literal_faellt_auf[fehlt-loopback-own-ports]
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac3_verfaelschtes_literal_faellt_auf[fehlt-ignore]
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac3_verfaelschtes_literal_faellt_auf[tippfehler-n]
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac3_verfaelschtes_literal_faellt_auf[tippfehler-dist]
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac3_verfaelschtes_literal_faellt_auf[tippfehler-disable-socket]
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac3_verfaelschtes_literal_faellt_auf[tippfehler-allow-unix-socket]
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac3_verfaelschtes_literal_faellt_auf[tippfehler-allow-hosts]
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac3_verfaelschtes_literal_faellt_auf[tippfehler-loopback-own-ports]
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac3_verfaelschtes_literal_faellt_auf[tippfehler-ignore]
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac3_verfaelschtes_literal_faellt_auf[doppelt-n]
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac3_verfaelschtes_literal_faellt_auf[doppelt-dist]
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac3_verfaelschtes_literal_faellt_auf[doppelt-disable-socket]
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac3_verfaelschtes_literal_faellt_auf[doppelt-allow-unix-socket]
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac3_verfaelschtes_literal_faellt_auf[doppelt-allow-hosts]
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac3_verfaelschtes_literal_faellt_auf[doppelt-loopback-own-ports]
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac3_verfaelschtes_literal_faellt_auf[doppelt-ignore]
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac4_woertliche_form_sperrt_netz_in_beiden_workern
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac4_gegenprobe_ein_worker_laeuft_in_die_barriere
+FAILED tests/tdd/test_xdist_worker_sicherheit.py::test_3278_ac4_gegenprobe_ohne_port_guard_faellt_die_auswertung_durch
+================= 112 failed, 155 passed, 2 warnings in 32.50s =================

@@ -31,7 +31,7 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 HOOK = ROOT / ".claude" / "hooks" / "broad_test_run_gate.py"
 
 sys.path.insert(0, str(ROOT / ".claude" / "hooks"))
-pytest.importorskip("broad_test_run_gate", exc_type=ImportError)
+gate = pytest.importorskip("broad_test_run_gate", exc_type=ImportError)
 
 NEW_FORM = (
     "--disable-socket --allow-unix-socket "
@@ -571,3 +571,155 @@ def test_fixloop8_suchmuster_ausnahme_gilt_nicht_fuer_folgeanweisung():
     -- ein echter Breitlauf danach bleibt blockiert."""
     proc = _run_gate("grep pytest docs/x.md; uv run pytest tests/")
     assert proc.returncode == 2, proc.stderr
+
+
+# ---------------------------------------------------------------------------
+# #3278: parallele Form -- genau EIN weiteres Literal, sonst nichts
+# SPEC: docs/specs/modules/rework_3278_lokaler_volllauf_parallel.md
+# ---------------------------------------------------------------------------
+
+# Bewusst abgeschrieben: unabhaengige Vorgabe aus der Spec, nicht aus dem Gate.
+PARALLEL_CALL = f"nice -n 10 uv run pytest -n 2 --dist loadgroup {NEW_FORM} --ignore=tests/red/"
+OHNE_NICE = PARALLEL_CALL.removeprefix("nice -n 10 ")
+NBSP = " "
+
+
+def _assert_blockt_und_nennt_beide_formen(proc, command):
+    assert proc.returncode == 2, (
+        f"Erwartet Block (Exit 2), bekam {proc.returncode} fuer: {command!r}\n{proc.stderr}"
+    )
+    assert "BLOCKED" in proc.stderr, proc.stderr
+    zeilen = [z.strip() for z in proc.stderr.splitlines()]
+    assert DOCUMENTED_CALL in zeilen, f"serielle Form fehlt in der Meldung\n{proc.stderr}"
+    assert PARALLEL_CALL in zeilen, f"parallele Form fehlt in der Meldung\n{proc.stderr}"
+
+
+@pytest.mark.parametrize("umleitung", ["", " > docs/artifacts/x/out-1.txt 2>&1"], ids=["pur", "umleitung"])
+@pytest.mark.parametrize("call", [PARALLEL_CALL, DOCUMENTED_CALL, BASE_CALL],
+                         ids=["parallel", "seriell", "seriell-ohne-ignore"])
+def test_3278_ac1_feste_formen_sind_frei(call, umleitung):
+    proc = _run_gate(call + umleitung)
+    assert proc.returncode == 0, proc.stderr
+
+
+_P = PARALLEL_CALL
+_ABWEICHUNGEN = {
+    # Worker-Zahl und Verteilung
+    "n-3": _P.replace("-n 2", "-n 3"),
+    "n-20": _P.replace("-n 2", "-n 20"),
+    "n2-geklebt": _P.replace("-n 2", "-n2"),
+    "n-auto": _P.replace("-n 2", "-n auto"),
+    "n-fehlt": _P.replace(" -n 2", ""),
+    "numprocesses": _P.replace("-n 2", "--numprocesses 2"),
+    "numprocesses-gleich": _P.replace("-n 2", "--numprocesses=2"),
+    "n-doppelt-hinten": f"{_P} -n 4",
+    "n-doppelt-vorn": _P.replace("-n 2", "-n 2 -n 2"),
+    "dist-fehlt": _P.replace(" --dist loadgroup", ""),
+    "dist-load": _P.replace("loadgroup", "load"),
+    "dist-each": _P.replace("loadgroup", "each"),
+    "dist-gleich": _P.replace("--dist loadgroup", "--dist=loadgroup"),
+    "tx": f"{_P} --tx 2*popen",
+    "boxed": f"{_P} --boxed",
+    # fehlende oder umgestellte Flags
+    "ohne-disable-socket": _P.replace(" --disable-socket", ""),
+    "ohne-unix-socket": _P.replace(" --allow-unix-socket", ""),
+    "ohne-allow-hosts": _P.replace(" --allow-hosts=127.0.0.1,::1,localhost", ""),
+    "fremder-host": _P.replace("localhost", "localhost,8.8.8.8"),
+    "ohne-loopback-guard": _P.replace(" --loopback-own-ports", ""),
+    "ohne-ignore-red": _P.replace(" --ignore=tests/red/", ""),
+    "xdist-ohne-loopback-flags": "nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --ignore=tests/red/",
+    "umgestellt": _P.replace("-n 2 --dist loadgroup", "--dist loadgroup -n 2"),
+    "n-ans-ende": _P.replace(" -n 2", "") + " -n 2",
+    # Zusatz-Flags
+    "p-no-xdist": f"{_P} -p no:xdist",
+    "p-no-guard": f"{_P} -p no:_loopback_port_guard",
+    "p-no-socket": f"{_P} -p no:socket",
+    "force-enable-socket": f"{_P} --force-enable-socket",
+    "o-addopts": f"{_P} -o addopts=",
+    "c-ini": f"{_P} -c /tmp/leer.ini",
+    "m-live": f"{_P} -m live",
+    "noconftest": f"{_P} --noconftest",
+    "k-foo": f"{_P} -k foo",
+    "verzeichnis": f"{_P} tests/unit/",
+    "argumentdatei": f"{_P} @args.txt",
+    # nice
+    "nice-fehlt": OHNE_NICE,
+    "nice-ohne-stufe": f"nice {OHNE_NICE}",
+    "nice-19": f"nice -n 19 {OHNE_NICE}",
+    "nice-negativ": f"nice -n -10 {OHNE_NICE}",
+    "nice-kurzform": f"nice -10 {OHNE_NICE}",
+    "nice-geklebt": f"nice -n10 {OHNE_NICE}",
+    "nice-doppelt": f"nice -n 10 {_P}",
+    "nice-vor-timeout": f"nice -n 10 timeout 60 {OHNE_NICE}",
+    "nice-vor-nohup": f"nice -n 10 nohup {OHNE_NICE}",
+    "nice-vor-sh-c": f'nice -n 10 sh -c "{OHNE_NICE}"',
+    "nice-vor-python-m": _P.replace("uv run pytest", "python3 -m pytest"),
+    "nice-vor-seriell": f"nice -n 10 {DOCUMENTED_CALL}",
+    "nice-vor-breit": "nice -n 10 uv run pytest tests/",
+    # Vorspann
+    "ionice": f"ionice -c 3 {_P}",
+    "sudo": f"sudo {_P}",
+    "env": f"env {_P}",
+    "timeout": f"timeout 3000 {_P}",
+    "env-addopts": f"env PYTEST_ADDOPTS=-pno:socket {_P}",
+    "addopts": f"PYTEST_ADDOPTS=--force-enable-socket {_P}",
+    "addopts-hinter-nice": f"nice -n 10 env PYTEST_ADDOPTS=-pno:socket {OHNE_NICE}",
+    "xdist-umgebung": f"PYTEST_XDIST_AUTO_NUM_WORKERS=8 {_P}",
+    "xdist-worker": f"PYTEST_XDIST_WORKER=gw0 {_P}",
+    # Shell
+    "semikolon": f"{_P}; echo ok",
+    "semikolon-geklebt": f"{_P};pytest",
+    "und-und": f"{_P} && echo ok",
+    "und-und-davor": f"cd /tmp && {_P}",
+    "pipe": f"{_P} | tee log",
+    "hintergrund": f"{_P} &",
+    "substitution-im-ziel": f"{_P} > $(pytest -q) 2>&1",
+    "backtick-im-ziel": f"{_P} > `pytest -q` 2>&1",
+    "variable-im-ziel": f"{_P} > $HOME/o.txt 2>&1",
+    "ziel-beginnt-mit-strich": f"{_P} > -o 2>&1",
+    "ziel-ohne-stderr": f"{_P} > o.txt",
+    "ziel-dann-flag": f"{_P} > o.txt 2>&1 -n 4",
+    "ziel-anhaengen": f"{_P} >> o.txt 2>&1",
+    "sh-c": f'sh -c "{_P}"',
+    "raute-datei": f"{_P} #x.py",
+    # Leerraum und Zeilen
+    "nbsp-am-ende": f"{_P}{NBSP}",
+    "nbsp-mittendrin": _P.replace("-n 2", f"-n{NBSP}2"),
+    "doppel-leerzeichen": _P.replace("-n 2", "-n  2"),
+    "tab": _P.replace("-n 2", "-n\t2"),
+    "fortsetzung": _P.replace(" --disable-socket", " \\\n --disable-socket"),
+    "fortsetzung-dann-flag": f"{_P} \\\n -o addopts=",
+    "mehrzeiler": f"{_P}\nuv run pytest tests/",
+    "mehrzeiler-davor": f"export PYTEST_ADDOPTS=-pno:socket\n{_P}",
+    "doppelt-mehrzeilig": f"{_P}\n{_P}",
+}
+
+
+@pytest.mark.parametrize("command", _ABWEICHUNGEN.values(), ids=_ABWEICHUNGEN.keys())
+def test_3278_ac2_jede_abweichung_ist_blockiert(command):
+    assert command != PARALLEL_CALL, "Fall ist keine Abweichung -- Ersetzung griff nicht"
+    _assert_blockt_und_nennt_beide_formen(_run_gate(command), command)
+
+
+def test_3278_ac5_doku_nennt_beide_formen_woertlich():
+    # doc-compliance-test (nur Auffindbarkeit; das Verhalten pruefen AC-1/AC-2)
+    zeilen = (ROOT / "docs" / "reference" / "gates_und_ratschen.md").read_text(encoding="utf-8").splitlines()
+    for form in (gate.OFFLINE_CALL, gate.OFFLINE_PARALLEL_CALL):
+        assert form in zeilen, f"Doku nennt die Gate-Form nicht als eigene Zeile: {form}"
+
+
+def test_3278_ac5_blockmeldung_nennt_beide_formen():
+    _assert_blockt_und_nennt_beide_formen(_run_gate("uv run pytest"), "uv run pytest")
+
+
+def test_3278_ac6_override_oeffnet_die_parallele_abweichung_nicht(tmp_path):
+    """Echtes Override-Token; dass es in dieser Anordnung gueltig ist, belegt
+    ``test_broad_test_run_gate_ignores_override.py``."""
+    from tests.tdd.test_broad_test_run_gate_ignores_override import _make_root
+    from tests.tdd.test_broad_test_run_gate_ignores_override import _run_gate as _run_mit_token
+
+    root = _make_root(tmp_path, with_token=True)
+    proc = _run_mit_token(root, PARALLEL_CALL)
+    assert proc.returncode == 0, proc.stderr
+    auto = PARALLEL_CALL.replace("-n 2", "-n auto")
+    _assert_blockt_und_nennt_beide_formen(_run_mit_token(root, auto), auto)

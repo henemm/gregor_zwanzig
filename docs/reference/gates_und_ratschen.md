@@ -245,11 +245,17 @@ Verzeichnis-Lauf. Grund: eine ungemarkerte Testdatei genügt, um echten Versand 
 **Erlaubt:** Dateien benennen · `--collect-only` · sicherer Offline-Volllauf. `override` wirkt auf
 dieses Gate nicht mehr (#2227).
 
-**Sicherer Offline-Volllauf (#1755)**, genau diese Zeile, einzeilig und wörtlich (`--ignore=tests/red/`
-darf fehlen; optional dahinter genau ` > datei 2>&1`):
+**Sicherer Offline-Volllauf (#1755, parallel #3278)**, genau eine dieser zwei Zeilen, einzeilig und
+wörtlich (optional dahinter genau ` > datei 2>&1`). Seriell (`--ignore=tests/red/` darf fehlen):
 
 ```bash
 uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+```
+
+Parallel mit 2 Workern (nichts darf fehlen, auch nicht `nice -n 10` oder `--ignore=tests/red/`):
+
+```bash
+nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
 ```
 
 `--disable-socket` allein ist **keine** Freigabe mehr: es sperrt auch lokale Test-Doubles, und
@@ -257,17 +263,17 @@ uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,l
 filtert nur nach Host). `--loopback-own-ports` (`tests/_loopback_port_guard.py`) erlaubt Loopback nur zu
 Ports, die der Testprozess selbst gebunden hat, und sperrt auch `connect_ex`. Das Gate vergleicht den
 Rohstring exakt, vor jeder Shell-Zerlegung (Fix-Loop 6: fünf Runden Zerlegung fanden je eine neue
-Umgehung). Jede Abweichung blockt: Zusatz-Flags, Präfix (`nohup`, `timeout`, `PYTEST_ADDOPTS=…`),
+Umgehung). Jede Abweichung blockt: Zusatz-Flags, andere Worker-Zahl oder Verteilung, anderes Präfix (`nohup`, `timeout`, `PYTEST_ADDOPTS=…`),
 `| tee`, `; echo`, Mehrzeilenform mit `\`, anderer Leerraum. Grenze: Ausgang aus Kindprozessen (curl, Go, Playwright) ist nicht
-erfasst. Läuft ca. 42 min. Diese lokale Form bleibt **seriell**; eine lokale parallele Form ist #3278.
+erfasst. Seriell ca. 42 min; die Laufzeit der parallelen Form ist am Server noch nicht gemessen (#3323).
 
 ## Parallele Kern-Suite in CI (#3209, seit 2026-11-22)
 
 Der CI-Job `test` läuft mit `pytest-xdist` auf 4 Workern: `-n 4 --dist loadgroup` (zusätzlich zu
 `--disable-socket --allow-unix-socket --allow-hosts=… --ignore=tests/red/ $TDD_EXCLUDES --tb=short -rfE`).
-Vorher ~30 min seriell, längster Pflicht-Check jedes PR. Die lokale sichere Offline-Form (Abschnitt
-oben) bleibt seriell, das Gate `broad_test_run_gate.py` sperrt `-n` lokal weiterhin (lokale parallele
-Form: #3278).
+Vorher ~30 min seriell, längster Pflicht-Check jedes PR. Lokal gibt das Gate
+`broad_test_run_gate.py` neben der seriellen genau eine parallele Form mit 2 Workern frei (#3278,
+Abschnitt oben); jede andere `-n`-Form ohne benannte Testdatei bleibt gesperrt.
 
 **Regel: Echtbaum-Tests nur mit `real_data_root`** (bzw. `xdist_group("echtdaten")`). Ein Test, der den
 ECHTEN `data/users`-Baum des Repos liest oder schreibt (`Path("data/users")`, `Path("data") / "users"`,
