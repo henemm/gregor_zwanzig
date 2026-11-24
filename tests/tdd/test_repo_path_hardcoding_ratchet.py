@@ -542,18 +542,20 @@ def _module_constants(tree) -> dict:
     `REPO / "rel/pfad"` ein erkennbares Ziel (real belegt in test_issue_603
     und test_622).
     """
+    # EINMAL sammeln, in der Reihenfolge von `ast.walk` (#3316): nur diese
+    # Zuweisungen zaehlen, nicht jeder Baumknoten in jeder Runde.
+    zuweisungen = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            # ALLE Ziele: `A = B = "..."` bindet beide Namen, ebenso die
+            # Mischform `A = B, C = "x", "y"`.
+            zuweisungen.append((node.targets, node.value))
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            zuweisungen.append(([node.target], node.value))
     consts: dict = {}
     for _ in range(_MAX_ROUNDS):
         vorher = dict(consts)
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Assign):
-                # ALLE Ziele: `A = B = "..."` bindet beide Namen, ebenso die
-                # Mischform `A = B, C = "x", "y"`.
-                ziele, wert = node.targets, node.value
-            elif isinstance(node, ast.AnnAssign) and node.value is not None:
-                ziele, wert = [node.target], node.value
-            else:
-                continue
+        for ziele, wert in zuweisungen:
             # Erst ALLE Werte gegen den Stand VOR der Anweisung aufloesen, dann
             # binden — Python wertet die rechte Seite vollstaendig aus, bevor es
             # zuweist. Schrittweises Schreiben machte aus `A, B = B, A` sonst
