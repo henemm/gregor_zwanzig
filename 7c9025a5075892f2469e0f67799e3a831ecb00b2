@@ -1,0 +1,115 @@
+{
+  "verified_commit": "7c9025a5075892f2469e0f67799e3a831ecb00b2",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/new",
+      "evidence": "Playwright Staging 7c9025a50: TZ-1/TZ-3 gruen: Reiter Zustellung in Desktop+Mobil, Alt-Panel und Mail-Inhalt-Karte weg",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/new",
+      "evidence": "Playwright Staging 7c9025a50: TZ-1 gruen: Zeiten/Kanaele/Dringlichkeit/Stille/Cooldown im einen POST; Hub zeigt denselben Stand",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/new",
+      "evidence": "Playwright Staging 7c9025a50: TZ-1 gruen: Stand im POST und im Hub-Reiter identisch",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/new",
+      "evidence": "Kern-Tests trip_anlegen_zustellung_verdrahtung_3332 (Test 3, bitgleich zur Referenz-Fixture), 80/80 gruen",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/new",
+      "evidence": "Playwright Staging 7c9025a50: TZ-1 gruen: genau ein POST /api/trips, kein PUT, kein Schreibaufruf vorher",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/new",
+      "evidence": "Playwright Staging 7c9025a50: TZ-3 gruen: Stand ueberlebt Ansichts- und Schrittwechsel",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/new",
+      "evidence": "Playwright Staging 7c9025a50: TZ-2 gruen: 06:50 Meldung, Anlegen ohne 400, POST mit letzter gueltiger Zeit",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-8",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/new",
+      "evidence": "Playwright Staging 7c9025a50: TZ-1 gruen: Kanal-/Dringlichkeits-Werte im POST",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/new",
+      "evidence": "Playwright Staging 7c9025a50: TZ-1 gruen: keine zweite Bedienstelle im Reiter Alarme; amtliche Warnungen bleiben",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-10",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/new",
+      "evidence": "Kern-Tests verdrahtung_3332 (AC-10 Mail-Inhalt ueber Was-steht-wo) 80/80 gruen",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-11",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/new",
+      "evidence": "Kern-Tests infobox_nur_beim_anlegen + alarme_tab_ohne_zustellung_3332 gruen",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-12",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/new",
+      "evidence": "Playwright Staging 7c9025a50: TZ-4 gruen: Zwei-Nutzer-Isolation, Dringlichkeit nur mit Telegram",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-13",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/new",
+      "evidence": "Playwright Staging 7c9025a50: hub-anlegen-ablauf Vergleichsteil (AN-1..AN-15, AN-6/AN-10) gruen; Kern-Test ssr_3332 Test 6",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    }
+  ],
+  "verified_at": "2026-11-24T17:39:09.215729+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: #3332 AC-1..13 auf Staging 7c9025a50 (TZ-1..4, hub-anlegen-ablauf, EN, Kern-Tests 80/80)",
+  "scope": "docs-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "fix-3273-trip-grundauswahl-ohne-metrics": {
+      "verdict": "VERIFIED: #3332 AC-1..13 auf Staging 7c9025a50 (TZ-1..4, hub-anlegen-ablauf, EN, Kern-Tests 80/80)",
+      "scope": "docs-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-24T17:39:09.215729+00:00"
+    }
+  }
+}
