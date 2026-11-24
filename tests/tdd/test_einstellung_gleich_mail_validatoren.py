@@ -275,6 +275,13 @@ def test_trip_positiv_mail_stimmt_mit_konfig(tmp_path, trip_mail):
     assert code == 0, aus
 
 
+def test_trip_echter_prozess_mit_konfig(tmp_path, trip_mail):
+    """#3331 AC-2: unveraenderter Validator als echter Prozess, ohne installiertes src."""
+    eml, konfig = trip_mail
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig, prozess=True)
+    assert code == 0, aus
+
+
 def test_trip_spalten_vertauscht_scheitert_mit_name(tmp_path, trip_mail):
     eml, konfig = trip_mail
     falsch = _aendere(eml, html=lambda h: _tausche(h, ">Gust</th>", ">Temp</th>"))
@@ -344,6 +351,13 @@ def orte_mail(monkeypatch, tmp_path):
 def test_orte_positiv_mail_stimmt_mit_konfig(tmp_path, orte_mail):
     eml, konfig = orte_mail
     code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig)
+    assert code == 0, aus
+
+
+def test_orte_echter_prozess_mit_konfig(tmp_path, orte_mail):
+    """#3331 AC-2: unveraenderter Validator als echter Prozess, ohne installiertes src."""
+    eml, konfig = orte_mail
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig, prozess=True)
     assert code == 0, aus
 
 

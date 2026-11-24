@@ -77,6 +77,16 @@ Geht bei Widerspruch dem Prototyp vor. Explore-Teilagenten ausgelassen (Context 
 7. **Socket-Sperre:** wirkt auch heute nicht im Unterprozess, also unverändert.
 8. **Nachgerechnet:** Der Gewinn verteilt sich seriell (Lauf 1) etwa zur Hälfte: briefing 246 -> 165 s, email_spec 119 -> 30 s. Die Aussage des Agenten, fast alles komme aus email_spec, ist falsch. Geteilter Chromium ist ohne Änderung am Validator nicht möglich.
 
+9. **Nachtrag RED (gemessen 24.11.2026), geht der Spec bei AC-2 vor:** `src` liegt ueber die editierbare Installation (`__editable__.gregor_zwanzig-0.2.0.pth`) in jedem Prozess im Suchpfad. Mit allen fuenf entfernten `src`-Ergaenzungen blieb der normale Prozesslauf von `email_spec_validator` ohne Importfehler; erst `python -S` mit `PYTHONPATH=<site-packages>` gab `ModuleNotFoundError: app`. `briefing` war mit der Messkonfiguration nicht aussagekraeftig (Exit 2 in allen Faellen). Der Prozesslauf fuer AC-2 muss deshalb das installierte `src` ausblenden (`-S` + site-packages im `PYTHONPATH`); der Validator bleibt unveraendert.
+
+### Schnittstelle, die die RED-Tests festlegen
+- `tests/helpers/validator_server.py`: `SERVER_SKRIPT`, `ServerFehler`, `GEMEINSAM` (ein `Klient` je Worker), `Klient(server_skript=SERVER_SKRIPT)` mit `lauf(skript, args, *, env, cwd, timeout=180)` -> `CompletedProcess`, `pid`, `verwerfen()`.
+- Zeilen je Anfrage: Anfrage `{"kennung", ...}`; Antwort 1 `{"kennung", "pid"}` (Prozessgruppe, VOR dem Warten; Kind muss `setsid` schon ausgefuehrt haben), Antwort 2 `{"kennung", "returncode", "stdout", "stderr"}`. Fremde Kennung in beiden Zeilen = `ServerFehler`; `killpg` nie auf eine pid aus einer fremden Zeile, `ProcessLookupError` dulden.
+- Frist auch im Server durchsetzen (hart beendeter Worker, Kind haengt: Server, Kind und Enkel enden spaetestens kurz nach der Frist).
+- `ServerFehler` enthaelt die stderr-Ausgabe des Servers (Meldungen mit "fork" bzw. "Thread"). Traceback ohne runpy-Rahmen, gleich dem echten Prozess.
+- Playwright startet Chromium unter POSIX vermutlich in eigener Prozessgruppe (nicht geprueft); `test_ac10_browser_weg_nach_frist` entscheidet, ob `killpg` reicht.
+- `validator_lauf(..., im_server=False)`; `_lauf(..., prozess=False)` der Zieldatei: Standard Server, `prozess=True` = echter Prozess ohne installiertes `src`.
+
 ### Affected Files
 | File | Change | Beschreibung |
 |---|---|---|
