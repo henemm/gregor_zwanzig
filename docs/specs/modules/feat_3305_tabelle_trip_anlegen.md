@@ -3,7 +3,7 @@ entity_id: feat_3305_tabelle_trip_anlegen
 type: module
 created: 2026-11-24
 updated: 2026-11-24
-status: draft
+status: approved
 version: "1.0"
 workflow: feat-3305-tabelle-trip-anlegen
 tags: [was-steht-wo, placements, anlegen, trip, epic-3122]
@@ -13,7 +13,7 @@ tags: [was-steht-wo, placements, anlegen, trip, epic-3122]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (automatisch, Ampel grün, 2026-11-24)
 
 ## Purpose
 
