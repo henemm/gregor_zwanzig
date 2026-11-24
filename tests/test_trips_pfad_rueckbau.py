@@ -44,6 +44,8 @@ import inspect
 import sys
 from pathlib import Path
 
+import pytest
+
 # Pfadregel #1409: Repo-Wurzel relativ zu DIESER Testdatei.
 _TESTS_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _TESTS_DIR.parent
@@ -136,6 +138,32 @@ def test_no_test_file_still_calls_get_trips_dir():
         f"{len(offenders)} Testdatei(en) (AC-1 verlangt: keine mehr nach der "
         f"Umstellung auf get_briefings_dir()): {sorted(offenders.items())}"
     )
+
+
+@pytest.mark.parametrize("name", ["get_trips_dir", "ｇｅｔ_trips_dir"])
+def test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst(
+    tmp_path, monkeypatch, name,
+):
+    """#3279 AC-2/AC-3: der Vorfilter laesst einen echten Aufruf durch, auch in
+    NFKC-gleicher Schreibweise; blosse Nennung bleibt straffrei, eine Datei
+    ohne den Bezeichner wird nicht geparst."""
+    text = f"def test_x():\n    loader.{name}('u')\n    {name}('v')\n"
+    nennung = '"""get_trips_dir() ist tot."""\n'
+    (tmp_path / "unter").mkdir()
+    (tmp_path / "unter" / "test_attrappe.py").write_text(text, encoding="utf-8")
+    (tmp_path / "test_nennung.py").write_text(nennung, encoding="utf-8")
+    (tmp_path / "test_unbeteiligt.py").write_text("x = 1\n", encoding="utf-8")
+    geparst: list[str] = []
+    parse = ast.parse
+    monkeypatch.setattr(ast, "parse", lambda q, *a, **k: (geparst.append(q), parse(q, *a, **k))[1])
+    assert aufrufer_von_get_trips_dir(tmp_path) == {"unter/test_attrappe.py": 2}
+    assert sorted(geparst) == sorted([nennung, text])
+
+
+def test_kaputte_kandidatendatei_bleibt_rot(tmp_path):
+    (tmp_path / "x.py").write_text("get_trips_dir(\n", encoding="utf-8")
+    with pytest.raises(SyntaxError):
+        aufrufer_von_get_trips_dir(tmp_path)
 
 
 # ---------------------------------------------------------------------------

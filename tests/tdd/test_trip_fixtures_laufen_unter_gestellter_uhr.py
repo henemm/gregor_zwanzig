@@ -16,6 +16,7 @@ Aufrufketten unverfolgt.
 from __future__ import annotations
 
 import ast
+import functools
 from datetime import date
 from pathlib import Path
 
@@ -126,3 +127,47 @@ def test_scanner_schweigt_wenn_geschuetzt(tmp_path, code):
 def test_regel_budget_pruefdatum_steht_als_text_in_der_datei():
     assert EXPIRY == date(2026, 12, 8)
     assert EXPIRY.isoformat() in Path(__file__).read_text(encoding="utf-8")
+
+@pytest.mark.parametrize("alt, neu", [
+    ("make_trip", "ｍａｋｅ_trip"), ("save_trip", "ｓａｖｅ_trip")])
+def test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten(
+    tmp_path, monkeypatch, alt, neu,
+):
+    """#3279 AC-3: Fullwidth-Bezeichner sind fuer Python derselbe Name."""
+    text = _ROH.replace(alt, neu)
+    (tmp_path / "test_attrappe.py").write_text(text, encoding="utf-8")
+    (tmp_path / "test_unbeteiligt.py").write_text("make_trip('t')\n", encoding="utf-8")
+    geparst: list[str] = []
+    parse = ast.parse
+    monkeypatch.setattr(ast, "parse", lambda q, *a, **k: (geparst.append(q), parse(q, *a, **k))[1])
+    assert [f for _, f, _ in scan_ungestellte_uhr(tmp_path)] == ["test_x"]
+    assert geparst == [text]
+
+def test_echtbaum_cache_scannt_nur_einmal(tmp_path, monkeypatch):
+    """#3279 AC-5: ein Scan, frische Liste je Aufruf, ``tmp_path`` ungecacht."""
+    datei, scan = tmp_path / "test_attrappe.py", scan_ungestellte_uhr
+    datei.write_text(_ROH, encoding="utf-8")
+    erwartet = scan(tmp_path)
+    assert erwartet
+    aufrufe: list[Path] = []
+    with monkeypatch.context() as m:
+        m.setitem(globals(), "TESTS_ROOT", tmp_path)
+        m.setitem(globals(), "_echtbaum", functools.cache(_echtbaum.__wrapped__))
+        m.setitem(globals(), "scan_ungestellte_uhr", lambda w: (aufrufe.append(w), scan(w))[1])
+        erste = funde_echtbaum()
+        erste.append("fremd")
+        assert funde_echtbaum() == erwartet
+        assert aufrufe == [tmp_path]
+    datei.write_text(_MIT_HELFER, encoding="utf-8")
+    assert scan(tmp_path) == []
+
+def test_echtbaum_pruefungen_nutzen_den_cache(monkeypatch):
+    """#3279 AC-5: ist der Baum einmal gescannt, scannt keine Pruefung neu."""
+    funde_echtbaum()
+
+    def kein_neuer_scan(wurzel):
+        raise AssertionError(f"neuer Baumlauf ueber {wurzel} statt Cache")
+
+    monkeypatch.setitem(globals(), "scan_ungestellte_uhr", kein_neuer_scan)
+    test_bestand_liefert_keine_neuen_funde()
+    test_known_violations_enthaelt_keine_veralteten_eintraege()

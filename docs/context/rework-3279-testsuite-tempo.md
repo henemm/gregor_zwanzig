@@ -195,3 +195,23 @@ Kein Gegenbeispiel für wallclock direkt/indirekt, gestellte_uhr, trips_pfad, us
    wallclock und gestellte_uhr** (Doppelläufe) und thunder (S2).
 Damit ist die offene Frage zu `xdist_group` entschieden. Scheiben-Schnitt neu: S1 = Helfer, wallclock, gestellte_uhr, trips_pfad,
 repo_path (nur Parsebarkeit); S2 = thunder, repo_path (Tempo), user_id; S3 = Wartezeiten.
+
+## Stand nach TDD RED (2026-11-24): Vertrag für /50-implement
+Namen, die die roten Tests verlangen:
+- `tests/helpers/bezeichner_vorfilter.py`: `quelltext_mit_bezeichnern(datei, alle=(), eines_aus=()) -> str | None` (unveränderter
+  Quelltext bei Treffer, sonst None; leeres `eines_aus` heißt keine Zusatzbedingung; Lesefehler fliegen) und
+  `unparsbare_dateien(wurzel) -> list[str]` (je Befund Dateiname). Die Prüfung selbst steht in `tests/tdd/test_bezeichner_vorfilter.py`.
+- wallclock: `_echtbaum_direkt`/`_echtbaum_indirekt` (`functools.cache`, nullstellig, Tupel, lesen `TESTS_ROOT` und die Scan-Funktion
+  zur Laufzeit aus den Modul-Globals) und `funde_echtbaum_direkt()`/`funde_echtbaum_indirekt()` (frische Liste);
+  gestellte_uhr: `_echtbaum`, `funde_echtbaum()`.
+- trips_pfad: `aufrufer_von_get_trips_dir(wurzel) -> dict[str, int]`, Schlüssel posix-relativ zur Wurzel.
+- `pytestmark = pytest.mark.xdist_group("<eigener Name>")` als einzelne Marke (keine Liste) in beiden Cache-Dateien.
+- Geparst wird über `ast.parse(quelltext, ...)` mit dem unveränderten Quelltext als erstem Argument (die Tests zählen dort mit).
+
+Noch zu erbringen: Baseline-Messung (AC-7) VOR dem Umbau im selben Zeitfenster, Vergleich gefiltert/ungefiltert (AC-1),
+Mutationsprotokoll (AC-4; auch: kaputter Helfer lässt die Kandidatenzählung >= 20 grün) und ein einmaliger VOLLER Lauf beider
+Cache-Dateien mit `-n 2 --dist loadgroup` als Artefakt (AC-8; der Dauertest fährt nur `-k scanner`, die Vollständigkeit folgt aus
+der Modul-Markierung). Die NFKC-Fälle findet der Scan schon heute; rot ist dort „unbeteiligte Datei wird nicht geparst“.
+
+Umfang: Testcode allein +259 Zeilen, mit Umbau geschätzt ca. +340/−30 statt +200/−30 der Spec (weiterhin 5 Dateien, nur Testcode).
+Dem PO mit dem RED-Abschluss genannt.
