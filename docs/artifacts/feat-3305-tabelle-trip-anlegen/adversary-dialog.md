@@ -1,6 +1,6 @@
 # Adversary Dialog — feat-3305-tabelle-trip-anlegen
 Spec: docs/specs/modules/feat_3305_tabelle_trip_anlegen.md
-Datum: 2026-11-24 08:33
+Datum: 2026-11-24 09:02
 
 ## Checkliste
 - [x] **Input:** Nutzer legt einen Trip an, wählt Metriken im Schritt Wetter, stellt in der Karte Haken, Formate, Reihenfolge und Schalter ein und legt den Trip an. Beweis: Verdrahtungs- und Payload-Test, Mutationen M4 (TripNewEditor.svelte:561) und M5 rot; 41 Frontend-Tests erneut gruen.
@@ -20,12 +20,11 @@ Datum: 2026-11-24 08:33
 ## Dialog
 
 ### Runde 1
-**Adversary:** 41 Frontend-Tests (5 *3305*-Dateien) und 40 Python-Tests (test_3305_vorschau_entwurf_frueh 7, test_3304_placements_vorschau 33) gruen (adversary-test-output.txt). Der Fix `_mit_platzhalter_datum` wird nur aus `_entwurf_trip` gerufen, das nur `build_placements_preview` (POST Vorschau) nutzt; GET (`_trip_abo`), Erstanlage und Trip-Anlage beruehren den Pfad nicht. Mutationen am Dienst (src/services/placements_view_service.py:164): M1 Aufruf entfernt rot; M2 None nicht ersetzt rot; M3 leer nicht ersetzt rot; M4 jedes Datum ersetzt rot (datum-zahl); M7 ungueltiges Platzhalterdatum rot; M8 In-place-Aenderung rot (Aufrufer-Entwurf). Original per diff byte-gleich zurueck.
-
+**Adversary:** 99 Tests gruen (Python 58 inkl. test_output_timezone_guard, Frontend 41; adversary-test-output.txt). Aenderung seit Runde 5: date.today() durch Konstante _VORSCHAU_PLATZHALTER_DATUM = "2000-01-01" ersetzt (placements_view_service.py:143), Import date entfernt; Zeitzonenwaechter gruen. Mutationen: M1 Aufruf entfernt rot; M2 None nicht ersetzt rot; M3 leer nicht ersetzt rot; M4 jedes Datum ersetzt rot; M7 ungueltige Konstante rot; M8 In-place rot; M9 Konstante None rot. Original per diff byte-gleich zurueck.
 **Implementierer:** (nicht erreichbar, Kontext-Isolation)
 
 ### Runde 2
-**Adversary:** Ueberlebende Mutationen: M5 (Platzhalter auch fuer Etappen MIT Datum, placements_view_service.py:154: gemischte Liste aus leerer und unlesbarer Etappe wuerde 200 statt 422 liefern; kein Test mit gemischter Liste), M6 (festes altes Datum statt heute; Tabelle haengt nicht am Datum), M9/M10/M11 aequivalent (Fehler wird weiter zu 422). Alle ohne Auswirkung auf Anlege-POST oder Nutzerdaten, daher LOW. Cross-User: Vorschau liest nur `user_id` des Aufrufs, der Trip-Zweig liest keine Nutzerdaten; test_3304 AC-5 gruen.
+**Adversary:** Ueberlebt: M5 (Platzhalter auch fuer Etappen mit Datum, placements_view_service.py:161; gemischte Liste leer plus unlesbar wuerde 200 statt 422 liefern, ungetestet) und M6 (anderes gueltiges Datum; Tabelle haengt nicht am Datum, jetzt sogar aequivalent). Beides LOW ohne Folge fuers Anlegen. Cross-User: Vorschau liest keine Nutzerdaten im Trip-Zweig, schreibt nichts; GET, Erstanlage und Anlage beruehren den Pfad nicht.
 **Implementierer:** (nicht erreichbar, Kontext-Isolation)
 
 ## Herkunft der Vorbedingungen
@@ -34,9 +33,9 @@ Kein Sprachprofil konfiguriert (`precondition_origins.default_lang`); Vorbedingu
 
 ## Verdict
 VERDICT: VERIFIED
-Finding F-D1 LOW edge_case, Ort: src/services/placements_view_service.py:154 -- Mutationen M5 (Platzhalter fuer alle Etappen) und M6 (festes statt heutiges Datum) ueberleben; gemischte Etappenliste (leer + unlesbar) ungetestet. Remediation optional: Test mit gemischter Liste.
-Confirmed: AC-2/3/4/5/6/7/10; AC-1/8/9 offen fuer Staging (/e2e-verify). Alle 6 Produktionsdateien geprueft.
-Tests: 81 passed, 0 failed.
+Finding F-E1 LOW edge_case, Ort: src/services/placements_view_service.py:161 -- Mutation M5 (Platzhalter fuer alle Etappen) ueberlebt; gemischte Etappenliste (leer + unlesbar) ungetestet. Remediation optional.
+Confirmed: AC-2/3/4/5/6/7/10; AC-1/8/9 offen fuer Staging (/e2e-verify).
+Tests: 99 passed, 0 failed.
 
 Code reference: frontend/src/lib/components/shared/wetter-tab/wasStehtWoSpeicherung.ts:146
 
@@ -48,7 +47,7 @@ Code reference: frontend/src/lib/components/trip-new/TripNewEditor.svelte:561
 
 Code reference: frontend/src/lib/components/trip-new/tripNewLogic.ts:351
 
-Code reference: src/services/placements_view_service.py:164
+Code reference: src/services/placements_view_service.py:143
 
 ## Geprüfte Dateien
 
@@ -57,7 +56,7 @@ Code reference: src/services/placements_view_service.py:164
 - sha256:48f09c3ca52751b31217d62137dccfa98ebf389854f1871be22a28847268f7cc  frontend/src/lib/components/shared/wetter-tab/wasStehtWoSpeicherung.ts
 - sha256:7632d67c23b9bccf545264c9b7c30f8175922bea48af2ddcae9577634cc0a03a  frontend/src/lib/components/trip-new/TripNewEditor.svelte
 - sha256:9082bbcf8e1fa3b03630cf65cb57f8975fddfd442b934d9985aea22218d45f06  frontend/src/lib/components/trip-new/tripNewLogic.ts
-- sha256:dbd6c9865e7c5dc23872693b788d686af1374eb34c69db117d9367c8d928de1d  src/services/placements_view_service.py
+- sha256:67d3eae90ab90990b551163a8340a8b7bc8baa72ffa1e727e8c017132cc7db05  src/services/placements_view_service.py
 
 ## Prüfbasis
 
@@ -67,4 +66,4 @@ Code reference: src/services/placements_view_service.py:164
 - blob:a137c9006b0b223ef0641133833ed34b27266e64  frontend/src/lib/components/shared/wetter-tab/wasStehtWoSpeicherung.ts
 - blob:f17640cd7a2b84383dd94502211d2e2623acd726  frontend/src/lib/components/trip-new/TripNewEditor.svelte
 - blob:877f4f57f108b10126a1d975fed8353783867ab9  frontend/src/lib/components/trip-new/tripNewLogic.ts
-- blob:ea823237380b9b5481600d857b199a87c2786342  src/services/placements_view_service.py
+- blob:5e3f391cc7071ead44293a5b43d1d1aae4748afe  src/services/placements_view_service.py

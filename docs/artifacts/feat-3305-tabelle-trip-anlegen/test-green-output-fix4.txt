@@ -474,3 +474,25 @@ P4
 [1A[2K[25/26] [tests] › e2e/trip-anlegen-was-steht-wo-3305.spec.ts:241:2 › #3305 Tabelle „Was steht wo“ beim Trip-Anlegen › TA-5 (AC-8): Reiter Wetter des neuen Trips zeigt das beim Anlegen Eingestellte
 [1A[2K[26/26] [tests] › e2e/trip-anlegen-was-steht-wo-3305.spec.ts:261:2 › #3305 Tabelle „Was steht wo“ beim Trip-Anlegen › TA-6 (AC-9): zweiter Nutzer sieht Trip und Tabelle von A nicht; Vorschau als B ohne Daten von A
 [1A[2K  26 passed (2.0m)
+
+## Fix-Loop 5: date.today() durch feste Konstante _VORSCHAU_PLATZHALTER_DATUM = "2000-01-01" ersetzt (#1402 Zeitzonen-Waechter)
+# uv run pytest -p no:warnings -q tests/test_output_timezone_guard.py tests/tdd/test_3305_vorschau_entwurf_frueh.py tests/tdd/test_3304_placements_vorschau.py
+..........................................................               [100%]
+
+=> 58 passed, 0 failed
+# Mutationsgegenprobe P1-P4 (String-Ersetzung, Sicherung, byte-gleich zurueck):
+P1
+  GEFANGEN
+  FAILED tests/tdd/test_3305_vorschau_entwurf_frueh.py::test_frueher_entwurf_ohne_datum_liefert_tabelle_statt_422
+  FAILED tests/tdd/test_3305_vorschau_entwurf_frueh.py::test_frueher_entwurf_gleiche_ansicht_wie_mit_datum
+  FAILED tests/tdd/test_3305_vorschau_entwurf_frueh.py::test_etappe_ganz_ohne_datum_schluessel_liefert_tabelle
+P2
+  GEFANGEN
+  FAILED tests/tdd/test_3305_vorschau_entwurf_frueh.py::test_etappe_ganz_ohne_datum_schluessel_liefert_tabelle
+P3
+  GEFANGEN
+  FAILED tests/tdd/test_3305_vorschau_entwurf_frueh.py::test_wirklich_unlesbare_etappen_bleiben_422[datum-falsches-format]
+  FAILED tests/tdd/test_3305_vorschau_entwurf_frueh.py::test_wirklich_unlesbare_etappen_bleiben_422[datum-zahl]
+P4
+  GEFANGEN
+  FAILED tests/tdd/test_3305_vorschau_entwurf_frueh.py::test_dienst_veraendert_den_entwurf_des_aufrufers_nicht
