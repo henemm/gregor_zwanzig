@@ -91,6 +91,9 @@ from typing import Optional, Sequence
 
 import pytest
 
+# Baum- und Backend-Lauf sind Modul-Fixtures, also ein Worker fuer die Datei (#3316).
+pytestmark = pytest.mark.xdist_group("gewitterskala")
+
 # Wurzel DIESES Checkouts (Worktree) -- kein fester Hauptrepo-Pfad, sonst
 # misst man aus einem Worktree heraus den falschen Baum.
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -234,13 +237,21 @@ MARKER_MIND_VERSCHIEDEN = 5
 
 # Regel D: BELEGTE Wortlaute aus dem Bestand, keine erfundenen (Messung:
 # 8 von 16 Fixtures behaupten Paritaet, 0 Fehlalarme).
+# Je Alternative (Filterwort, Rest) als Regex-Stuecke (#3316): Muster = Filterwort
+# + Rest, Vorfilter = nur das Filterwort -- er ist so stets notwendige Bedingung.
+# Das Filterwort traegt keinen Leerraum, die Phrase darf ueber die Zeile brechen.
+_PARITAETS_ALTERNATIVEN = (
+    (r"1:1", r""),
+    (r"wortw(?:oe|ö)rt", r""),
+    (r"identische", r" reihenfolge"),
+    (r"eingefroren", r" aus dem"),
+    (r"unver(?:ae|ä)ndert", r" (?:aus|uebernommen)"),
+)
 _PARITAETS_BEHAUPTUNG = re.compile(
-    r"1:1"
-    r"|wortw(?:oe|ö)rt"
-    r"|identische reihenfolge"
-    r"|eingefroren aus dem"
-    r"|unver(?:ae|ä)ndert (?:aus|uebernommen)",
-    re.IGNORECASE,
+    "|".join(wort + rest for wort, rest in _PARITAETS_ALTERNATIVEN), re.IGNORECASE
+)
+_PARITAETS_FILTER = re.compile(
+    "|".join(wort for wort, _ in _PARITAETS_ALTERNATIVEN), re.IGNORECASE
 )
 
 
@@ -651,6 +662,19 @@ def _kommentarblock_ueber(zeilen, lineno: int) -> str:
     return re.sub(r"\s+", " ", roh).strip()
 
 
+def _kann_paritaet_behaupten(quelltext: str) -> bool:
+    """Notwendige Bedingung fuer Regel D (#3316): ein Filterwort hinter der
+    ersten Raute einer Zeile -- nur solchen Text liest ``_kommentarblock_ueber``.
+    Kommentartext als Filter ist hier zulaessig, weil er weder Escapes noch
+    Verkettung kennt. ``split`` trennt groeber als das ``splitlines`` dort, der
+    Filter ist also nie strenger. Rohtext ohne NFKC/casefold, wie das Muster."""
+    return any(
+        _PARITAETS_FILTER.search(zeile, zeile.index("#"))
+        for zeile in quelltext.split("\n")
+        if "#" in zeile
+    )
+
+
 def _positionsfolge(tokens, ordnung) -> Optional[list]:
     idxs = [ordnung.index(t) for t in tokens if t in ordnung]
     if len(idxs) < 2 or idxs[0] != 0:
@@ -765,6 +789,20 @@ def _ist_pfad(kandidat: str, repo_relativ: str) -> bool:
     return kandidat.replace("\\", "/").endswith("/" + repo_relativ.lstrip("/"))
 
 
+def _ist_geduldet(fund: Finding, spec: ScaleSpec, altlasten: Sequence[Altlast]) -> bool:
+    """Die beiden Baum-Stufen der Duldung: Whitelist kanonischer Quellen und
+    Altlasten-Basislinie -- EINE Fassung fuer ``scan_tree`` und die Fixtures."""
+    return any(
+        fund.symbol == symbol and _ist_pfad(fund.file, kanonisch)
+        for kanonisch, symbol in spec.canonical_symbols
+    ) or any(
+        fund.symbol == eintrag.symbol
+        and fund.rule == eintrag.rule
+        and _ist_pfad(fund.file, eintrag.file)
+        for eintrag in altlasten
+    )
+
+
 def scan_tree(
     roots: Sequence,
     spec: ScaleSpec,
@@ -773,6 +811,7 @@ def scan_tree(
     canonical_order: Optional[Sequence[str]] = None,
     baseline: Optional[Sequence[Altlast]] = None,
     besucht: Optional[set] = None,
+    geparst: Optional[set] = None,
 ) -> list:
     """Durchsucht alle ``*.py`` unter den Wurzeln rekursiv und wendet die
     beiden Baum-Stufen der Duldung an: Whitelist kanonischer Quellen
@@ -789,8 +828,13 @@ def scan_tree(
     Der Waechter kennt KEINE Ausschluesse: die Soll-Menge ist genau
     ``rglob("*.py")`` unter den Wurzeln. Eine unlesbare Datei wird
     uebersprungen und erscheint dann bewusst NICHT in ``besucht`` -- ein
-    stiller Skip soll sichtbar werden, nicht als "besucht" durchgehen."""
+    stiller Skip soll sichtbar werden, nicht als "besucht" durchgehen.
+
+    Laeuft AUSSCHLIESSLICH Regel D, werden nur Dateien geparst, die ueberhaupt
+    eine Behauptung tragen koennen (``_kann_paritaet_behaupten``); ``geparst``
+    sammelt sie NACH dem Filter, ``besucht`` zaehlt davor."""
     altlasten = ALTLASTEN if baseline is None else tuple(baseline)
+    nur_regel_d = set(rules) == {"D"}
     funde = []
     for root in roots:
         pfad = Path(root)
@@ -804,22 +848,15 @@ def scan_tree(
                 continue
             if besucht is not None:
                 besucht.add(datei)
+            if nur_regel_d and not _kann_paritaet_behaupten(quelle):
+                continue
+            if geparst is not None:
+                geparst.add(datei)
             for fund in scan_source(
                 quelle, name, spec, rules=rules, canonical_order=canonical_order
             ):
-                if any(
-                    fund.symbol == symbol and _ist_pfad(fund.file, kanonisch)
-                    for kanonisch, symbol in spec.canonical_symbols
-                ):
-                    continue
-                if any(
-                    fund.symbol == eintrag.symbol
-                    and fund.rule == eintrag.rule
-                    and _ist_pfad(fund.file, eintrag.file)
-                    for eintrag in altlasten
-                ):
-                    continue
-                funde.append(fund)
+                if not _ist_geduldet(fund, spec, altlasten):
+                    funde.append(fund)
     return funde
 
 
@@ -1042,13 +1079,22 @@ def _rel(pfad: str) -> str:
 
 
 @pytest.fixture(scope="module")
-def bestand_ohne_basislinie():
-    """Der echte Baum OHNE die Altlasten-Stufe -- Whitelist und Marker wirken
-    weiter. Genau die Menge, gegen die die Basislinie sich rechtfertigen muss.
-    Ein Lauf fuer beide Zusicherungen unten."""
-    return scan_tree(  # noqa: F821
-        [SRC_ROOT, API_ROOT], _thunder_spec(), rules=("A", "B", "C"), baseline=()
+def backend_rohlauf():
+    """Der echte Baum ohne Whitelist UND ohne Basislinie (Marker wirken weiter)
+    -- EIN Lauf, aus dem beide Bestaende unten abgeleitet werden (#3316)."""
+    return scan_tree(
+        [SRC_ROOT, API_ROOT],
+        _thunder_spec(canonical_symbols=()),
+        rules=("A", "B", "C"),
+        baseline=(),
     )
+
+
+@pytest.fixture(scope="module")
+def bestand_ohne_basislinie(backend_rohlauf):
+    """Der echte Baum OHNE die Altlasten-Stufe -- Whitelist und Marker wirken
+    weiter. Genau die Menge, gegen die die Basislinie sich rechtfertigen muss."""
+    return [f for f in backend_rohlauf if not _ist_geduldet(f, _thunder_spec(), ())]
 
 
 def test_ac12_echter_backend_baum_hat_ausser_den_drei_duldungsstufen_keinen_fund():
@@ -1176,13 +1222,12 @@ def test_ac9_regelc_fundstelle_mit_marker_bleibt_gruen():
 
 
 @pytest.fixture(scope="module")
-def bestand_ohne_whitelist():
+def bestand_ohne_whitelist(backend_rohlauf):
     """Der echte Baum OHNE die Whitelist-Stufe (Basislinie und Marker wirken
     weiter) -- die Menge, gegen die sich jeder Whitelist-Eintrag rechtfertigen
     muss."""
-    return scan_tree(  # noqa: F821
-        [SRC_ROOT, API_ROOT], _thunder_spec(canonical_symbols=()), rules=("A", "B", "C")
-    )
+    spec = _thunder_spec(canonical_symbols=())
+    return [f for f in backend_rohlauf if not _ist_geduldet(f, spec, ALTLASTEN)]
 
 
 def test_whitelist_kanonischer_quellen_hat_keinen_leerlauf_eintrag(bestand_ohne_whitelist):
@@ -1769,6 +1814,7 @@ def test_filter_von_regel_d_sieht_nur_text_hinter_der_raute():
     """AC-1: zeilenweise ab der ersten Raute, ohne quadratische Suche (eine
     solche risse bei 200.000 Rauten das globale 30-s-Netz)."""
     assert _kann_paritaet_behaupten("x = 1  # a # b IDENTISCHE\n")
+    assert _kann_paritaet_behaupten("x = 1  # IDENTISCHE # b\n")
     for quelle in ("", "identische = 1\n", "identische = 1  # x\n",
                    "# x\nidentische = 1\n", "#" * 200_000):
         assert not _kann_paritaet_behaupten(quelle), quelle[:40]
@@ -1820,6 +1866,7 @@ def test_duldungsfunktion_kennt_whitelist_und_altlasten_und_sonst_nichts():
     kanonisch = Finding(f"/x/{datei}", 1, "A", symbol)
     assert _ist_geduldet(kanonisch, spec, ())
     assert not _ist_geduldet(kanonisch, _thunder_spec(canonical_symbols=()), ())
+    assert not _ist_geduldet(Finding("/x/src/fremd.py", 1, "A", symbol), spec, ())
     altlast = Altlast("src/a.py", "_RANG", "A", "Testeintrag")
     assert _ist_geduldet(Finding("/x/src/a.py", 1, "A", "_RANG"), spec, (altlast,))
     for fremd in (Finding("/x/src/b.py", 1, "A", "_RANG"),
