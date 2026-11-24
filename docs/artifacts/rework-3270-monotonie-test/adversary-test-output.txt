@@ -1,0 +1,37 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.15, pytest-9.2.0, pluggy-1.6.0 -- /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/zany-imagining-meerkat/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/zany-imagining-meerkat
+configfile: pyproject.toml
+plugins: socket-0.8.0, xdist-3.8.0, timeout-2.4.0, anyio-4.14.2
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collecting ... collected 11 items
+
+tests/tdd/test_gehzeit_etappenregel.py::test_ac1_unplausibler_abschnitt_entwertet_die_ganze_etappe PASSED [  9%]
+tests/tdd/test_gehzeit_etappenregel.py::test_ac2_nicht_strikt_steigend_faellt_zurueck[gleich] PASSED [ 18%]
+tests/tdd/test_gehzeit_etappenregel.py::test_ac2_nicht_strikt_steigend_faellt_zurueck[kleiner] PASSED [ 27%]
+tests/tdd/test_gehzeit_etappenregel.py::test_ac2b_nicht_steigend_am_selben_ort_faellt_zurueck[gleich] PASSED [ 36%]
+tests/tdd/test_gehzeit_etappenregel.py::test_ac2b_nicht_steigend_am_selben_ort_faellt_zurueck[leicht-fallend] PASSED [ 45%]
+tests/tdd/test_gehzeit_etappenregel.py::test_ac3_ein_wegpunkt_ohne_messwert_entwertet_die_etappe PASSED [ 54%]
+tests/tdd/test_gehzeit_etappenregel.py::test_ac3b_luecke_am_etappenende_entwertet_die_etappe PASSED [ 63%]
+tests/tdd/test_gehzeit_etappenregel.py::test_ac4_vermessene_plausible_etappe_rechnet_gemessen PASSED [ 72%]
+tests/tdd/test_gehzeit_etappenregel.py::test_ac5_gehzeit_leitet_aus_der_kanonischen_regel_ab PASSED [ 81%]
+tests/tdd/test_gehzeit_etappenregel.py::test_ac7_etappe_ohne_messwerte_bleibt_unveraendert PASSED [ 90%]
+tests/tdd/test_gehzeit_etappenregel.py::test_ac8_paritaet_erwartungswerte_fuer_die_go_seite PASSED [100%]
+
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/zany-imagining-meerkat/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/zany-imagining-meerkat/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 11 passed, 2 warnings in 1.69s ========================
