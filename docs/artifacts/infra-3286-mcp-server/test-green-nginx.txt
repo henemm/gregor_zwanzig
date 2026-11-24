@@ -1,0 +1,45 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.2.0, pluggy-1.7.0 -- /Users/hem/.cache/uv/builds-v0/.tmpL3AlBC/bin/python
+cachedir: .pytest_cache
+rootdir: /private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-swift-scribbling-catmull/8bfbc977-2dd2-4f0a-9b53-718f0da34340/scratchpad/henemm-infra
+collecting ... collected 37 items
+
+tests/test_staging_mcp_nginx.py::test_schranke_ist_aus[= /api/mcp] PASSED [  2%]
+tests/test_staging_mcp_nginx.py::test_schranke_ist_aus[^~ /api/mcp/oauth/] PASSED [  5%]
+tests/test_staging_mcp_nginx.py::test_schranke_ist_aus[^~ /.well-known/oauth-] PASSED [  8%]
+tests/test_staging_mcp_nginx.py::test_ziel[= /api/mcp-8091] PASSED       [ 10%]
+tests/test_staging_mcp_nginx.py::test_ziel[^~ /api/mcp/oauth/-8091] PASSED [ 13%]
+tests/test_staging_mcp_nginx.py::test_ziel[^~ /.well-known/oauth--3001] PASSED [ 16%]
+tests/test_staging_mcp_nginx.py::test_kopfzeilen[= /api/mcp-proxy_set_header Host $host;] PASSED [ 18%]
+tests/test_staging_mcp_nginx.py::test_kopfzeilen[= /api/mcp-proxy_set_header X-Real-IP $remote_addr;] PASSED [ 21%]
+tests/test_staging_mcp_nginx.py::test_kopfzeilen[= /api/mcp-proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;] PASSED [ 24%]
+tests/test_staging_mcp_nginx.py::test_kopfzeilen[= /api/mcp-proxy_set_header X-Forwarded-Proto $scheme;] PASSED [ 27%]
+tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /api/mcp/oauth/-proxy_set_header Host $host;] PASSED [ 29%]
+tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /api/mcp/oauth/-proxy_set_header X-Real-IP $remote_addr;] PASSED [ 32%]
+tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /api/mcp/oauth/-proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;] PASSED [ 35%]
+tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /api/mcp/oauth/-proxy_set_header X-Forwarded-Proto $scheme;] PASSED [ 37%]
+tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /.well-known/oauth--proxy_set_header Host $host;] PASSED [ 40%]
+tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /.well-known/oauth--proxy_set_header X-Real-IP $remote_addr;] PASSED [ 43%]
+tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /.well-known/oauth--proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;] PASSED [ 45%]
+tests/test_staging_mcp_nginx.py::test_kopfzeilen[^~ /.well-known/oauth--proxy_set_header X-Forwarded-Proto $scheme;] PASSED [ 48%]
+tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[= /api/mcp-satisfy] PASSED [ 51%]
+tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[= /api/mcp-allow] PASSED [ 54%]
+tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[= /api/mcp-deny] PASSED [ 56%]
+tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[= /api/mcp-limit_req] PASSED [ 59%]
+tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[= /api/mcp-proxy_buffering] PASSED [ 62%]
+tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /api/mcp/oauth/-satisfy] PASSED [ 64%]
+tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /api/mcp/oauth/-allow] PASSED [ 67%]
+tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /api/mcp/oauth/-deny] PASSED [ 70%]
+tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /api/mcp/oauth/-limit_req] PASSED [ 72%]
+tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /api/mcp/oauth/-proxy_buffering] PASSED [ 75%]
+tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /.well-known/oauth--satisfy] PASSED [ 78%]
+tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /.well-known/oauth--allow] PASSED [ 81%]
+tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /.well-known/oauth--deny] PASSED [ 83%]
+tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /.well-known/oauth--limit_req] PASSED [ 86%]
+tests/test_staging_mcp_nginx.py::test_keine_sperren_aus_den_nachbarbloecken[^~ /.well-known/oauth--proxy_buffering] PASSED [ 89%]
+tests/test_staging_mcp_nginx.py::test_mcp_wartet_laenger_als_der_laengste_aufruf PASSED [ 91%]
+tests/test_staging_mcp_nginx.py::test_nur_die_bekannten_bloecke_sind_offen PASSED [ 94%]
+tests/test_staging_mcp_nginx.py::test_schranke_auf_server_ebene PASSED   [ 97%]
+tests/test_staging_mcp_nginx.py::test_zugriffslisten_wie_bestand PASSED  [100%]
+
+============================== 37 passed in 0.03s ==============================

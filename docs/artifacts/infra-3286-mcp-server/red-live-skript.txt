@@ -1,0 +1,10 @@
+RED-Lauf gegen Staging vor dem nginx-Rollout; Zugangsvariablen mit Platzhaltern belegt (keine Anmeldung, weil register blockiert ist)
+/.well-known/oauth-authorization-server: Soll ohne Zugangsdaten verfehlt (HTTP 401)
+/.well-known/oauth-protected-resource: Soll ohne Zugangsdaten verfehlt (HTTP 401)
+/.well-known/oauth-protected-resource/api/mcp: Soll ohne Zugangsdaten verfehlt (HTTP 401)
+/api/mcp: Soll ohne Zugangsdaten verfehlt (HTTP 401)
+/api/mcp/oauth/register: Soll ohne Zugangsdaten verfehlt (HTTP 401)
+/api/mcp/oauth/authorize: Soll ohne Zugangsdaten verfehlt (HTTP 401)
+/api/mcp/oauth/token: Soll ohne Zugangsdaten verfehlt (HTTP 401)
+NICHT BESTANDEN: 7 Befund(e)
+EXIT=1

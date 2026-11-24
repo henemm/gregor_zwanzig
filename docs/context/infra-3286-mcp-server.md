@@ -138,11 +138,34 @@ Startwarnung für `GZ_MCP_USER_IDS` ohne Konto (`cmd/server/main.go`, `warnPrivi
 
 - Kern-Test `tests/tdd/test_staging_mcp_pruefen.py` (76 rot, Werkzeug fehlt). Der Kopf der Datei ist der Schnittstellen-Vertrag
   für `.claude/tools/staging_mcp_pruefen.py`: `main(argv, *, env, basis, server_merkmal)`, Schalter `--vor-freigabe` für AC-6.
-- Textvertrag nginx (Test 7): henemm-infra, Branch `feat-gregor-3286-mcp-staging`, `tests/test_staging_mcp_nginx.py` (35 rot), gepusht.
-  Dort fehlt noch die Conf-Änderung; Klon fürs Weiterarbeiten: `gh repo clone henemm/henemm-infra` in den Scratchpad.
+- Textvertrag nginx (Test 7, 35 rot): Datei liegt fertig unter `docs/artifacts/infra-3286-mcp-server/henemm-infra-test_staging_mcp_nginx.py`
+  (noch uncommittet) und gehört in henemm-infra nach `tests/test_staging_mcp_nginx.py`. Branch `feat-gregor-3286-mcp-staging` ist dort
+  angelegt, aber noch ohne Commit (Commit-Sperre ab Phase 6 bis zum Adversary-Verdict). Klon: `gh repo clone henemm/henemm-infra`.
 - Live-Ist-Stand vor der Änderung: `docs/artifacts/infra-3286-mcp-server/red-live-pfade.txt`. Den Exit-1-Lauf des Skripts gegen
   Staging (AC-10) in Phase 6 **vor** dem nginx-Rollout nachholen, sobald das Skript existiert.
 - Zugangsdaten liegen nicht auf dem iMac, sondern auf dem Server: `/home/hem/gregor_zwanzig/.claude/validator.env`
   (`GZ_VALIDATOR_*`), `/home/hem/gregor_zwanzig/.claude/staging_admin.env` (`GZ_STAGING_ADMIN_*`), Staging-`.env` (`GZ_AUTH_*`).
   Für den Lauf per Umgebung reichen, nie ausgeben oder ablegen.
 - AC-12 (Produktion) per curl prüfen, das Skript ist nur für Staging.
+
+## Stand Phase 6 (2026-11-24)
+
+- Probe-Skript fertig: 172 Zeilen (146 nicht leer), über der 150er-Marke der Spec; nach Neuschätzung akzeptiert, kein Weiterbau. Kern-Test 76 grün.
+- nginx-Blöcke und Textvertrag (35 grün) liegen uncommittet in einem henemm-infra-Klon im Sitzungs-Scratchpad; gesichert als
+  `docs/artifacts/infra-3286-mcp-server/henemm-infra-conf.diff` (per `git apply`) und `henemm-infra-test_staging_mcp_nginx.py`.
+- RED-Lauf gegen Staging (AC-10) erledigt: Exit 1, sieben Soll-Pfade 401 (`red-live-skript.txt`), Zugangsvariablen mit Platzhaltern.
+- `red-live-pfade.txt` war als RED-Artefakt fehlregistriert (Messung, kein Testlauf) und ist abgemeldet; Datei bleibt.
+- **Offen:** Lesen der Zugangsdaten per `ssh henemm` hat der Auto-Modus am 2026-11-24 abgelehnt („Unauthorized Access“). Nicht umgehen;
+  vor AC-1 bis AC-6, AC-9, AC-13 (Läufe mit echten Konten) braucht es die ausdrückliche Freigabe des PO.
+- Adversary Durchgang 1: **BROKEN** (F001 bis F009, Protokoll `adversary-dialog-runde1-2-broken.md`). Ist-Code trägt, aber Tests fangen 24 Mutationen nicht.
+  Neuschätzung (F002): Skript ca. 180, Kern-Test ca. 450, Textvertrag ca. 100 Zeilen; über ±250, der Überhang ist Testcode. Weiterbau entschieden.
+- Fix-Loop 1 erledigt: F001, F003 bis F008 geschlossen, 23 nicht äquivalente Mutationen gefangen (P30 äquivalent). Kern-Test 114 grün,
+  Textvertrag 37 grün. Zeilen: Skript 176, Kern-Test 478, Textvertrag 97. Offen: Adversary Runde 3. Artefakte unter `docs/artifacts/` brauchen `git add -f`.
+- Adversary Runde 3: **VERIFIED** (114 + 37 grün; offen nur F009, F010, beide LOW). Protokoll registriert und gestempelt.
+- QA-Gate: **CHECKLIST FAILED**, weil AC-11 (PO-Abnahme) und AC-12 (Produktion) im Protokoll `[ ]` sind. Beide liegen laut Spec nach Merge und
+  Staging-Rollout, sind in Phase 6b also nicht beweisbar. AC-1 bis AC-6, AC-9, AC-13 stehen als `[-]` (Implementierung belegt, live offen); diese
+  Markierung sieht das Gate nicht. Protokoll nicht eigenmächtig umgetragen, um das Gate zu öffnen; Entscheidung des PO eingeholt.
+- **PO-Entscheid 2026-11-24 (Auswahldialog):** AC-11/AC-12 sowie die Live-Teile von AC-1 bis AC-6, AC-9, AC-13 dürfen im Protokoll als „später
+  nachzuweisen“ (`[-]`) stehen; Pflicht vor Schließen von #3286, sonst bleibt das Ticket offen.
+- **PO-Freigabe 2026-11-24 (Auswahldialog):** die sechs Zugangswerte (`GZ_VALIDATOR_*`, `GZ_AUTH_*` der Staging-`.env`, `GZ_STAGING_ADMIN_*`) per SSH
+  nur in den Arbeitsspeicher lesen, ausschließlich für Prüfläufe gegen Staging, nicht anzeigen oder speichern. Produktion nicht betroffen.

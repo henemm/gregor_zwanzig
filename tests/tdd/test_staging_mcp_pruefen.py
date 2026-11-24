@@ -25,6 +25,7 @@ import socket
 import subprocess
 import sys
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlsplit
@@ -48,6 +49,8 @@ ENV = {"GZ_VALIDATOR_USER": "schranke-nutzer", "GZ_VALIDATOR_PASS": "SCHRANKE-GE
        "GZ_AUTH_USER": "default", "GZ_AUTH_PASS": "APP-GEHEIM-b2",
        "GZ_STAGING_ADMIN_USER": "gz-staging-admin", "GZ_STAGING_ADMIN_PASS": "ADMIN-GEHEIM-c3"}
 BASIC = base64.b64encode(f"{ENV['GZ_VALIDATOR_USER']}:{ENV['GZ_VALIDATOR_PASS']}".encode()).decode()
+GO_FEHLER = [("Content-Security-Policy", "default-src 'none'")]
+FREMD = "https://gregor20.henemm.com"
 CODE, TOKEN, ERNEUERN, SITZUNG = "CODE-GEHEIM-d4", "TOKEN-GEHEIM-e5", "REFRESH-GEHEIM-f6", "SITZUNG-GEHEIM-g7"
 GEHEIM = [ENV["GZ_VALIDATOR_PASS"], ENV["GZ_AUTH_PASS"], ENV["GZ_STAGING_ADMIN_PASS"], BASIC,
           CODE, TOKEN, ERNEUERN, SITZUNG]
@@ -64,6 +67,14 @@ class _Staging:
         self.csp = [CSP]
         self.www = 'Bearer resource_metadata="{b}' + META_RESSOURCE + '/api/mcp"'
         self.meta_basis: str | None = None     # abweichender Issuer bzw. Resource
+        self.meta: dict[str, dict] = {}        # je Metadatenpfad abweichende Felder
+        self.register_status = 201
+        self.ablehnung = (403, GO_FEHLER)      # Antwort an nicht gelistete Konten
+        self.ablehnung_bei = ""                # Methode, für die self.ablehnung gilt ("" = beide)
+        self.umleitung: dict[str, str] = {}    # abweichende Felder bzw. Ziel der Code-Weiterleitung
+        self.ziel: str | None = None
+        self.token, self.token_status = TOKEN, 200
+        self.haengt_s = 0.0
         self.meta_html = False                 # Metadaten 200, aber HTML
         self.code_status = 303
         self.ohne_code = False
@@ -103,6 +114,7 @@ class _Staging:
                         ziel = [("Location", "/login")] if outer.offen[pfad] == 302 else []
                         return self._raus(outer.offen[pfad], {}, ziel)
                     return self._raus(401, b"", [("WWW-Authenticate", 'Basic realm="Staging"')], "text/html")
+                time.sleep(outer.haengt_s)
                 if pfad in META:
                     return self._meta(pfad)
                 if pfad == "/api/auth/login":
@@ -110,6 +122,8 @@ class _Staging:
                 if pfad == "/api/mcp":
                     return self._mcp(auth, roh)
                 if pfad == OAUTH[0] and methode == "POST":
+                    if outer.register_status != 201:
+                        return self._raus(outer.register_status, {"error": "rate_limit_exceeded"})
                     uris = json.loads(roh or b"{}").get("redirect_uris") or []
                     if not uris or not all(u.startswith("http://127.0.0.1:") for u in uris):
                         return self._raus(400, {"error": "invalid_redirect_uri"})
@@ -127,8 +141,9 @@ class _Staging:
                 if outer.meta_html:
                     return self._raus(200, b"<html></html>", typ="text/html")
                 b = outer.meta_basis or outer.basis
-                return self._raus(200, {"issuer": b} if pfad == META_SERVER
-                                  else {"resource": b + "/api/mcp", "authorization_servers": [b]})
+                soll = {"issuer": b} if pfad == META_SERVER \
+                    else {"resource": b + "/api/mcp", "authorization_servers": [b]}
+                return self._raus(200, {**soll, **outer.meta.get(pfad, {})})
 
             def _anmelden(self, b):
                 if (b.get("username"), b.get("password")) not in (
@@ -152,8 +167,9 @@ class _Staging:
                 if not nutzer:
                     return self._raus(302, b"", [("Location", "/login?redirect=x")])
                 if nutzer not in outer.frei and outer.leck != methode:
-                    return self._raus(403, b"<html>nicht freigegeben</html>",
-                                      [("Content-Security-Policy", "default-src 'none'")], "text/html")
+                    gilt = outer.ablehnung_bei in ("", methode)
+                    status, kopf = outer.ablehnung if gilt else (403, GO_FEHLER)
+                    return self._raus(status, b"<html>nicht freigegeben</html>", kopf, "text/html")
                 kopf = [("Content-Security-Policy", c) for c in outer.csp]
                 if methode == "GET":
                     return self._raus(200, b"<html><form></form></html>", kopf, "text/html")
@@ -163,7 +179,7 @@ class _Staging:
                 daten = {"state": q.get("state", ""), "iss": outer.basis}
                 if not outer.ohne_code:
                     daten["code"] = CODE
-                ziel = outer.redirect + "?" + urlencode(daten)
+                ziel = (outer.ziel or outer.redirect) + "?" + urlencode({**daten, **outer.umleitung})
                 return self._raus(outer.code_status, b"", [("Location", ziel), *kopf])
 
             def _token(self, f):
@@ -173,7 +189,8 @@ class _Staging:
                     and base64.urlsafe_b64encode(probe).rstrip(b"=").decode() == outer.challenge
                 if not ok:
                     return self._raus(400, {"error": "invalid_grant"})
-                return self._raus(200, {"access_token": TOKEN, "refresh_token": ERNEUERN, "token_type": "Bearer"})
+                return self._raus(outer.token_status, {"access_token": outer.token, "refresh_token": ERNEUERN,
+                                                       "token_type": "Bearer"})
 
             def _mcp(self, auth, roh):
                 if auth != f"Bearer {TOKEN}":
@@ -221,9 +238,10 @@ def _werkzeug():
 @pytest.fixture
 def lauf(capsys, tmp_path):
     """Führt die Probe aus; JEDER Lauf prüft, dass kein Geheimnis in der Ausgabe steht (AC-10)."""
-    def _lauf(basis, argv=(), env=ENV, merkmal=None):
-        rc = _werkzeug().main(list(argv), env=env, basis=basis,
-                              server_merkmal=merkmal or tmp_path / "kein-server")
+    def _lauf(basis, argv=(), env=ENV, merkmal=None, zeitgrenze=None):
+        mod = _werkzeug()
+        mod.TIMEOUT_S = zeitgrenze or mod.TIMEOUT_S
+        rc = mod.main(list(argv), env=env, basis=basis, server_merkmal=merkmal or tmp_path / "kein-server")
         aus = capsys.readouterr()
         text = aus.out + aus.err
         assert not [g for g in GEHEIM if g in text], "Geheimnis in der Ausgabe"
@@ -305,6 +323,86 @@ def test_oauth_ablauf_unvollstaendig(staging, lauf, abweichung):
     """AC-4: jeder einzelne Schritt zählt."""
     vars(staging).update(abweichung)
     assert lauf(staging.basis)[0] == 1
+
+
+@pytest.mark.parametrize("pfad,feld,wert", [
+    (META_SERVER, "issuer", FREMD), *[(p, f, w) for p in META[1:] for f, w in (
+        ("resource", FREMD + "/api/mcp"), ("authorization_servers", [FREMD]))]])
+def test_einzelnes_metadatenfeld_falsch(staging, lauf, pfad, feld, wert):
+    """F003 (AC-1): jedes Feld jedes Dokuments zählt für sich."""
+    staging.meta = {pfad: {feld: wert}}
+    rc, text = lauf(staging.basis)
+    assert rc == 1
+    assert _genannt(pfad, text), text
+
+
+_STUNDE = {"zeit": "x", "t2m_c": 1.0}
+
+
+@pytest.mark.parametrize("abweichung", [
+    {"wetter": {"ort": {}, "stunden": [_STUNDE]}},
+    *[{"wetter": {"ort": {"name": "Innsbruck"}, "stunden": st}} for st in (
+        [{"t2m_c": 1.0}], [{"zeit": "x"}], [_STUNDE, {"t2m_c": 1.0}], [_STUNDE, {"zeit": "x"}])],
+    {"werkzeuge": ["wetter"]}, {"token_status": 400}, {"token_status": 201},
+    {"code_status": 302}, {"umleitung": {"iss": FREMD}}, {"umleitung": {"state": "falsch"}},
+    {"ziel": "http://127.0.0.1:1/fremd"},
+])
+def test_oauth_ablauf_einzelmerkmal_falsch(staging, lauf, abweichung):
+    """F003, F006 (AC-4): je Fall genau ein Merkmal falsch."""
+    vars(staging).update(abweichung)
+    assert lauf(staging.basis)[0] == 1
+
+
+@pytest.mark.parametrize("argv", [[], ["--vor-freigabe"]])
+@pytest.mark.parametrize("methode", ["GET", "POST"])
+@pytest.mark.parametrize("antwort", [
+    (302, [*GO_FEHLER, ("Location", "/login?redirect=x")]), (500, GO_FEHLER), (403, []),
+    (403, [*GO_FEHLER, ("Location", "http://127.0.0.1:1/?code=x")])], ids=["302", "500", "403-fremd", "403-location"])
+def test_ablehnung_muss_403_von_go_ohne_weiterleitung_sein(staging, lauf, antwort, methode, argv):
+    """F004 (AC-5, AC-6): eine andere Absage ist kein Beleg, dass Go das Konto ablehnt."""
+    staging.ablehnung, staging.ablehnung_bei = antwort, methode
+    staging.frei = set() if argv else {"default"}
+    rc, text = lauf(staging.basis, argv)
+    assert rc == 1
+    assert _genannt(OAUTH[1], text), text
+
+
+def test_ausnahmetext_mit_geheimnis_bleibt_stumm(staging, lauf):
+    """F005 (AC-10): http.client nennt einen ungültigen Headerwert im Ausnahmetext."""
+    staging.token = TOKEN + "\nX"
+    rc, text = lauf(staging.basis)
+    assert rc == 2
+    assert "ValueError" in text
+
+
+def test_haengender_server_ist_umgebungsfehler(staging, lauf):
+    """F007: die Zeitgrenze erreicht die Verbindung; die Antwort käme erst nach 1,5 s."""
+    staging.haengt_s = 1.5
+    start = time.monotonic()
+    assert lauf(staging.basis, zeitgrenze=0.2)[0] == 2
+    assert time.monotonic() - start < 1.4
+
+
+def test_zeitgrenze_passt_zur_spec():
+    """F007 (AC-7): länger als der längste Aufruf (10+5+60 s), nicht länger als nginx wartet (120 s)."""
+    assert 10 + 5 + 60 < _werkzeug().TIMEOUT_S <= 120
+
+
+def test_registrierungsbremse_ist_umgebungsfehler(staging, lauf):
+    """F008: 429 heißt Kontingent erschöpft, nicht Schranke zu; übrige Befunde werden weiter genannt."""
+    staging.register_status, staging.offen = 429, {"/login": 200}
+    rc, text = lauf(staging.basis)
+    assert rc == 2
+    zeilen = [z for z in text.splitlines() if OAUTH[0] in z]
+    assert len(zeilen) == 1 and "429" in zeilen[0] and "Soll" not in zeilen[0], text
+    assert _genannt("/login", text), text
+
+
+def test_registrierungsbremse_allein_ist_nie_bestanden(staging, lauf):
+    """F008."""
+    staging.register_status = 429
+    rc, text = lauf(staging.basis)
+    assert rc == 2 and "BESTANDEN" not in text
 
 
 @pytest.mark.parametrize("methode", ["GET", "POST"])
