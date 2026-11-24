@@ -42,7 +42,8 @@ const pos = (h: string, merkmal: string) => {
 	assert.notEqual(i, -1, `${merkmal} fehlt im Reiter`);
 	return i;
 };
-const UEBERGANGSTEXT = [de['zustellung.uebergang.titel'], de['zustellung.uebergang.hinweis']].filter(Boolean) as string[];
+const katalogDe = de as Record<string, string | undefined>;
+const UEBERGANGSTEXT = [katalogDe['zustellung.uebergang.titel'], katalogDe['zustellung.uebergang.hinweis']].filter(Boolean) as string[];
 
 for (const context of ['route', 'vergleich'] as const) {
 	describe(`#3036 AC-7 Reiter Zustellung (${context}): kein Übergangsblock, Beispiel-Alarm als eigener Abschnitt`, () => {

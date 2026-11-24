@@ -51,10 +51,13 @@
 		vergleich: { text: 'wetter.wsw.text_vergleich', ausblick: 'wetter.wsw.bloecke.ausblick_hinweis_vergleich', stundenverlauf: true, tripBloecke: false }
 	};
 	const k = $derived(KONTEXT[context]);
-	const TRIP_BLOECKE: { feld: 'show_stage_stats' | 'show_yesterday_comparison' | 'show_night_block'; titel: MessageKey; hinweis: MessageKey }[] = [
+	const TRIP_BLOECKE: { feld: 'show_stage_stats' | 'show_yesterday_comparison' | 'show_night_block' | 'show_compact_summary' | 'show_stability'; titel: MessageKey; hinweis: MessageKey }[] = [
 		{ feld: 'show_stage_stats', titel: 'wetter.wsw.bloecke.etappen', hinweis: 'wetter.wsw.bloecke.etappen_hinweis' },
 		{ feld: 'show_yesterday_comparison', titel: 'wetter.wsw.bloecke.vortag', hinweis: 'wetter.wsw.bloecke.vortag_hinweis' },
-		{ feld: 'show_night_block', titel: 'wetter.wsw.bloecke.nacht', hinweis: 'wetter.wsw.bloecke.nacht_hinweis' }
+		{ feld: 'show_night_block', titel: 'wetter.wsw.bloecke.nacht', hinweis: 'wetter.wsw.bloecke.nacht_hinweis' },
+		// #3036: Kurz-Zusammenfassung und Großwetterlage (report_config, nur ausführliche E-Mail)
+		{ feld: 'show_compact_summary', titel: 'wetter.wsw.bloecke.kurz', hinweis: 'wetter.wsw.bloecke.kurz_hinweis' },
+		{ feld: 'show_stability', titel: 'wetter.wsw.bloecke.grosswetterlage', hinweis: 'wetter.wsw.bloecke.grosswetterlage_hinweis' }
 	];
 	const BERICHTE: { id: 'morning' | 'evening'; titel: MessageKey; name: MessageKey }[] = [
 		{ id: 'morning', titel: 'wetter.wsw.bloecke.morgen', name: 'wetter.wsw.bloecke.ausblick_morgen' },

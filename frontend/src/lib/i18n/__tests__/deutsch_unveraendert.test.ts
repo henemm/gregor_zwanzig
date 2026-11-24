@@ -526,6 +526,11 @@ const NEU_IN_FOLGEPAKETEN = [
 	'wetter.wsw.bloecke.nacht_hinweis',
 	// #3154: Grund der Kompakt-Sperre (Etappen-Kennzahlen, Vortag-Vergleich, Nacht-Stundentabelle).
 	'wetter.wsw.bloecke.nur_ausfuehrlich',
+	// #3036: Schalter Kurz-Zusammenfassung und Großwetterlage (nur Trip, ausführliche E-Mail).
+	'wetter.wsw.bloecke.kurz',
+	'wetter.wsw.bloecke.kurz_hinweis',
+	'wetter.wsw.bloecke.grosswetterlage',
+	'wetter.wsw.bloecke.grosswetterlage_hinweis',
 	'wetter.wsw.kanal.titel',
 	'wetter.wsw.kanal.email_format',
 	'wetter.wsw.kanal.email_format_hinweis',

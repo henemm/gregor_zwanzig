@@ -1,0 +1,55 @@
+    # Subtest: die Titel benennen Kurz-Zusammenfassung und Großwetterlage
+    ok 5 - die Titel benennen Kurz-Zusammenfassung und Großwetterlage
+      ---
+      duration_ms: 0.18732
+      type: 'test'
+      ...
+    1..5
+ok 61 - \#3036 AC-6: Titel und Hinweis der neuen Schalter in DE und EN
+  ---
+  duration_ms: 2.001922
+  type: 'suite'
+  ...
+# Subtest: \#3036 AC-7: kein Übergangsblock mehr im Katalog
+    # Subtest: de: kein Key zustellung.uebergang.*
+    ok 1 - de: kein Key zustellung.uebergang.*
+      ---
+      duration_ms: 0.788631
+      type: 'test'
+      ...
+    # Subtest: en: kein Key zustellung.uebergang.*
+    ok 2 - en: kein Key zustellung.uebergang.*
+      ---
+      duration_ms: 1.223492
+      type: 'test'
+      ...
+    1..2
+ok 62 - \#3036 AC-7: kein Übergangsblock mehr im Katalog
+  ---
+  duration_ms: 2.295334
+  type: 'suite'
+  ...
+1..62
+# tests 226
+# suites 57
+# pass 226
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 14603.26925
+=== PYTEST ===
+.........................................                                [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  /home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html

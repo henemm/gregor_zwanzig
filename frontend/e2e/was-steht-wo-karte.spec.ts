@@ -722,7 +722,7 @@ test.describe('Karte „Was steht wo“', () => {
 				const ortIds = fall.kind === 'vergleich' ? ((await stand(page.request, abo.kind, abo.id)).location_ids as string[]) : [];
 				const pruefe = async (seite: Page, a: Abo) => {
 					const z = await oeffneZustellung(seite, a.kind, a.id);
-					const karte = z.getByTestId(ZT.uebergang).getByTestId('alert-preview-card');
+					const karte = z.getByTestId(ZT.beispielAlarm).getByTestId('alert-preview-card');
 					await expect(karte.getByTestId('alert-preview-unsaved'), 'kein ungespeicherter Zustand').toHaveCount(0);
 					const anfrage = seite.waitForRequest((r) => r.method() === 'POST' && r.url().includes('/alert-preview'), { timeout: 20_000 });
 					await karte.getByTestId('alert-preview-load-btn').click();
@@ -835,10 +835,11 @@ test.describe('Karte „Was steht wo“', () => {
 			const abo = await seed(page.request, fall);
 			try {
 				const z = await oeffneZustellung(page, abo.kind, abo.id);
-				const ueb = z.getByTestId(ZT.uebergang);
-				await expect(ueb).toBeVisible();
-				await expect(ueb.getByTestId('alert-preview-card')).toBeVisible();
-				await expect(ueb.getByTestId('compare-hub-activation-card')).toHaveCount(abo.kind === 'vergleich' ? 1 : 0);
+				// #3036: Beispiel-Alarm als eigener Abschnitt, Pausieren-Karte (Orte) im Abschnitt unter dem Kopf.
+				const beispiel = z.getByTestId(ZT.beispielAlarm);
+				await expect(beispiel).toBeVisible();
+				await expect(beispiel.getByTestId('alert-preview-card')).toBeVisible();
+				await expect(z.getByTestId(ZT.aktivierung).getByTestId('compare-hub-activation-card')).toHaveCount(abo.kind === 'vergleich' ? 1 : 0);
 				for (const id of [...ALT_TESTIDS, ...Object.keys(KARTE_EINMAL[abo.kind])]) await expect(z.getByTestId(id), `Reiter Zustellung: ${id}`).toHaveCount(0);
 				for (const w of ALT_TEXTE) await expect(z, `Reiter Zustellung: „${w}“`).not.toContainText(w);
 
@@ -876,7 +877,7 @@ test.describe('Karte „Was steht wo“', () => {
 				}
 				expect((await page.request.get(tabellenUrl(fremd.kind, fremd.id))).status(), 'fremdes Abo nicht lesbar').toBe(404);
 
-				// Reiter Zustellung: ein Schalter außerhalb des Übergangsblocks; bei Orten zusätzlich die Pausieren-Karte im Block.
+				// Reiter Zustellung: ein Schalter der Briefing-Zeiten; bei Orten zusätzlich die Pausieren-Karte (#3036: Abschnitt unter dem Kopf).
 				const z = await oeffneZustellung(page, abo.kind, abo.id);
 				const pfad = abo.kind === 'route' ? `/api/trips/${abo.id}` : `/api/compare/presets/${abo.id}`;
 				const put = () => page.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === pfad, { timeout: 20_000 });
@@ -885,9 +886,9 @@ test.describe('Karte „Was steht wo“', () => {
 				expect((await p).status()).toBe(200);
 				if (abo.kind === 'vergleich') {
 					p = put();
-					await z.getByTestId(ZT.uebergang).getByTestId('compare-hub-activation-cta').click();
+					await z.getByTestId(ZT.aktivierung).getByTestId('compare-hub-activation-cta').click();
 					expect((await p).status()).toBe(200);
-					expect((await stand(page.request, abo.kind, abo.id)).schedule, 'Pausieren im Übergangsblock speichert').toBe('manual');
+					expect((await stand(page.request, abo.kind, abo.id)).schedule, 'Pausieren im Abschnitt Aktivierung speichert').toBe('manual');
 				}
 				expect(altStand(abo.kind, await stand(page.request, abo.kind, abo.id)), 'nach Speichern im Reiter Zustellung').toEqual(vorher);
 

@@ -42,7 +42,7 @@ test.describe('Issue #1719 S3 Block A: Live-Vorschau ist ersatzlos weg', () => {
 				await expect(page.getByTestId('wm2-mail-preview'), `AC-1 FAIL (${vp.width}px, Wetter): "So kommt es an"`).toHaveCount(0);
 				await expect(page.getByTestId('mobile-mail-fab'), `AC-1 FAIL (${vp.width}px, Wetter): Mobile-FAB`).toHaveCount(0);
 				const z = await oeffneZustellung(page, 'route', abo.id);
-				await expect(z.getByTestId(ZT.uebergang)).toBeVisible();
+				await expect(z.getByTestId(ZT.beispielAlarm)).toBeVisible();
 				await expect(page.getByTestId('wm2-mail-preview'), `AC-1 FAIL (${vp.width}px, Zustellung): "So kommt es an"`).toHaveCount(0);
 				await expect(page.getByTestId('mobile-mail-fab'), `AC-1 FAIL (${vp.width}px, Zustellung): Mobile-FAB`).toHaveCount(0);
 			}

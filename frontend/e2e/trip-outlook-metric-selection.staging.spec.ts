@@ -67,7 +67,7 @@ test.describe('Trip-Ausblick in der Karte „Was steht wo“ (#1720, #3154)', ()
 		for (const b of ['morning', 'evening']) await expect(page.locator(`[data-testid="was-steht-wo-ausblick-${b}"]`)).toHaveCount(1);
 		await expect(page.getByTestId('report-show-outlook'), 'kein alter Ausblick-Schalter').toHaveCount(0);
 		await page.getByTestId('trip-detail-tab-zustellung').first().click();
-		await expect(page.getByTestId('zustellung-uebergang').first()).toBeVisible({ timeout: 15_000 });
+		await expect(page.getByTestId('zustellung-beispiel-alarm').first()).toBeVisible({ timeout: 15_000 });
 		await expect(page.locator('[data-testid="report-show-outlook"], [data-testid^="was-steht-wo-ausblick-"]'), 'Reiter Zustellung ohne Ausblick-Schalter').toHaveCount(0);
 		await page.screenshot({ path: '../docs/artifacts/feat-1720-vorschau-metriken/ac-13-kein-zweiter-schalter.png', fullPage: true });
 	});
