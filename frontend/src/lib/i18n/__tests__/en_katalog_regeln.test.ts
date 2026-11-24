@@ -30,9 +30,9 @@ function verstoesse(key: string, wert: string): string[] {
 	if (TOUR.test(wert)) v.push('tour');
 	if (LEG.test(wert)) v.push('leg statt stage');
 	if (wert.includes('!')) v.push('Ausrufezeichen');
-	if (key.startsWith('start.') && KANAL_IN_ARBEIT.test(wert)) {
-		if (!/in progress/.test(wert)) v.push('SMS/Satellit ohne "in progress"');
-		if (!/on request/.test(wert)) v.push('SMS/Satellit ohne "on request"');
+	// Issue #3319 AC-1 (loest #2520 AC-6 ab): alle vier Kanaele sind verfuegbar.
+	if ((key.startsWith('start.') || key.startsWith('funktionen.')) && KANAL_IN_ARBEIT.test(wert)) {
+		if (/in progress|on request|on demand/.test(wert)) v.push('SMS/Satellit als "in progress/on request"');
 	}
 	return v;
 }
@@ -49,15 +49,17 @@ function bildpfadErlaubt(en: string, de: string): boolean {
 after(() => locale.set('de'));
 
 describe('Gegenprobe: die Regeln erkennen schlechte Texte', () => {
-	test('tour, leg, Ausrufezeichen, SMS ohne Zusatz', () => {
+	test('tour, leg, Ausrufezeichen, SMS als in progress', () => {
 		assert.deepEqual(verstoesse('x.a', 'Plan your tour'), ['tour']);
 		assert.deepEqual(verstoesse('x.a', 'Each leg of the trip'), ['leg statt stage']);
 		assert.deepEqual(verstoesse('x.a', 'Great!'), ['Ausrufezeichen']);
-		assert.deepEqual(verstoesse('start.x', 'SMS is available'), [
-			'SMS/Satellit ohne "in progress"',
-			'SMS/Satellit ohne "on request"'
+		assert.deepEqual(verstoesse('start.x', 'SMS is in progress or on request'), [
+			'SMS/Satellit als "in progress/on request"'
 		]);
-		assert.deepEqual(verstoesse('start.x', 'SMS is in progress or on request'), []);
+		assert.deepEqual(verstoesse('funktionen.x', 'Satellite on request'), [
+			'SMS/Satellit als "in progress/on request"'
+		]);
+		assert.deepEqual(verstoesse('start.x', 'SMS is available'), []);
 		assert.deepEqual(verstoesse('x.a', 'The weather for your stage'), []);
 	});
 });

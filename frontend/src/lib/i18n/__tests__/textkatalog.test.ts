@@ -45,16 +45,36 @@ test('AC-1: Empfangslage-Aussage und Begriffe (nie "Tour")', () => {
 	assert.doesNotMatch(alleText, /\bTour/);
 });
 
-test('AC-6: SMS/Satellit nur mit "in Arbeit" und "auf Anfrage"; E-Mail Hauptkanal, Telegram erwaehnt', () => {
+// Issue #3319 AC-1 — loest #2520 AC-6 ab: alle vier Kanaele sind verfuegbar, kein
+// „in Arbeit/auf Anfrage/auf Wunsch“ mehr bei SMS, Satellit oder Telegram (DE und EN).
+const VERFUEGBAR_VERBOTEN_DE = /in Arbeit|auf Anfrage|auf Wunsch/i;
+const VERFUEGBAR_VERBOTEN_EN = /in progress|on request|on demand|upon request/i;
+
+test('#3319 AC-1 Gegenprobe: alte Formulierungen werden erkannt', () => {
+	assert.match('SMS und Satellit (Garmin inReach) sind in Arbeit, auf Anfrage', VERFUEGBAR_VERBOTEN_DE);
+	assert.match('Telegram auf Wunsch', VERFUEGBAR_VERBOTEN_DE);
+	assert.match('SMS and satellite are in progress, on request', VERFUEGBAR_VERBOTEN_EN);
+	assert.doesNotMatch('E-Mail, Telegram, SMS und Premium-SMS (Garmin inReach)', VERFUEGBAR_VERBOTEN_DE);
+});
+
+test('#3319 AC-1: kein start.*-Text nennt einen Kanal als in Arbeit, auf Anfrage oder auf Wunsch', () => {
 	for (const k of startKeys) {
-		if (/sms|satellit/i.test(katalog[k])) {
-			assert.match(katalog[k], /in Arbeit/, `${k}: "in Arbeit" fehlt`);
-			assert.match(katalog[k], /auf Anfrage/, `${k}: "auf Anfrage" fehlt`);
+		assert.doesNotMatch(trFor('de', k as never), VERFUEGBAR_VERBOTEN_DE, `de ${k}`);
+		assert.doesNotMatch(trFor('en', k as never), VERFUEGBAR_VERBOTEN_EN, `en ${k}`);
+	}
+});
+
+test('#3319 AC-1: Zustellung, Einleitung und Beschreibung nennen alle vier Kanaele als verfuegbar (DE/EN)', () => {
+	for (const lang of ['de', 'en'] as const) {
+		const k = trFor(lang, 'start.ankommt.kanaele' as never);
+		for (const re of [/E-Mail|email/i, /Telegram/, /\bSMS\b/, /Premium-SMS/, /inReach/]) {
+			assert.match(k, re, `${lang} start.ankommt.kanaele: ${re}`);
+		}
+		for (const key of ['start.meta.description', 'start.hero.lead']) {
+			const w = trFor(lang, key as never);
+			for (const re of [/E-Mail|email/i, /Telegram/, /SMS/]) assert.match(w, re, `${lang} ${key}: ${re}`);
 		}
 	}
-	assert.match(katalog['start.hero.lead'], /E-Mail/);
-	assert.match(alleText, /Telegram/);
-	assert.ok(/sms|satellit/i.test(alleText), 'Hinweis auf SMS/Satellit mit Zusatz fehlt');
 });
 
 test('AC-7: jede referenzierte Bilddatei existiert, Alt-Texte nicht leer, >= 3 Bilder, < 200 KB', () => {
