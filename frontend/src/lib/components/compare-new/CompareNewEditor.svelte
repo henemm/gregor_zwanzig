@@ -26,6 +26,7 @@
 		compareFeldsatzStandard,
 		type CompareFeldsatz
 	} from '../compare/compareEditorSave.ts';
+	import type { KarteAnlegeStand } from '../shared/wetter-tab/wasStehtWoSpeicherung.ts';
 	import { feldsatzAusVorlage } from './compareNewVorlage.ts';
 	import type { CompareMetricDef } from '$lib/components/shared/wetter-tab/corridorEditorState';
 	// Issue #2794 S3a Teil-PR 4a (AC-44/AC-45): Vorbelegung der Wertebereiche als reine
@@ -158,9 +159,17 @@
 	// liest sie beim Zurueckkehren (sonst Profil-Standard; die Rueckabbildung ueber die Vergleichs-
 	// Schluessel verliert Metriken ausserhalb des Vergleichs-Katalogs).
 	let wetterAuswahl = $state<WetterAnlegeNutzlast['display_config']['active_metrics'] | undefined>(undefined);
+	// #3306: Stand der Karte „Was steht wo“ — hier, damit er Neuaufbau und Wechsel Desktop/Mobil übersteht;
+	// fließt nie in wetterAbo zurück (Schleifenschutz), nur in den Anlege-POST.
+	let karteStand = $state<KarteAnlegeStand | undefined>(undefined);
+	function handleKarteStand(k: KarteAnlegeStand) { karteStand = k; }
 	// #3198 (S4b-3): keine Profil-Wahl mehr; die angezeigte Vorlage kommt aus `wiz.vorlageId`.
+	// #3306 (AC-1, AC-7): der Vorschau-Entwurf der Karte trägt Orte und die Schalter des Feldsatzes.
 	const wetterAbo = $derived({
+		location_ids: wiz.pickedIds,
+		hourly_enabled: wiz.hourlyEnabled,
 		display_config: {
+			telegram_style: wiz.telegramStyle,
 			...(wetterAuswahl
 				? { active_metrics: wetterAuswahl }
 				: wiz.activeMetricKeys
@@ -324,7 +333,7 @@
 	async function speichereNeuenVergleich(): Promise<void> {
 		// Issue #3276 F002/F-ADV1: Rumpf-Bau und POST als eine getestete Funktion (keine Altschluessel).
 		try {
-			const created = await legeVergleichAn(api, wiz, { ampel: wetterAmpel, auswahl: wetterAuswahl });
+			const created = await legeVergleichAn(api, wiz, { ampel: wetterAmpel, auswahl: wetterAuswahl, karte: karteStand });
 			await goto('/compare/' + created.id);
 		} catch {
 			/* Nebenbefund #1199: Fehlermeldung wird (wie bisher) nicht angezeigt */
@@ -512,7 +521,7 @@
 			     PUT — gespeichert wird erst per „Briefing aktivieren", ein POST). Die
 			     Wertebereiche-Vorbelegung (wiz.corridors/idealRanges) laeuft seit Teil-PR 4a
 			     als Effekt im Skript (anlegeVorbelegung.ts), ohne versteckten CorridorEditor. -->
-			<WetterTab context="vergleich" preset={wetterAbo} createMode={true} onAnlegeStand={handleWetterAnlegeStand} />
+			<WetterTab context="vergleich" preset={wetterAbo} createMode={true} onAnlegeStand={handleWetterAnlegeStand} karteStart={karteStand} onAnlegeKarte={handleKarteStand} />
 		{/if}
 		<div class="ce-cta-foot" style:max-width="1100px">
 			<div class="ce-cta-row">
@@ -565,7 +574,7 @@
 			<Step2Orte bind:pickedIds={wiz.pickedIds} {locations} groups={ceGroups} dense onOpenLibrary={() => { mobileLibraryOpen = true; }} />
 		{:else if activeTab === 'wetter'}
 			{#if isMobileViewport}
-				<WetterTab context="vergleich" preset={wetterAbo} createMode={true} onAnlegeStand={handleWetterAnlegeStand} />
+				<WetterTab context="vergleich" preset={wetterAbo} createMode={true} onAnlegeStand={handleWetterAnlegeStand} karteStart={karteStand} onAnlegeKarte={handleKarteStand} />
 			{/if}
 		{:else if activeTab === 'zustellung'}
 			{#if isMobileViewport}

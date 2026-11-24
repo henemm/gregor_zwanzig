@@ -1,0 +1,16 @@
+0 save if (wetter.karte) mitKarte(payload, wetter.karte); => # pass 9 # fail 13 
+1 save if (wetter.karte) mitKarte(payload, wetter.karte); => # pass 21 # fail 1 
+2 save , placements: karte.placements }; => # pass 11 # fail 11 
+3 save felderNutzlast('vergleich', karte.felder, karte.fe => # pass 21 # fail 1 
+4 save Object.assign(payload, rest); => # pass 14 # fail 8 
+5 save ...(dcDiff ?? {}), placements => # pass 15 # fail 7 
+6 save ...((payload.display_config as object) ?? {}), ... => # pass 18 # fail 4 
+7 editor karte: karteStand } => # pass 17 # fail 5 
+8 editor location_ids: wiz.pickedIds, 		hourly_enabled => # pass 20 # fail 2 
+9 editor hourly_enabled: wiz.hourlyEnabled, 		display_confi => # pass 20 # fail 2 
+10 editor telegram_style: wiz.telegramStyle, 			...(wetterAu => # pass 20 # fail 2 
+11 editor onAnlegeStand={handleWetterAnlegeStand} karteStart => # pass 19 # fail 3 
+12 editor onAnlegeStand={handleWetterAnlegeStand} karteStart => # pass 16 # fail 6 
+13 editor onAnlegeStand={handleWetterAnlegeStand} karteStart => # pass 20 # fail 2 
+14 editor onAnlegeStand={handleWetterAnlegeStand} karteStart => # pass 19 # fail 3 
+15 editor function handleKarteStand(k: KarteAnlegeStand) { k => # pass 17 # fail 5 
