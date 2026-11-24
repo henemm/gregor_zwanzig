@@ -1,0 +1,218 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.15, pytest-9.2.0, pluggy-1.6.0 -- /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo
+configfile: pyproject.toml
+plugins: socket-0.8.0, xdist-3.8.0, timeout-2.4.0, anyio-4.14.2
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collecting ... collected 142 items / 4 deselected / 138 selected
+
+tests/tdd/test_pytest_collection_and_timeout_safety.py::test_default_selection_excludes_b1_live_leak_files PASSED [  0%]
+tests/tdd/test_pytest_collection_and_timeout_safety.py::test_friendly_format_footgun_not_collected_by_default PASSED [  1%]
+tests/tdd/test_pytest_collection_and_timeout_safety.py::test_full_suite_collection_still_exits_zero PASSED [  2%]
+tests/tdd/test_pytest_collection_and_timeout_safety.py::test_email_marker_run_still_collects_b1_files PASSED [  2%]
+tests/tdd/test_pytest_collection_and_timeout_safety.py::test_default_selection_excludes_staging_dialers PASSED [  3%]
+tests/tdd/test_pytest_collection_and_timeout_safety.py::test_b3_module_files_excluded_from_default PASSED [  4%]
+tests/tdd/test_pytest_collection_and_timeout_safety.py::test_b3_partial_files_partition PASSED [  5%]
+tests/tdd/test_pytest_collection_and_timeout_safety.py::test_1010_1006_keeps_timeout_marker_alongside_staging SKIPPED [  5%]
+tests/tdd/test_pytest_collection_and_timeout_safety.py::test_geosphere_and_providers_base_pass_in_default_selection PASSED [  6%]
+tests/tdd/test_pytest_collection_and_timeout_safety.py::test_c2_returned_tests_in_default_selection PASSED [  7%]
+tests/tdd/test_pytest_collection_and_timeout_safety.py::test_c2_full_live_files_stay_excluded PASSED [  7%]
+tests/tdd/test_pytest_collection_and_timeout_safety.py::test_marker_auswahl_der_ableitung_deckt_sich_mit_pytest[email-tests/tdd/test_issue_1147_resend_recipient_invariant.py] PASSED [  8%]
+tests/tdd/test_pytest_collection_and_timeout_safety.py::test_marker_auswahl_der_ableitung_deckt_sich_mit_pytest[live-tests/tdd/test_issue_608_sms_seven_io.py] PASSED [  9%]
+tests/tdd/test_pytest_collection_and_timeout_safety.py::test_marker_auswahl_der_ableitung_deckt_sich_mit_pytest[staging-tests/tdd/test_issue_1069_tier_channel_gating.py] PASSED [ 10%]
+tests/tdd/test_pytest_collection_and_timeout_safety.py::test_wirksames_limit_aus_der_echten_konfiguration_ist_30 PASSED [ 10%]
+tests/tdd/test_pytest_collection_and_timeout_safety.py::test_haenger_wird_am_limit_nachweislich_abgebrochen PASSED [ 11%]
+tests/tdd/test_pytest_collection_and_timeout_safety.py::test_nutzer_der_sammlung_teilen_eine_worker_gruppe PASSED [ 12%]
+tests/tdd/test_pytest_collection_and_timeout_safety.py::test_rolling_trip_dialer_excluded_from_default PASSED [ 13%]
+tests/tdd/test_pytest_collection_and_timeout_safety.py::test_rolling_trip_collection_opens_no_socket PASSED [ 13%]
+tests/tdd/test_pytest_collection_and_timeout_safety.py::test_rolling_trip_send_skips_at_runtime_when_port_closed PASSED [ 14%]
+tests/tdd/test_pytest_collection_and_timeout_safety.py::test_genau_eine_voll_sammlung_je_dateilauf PASSED [ 15%]
+tests/refactor/test_epic_129a_3_ui_removed.py::test_ac1_src_web_directory_empty PASSED [ 15%]
+tests/refactor/test_epic_129a_3_ui_removed.py::test_ac2_no_imports_from_web PASSED [ 16%]
+tests/refactor/test_epic_129a_3_ui_removed.py::test_ac3_seven_test_files_deleted PASSED [ 17%]
+tests/refactor/test_epic_129a_3_ui_removed.py::test_ac4_pyproject_no_nicegui_apscheduler PASSED [ 18%]
+tests/refactor/test_epic_129a_3_ui_removed.py::test_ac5_no_web_main_in_hooks PASSED [ 18%]
+tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac1_langsamer_dwd_liefert_mindestens_doppelt_so_viele_zeitpunkte FAILED [ 19%]
+tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac2_budgetende_laesst_nur_hintere_zeitpunkte_und_groessen_fehlen PASSED [ 20%]
+tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac3_haengender_download_kostet_hoechstens_den_timeout_und_wird_nicht_wiederholt PASSED [ 21%]
+tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac4_laufrueckfall_bleibt_konsistent_und_einzelne_luecke_verschiebt_nichts PASSED [ 21%]
+tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac5_werte_und_reihenfolge_sind_unveraendert_inklusive_grau_gsp_anker PASSED [ 22%]
+tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac6_pfadkonstante_thunder_budget_existiert PASSED [ 23%]
+tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac6_budgetende_schreibt_genau_eine_journalzeile_fallback PASSED [ 23%]
+tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac6_vollstaendiger_lauf_schreibt_genau_eine_zeile_ok PASSED [ 24%]
+tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac7_zweiter_abruf_desselben_punkts_loest_keinen_download_aus PASSED [ 25%]
+tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac8_neue_konstanten_und_festes_budget PASSED [ 26%]
+tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac8_garbage_abbruch_und_404_werfen_nie_und_hinterlassen_keinen_thread PASSED [ 26%]
+tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac8_totalausfall_wirft_weiterhin_thunder_source_unavailable PASSED [ 27%]
+tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac8_nicht_schreibbares_journal_bricht_den_abruf_nicht PASSED [ 28%]
+tests/tdd/test_dwd_thunder_parallel_fetch.py::test_testserver_startet_ohne_namensaufloesung PASSED [ 28%]
+tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac3_default_timeout_10s_wirkt_am_gewitter_request PASSED [ 29%]
+tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac2_nach_fristende_beginnt_kein_download_und_kein_weiterer_zeitpunkt[1.2] PASSED [ 30%]
+tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac2_nach_fristende_beginnt_kein_download_und_kein_weiterer_zeitpunkt[1.8] PASSED [ 31%]
+tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac2_abgeschnittene_vordere_groesse_verwirft_hintere_desselben_zeitpunkts PASSED [ 31%]
+tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac8_totalausfall_ueber_http_500_wirft_thunder_source_unavailable PASSED [ 32%]
+tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac8_totalausfall_ueber_http_403_wirft_thunder_source_unavailable_ohne_retry PASSED [ 33%]
+tests/tdd/test_radar_nowcast_segment_wanduhr_unabhaengig.py::test_matrix_verwendet_vorhandene_messung_wieder PASSED [ 34%]
+tests/tdd/test_radar_nowcast_segment_wanduhr_unabhaengig.py::test_radar_segment_tests_liefern_zu_jeder_wanduhrzeit_dasselbe_ergebnis[822-nowcast-segment] PASSED [ 34%]
+tests/tdd/test_radar_nowcast_segment_wanduhr_unabhaengig.py::test_radar_segment_tests_liefern_zu_jeder_wanduhrzeit_dasselbe_ergebnis[818-briefing-integration] PASSED [ 35%]
+tests/tdd/test_wanduhr_matrix.py::test_matrix_findet_die_kante PASSED    [ 36%]
+tests/tdd/test_wanduhr_matrix.py::test_matrix_meldet_nichts_ohne_kante PASSED [ 36%]
+tests/tdd/test_wanduhr_matrix.py::test_matrix_schweigt_bei_einem_stabilen_testfall PASSED [ 37%]
+tests/tdd/test_wanduhr_matrix.py::test_matrix_nutzt_je_datenpunkt_einen_eigenen_prozess PASSED [ 38%]
+tests/tdd/test_prozesszonen_schalter.py::test_ac1_ohne_variable_bleibt_die_prozesszone_st_johns_regressionswaechter PASSED [ 39%]
+tests/tdd/test_prozesszonen_schalter.py::test_ac2_gestern_zone_liefert_prozesstag_gleich_utc_tag_minus_eins PASSED [ 39%]
+tests/tdd/test_prozesszonen_schalter.py::test_ac3_selbstschutz_bei_nicht_tragender_zone_scheitert_sichtbar PASSED [ 40%]
+tests/tdd/test_prozesszonen_schalter.py::test_gestern_zone_ist_dieselbe_wie_die_gemeinsame_hilfe PASSED [ 41%]
+tests/tdd/test_radar_onset_threshold_variance.py::test_ac1_shared_threshold_drives_both_paths PASSED [ 42%]
+tests/tdd/test_radar_onset_threshold_variance.py::test_ac2_trip_variance_over_grid_values[2min-alarm] PASSED [ 42%]
+tests/tdd/test_radar_onset_threshold_variance.py::test_ac2_trip_variance_over_grid_values[7min-alarm] PASSED [ 43%]
+tests/tdd/test_radar_onset_threshold_variance.py::test_ac2_trip_variance_over_grid_values[12min-alarm] PASSED [ 44%]
+tests/tdd/test_radar_onset_threshold_variance.py::test_ac2_trip_variance_over_grid_values[22min-alarm] PASSED [ 44%]
+tests/tdd/test_radar_onset_threshold_variance.py::test_ac2_trip_variance_over_grid_values[37min-alarm] PASSED [ 45%]
+tests/tdd/test_radar_onset_threshold_variance.py::test_ac2_trip_variance_over_grid_values[52min-alarm] PASSED [ 46%]
+tests/tdd/test_radar_onset_threshold_variance.py::test_ac2_trip_variance_over_grid_values[67min-alarm] PASSED [ 47%]
+tests/tdd/test_radar_onset_threshold_variance.py::test_ac2_trip_variance_over_grid_values[82min-alarm] PASSED [ 47%]
+tests/tdd/test_radar_onset_threshold_variance.py::test_ac2_trip_variance_over_grid_values[172min-alarm] PASSED [ 48%]
+tests/tdd/test_radar_onset_threshold_variance.py::test_ac2_trip_variance_over_grid_values[187min-still] PASSED [ 49%]
+tests/tdd/test_radar_onset_threshold_variance.py::test_ac3_compare_variance_over_grid_values[2min-alarm] PASSED [ 50%]
+tests/tdd/test_radar_onset_threshold_variance.py::test_ac3_compare_variance_over_grid_values[7min-alarm] PASSED [ 50%]
+tests/tdd/test_radar_onset_threshold_variance.py::test_ac3_compare_variance_over_grid_values[12min-alarm] PASSED [ 51%]
+tests/tdd/test_radar_onset_threshold_variance.py::test_ac3_compare_variance_over_grid_values[22min-alarm] PASSED [ 52%]
+tests/tdd/test_radar_onset_threshold_variance.py::test_ac3_compare_variance_over_grid_values[37min-alarm] PASSED [ 52%]
+tests/tdd/test_radar_onset_threshold_variance.py::test_ac3_compare_variance_over_grid_values[52min-alarm] PASSED [ 53%]
+tests/tdd/test_radar_onset_threshold_variance.py::test_ac3_compare_variance_over_grid_values[67min-alarm] PASSED [ 54%]
+tests/tdd/test_radar_onset_threshold_variance.py::test_ac3_compare_variance_over_grid_values[82min-alarm] PASSED [ 55%]
+tests/tdd/test_radar_onset_threshold_variance.py::test_ac3_compare_variance_over_grid_values[172min-alarm] PASSED [ 55%]
+tests/tdd/test_radar_onset_threshold_variance.py::test_ac3_compare_variance_over_grid_values[187min-still] PASSED [ 56%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_keine_fixture_baut_ankunft_aus_der_rohen_wanduhr PASSED [ 57%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_known_violations_enthaelt_keine_veralteten_eintraege PASSED [ 57%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_meldet_das_antimuster PASSED [ 58%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_geklemmtem_muster PASSED [ 59%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_ohne_etappendatum PASSED [ 60%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_astimezone_zwischenschritt PASSED [ 60%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_den_bypass_ueber_eine_zwischenvariable PASSED [ 61%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_die_kette_ueber_astimezone_und_namen PASSED [ 62%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_uhrzeiten_in_einer_liste PASSED [ 63%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_uhrzeiten_in_einer_tupel_rueckgabe PASSED [ 63%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_einem_nur_verglichenen_erwartungswert PASSED [ 64%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_geklemmtem_namen PASSED [ 65%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_date_today_als_etappendatum PASSED [ 65%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_ortstag_ohne_now_utc_als_etappendatum PASSED [ 66%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_ortstag_mit_gepinnter_uhr PASSED [ 67%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_ortstag_mit_wanduhr_als_now_utc[datetime.now(timezone.utc)] PASSED [ 68%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_ortstag_mit_wanduhr_als_now_utc[now_utc] PASSED [ 68%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_ortstag_mit_wanduhr_als_now_utc[now_utc - timedelta(hours=1)] PASSED [ 69%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_ortstag_mit_literalem_zeitpunkt PASSED [ 70%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_utc_tag_ohne_now_utc_als_etappendatum PASSED [ 71%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_utc_tag_mit_gepinnter_uhr PASSED [ 71%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_regel_budget_pruefdatum_steht_als_text_in_der_datei PASSED [ 72%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_meldet_die_indirekte_variante PASSED [ 73%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_nur_einem_wegpunkt PASSED [ 73%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_gesetztem_arrival_calculated PASSED [ 74%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_gesetztem_arrival_override PASSED [ 75%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_gesetztem_stage_start_time PASSED [ 76%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_arrival_window_fixtures_import PASSED [ 76%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_briefing_zeiten_import PASSED [ 77%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_ohne_alarmpfad_import PASSED [ 78%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_wegpunkte_aus_einer_hilfsfunktion PASSED [ 78%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_stage_aus_kwargs_entpackung PASSED [ 79%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_wegpunkte_aus_einer_comprehension PASSED [ 80%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_ungehaertete_funktion_trotz_dateiweitem_import PASSED [ 81%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_stage_und_waypoint_hinter_import_alias PASSED [ 81%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_literalem_etappendatum PASSED [ 82%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_start_time_vor_unaufloesbaren_wegpunkten PASSED [ 83%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_alarmpfad_ueber_modulimport PASSED [ 84%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_echter_testbaum_ohne_fehlalarm_der_zweiten_regel PASSED [ 84%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_known_violations_der_neuen_regel_ohne_veraltete_eintraege PASSED [ 85%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_known_violations_der_neuen_regel_ist_leer PASSED [ 86%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_regel_budget_pruefdatum_der_neuen_regel_steht_als_text PASSED [ 86%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_neue_waechter_sind_nicht_von_der_ci_ausgenommen PASSED [ 87%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[direkt] PASSED [ 88%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[indirekt] PASSED [ 89%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[trip_alert] PASSED [ 89%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[compare_alert] PASSED [ 90%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[trip_report_scheduler] PASSED [ 91%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[compare_slot_scheduler] PASSED [ 92%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[alert_gate] PASSED [ 92%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[deviation_alert] PASSED [ 93%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[alert_daily_limit] PASSED [ 94%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[official_alert] PASSED [ 94%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_ueberspringt_kaputte_kandidaten[syntax-direkt] PASSED [ 95%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_ueberspringt_kaputte_kandidaten[syntax-indirekt] PASSED [ 96%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_ueberspringt_kaputte_kandidaten[utf8-direkt] PASSED [ 97%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_ueberspringt_kaputte_kandidaten[utf8-indirekt] PASSED [ 97%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_echtbaum_cache_scannt_je_regel_nur_einmal[direkt-scan_wallclock_arrival_fixtures] PASSED [ 98%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_echtbaum_cache_scannt_je_regel_nur_einmal[indirekt-scan_indirekte_wanduhr_fixtures] PASSED [ 99%]
+tests/tdd/test_fixture_wallclock_ratchet.py::test_echtbaum_pruefungen_nutzen_den_cache PASSED [100%]
+
+=================================== FAILURES ===================================
+____ test_ac1_langsamer_dwd_liefert_mindestens_doppelt_so_viele_zeitpunkte _____
+tests/tdd/test_dwd_thunder_parallel_fetch.py:294: in test_ac1_langsamer_dwd_liefert_mindestens_doppelt_so_viele_zeitpunkte
+    assert len(da) >= 10, (
+E   AssertionError: 'lpi_max': nur 9 von 12 Zeitpunkten innerhalb des Budgets angekommen (erwartet >= 10) -- [1, 2, 3, 4, 5, 6, 7, 8, 9]
+E   assert 9 >= 10
+E    +  where 9 = len([1, 2, 3, 4, 5, 6, ...])
+----------------------------- Captured stderr call -----------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 59167)
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/socketserver.py", line 766, in __init__
+    self.handle()
+  File "/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/http/server.py", line 440, in handle
+    self.handle_one_request()
+  File "/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/http/server.py", line 428, in handle_one_request
+    method()
+  File "/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/tests/tdd/test_dwd_thunder_parallel_fetch.py", line 191, in do_GET
+    self.wfile.write(body)
+  File "/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/socketserver.py", line 845, in write
+    self._sock.sendall(b)
+BrokenPipeError: [Errno 32] Broken pipe
+----------------------------------------
+------------------------------ Captured log call -------------------------------
+WARNING  dwd:dwd.py:710 Gewittersignal 'uh_max' +14h nicht abrufbar: timed out
+WARNING  dwd:dwd.py:710 Gewittersignal 'uh_max_low' +14h nicht abrufbar: timed out
+WARNING  dwd:dwd.py:710 Gewittersignal 'uh_max_med' +14h nicht abrufbar: timed out
+WARNING  dwd:dwd.py:710 Gewittersignal 'lpi_max' +14h nicht abrufbar: timed out
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================= slowest 15 durations =============================
+39.55s setup    tests/tdd/test_pytest_collection_and_timeout_safety.py::test_default_selection_excludes_b1_live_leak_files
+37.70s call     tests/tdd/test_pytest_collection_and_timeout_safety.py::test_friendly_format_footgun_not_collected_by_default
+13.49s call     tests/tdd/test_fixture_wallclock_ratchet.py::test_echter_testbaum_ohne_fehlalarm_der_zweiten_regel
+11.97s call     tests/tdd/test_radar_nowcast_segment_wanduhr_unabhaengig.py::test_radar_segment_tests_liefern_zu_jeder_wanduhrzeit_dasselbe_ergebnis[822-nowcast-segment]
+10.59s call     tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac3_haengender_download_kostet_hoechstens_den_timeout_und_wird_nicht_wiederholt
+9.74s call     tests/tdd/test_radar_nowcast_segment_wanduhr_unabhaengig.py::test_radar_segment_tests_liefern_zu_jeder_wanduhrzeit_dasselbe_ergebnis[818-briefing-integration]
+8.31s call     tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac1_langsamer_dwd_liefert_mindestens_doppelt_so_viele_zeitpunkte
+6.78s call     tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac8_totalausfall_ueber_http_500_wirft_thunder_source_unavailable
+5.99s call     tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac4_laufrueckfall_bleibt_konsistent_und_einzelne_luecke_verschiebt_nichts
+4.29s call     tests/tdd/test_pytest_collection_and_timeout_safety.py::test_haenger_wird_am_limit_nachweislich_abgebrochen
+3.43s call     tests/tdd/test_fixture_wallclock_ratchet.py::test_keine_fixture_baut_ankunft_aus_der_rohen_wanduhr
+3.07s call     tests/refactor/test_epic_129a_3_ui_removed.py::test_ac2_no_imports_from_web
+2.89s call     tests/tdd/test_pytest_collection_and_timeout_safety.py::test_geosphere_and_providers_base_pass_in_default_selection
+2.47s call     tests/tdd/test_radar_onset_threshold_variance.py::test_ac1_shared_threshold_drives_both_paths
+2.42s call     tests/tdd/test_pytest_collection_and_timeout_safety.py::test_rolling_trip_send_skips_at_runtime_when_port_closed
+=========================== short test summary info ============================
+SKIPPED [1] tests/tdd/test_issue_1010_1006_stille_fehler.py:60: Staging-Credentials (validator.env) fehlen — laeuft nur auf dem Server
+FAILED tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac1_langsamer_dwd_liefert_mindestens_doppelt_so_viele_zeitpunkte
+= 1 failed, 136 passed, 1 skipped, 4 deselected, 2 warnings in 204.02s (0:03:24) =
+
+=== Ruff auf den fuenf geaenderten Dateien ===
+All checks passed!

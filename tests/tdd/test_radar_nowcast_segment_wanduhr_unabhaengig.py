@@ -230,7 +230,9 @@ def test_radar_segment_tests_liefern_zu_jeder_wanduhrzeit_dasselbe_ergebnis(
         "auch dann leer, wenn die Tests zu ALLEN Uhrzeiten rot sind."
     )
 
-    abweichend = _funktionsnamen(matrix_differenz(datei, uhrzeiten))
+    abweichend = _funktionsnamen(
+        matrix_differenz(datei, uhrzeiten, vorhanden={referenzzeit: referenz})
+    )
     betroffen = sorted(abweichend & spec_umfang)
 
     starts = _starts_je_uhrzeit(prozessstarts, uhrzeiten)

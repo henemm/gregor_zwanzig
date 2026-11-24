@@ -134,3 +134,12 @@ Beleg: `docs/artifacts/rework-3317-wartezeiten/test-red-output.txt` (8 failed, 3
 - **ac7**: kein eigener RED-Test, Entscheidung per Mutation (vor UND nach dem Umbau, AC-4).
 - Offen für `/50-implement`: Vorher-Messung je Datei (AC-8) gegen Stand `a6ccf6ca7` (main nach Rebase, Elter des RED-Commits) im selben Zeitfenster wie Nachher; Umfang beachten (RED-Tests bereits +190 Zeilen von ±250, Entfernungen zählen mit).
 - Ruff meldet bis zur Umsetzung F821 (`_wirksames_limit`, `_haenger_lauf`): erwarteter RED-Zustand.
+
+## Stand Phase 6b (24.11.2026, nach GREEN-Freigabe `go` des PO)
+- Umsetzung fertig, uncommittet im Worktree (5 Testdateien). PO hat ausdrücklich akzeptiert: DWD ac1 lokal rot (9 statt >= 10) und Überschreitung der 250-Zeilen-Grenze (354 neu / 193 entfernt gegen a6ccf6ca7).
+- `auto-green` lehnte wegen ac1 ab, daher menschliche Freigabe.
+- Offen zugesagt: die vier `staging`-Tests der Sammlungs-Datei (zwei geändert) laufen nur auf dem Server und sind vor dem Ausliefern dort auszuführen.
+- Merge-Blocker: `test_3197_kanal_paritaet` war in Lauf 45372227336 rot; die zwei letzten roten main-Läufe (45405029605, 45396668131) sind NUR im Job `e2e` rot, beide am selben Fall: `frontend/e2e/pwa-offline-sperre-und-mandant.spec.ts:507` (AC-11, Hinweis `offline-sperre-hinweis` erscheint nicht binnen 5 s). Läufe dazwischen/davor (300ed4313, a6ccf6ca7) grün. Ursache nicht untersucht.
+- Vor dem PR auf origin/main aufsetzen (main hat u. a. tests/conftest.py 1 Zeile geändert, #3278); keine der fünf Dateien auf main geändert.
+- Adversary VERIFIED (F001-F004 LOW; F002 behoben: gates_und_ratschen.md). Das QA-Gate wertete den letzten Lauf der Testausgabe (`-n 4`, 137 grün); der serielle Lauf in derselben Datei ist wegen DWD ac1 rot (bekannt, vom PO akzeptiert).
+- Offen aus F001/F003/F004: bewusst belassen (Spec sieht die Form vor); F004: Frist `THUNDER_FETCH_DEADLINE_SECONDS` unter 10 s würde nicht mehr auffallen.
