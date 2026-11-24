@@ -164,3 +164,4 @@ Titel und Optionsnamen sind in beiden Sprachen gleich (Eigennamen der Sprachen, 
 ## Changelog
 
 - 2026-10-30: Initial spec created (Planung Epic #2644)
+- 2026-11-24: Ausnahme nachgetragen: Auf den Funktionsseiten (`/funktionen`) zeigt der Umschalter nur Abgemeldeten; Angemeldete sehen dort einen Hinweis mit Link zur Sprachwahl im Konto (Bug #3337, Spec `sprachumschalter_angemeldet_3337.md`)

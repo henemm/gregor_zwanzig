@@ -43,6 +43,9 @@ const hook = (p: string) => register(pathToFileURL(p).href, base);
 hook(path.join(FRONTEND, 'test-app-environment-stub-hooks.mjs'));
 hook(path.join(FRONTEND, 'test-svelte-ssr-hooks.mjs'));
 hook(path.join(LIB, 'components/trip-new/__tests__/ssrRunesHook.mjs'));
+// #3337: FunktionenKopf liest den Anmeldestatus aus `$app/state` (page.data.userId);
+// der Stub liefert leere Seitendaten = Besucher ohne Anmeldung.
+hook(path.join(ROUTES, '__tests__', 'layout-ssr-hooks.mjs'));
 
 const { render } = await import('svelte/server');
 const ladeKomponente = async (abs: string) => (await import(pathToFileURL(abs).href)).default;

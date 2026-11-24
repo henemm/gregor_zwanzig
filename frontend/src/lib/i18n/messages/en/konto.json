@@ -5,6 +5,8 @@
 	"konto.sprache.gespeichert": "Language saved",
 	"konto.sprache.fehler": "The language could not be saved. Please try again.",
 	"konto.sprache.umschalter_label": "Choose language",
+	"konto.sprache.hinweis_angemeldet": "You set your language in your account.",
+	"konto.sprache.hinweis_link": "Go to account",
 	"konto.titel": "My account",
 	"konto.aktion.speichern": "Save",
 	"konto.aktion.loeschen": "Delete",

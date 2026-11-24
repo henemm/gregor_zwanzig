@@ -14,6 +14,7 @@ Die Funktionsübersicht `/funktionen` erklärt die Funktionen in neun Unterseite
 - Exakte Pfade, kein Präfix-Vergleich: `/`, `/funktionen`, `/funktionen/<slug>` für jede Seite der Liste.
 - Quelle der Liste: `frontend/src/lib/funktionen_seiten.ts` (Übersicht, Navigation und Hook nutzen dieselbe Liste).
 - Die Sprache folgt dem Cookie `gz_lang`, dann `Accept-Language`, sonst Deutsch. Es gibt kein `/en/`-Präfix.
+- Im Seitenkopf sehen Besucher ohne Anmeldung den Umschalter `DE | EN`. Angemeldete sehen stattdessen den Hinweis „Die Sprache stellst du in deinem Konto ein. Zum Konto“ (Link `/account#sprache`), weil für sie die gespeicherte Kontosprache gilt und der Umschalter dort nichts bewirkt (Spec `docs/specs/modules/sprachumschalter_angemeldet_3337.md`, Issue #3337).
 - Unbekannter Slug: für Angemeldete 404, für Abgemeldete die Anmeldeseite (wie jeder nicht freigegebene Pfad).
 - Die Seiten laden keine Nutzerdaten und rufen keine API auf; sie tragen keinen Mandanten-Header.
 
@@ -54,6 +55,8 @@ Die Texte liegen im Katalog `frontend/src/lib/i18n/messages/{de,en}/funktionen.j
 - Der Personendaten-Wächter gilt für Renderer- und Oberflächen-Bilder gleichermaßen (Spec `pruefregeln_funktionsseiten_3324`).
 
 ## Änderungen
+
+- 2026-11-24: Sprachumschalter im Seitenkopf nur für Abgemeldete; Angemeldete sehen einen Hinweis auf die Sprachwahl im Konto (Issue #3337)
 
 - 2026-11-24: Prüfregeln nachgeschärft: erweiterte Erkennung von Handlungsempfehlungen DE/EN, Personendaten-Wächter auch für Renderer-Bilder, Drift-Test Ortsvergleich-Befehlssatz (Issue #3324)
 - 2026-11-24: Erstfassung mit Startseite, Level-Übersicht, Funktionsseiten DE/EN (Issue #3319)

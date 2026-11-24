@@ -144,6 +144,9 @@ for (const h of [
 ]) {
 	register(pathToFileURL(h).href, funktionenBase);
 }
+// #3337: FunktionenKopf liest den Anmeldestatus aus `$app/state` (page.data.userId);
+// der Stub liefert leere Seitendaten = Besucher ohne Anmeldung.
+register(pathToFileURL(join(frontend, 'src', 'routes', '__tests__', 'layout-ssr-hooks.mjs')).href, funktionenBase);
 
 type FLang = 'de' | 'en';
 type Img = { src: string; alt: string; width: string; height: string; loading: string };

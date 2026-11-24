@@ -5,6 +5,8 @@
 	"konto.sprache.gespeichert": "Sprache gespeichert",
 	"konto.sprache.fehler": "Die Sprache konnte nicht gespeichert werden. Bitte versuche es noch einmal.",
 	"konto.sprache.umschalter_label": "Sprache wählen",
+	"konto.sprache.hinweis_angemeldet": "Die Sprache stellst du in deinem Konto ein.",
+	"konto.sprache.hinweis_link": "Zum Konto",
 	"konto.titel": "Mein Konto",
 	"konto.aktion.speichern": "Speichern",
 	"konto.aktion.loeschen": "Löschen",

@@ -14,8 +14,9 @@
 //     npx playwright test funktionen-oeffentlich.staging.spec.ts
 //
 // GEHOERT NICHT in `.github/ci_e2e_specs.txt` (braucht Staging, Suffix `.staging.`).
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import { assertNotProdBaseURL } from './prodUrlGuard';
+import { ausUmgebung } from './stagingZugang';
 import { FUNKTIONEN_SEITEN } from '../src/lib/funktionen_seiten';
 
 const BASE = process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
@@ -135,6 +136,23 @@ test('AC-6: Sprachumschalter wechselt auf einer Unterseite ohne Login', async ({
 	await expect(page.locator('html')).not.toHaveAttribute('lang', vorher ?? '');
 	await expect(page.locator('[data-testid="level-tabelle"]')).toBeVisible();
 });
+
+// AC-4 (#3337): ohne Anmeldung (kein Cookie) bleibt der Umschalter, es erscheint KEIN Konto-Hinweis.
+for (const pfad of ['/funktionen', '/funktionen/trips']) {
+	test(`AC-4 (#3337): ${pfad} ohne Anmeldung: Umschalter statt Hinweis, Sprachwechsel`, async ({ page }) => {
+		await page.goto(pfad);
+		await expect(page.locator('[data-testid="sprach-umschalter"]')).toBeVisible();
+		await expect(page.locator('[data-testid="sprach-hinweis"]')).toHaveCount(0);
+		const vorher = await page.locator('html').getAttribute('lang');
+		await page
+			.locator('[data-testid="sprach-umschalter"] button, [data-testid="sprach-umschalter"] a')
+			.filter({ hasText: vorher === 'en' ? /DE/ : /EN/ })
+			.first()
+			.click();
+		await expect(page).toHaveURL(new RegExp(`${pfad.replace(/\//g, '\\/')}$`));
+		await expect(page.locator('html')).not.toHaveAttribute('lang', vorher ?? '');
+	});
+}
 
 test('AC-5: unbekannte Unterseite ohne Login fuehrt zum Login', async ({ page }) => {
 	await page.goto('/funktionen/unbekannt');
@@ -301,4 +319,137 @@ test('AC-2: Startseite zeigt Level-Tabelle, Link fuehrt zu /funktionen', async (
 	await expect(page.locator('[data-testid="level-tabelle"]')).toBeVisible();
 	await page.locator('a[href="/funktionen"]').first().click();
 	await expect(page).toHaveURL(/\/funktionen$/);
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// Issue #3337 — Angemeldete sehen statt des Umschalters einen Hinweis mit Link zur
+// Sprachwahl im Konto. Spec: docs/specs/modules/sprachumschalter_angemeldet_3337.md
+// AC-1/AC-2 (Hinweis DE/EN, kein Umschalter), AC-3 (Link -> /account#sprache, Select
+// sichtbar), AC-5 (/login, /register ohne Hinweis), AC-6 (Kontrast >= 4,5:1,
+// unterstrichen, per Tab-Taste erreichbar).
+// Prüfkonto: App-Login GZ_AUTH_USER/GZ_AUTH_PASS (Staging-.env). Die Profilsprache
+// wird je Fall gesetzt und am Ende auf Deutsch zurueckgestellt.
+// RED (vor dem Fix): Angemeldete sehen den Umschalter, kein Hinweis vorhanden.
+
+const SOLL_3337 = {
+	de: { hinweis: 'Die Sprache stellst du in deinem Konto ein.', link: 'Zum Konto' },
+	en: { hinweis: 'You set your language in your account.', link: 'Go to account' }
+} as const;
+
+async function angemeldeterKontext(browser: Browser): Promise<BrowserContext> {
+	const ctx = await browser.newContext({
+		baseURL: BASE,
+		ignoreHTTPSErrors: true,
+		httpCredentials: {
+			username: ausUmgebung('GZ_VALIDATOR_USER'),
+			password: ausUmgebung('GZ_VALIDATOR_PASS')
+		},
+		viewport: { width: 375, height: 800 }
+	});
+	const res = await ctx.request.post('/api/auth/login', {
+		data: { username: ausUmgebung('GZ_AUTH_USER', 'E2E_USER'), password: ausUmgebung('GZ_AUTH_PASS', 'E2E_PASS') }
+	});
+	expect(res.ok(), `Prüfkonto-Login HTTP ${res.status()}`).toBeTruthy();
+	return ctx;
+}
+
+async function profilSprache(ctx: BrowserContext, lang: 'de' | 'en') {
+	const res = await ctx.request.put('/api/auth/profile', { data: { language: lang } });
+	expect(res.ok(), `Profilsprache ${lang} setzen: HTTP ${res.status()}`).toBeTruthy();
+}
+
+/** WCAG-Kontrast der Textfarbe gegen den ersten deckenden Hintergrund der Vorfahren. */
+async function kontrastVon(page: Page, selektor: string): Promise<number> {
+	return page.locator(selektor).first().evaluate((el) => {
+		const rgb = (s: string) => (s.match(/[\d.]+/g) ?? []).map(Number);
+		const lum = ([r, g, b]: number[]) => {
+			const k = (c: number) => ((c /= 255) <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+			return 0.2126 * k(r) + 0.7152 * k(g) + 0.0722 * k(b);
+		};
+		let grund = [255, 255, 255];
+		for (let e: Element | null = el; e; e = e.parentElement) {
+			const c = rgb(getComputedStyle(e).backgroundColor);
+			if (c.length >= 3 && (c.length < 4 || c[3] > 0.5)) {
+				grund = c.slice(0, 3);
+				break;
+			}
+		}
+		const a = lum(rgb(getComputedStyle(el).color).slice(0, 3));
+		const b = lum(grund);
+		return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+	});
+}
+
+test.describe('#3337: Angemeldete sehen den Konto-Hinweis statt des Umschalters', () => {
+	test.describe.configure({ mode: 'serial' });
+	let ctx: BrowserContext;
+
+	test.beforeAll(async ({ browser }) => {
+		ctx = await angemeldeterKontext(browser);
+	});
+	test.afterAll(async () => {
+		await profilSprache(ctx, 'de').catch(() => {});
+		await ctx.close();
+	});
+
+	for (const lang of ['de', 'en'] as const) {
+		for (const pfad of ['/funktionen', '/funktionen/trips']) {
+			test(`AC-1/AC-2 (${lang}): ${pfad} angemeldet: Hinweis, kein Umschalter`, async () => {
+				await profilSprache(ctx, lang);
+				const page = await ctx.newPage();
+				await page.goto(pfad);
+				await expect(page.locator('[data-testid="sprach-umschalter"]')).toHaveCount(0);
+				const hinweis = page.locator('[data-testid="sprach-hinweis"]');
+				await expect(hinweis).toHaveCount(1);
+				await expect(hinweis).toContainText(SOLL_3337[lang].hinweis);
+				const link = hinweis.locator('a');
+				await expect(link).toHaveCount(1);
+				await expect(link).toHaveText(SOLL_3337[lang].link);
+				await expect(link).toHaveAttribute('href', '/account#sprache');
+				await page.close();
+			});
+		}
+	}
+
+	test('AC-3: Link fuehrt zu /account#sprache, Sprachauswahl sichtbar', async () => {
+		await profilSprache(ctx, 'de');
+		const page = await ctx.newPage();
+		await page.goto('/funktionen/trips');
+		await page.locator('[data-testid="sprach-hinweis"] a').click();
+		await expect(page).toHaveURL(/\/account#sprache$/);
+		await expect(page.locator('select#sprache')).toBeVisible();
+		await page.close();
+	});
+
+	test('AC-6: Hinweis und Link kontraststark, Link unterstrichen und per Tab erreichbar', async () => {
+		await profilSprache(ctx, 'de');
+		const page = await ctx.newPage();
+		await page.goto('/funktionen');
+		const hinweis = await kontrastVon(page, '[data-testid="sprach-hinweis"]');
+		const link = await kontrastVon(page, '[data-testid="sprach-hinweis"] a');
+		expect(hinweis, `Kontrast Hinweistext ${hinweis.toFixed(2)}`).toBeGreaterThanOrEqual(4.5);
+		expect(link, `Kontrast Link ${link.toFixed(2)}`).toBeGreaterThanOrEqual(4.5);
+		const deko = await page
+			.locator('[data-testid="sprach-hinweis"] a')
+			.evaluate((el) => getComputedStyle(el).textDecorationLine);
+		expect(deko).toContain('underline');
+		let erreicht = false;
+		for (let i = 0; i < 15 && !erreicht; i++) {
+			await page.keyboard.press('Tab');
+			erreicht = await page.evaluate(
+				() =>
+					document.activeElement?.tagName === 'A' &&
+					document.activeElement.closest('[data-testid="sprach-hinweis"]') != null
+			);
+		}
+		expect(erreicht, 'Link im Hinweis per Tab-Taste nicht erreichbar').toBeTruthy();
+		await page.close();
+	});
+});
+
+test('AC-5 (#3337): /, /login und /register ohne Anmeldung zeigen keinen Konto-Hinweis', async ({ page }) => {
+	for (const pfad of ['/', '/login', '/register']) {
+		await page.goto(pfad);
+		await expect(page.locator('[data-testid="sprach-hinweis"]'), `${pfad}: Hinweis darf nicht erscheinen`).toHaveCount(0);
+	}
 });
