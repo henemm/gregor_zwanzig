@@ -1,0 +1,61 @@
+{
+  "verified_commit": "300ed4313eaecc532e012fce7ef226678822279f",
+  "findings": [
+    {
+      "ac": "AC-1..AC-7",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "Aenderung betrifft nur Pruefregeln (Katalogtest, Bild-Skript, Drift-Test), keine Laufzeit; Kern- und CI-Checks gruen (6/6)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "Smoke",
+      "status": "PASS",
+      "url": "/funktionen",
+      "evidence": "Staging auf 300ed4313, ROOT 200, HEALTH 200; Funktionsseite DE ('Ortsvergleich') und EN ('comparison') gerendert",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "Mail-Regression",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "staging_mail_pruefen --typ beide DE und EN: Trip- und Compare-Mail zugestellt, Validatoren Exit 0",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-24T12:37:05.222069+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Staging 300ed4313, Funktionsseite DE/EN, Trip+Compare-Mail DE/EN Exit 0",
+  "scope": "full-stack",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Staging 300ed4313, Funktionsseite DE/EN, Trip+Compare-Mail DE/EN Exit 0",
+      "scope": "full-stack",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-24T12:37:05.222069+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
