@@ -1,0 +1,152 @@
+{
+  "verified_commit": "5c8b44855dc57a279827e13d56d6ed21835e76cf",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/compare/new",
+      "evidence": "Playwright Staging 5c8b44855 orte-anlegen-zustellung-3333 OZ-1/OZ-3 gruen: Reiter Zustellung Desktop+Mobil, Alt-Panel-Testids abwesend",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "/compare/new",
+      "evidence": "OZ-1 gruen: 06:45, Abend aus, Briefing-Kanaele, Stille 22:30-06:15 im einen POST /api/compare/presets",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "/compare/new",
+      "evidence": "OZ-1 gruen: alert_channels, alert_channel_thresholds.telegram=HIGH, alert_cooldown_minutes=45 im POST",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "/compare/new",
+      "evidence": "OZ-1 gruen: send_email:false nach Abwahl; Kern-Test payload_3333 send_email:true bei unberuehrt",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "Kern-Test vergleich_anlegen_zustellung_payload_3333: Rumpf bitgleich zur Fixture plus send_email:true",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "/compare/new",
+      "evidence": "OZ-1 gruen: kein PUT, kein Schreibaufruf vorher, genau ein POST",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "/compare/new",
+      "evidence": "OZ-3 gruen: Stand ueberlebt Ansichts- und Schrittwechsel und steht im POST",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-8",
+      "status": "PASS",
+      "url": "/compare/new",
+      "evidence": "OZ-2 gruen: 06:50 mit Meldung, Anlegen ohne 400, POST mit letzter gueltiger Zeit",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "/compare/<id>",
+      "evidence": "OZ-1 gruen: Hub-Reiter Zustellung zeigt 06:45, Telegram HIGH, Stille, Cooldown, E-Mail aus",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-10",
+      "status": "PASS",
+      "url": "/compare/new",
+      "evidence": "OZ-1 gruen: Reiter Alarme ohne Kanaele/Cooldown/Stille; Kern-Test alarme_createmode_3333",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-11",
+      "status": "PASS",
+      "url": "/compare/new",
+      "evidence": "OZ-1 gruen: Banner compare-step5-activation-banner im Reiter Zustellung",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-12",
+      "status": "PASS",
+      "url": "/compare/new",
+      "evidence": "Kern-Test ssr_3333 + OZ-1: keine Alt-Infobox im Reiter Zustellung",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-13",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "Waechter anlegeseiten_ohne_versand_panel_3333 gruen",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-14",
+      "status": "PASS",
+      "url": "/compare/new",
+      "evidence": "OZ-4 gruen: zwei Nutzer, Dringlichkeit nur bei Telegram-verbundenem Nutzer, gegenseitig nicht lesbar",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-15",
+      "status": "PASS",
+      "url": "/trips/new",
+      "evidence": "trip-anlegen-zustellung-3332 und hub-anlegen-ablauf auf Staging gruen (38/38 gesamt)",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "EN",
+      "status": "PASS",
+      "url": "/",
+      "evidence": "playwright.sprachwechsel.staging.config 8/8 gruen (DE/EN)",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    }
+  ],
+  "verified_at": "2026-11-24T20:53:38.639396+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: #3333 AC-1..15 auf Staging 5c8b44855 (OZ-1..4, hub-anlegen-ablauf, TZ 3332: 38/38; Sprachwechsel 8/8)",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "fix-3273-trip-grundauswahl-ohne-metrics": {
+      "verdict": "VERIFIED: #3333 AC-1..15 auf Staging 5c8b44855 (OZ-1..4, hub-anlegen-ablauf, TZ 3332: 38/38; Sprachwechsel 8/8)",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-24T20:53:38.639396+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
