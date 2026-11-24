@@ -169,6 +169,7 @@ Test-Politik: kein Mock-Theater; Kern-Tests deterministisch ohne Netz (`node --t
 
 ## Known Limitations
 
+- Mit dem Reiter Zustellung entfallen im Trip-Anlegen auch die ⓘ-Erklärungen zu „Dringlichkeits-Schwelle“ und „Cooldown“ (Hub-Parität: der Reiter Zustellung hat Bereichstexte, keine ⓘ). Im Ortsvergleich-Anlegen bleiben sie bis D2 (#3333).
 - Ortsvergleich-Anlegen nutzt bis D2 (#3333) weiter das Alt-Panel; die Karte „Layout je Kanal“ (#3301) bleibt dort bis dahin.
 - Im Trip-Anlegen entfallen der Schalter Großwetterlage (`show_stability`) und weitere Bestandsfelder der Mail-Inhalt-Karte ohne Bedienstelle; sie behalten den Standardwert. Der Hub bietet sie ebenfalls nicht an (Anlegen = Bearbeiten, ADR-0124 Nr. 14). Kein Datenverlust, da Neuanlage.
 - Der Reiter Alarme bleibt im Trip-Anlegen bis D2 mit Metrik-Alarmstufen und amtlichen Warnungen bestehen.

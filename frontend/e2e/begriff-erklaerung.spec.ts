@@ -12,6 +12,10 @@
 //   AC-13       Tastatur (Enter, Leertaste) ohne Mauszeiger; sprechender Name
 //   AC-16       keine Konsolenfehler beim Durchlauf aller Reiter und Oeffnen/Schliessen
 //
+// #3332 (feat_3332_zustellung_anlegen_trip.md): im Trip-Anlegen ist der Schritt Zustellung der Reiter
+// Zustellung wie im Hub (ohne Infobox, ohne ⓘ); Dringlichkeit und Cooldown stehen dort. Die ⓘ-Faelle
+// (Sprechblase, Tastatur, Tippflaeche) laufen deshalb am Ortsvergleich-Anlegen (Alt-Panel bis D2, #3333).
+//
 // Warum im Browser: das Popover-Portal, die Fokus-Rueckgabe und `onOpenChange`
 // laufen im SSR-Harness nie (Kernsuite = svelte/server). Die Texte selbst sind
 // im Katalogtest als Literale gepinnt; hier stehen sie als Literale aus
@@ -32,6 +36,7 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import * as path from 'node:path';
 import { cleanupTracked, createTestLocation, tippeDatum } from './helpers';
+import { ZT, angezeigteZeit, cooldownFeld } from './s3b2795-zustellung.helpers';
 import {
 	ARIA_WORT,
 	INFO_TEXTE,
@@ -77,9 +82,13 @@ const TRIP_KETTE: TripReiter[] = ['wetter', 'zustellung'];
 // 3-Tages-Ausblick) samt Infobox „wetter-metriken" steht im Schritt Zustellung. Der CorridorEditor
 // mit Infobox „wertebereiche" und ⓘ Wertebereiche ist im Schritt Wetter nur noch unsichtbar
 // gemountet (§6 (d): „verschwindet im Schritt wetter aus der Sicht") — die Infobox entfällt.
-const INFOBOXEN_JE_REITER: Record<'wetter' | 'zustellung', string[]> = {
-	wetter: [],
-	zustellung: ['wetter-metriken', 'versand', 'alarme']
+// #3332 (Spec feat_3332_zustellung_anlegen_trip.md AC-1/AC-11): im Trip-Anlegen ist der Schritt Zustellung
+// der Reiter Zustellung wie im Hub (ohne Infobox); das Alt-Panel mit den Infoboxen „wetter-metriken" und
+// „versand" gibt es dort nicht mehr. Der Reiter Alarme behaelt seine Infobox. Im Ortsvergleich-Anlegen
+// bleibt das Alt-Panel bis D2 (#3333) — dort unveraendert alle drei.
+const INFOBOXEN_JE_REITER: Record<Kontext, Record<'wetter' | 'zustellung', string[]>> = {
+	route: { wetter: [], zustellung: ['alarme'] },
+	vergleich: { wetter: [], zustellung: ['wetter-metriken', 'versand', 'alarme'] }
 };
 
 function tripTab(page: Page, mobil: boolean, reiter: TripReiter): Locator {
@@ -260,7 +269,7 @@ for (const mobil of [false, true]) {
 
 			for (const reiter of TRIP_KETTE) {
 				await wechsleTripReiter(page, mobil, reiter);
-				const erwartet = INFOBOXEN_JE_REITER[reiter as 'wetter' | 'zustellung'];
+				const erwartet = INFOBOXEN_JE_REITER.route[reiter as 'wetter' | 'zustellung'];
 				for (const abschnitt of erwartet) {
 					await pruefeInfobox(page, abschnitt, 'route');
 				}
@@ -269,11 +278,18 @@ for (const mobil of [false, true]) {
 					await expect(infoboxen(page), `Schritt ${reiter} trägt eine Infobox (#2794 Teil 3 §4)`).toHaveCount(0);
 				}
 			}
-			// Versand (#2794 S3a: Abschnitt im Schritt Zustellung): beim Trip BEIDE Zeiten.
+			// #3332 (AC-1/AC-11): Schritt Zustellung = Reiter Zustellung wie im Hub, ohne Infobox; genau die
+			// Infobox des Reiters Alarme bleibt. Die Standardzeiten (Trip: BEIDE, 07:00 und 18:00), die bisher
+			// die Versand-Infobox nannte, stehen jetzt in den Briefing-Zeiten des Reiters selbst.
 			await wechsleTripReiter(page, mobil, 'zustellung');
-			await pruefeInfobox(page, 'versand', 'route');
-			await expect(infobox(page, 'versand', 'route')).toContainText('07:00');
-			await expect(infobox(page, 'versand', 'route')).toContainText('18:00');
+			const zt = page.locator('[data-testid="zustellung-tab"]:visible');
+			await expect(zt, 'Reiter Zustellung fehlt im Trip-Anlegen').toHaveCount(1);
+			await expect(zt.locator('[data-testid^="infobox-"]'), 'Reiter Zustellung trägt eine Infobox (#3332 AC-11)').toHaveCount(0);
+			await expect(infobox(page, 'versand', 'route'), 'Versand-Infobox des Alt-Panels noch da').toHaveCount(0);
+			await expect(infobox(page, 'wetter-metriken', 'route'), 'Metrik-Infobox des Alt-Panels noch da').toHaveCount(0);
+			await expect(infoboxen(page), 'Schritt Zustellung: genau die Infobox des Reiters Alarme').toHaveCount(1);
+			expect(await angezeigteZeit(zt.getByTestId(ZT.zeit('morgen')))).toBe('07:00');
+			expect(await angezeigteZeit(zt.getByTestId(ZT.zeit('abend')))).toBe('18:00');
 		});
 	});
 }
@@ -290,7 +306,7 @@ test.describe('/compare/new (Desktop): Infobox je Reiter', () => {
 
 		for (const reiter of VERGLEICH_KETTE) {
 			await vergleichTab(page, false, reiter).click();
-			const erwartet = INFOBOXEN_JE_REITER[reiter as 'wetter' | 'zustellung'];
+			const erwartet = INFOBOXEN_JE_REITER.vergleich[reiter as 'wetter' | 'zustellung'];
 			for (const abschnitt of erwartet) {
 				await pruefeInfobox(page, abschnitt, 'vergleich');
 			}
@@ -322,15 +338,15 @@ test.describe('AC-7: die Infobox ist zustandslos', () => {
 		const speicherSchluessel = async () =>
 			page.evaluate(() => [...Object.keys(localStorage), ...Object.keys(sessionStorage)]);
 
-		// #2794 Teil 3 (§4): die Infobox „wetter-metriken" steht im Schritt Zustellung.
+		// #3332 (AC-11): im Schritt Zustellung des Trip-Anlegens traegt nur noch der Reiter Alarme eine
+		// Infobox (der Reiter Zustellung hat keine, das Alt-Panel mit „wetter-metriken" entfaellt).
 		await tripBis(page, false, 'zustellung');
-		await pruefeInfobox(page, 'wetter-metriken', 'route');
+		await pruefeInfobox(page, 'alarme', 'route');
 		const vorher = veraendernde.length;
 
 		await wechsleTripReiter(page, false, 'wetter');
 		await wechsleTripReiter(page, false, 'zustellung');
 		await pruefeInfobox(page, 'alarme', 'route');
-		await pruefeInfobox(page, 'wetter-metriken', 'route');
 		expect(veraendernde.slice(vorher), 'Reiterwechsel/Infobox löst eine Schreib-Anfrage aus').toEqual([]);
 		expect(
 			(await speicherSchluessel()).filter((k) => /infobox|begriff|tip\.|hinweis|dismiss|schliess/i.test(k)),
@@ -339,7 +355,7 @@ test.describe('AC-7: die Infobox ist zustandslos', () => {
 
 		await page.reload();
 		await tripBis(page, false, 'zustellung');
-		await pruefeInfobox(page, 'wetter-metriken', 'route');
+		await pruefeInfobox(page, 'alarme', 'route');
 	});
 });
 
@@ -384,21 +400,42 @@ for (const mobil of [false, true]) {
 for (const mobil of [false, true]) {
 	const ansicht = mobil ? 'Mobil' : 'Desktop';
 
-	test(`AC-9 Trip (${ansicht}): sichtbares Label „Dringlichkeits-Schwelle“ + ⓘ, Erklärung öffnet`, async ({ page }) => {
+	// #3332 (Spec feat_3332_zustellung_anlegen_trip.md AC-1/AC-9): im Trip-Anlegen besitzt der Reiter
+	// Zustellung (wie im Hub) Alarm-Kanaele mit Dringlichkeit und den Cooldown; der Reiter Alarme blendet
+	// Kanal-Block, Cooldown und Stille Stunden dort aus. Damit gibt es im Trip-Anlegen weder die alte
+	// Schwellen-Auswahl noch die beiden ⓘ (Hub-Paritaet) — auch kein verwaistes. Geprueft: beide Felder
+	// sind im Reiter Zustellung sichtbar und bedienbar. Das Verhalten der Sprechblasen selbst (Klick,
+	// Esc, Enter, Leertaste, Klick daneben, Fokus) pruefen die Ortsvergleich-Faelle unten in beiden Ansichten.
+	test(`AC-9/AC-11 Trip (${ansicht}): Dringlichkeit und Cooldown im Reiter Zustellung (#3332), keine alte Auswahl, kein verwaistes ⓘ`, async ({ page }) => {
 		await tripBis(page, mobil, 'zustellung');
-		const kanalBlock = page.getByTestId('alert-channel-picker');
-		await expect(kanalBlock.getByText(/^Dringlichkeits-Schwelle$/)).toBeVisible();
-		await pruefePopover(page, 'kanal_schwelle', infobox(page, 'alarme', 'route'));
-	});
-
-	test(`AC-11 Trip (${ansicht}): ⓘ Cooldown öffnet die Erklärung, Hinweistext bleibt`, async ({ page }) => {
-		await tripBis(page, mobil, 'zustellung');
-		await pruefePopover(page, 'cooldown', infobox(page, 'alarme', 'route'));
-		await expect(
-			page.getByText('Mindestabstand zwischen zwei Alerts derselben Metrik — verhindert Spam bei zappelnden Werten.')
-		).toBeVisible();
+		const zt = page.locator('[data-testid="zustellung-tab"]:visible');
+		await expect(zt).toHaveCount(1);
+		await expect(zt.getByTestId(ZT.tabelle)).toBeVisible({ timeout: 15_000 });
+		await expect(page.locator('[data-testid="alert-channel-picker"]:visible'), 'alte Schwellen-Auswahl noch im Trip-Anlegen').toHaveCount(0);
+		await expect(iiKnopf(page, 'kanal_schwelle'), 'verwaistes ⓘ Dringlichkeits-Schwelle').toHaveCount(0);
+		await expect(iiKnopf(page, 'cooldown'), 'verwaistes ⓘ Cooldown').toHaveCount(0);
+		// Dringlichkeit: Spalte der Kanal-Tabelle (E-Mail-Alarm ist im Anlegen an).
+		await expect(zt.getByTestId(ZT.dringlichkeit('email'))).toBeVisible();
+		// Cooldown: im Aufklapper „Anpassen“, Startwert 120 Minuten, bedienbar.
+		const cd = await cooldownFeld(zt);
+		await expect(cd).toHaveValue('120');
+		await cd.fill('45');
+		await expect(cd).toHaveValue('45');
 	});
 }
+
+// AC-9 + AC-11 auch am Handy (vorher ueber die Trip-Faelle abgedeckt, seit #3332 hat das Trip-Anlegen
+// keine ⓘ mehr): ⓘ Dringlichkeits-Schwelle und ⓘ Cooldown im Ortsvergleich-Anlegen, Mobil-Baum.
+test('AC-9/AC-11 Ortsvergleich (Mobil): ⓘ Dringlichkeits-Schwelle und ⓘ Cooldown öffnen die Erklärung, Hinweistext bleibt', async ({ page }) => {
+	await vergleichBis(page, true, 'zustellung');
+	const mobilBaum = page.locator('.cm-mobile');
+	await expect(mobilBaum.getByTestId('alert-channel-picker').getByText(/^Dringlichkeits-Schwelle$/)).toBeVisible();
+	await pruefePopover(page, 'kanal_schwelle', infobox(page, 'alarme', 'vergleich'));
+	await pruefePopover(page, 'cooldown', infobox(page, 'alarme', 'vergleich'));
+	await expect(
+		mobilBaum.getByText('Mindestabstand zwischen zwei Alerts derselben Metrik — verhindert Spam bei zappelnden Werten.')
+	).toBeVisible();
+});
 
 // AC-10 hat hier bewusst KEINEN Browserfall: `cape` ist seit #1585 `selectable=False`
 // (metric_catalog.py), die Alarm-Zeilen im Anlege-Flow werden aus dem waehlbaren Katalog
@@ -445,8 +482,15 @@ for (const mobil of [false, true]) {
 				}
 			}
 		}
-		// #2794 Teil 3 (§6 d): ⓘ Wertebereiche entfällt im Schritt Wetter — es bleiben Schwelle und Cooldown.
-		expect(geoeffnet, 'Messaufbau: es wurden zu wenige Sprechblasen geöffnet (Schwelle, Cooldown)').toBeGreaterThanOrEqual(2);
+		// #2794 Teil 3 (§6 d): ⓘ Wertebereiche entfällt im Schritt Wetter. #3332 (AC-1/AC-9): Schwelle und
+		// Cooldown stehen im Reiter Zustellung (Hub-Paritaet, ohne ⓘ) — im Trip-Anlegen gibt es kein ⓘ mehr.
+		// Statt der Sprechblasen wird der Reiter Zustellung bedient (Aufklapper „Anpassen“, Cooldown).
+		expect(geoeffnet, 'ⓘ im Trip-Anlegen sichtbar, obwohl Schwelle/Cooldown im Reiter Zustellung stehen (#3332)').toBe(0);
+		const zt = page.locator('[data-testid="zustellung-tab"]:visible');
+		await expect(zt.getByTestId(ZT.tabelle)).toBeVisible({ timeout: 15_000 });
+		const cd = await cooldownFeld(zt);
+		await cd.fill('60');
+		await expect(cd).toHaveValue('60');
 		expect(fehler, `Konsolenfehler: ${fehler.join(' | ')}`).toEqual([]);
 	});
 
@@ -477,9 +521,12 @@ for (const mobil of [false, true]) {
 // ─────────────────────────────────────────────────────────────────────────────
 // AC-14 (Browser-Teil) — Tippflaeche des ⓘ gemessen
 // ─────────────────────────────────────────────────────────────────────────────
+// #3332: im Trip-Anlegen gibt es kein ⓘ Cooldown mehr (Reiter Zustellung, Hub-Paritaet) — gemessen wird
+// am ⓘ Cooldown des Ortsvergleich-Anlegens (derselbe Baustein AlertCooldownCard), Desktop- und Mobil-Baum.
 for (const mobil of [false, true]) {
 	test(`AC-14 (${mobil ? 'Mobil' : 'Desktop'}): das ⓘ ist mindestens 24 × 24 px groß`, async ({ page }) => {
-		await tripBis(page, mobil, 'zustellung');
+		await vergleichBis(page, mobil, 'zustellung');
+		await expect(iiKnopf(page, 'cooldown'), 'ⓘ Cooldown: genau ein sichtbarer Knopf').toHaveCount(1);
 		const box = await iiKnopf(page, 'cooldown').boundingBox();
 		expect(box, 'ⓘ Cooldown nicht sichtbar').not.toBeNull();
 		expect(box!.width).toBeGreaterThanOrEqual(24);

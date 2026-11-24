@@ -1169,7 +1169,13 @@ for (const breite of BREITEN) {
 					// #2794 S3a: Anlege-Kette … → Wetter → Zustellung (Zustellung erst nach Wetter frei).
 					await page.getByTestId(ANLEGE_REITER(kind, 'wetter', mobil)).click({ force: mobil });
 					await page.getByTestId(ANLEGE_REITER(kind, 'zustellung', mobil)).click({ force: mobil });
-					await expect(page.locator('[data-testid="versand-abschnitt"]:visible').first()).toBeVisible({ timeout: 15_000 });
+					// #3332: im Trip-Anlegen ist der Schritt Zustellung der Reiter Zustellung wie im Hub (Kanal-Tabelle);
+					// das Ortsvergleich-Anlegen behaelt das Alt-Panel mit Versand-Abschnitt bis D2 (#3333).
+					const zustellungGeladen =
+						kind === 'route'
+							? '[data-testid="zustellung-tab"]:visible [data-testid="zustellung-kanal-tabelle"]'
+							: '[data-testid="versand-abschnitt"]:visible';
+					await expect(page.locator(zustellungGeladen).first()).toBeVisible({ timeout: 15_000 });
 					await pruefeSeite(page, `${kind}-Anlegen Zustellung`, fehler, ZUSTELLUNG);
 				}
 			} finally {
