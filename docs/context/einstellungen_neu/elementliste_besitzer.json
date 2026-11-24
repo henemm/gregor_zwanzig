@@ -1956,6 +1956,150 @@
 			"muster": "Port d'And D{zahl}/{zahl} W{zahl}@{zahl}({zahl}@{zahl}) G{zahl}@{zahl}({zahl}@{zahl}) PR{zahl}%@{zahl} R{zahl}@{zahl} TF- FN{zahl} FD{zahl}/{zahl} TH:L@{zahl}(M@{zahl}) TH+:- VS- FZ{zahl}@{zahl} UV{zahl}@{zahl}({zahl}@{zahl}) SL{zahl} CL:SCT@{zahl} N{zahl}",
 			"grund": "ganze SMS-Beispielzeile in „Was steht wo“: Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab (Etappe, Metrik-Reihenfolge und Werte des Prüf-Trips); {zahl} erklärt nur Zahlen",
 			"verweis": "#3258"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Beispiel-Warnung",
+			"grund": "Beispiel-Alarm bleibt bis #2797 als eigener Abschnitt im Reiter Zustellung (#3036, Spec rework_3036_uebergangsblock_aufloesen.md); #2797 holt ihn in den Hub-Kopf („Test schicken ▾“, Test-Alarm)",
+			"verweis": "#2797"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Example warning",
+			"grund": "Beispiel-Alarm bleibt bis #2797 als eigener Abschnitt im Reiter Zustellung (#3036, Spec rework_3036_uebergangsblock_aufloesen.md); #2797 holt ihn in den Hub-Kopf („Test schicken ▾“, Test-Alarm)",
+			"verweis": "#2797"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Vorschau laden",
+			"grund": "Beispiel-Alarm bleibt bis #2797 als eigener Abschnitt im Reiter Zustellung (#3036, Spec rework_3036_uebergangsblock_aufloesen.md); #2797 holt ihn in den Hub-Kopf („Test schicken ▾“, Test-Alarm)",
+			"verweis": "#2797"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Load preview",
+			"grund": "Beispiel-Alarm bleibt bis #2797 als eigener Abschnitt im Reiter Zustellung (#3036, Spec rework_3036_uebergangsblock_aufloesen.md); #2797 holt ihn in den Hub-Kopf („Test schicken ▾“, Test-Alarm)",
+			"verweis": "#2797"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "zustellung",
+			"text": "Pausieren",
+			"grund": "Pausieren/Aktivieren-Karte des Orts-Vergleichs bleibt bis #2797 als eigener Abschnitt im Reiter Zustellung (#3036, Spec rework_3036_uebergangsblock_aufloesen.md); #2797 holt sie in den Hub-Kopf",
+			"verweis": "#2797"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "zustellung",
+			"text": "Pause",
+			"grund": "Pausieren/Aktivieren-Karte des Orts-Vergleichs bleibt bis #2797 als eigener Abschnitt im Reiter Zustellung (#3036, Spec rework_3036_uebergangsblock_aufloesen.md); #2797 holt sie in den Hub-Kopf",
+			"verweis": "#2797"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "zustellung",
+			"text": "Läuft automatisch — unbegrenzt, bis du pausierst. Das Briefing geht zu den konfigurierten Zeiten in die Kanäle.",
+			"grund": "Pausieren/Aktivieren-Karte des Orts-Vergleichs bleibt bis #2797 als eigener Abschnitt im Reiter Zustellung (#3036, Spec rework_3036_uebergangsblock_aufloesen.md); #2797 holt sie in den Hub-Kopf",
+			"verweis": "#2797"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "zustellung",
+			"text": "Runs automatically — with no end date until you pause it. The briefing goes out to the channels at the configured times.",
+			"grund": "Pausieren/Aktivieren-Karte des Orts-Vergleichs bleibt bis #2797 als eigener Abschnitt im Reiter Zustellung (#3036, Spec rework_3036_uebergangsblock_aufloesen.md); #2797 holt sie in den Hub-Kopf",
+			"verweis": "#2797"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.906f179082",
+			"grund": "Kontodaten des Prüfkontos: die Kanalzeile E-Mail zeigt die gekürzte Adresse des angemeldeten Kontos (Format „{status} · {lokalteil}@…“ aus #3202); Mockup-Beispieladresse „henning@…“, Prüfkonto „gregor-test+pruefkonto@…“; kein Übersetzungs- oder Produktfehler",
+			"verweis": "#3009"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.595987e4e7",
+			"grund": "Kontodaten des Prüfkontos: die Kanalzeile E-Mail zeigt die gekürzte Adresse des angemeldeten Kontos (Format „{status} · {lokalteil}@…“ aus #3202); Mockup-Beispieladresse „henning@…“, Prüfkonto „gregor-test+pruefkonto@…“; kein Übersetzungs- oder Produktfehler",
+			"verweis": "#3009"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.4762809827",
+			"grund": "Kontodaten des Prüfkontos: die Kanalzeile E-Mail zeigt die gekürzte Adresse des angemeldeten Kontos (Format „{status} · {lokalteil}@…“ aus #3202); Mockup-Beispieladresse „henning@…“, Prüfkonto „gregor-test+pruefkonto@…“; kein Übersetzungs- oder Produktfehler",
+			"verweis": "#3009"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.87baaef1fe",
+			"grund": "Kontodaten des Prüfkontos: die Kanalzeile E-Mail zeigt die gekürzte Adresse des angemeldeten Kontos (Format „{status} · {lokalteil}@…“ aus #3202); Mockup-Beispieladresse „henning@…“, Prüfkonto „gregor-test+pruefkonto@…“; kein Übersetzungs- oder Produktfehler",
+			"verweis": "#3009"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.3be2812fc6",
+			"grund": "Kontodaten des Prüfkontos: die Kanalzeile E-Mail zeigt die gekürzte Adresse des angemeldeten Kontos (Format „{status} · {lokalteil}@…“ aus #3202); Mockup-Beispieladresse „henning@…“, Prüfkonto „gregor-test+pruefkonto@…“; kein Übersetzungs- oder Produktfehler",
+			"verweis": "#3009"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.46a0b8fc48",
+			"grund": "Kontodaten des Prüfkontos: die Kanalzeile E-Mail zeigt die gekürzte Adresse des angemeldeten Kontos (Format „{status} · {lokalteil}@…“ aus #3202); Mockup-Beispieladresse „henning@…“, Prüfkonto „gregor-test+pruefkonto@…“; kein Übersetzungs- oder Produktfehler",
+			"verweis": "#3009"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.5d3903c14a",
+			"grund": "Kontodaten des Prüfkontos: die Kanalzeile E-Mail zeigt die gekürzte Adresse des angemeldeten Kontos (Format „{status} · {lokalteil}@…“ aus #3202); Mockup-Beispieladresse „henning@…“, Prüfkonto „gregor-test+pruefkonto@…“; kein Übersetzungs- oder Produktfehler",
+			"verweis": "#3009"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "bestätigt · gregor-test+pruefkonto@…",
+			"grund": "Kontodaten des Prüfkontos: die Kanalzeile E-Mail zeigt die gekürzte Adresse des angemeldeten Kontos (Format „{status} · {lokalteil}@…“ aus #3202); Mockup-Beispieladresse „henning@…“, Prüfkonto „gregor-test+pruefkonto@…“; kein Übersetzungs- oder Produktfehler",
+			"verweis": "#3009"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "confirmed · gregor-test+pruefkonto@…",
+			"grund": "Kontodaten des Prüfkontos: die Kanalzeile E-Mail zeigt die gekürzte Adresse des angemeldeten Kontos (Format „{status} · {lokalteil}@…“ aus #3202); Mockup-Beispieladresse „henning@…“, Prüfkonto „gregor-test+pruefkonto@…“; kein Übersetzungs- oder Produktfehler",
+			"verweis": "#3009"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Fertig",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill des Prüf-Trips (Etappen 23.–26.2.2026 liegen in der Vergangenheit, daher „fertig“); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Finished",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill des Prüf-Trips (Etappen 23.–26.2.2026 liegen in der Vergangenheit, daher „fertig“); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Orte · Westfalen",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Eyebrow des Hub-Kopfs mit der Region des Prüf-Vergleichs (aktionen.kopf.eyebrow_orte); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Locations · Westfalen",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Eyebrow des Hub-Kopfs mit der Region des Prüf-Vergleichs (aktionen.kopf.eyebrow_orte); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
 		}
 	],
 	"ausnahmen": [
