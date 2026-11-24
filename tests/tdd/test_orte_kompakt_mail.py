@@ -38,7 +38,7 @@ import dataclasses
 import email
 import json
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
 from email import policy
 
 import pytest
