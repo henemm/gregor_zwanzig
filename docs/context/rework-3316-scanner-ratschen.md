@@ -94,3 +94,50 @@ Summe ca. 21,3 → ca. 10,6 s (gerechnet aus den Einzelwerten).
 - `#`-Filter: `_kommentarblock_ueber` nimmt nur Text hinter `#` derselben Quellzeile, `splitlines()` trennt feiner als `\n`,
   also ist `#[^\n]*Wort` notwendige Bedingung (eigene Prüfung; Gegenprüfung läuft).
 - Prototyp-Muster: `#[^\n]*(?:1:1|wortw(?:oe|ö)rt|identische|eingefroren|unver(?:ae|ä)ndert)`, IGNORECASE, Rohtext.
+
+### Gegenprüfung (Plan-Agent, nur gelesen) und Entscheidungen des Tech Leads
+Kein Gegenbeispiel gegen die drei Umbauten gefunden. Der `#`-Filter ist Obermenge der Regel-D-Treffer. Auflagen für die Spec:
+1. **Filterausnahme ausdrücklich benennen:** S1 erlaubt nur Bezeichner als Filter; hier Kommentartext (kennt keine Escapes).
+2. **Drift:** eine sechste Alternative in `_PARITAETS_BEHAUPTUNG` ohne Filteranpassung macht D still blind. Filter und Muster aus
+   EINER Wortliste bauen, dazu parametrierter Test je Alternative (inkl. `ı`, Zeilenbruch).
+3. **`geparst`-Set zusätzlich zu `besucht`:** `besucht` beweist nur Lesen. Prüfen: nicht leer, enthält eine bekannte echte Datei;
+   dazu gepflanzter D-Verstoß im gefilterten Baumlauf (`tmp_path`). `besucht` zählt vor dem Filter (:806).
+4. **Backend:** Duldungslogik aus `scan_tree` als Funktion herauslösen, die `scan_tree` selbst nutzt; nie im Test nachbauen.
+   Entscheidung: **3 statt 4 Läufe**. AC-12 (:1054) bleibt echter `scan_tree`-Lauf mit Standardwerten (keine Schwächung),
+   die Fixtures :1045 und :1179 kommen aus einem Rohlauf, Lauf 4 (Marker) bleibt eigen. Ergebnisgleichheit zu heute belegen.
+5. **user_id:** Wurzel-Parameter vor Filter; `_SELBST` ausgenommen; Register nicht leer zusichern; pflanzen: Name-Aufruf,
+   Attribut-Aufruf, Fullwidth-Name.
+6. **repo_path:** nur `_module_constants` (ab :538); Reihenfolge der Anweisungen und Ziele erhalten (`A, B = B, A`); Z. 1–360 nicht
+   verschieben (Verweise in test_mail_recipient_parity, test_output_timezone_guard, test_egress_single_dial_point).
+7. **xdist_group für thunder:** `test_cache_dateien_laufen_je_in_einem_worker` (`tests/tdd/test_bezeichner_vorfilter.py:88-113`)
+   kennt nur 2 Dateien, prüft `len(gruppen) == 2` hart und läuft mit `-k scanner`: miterweitern, sonst unbelegt.
+8. Filter-Regex: quadratisches Verhalten bei Zeilen mit sehr vielen `#` beachten (zeilenweise oder nur ein Treffer je Zeile).
+9. `timeout(180)` (:1347, :1363) zurücknehmen; Beleg ist der grüne CI-Lauf des PR mit 30-s-Netz. Wird er rot: 60 statt 180.
+
+### Variantenvergleich (Mac, seriell, s; Backend mit 3 Läufen = 4,2 gerechnet)
+| Variante | thunder | repo_path | user_id | Summe |
+|---|---|---|---|---|
+| nichts tun | 12,8 | 5,4 | 3,2 | 21,3 |
+| nur thunder | 5,9 | 5,4 | 3,2 | 14,4 |
+| **alle drei (gewählt)** | 5,9 | 4,2 | 1,8 | **11,9** |
+
+### Affected Files (with changes)
+| File | Change Type | Description |
+|------|-------------|-------------|
+| tests/tdd/test_thunder_scale_local_copy_guard.py | MODIFY | `#`-Filter Regel D, `geparst`, Duldungsfunktion, Rohlauf, xdist_group, timeout(180) weg |
+| tests/tdd/test_repo_path_hardcoding_ratchet.py | MODIFY | Zuweisungen einmal sammeln |
+| tests/test_test_suite_passes_user_id_explicitly.py | MODIFY | Wurzel-Parameter, Bezeichner-Filter, gepflanzte Verstöße |
+| tests/tdd/test_bezeichner_vorfilter.py | MODIFY | Gruppen-Nachweis um thunder erweitern |
+
+### Scope Assessment
+- Files: 4 (plus Spec/Artefakte). Estimated LoC: +180 bis +230 / ca. −60, knapp an ±250. Reihenfolge: thunder zuerst (trägt den
+  größten Teil und das Timeout-Problem), dann repo_path, user_id als eigener Commit; bei Überschreitung diese zwei abtrennen.
+- Risk Level: MEDIUM (stilles Blindwerden eines Wächters), kein Produktcode.
+
+### Technical Approach
+Wie oben. Mutationen je Ratsche: falsches Filterwort, `#`-Bedingung verschärft, Filter immer falsch, Wurzel ignoriert ⇒ je ein roter Test.
+Ehrliche Grenze: repo_path bleibt am engsten am 30-s-Netz (Hochrechnung aus „CI > 4,3× lokal“: mindestens 18 s nach, 23 s vor
+Umbau; nach oben unbelegt). Mehr gäbe nur ein Umbau von `_sammle`/`_resolve` (ca. 3 s der 5,3 s), nicht Teil von #3316.
+
+### Open Questions
+Keine Produktfrage offen.
