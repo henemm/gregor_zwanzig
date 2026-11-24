@@ -131,6 +131,7 @@ Die öffentlichen Funktionsseiten (`/funktionen`, Spec `oeffentliche_doku_3319`)
 - Die Ratschlag-Erkennung bleibt eine Regel-Heuristik; neue Formulierungen müssen bei Bedarf in den Korpus und die Regel nachgetragen werden. „check“ und „note that“ sind bewusst nicht erfasst, weil sie zulässige Texte treffen würden.
 - Der Wächter erkennt nur Mail-Adressen und Telefonnummern im sichtbaren Text, nicht Personendaten in Bildpixeln; die Sichtprüfung neuer Bilder bleibt Pflicht (Runbook).
 - Das Archiv-Bild bleibt bis #3327 leer.
+- „Plane … um“ trifft auch das Substantiv „Plane“ am Satzanfang, wenn später im Satz „um“ folgt (z. B. „Plane schützen den Rucksack um 5 Uhr“); diese Heuristik-Grenze ist bewusst akzeptiert, solche Sätze kommen in den Funktionstexten nicht vor.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -140,3 +141,4 @@ Die öffentlichen Funktionsseiten (`/funktionen`, Spec `oeffentliche_doku_3319`)
 ## Changelog
 
 - 2026-11-24: Initial spec created (Punkte 1, 2, 4 aus Issue #3324; Punkt 3 nach #3327 abgespalten)
+- 2026-11-24: Fix-Loop 1 nach Adversary (Heuristik-Grenze „Plane … um“ unter Known Limitations ergänzt)

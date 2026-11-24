@@ -103,19 +103,32 @@ def test_ac5_fiktiver_ausschnitt_ergibt_webp(page, tmp_path):
     assert ziel.exists() and ziel.read_bytes()[8:12] == b"WEBP"
 
 
-def _renderer_fixtures(lang: str) -> dict[str, str]:
-    return {
-        "briefing-mail": ls.briefing_report(lang).email_html,
-        "briefing-telegram": ls.telegram_html(lang),
-        "alarm-mail": ls.alarm_html(lang),
-        "briefing-sms": ls.sms_html(lang),
-        "premium-sms": ls.premium_sms_html(lang),
-    }
+def _bildstand(ordner):
+    """Pfad -> (Groesse, mtime) aller echten Bildausgaben; Tests duerfen sie nie schreiben."""
+    return {p: (p.stat().st_size, p.stat().st_mtime_ns) for p in ordner.rglob("*") if p.is_file()}
 
 
-@pytest.mark.parametrize("lang", ls.FUNKTIONEN_SPRACHEN)
-def test_ac5_alle_renderer_fixtures_passieren_den_waechter(page, tmp_path, lang):
-    for name, html in _renderer_fixtures(lang).items():
-        ziel = tmp_path / lang / f"{name}.webp"
-        ls.renderer_aufnahme(page, html, ziel, 800)
-        assert ziel.exists(), f"{lang}/{name}: keine Bilddatei"
+def test_ac5_funktionen_bilder_erzeugt_alle_bilder_beider_sprachen(page, tmp_path):
+    # Echte Auftragsquelle (alle Renderer-Fixtures inkl. Ausschnitte), Ziel nur in tmp_path.
+    vorher = _bildstand(ls.FUNKTIONEN_DIR)
+    masse = ls.funktionen_bilder(page, ziel=lambda name, lang: tmp_path / lang / f"{name}.webp")
+    for lang in ls.FUNKTIONEN_SPRACHEN:
+        erwartet = {name for name, *_ in ls.renderer_auftraege(lang)}
+        assert len(erwartet) >= 7, f"{lang}: Auftragsquelle unvollstaendig: {sorted(erwartet)}"
+        erzeugt = {p.stem for p in (tmp_path / lang).glob("*.webp")}
+        assert erzeugt == erwartet, f"{lang}: Bilder {sorted(erzeugt)} statt {sorted(erwartet)}"
+        for name in erwartet:
+            assert (tmp_path / lang / f"{name}.webp").read_bytes()[8:12] == b"WEBP"
+            assert masse[name][lang][0] > 0 and masse[name][lang][1] > 0
+    assert _bildstand(ls.FUNKTIONEN_DIR) == vorher, "Test hat echte Bildausgaben veraendert"
+
+
+def test_ac4_funktionen_bilder_bricht_bei_personendaten_ohne_datei_ab(page, tmp_path):
+    # Der Bildlauf selbst (nicht nur der Helfer) muss den Waechter durchlaufen.
+    def auftraege(lang):
+        return [("briefing-sms", _HTML.format(f"<p>Briefing 07:00</p><p>{NUMMER}</p>"), 420, {})]
+
+    with pytest.raises(ls.PersonendatenGefunden):
+        ls.funktionen_bilder(page, ziel=lambda name, lang: tmp_path / lang / f"{name}.webp",
+                             auftraege=auftraege)
+    assert not any(tmp_path.rglob("*")), "Bild trotz Personendaten gespeichert"

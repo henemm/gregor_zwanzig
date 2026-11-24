@@ -32,6 +32,7 @@ import path from 'node:path';
 import { locale, trFor, type MessageKey } from '../index.ts';
 import { de } from '../messages/de/index.ts';
 import { en } from '../messages/en/index.ts';
+import { translate, type Kataloge } from '../translate.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const LIB = path.resolve(HERE, '../..');
@@ -437,17 +438,30 @@ describe('AC-7: nur Funktionsbeschreibung, nichts Internes', () => {
 	//     Meide…, Pack…, Zieh…, Verschieb…, Starte…), (3) feste Wendungen (umkehren, brich … ab).
 	// EN entsprechend (should, ought to, recommend, advise, best to, you must, better, make sure,
 	// turn back, Imperative Take/Go/Turn/Stay/Wait/Avoid/Pack/Bring/Head/Postpone/Start/Leave).
+	// #3324: DE zusaetzlich empfiehlt/empfehlenswert, am sichersten, „Plane … um“ (nur mit „um“,
+	// nacktes „Plane“ ist Substantiv), Beachte/Denk/Achte am Satzanfang; EN prudent, wise to,
+	// advisable, it is/it's best/wise/safer, you'd want to, would be wise, be sure, keep in mind,
+	// Consider am Satzanfang. Bewusst NICHT: „check“, „note that“ (treffen zulaessige Texte).
+	// Fix-Loop 1: Flexionen Denke/Beachtet/Beachten/Achtet/Achten am Satzanfang, Imperative nie
+	// als Bindestrich-Kompositum („Denk-Pause“); EN you may want to, don't/do not forget.
 	const SATZANFANG = String.raw`(?:^|[.!?:;]\s+|\n)`;
 	const EMPFEHLUNG_DE = new RegExp(
-		String.raw`\bsollte(?:st|n|t)?\b|\bmusst\b|\bempfehl|\bratsam\b|\bam besten\b|\bbesser\b|\blieber\b|\bumkehren\b|\bbrich\b[^.!?]*\bab\b|` +
-			`${SATZANFANG}(?:nimm|geh|brich|kehr|bleib|warte|meide|vermeide|pack|zieh|verschieb|starte)\\b`,
+		String.raw`\bsollte(?:st|n|t)?\b|\bmusst\b|\bempfehl|\bempfiehl|\bratsam\b|\bam besten\b|\bam sichersten\b|\bbesser\b|\blieber\b|\bumkehren\b|\bbrich\b[^.!?]*\bab\b|` +
+			`${SATZANFANG}plane\\b[^.!?]*\\bum\\b|` +
+			`${SATZANFANG}(?:nimm|geh|brich|kehr|bleib|warte|meide|vermeide|pack|zieh|verschieb|starte|beachte[nt]?|denke?|achte[nt]?)\\b(?![-‐])`,
 		'iu'
 	);
 	const EMPFEHLUNG_EN = new RegExp(
 		String.raw`\bshould\b|\bought to\b|recommend|\badvis|\bbest to\b|\byou must\b|\bbetter\b|\bmake sure\b|\bturn back\b|` +
-			`${SATZANFANG}(?:take|go|turn|stay|wait|avoid|pack|bring|head|postpone|start|leave)\\b`,
+			String.raw`\bprudent\b|\bwise to\b|\bit(?: is|['’]s) (?:best|wise|safer)\b|\byou['’]d want to\b|\bwould be wise\b|\bbe sure\b|\bkeep in mind\b|\byou may want to\b|\bdon['’]t forget\b|\bdo not forget\b|` +
+			`${SATZANFANG}(?:take|go|turn|stay|wait|avoid|pack|bring|head|postpone|start|leave|consider)\\b`,
 		'iu'
 	);
+	const EMPFEHLUNG: Record<Lang, RegExp> = { de: EMPFEHLUNG_DE, en: EMPFEHLUNG_EN };
+	/** Schluessel aller funktionen.*-Texte einer Sprache, die einen Ratschlag enthalten. */
+	function ratschlagTreffer(kataloge: Kataloge, lang: Lang): string[] {
+		return funktionenKeys.filter((k) => !k.endsWith('.src') && EMPFEHLUNG[lang].test(translate(kataloge, lang, k)));
+	}
 	test('Gegenprobe: die Regeln greifen', () => {
 		assert.match('Der Claude-Konnektor', VERBOTEN);
 		assert.match('Admin area', VERBOTEN);
@@ -503,7 +517,12 @@ describe('AC-7: nur Funktionsbeschreibung, nichts Internes', () => {
 			'Bei Gewitter: Plane die Etappe um.',
 			'Beachte die Gewitterwarnung.',
 			'Denk an die Regenjacke.',
-			'Achte auf die Böen am Grat.'
+			'Achte auf die Böen am Grat.',
+			'Denke an die Regenjacke.',
+			'Beachtet die Gewitterwarnung.',
+			'Beachten Sie die Gewitterwarnung.',
+			'Achtet auf die Böen am Grat.',
+			'Achten Sie auf die Böen am Grat.'
 		]) {
 			assert.match(s, EMPFEHLUNG_DE, s);
 		}
@@ -521,7 +540,16 @@ describe('AC-7: nur Funktionsbeschreibung, nichts Internes', () => {
 			'Be sure to carry water.',
 			'Keep in mind that storms build up.',
 			'Consider a rain jacket.',
-			'Gusts increase. Consider a rain jacket.'
+			'Gusts increase. Consider a rain jacket.',
+			// Je Regex-Alternative ein Satz, der NUR diese Alternative trifft (Fix-Loop 1, F002).
+			'Starting early is wise to beat the storm.',
+			'Starting early would be wise.',
+			'It is best at dawn.',
+			'It is wise, given the storm.',
+			"It's safer at dawn.",
+			'You may want to leave early.',
+			"Don't forget the rain jacket.",
+			'Do not forget the rain jacket.'
 		]) {
 			assert.match(s, EMPFEHLUNG_EN, s);
 		}
@@ -532,7 +560,8 @@ describe('AC-7: nur Funktionsbeschreibung, nichts Internes', () => {
 			'Plan: Free, Standard, Premium',
 			'Die Planung der Etappe übernimmst du im Editor.',
 			'Gregor achtet auf die Böen am Grat.',
-			'Die Warnung beachtet alle amtlichen Stufen.'
+			'Die Warnung beachtet alle amtlichen Stufen.',
+			'Denk-Pause am Pass: Gregor zeigt die Böen.'
 		]) {
 			assert.doesNotMatch(s, EMPFEHLUNG_DE, s);
 		}
@@ -548,8 +577,14 @@ describe('AC-7: nur Funktionsbeschreibung, nichts Internes', () => {
 	test('#3324 AC-2 Gegenprobe: eingefuegter Ratschlag in einem Katalogtext wird rot', () => {
 		const k = funktionenKeys.find((x) => !x.endsWith('.src'));
 		assert.ok(k);
-		assert.match(`${txt('de', k)} Es empfiehlt sich, früh zu starten.`, EMPFEHLUNG_DE);
-		assert.match(`${txt('en', k)} It is advisable to carry water.`, EMPFEHLUNG_EN);
+		// Kopie des geladenen Katalogs: ein funktionen.*-Text bekommt einen Ratschlag; dieselbe
+		// Pruefung wie der Lauf ueber alle Texte muss genau diesen Schluessel melden.
+		const kopieDe: Record<string, string> = { ...katalogDe, [k]: `${katalogDe[k]} Es empfiehlt sich, früh zu starten.` };
+		const kopieEn: Record<string, string> = { ...katalogEn, [k]: `${katalogEn[k]} It is advisable to carry water.` };
+		const kopie: Kataloge = { de: kopieDe, en: kopieEn };
+		assert.deepEqual(ratschlagTreffer(kopie, 'de'), [k]);
+		assert.deepEqual(ratschlagTreffer(kopie, 'en'), [k]);
+		assert.deepEqual(ratschlagTreffer({ de, en }, 'de'), [], 'Original-Katalog unveraendert');
 	});
 	test('kein funktionen.*-Text nennt Konnektor/MCP/Admin/Design oder empfiehlt etwas', () => {
 		assert.ok(funktionenKeys.length >= 28, `zu wenige funktionen.*-Texte: ${funktionenKeys.length}`);
@@ -557,9 +592,9 @@ describe('AC-7: nur Funktionsbeschreibung, nichts Internes', () => {
 			if (k.endsWith('.src')) continue;
 			assert.doesNotMatch(txt('de', k), VERBOTEN, `de ${k}`);
 			assert.doesNotMatch(txt('en', k), VERBOTEN, `en ${k}`);
-			assert.doesNotMatch(txt('de', k), EMPFEHLUNG_DE, `de ${k}`);
-			assert.doesNotMatch(txt('en', k), EMPFEHLUNG_EN, `en ${k}`);
 		}
+		assert.deepEqual(ratschlagTreffer({ de, en }, 'de'), [], 'de: Ratschlag in funktionen.*');
+		assert.deepEqual(ratschlagTreffer({ de, en }, 'en'), [], 'en: Ratschlag in funktionen.*');
 	});
 	test('auch die gerenderten Seiten (Uebersicht + alle Unterseiten) sind frei davon', async () => {
 		for (const lang of SPRACHEN) {

@@ -43,6 +43,13 @@ unter 200 KB) und mergen die Maße in `bildmasse.json` (andere Einträge bleiben
   `tests/test_funktionen_screenshots_waechter.py`.
 - Aufgenommen wird nur der Inhaltsbereich (`main`) bzw. die genannte Karte, nie die Seitenleiste mit dem
   Kontonamen.
+- Derselbe Wächter gilt auch für die **Renderer-Bilder** (`scripts/landing_screenshots.py --funktionen`,
+  Issue #3324): Jede Aufnahme läuft über den Helfer `renderer_aufnahme`, der vor dem Bildschirmfoto den
+  gesamten sichtbaren Seitentext (`body`) mit `pruefe_vor_aufnahme` gegen `FIKTIV_ERLAUBT` prüft, auch
+  bei Ausschnitten (`befehle-mail`, `briefing-quelle`). Dort wird nichts maskiert: Ein Befund bricht mit
+  `PersonendatenGefunden` ab (Meldung nennt nur die Anzahl), es entsteht keine Datei. Abhilfe ist ein
+  fiktiver Wert in der Fixture, nicht eine Erweiterung von `FIKTIV_ERLAUBT`. Test mit echtem Chromium:
+  `tests/test_funktionen_renderer_waechter.py`.
 - Der Wächter ersetzt die Sichtprüfung nicht: Namen, Kennungen oder Bilder in Bildern erkennt er nicht.
 
 **Lehre aus der ersten Aufnahme (24.11.2026):** Der Reiter Zustellung zeigt Adresse und Nummer gekürzt
@@ -82,6 +89,6 @@ archivierter Trip ginge nur über eine Erweiterung des Prüfkonto-Seeds
 (`scripts/staging_pruefkonto_mockupdaten.py`): zweiter Trip, Archiv-Aufruf, Anpassung seiner eigenen
 Tests (`tests/tdd/test_staging_pruefkonto_mockupdaten.py`). Außerdem würde sich der Bestand des Kontos
 ändern, den der Elementlisten-Abgleich (#2913) gegen das Mockup liest. Das ist kein kleiner Umbau und
-wurde deshalb in #3319 nicht gemacht. Wird der Seed später um einen archivierten Trip erweitert:
+wurde deshalb in #3319 nicht gemacht; die Erweiterung ist als eigenes Issue #3327 geplant. Wird der Seed später um einen archivierten Trip erweitert:
 `uv run python scripts/funktionen_screenshots.py --nur archiv`, Sichtprüfung, Alt-Text
 `funktionen.bild.archiv.alt` (DE/EN) anpassen.
