@@ -234,7 +234,10 @@ export function felderNutzlast(kind: Kind, neu: Felder, alt: Felder): Rumpf {
 		const dc = nurGeaendert(neu, alt, ['show_night_block']);
 		return zusammen(Object.keys(rc).length ? { report_config: rc } : {}, kurzstil(kind, neu, alt), Object.keys(dc).length ? { display_config: dc } : {});
 	}
-	return zusammen(nurGeaendert(neu, alt, ['hourly_enabled']), kurzstil(kind, neu, alt));
+	// #3059: Orte tragen das E-Mail-Format in `display_config` (wie den Kurzstil); Teilfeld, der Server mischt
+	// `display_config` feldweise (Read-Modify-Write) — `telegram_style` und alle übrigen Felder bleiben.
+	const dc = nurGeaendert(neu, alt, ['email_format']);
+	return zusammen(nurGeaendert(neu, alt, ['hourly_enabled']), kurzstil(kind, neu, alt), Object.keys(dc).length ? { display_config: dc } : {});
 }
 
 const FELDER_PFAD: Record<Kind, (id: string) => string> = {

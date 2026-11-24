@@ -500,6 +500,7 @@ _MAIL_TYPE_LABELS: dict[tuple[str, "str | None"], str] = {
     ("trip-briefing", "full"): "mail.herkunft.trip_voll",
     ("trip-briefing", "compact"): "mail.herkunft.trip_kompakt",
     ("compare", None): "mail.herkunft.vergleich",
+    ("compare", "compact"): "mail.herkunft.vergleich_kompakt",  # Issue #3059
     ("official-alert", None): "mail.herkunft.amtliche_warnung",
     ("radar-alert", None): "mail.herkunft.radar_alarm",
     ("deviation-alert", None): "mail.herkunft.abweichungs_alarm",

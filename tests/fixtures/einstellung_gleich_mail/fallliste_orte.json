@@ -18,9 +18,24 @@
     ],
     "format": [
       "html",
-      "klartext"
+      "klartext",
+      "kompakt"
     ],
     "ausgeschlossen": [
+      [
+        "orte_stundenverlauf",
+        "darstellung",
+        "gemischt",
+        "format",
+        "kompakt"
+      ],
+      [
+        "orte_stundenverlauf",
+        "darstellung",
+        "einfach",
+        "format",
+        "kompakt"
+      ],
       [
         "orte_vergleichstabelle",
         "auswahl_muster",
@@ -274,7 +289,7 @@
         "einfach"
       ]
     ],
-    "hinweis": "Fachlich unmoegliche Paare: (1) der Stundenverlauf kennt heute keine Darstellung je Zeile (Konzept W11, offen_feature, #3047 Phase 3), deshalb nur 'roh'; die Vergleichstabelle traegt Roh/Einfach seit #3039 ueber channel_layouts.email, eine nie eingestellte Vergleichstabelle hat keine Darstellung (Bestand = Roh, #3039 Regel 3); (2) eine bewusst leere Auswahl hat weder Reihenfolge noch Darstellung; (3) der nie eingestellte Stundenverlauf hat die feste Standardfolge (AC-13), keine waehlbare Reihenfolge. Reihenfolge 'katalog' = Folge des zentralen Registers, 'gemischt' ungleich Katalog und Umkehrung. Teilnehmende Faelle tragen 'werte'; der Test baut daraus das rohe Preset (Darstellung roh: channel_active_metrics, sonst channel_layouts.email)."
+    "hinweis": "Fachlich unmoegliche Paare: (1) der Stundenverlauf kennt heute keine Darstellung je Zeile (Konzept W11, offen_feature, #3047 Phase 3), deshalb nur 'roh'; die Vergleichstabelle traegt Roh/Einfach seit #3039 ueber channel_layouts.email, eine nie eingestellte Vergleichstabelle hat keine Darstellung (Bestand = Roh, #3039 Regel 3); (2) eine bewusst leere Auswahl hat weder Reihenfolge noch Darstellung; (3) der nie eingestellte Stundenverlauf hat die feste Standardfolge (AC-13), keine waehlbare Reihenfolge. Reihenfolge 'katalog' = Folge des zentralen Registers, 'gemischt' ungleich Katalog und Umkehrung. Teilnehmende Faelle tragen 'werte'; der Test baut daraus das rohe Preset (Darstellung roh: channel_active_metrics, sonst channel_layouts.email). Format 'kompakt' (#3059): display_config.email_format = compact; die Kompakt-Mail traegt je Ort eine Zeile mit den Kuerzeln der E-Mail-Auswahl und eine Ausblick-Zeile, aber nie einen Stundenverlauf (#722): die kompakt-Faelle des Stundenverlaufs laufen echt und pruefen dessen Fehlen, Status 'ausnahme' mit Verweis."
   },
   "faelle": [
     {
@@ -734,6 +749,214 @@
         "reihenfolge": "katalog",
         "darstellung": "roh",
         "format": "klartext"
+      }
+    },
+    {
+      "id": "O-VT-KP01",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "kompakt",
+      "pruefung": "reihenfolge",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "#3059 AC-1 AC-15",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "gemischt",
+        "darstellung": "gemischt",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "O-VT-KP02",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "kompakt",
+      "pruefung": "reihenfolge",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "#3059 AC-1 AC-15",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "umkehrung",
+        "darstellung": "einfach",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "O-VT-KP03",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "kompakt",
+      "pruefung": "auswahl",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "#3059 AC-1 AC-15",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "O-VT-KP04",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "kompakt",
+      "pruefung": "auswahl",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "#3059 AC-1 AC-15",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "bewusst_leer",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "O-SV-KP01",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "kompakt",
+      "pruefung": "reihenfolge",
+      "test": "test_stundenverlauf_paarweise",
+      "ac": "#3059 AC-5 AC-15",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#722 / PO #3160 / #3059: die Kompakt-Mail zeigt keinen Stundenverlauf; der Fall laeuft echt und prueft dessen Fehlen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "umkehrung",
+        "darstellung": "roh",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "O-SV-KP02",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "kompakt",
+      "pruefung": "reihenfolge",
+      "test": "test_stundenverlauf_paarweise",
+      "ac": "#3059 AC-5 AC-15",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#722 / PO #3160 / #3059: die Kompakt-Mail zeigt keinen Stundenverlauf; der Fall laeuft echt und prueft dessen Fehlen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "gemischt",
+        "darstellung": "roh",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "O-SV-KP03",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "kompakt",
+      "pruefung": "auswahl",
+      "test": "test_stundenverlauf_paarweise",
+      "ac": "#3059 AC-5 AC-15",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#722 / PO #3160 / #3059: die Kompakt-Mail zeigt keinen Stundenverlauf; der Fall laeuft echt und prueft dessen Fehlen",
+      "werte": {
+        "auswahl_muster": "bewusst_leer",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "O-SV-KP04",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "kompakt",
+      "pruefung": "auswahl",
+      "test": "test_stundenverlauf_paarweise",
+      "ac": "#3059 AC-5 AC-15",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#722 / PO #3160 / #3059: die Kompakt-Mail zeigt keinen Stundenverlauf; der Fall laeuft echt und prueft dessen Fehlen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "O-AB-KP01",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "kompakt",
+      "pruefung": "reihenfolge",
+      "test": "test_ausblick_paarweise",
+      "ac": "#3059 AC-4 AC-15",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "gemischt",
+        "darstellung": "gemischt",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "O-AB-KP02",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "kompakt",
+      "pruefung": "reihenfolge",
+      "test": "test_ausblick_paarweise",
+      "ac": "#3059 AC-4 AC-15",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "umkehrung",
+        "darstellung": "einfach",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "O-AB-KP03",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "kompakt",
+      "pruefung": "auswahl",
+      "test": "test_ausblick_paarweise",
+      "ac": "#3059 AC-4 AC-15",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "O-AB-KP04",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "kompakt",
+      "pruefung": "auswahl",
+      "test": "test_ausblick_paarweise",
+      "ac": "#3059 AC-4 AC-15",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "bewusst_leer",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "kompakt"
       }
     },
     {

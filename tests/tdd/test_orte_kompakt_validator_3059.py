@@ -191,3 +191,38 @@ def test_kompakt_als_multipart_scheitert(tmp_path):
         msg[k] = v
     code, aus = _lauf(tmp_path, msg.as_bytes(), "--konfig", _konfig(tmp_path, "compact"))
     assert code == 1 and "COMPACT" in aus, aus
+
+
+# --------------------------------------------------------------------------- #
+# F009: Groessengrenze genau an der Kante (strikt < 2048 Byte)
+# --------------------------------------------------------------------------- #
+def _text_mit_laenge(ziel: int) -> str:
+    """Gueltiger Kompakttext (ASCII, ohne Stundentabelle) von genau ``ziel`` Byte;
+    aufgefuellt mit Zeilen aus ``x`` (je < 80 Zeichen)."""
+    basis = len(_kompakt_text(zusatz="x").encode("ascii"))
+    fuell = ("x" * 69 + "\n") * 40
+    fuell = fuell[:ziel - basis + 1]
+    if fuell.endswith("\n"):
+        fuell = fuell[:-1] + "x"
+    text = _kompakt_text(zusatz=fuell)
+    assert len(text.encode("ascii")) == ziel, "Vorbedingung Laenge"
+    return text
+
+
+def _payload_laenge(eml: bytes) -> int:
+    import email as _email
+
+    return len(_email.message_from_bytes(eml).get_payload(decode=True))
+
+
+@pytest.mark.parametrize("laenge,zu_gross", [(2048, True), (2047, False)])
+def test_f009_groessengrenze_an_der_kante(tmp_path, laenge, zu_gross):
+    """F009: Text von genau 2048 Byte -> COMPACT-Groessenfehler; 2047 Byte -> kein
+    Groessenfehler, die Mail besteht."""
+    eml = _kompakt_eml(_text_mit_laenge(laenge))
+    assert _payload_laenge(eml) == laenge, "Vorbedingung: Text kommt unveraendert an"
+    code, aus = _lauf(tmp_path, eml, "--konfig", _konfig(tmp_path, "compact"))
+    if zu_gross:
+        assert code == 1 and "COMPACT: Text 2048 Byte >= Grenze 2048" in aus, aus
+    else:
+        assert code == 0 and "Grenze" not in aus, aus

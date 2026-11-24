@@ -163,6 +163,7 @@ Orte-Abos können wie Trips wahlweise als ausführliche oder als kompakte Text-M
 
 - Kein Vortag-Vergleich, keine Etappen-Kennzahlen, keine Nacht-Tabelle für Orte (siehe Nicht im Scope, #3342).
 - Die 2-KB-Grenze kann bei vielen Orten Orte weglassen; das ist beabsichtigt und wird in der Mail genannt.
+- Δ-Anker (AC-11): Der Kompaktpfad verhält sich exakt wie der Vollpfad. Seit #1629 wird der Vergleichs-Anker bewusst auch bei Versandfehler geschrieben, damit der nächste Vergleich eine Basis hat; #3059 ändert diese bestehende Entscheidung nicht. Abgesichert ist die Gleichheit Kompakt = Vollpfad, auch bei Fehlversand (Tech-Lead-Festlegung im Issue).
 
 ## Architektur-Entscheidung (ADR)
 

@@ -46,9 +46,11 @@
 	let { context, id, saveController, enqueueHubWrite, onUebernahme, createMode = false, entwurf, start, onAnlegeStand }: Props = $props();
 
 	/** Kontext-Unterschiede als Daten (Ratsche context_herkunft_zweige_eingefroren). */
-	const KONTEXT: Record<Kontext, { text: MessageKey; ausblick: MessageKey; stundenverlauf: boolean; tripBloecke: boolean }> = {
-		route: { text: 'wetter.wsw.text_route', ausblick: 'wetter.wsw.bloecke.ausblick_hinweis_route', stundenverlauf: false, tripBloecke: true },
-		vergleich: { text: 'wetter.wsw.text_vergleich', ausblick: 'wetter.wsw.bloecke.ausblick_hinweis_vergleich', stundenverlauf: true, tripBloecke: false }
+	// #3059: `emailFormat` — der Format-Schalter „Ausführlich/Kompakt“ gilt für Trip UND Orte (eigenes Flag, nicht
+	// an `tripBloecke` gekoppelt; Orte tragen das Feld in `display_config`).
+	const KONTEXT: Record<Kontext, { text: MessageKey; ausblick: MessageKey; stundenverlauf: boolean; tripBloecke: boolean; emailFormat: boolean }> = {
+		route: { text: 'wetter.wsw.text_route', ausblick: 'wetter.wsw.bloecke.ausblick_hinweis_route', stundenverlauf: false, tripBloecke: true, emailFormat: true },
+		vergleich: { text: 'wetter.wsw.text_vergleich', ausblick: 'wetter.wsw.bloecke.ausblick_hinweis_vergleich', stundenverlauf: true, tripBloecke: false, emailFormat: true }
 	};
 	const k = $derived(KONTEXT[context]);
 	const TRIP_BLOECKE: { feld: 'show_stage_stats' | 'show_yesterday_comparison' | 'show_night_block'; titel: MessageKey; hinweis: MessageKey }[] = [
@@ -219,7 +221,8 @@
 	const sms = $derived(antwort ? smsAus(antwort, $t, $tn) : null);
 	const legende = $derived(antwort ? legendeAus(antwort, $t) : []);
 	const einOrt = $derived(antwort?.location_count === 1);
-	/** #3154: Etappen-Kennzahlen, Vortag-Vergleich, Nacht-Stundentabelle wirken in der Kompakt-Mail nicht. */
+	/** #3154: Etappen-Kennzahlen, Vortag-Vergleich, Nacht-Stundentabelle wirken in der Kompakt-Mail nicht;
+	 *  #3059: ebenso der Stundenverlauf der Orte. */
 	const nurAusfuehrlich = $derived(aktFelder?.email_format === 'compact');
 	const kurzstilGesperrt = $derived(!telegramVerbunden && aktFelder?.telegram_style !== 'kurzform');
 </script>
@@ -261,8 +264,11 @@
 
 		<div class="wsw-sub">{$t('wetter.wsw.bloecke.titel')}</div>
 		{#if k.stundenverlauf}
-			<Einstellungszeile titel={$t('wetter.wsw.bloecke.stundenverlauf')} hinweis={$t(einOrt ? 'wetter.wsw.bloecke.stundenverlauf_hinweis_ein_ort' : 'wetter.wsw.bloecke.stundenverlauf_hinweis')}>
-				<Switch checked={aktFelder.hourly_enabled} tap testid="was-steht-wo-stundenverlauf" aria-label={$t('wetter.wsw.bloecke.stundenverlauf')} onchange={(an) => feld('hourly_enabled', an)} />
+			<!-- #3059: die Kompakt-Mail zeigt keinen Stundenverlauf (#722) — bei „Kompakt“ gesperrt mit Grund,
+			     gespeicherter Wert bleibt stehen; der Ausblick bleibt bedienbar (feat_3122 Nr. 6). -->
+			{@const stundenHinweis = $t(einOrt ? 'wetter.wsw.bloecke.stundenverlauf_hinweis_ein_ort' : 'wetter.wsw.bloecke.stundenverlauf_hinweis')}
+			<Einstellungszeile titel={$t('wetter.wsw.bloecke.stundenverlauf')} hinweis={nurAusfuehrlich ? `${stundenHinweis}. ${$t('wetter.wsw.bloecke.nur_ausfuehrlich')}` : stundenHinweis}>
+				<Switch checked={aktFelder.hourly_enabled} disabled={nurAusfuehrlich} tap testid="was-steht-wo-stundenverlauf" aria-label={$t('wetter.wsw.bloecke.stundenverlauf')} onchange={(an) => feld('hourly_enabled', an)} />
 			</Einstellungszeile>
 		{/if}
 		<Einstellungszeile titel={$t('wetter.wsw.bloecke.ausblick')} hinweis={$t(k.ausblick)}>
@@ -284,7 +290,7 @@
 		{/if}
 
 		<div class="wsw-sub">{$t('wetter.wsw.kanal.titel')}</div>
-		{#if k.tripBloecke}
+		{#if k.emailFormat}
 			<Einstellungszeile titel={$t('wetter.wsw.kanal.email_format')} hinweis={$t('wetter.wsw.kanal.email_format_hinweis')}>
 				<Segmented
 					variant="kompakt"

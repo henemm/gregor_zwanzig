@@ -997,8 +997,19 @@ def orte_soll(preset: dict, lang: str = "de", ortsnamen: dict | None = None) -> 
         "ausblick_briefings": briefings,
         "ausblick_an": bool(briefings),
         "ausblick": None if ids == [] else _ausblick_spalten(ids, _ausblick_formate(dc, ids)),
+        # #3059: E-Mail-Format der Orte steht in ``display_config`` (wie
+        # ``telegram_style``); fehlend oder unbekannt = ausfuehrlich.
+        "email_format": orte_email_format(preset),
         **_ortsfolge(ids_orte, ortsnamen),
     }
+
+
+def orte_email_format(preset: dict) -> str:
+    """#3059: ``display_config.email_format`` eines Orte-Presets; nur
+    ``"compact"`` schaltet um, alles andere (fehlend, oberste Ebene,
+    ``report_config``) ist ``"full"``."""
+    dc = preset.get("display_config")
+    return "compact" if isinstance(dc, dict) and dc.get("email_format") == "compact" else "full"
 
 
 def _ortsfolge(ids_orte: list[str], ortsnamen: dict | None) -> dict:

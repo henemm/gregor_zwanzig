@@ -60,9 +60,10 @@ ABDECKUNG_SOLL: dict[str, tuple[str, ...]] = {
     "trip_stundentabelle": ("html", "klartext", "kompakt"),
     "trip_nachttabelle": ("html", "klartext", "kompakt"),
     "trip_ausblick": ("html", "klartext", "kompakt"),
-    "orte_vergleichstabelle": ("html", "klartext"),
-    "orte_stundenverlauf": ("html", "klartext"),
-    "orte_ausblick": ("html", "klartext"),
+    # #3059: Orte kennen die Kompakt-Mail (display_config.email_format).
+    "orte_vergleichstabelle": ("html", "klartext", "kompakt"),
+    "orte_stundenverlauf": ("html", "klartext", "kompakt"),
+    "orte_ausblick": ("html", "klartext", "kompakt"),
 }
 ABDECKUNG_PRUEFUNGEN = ("auswahl", "reihenfolge")
 
@@ -627,7 +628,8 @@ def test_selbsttest_vollstaendige_liste_ist_gruen(tmp_path):
     verzeichnis = _schreibe(tmp_path, _syn_daten())
     assert _alle_pruefungen(tmp_path, verzeichnis) == []
     assert zaehle_status(lade_falllisten(verzeichnis)) == {
-        "gruen": 37, "ausnahme": 0, "offen_feature": 1, "rot_erwartet": 0,
+        # #3059: +6 synthetische Faelle (orte_* x kompakt x auswahl/reihenfolge).
+        "gruen": 43, "ausnahme": 0, "offen_feature": 1, "rot_erwartet": 0,
     }
 
 

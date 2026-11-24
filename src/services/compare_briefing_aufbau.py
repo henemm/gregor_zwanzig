@@ -95,10 +95,27 @@ def compare_wetter_laden(preset: dict, locations: list, zieltag: date, user_id: 
 
 
 def compare_email_rendern(kontext: dict, *, lang: Lang = "de", undelivered=None) -> tuple[str, str]:
-    """E-Mail (HTML, Text). ``undelivered`` liest nur der Versand (Vorschau: None)."""
+    """E-Mail (HTML, Text). ``undelivered`` liest nur der Versand (Vorschau: None).
+
+    Issue #3059: Format "Kompakt" liefert ``("", text)`` -- das leere HTML ist
+    wie beim Trip das Signal fuer den Versand als einzelner Textteil. Einziger
+    gemeinsamer Punkt fuer Versand, Vorschau und Testversand."""
     from output.renderers.comparison import render_compare_email
 
     opts = kontext["opts"]
+    if opts.email_format == "compact":
+        from output.renderers.email.compact_compare import render_compare_compact
+
+        return "", render_compare_compact(
+            kontext["result"],
+            enabled_metrics=opts.enabled_metrics_by_channel["email"],
+            metric_formats=opts.metric_formats("email"),
+            outlook_enabled=opts.outlook_enabled,
+            outlook_metrics=opts.outlook_metrics,
+            outlook_metric_formats=opts.outlook_metric_formats,
+            preset=kontext["preset"],
+            lang=lang,
+        )
     return render_compare_email(
         kontext["result"],
         undelivered=undelivered,

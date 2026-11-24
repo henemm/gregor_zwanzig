@@ -92,3 +92,12 @@ Die Punkte, die oben unter „Folgepflichten“ und in Nr. 5 als offen für die 
 15. **Design-Charter:** §3 bekommt die Ausnahme „Einstell-Tabelle ‚Was steht wo‘“.
 
 **Weiter offen, nicht Teil des Baus zu #3122:** die Schalter der Trip-Mail ohne Platz im Soll-Bild (Kurz-Zusammenfassung, Quick-Take-Chips, Metriken-Überblick, Großwetterlage, Zusammenfassung, Tages-Summe). Sie bleiben bis #3036 im Übergangsblock bedienbar; die Frage gehört zu #3036.
+
+## Nachtrag 2026-11-24: E-Mail-Format „Kompakt“ auch für Orte (#3059)
+
+Überholt die Einschränkung „(Trip: …)“ in Nr. 7 und ergänzt Nr. 6 und Nr. 9 der Spec-Festlegungen; nichts wird still zurückgenommen. Spec: `docs/specs/modules/feat_3059_orte_kompakt_mail.md`.
+
+- **Nr. 7:** Der Schalter „E-Mail: Format“ (Ausführlich oder Kompakt) steht in der Karte für Trip **und** Orte, aus demselben Baustein (Kontext-Flag, kein eigener Orte-Baustein, #1170). Orte speichern ihn in `display_config.email_format` (wie `telegram_style`, Teilfeld per Read-Modify-Write); fehlend oder unbekannt = Ausführlich. Bestehende Orte-Abos bleiben ausführlich.
+- **Nr. 6 / Nr. 9:** Die Orte-Kompakt-Mail ist ein einzelner ASCII-Textteil unter 2 KB: je Ort eine Zeile (Name, Warnmarker, Kürzel und Wert der für die E-Mail gewählten Metriken), je Ort eine Zeile „3-Tages-Ausblick“ nur, wenn der Ausblick für das Briefing eingeschaltet ist. Den Stundenverlauf zeigt sie nie; in der Karte ist sein Schalter bei Kompakt gesperrt (gespeicherter Wert bleibt), der Ausblick-Schalter bleibt bedienbar (#722, PO #3160). Bei mehr Orten als in 2 KB passen, wird vom Listenende gekürzt („+N Orte nicht gezeigt“).
+- **Kanäle:** Das Format wirkt allein auf die E-Mail; Telegram, SMS und Premium-SMS bleiben unverändert, `email_format` und `telegram_style` sind unabhängig.
+- **Nicht Teil:** Vortag-Vergleich für Orte (#3342); Etappen-Kennzahlen und Nacht-Stundentabelle für Orte sind nicht vorgesehen (PO 2026-11-24).

@@ -231,6 +231,10 @@ class CompareRenderOptions:
     channel_rows_by_channel: dict[str, Optional[list[tuple[str, bool]]]] = field(
         default_factory=dict
     )
+    # Issue #3059: E-Mail-Format des Orte-Abos aus `display_config.email_format`
+    # ("full" | "compact"); fehlend oder unbekannt = "full" (Bestand bleibt
+    # ausfuehrlich). Unabhaengig von `telegram_style`.
+    email_format: str = "full"
 
     def metric_formats(self, channel: str) -> Optional[dict[str, bool]]:
         """`{renderer_id: einfach}` eines Kanals fuer die Renderer; `None` =
@@ -301,7 +305,16 @@ def resolve_compare_render_options(
         enabled_metrics_by_channel={ch: orte_renderer_ids(getattr(view, ch)) for ch in kanaele},
         unresolved_by_channel={ch: unaufloesbar for ch in kanaele},
         channel_rows_by_channel=channel_rows,
+        email_format=compare_email_format(display_config),
     )
+
+
+def compare_email_format(display_config: object) -> str:
+    """Issue #3059: E-Mail-Format eines Orte-Abos aus seinem
+    ``display_config``; nur ``"compact"`` schaltet um, alles andere ist
+    ``"full"``."""
+    wert = display_config.get("email_format") if isinstance(display_config, dict) else None
+    return "compact" if wert == "compact" else "full"
 
 
 def orte_renderer_zeilen(zeilen) -> list[tuple[str, object]]:
