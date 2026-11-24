@@ -72,3 +72,64 @@ Schritt „#3281 schließen“ entfällt, stattdessen Nachweis AC-16 dort kommen
 1. Exakte `location`-Auswahl je Pfad und Upstream (8091 Go, 3001 SvelteKit), `proxy_read_timeout`.
 2. Reihenfolge: nginx-PR → Staging-`.env` + Neustart → curl-Proben → Abnahme AC-16 → Produktion.
 3. Automatischer Nachweis ohne PO: OAuth-Ablauf per Skript gegen Staging (Loopback-Redirect ist erlaubt); die Claude-App selbst bleibt PO-Schritt.
+
+## Analysis
+
+Stand 2026-11-24 (drei Explore-Berichte, eine Plan-Bewertung; Aussagen unten mit „gemessen“ selbst geprüft).
+
+### Type
+Feature (Infrastruktur/Server-Einrichtung). Keine Änderung an Go-, Python- oder Frontend-Code.
+
+### Affected Files (with changes)
+| File | Change Type | Description |
+|------|-------------|-------------|
+| henemm-infra `nginx/staging.gregor20.henemm.com.conf` | MODIFY | drei `location`-Blöcke mit `auth_basic off` (ca. +50) |
+| henemm-infra `tests/test_staging_mcp_nginx.py` | CREATE | Textvertrag der Conf, Muster `tests/test_mta_sts_policy.py` (ca. 80) |
+| `.env.example` | MODIFY | `GZ_MCP_USER_IDS=` mit Kommentar nach `GZ_ADMIN_USER_IDS` (ca. +5) |
+| `.claude/tools/staging_mcp_pruefen.py` | CREATE | Außen-Probe und OAuth-Ablauf gegen Staging, Muster `staging_befehl_pruefen.py` (ca. 100-150) |
+| Server: Staging-nginx-Datei, beide `.env` | MODIFY (live) | nicht versioniert; siehe Reihenfolge |
+
+### Scope Assessment
+- Files: 4 versioniert (zwei Repos, zwei PRs) plus drei Live-Dateien
+- Estimated LoC: +235 bis +285 / -0. **Grenze ±250 beachten**; notfalls Probe-Skript kürzen.
+- Risk Level: MEDIUM (öffentliche Öffnung auf Staging, Rechte-Eintrag in Produktion; Rollback trivial)
+
+### Technical Approach
+Variante A (empfohlen), verglichen mit:
+
+| Variante | Conf-Zeilen | Öffnung | Bewertung |
+|---|---|---|---|
+| A: drei enge Blöcke | ca. 50 | 3 Pfade | empfohlen; `/login` bleibt hinter der Schranke |
+| B: A plus `/login`, `/_app/` | ca. 70 | Anmeldeoberfläche offen | weicht die Staging-Schranke auf, abgelehnt |
+| C: nur in Produktion abnehmen | 0 | keine | verletzt „Produktion erst nach Test auf Staging“ |
+
+- `location = /api/mcp` → 8091, `proxy_read_timeout 120s` (Herleitung: 10 s Ortssuche + 5 s Kontingent + 60 s Core = 75 s plus Puffer; nginx-Standard 60 s wäre zu kurz)
+- `location ^~ /api/mcp/oauth/` → 8091; `location ^~ /.well-known/oauth-` → 3001 (SvelteKit, wie bisher). Das Präfix deckt alle drei Metadatenpfade; exakte Treffer verfehlen leicht den dritten mit Suffix `/api/mcp`.
+- Je Block `auth_basic off`, alle vier `proxy_set_header`-Zeilen wie im Bestand (`X-Real-IP` ist nötig für die Registrierungsbremse), Begründungskommentar mit #3286. **Kein** `satisfy`/`deny`, **kein** `limit_req` (henemm-infra#397 ist offen).
+- `GET`/`DELETE /api/mcp` sind mit offen; Go antwortet ohne Daten (`OhnePost`).
+- Kein `proxy_buffering off`: `internal/mcp/` enthält weder `event-stream` noch `Flusher` (gemessen per grep).
+- Kein eigenes Log-Format: `code` steht nur im Redirect an den Client bzw. im POST-Body, nie in einer Request-URL an Staging.
+- CSP-Kollision: Produktion `GET /api/mcp/oauth/authorize` liefert genau eine CSP, die von Go (gemessen); das Snippet setzt keine. Staging bindet dasselbe Snippet ein, nach dem Reload erneut prüfen.
+
+### Dependencies / Reihenfolge
+1. RED: Außen-Probe vom iMac **vor** der Änderung. Gemessen 2026-11-24: alle Pfade 401 Basic, auch `/api/mcp/oauth/token` und `/.well-known/oauth-protected-resource/api/mcp`.
+2. henemm-infra-PR (eigener Klon, kein Arbeiten im Hauptcheckout; dieser liegt 4 Commits hinter main), Merge. Kein offener PR dort ändert diese Datei (geprüft).
+3. Server: `diff` Live/Repo, Live-Datei sichern, kopieren, `sudo nginx -t`, `systemctl reload nginx` (Weg wie `fix_2124_versand_nginx_timeout.md`). Rollback = Sicherung zurück + reload.
+4. Staging-`.env`: `GZ_MCP_USER_IDS=default`, Dateimodus/ACL unverändert (`fix_2788`), nur `gregor-api-staging` neu starten.
+5. Außen-Probe (nur von außerhalb: die Server-IP umgeht die Schranke, infra#229). Soll: Metadaten 200 JSON mit Staging-Issuer; `POST /api/mcp` 401 mit `Bearer resource_metadata=`; weiter 401 Basic: `/`, `/login`, `/api/trips`, `/api/mcpx`, `/.well-known/openid-configuration`; `/api/internal/` gesperrt.
+6. OAuth-Ablauf per Skript ohne PO: `register` → Login (Basic `GZ_VALIDATOR_*` + `GZ_AUTH_*` der Staging-`.env`) → `authorize` mit Loopback-Redirect, Code aus `Location` (Antwort 303) → `token` mit PKCE → `tools/call`. Zwei Nutzer: `default` bekommt Daten, ein nicht gelistetes Konto keinen Code. Token-Entzug ist in #3281 durch Tests abgedeckt, live nicht wiederholen.
+7. PO: AC-16 in der Claude-App. Danach Produktions-`.env` `GZ_MCP_USER_IDS=henning`, nur `gregor-api` neu starten, Probe, Selftest, Nachweis in #3281 kommentieren, #3286 schließen.
+
+### Befunde gegen den Plan
+- **A (wichtigster):** `authorize` leitet auf `/login` hinter der Schranke. Zeigt der In-App-Browser keinen Basic-Dialog, verbindet der PO einmalig am Desktop-Browser; `/login` wird **nicht** geöffnet.
+- **B:** Falsch beantwortete Basic-Abfragen können die Jail `nginx-http-auth` auslösen (5 in 10 min → 1 h); sieht dann wie ein Konnektor-Fehler aus. Zugangsdaten dem PO vorab bereitstellen. Ob bloßes Abbrechen zählt, ist ungeprüft.
+- **C:** Offene Registrierung schreibt Dateien unter `GZ_DATA_DIR`; gebremst durch 20/h je IP und 500/Tag.
+- **D:** Textvertrag der Conf ist nur Regressionsschutz; der Verhaltensnachweis ist die Außen-Probe (Regel gegen Dateiinhalt-Checks).
+
+### Nicht in diesem Ticket
+Startwarnung für `GZ_MCP_USER_IDS` ohne Konto (`cmd/server/main.go`, `warnPrivilegedIDsWithoutAccount`): Nebenbefund für #1199. Hier genügt: Kennung wird über den OAuth-Lauf positiv belegt.
+
+### Open Questions
+- [ ] Spec: gilt `.env.example` im Deploy-Gate als docs-only? Vor dem Commit am Scope-Detektor prüfen.
+- [ ] Rechte-Eintrag in `.env`: sperrt der Auto-Modus, die Freigabe beim PO einholen, nicht umgehen.
+- [ ] Keine Produktfrage an den PO offen.
