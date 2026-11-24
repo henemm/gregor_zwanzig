@@ -51,7 +51,9 @@ Die Texte liegen im Katalog `frontend/src/lib/i18n/messages/{de,en}/funktionen.j
 - Oberflächen-Bilder vom Staging-Prüfkonto: `scripts/funktionen_screenshots.py`.
 - Ablage: `frontend/static/funktionen/` (DE) und `frontend/static/funktionen/en/` (EN), WebP, je unter 200 KB.
 - Neuerzeugung und Sichtprüfung auf Personendaten: `docs/runbooks/funktionen_screenshots.md`.
+- Der Personendaten-Wächter gilt für Renderer- und Oberflächen-Bilder gleichermaßen (Spec `pruefregeln_funktionsseiten_3324`).
 
 ## Änderungen
 
+- 2026-11-24: Prüfregeln nachgeschärft: erweiterte Erkennung von Handlungsempfehlungen DE/EN, Personendaten-Wächter auch für Renderer-Bilder, Drift-Test Ortsvergleich-Befehlssatz (Issue #3324)
 - 2026-11-24: Erstfassung mit Startseite, Level-Übersicht, Funktionsseiten DE/EN (Issue #3319)

@@ -53,6 +53,17 @@ from zoneinfo import ZoneInfo
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
+# Issue #3324: Personendaten-Waechter und WebP-Ausgabe aus dem Funktionsseiten-Skript
+# wiederverwenden (als Paket ``scripts.`` im Test, als Nachbarmodul beim Skriptlauf).
+try:
+    from scripts.funktionen_screenshots import (
+        FIKTIV_ERLAUBT, PersonendatenGefunden, pruefe_vor_aufnahme, speichere_webp, ziel_datei,
+    )
+except ImportError:
+    from funktionen_screenshots import (  # type: ignore[no-redef]
+        FIKTIV_ERLAUBT, PersonendatenGefunden, pruefe_vor_aufnahme, speichere_webp, ziel_datei,
+    )
+
 LANDING_DIR = PROJECT_ROOT / "frontend" / "static" / "landing"
 OUT_DIR = LANDING_DIR / "en"
 LANG = "en"
@@ -382,36 +393,58 @@ def _ausschnitt(page, name: str) -> dict:
     return box
 
 
-def funktionen_bilder(page) -> dict[str, dict[str, tuple[int, int]]]:
-    """Renderer-Bilder der Funktionsseiten je Sprache als WebP (Issue #3319)."""
-    from funktionen_screenshots import speichere_webp, ziel_datei
+def renderer_aufnahme(page, html: str, ziel: Path, width: int, *, height: int | None = None,
+                      body_css: str = "", clip: dict | None = None,
+                      ausschnitt: str | None = None) -> tuple[int, int]:
+    """Renderer-HTML als WebP aufnehmen; vorher Personendaten-Waechter (Issue #3324).
 
+    Der Waechter prueft den GESAMTEN sichtbaren Seitentext (``body``), auch wenn nur
+    ein Ausschnitt fotografiert wird. Es wird nichts maskiert: ein Befund bricht mit
+    ``PersonendatenGefunden`` ab, bevor eine Datei entsteht. ``ausschnitt`` (Schluessel
+    von ``_AUSSCHNITT``) ermittelt den Ausschnitt erst auf der geladenen Seite.
+    """
+    # Ohne feste Hoehe: kleines Fenster, die Aufnahme waechst mit dem Inhalt.
+    page.set_viewport_size({"width": width, "height": height or 40})
+    page.set_content(html, wait_until="load")
+    if body_css:
+        page.add_style_tag(content=body_css)
+    pruefe_vor_aufnahme(page.inner_text("body"), FIKTIV_ERLAUBT)
+    if ausschnitt is not None:
+        clip = _ausschnitt(page, ausschnitt)
+    if clip is None and height:
+        clip = {"x": 0, "y": 0, "width": width, "height": height}
+    png = page.screenshot(clip=clip, full_page=True) if clip else page.screenshot(full_page=True)
+    return speichere_webp(png, ziel)
+
+
+def renderer_auftraege(lang: str) -> list[tuple[str, str, int, dict]]:
+    """Einzige Auftragsquelle der Renderer-Bilder je Sprache: ``(name, html, breite, kwargs)``.
+
+    Ausschnitte derselben Mail (Antwort-Befehle, Fusszeile mit Wettermodell) tragen nur
+    den Schluessel ``ausschnitt``; der Rahmen entsteht erst in ``renderer_aufnahme``.
+    """
+    report = briefing_report(lang)
+    return [
+        ("briefing-mail", report.email_html, MAIL_WIDTH, {"height": MAIL_HEIGHT}),
+        ("briefing-telegram", telegram_html(lang), TELEGRAM_WIDTH, {}),
+        ("alarm-mail", alarm_html(lang), ALARM_WIDTH, {"body_css": "body{margin:24px;}"}),
+        ("briefing-sms", sms_html(lang), SMS_WIDTH, {}),
+        ("premium-sms", premium_sms_html(lang), SMS_WIDTH, {}),
+        *[(name, report.email_html, BEFEHLE_WIDTH, {"ausschnitt": name}) for name in _AUSSCHNITT],
+    ]
+
+
+def funktionen_bilder(page, *, ziel=ziel_datei,
+                      auftraege=renderer_auftraege) -> dict[str, dict[str, tuple[int, int]]]:
+    """Renderer-Bilder der Funktionsseiten je Sprache als WebP (Issue #3319).
+
+    Jedes Bild laeuft ausschliesslich ueber ``renderer_aufnahme`` (Personendaten-Waechter,
+    Issue #3324). ``ziel(name, lang)`` und ``auftraege(lang)`` sind fuer Tests austauschbar.
+    """
     masse: dict[str, dict[str, tuple[int, int]]] = {}
-
-    def aufnehmen(name: str, lang: str, html: str, width: int, *, height: int | None = None,
-                  body_css: str = "", clip: dict | None = None) -> None:
-        # Ohne feste Hoehe: kleines Fenster, die Aufnahme waechst mit dem Inhalt.
-        page.set_viewport_size({"width": width, "height": height or 40})
-        page.set_content(html, wait_until="load")
-        if body_css:
-            page.add_style_tag(content=body_css)
-        if clip is None and height:
-            clip = {"x": 0, "y": 0, "width": width, "height": height}
-        png = page.screenshot(clip=clip, full_page=True) if clip else page.screenshot(full_page=True)
-        masse.setdefault(name, {})[lang] = speichere_webp(png, ziel_datei(name, lang))
-
     for lang in FUNKTIONEN_SPRACHEN:
-        report = briefing_report(lang)
-        aufnehmen("briefing-mail", lang, report.email_html, MAIL_WIDTH, height=MAIL_HEIGHT)
-        aufnehmen("briefing-telegram", lang, telegram_html(lang), TELEGRAM_WIDTH)
-        aufnehmen("alarm-mail", lang, alarm_html(lang), ALARM_WIDTH, body_css="body{margin:24px;}")
-        aufnehmen("briefing-sms", lang, sms_html(lang), SMS_WIDTH)
-        aufnehmen("premium-sms", lang, premium_sms_html(lang), SMS_WIDTH)
-        # Ausschnitte derselben Mail: Antwort-Befehle und Fusszeile mit Wettermodell.
-        for name in _AUSSCHNITT:
-            page.set_viewport_size({"width": BEFEHLE_WIDTH, "height": 40})
-            page.set_content(report.email_html, wait_until="load")
-            aufnehmen(name, lang, report.email_html, BEFEHLE_WIDTH, clip=_ausschnitt(page, name))
+        for name, html, width, kw in auftraege(lang):
+            masse.setdefault(name, {})[lang] = renderer_aufnahme(page, html, ziel(name, lang), width, **kw)
     return masse
 
 
