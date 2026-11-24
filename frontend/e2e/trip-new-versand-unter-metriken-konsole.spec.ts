@@ -1,28 +1,29 @@
-// E2E — Issue #1743 (docs/specs/modules/feat_1743_reiter_aufraeumen.md): auf
-// /trips/new steht der Versand nicht mehr in einem eigenen Schritt, sondern
-// unten im Schritt „Wetter-Metriken" (geteilter Baustein
-// WetterMetrikenVersandPanel, Abschnitt `#versand`). Damit leben Metrik-Auswahl
-// und Versand-Blob (`bind:reportConfig`) in EINEM Schritt — genau die Lage, in
-// der #1552 eine Endlosschleife (`effect_update_depth_exceeded`) erzeugte.
+// E2E — Issue #1743 (docs/specs/modules/feat_1743_reiter_aufraeumen.md), umgestellt mit #3332
+// (docs/specs/modules/feat_3332_zustellung_anlegen_trip.md, AC-1/AC-6): auf /trips/new steht im
+// Schritt Zustellung der Reiter Zustellung (wie im Hub) statt des Alt-Panels mit `bind:reportConfig`.
+// Der Reiter meldet seinen Stand an den Editor, der ihn in `reportConfig` mischt — dieselbe Lage
+// (Rueckkanal in den Anlege-Blob, aus dem der Eintrittstrip abgeleitet ist), in der #1552 eine
+// Endlosschleife (`effect_update_depth_exceeded`) erzeugte.
 //
 // Warum E2E: die Unit-Harness ist SSR-only, `$effect` laeuft dort nie. Nur im
 // echten Browser zeigt sich eine Effekt-Schleife als Konsolenfehler.
 //
-// Nutzerweg: Schritt Wetter-Metriken oeffnen → Metrik anhaken → Versandzeit
+// Nutzerweg: Schritt Wetter oeffnen → Metrik anhaken → Schritt Zustellung → Versandzeit
 // aendern → Fensterbreite Mobil ↔ Desktop wechseln (Desktop-/Mobil-Instanz
-// tauschen) → keine Konsolenfehler, kein pageerror, Reaktivitaet lebt.
+// tauschen) → keine Konsolenfehler, kein pageerror, Stand bleibt, Reaktivitaet lebt.
 //
 // Ausfuehren (lokaler CI-Stack):
 //   cd frontend && npx playwright test e2e/trip-new-versand-unter-metriken-konsole.spec.ts
 
 import { test, expect, type Page } from '@playwright/test';
-import { tippeDatum, waehleOption } from './helpers';
+import { tippeDatum, tippeUhrzeit } from './helpers';
+import { angezeigteZeit } from './s3b2795-zustellung.helpers';
 import * as path from 'node:path';
 
 const MOBILE = { width: 390, height: 844 };
 const DESKTOP = { width: 1280, height: 900 };
 
-async function oeffneWetterMetrikenMobil(page: Page): Promise<void> {
+async function oeffneWetterMobil(page: Page): Promise<void> {
 	await page.setViewportSize(MOBILE);
 	await page.goto('/trips/new');
 	await page.getByTestId('trip-new-name-input-mobile').fill('E2E-GZ #1743 Versand unter Metriken');
@@ -46,7 +47,10 @@ async function oeffneWetterMetrikenMobil(page: Page): Promise<void> {
 	await expect(page.locator('.tn-mobile').getByTestId('wm2-grundauswahl')).toBeVisible({ timeout: 15_000 });
 }
 
-test('#1743: Metrik anhaken, Versandzeit ändern, Breite wechseln — keine Konsolenfehler', async ({ page }) => {
+const reiter = (page: Page) => page.locator('[data-testid="zustellung-tab"][data-context="route"]:visible').first();
+const morgenZeit = (page: Page) => reiter(page).locator('[data-testid="zustellung-morgen-zeit"]');
+
+test('#1743/#3332: Metrik anhaken, Versandzeit im Reiter Zustellung ändern, Breite wechseln — keine Konsolenfehler', async ({ page }) => {
 	const consoleErrors: string[] = [];
 	page.on('console', (msg) => {
 		if (msg.type() === 'error') consoleErrors.push(msg.text());
@@ -54,31 +58,32 @@ test('#1743: Metrik anhaken, Versandzeit ändern, Breite wechseln — keine Kons
 	const pageErrors: string[] = [];
 	page.on('pageerror', (err) => pageErrors.push(err.message));
 
-	await oeffneWetterMetrikenMobil(page);
-
-	// Der Versand-Abschnitt steht im selben Schritt unter den Wetter-Metriken.
-	const abschnitt = page.locator('[data-testid="versand-abschnitt"]:visible').first();
-	await expect(abschnitt).toBeVisible({ timeout: 15_000 });
+	await oeffneWetterMobil(page);
 
 	// Metrik anhaken (Bewölkung ist nicht Teil der Standardauswahl).
 	const bewoelkung = page.locator('.tn-mobile').getByTestId('wm2-grundauswahl').locator('button[title="Bewölkung"]');
 	await bewoelkung.click();
 	await page.waitForTimeout(300);
 
-	// Versandzeit ändern.
-	const morgen = abschnitt.locator('[data-testid="report-morning-time"]:visible').first();
-	await expect(morgen).toBeVisible({ timeout: 10_000 });
-	await waehleOption(page, morgen, '08:00');
-	await expect(morgen).toHaveText('08:00');
+	// Schritt Zustellung: der Reiter Zustellung, kein Alt-Panel (#3332 AC-1).
+	await page.getByTestId('tn-mobile-tabbar').getByRole('tab', { name: /Zustellung/ }).click({ force: true });
+	await expect(reiter(page)).toBeVisible({ timeout: 15_000 });
+	await expect(page.locator('[data-testid="versand-abschnitt"]:visible')).toHaveCount(0);
 
-	// Breite wechseln: Mobil → Desktop → Mobil (Instanz-Tausch, #1552 Fix-Loop 4).
+	// Versandzeit ändern.
+	await expect(morgenZeit(page)).toBeVisible({ timeout: 10_000 });
+	await tippeUhrzeit(page, morgenZeit(page), '08:00');
+	await page.keyboard.press('Tab');
+	expect(await angezeigteZeit(morgenZeit(page))).toBe('08:00');
+
+	// Breite wechseln: Mobil → Desktop → Mobil (Instanz-Tausch, #1552 Fix-Loop 4; #3332 AC-6).
 	await page.setViewportSize(DESKTOP);
 	await page.waitForTimeout(800);
-	await expect(page.locator('[data-testid="versand-abschnitt"]:visible').first()).toBeVisible({ timeout: 10_000 });
+	await expect(reiter(page)).toBeVisible({ timeout: 10_000 });
+	expect(await angezeigteZeit(morgenZeit(page)), '#3332 AC-6: Stand nach Wechsel auf Desktop verloren').toBe('08:00');
 	await page.setViewportSize(MOBILE);
 	await page.waitForTimeout(800);
-	const abschnittNachher = page.locator('[data-testid="versand-abschnitt"]:visible').first();
-	await expect(abschnittNachher).toBeVisible({ timeout: 10_000 });
+	await expect(reiter(page)).toBeVisible({ timeout: 10_000 });
 
 	// Svelte meldet eine Effekt-Schleife erst nach wiederholten Zyklen.
 	await page.waitForTimeout(1500);
@@ -86,14 +91,14 @@ test('#1743: Metrik anhaken, Versandzeit ändern, Breite wechseln — keine Kons
 	const alle = [...consoleErrors, ...pageErrors];
 	expect(
 		alle.filter((t) => t.includes('effect_update_depth_exceeded')),
-		'Effekt-Endlosschleife im Schritt Wetter-Metriken + Versand'
+		'Effekt-Endlosschleife im Schritt Zustellung'
 	).toHaveLength(0);
 	expect(alle, `Konsolenfehler/pageerror (erwartet: keine):\n${alle.join('\n')}`).toHaveLength(0);
 
 	// Reaktivität lebt: die geänderte Versandzeit ist nach dem Breitenwechsel
 	// noch da, und eine weitere Änderung kommt an.
-	const morgenNachher = abschnittNachher.locator('[data-testid="report-morning-time"]:visible').first();
-	await expect(morgenNachher).toHaveText('08:00');
-	await waehleOption(page, morgenNachher, '09:00');
-	await expect(morgenNachher).toHaveText('09:00');
+	expect(await angezeigteZeit(morgenZeit(page))).toBe('08:00');
+	await tippeUhrzeit(page, morgenZeit(page), '09:00');
+	await page.keyboard.press('Tab');
+	expect(await angezeigteZeit(morgenZeit(page))).toBe('09:00');
 });

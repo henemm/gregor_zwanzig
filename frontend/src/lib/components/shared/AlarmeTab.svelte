@@ -41,7 +41,7 @@
 	import { vergleichAlarmRegeln } from '$lib/components/alerts-tab/alertPreviewHelpers'; // #2283 S5: echte Alarm-Vorschau statt VTAlertSample
 	import AlertChannelPicker from './AlertChannelPicker.svelte'; import Infobox from '$lib/components/molecules/Infobox.svelte';
 	import {
-		alarmeTabSections,
+		alarmeTabSections, ZUSTELLUNG_IM_ANLEGEN_AUSGELAGERT,
 		triggerGroupHeading,
 		type AlarmeContext
 	} from './alarme-tab/alarmeTabSections.ts';
@@ -214,7 +214,7 @@
 			: undefined
 	);
 
-	const sections = $derived(alarmeTabSections(context));
+	const sections = $derived(alarmeTabSections(context, !!createMode && ZUSTELLUNG_IM_ANLEGEN_AUSGELAGERT[context])); // #3332 AC-9
 	// #2656 (F7): Ortszeit-Bezug der Stillen Stunden je Kontext — zwei Katalogsaetze.
 	const ZONEN_BEZUG: Record<AlarmeContext, MessageKey> = {
 		route: 'alarme.stille_stunden.bezug_route',

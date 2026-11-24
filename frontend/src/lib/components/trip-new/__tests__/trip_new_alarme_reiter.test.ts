@@ -19,7 +19,24 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { renderTripNew, countTestid, outerHtml, FRONTEND } from './tripNewSsr.ts';
+import { initialCreateTripAlarmState } from '../tripNewLogic.ts';
+import { kanalStatus, standAusTrip } from '../../shared/zustellung-tab/zustellungModell.ts';
+
+// #3332 (D1 von #3307, AC-9): im Trip-Anlegen stehen Alarm-Kanaele (inkl. Premium-SMS) mit Dringlichkeit in der
+// Kanal-Tabelle des Reiters Zustellung, nicht mehr im Reiter Alarme. Die Tabelle erscheint erst nach dem
+// Profil-Abruf (onMount, im SSR nie) — gemessen wird sie deshalb als ECHTE KanalTabelle im Server-Render,
+// gespeist mit dem Anlege-Startstand (Eintrittstrip wie im Editor: Alarm-Kanaele aus dem Neuanlage-Alarmzustand;
+// dass der Editor genau diesen Stand liefert, belegt trip_anlegen_zustellung_verdrahtung_3332, „Startstand").
+const { render } = await import('svelte/server');
+const KanalTabelle = (await import(pathToFileURL(join(FRONTEND, 'src/lib/components/organisms/zustellung-tab/KanalTabelle.svelte')).href)).default;
+function anlegeKanalTabelle(): string {
+	const a = initialCreateTripAlarmState();
+	const stand = standAusTrip({ id: '__new__', name: 'x', stages: [], alert_channels: a.channels, alert_channel_thresholds: a.channelThresholds } as never);
+	const status = kanalStatus({ mail_to: 'a@example.com', email_verified: true, telegram_chat_id: 'c', premium_sms_allowed: true } as never);
+	return render(KanalTabelle, { props: { stand, status, onaendern: () => {} } }).body;
+}
 
 describe('AC-1: Mount-Ersetzung — AlarmeTab statt AlertRulesEditor (schließt #2229)', () => {
 	test('Desktop, Tab "alarme": genau 1 alarme-tab, 0 alert-rules-editor, 1 Premium-SMS-Kanalzeile', () => {
@@ -34,11 +51,11 @@ describe('AC-1: Mount-Ersetzung — AlarmeTab statt AlertRulesEditor (schließt 
 			0,
 			'AC-1 FAIL: der Alt-Mount AlertRulesEditor ist weiterhin im Dokument.'
 		);
-		assert.equal(
-			countTestid(html, 'alert-channel-toggle-premium_sms'),
-			1,
-			'AC-1 FAIL: keine Premium-SMS-Kanalzeile im Alerts-Tab (Issue #2229).'
-		);
+		// #3332 AC-9: die Premium-SMS-Kanalzeile hat genau eine Bedienstelle — die Kanal-Tabelle des Reiters
+		// Zustellung (gemountet im selben Schritt), nicht der Reiter Alarme.
+		assert.equal(countTestid(html, 'alert-channel-toggle-premium_sms'), 0, '#3332 AC-9 FAIL: zweite Bedienstelle der Premium-SMS-Alarmwahl im Reiter Alarme.');
+		assert.equal(countTestid(html, 'zustellung-tab'), 1, '#3332 AC-1 FAIL: Reiter Zustellung (Träger der Kanal-Tabelle) fehlt.');
+		assert.equal(countTestid(anlegeKanalTabelle(), 'zustellung-kanal-premium_sms'), 1, 'AC-1 FAIL: keine Premium-SMS-Kanalzeile beim Anlegen (Issue #2229).');
 	});
 
 	test('Mobile, Tab "alarme": genau 1 alarme-tab, 0 alert-rules-editor, 1 Premium-SMS-Kanalzeile', () => {
@@ -53,25 +70,22 @@ describe('AC-1: Mount-Ersetzung — AlarmeTab statt AlertRulesEditor (schließt 
 			0,
 			'AC-1 FAIL (Mobile): der Alt-Mount AlertRulesEditor ist weiterhin im Dokument.'
 		);
-		assert.equal(
-			countTestid(html, 'alert-channel-toggle-premium_sms'),
-			1,
-			'AC-1 FAIL (Mobile): keine Premium-SMS-Kanalzeile im Alerts-Tab (Issue #2229).'
-		);
+		assert.equal(countTestid(html, 'alert-channel-toggle-premium_sms'), 0, '#3332 AC-9 FAIL (Mobile): zweite Bedienstelle der Premium-SMS-Alarmwahl im Reiter Alarme.');
+		assert.equal(countTestid(html, 'zustellung-tab'), 1, '#3332 AC-1 FAIL (Mobile): Reiter Zustellung (Träger der Kanal-Tabelle) fehlt.');
 	});
 });
 
 describe('AC-3: E-Mail-Kanal zeigt den Neuanlage-Default (an, Issue #2518)', () => {
-	test('alert-channel-toggle-email ist im CHECKED-Zustand (aria-checked="true", Neuanlage-Default #2518)', () => {
-		const html = renderTripNew({ activeTab: 'alarme', isMobileViewport: false });
-		const email = outerHtml(html, 'alert-channel-toggle-email');
+	// #3332 (AC-9): der Alarm-Schalter E-Mail steht im Trip-Anlegen in der Kanal-Tabelle des Reiters Zustellung.
+	test('zustellung-kanal-email-alarm ist im CHECKED-Zustand (aria-checked="true", Neuanlage-Default #2518)', () => {
+		const email = outerHtml(anlegeKanalTabelle(), 'zustellung-kanal-email-alarm');
 		assert.match(
 			email,
 			/aria-checked="true"/,
-			'AC-3 FAIL: der E-Mail-Kanal-Schalter ist nicht gecheckt — Neuanlage-Default #2518; ein Versagen waere der ' +
-				'AlarmeTab-interne "vergleich"-Hardcode-Zweig (displayChannelState), der ' +
-				'nur greift, wenn TripNewEditor eine Kanal-Wertprop (sendTelegram) setzt.'
+			'AC-3 FAIL: der E-Mail-Alarm-Schalter ist nicht gecheckt — Neuanlage-Default #2518 (Alarm-Kanaele aus dem ' +
+				'Neuanlage-Alarmzustand, nicht aus den Briefing-Kanaelen).'
 		);
+		assert.match(outerHtml(anlegeKanalTabelle(), 'zustellung-kanal-telegram-alarm'), /aria-checked="true"/, 'AC-3 FAIL: Telegram-Alarm nicht an (Neuanlage-Default #2518)');
 	});
 });
 

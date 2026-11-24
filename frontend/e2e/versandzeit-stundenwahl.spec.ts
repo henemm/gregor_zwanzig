@@ -10,7 +10,8 @@
 // Ausfuehren: cd frontend && npx playwright test e2e/versandzeit-stundenwahl.spec.ts
 
 import { test, expect, type Locator } from '@playwright/test';
-import { tippeDatum, waehleOption } from './helpers';
+import { tippeDatum, tippeUhrzeit, waehleOption } from './helpers';
+import { angezeigteZeit } from './s3b2795-zustellung.helpers';
 import * as path from 'node:path';
 
 const TRIP_ID = 'e2e-gz-versandzeit-stundenwahl';
@@ -149,18 +150,18 @@ test.describe('Issue #1379: Versandzeit nur als volle Stunde waehlbar', () => {
 		}
 
 		await tabbar.getByRole('tab', { name: /Wetter/ }).click({ force: true });
-		// Issue #1743: kein Schritt Versand mehr — Versand-Abschnitt unten im
-		// Schritt Wetter-Metriken (oben aktiviert).
-		const morning = page
-			.locator('.tn-mobile [data-testid="versand-abschnitt"] [data-testid="report-morning-time"]')
-			.first();
+		// #3332 (AC-1): im Schritt Zustellung steht derselbe Reiter Zustellung wie im Hub — dieselbe
+		// Uhrzeit-Bedienung (Briefing-Zeiten), kein Alt-Panel mit Stunden-Auswahl mehr.
+		await tabbar.getByRole('tab', { name: /Zustellung/ }).click({ force: true });
+		const reiter = page.locator('.tn-mobile [data-testid="zustellung-tab"][data-context="route"]');
+		await expect(reiter).toBeVisible({ timeout: 15_000 });
+		await expect(page.locator('.tn-mobile [data-testid="versand-abschnitt"]')).toHaveCount(0);
+		const morning = reiter.locator('[data-testid="zustellung-morgen-zeit"]');
 		await expect(morning).toBeVisible({ timeout: 15_000 });
-		const values = await optionValues(morning);
-		expect(values.length).toBe(24);
-		expect(values.every((v) => /^\d{2}:00$/.test(v))).toBeTruthy();
 
 		// Bedienbar wie beim Bearbeiten — kein Unterschied Anlegen/Bearbeiten.
-		await waehleOption(page, morning, '06:00');
-		await expect(morning).toHaveText('06:00');
+		await tippeUhrzeit(page, morning, '06:00');
+		await page.keyboard.press('Tab');
+		expect(await angezeigteZeit(morning)).toBe('06:00');
 	});
 });

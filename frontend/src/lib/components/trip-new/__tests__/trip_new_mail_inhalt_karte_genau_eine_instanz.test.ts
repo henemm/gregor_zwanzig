@@ -1,25 +1,20 @@
 // TDD RED — Issue #2277 Scheibe S5: Anlege-Wirkstelle der Mail-Inhalt-Karte.
 // Spec: docs/specs/modules/feat_2277_s5_reportconfig_rueckbau.md — AC-3, AC-4, AC-5.
 //
-// Die Karte "E-Mail-Inhalt" (report-mail-content) steht auf /trips/new im
-// Versand-Reiter, in Desktop UND Mobil, jeweils genau EINMAL (XOR per
-// isMobileViewport — zwei gleichzeitig gemountete Instanzen halten je einen
-// Schnappschuss von report_config, Last-Write-Wins, Fix-Loop 4 aus #1738) und
-// kommt ab S5 aus shared/MailInhaltCard.svelte statt aus der Section.
+// Urspruenglich: die Karte "E-Mail-Inhalt" (report-mail-content) stand auf /trips/new in Desktop UND
+// Mobil jeweils genau EINMAL (XOR per isMobileViewport — zwei gleichzeitig gemountete Instanzen hielten
+// je einen Schnappschuss von report_config, Last-Write-Wins, Fix-Loop 4 aus #1738).
 //
-// Messung: SSR-Render der echten Anlege-Komponente (Harness ./tripNewSsr.ts),
-// plus AST der Komponente fuer WELCHER Baustein in WELCHEM Gate steht
-// (Mutation "isMobileViewport-Gate entfernen" / "Mobil-Mount weglassen" wird an
-// der Wirkstelle rot, nicht nur im Baustein-Test).
-//
-// RED heute:
-//   - Startzustand: die Section uebernimmt email_format erst in onMount; der
-//     Server-Render zeigt bei email_format="compact" kein report-compact-hint.
-//   - AST: TripNewEditor mountet EditReportConfigSection statt MailInhaltCard.
+// #3332 (D1 von #3307, Spec feat_3332_zustellung_anlegen_trip.md, AC-10, „an die Hub-Paritaet angepasst"):
+// Anlegen = Bearbeiten — der Hub hat keine Mail-Inhalt-Karte, also auch das Trip-Anlegen nicht mehr
+// (Soll: 0 Instanzen, in jeder Ansicht und jedem Schritt; damit auch keine zwei Schreiber). E-Mail-Format,
+// Etappen-Statistik, Vortagesvergleich und Nacht-Block bedient die Karte „Was steht wo“ im Reiter Wetter
+// (Wirkung im POST: trip_anlegen_zustellung_verdrahtung_3332, AC-10). Die Standardfelder der Karte
+// entstehen jetzt im Speicherweg (`ergaenzeStandardwerteReportConfig`): ein im Blob gesetzter Wert gewinnt
+// dort — das sichern AC-3/AC-5 unten am Speicherweg (Wirkort ist der POST, nicht mehr die Karte).
 //
 // Ausfuehren:
-//   cd frontend && node --experimental-strip-types --test \
-//     src/lib/components/trip-new/__tests__/trip_new_mail_inhalt_karte_genau_eine_instanz.test.ts
+//   cd frontend && npm test -- src/lib/components/trip-new/__tests__/trip_new_mail_inhalt_karte_genau_eine_instanz.test.ts
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
@@ -27,60 +22,26 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { parse } from 'svelte/compiler';
-import {
-	renderTripNew,
-	assertTabOffen,
-	countTestid,
-	bereichVon,
-	checkboxInputTag,
-	hatAttribut
-} from './tripNewSsr.ts';
-import { buildCreateTripPayload } from '../tripNewLogic.ts';
+import { renderTripNew, countTestid } from './tripNewSsr.ts';
+import { buildCreateTripPayload, ergaenzeStandardwerteReportConfig } from '../tripNewLogic.ts';
+import { standAusTrip } from '../../shared/zustellung-tab/zustellungModell.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const EDITOR = path.join(HERE, '..', 'TripNewEditor.svelte');
 const ALLE_AN = { email: true, telegram: true, sms: true };
 
-function versand(isMobileViewport: boolean, reportConfig?: Record<string, unknown>): string {
-	// #1743: der Versand-Inhalt steht unten im Schritt Wetter-Metriken (kein Reiter „Versand" mehr).
-	const html = renderTripNew({ activeTab: 'wetter-metriken', isMobileViewport, channels: ALLE_AN, reportConfig });
-	assertTabOffen(html, 'wetter-metriken');
-	return html;
-}
+// ─── AC-3 (Desktop) / AC-4 (Mobil): keine Mail-Inhalt-Karte mehr (Hub-Paritaet) ──
 
-// ─── AC-3 (Desktop) / AC-4 (Mobil): genau eine Karte, im richtigen Baum ──────
-
-describe('AC-3/AC-4: genau eine Karte report-mail-content, in jeder Ansicht', () => {
-	for (const [name, mobil, baum] of [
-		['AC-3 Desktop', false, 'desktop'],
-		['AC-4 Mobil (390 px)', true, 'mobil']
-	] as const) {
-		test(`genau_eine_karte__${baum}`, () => {
-			const html = versand(mobil);
-			assert.equal(
-				countTestid(html, 'report-mail-content'), 1,
-				`${name}: ${countTestid(html, 'report-mail-content')} Karten im Dokument (erwartet genau 1).`
-			);
-			assert.equal(countTestid(html, 'report-email-format-switcher'), 1, `${name}: Format-Umschalter nicht genau einmal.`);
-			assert.equal(bereichVon(html, 'report-mail-content'), baum, `${name}: Karte steht im falschen Markup-Baum (CSS-Umschaltung macht sie sonst unsichtbar).`);
-		});
-
-		test(`startzustand_compact_aus_dem_blob__${baum}`, () => {
-			// #3237 F002: der Haken "Grosswetterlage" folgt show_stability, nicht dem Altfeld show_outlook.
-			const html = versand(mobil, { email_format: 'compact', show_stability: false, show_outlook: true });
-			assert.equal(countTestid(html, 'report-compact-hint'), 1,
-				`${name}: Kompakt-Hinweis fehlt — der Startzustand der Karte kommt nicht beim Erzeugen aus dem Blob ` +
-					'(onMount laeuft im Server-Render nie).');
-			assert.ok(hatAttribut(checkboxInputTag(html, 'report-show-outlook'), 'disabled'),
-				`${name}: Schalter "Grosswetterlage" im Kompakt-Modus nicht deaktiviert.`);
-			assert.ok(!hatAttribut(checkboxInputTag(html, 'report-show-outlook'), 'checked'),
-				`${name}: show_stability=false wird nicht uebernommen (Haken folgt show_stability).`);
-		});
-
-		test(`ausfuehrlich_ohne_hinweis__${baum}`, () => {
-			const html = versand(mobil, { email_format: 'full' });
-			assert.equal(countTestid(html, 'report-compact-hint'), 0, `${name}: Hinweis im Modus "Ausfuehrlich".`);
-		});
+describe('AC-3/AC-4 (#3332 AC-10): keine Karte report-mail-content im Trip-Anlegen, in jeder Ansicht', () => {
+	for (const [name, mobil] of [['Desktop', false], ['Mobil (390 px)', true]] as const) {
+		for (const schritt of ['wetter', 'zustellung'] as const) {
+			test(`keine_karte__${mobil ? 'mobil' : 'desktop'}__${schritt}`, () => {
+				const html = renderTripNew({ activeTab: schritt, isMobileViewport: mobil, channels: ALLE_AN, wtVisited: true, zuVisited: true, name: 'X', startDate: '2026-09-01', stageNames: ['E1'] });
+				assert.equal(countTestid(html, 'report-mail-content'), 0, `${name}/${schritt}: Mail-Inhalt-Karte noch im Trip-Anlegen (der Hub hat keine).`);
+				assert.equal(countTestid(html, 'report-email-format-switcher'), 0, `${name}/${schritt}: zweite Bedienstelle des E-Mail-Formats.`);
+				if (schritt === 'zustellung') assert.equal(countTestid(html, 'zustellung-tab'), 1, `${name}: Messaufbau — Reiter Zustellung fehlt.`);
+			});
+		}
 	}
 });
 
@@ -95,21 +56,37 @@ describe('AC-3: der Anlege-Payload enthaelt das gewaehlte Format', () => {
 		assert.equal((payload.report_config as any)?.email_format, 'compact');
 		assert.deepEqual(payload.report_config, rc, 'AC-3/AC-5: report_config im Anlege-Payload weicht vom Blob ab.');
 	});
-});
 
-// ─── AC-5: Nachbar-Felder bleiben im Render stehen ───────────────────────────
-
-describe('AC-5: Premium-SMS aus dem Blob bleibt neben der Karte erhalten', () => {
-	test('premium_sms_haken_steht_trotz_mail_inhalt_karte', () => {
-		const html = versand(false, { send_premium_sms: true, morning_time: '06:30:00', email_format: 'compact' });
-		assert.equal(countTestid(html, 'channel-premium-sms'), 1);
-		assert.ok(hatAttribut(checkboxInputTag(html, 'channel-premium-sms'), 'checked'),
-			'AC-5: send_premium_sms=true aus dem Blob ist im Versand-Reiter nicht mehr angehakt.');
-		assert.equal(countTestid(html, 'report-mail-content'), 1);
+	// Ersetzt „startzustand_compact_aus_dem_blob": die Standardfelder der entfallenen Karte ergaenzt jetzt der
+	// Speicherweg — ein gesetzter Wert (Kompakt, Grosswetterlage aus) darf dort nicht vom Standard ueberschrieben werden.
+	test('speicherweg_ergaenzt_standardfelder_ohne_gesetzte_werte_zu_ueberschreiben', () => {
+		const rc = ergaenzeStandardwerteReportConfig({ email_format: 'compact', show_stability: false, show_outlook: true } as any) as any;
+		assert.equal(rc.email_format, 'compact', 'Kompakt aus dem Blob vom Standard ueberschrieben.');
+		assert.equal(rc.show_stability, false, '#3237 F002: show_stability=false aus dem Blob vom Standard ueberschrieben.');
+		assert.equal(rc.show_stage_stats, true, 'Standardfeld der Karte fehlt im Speicherweg.');
+		const voll = ergaenzeStandardwerteReportConfig({ email_format: 'full' } as any) as any;
+		assert.equal(voll.email_format, 'full');
+		assert.equal(voll.show_stability, true, 'Standard der Grosswetterlage fehlt im Speicherweg.');
 	});
 });
 
-// ─── Wirkstelle: welcher Baustein, unter welchem Gate ────────────────────────
+// ─── AC-5: Nachbar-Felder bleiben erhalten ───────────────────────────────────
+
+describe('AC-5: Premium-SMS aus dem Blob bleibt neben den Mail-Feldern erhalten', () => {
+	// Ersetzt den Haken im Alt-Panel: der Reiter Zustellung liest den Briefing-Kanal aus demselben Blob,
+	// und der Speicherweg laesst ihn neben den ergaenzten Mail-Feldern stehen.
+	test('premium_sms_bleibt_im_speicherweg_und_im_startstand_des_reiters', () => {
+		const blob = { send_premium_sms: true, morning_time: '06:30:00', email_format: 'compact' };
+		const rc = ergaenzeStandardwerteReportConfig(blob as any) as any;
+		assert.equal(rc.send_premium_sms, true, 'AC-5: send_premium_sms=true geht im Speicherweg verloren.');
+		assert.equal(rc.morning_time, '06:30:00');
+		assert.equal(rc.email_format, 'compact');
+		const stand = standAusTrip({ id: '__new__', name: 'x', stages: [], report_config: blob } as any);
+		assert.equal(stand.briefing.premium_sms, true, 'AC-5: Reiter Zustellung zeigt Premium-SMS aus dem Blob nicht an.');
+	});
+});
+
+// ─── Wirkstelle: kein Mail-Inhalt-Baustein mehr im Editor ────────────────────
 
 type Knoten = Record<string, any>;
 function laufe(n: unknown, ahnen: Knoten[], f: (k: Knoten, a: Knoten[]) => void): void {
@@ -121,48 +98,24 @@ function laufe(n: unknown, ahnen: Knoten[], f: (k: Knoten, a: Knoten[]) => void)
 	for (const [feld, v] of Object.entries(k)) if (feld !== 'metadata') laufe(v, neu, f);
 }
 
-describe('AC-3/AC-4: TripNewEditor mountet MailInhaltCard genau zweimal, XOR per isMobileViewport', () => {
+describe('#3332 AC-10: TripNewEditor mountet und importiert keinen Mail-Inhalt-Baustein (Hub-Paritaet)', () => {
 	const quelle = readFileSync(EDITOR, 'utf-8');
 	const ast = parse(quelle, { modern: true }) as Knoten;
-	const gate = (g: Knoten) => quelle.slice(g.test.start, g.test.end).trim();
-
 	function mounts(name: string) {
-		const out: { k: Knoten; ahnen: Knoten[] }[] = [];
-		laufe(ast.fragment, [], (k, ahnen) => { if (k.type === 'Component' && k.name === name) out.push({ k, ahnen }); });
+		const out: Knoten[] = [];
+		laufe(ast.fragment, [], (k) => { if (k.type === 'Component' && k.name === name) out.push(k); });
 		return out;
 	}
 
-	test('keine_section_mehr_nur_der_baustein', () => {
+	test('keine_section_und_keine_mail_inhalt_karte', () => {
 		assert.equal(mounts('EditReportConfigSection').length, 0, 'EditReportConfigSection ist in TripNewEditor noch gemountet.');
-		assert.equal(mounts('MailInhaltCard').length, 2, `Erwartet 2 MailInhaltCard-Mounts (Desktop + Mobil), gefunden ${mounts('MailInhaltCard').length}.`);
+		assert.equal(mounts('MailInhaltCard').length, 0, `MailInhaltCard noch ${mounts('MailInhaltCard').length}-mal gemountet (Hub hat keine).`);
 	});
 
-	test('ein_mount_steht_unter_not_isMobileViewport_der_andere_unter_isMobileViewport', () => {
-		const gates = mounts('MailInhaltCard').map((m) =>
-			m.ahnen.filter((a) => a.type === 'IfBlock').map(gate)
-		);
-		const desktop = gates.filter((g) => g.some((t) => /^!\s*isMobileViewport$/.test(t)));
-		const mobil = gates.filter((g) => g.some((t) => /^isMobileViewport$/.test(t)));
-		assert.equal(desktop.length, 1, `AC-3: genau ein Mount muss unter {#if !isMobileViewport} stehen (Gates: ${JSON.stringify(gates)}).`);
-		assert.equal(mobil.length, 1, `AC-4: genau ein Mount muss unter {#if isMobileViewport} stehen (Gates: ${JSON.stringify(gates)}).`);
-	});
-
-	test('beide_mounts_binden_reportConfig_ohne_kanal_oder_zeitplan_props', () => {
-		assert.equal(mounts('MailInhaltCard').length, 2, 'Erwartet 2 MailInhaltCard-Mounts (sonst waere diese Pruefung leer).');
-		for (const { k } of mounts('MailInhaltCard')) {
-			assert.ok(k.attributes.some((a: Knoten) => a.type === 'BindDirective' && a.name === 'reportConfig'),
-				'AC-4: Mount ohne bind:reportConfig — Desktop und Mobil schrieben nicht in denselben report_config.');
-			const namen = k.attributes.map((a: Knoten) => a.name);
-			for (const v of ['showChannels', 'showSchedule', 'mode', 'weatherChannels']) {
-				assert.ok(!namen.includes(v), `Prop "${v}" gehoert nicht an den Baustein.`);
-			}
-		}
-	});
-
-	test('importiert_den_baustein_aus_shared', () => {
+	test('importiert_den_baustein_nicht_mehr', () => {
 		const importe: string[] = [];
 		laufe(ast.instance, [], (k) => { if (k.type === 'ImportDeclaration') importe.push(String(k.source.value)); });
-		assert.ok(importe.some((p) => /shared\/MailInhaltCard\.svelte$/.test(p)), `Kein Import von shared/MailInhaltCard.svelte (Importe: ${importe.filter((p) => /Mail|Report/.test(p))}).`);
+		assert.ok(!importe.some((p) => /MailInhaltCard/.test(p)), 'MailInhaltCard noch importiert.');
 		assert.ok(!importe.some((p) => /EditReportConfigSection/.test(p)), 'EditReportConfigSection noch importiert.');
 	});
 });

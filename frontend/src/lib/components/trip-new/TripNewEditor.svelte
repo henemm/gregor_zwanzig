@@ -17,13 +17,15 @@
 	// Issue #2880: geteilte Schritt-Reiter und Feld-Bausteine (wie /compare/new).
 	import AnlegeReiter, { type AnlegeReiterSchritt } from '$lib/components/shared/anlege-rahmen/AnlegeReiter.svelte';
 	import Field from '$lib/components/molecules/Field.svelte';
-	import WetterMetrikenVersandPanel from '$lib/components/shared/WetterMetrikenVersandPanel.svelte';
+	// #3332 (D1 von #3307): Schritt Zustellung = derselbe Reiter wie im Hub (Anlegen = Bearbeiten).
+	import ZustellungTab from '$lib/components/shared/zustellung-tab/ZustellungTab.svelte';
+	import type { ZustellungStand } from '$lib/components/shared/zustellung-tab/zustellungModell';
+	import type { ZustellungAnlegeMeldung } from '$lib/components/shared/zustellung-tab/zustellungSpeicherung';
 	// Issue #2794 S3a Teil-PR 3 (AC-38): Schritt Wetter = WetterTab (createMode, kein PUT).
 	import WetterTab from '$lib/components/shared/WetterTab.svelte';
 	import type { tripSpeicherPayload } from '$lib/components/shared/wetter-tab/ampelSchreiben';
 	type WetterAnlegeNutzlast = ReturnType<typeof tripSpeicherPayload>;
 	import { anlegeKette } from '$lib/components/shared/subscriptionTabs';
-	import MailInhaltCard from '$lib/components/shared/MailInhaltCard.svelte';
 	import EditStagesPanelNew from '$lib/components/edit/EditStagesPanelNew.svelte';
 	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
 	// Issue #2794 S3a Teil-PR 4a (AC-43/AC-45): Vorbelegung der Wertebereiche als reine
@@ -59,7 +61,7 @@
 		canSave,
 		buildCreateTripPayload,
 		ergaenzeStandardwerteReportConfig,
-		ergaenzeVersandStandard,
+		mitZustellung,
 		editorEtappenAusAnlage,
 		anlageAusEditorEtappen,
 		tempoImAnlegenWechseln,
@@ -413,10 +415,8 @@
 	}
 	const onVersandJump = makeVersandJumpHandler();
 
-	// ── Kanal-Änderung aus WeatherMetricsTab ──────────────────────────────────
-	function handleChannelsChange(c: { email: boolean; telegram: boolean; sms: boolean }) {
-		channels = { ...c };
-	}
+	// #3332: `channels` (display_config) bleibt beim Editor-Standard — das Alt-Panel, das ihn
+	// zurueckmeldete, ist im Schritt Zustellung durch den Reiter Zustellung ersetzt.
 
 	// ── Wetter-Metrik-Änderung aus WeatherMetricsTab (Issue #1552) ────────────
 	// Rückkanal analog handleChannelsChange — ohne ihn verwirft der Anlege-
@@ -530,6 +530,30 @@
 	function handleAlarmQuietHoursChange(von: string | undefined, bis: string | undefined) { alarm = { ...alarm, quietFrom: von, quietTo: bis }; }
 	function handleAlarmMetricChannelChange(k: string, e: AlertMetricChannelEntry) { alarm = { ...alarm, metricChannels: { ...(alarm.metricChannels ?? {}), [k]: e } }; } // #1895 S3b1
 
+	// ── Reiter Zustellung im Anlegen (#3332, D1 von #3307) ─────────────────────
+	// Der Editor haelt den gemeldeten Stand (ueberlebt Neuaufbau Desktop/Mobil und Schrittwechsel,
+	// zurueck als `zustellungStart`) und mischt ihn per Read-Modify-Write (`mitZustellung`) in
+	// `reportConfig` und `alarm` — die letzte gueltige Uhrzeit bleibt dort stehen (AC-7). Der Stand fliesst
+	// nie in die Eingangs-Props des Reiters zurueck (er liest seinen Start einmal), daher keine Schleife.
+	let zustellungStand = $state<ZustellungStand | undefined>(undefined);
+	function handleZustellungAnlegeStand(m: ZustellungAnlegeMeldung) {
+		if (JSON.stringify(m.stand) === JSON.stringify(zustellungStand)) return;
+		zustellungStand = m.stand;
+		const r = mitZustellung(reportConfig, alarm, m.stand);
+		reportConfig = r.reportConfig;
+		alarm = r.alarm;
+	}
+	// Eintrittstrip: `standAusTrip` liefert daraus genau die heutigen Anlege-Startwerte (Morgen/Abend nach
+	// reportSlotAktiv, E-Mail an, Alarm-Kanaele und -Felder aus dem Alarm-Zustand des Editors).
+	const zustellungAnlegeTrip = $derived<Trip>({
+		...stubTrip,
+		alert_channels: alarm.channels,
+		alert_channel_thresholds: alarm.channelThresholds,
+		alert_quiet_from: alarm.quietFrom,
+		alert_quiet_to: alarm.quietTo,
+		alert_cooldown_minutes: alarm.cooldownMinutes
+	} as Trip);
+
 	// ── Speichern ─────────────────────────────────────────────────────────────
 	// #2521 S3: `mitStandardwerten` = Weg des Standardwerte-Knopfs — eigenes Gate
 	// statt `ready`, report_config wie nach unveraendertem Durchklicken ergaenzt.
@@ -550,8 +574,10 @@
 				weatherMetrics,
 				channels,
 				// #1743 AC-21: Standard-Versandeinstellungen entstehen im Speicherweg,
-				// auch wenn der Versand-Abschnitt nie beruehrt wurde.
-				reportConfig: mitStandardwerten ? ergaenzeStandardwerteReportConfig(reportConfig) : ergaenzeVersandStandard(reportConfig),
+				// auch wenn der Versand-Abschnitt nie beruehrt wurde. #3332 (AC-4/AC-10): seit die
+				// Mail-Inhalt-Karte im Anlegen entfaellt, ergaenzt auch der Bestandsweg ihre Standardfelder
+				// (Koerper bitgleich zu vorher); der Stand des Reiters Zustellung steckt schon in `reportConfig`.
+				reportConfig: ergaenzeStandardwerteReportConfig(reportConfig),
 				alarm,
 				corridors,
 				tempo: selectedTempo,
@@ -918,14 +944,9 @@
 		     meldet allein der WetterTab (handleWetterAnlegeStand) — genau ein Rueckkanal. -->
 		{#if !isMobileViewport}
 		<div style:display={activeTab === 'zustellung' ? '' : 'none'}>
-			<!-- Issue #1743: geteilter Baustein „Wetter-Metriken + Versand" (createMode,
-			     kein PUT). Der Versand-Abschnitt haelt den report_config-Blob per
-			     bind:reportConfig und schreibt seine Standardwerte wie bisher ab dem Start;
-			     die Mail-Inhalt-Karte folgt darunter. -->
-			<WetterMetrikenVersandPanel context="route" bereich="zustellung" trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} bind:reportConfig onJump={onVersandJump} />
-			<div style="padding: 0 40px; max-width: 720px;">
-				<MailInhaltCard bind:reportConfig />
-			</div>
+			<!-- #3332 (AC-1): derselbe Reiter Zustellung wie im Hub (createMode, kein PUT) statt Alt-Panel
+			     und Mail-Inhalt-Karte; einziger Schreiber der Versand- und Alarm-Zustellungsfelder. -->
+			<ZustellungTab context="route" trip={zustellungAnlegeTrip} createMode={true} zustellungStart={zustellungStand} onAnlegeStand={handleZustellungAnlegeStand} onJump={onVersandJump} />
 		</div>
 		{/if}
 
@@ -1177,12 +1198,8 @@
 			     isMobileViewport-Gate nur EINE Instanz im DOM (Desktop XOR Mobile). -->
 			{#if isMobileViewport}
 			<div style:display={activeTab === 'zustellung' ? '' : 'none'}>
-				<!-- Issue #1743: geteilter Baustein, XOR zum Desktop-Mount oben.
-				     Issue #2794 S3a Teil-PR 3: nur Bereich Zustellung (s. Desktop). -->
-				<WetterMetrikenVersandPanel context="route" bereich="zustellung" trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} bind:reportConfig onJump={onVersandJump} />
-				<div style="padding: 0 16px;">
-					<MailInhaltCard bind:reportConfig />
-				</div>
+				<!-- #3332 (AC-1/AC-6): Reiter Zustellung, XOR zum Desktop-Mount oben; Startstand vom Editor. -->
+				<ZustellungTab context="route" trip={zustellungAnlegeTrip} createMode={true} zustellungStart={zustellungStand} onAnlegeStand={handleZustellungAnlegeStand} onJump={onVersandJump} />
 			</div>
 			{/if}
 

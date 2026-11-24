@@ -95,11 +95,17 @@ function erwartet(reiter: string, kontext: Kontext): string {
 // gemounteten) Korridor-Editor; mit ihm entfaellt sie in beiden Anlege-Editoren. Den Schluessel
 // selbst (info.wertebereiche.*) raeumt Teil-PR 4b auf; der Baustein Infobox kennt ihn noch.
 const OHNE_KORRIDOR_EDITOR = (r: string) => r !== 'wertebereiche';
+// Issue #3332 (Spec feat_3332_zustellung_anlegen_trip.md, AC-11, Tech-Entscheidung Hub-Parität): im Schritt
+// Zustellung des Trip-Anlegens steht der Reiter Zustellung statt des Alt-Panels. Er zeigt keine Infobox — weder
+// die Versand-Infobox noch die Wetter-Metriken-Infobox, die bisher im (dort sichtbaren) Alt-Panel stand. Die
+// Alarme-Infobox im Trip-Anlegen und alle Infoboxen des Ortsvergleich-Anlegens (Alt-Panel bis D2) bleiben.
+const TRIP_OHNE_INFOBOX_SEIT_3332 = ['versand', 'wetter-metriken'];
+const MIT_INFOBOX_IM_TRIP_ANLEGEN = (r: string) => !TRIP_OHNE_INFOBOX_SEIT_3332.includes(r);
 
 describe('AC-1/AC-3/AC-4: /trips/new zeigt die Infobox in jedem überspringbaren Reiter', () => {
 	for (const mobil of [false, true]) {
 		const ansicht = mobil ? 'Mobil' : 'Desktop';
-		for (const reiter of REITER_MIT_INFOBOX.route.filter(OHNE_KORRIDOR_EDITOR)) {
+		for (const reiter of REITER_MIT_INFOBOX.route.filter(OHNE_KORRIDOR_EDITOR).filter(MIT_INFOBOX_IM_TRIP_ANLEGEN)) {
 			test(`${ansicht}: Reiter ${reiter} trägt genau eine Infobox mit dem freigegebenen Text`, async () => {
 				const html = await renderTrip({ ...TRIP_BASIS, activeTab: (REITER_DES_ABSCHNITTS as Record<string, string>)[reiter], isMobileViewport: mobil });
 				const id = `infobox-${reiter}-route`;
@@ -120,11 +126,14 @@ describe('AC-1/AC-3/AC-4: /trips/new zeigt die Infobox in jedem überspringbaren
 				assert.equal(infoboxText(html, reiter, 'route'), erwartet(reiter, 'route'));
 			});
 		}
-		test(`${ansicht}: Versand-Infobox des Trips nennt BEIDE Zeiten (07:00 und 18:00)`, async () => {
+		// #3332 AC-11: ersetzt „Versand-Infobox des Trips nennt BEIDE Zeiten“ — der Reiter Zustellung hat keine Infobox.
+		test(`${ansicht}: #3332 AC-11 — Schritt Zustellung des Trips: Reiter Zustellung ohne Infobox, Alarme-Infobox bleibt`, async () => {
 			const html = await renderTrip({ ...TRIP_BASIS, activeTab: 'zustellung', isMobileViewport: mobil });
-			const text = infoboxText(html, 'versand', 'route');
-			assert.match(text, /07:00/);
-			assert.match(text, /18:00/);
+			assert.equal(tagsMitTestid(html, 'zustellung-tab').length, 1, 'Messaufbau: Reiter Zustellung nicht im Schritt Zustellung');
+			assert.deepEqual(testids(innen(html, 'zustellung-tab'), 'infobox-'), [], 'Reiter Zustellung trägt eine Infobox');
+			for (const reiter of TRIP_OHNE_INFOBOX_SEIT_3332)
+				assert.equal(tagsMitTestid(html, `infobox-${reiter}-route`).length, 0, `Infobox "${reiter}" noch im Trip-Anlegen`);
+			assert.equal(tagsMitTestid(html, 'infobox-alarme-route').length, 1, 'Alarme-Infobox im Trip-Anlegen verloren');
 		});
 	}
 });
@@ -252,9 +261,8 @@ describe('#1743 AC-22: Anlegen — Versand-Infobox steht im Schritt Wetter-Metri
 	}
 	for (const mobil of [false, true]) {
 		const ansicht = mobil ? 'Mobil' : 'Desktop';
-		test(`${ansicht}: /trips/new`, async () => {
-			reihenfolge(await renderTrip({ ...TRIP_BASIS, activeTab: 'zustellung', isMobileViewport: mobil }), 'route');
-		});
+		// #3332 AC-11: /trips/new hat im Schritt Zustellung kein Alt-Panel und keine Versand-Infobox mehr
+		// (Gegenprobe im Block AC-1/AC-3/AC-4 oben); die Reihenfolge gilt nur noch im Ortsvergleich (bis D2).
 		test(`${ansicht}: /compare/new`, async () => {
 			reihenfolge(await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'zustellung', isMobileViewport: mobil }), 'vergleich');
 		});
@@ -426,7 +434,8 @@ describe('Verdrahtung: jeder Anlege-Mount setzt showInfobox explizit auf true', 
 			join(COMPONENTS, 'trip-new/TripNewEditor.svelte'),
 			// #1743: Wetter-Metriken und Versand nur noch ueber den geteilten Panel-Baustein (Desktop + Mobil).
 			// #2794 S3a Teil-PR 4a: die zwei versteckten CorridorEditor-Mounts sind entfernt (Soll 0).
-			{ WeatherMetricsTab: 0, CorridorEditor: 0, CorridorEditorMobile: 0, AlarmeTab: 2, VersandTab: 0, WetterMetrikenVersandPanel: 2 }
+			// #3332 (AC-1/AC-11): der Reiter Zustellung ersetzt das Panel (Soll 0); er trägt keine Infobox (Block unten).
+			{ WeatherMetricsTab: 0, CorridorEditor: 0, CorridorEditorMobile: 0, AlarmeTab: 2, VersandTab: 0, WetterMetrikenVersandPanel: 0 }
 		],
 		[
 			'CompareNewEditor',
@@ -453,6 +462,13 @@ describe('Verdrahtung: jeder Anlege-Mount setzt showInfobox explizit auf true', 
 			}
 		});
 	}
+
+	test('#3332 AC-11: TripNewEditor mountet den Reiter Zustellung zweimal (Desktop + Mobil), nie mit showInfobox', () => {
+		const ast = parse(readFileSync(join(COMPONENTS, 'trip-new/TripNewEditor.svelte'), 'utf-8'), { modern: true }) as Knoten;
+		const zt = findeKomponenten(ast, 'ZustellungTab');
+		assert.equal(zt.length, 2, `TripNewEditor: ZustellungTab hat ${zt.length} statt 2 Mounts`);
+		for (const e of zt) assert.ok(!attributNamen(e).includes('showInfobox'), 'Reiter Zustellung im Anlegen mit showInfobox (Hub-Parität verletzt)');
+	});
 
 	test('TripNewEditor: das Wegpunkte-Panel trägt eine Infobox (Desktop- und Mobil-Baum)', () => {
 		const quelle = readFileSync(join(COMPONENTS, 'trip-new/TripNewEditor.svelte'), 'utf-8');

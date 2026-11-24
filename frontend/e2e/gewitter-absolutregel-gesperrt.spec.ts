@@ -22,19 +22,21 @@
 // Ratschen-Eintrag entwertet — „Ratsche leeren macht den abhaengigen Test
 // vakuum-gruen".
 //
-// Warum im echten Browser: der mobile Mount steckt in einem Wrapper, der nur per
-// `style:display` ein-/ausgeblendet wird (TripNewEditor.svelte, #2277 S1) — der
-// Kanal-/Schwellen-Stand lebt als lokaler State im gemounteten AlarmeTab und im
-// Schatten-State der Anlege-Seite. Ob er einen Tab-Wechsel wirklich ueberlebt und
-// ob Klicks auf `<span role="switch">` den Zustand umschalten, koennen SSR- und
-// Kern-Tests (node --test) strukturell nicht belegen.
+// #3332 (Spec feat_3332_zustellung_anlegen_trip.md, AC-9) — viertes Nachziehen IN PLACE: im
+// Trip-Anlegen besitzt der Reiter Zustellung (wie im Hub) Alarm-Kanaele mit Dringlichkeit, Cooldown und
+// Stille Stunden; der Reiter Alarme blendet genau diese Abschnitte aus. Kanal-Schalter und -Stufen werden
+// deshalb in der Kanal-Tabelle des Reiters Zustellung bedient, der Schalter „Amtliche Warnungen" bleibt im
+// Reiter Alarme. Die Kanal-Tabelle bietet Alarm-Schalter und Stufe nur fuer VERBUNDENE Kanaele; wie
+// hub-anlegen-ablauf AN-6 ergaenzt NUR die Profil-Lesung im Browser Test-Kontakte fuer E-Mail, Telegram
+// und SMS (kein Profil wird veraendert). Premium-SMS bleibt tarifgebunden und wird nach dem echten Tarif
+// gemessen.
 //
-// Premium-SMS: die Zeile ist beim Anlegen IMMER sichtbar (#2229), der Schalter
-// aber tarifgebunden (premiumSmsAlarmGate.ts — nur `premium_sms_allowed === true`
-// macht ihn bedienbar). Der Test misst den Tarif des angemeldeten Nutzers ueber
-// `/api/auth/profile` und prueft den dazu passenden Zustand — bedienbar ODER
-// gesperrt mit Begruendung. Umschalten und Persistenz laufen deshalb ueber den
-// tariffreien Kanal E-Mail, damit sie in jeder Umgebung begehbar sind.
+// Warum im echten Browser: der mobile Mount steckt in einem Wrapper, der nur per
+// `style:display` ein-/ausgeblendet wird (TripNewEditor.svelte) — der Kanal-/Stufen-Stand
+// lebt im Anlege-Editor (`zustellungStand`, #3332) und wird dem Reiter beim Aufbau
+// zurueckgegeben. Ob er einen Tab-Wechsel wirklich ueberlebt und ob Klicks auf
+// `<span role="switch">` den Zustand umschalten, koennen SSR- und Kern-Tests
+// (node --test) strukturell nicht belegen.
 
 import { test, expect } from '@playwright/test';
 import { tippeDatum } from './helpers';
@@ -43,12 +45,23 @@ import * as path from 'node:path';
 
 const MOBILE = { width: 390, height: 844 };
 
-// `/trips/new` bis zum Alerts-Tab durchklicken. Uebernommen aus dem bereits
-// funktionierenden `issue-776-metrics-toggle.spec.ts::openNewTripZeitplan()`
-// (mobiler Pfad, Progressive-Tab-Unlock) — einziger zusaetzlicher Schritt ist der
-// Klick auf „Alerts". Kein Trip wird angelegt: der GPX-Upload loest nur den
-// zustandslosen `POST /api/gpx/parse` aus.
-async function openNewTripAlerts(page: Page) {
+/** Nur die Profil-LESUNG im Browser: Test-Kontakte, damit E-Mail, Telegram und SMS als verbunden gelten. */
+async function kontakteVerbunden(page: Page): Promise<void> {
+	await page.route('**/api/auth/profile', async (route) => {
+		if (route.request().method() !== 'GET') return route.continue();
+		const echt = await route.fetch();
+		const profil = (await echt.json()) as Record<string, unknown>;
+		await route.fulfill({
+			response: echt,
+			json: { ...profil, mail_to: profil.mail_to || 'e2e-3332@example.com', telegram_chat_id: 'e2e-3332-test-chat', sms_to: '+491700000000', sms_verified: true, sms_allowed: true }
+		});
+	});
+}
+
+// `/trips/new` bis zum Schritt Zustellung durchklicken (mobiler Pfad, Progressive-Tab-Unlock).
+// Kein Trip wird angelegt: der GPX-Upload loest nur den zustandslosen `POST /api/gpx/parse` aus.
+async function openNewTripZustellung(page: Page): Promise<{ alarme: Locator; zustellung: Locator }> {
+	await kontakteVerbunden(page);
 	await page.setViewportSize(MOBILE);
 	await page.goto('/trips/new');
 	await page.getByTestId('trip-new-name-input-mobile').fill('#2277 Alarme-Reiter');
@@ -72,25 +85,27 @@ async function openNewTripAlerts(page: Page) {
 	}
 
 	await tabbar.getByRole('tab', { name: /Wetter/ }).click({ force: true });
-	// Issue #2794 S3a (Teil-PR 2): der AlarmeTab steht im Schritt „Zustellung", der nach
-	// Besuch von „Wetter" freigeschaltet ist (Kette ... → Wetter → Zustellung).
+	// Issue #2794 S3a (Teil-PR 2): AlarmeTab und (seit #3332) Reiter Zustellung stehen im Schritt
+	// „Zustellung", der nach Besuch von „Wetter" freigeschaltet ist.
 	await tabbar.getByRole('tab', { name: /Zustellung/ }).click({ force: true });
 
 	// Harter Surface-Check: ohne ihn waere jedes spaetere `toHaveCount(0)`
 	// bedeutungslos (leerer DOM zaehlt auch 0). Scope auf den mobilen Baum.
-	const scope = page.locator('.tn-mobile').getByTestId('alarme-tab');
-	await expect(scope).toBeVisible({ timeout: 15_000 });
-	return scope;
+	const alarme = page.locator('.tn-mobile').getByTestId('alarme-tab');
+	await expect(alarme).toBeVisible({ timeout: 15_000 });
+	const zustellung = page.locator('.tn-mobile [data-testid="zustellung-tab"][data-context="route"]');
+	await expect(zustellung.getByTestId('zustellung-kanal-tabelle')).toBeVisible({ timeout: 15_000 });
+	return { alarme, zustellung };
 }
 
-// Kanal-Schalter: die testid sitzt auf dem Container, der Schalter selbst ist ein
-// `<span role="switch" aria-checked>` (atoms/Switch.svelte) — KEINE Checkbox.
-function kanalSchalter(scope: Locator, kind: 'telegram' | 'sms' | 'email' | 'premium_sms') {
-	return scope.getByTestId(`alert-channel-toggle-${kind}`).getByRole('switch');
+// Alarm-Schalter der Kanal-Tabelle: `<span role="switch" aria-checked>` (atoms/Switch.svelte).
+function alarmSchalter(scope: Locator, kind: 'telegram' | 'sms' | 'email' | 'premium_sms') {
+	return scope.getByTestId(`zustellung-kanal-${kind}-alarm`);
 }
 
-function schwelle(scope: Locator, kind: string, level: 'LOW' | 'MODERATE' | 'HIGH') {
-	return scope.getByTestId(`alert-channel-threshold-${kind}-${level}`);
+// Dringlichkeit: Segment (role=radio, aria-checked), nur bei Alarm an UND verbundenem Kanal.
+function stufe(scope: Locator, kind: string, level: 'LOW' | 'MODERATE' | 'HIGH') {
+	return scope.getByTestId(`zustellung-kanal-${kind}-dringlichkeit-${level}`);
 }
 
 // Amtliche Warnungen: testid auf dem Container (ChannelToggle.svelte), die
@@ -99,58 +114,64 @@ function amtlicheWarnungen(scope: Locator) {
 	return scope.getByTestId('alerts-tab-official-alert-triggers-toggle').getByRole('checkbox');
 }
 
-test.describe('#2277 S1: AlarmeTab im Alarme-Reiter von /trips/new', () => {
-	test('Mount: AlarmeTab statt AlertRulesEditor, Kanal-Defaults der Neuanlage', async ({ page }) => {
-		const scope = await openNewTripAlerts(page);
+test.describe('#2277 S1 / #3332: Alarm-Bedienung im Schritt Zustellung von /trips/new', () => {
+	test('Mount: AlarmeTab ohne Kanal-Abschnitte, Kanal-Defaults der Neuanlage im Reiter Zustellung', async ({ page }) => {
+		const { alarme, zustellung } = await openNewTripZustellung(page);
 
 		await expect(page.getByTestId('alert-rules-editor')).toHaveCount(0);
+		// #3332 AC-9: genau eine Bedienstelle je Feld — Kanaele, Cooldown, Stille Stunden nur im Reiter Zustellung.
+		for (const s of ['channels', 'cooldown', 'quiet-hours']) await expect(alarme.getByTestId(`alarme-section-${s}`)).toHaveCount(0);
+		await expect(alarme.getByTestId('alarme-section-official-warnings')).toHaveCount(1);
 
-		await expect.soft(kanalSchalter(scope, 'telegram')).toHaveAttribute('aria-checked', 'true');
 		// Issue #2518: Neuanlage-Default = E-Mail + Telegram an, SMS aus.
-		await expect.soft(kanalSchalter(scope, 'sms')).toHaveAttribute('aria-checked', 'false');
-		await expect.soft(kanalSchalter(scope, 'email')).toHaveAttribute('aria-checked', 'true');
-		await expect.soft(kanalSchalter(scope, 'premium_sms')).toHaveAttribute('aria-checked', 'false');
+		await expect.soft(alarmSchalter(zustellung, 'telegram')).toHaveAttribute('aria-checked', 'true');
+		await expect.soft(alarmSchalter(zustellung, 'sms')).toHaveAttribute('aria-checked', 'false');
+		await expect.soft(alarmSchalter(zustellung, 'email')).toHaveAttribute('aria-checked', 'true');
 	});
 
-	test('Kanal-Schwellen: jede Zeile startet auf LOW', async ({ page }) => {
-		const scope = await openNewTripAlerts(page);
+	test('Kanal-Stufen: jede aktive Alarm-Zeile startet auf „gering" (LOW)', async ({ page }) => {
+		const { zustellung } = await openNewTripZustellung(page);
 
-		for (const kind of ['telegram', 'sms', 'email', 'premium_sms']) {
-			await expect.soft(schwelle(scope, kind, 'LOW')).toHaveAttribute('aria-pressed', 'true');
-			await expect.soft(schwelle(scope, kind, 'MODERATE')).toHaveAttribute('aria-pressed', 'false');
-			await expect.soft(schwelle(scope, kind, 'HIGH')).toHaveAttribute('aria-pressed', 'false');
+		for (const kind of ['telegram', 'email']) {
+			await expect.soft(stufe(zustellung, kind, 'LOW')).toHaveAttribute('aria-checked', 'true');
+			await expect.soft(stufe(zustellung, kind, 'MODERATE')).toHaveAttribute('aria-checked', 'false');
+			await expect.soft(stufe(zustellung, kind, 'HIGH')).toHaveAttribute('aria-checked', 'false');
 		}
+		// SMS-Alarm aus: keine Stufe wählbar; nach dem Einschalten startet sie auf LOW.
+		await expect(stufe(zustellung, 'sms', 'LOW')).toHaveCount(0);
+		await alarmSchalter(zustellung, 'sms').click();
+		await expect(stufe(zustellung, 'sms', 'LOW')).toHaveAttribute('aria-checked', 'true');
 	});
 
 	test('Premium-SMS wird beim Anlegen angeboten — bedienbar nach Tarif (#2229)', async ({ page }) => {
-		const scope = await openNewTripAlerts(page);
+		const { zustellung } = await openNewTripZustellung(page);
 		const res = await page.request.get('/api/auth/profile');
 		expect(res.ok(), `GET /api/auth/profile fehlgeschlagen: ${res.status()}`).toBeTruthy();
 		const profile = (await res.json()) as { premium_sms_allowed?: boolean };
 
-		const sw = kanalSchalter(scope, 'premium_sms');
-		await expect(scope.getByTestId('alert-channel-row-premium_sms')).toBeVisible();
-		await expect(sw).toHaveAttribute('aria-checked', 'false');
-
+		await expect(zustellung.getByTestId('zustellung-kanal-premium_sms')).toBeVisible();
 		if (profile.premium_sms_allowed === true) {
-			await expect(sw).not.toHaveAttribute('aria-disabled', 'true', { timeout: 10_000 });
-			await sw.click();
-			await expect(sw).toHaveAttribute('aria-checked', 'true');
+			// Bedienbar heißt: der Alarm-Schalter steht da (aus) und lässt sich einschalten — sofern das
+			// Gerät verbunden ist; sonst nennt die Zeile den Grund (gesperrt).
+			const sw = alarmSchalter(zustellung, 'premium_sms');
+			if ((await sw.count()) > 0) {
+				await expect(sw).toHaveAttribute('aria-checked', 'false');
+				await sw.click();
+				await expect(sw).toHaveAttribute('aria-checked', 'true');
+			} else {
+				await expect(zustellung.getByTestId('zustellung-kanal-premium_sms-alarm-gesperrt')).toBeVisible();
+			}
 		} else {
-			await expect(scope.getByTestId('alert-channel-disabled-hint-premium_sms')).toContainText(
-				'ab Level Premium',
-				{ timeout: 10_000 }
-			);
-			await expect(sw).toHaveAttribute('aria-disabled', 'true');
-			await sw.click({ force: true });
-			await expect(sw).toHaveAttribute('aria-checked', 'false');
+			// Ohne Tarif: kein Alarm-Schalter, die Zeile nennt den Sperrgrund.
+			await expect(alarmSchalter(zustellung, 'premium_sms')).toHaveCount(0);
+			await expect(zustellung.getByTestId('zustellung-kanal-premium_sms-alarm-gesperrt')).toBeVisible({ timeout: 10_000 });
 		}
 	});
 
-	test('Kanal umschalten: SMS an und wieder aus', async ({ page }) => {
-		const scope = await openNewTripAlerts(page);
+	test('Kanal umschalten: SMS-Alarm an und wieder aus', async ({ page }) => {
+		const { zustellung } = await openNewTripZustellung(page);
 		// Issue #2518: E-Mail startet in der Neuanlage an, SMS aus.
-		const sw = kanalSchalter(scope, 'sms');
+		const sw = alarmSchalter(zustellung, 'sms');
 
 		await expect(sw).toHaveAttribute('aria-checked', 'false');
 		await sw.click();
@@ -159,16 +180,17 @@ test.describe('#2277 S1: AlarmeTab im Alarme-Reiter von /trips/new', () => {
 		await expect(sw).toHaveAttribute('aria-checked', 'false');
 	});
 
-	test('Kanal-Schwelle und Amtliche Warnungen lassen sich setzen', async ({ page }) => {
-		const scope = await openNewTripAlerts(page);
+	test('Kanal-Stufe und Amtliche Warnungen lassen sich setzen', async ({ page }) => {
+		const { alarme, zustellung } = await openNewTripZustellung(page);
 
-		await schwelle(scope, 'sms', 'HIGH').click();
-		await expect(schwelle(scope, 'sms', 'HIGH')).toHaveAttribute('aria-pressed', 'true');
-		await expect(schwelle(scope, 'sms', 'LOW')).toHaveAttribute('aria-pressed', 'false');
+		await alarmSchalter(zustellung, 'sms').click();
+		await stufe(zustellung, 'sms', 'HIGH').click();
+		await expect(stufe(zustellung, 'sms', 'HIGH')).toHaveAttribute('aria-checked', 'true');
+		await expect(stufe(zustellung, 'sms', 'LOW')).toHaveAttribute('aria-checked', 'false');
 
 		// #3047 Runde 7 (Spec feat_3047 Nachtrag, PO 2026-11-16, löst #1258 AC-4 ab): neue Trips starten mit
 		// amtlichen Warnungen im Briefing und als Alarm — der Schalter steht an und lässt sich ausschalten.
-		const cb = amtlicheWarnungen(scope);
+		const cb = amtlicheWarnungen(alarme);
 		await expect(cb).toBeChecked();
 		await cb.click();
 		await expect(cb).not.toBeChecked();
@@ -176,27 +198,27 @@ test.describe('#2277 S1: AlarmeTab im Alarme-Reiter von /trips/new', () => {
 		await expect(cb).toBeChecked();
 	});
 
-	test('Eingaben ueberleben den Tab-Wechsel Alerts → Route → Alerts', async ({ page }) => {
-		const scope = await openNewTripAlerts(page);
+	test('Eingaben ueberleben den Tab-Wechsel Zustellung → Route → Zustellung', async ({ page }) => {
+		const { alarme, zustellung } = await openNewTripZustellung(page);
 
-		await kanalSchalter(scope, 'sms').click();
-		await expect(kanalSchalter(scope, 'sms')).toHaveAttribute('aria-checked', 'true');
-		await schwelle(scope, 'sms', 'HIGH').click();
-		await expect(schwelle(scope, 'sms', 'HIGH')).toHaveAttribute('aria-pressed', 'true');
+		await alarmSchalter(zustellung, 'sms').click();
+		await expect(alarmSchalter(zustellung, 'sms')).toHaveAttribute('aria-checked', 'true');
+		await stufe(zustellung, 'sms', 'HIGH').click();
+		await expect(stufe(zustellung, 'sms', 'HIGH')).toHaveAttribute('aria-checked', 'true');
 		// #3047 Runde 7 (PO 2026-11-16): Neuanlage startet mit amtlichen Warnungen an — die Eingabe ist das Ausschalten.
-		await expect(amtlicheWarnungen(scope)).toBeChecked();
-		await amtlicheWarnungen(scope).click();
-		await expect(amtlicheWarnungen(scope)).not.toBeChecked();
+		await expect(amtlicheWarnungen(alarme)).toBeChecked();
+		await amtlicheWarnungen(alarme).click();
+		await expect(amtlicheWarnungen(alarme)).not.toBeChecked();
 
 		const tabbar = page.getByTestId('tn-mobile-tabbar');
 		await tabbar.getByRole('tab', { name: /Route/ }).click({ force: true });
-		await expect(scope).toBeHidden();
+		await expect(alarme).toBeHidden();
 		await tabbar.getByRole('tab', { name: /Zustellung/ }).click({ force: true });
-		await expect(scope).toBeVisible();
+		await expect(alarme).toBeVisible();
 
-		await expect.soft(kanalSchalter(scope, 'sms')).toHaveAttribute('aria-checked', 'true');
-		await expect.soft(schwelle(scope, 'sms', 'HIGH')).toHaveAttribute('aria-pressed', 'true');
-		await expect.soft(schwelle(scope, 'sms', 'LOW')).toHaveAttribute('aria-pressed', 'false');
-		await expect.soft(amtlicheWarnungen(scope)).not.toBeChecked();
+		await expect.soft(alarmSchalter(zustellung, 'sms')).toHaveAttribute('aria-checked', 'true');
+		await expect.soft(stufe(zustellung, 'sms', 'HIGH')).toHaveAttribute('aria-checked', 'true');
+		await expect.soft(stufe(zustellung, 'sms', 'LOW')).toHaveAttribute('aria-checked', 'false');
+		await expect.soft(amtlicheWarnungen(alarme)).not.toBeChecked();
 	});
 });

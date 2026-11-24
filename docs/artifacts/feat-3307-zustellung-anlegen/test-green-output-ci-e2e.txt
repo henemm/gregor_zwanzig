@@ -1,0 +1,292 @@
+# CI-Fix e2e (Run 45429814554): lokaler isolierter Stack (ci-stack.sh, Ports 18091/18000)
+## begriff-erklaerung.spec.ts
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Running 19 tests using 1 worker
+
+[1/19] [setup] › e2e/global.setup.ts:10:1 › authenticate and seed test data
+[setup] › e2e/global.setup.ts:10:1 › authenticate and seed test data
+[e2e-setup] Anmeldezustand fehlt – melde neu an
+
+[2/19] [tests] › e2e/begriff-erklaerung.spec.ts:260:3 › /trips/new (Desktop): Infobox je Reiter › Pflichtreiter Route/Etappen ohne Infobox; Wegpunkte, Wetter (Metriken, Wertebereiche), Zustellung (Versand, Alarme) mit Infobox
+[3/19] [tests] › e2e/begriff-erklaerung.spec.ts:260:3 › /trips/new (Mobil): Infobox je Reiter › Pflichtreiter Route/Etappen ohne Infobox; Wegpunkte, Wetter (Metriken, Wertebereiche), Zustellung (Versand, Alarme) mit Infobox
+[4/19] [tests] › e2e/begriff-erklaerung.spec.ts:301:2 › /compare/new (Desktop): Infobox je Reiter › Pflichtreiter Vergleich/Orte ohne Infobox; Wetter (Metriken, Wertebereiche), Zustellung (Versand, Alarme) mit Vergleichs-Text
+[5/19] [tests] › e2e/begriff-erklaerung.spec.ts:331:2 › AC-7: die Infobox ist zustandslos › bleibt beim Reiterwechsel und nach Neuladen sichtbar; schreibt weder Browser-Speicher noch Server
+[6/19] [tests] › e2e/begriff-erklaerung.spec.ts:386:2 › AC-8/12/13 Trip (Desktop): ⓘ Wertebereiche entfällt (#2794 Teil 3 §6 d) — Grenzen im WetterTab
+[7/19] [tests] › e2e/begriff-erklaerung.spec.ts:391:2 › AC-8/12/13 Ortsvergleich (Desktop): ⓘ Wertebereiche entfällt (#2794 Teil 3 §6 d) — Grenzen im WetterTab
+[8/19] [tests] › e2e/begriff-erklaerung.spec.ts:386:2 › AC-8/12/13 Trip (Mobil): ⓘ Wertebereiche entfällt (#2794 Teil 3 §6 d) — Grenzen im WetterTab
+[9/19] [tests] › e2e/begriff-erklaerung.spec.ts:391:2 › AC-8/12/13 Ortsvergleich (Mobil): ⓘ Wertebereiche entfällt (#2794 Teil 3 §6 d) — Grenzen im WetterTab
+[10/19] [tests] › e2e/begriff-erklaerung.spec.ts:409:2 › AC-9/AC-11 Trip (Desktop): Dringlichkeit und Cooldown im Reiter Zustellung (#3332), keine alte Auswahl, kein verwaistes ⓘ
+[11/19] [tests] › e2e/begriff-erklaerung.spec.ts:409:2 › AC-9/AC-11 Trip (Mobil): Dringlichkeit und Cooldown im Reiter Zustellung (#3332), keine alte Auswahl, kein verwaistes ⓘ
+[12/19] [tests] › e2e/begriff-erklaerung.spec.ts:429:1 › AC-9/AC-11 Ortsvergleich (Mobil): ⓘ Dringlichkeits-Schwelle und ⓘ Cooldown öffnen die Erklärung, Hinweistext bleibt
+[13/19] [tests] › e2e/begriff-erklaerung.spec.ts:447:2 › /compare/new (Desktop): Alarme › AC-9: ⓘ Dringlichkeits-Schwelle; AC-11: ⓘ Cooldown samt unverändertem Hinweistext
+[14/19] [tests] › e2e/begriff-erklaerung.spec.ts:468:2 › AC-16 /trips/new (Desktop): alle Reiter, Sprechblasen öffnen und schließen — keine Konsolenfehler
+[15/19] [tests] › e2e/begriff-erklaerung.spec.ts:497:2 › AC-16 /compare/new (Desktop): alle Reiter, Sprechblasen öffnen und schließen — keine Konsolenfehler
+[16/19] [tests] › e2e/begriff-erklaerung.spec.ts:468:2 › AC-16 /trips/new (Mobil): alle Reiter, Sprechblasen öffnen und schließen — keine Konsolenfehler
+[17/19] [tests] › e2e/begriff-erklaerung.spec.ts:497:2 › AC-16 /compare/new (Mobil): alle Reiter, Sprechblasen öffnen und schließen — keine Konsolenfehler
+[18/19] [tests] › e2e/begriff-erklaerung.spec.ts:527:2 › AC-14 (Desktop): das ⓘ ist mindestens 24 × 24 px groß
+[19/19] [tests] › e2e/begriff-erklaerung.spec.ts:527:2 › AC-14 (Mobil): das ⓘ ist mindestens 24 × 24 px groß
+  19 passed (1.2m)
+## design-system-trip-vergleich.spec.ts
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Running 37 tests using 1 worker
+
+[1/37] [setup] › e2e/global.setup.ts:10:1 › authenticate and seed test data
+[2/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:141:3 › DS-5: Anlege-Aktion überall Btn primary (Ink) › DS-5 gefüllt (1280 px): Trip-Liste und Vergleichsliste
+[3/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:141:3 › DS-5: Anlege-Aktion überall Btn primary (Ink) › DS-5 gefüllt (390 px): Trip-Liste und Vergleichsliste
+[4/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:186:3 › DS-5: Leerzustände (frisches Konto ohne Trips und Vergleiche) › DS-5 leer (1280 px): Trip-Liste, Vergleichsliste, Startseite
+[5/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:186:3 › DS-5: Leerzustände (frisches Konto ohne Trips und Vergleiche) › DS-5 leer (390 px): Trip-Liste, Vergleichsliste, Startseite
+[6/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:228:1 › DS-7: .mono = Mono-Schrift aus --g-font-mono mit "tnum"; .tnum = tabellarische Ziffern
+[7/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:316:1 › DS-8: Hub-Reiterleiste am Computer ohne Kasten, Grundlinie --g-rule, 13 px/500, aktiv 600 — Trip = Vergleich
+[8/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:379:2 › DS-9 (route): Fortschritt — erledigt gefüllt --g-accent, offen nur 1-px-Kontur --g-ink-3, beide ≥ 3:1
+[9/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:379:2 › DS-9 (vergleich): Fortschritt — erledigt gefüllt --g-accent, offen nur 1-px-Kontur --g-ink-3, beide ≥ 3:1
+[10/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:433:1 › DS-10: Trip-Liste und Trip-Übersicht (de) ohne „Drafts", „Alert-Trigger", „Alerts justieren"
+[11/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:528:2 › DS-1 (de): Startdatum per Kalender 19.11.2026, Wochenbeginn Montag, gespeichert als 2026-11-19, Anzeige nach Neuladen
+[12/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:528:2 › DS-1 (en): Startdatum per Kalender 19.11.2026, Wochenbeginn Montag, gespeichert als 2026-11-19, Anzeige nach Neuladen
+[13/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:560:1 › DS-1 (390 px): Startdatum am Handy per Kalender, Anzeige 19.11.2026, Wochenbeginn Montag
+[14/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:577:2 › DS-2 (1280 px): Etappe — Datum 20.11.2026 und Startzeit 07:30 über die neuen Felder, nach Neuladen gespeichert (24 h)
+[15/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:577:2 › DS-2 (390 px): Etappe — Datum 20.11.2026 und Startzeit 07:30 über die neuen Felder, nach Neuladen gespeichert (24 h)
+[16/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:626:1 › DS-2 Etappenwechsel (1280 px): Datum/Zeit in Etappe 2 tippen, sofort zu Etappe 1 — keine Vermischung, nach Neuladen beides richtig
+[17/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:676:1 › DS-2 Zwischenstände (1280 px): langsam getippt geht kein halbes Segment (Tag „2", Monat „1", Stunde „0") als PUT hinaus
+[18/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:710:1 › DS-2 Leeren (1280 px): Startzeit leeren ⇒ 08:00 (gespeichert ohne Startzeit); Datum leeren ⇒ gespeichertes Datum bleibt und wird wieder angezeigt
+[19/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:751:1 › DS-2 (en, 1280 px): Startzeit 17:30 im englischen UI in 24 h, ohne AM/PM, gespeichert
+[20/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:773:1 › DS-1 Leeren (1280 px): Startdatum beim Anlegen leeren ⇒ „Startdatum fehlt", Etappen gesperrt
+[21/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:804:1 › DS-2 Jahr angefangen (1280 px): „202" ins Jahr getippt und Feld verlassen ⇒ nichts gespeichert, Anzeige zurück
+[22/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:826:1 › DS-2 dasselbe Datum (1280 px): gespeichertes Datum und gespeicherte Startzeit unverändert neu getippt ⇒ kein Schreibvorgang
+[23/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:848:1 › DS-2 Rückkehr ins fertige Segment (1280 px): Tag „1" nachgetippt ist angefangen, geht nicht als Zwischenstand hinaus
+[24/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:872:1 › DS-2 Rücktaste (1280 px): eine Ziffer im fertigen Tag gelöscht ist angefangen, geht nicht als Zwischenstand hinaus
+[25/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:900:1 › DS-2 Rücknahme beim Tippen (1280 px): scheitert das Speichern, während ein Segment angefangen ist, schreibt das Verlassen nichts nach
+[26/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:936:1 › DS-2 Etappenwechsel Startzeit (1280 px): Startzeit in Etappe 2 fertig bzw. angefangen, sofort zu Etappe 1 — keine Vermischung
+[27/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:974:1 › DS-2 Rücknahme Startzeit (1280 px): scheitert das Speichern, während die Minute angefangen ist, schreibt das Verlassen nichts nach
+[28/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:1009:1 › DS-2 Startzeit neu tippen (1280 px): Stunde per Rücktaste geleert ⇒ bis zur neuen Zeit kein Schreibvorgang
+[29/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:1034:1 › DS-1 Jahr angefangen und Neueintippen (1280 px): „202" ⇒ „Startdatum fehlt"; geleert und neu getippt ⇒ Hinweis erscheint nie
+[30/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:1071:1 › DS-4 Tempo Standard (1280 px): ohne Eingriff anlegen ⇒ tempo zu Fuß 4 gespeichert, keine Aktivität
+[31/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:1130:3 › DS-3 (1280 px, de): Listen, Hubs (Übersicht, Etappen/Orte, Zustellung) und Anlegen ohne native Datum/Uhrzeit/Radio/Select, ohne ✓/⊘
+[32/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:1130:3 › DS-3 (1280 px, en): Listen, Hubs (Übersicht, Etappen/Orte, Zustellung) und Anlegen ohne native Datum/Uhrzeit/Radio/Select, ohne ✓/⊘
+[33/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:1130:3 › DS-3 (390 px, de): Listen, Hubs (Übersicht, Etappen/Orte, Zustellung) und Anlegen ohne native Datum/Uhrzeit/Radio/Select, ohne ✓/⊘
+[34/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:1130:3 › DS-3 (390 px, en): Listen, Hubs (Übersicht, Etappen/Orte, Zustellung) und Anlegen ohne native Datum/Uhrzeit/Radio/Select, ohne ✓/⊘
+[35/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:1195:1 › DS-4 Tempo: Karte beim Trip-Anlegen ist eine Segment-Gruppe, per Maus und Tastatur bedienbar, Fokus sichtbar, gespeichert
+[36/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:1238:1 › DS-4 Mail-Format: Karte im Trip-Hub (Reiter Wetter) ist eine radiogroup, per Maus und Pfeiltaste bedienbar, Fokus sichtbar, gespeichert
+[37/37] [tests] › e2e/design-system-trip-vergleich.spec.ts:1315:1 › DS-6: Tippflächen am Handy (390 × 844) mindestens 44 × 44 — Kopfleiste (Hub) bzw. Zurück (Anlegen), Standardwerte, ⓘ, Zustellungs-Schalter, Wetter-Knöpfe — kein waagerechtes Überlaufen
+  37 passed (2.2m)

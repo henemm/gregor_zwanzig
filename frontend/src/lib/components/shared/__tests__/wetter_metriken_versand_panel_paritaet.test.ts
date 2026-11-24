@@ -217,15 +217,18 @@ const FESTER_KONTEXT = new Set(['Trip-Hub', 'Ortsvergleich-Hub']);
 // der Hub mountet die Huelle mit statischem context, die Huelle reicht genau diesen context an
 // DENSELBEN geteilten Baustein weiter.
 const ZUSTELLUNG_HUELLE = join(SHARED, 'zustellung-tab/ZustellungTab.svelte');
-const UEBER_HUELLE = new Set(['Trip-Hub', 'Ortsvergleich-Hub']);
+// #3332 (D1 von #3307, AC-1): auch /trips/new bettet im Schritt Zustellung die Huelle ZustellungTab ein
+// (Anlegen = Bearbeiten), je Geraet einmal (Desktop + Mobil); /compare/new folgt in D2 (#3333).
+const UEBER_HUELLE = new Set(['Trip-Hub', 'Ortsvergleich-Hub', '/trips/new']);
+const HUELLEN_ANZAHL: Record<string, number> = { 'Trip-Hub': 1, 'Ortsvergleich-Hub': 1, '/trips/new': 2 };
 const UEBERGANG = join(COMPONENTS, 'organisms/zustellung-tab/UebergangBlock.svelte');
 
 function pruefeHuelle(flaeche: string, datei: string, ctx: string): void {
 	const a = ast(datei);
 	const quelle = readFileSync(datei, 'utf-8');
 	const m = mounts(a.fragment, 'ZustellungTab');
-	assert.equal(m.length, 1, `${flaeche} bettet die Huelle ZustellungTab nicht genau einmal ein`);
-	assert.equal(contextWert(m[0], quelle), ctx, `${flaeche}: context der Huelle muss statisch "${ctx}" sein`);
+	assert.equal(m.length, HUELLEN_ANZAHL[flaeche], `${flaeche} bettet die Huelle ZustellungTab nicht ${HUELLEN_ANZAHL[flaeche]}-mal ein`);
+	for (const e of m) assert.equal(contextWert(e, quelle), ctx, `${flaeche}: context der Huelle muss statisch "${ctx}" sein`);
 	// #2795 S3b Teilschritt 1b: die Huelle reicht den context an den Uebergangsblock.
 	// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 14): der Uebergangsblock traegt den
 	// geteilten Baustein nicht mehr — Listen, Stundenverlauf, Ausblick und Mail-Inhalt bedient die Karte

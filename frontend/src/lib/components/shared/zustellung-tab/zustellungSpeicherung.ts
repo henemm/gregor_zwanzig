@@ -84,6 +84,32 @@ export function zustellungNutzlast(context: Kontext, vorher: ZustellungStand, je
 	return { versand: versandTeil(context, vorher, jetzt), alarme: alarmeTeil(vorher, jetzt) };
 }
 
+/** Meldung des Reiters im Anlegen: ganzer Stand und Unterschied zum Anlege-Start. */
+export interface ZustellungAnlegeMeldung {
+	stand: ZustellungStand;
+	nutzlast: ZustellungNutzlast;
+}
+
+/**
+ * Issue #3332 (D1 von #3307): Anlege-Speicherer (Muster `anlegeSpeicherer`, wetterTabSpeicherung.ts).
+ * Im Anlegen gibt es noch nichts zu speichern: jede Aenderung geht sofort als `{stand, nutzlast}` an den
+ * Editor, der sie in den einen Anlege-POST mischt. Das Delta gilt immer gegen den Anlege-Start. Kein Netz,
+ * kein saveController; die Meldung ist eine eigene Kopie (spaetere Mutationen des Aufrufers wirken nicht).
+ */
+export function erstelleZustellungAnlegeSpeicherer(opt: {
+	context: Kontext;
+	basis: ZustellungStand;
+	anlegen: (m: ZustellungAnlegeMeldung) => void;
+}): { aenderungMelden(jetzt: ZustellungStand): void } {
+	const basis: ZustellungStand = JSON.parse(JSON.stringify(opt.basis));
+	return {
+		aenderungMelden(jetzt: ZustellungStand): void {
+			const stand: ZustellungStand = JSON.parse(JSON.stringify(jetzt));
+			opt.anlegen({ stand, nutzlast: zustellungNutzlast(opt.context, basis, stand) });
+		}
+	};
+}
+
 /** Uebernimmt nach erfolgreichem Speichern die Felder EINES Teils in die Basis. Eine nicht
  *  gesendete (rasterfremde) Uhrzeit bleibt auf dem gespeicherten Wert. */
 function basisNachSpeichern(teil: ZustellungTeil, basis: ZustellungStand, gesendet: ZustellungStand): ZustellungStand {

@@ -64,13 +64,15 @@ describe('AC-1/AC-2/AC-3 (Test 4): handleWeatherMetricsChange schreibt weatherMe
 		}
 		const rumpf = code.match(/function handleWetterAnlegeStand\([^)]*\)\s*\{([\s\S]*?)\n\t\}/)?.[1] ?? '';
 		assert.match(rumpf, /handleWeatherMetricsChange\(weatherConfig\.metrics\)/, 'handleWetterAnlegeStand schreibt die Auswahl nicht');
-		// Regression: der bestehende Kanal-Ruckkanal der Panels darf nicht verloren gehen,
-		// und kein Panel meldet die Auswahl zusaetzlich (genau ein Schreiber).
-		const panels = code.match(/<WetterMetrikenVersandPanel\b[^>]*\/>/g) ?? [];
-		assert.equal(panels.length, 2, `Erwartet genau 2 WetterMetrikenVersandPanel-Mounts, gefunden: ${panels.length}`);
-		for (const [i, m] of panels.entries()) {
-			assert.match(m, /onChannelsChange=\{handleChannelsChange\}/, `Panel #${i + 1} verliert onChannelsChange`);
-			assert.doesNotMatch(m, /onWeatherMetricsChange=/, `Panel #${i + 1} meldet die Auswahl zusaetzlich (zwei Schreiber)`);
+		// Regression: kein Baustein im Schritt Zustellung meldet die Auswahl zusaetzlich (genau ein Schreiber).
+		// #3332 (AC-1): dort steht der Reiter Zustellung statt des Alt-Panels; sein einziger Rueckkanal ist
+		// der Zustellungs-Stand (display_config.channels bleibt beim Editor-Standard, Fixture-Test 3332 AC-4).
+		assert.equal((code.match(/<WetterMetrikenVersandPanel\b/g) ?? []).length, 0, '#3332: Alt-Panel noch im Trip-Anlegen');
+		const reiter = code.match(/<ZustellungTab\b[^>]*\/>/g) ?? [];
+		assert.equal(reiter.length, 2, `Erwartet genau 2 ZustellungTab-Mounts, gefunden: ${reiter.length}`);
+		for (const [i, m] of reiter.entries()) {
+			assert.match(m, /onAnlegeStand=\{handleZustellungAnlegeStand\}/, `Reiter Zustellung #${i + 1} ohne Anlege-Rueckkanal`);
+			assert.doesNotMatch(m, /onWeatherMetricsChange=/, `Reiter Zustellung #${i + 1} meldet die Auswahl zusaetzlich (zwei Schreiber)`);
 		}
 	});
 });
@@ -122,10 +124,11 @@ describe('AC-2/AC-3/AC-6 (Test 4-6, Issue #1775): handleDayWindowChange + stubTr
 		}
 		const rumpf = code.match(/function handleWetterAnlegeStand\([^)]*\)\s*\{([\s\S]*?)\n\t\}/)?.[1] ?? '';
 		assert.match(rumpf, /handleDayWindowChange\(\{ day_window_start_hour: rc\.day_window_start_hour, day_window_end_hour: rc\.day_window_end_hour \}\)/, 'handleWetterAnlegeStand schreibt das Tagesfenster nicht');
-		const panels = code.match(/<WetterMetrikenVersandPanel\b[^>]*\/>/g) ?? [];
-		for (const [i, m] of panels.entries()) {
-			assert.match(m, /onChannelsChange=\{handleChannelsChange\}/, `Panel #${i + 1} verliert onChannelsChange`);
-			assert.doesNotMatch(m, /onDayWindowChange=/, `Panel #${i + 1} meldet das Tagesfenster zusaetzlich (zwei Schreiber)`);
+		// #3332: im Schritt Zustellung steht der Reiter Zustellung; er meldet das Tagesfenster nicht (ein Schreiber).
+		const reiter = code.match(/<ZustellungTab\b[^>]*\/>/g) ?? [];
+		assert.equal(reiter.length, 2, `Erwartet genau 2 ZustellungTab-Mounts, gefunden: ${reiter.length}`);
+		for (const [i, m] of reiter.entries()) {
+			assert.doesNotMatch(m, /onDayWindowChange=/, `Reiter Zustellung #${i + 1} meldet das Tagesfenster zusaetzlich (zwei Schreiber)`);
 		}
 	});
 

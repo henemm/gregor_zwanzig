@@ -1,0 +1,658 @@
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts src/lib/components/shared/__tests__/alarme_tab_ohne_zustellung_3332.test.ts src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_ssr_3332.test.ts src/lib/components/shared/__tests__/infobox_nur_beim_anlegen.test.ts
+
+TAP version 13
+# Subtest: \#3332 Test 5 (AC-9): Abschnittsliste mit und ohne Zustellungs-Abschnitte
+    # Subtest: route, ohneZustellung: channels, cooldown, quiet-hours fehlen; Rest in unveränderter Reihenfolge
+    ok 1 - route, ohneZustellung: channels, cooldown, quiet-hours fehlen; Rest in unveränderter Reihenfolge
+      ---
+      duration_ms: 1.008181
+      type: 'test'
+      ...
+    # Subtest: ohne den Parameter bzw. mit false: Liste unverändert (Hub, Ortsvergleich)
+    ok 2 - ohne den Parameter bzw. mit false: Liste unverändert (Hub, Ortsvergleich)
+      ---
+      duration_ms: 0.17532
+      type: 'test'
+      ...
+    1..2
+ok 1 - \#3332 Test 5 (AC-9): Abschnittsliste mit und ohne Zustellungs-Abschnitte
+  ---
+  duration_ms: 2.723804
+  type: 'suite'
+  ...
+# Subtest: \#3332 Test 5 (AC-9): Wirkort — der gerenderte Reiter Alarme
+    # Subtest: Trip-Anlegen (route, createMode): keine Abschnitte Kanäle, Cooldown, Stille Stunden; Warnungen und Metrik-Stufen bleiben
+    ok 1 - Trip-Anlegen (route, createMode): keine Abschnitte Kanäle, Cooldown, Stille Stunden; Warnungen und Metrik-Stufen bleiben
+      ---
+      duration_ms: 8.173469
+      type: 'test'
+      ...
+    # Subtest: Trip-Hub (route, ohne createMode): Liste vollständig
+    ok 2 - Trip-Hub (route, ohne createMode): Liste vollständig
+      ---
+      duration_ms: 5.982907
+      type: 'test'
+      ...
+    # Subtest: Ortsvergleich-Anlegen (vergleich, createMode): Liste vollständig, D1 ändert dort nichts (AC-13)
+    ok 3 - Ortsvergleich-Anlegen (vergleich, createMode): Liste vollständig, D1 ändert dort nichts (AC-13)
+      ---
+      duration_ms: 1.633742
+      type: 'test'
+      ...
+    1..3
+ok 2 - \#3332 Test 5 (AC-9): Wirkort — der gerenderte Reiter Alarme
+  ---
+  duration_ms: 15.952527
+  type: 'suite'
+  ...
+# Subtest: AC-1/AC-3/AC-4: /trips/new zeigt die Infobox in jedem überspringbaren Reiter
+    # Subtest: Desktop: Reiter alarme trägt genau eine Infobox mit dem freigegebenen Text
+    ok 1 - Desktop: Reiter alarme trägt genau eine Infobox mit dem freigegebenen Text
+      ---
+      duration_ms: 4448.86259
+      type: 'test'
+      ...
+    # Subtest: Desktop: Reiter wegpunkte trägt genau eine Infobox mit dem freigegebenen Text
+    ok 2 - Desktop: Reiter wegpunkte trägt genau eine Infobox mit dem freigegebenen Text
+      ---
+      duration_ms: 14.339894
+      type: 'test'
+      ...
+    # Subtest: Desktop: \#3332 AC-11 — Schritt Zustellung des Trips: Reiter Zustellung ohne Infobox, Alarme-Infobox bleibt
+    ok 3 - Desktop: \#3332 AC-11 — Schritt Zustellung des Trips: Reiter Zustellung ohne Infobox, Alarme-Infobox bleibt
+      ---
+      duration_ms: 8.47515
+      type: 'test'
+      ...
+    # Subtest: Mobil: Reiter alarme trägt genau eine Infobox mit dem freigegebenen Text
+    ok 4 - Mobil: Reiter alarme trägt genau eine Infobox mit dem freigegebenen Text
+      ---
+      duration_ms: 23.486165
+      type: 'test'
+      ...
+    # Subtest: Mobil: Reiter wegpunkte trägt genau eine Infobox mit dem freigegebenen Text
+    ok 5 - Mobil: Reiter wegpunkte trägt genau eine Infobox mit dem freigegebenen Text
+      ---
+      duration_ms: 9.521541
+      type: 'test'
+      ...
+    # Subtest: Mobil: \#3332 AC-11 — Schritt Zustellung des Trips: Reiter Zustellung ohne Infobox, Alarme-Infobox bleibt
+    ok 6 - Mobil: \#3332 AC-11 — Schritt Zustellung des Trips: Reiter Zustellung ohne Infobox, Alarme-Infobox bleibt
+      ---
+      duration_ms: 3.838505
+      type: 'test'
+      ...
+    1..6
+ok 3 - AC-1/AC-3/AC-4: /trips/new zeigt die Infobox in jedem überspringbaren Reiter
+  ---
+  duration_ms: 4509.709744
+  type: 'suite'
+  ...
+# Subtest: AC-5: Trip-Pflichtreiter Route und Etappen tragen keine Infobox
+    # Subtest: Desktop: Reiter route — keine Infobox für diesen Reiter, keine fremde
+    ok 1 - Desktop: Reiter route — keine Infobox für diesen Reiter, keine fremde
+      ---
+      duration_ms: 13.138265
+      type: 'test'
+      ...
+    # Subtest: Desktop: Reiter etappen — keine Infobox für diesen Reiter, keine fremde
+    ok 2 - Desktop: Reiter etappen — keine Infobox für diesen Reiter, keine fremde
+      ---
+      duration_ms: 5.861347
+      type: 'test'
+      ...
+    # Subtest: Mobil: Reiter route — keine Infobox für diesen Reiter, keine fremde
+    ok 3 - Mobil: Reiter route — keine Infobox für diesen Reiter, keine fremde
+      ---
+      duration_ms: 7.605408
+      type: 'test'
+      ...
+    # Subtest: Mobil: Reiter etappen — keine Infobox für diesen Reiter, keine fremde
+    ok 4 - Mobil: Reiter etappen — keine Infobox für diesen Reiter, keine fremde
+      ---
+      duration_ms: 4.212215
+      type: 'test'
+      ...
+    1..4
+ok 4 - AC-5: Trip-Pflichtreiter Route und Etappen tragen keine Infobox
+  ---
+  duration_ms: 31.222943
+  type: 'suite'
+  ...
+# (node:887669) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: AC-2/AC-3: /compare/new zeigt die Infobox (Versand), Desktop UND Mobil
+    # Subtest: Desktop: Schritt Wetter — keine Wertebereiche-Infobox mehr (Korridor-Editor entfernt)
+    ok 1 - Desktop: Schritt Wetter — keine Wertebereiche-Infobox mehr (Korridor-Editor entfernt)
+      ---
+      duration_ms: 599.858369
+      type: 'test'
+      ...
+    # Subtest: Desktop: Versand-Abschnitt im Schritt Zustellung — Infobox je Abschnitt mit Vergleichs-Text (nur 07:00, kein 18:00)
+    ok 2 - Desktop: Versand-Abschnitt im Schritt Zustellung — Infobox je Abschnitt mit Vergleichs-Text (nur 07:00, kein 18:00)
+      ---
+      duration_ms: 9.245589
+      type: 'test'
+      ...
+    # Subtest: Mobil: Schritt Wetter — keine Wertebereiche-Infobox mehr (Korridor-Editor entfernt)
+    ok 3 - Mobil: Schritt Wetter — keine Wertebereiche-Infobox mehr (Korridor-Editor entfernt)
+      ---
+      duration_ms: 5.562466
+      type: 'test'
+      ...
+    # Subtest: Mobil: Versand-Abschnitt im Schritt Zustellung — Infobox je Abschnitt mit Vergleichs-Text (nur 07:00, kein 18:00)
+    ok 4 - Mobil: Versand-Abschnitt im Schritt Zustellung — Infobox je Abschnitt mit Vergleichs-Text (nur 07:00, kein 18:00)
+      ---
+      duration_ms: 1.724021
+      type: 'test'
+      ...
+    # Subtest: Wetter-Metriken (Desktop): Infobox mit Vergleichs-Text, nicht dem Trip-Text
+    ok 5 - Wetter-Metriken (Desktop): Infobox mit Vergleichs-Text, nicht dem Trip-Text
+      ---
+      duration_ms: 1.854933
+      type: 'test'
+      ...
+    1..5
+ok 5 - AC-2/AC-3: /compare/new zeigt die Infobox (Versand), Desktop UND Mobil
+  ---
+  duration_ms: 618.606109
+  type: 'suite'
+  ...
+# Subtest: AC-5: Ortsvergleich-Pflichtreiter Vergleich und Orte tragen keine Infobox
+    # Subtest: Desktop: Reiter vergleich — gar keine Infobox im Dokument
+    ok 1 - Desktop: Reiter vergleich — gar keine Infobox im Dokument
+      ---
+      duration_ms: 3.537724
+      type: 'test'
+      ...
+    # Subtest: Desktop: Reiter orte — gar keine Infobox im Dokument
+    ok 2 - Desktop: Reiter orte — gar keine Infobox im Dokument
+      ---
+      duration_ms: 4.013194
+      type: 'test'
+      ...
+    # Subtest: Mobil: Reiter vergleich — gar keine Infobox im Dokument
+    ok 3 - Mobil: Reiter vergleich — gar keine Infobox im Dokument
+      ---
+      duration_ms: 10.20083
+      type: 'test'
+      ...
+    # Subtest: Mobil: Reiter orte — gar keine Infobox im Dokument
+    ok 4 - Mobil: Reiter orte — gar keine Infobox im Dokument
+      ---
+      duration_ms: 2.287383
+      type: 'test'
+      ...
+    1..4
+ok 6 - AC-5: Ortsvergleich-Pflichtreiter Vergleich und Orte tragen keine Infobox
+  ---
+  duration_ms: 20.215351
+  type: 'suite'
+  ...
+# Subtest: \#1743 AC-22: Anlegen — Versand-Infobox steht im Schritt Wetter-Metriken über dem Versand-Inhalt
+    # Subtest: Desktop: /compare/new
+    ok 1 - Desktop: /compare/new
+      ---
+      duration_ms: 1.735451
+      type: 'test'
+      ...
+    # Subtest: Mobil: /compare/new
+    ok 2 - Mobil: /compare/new
+      ---
+      duration_ms: 1.958903
+      type: 'test'
+      ...
+    1..2
+ok 7 - \#1743 AC-22: Anlegen — Versand-Infobox steht im Schritt Wetter-Metriken über dem Versand-Inhalt
+  ---
+  duration_ms: 3.837586
+  type: 'suite'
+  ...
+# Subtest: AC-1/AC-2/AC-3: Organismus MIT showInfobox rendert die Infobox (auch im Lade-Zustand)
+    # Subtest: AlarmeTab (route): genau eine Infobox "alarme" mit dem freigegebenen Text
+    ok 1 - AlarmeTab (route): genau eine Infobox "alarme" mit dem freigegebenen Text
+      ---
+      duration_ms: 8.464189
+      type: 'test'
+      ...
+    # Subtest: AlarmeTab (vergleich): genau eine Infobox "alarme" mit dem freigegebenen Text
+    ok 2 - AlarmeTab (vergleich): genau eine Infobox "alarme" mit dem freigegebenen Text
+      ---
+      duration_ms: 2.453762
+      type: 'test'
+      ...
+    # Subtest: WeatherMetricsTab (vergleich): genau eine Infobox "wetter-metriken" mit dem freigegebenen Text
+    ok 3 - WeatherMetricsTab (vergleich): genau eine Infobox "wetter-metriken" mit dem freigegebenen Text
+      ---
+      duration_ms: 1.692482
+      type: 'test'
+      ...
+    # Subtest: VersandTab (vergleich): genau eine Infobox "versand" mit dem freigegebenen Text
+    ok 4 - VersandTab (vergleich): genau eine Infobox "versand" mit dem freigegebenen Text
+      ---
+      duration_ms: 1.392641
+      type: 'test'
+      ...
+    1..4
+ok 8 - AC-1/AC-2/AC-3: Organismus MIT showInfobox rendert die Infobox (auch im Lade-Zustand)
+  ---
+  duration_ms: 14.172984
+  type: 'suite'
+  ...
+# Subtest: AC-6: Organismus OHNE showInfobox (Bearbeiten-Hub): keine Infobox, aber die ⓘ-Erklärungen
+    # Subtest: AlarmeTab (route): kein Infobox-Element, ⓘ kanal_schwelle + cooldown vorhanden
+    ok 1 - AlarmeTab (route): kein Infobox-Element, ⓘ kanal_schwelle + cooldown vorhanden
+      ---
+      duration_ms: 2.140602
+      type: 'test'
+      ...
+    # Subtest: AlarmeTab (vergleich): kein Infobox-Element, ⓘ kanal_schwelle + cooldown vorhanden
+    ok 2 - AlarmeTab (vergleich): kein Infobox-Element, ⓘ kanal_schwelle + cooldown vorhanden
+      ---
+      duration_ms: 4.066113
+      type: 'test'
+      ...
+    # Subtest: WeatherMetricsTab (vergleich): kein Infobox-Element
+    ok 3 - WeatherMetricsTab (vergleich): kein Infobox-Element
+      ---
+      duration_ms: 2.604632
+      type: 'test'
+      ...
+    # Subtest: VersandTab (vergleich): kein Infobox-Element
+    ok 4 - VersandTab (vergleich): kein Infobox-Element
+      ---
+      duration_ms: 1.923981
+      type: 'test'
+      ...
+    1..4
+ok 9 - AC-6: Organismus OHNE showInfobox (Bearbeiten-Hub): keine Infobox, aber die ⓘ-Erklärungen
+  ---
+  duration_ms: 10.897112
+  type: 'suite'
+  ...
+# Subtest: Verdrahtung: jeder Anlege-Mount setzt showInfobox explizit auf true
+    # Subtest: TripNewEditor: Mount-Anzahl stimmt (sonst beweist „alle" nichts) und jeder trägt showInfobox
+    ok 1 - TripNewEditor: Mount-Anzahl stimmt (sonst beweist „alle" nichts) und jeder trägt showInfobox
+      ---
+      duration_ms: 187.009167
+      type: 'test'
+      ...
+    # Subtest: CompareNewEditor: Mount-Anzahl stimmt (sonst beweist „alle" nichts) und jeder trägt showInfobox
+    ok 2 - CompareNewEditor: Mount-Anzahl stimmt (sonst beweist „alle" nichts) und jeder trägt showInfobox
+      ---
+      duration_ms: 45.286787
+      type: 'test'
+      ...
+    # Subtest: \#3332 AC-11: TripNewEditor mountet den Reiter Zustellung zweimal (Desktop + Mobil), nie mit showInfobox
+    ok 3 - \#3332 AC-11: TripNewEditor mountet den Reiter Zustellung zweimal (Desktop + Mobil), nie mit showInfobox
+      ---
+      duration_ms: 81.093825
+      type: 'test'
+      ...
+    # Subtest: TripNewEditor: das Wegpunkte-Panel trägt eine Infobox (Desktop- und Mobil-Baum)
+    ok 4 - TripNewEditor: das Wegpunkte-Panel trägt eine Infobox (Desktop- und Mobil-Baum)
+      ---
+      duration_ms: 67.802711
+      type: 'test'
+      ...
+    1..4
+ok 10 - Verdrahtung: jeder Anlege-Mount setzt showInfobox explizit auf true
+  ---
+  duration_ms: 381.394971
+  type: 'suite'
+  ...
+# Subtest: AC-6 Verdrahtung: die Bearbeiten-Hubs und die Wertprop-Bündel setzen showInfobox NIE
+    # Subtest: Trip-Hub (TripTabs + Reiter Zustellung): mountet die Organismen (nicht vakuum) ohne showInfobox
+    ok 1 - Trip-Hub (TripTabs + Reiter Zustellung): mountet die Organismen (nicht vakuum) ohne showInfobox
+      ---
+      duration_ms: 81.254135
+      type: 'test'
+      ...
+    # Subtest: CompareTabs: mountet die Organismen (nicht vakuum) ohne showInfobox
+    ok 2 - CompareTabs: mountet die Organismen (nicht vakuum) ohne showInfobox
+      ---
+      duration_ms: 56.66759
+      type: 'test'
+      ...
+    # Subtest: wetterMetriken-/alarme-/versandPropsAus liefern kein showInfobox-Feld
+    ok 3 - wetterMetriken-/alarme-/versandPropsAus liefern kein showInfobox-Feld
+      ---
+      duration_ms: 127.071524
+      type: 'test'
+      ...
+    1..3
+ok 11 - AC-6 Verdrahtung: die Bearbeiten-Hubs und die Wertprop-Bündel setzen showInfobox NIE
+  ---
+  duration_ms: 265.249598
+  type: 'suite'
+  ...
+# Subtest: \#3332 Test 1 (AC-2, AC-3, AC-5): Anlege-Speicherer meldet {stand, nutzlast} statt zu speichern
+    # Subtest: Trip: Zeiten, Kanäle, Dringlichkeit, Stille, Cooldown geändert — eine Meldung, Nutzlast nur Geändertes, kein Netz
+    ok 1 - Trip: Zeiten, Kanäle, Dringlichkeit, Stille, Cooldown geändert — eine Meldung, Nutzlast nur Geändertes, kein Netz
+      ---
+      duration_ms: 2.075191
+      type: 'test'
+      ...
+    # Subtest: nur Geändertes: eine Uhrzeit allein ergibt nur den Versand-Teil, Alarme null
+    ok 2 - nur Geändertes: eine Uhrzeit allein ergibt nur den Versand-Teil, Alarme null
+      ---
+      duration_ms: 0.29957
+      type: 'test'
+      ...
+    # Subtest: Delta immer gegen den Anlege-Start, nicht gegen die letzte Meldung (im Anlegen wird nichts gespeichert)
+    ok 3 - Delta immer gegen den Anlege-Start, nicht gegen die letzte Meldung (im Anlegen wird nichts gespeichert)
+      ---
+      duration_ms: 0.50408
+      type: 'test'
+      ...
+    # Subtest: zurück auf den Start: Meldung mit leerer Nutzlast (kein Rest der früheren Änderung)
+    ok 4 - zurück auf den Start: Meldung mit leerer Nutzlast (kein Rest der früheren Änderung)
+      ---
+      duration_ms: 0.389311
+      type: 'test'
+      ...
+    # Subtest: rasterfremde Uhrzeit (06:50): Stand wird gemeldet, die Nutzlast trägt keine Uhrzeit (AC-7)
+    ok 5 - rasterfremde Uhrzeit (06:50): Stand wird gemeldet, die Nutzlast trägt keine Uhrzeit (AC-7)
+      ---
+      duration_ms: 0.42946
+      type: 'test'
+      ...
+    # Subtest: die Meldung hängt nicht am Objekt des Aufrufers (spätere Mutation ändert die Meldung nicht)
+    ok 6 - die Meldung hängt nicht am Objekt des Aufrufers (spätere Mutation ändert die Meldung nicht)
+      ---
+      duration_ms: 0.22499
+      type: 'test'
+      ...
+    # Subtest: Ortsvergleich (vorbereitet für D2): Felder top-level, gleiche reine Funktion
+    ok 7 - Ortsvergleich (vorbereitet für D2): Felder top-level, gleiche reine Funktion
+      ---
+      duration_ms: 0.38601
+      type: 'test'
+      ...
+    1..7
+ok 12 - \#3332 Test 1 (AC-2, AC-3, AC-5): Anlege-Speicherer meldet {stand, nutzlast} statt zu speichern
+  ---
+  duration_ms: 5.258557
+  type: 'suite'
+  ...
+# Subtest: \#3332 Test 2 (AC-2, AC-3): mitZustellung mischt den Stand in report_config und Alarm-Felder
+    # Subtest: Zeiten, Schalter, Briefing-Kanäle in report_config; bestehende Felder erhalten
+    ok 1 - Zeiten, Schalter, Briefing-Kanäle in report_config; bestehende Felder erhalten
+      ---
+      duration_ms: 1.316421
+      type: 'test'
+      ...
+    # Subtest: beide Briefings aus: enabled false
+    ok 2 - beide Briefings aus: enabled false
+      ---
+      duration_ms: 0.1552
+      type: 'test'
+      ...
+    # Subtest: Alarm-Kanäle, Dringlichkeit, Stille, Cooldown in den Alarm-Zustand; Metrik-Stufen und Warnungen bleiben
+    ok 3 - Alarm-Kanäle, Dringlichkeit, Stille, Cooldown in den Alarm-Zustand; Metrik-Stufen und Warnungen bleiben
+      ---
+      duration_ms: 0.45103
+      type: 'test'
+      ...
+    # Subtest: Stille Stunden aus: quietFrom/quietTo leer, im POST null
+    ok 4 - Stille Stunden aus: quietFrom/quietTo leer, im POST null
+      ---
+      duration_ms: 2.019692
+      type: 'test'
+      ...
+    # Subtest: im POST: report_config und Alarm-Felder tragen genau die eingestellten Werte
+    ok 5 - im POST: report_config und Alarm-Felder tragen genau die eingestellten Werte
+      ---
+      duration_ms: 0.35099
+      type: 'test'
+      ...
+    # Subtest: Reiter nie bedient (stand undefined): Ausgabe gleich Eingabe
+    ok 6 - Reiter nie bedient (stand undefined): Ausgabe gleich Eingabe
+      ---
+      duration_ms: 0.226859
+      type: 'test'
+      ...
+    # Subtest: rein: Eingaben bleiben unverändert
+    ok 7 - rein: Eingaben bleiben unverändert
+      ---
+      duration_ms: 0.143561
+      type: 'test'
+      ...
+    # Subtest: ohne report_config im Editor: Helfer legt ihn an
+    ok 8 - ohne report_config im Editor: Helfer legt ihn an
+      ---
+      duration_ms: 0.26823
+      type: 'test'
+      ...
+    1..8
+ok 13 - \#3332 Test 2 (AC-2, AC-3): mitZustellung mischt den Stand in report_config und Alarm-Felder
+  ---
+  duration_ms: 5.974976
+  type: 'suite'
+  ...
+# Subtest: \#3332 Test 4 (AC-7): rasterfremde Uhrzeit wird nie übernommen
+    # Subtest: 06:50: vorhandene gültige Zeit bleibt, 06:50 nirgends im POST
+    ok 1 - 06:50: vorhandene gültige Zeit bleibt, 06:50 nirgends im POST
+      ---
+      duration_ms: 0.374241
+      type: 'test'
+      ...
+    # Subtest: Abendzeit 18:07 ohne vorhandenen Wert: kein evening_time aus dem Stand (Standard aus dem POST-Ergänzer)
+    ok 2 - Abendzeit 18:07 ohne vorhandenen Wert: kein evening_time aus dem Stand (Standard aus dem POST-Ergänzer)
+      ---
+      duration_ms: 0.387059
+      type: 'test'
+      ...
+    # Subtest: gültige Zeiten derselben Meldung gehen trotzdem durch
+    ok 3 - gültige Zeiten derselben Meldung gehen trotzdem durch
+      ---
+      duration_ms: 0.12492
+      type: 'test'
+      ...
+    1..3
+ok 14 - \#3332 Test 4 (AC-7): rasterfremde Uhrzeit wird nie übernommen
+  ---
+  duration_ms: 1.07154
+  type: 'suite'
+  ...
+# Subtest: \#3332 Test 6 (AC-1): Trip-Anlegen, Schritt Zustellung
+    # Subtest: Desktop: Reiter Zustellung mit Briefing-Zeiten, Kanal-Tabelle, Stille Stunden — genau einmal, im richtigen Baum
+    ok 1 - Desktop: Reiter Zustellung mit Briefing-Zeiten, Kanal-Tabelle, Stille Stunden — genau einmal, im richtigen Baum
+      ---
+      duration_ms: 27.106538
+      type: 'test'
+      ...
+    # Subtest: Desktop: Alt-Panel (Versand-Abschnitt) und Mail-Inhalt-Karte erscheinen nicht mehr
+    ok 2 - Desktop: Alt-Panel (Versand-Abschnitt) und Mail-Inhalt-Karte erscheinen nicht mehr
+      ---
+      duration_ms: 4.261525
+      type: 'test'
+      ...
+    # Subtest: Mobil: Reiter Zustellung mit Briefing-Zeiten, Kanal-Tabelle, Stille Stunden — genau einmal, im richtigen Baum
+    ok 3 - Mobil: Reiter Zustellung mit Briefing-Zeiten, Kanal-Tabelle, Stille Stunden — genau einmal, im richtigen Baum
+      ---
+      duration_ms: 4.269644
+      type: 'test'
+      ...
+    # Subtest: Mobil: Alt-Panel (Versand-Abschnitt) und Mail-Inhalt-Karte erscheinen nicht mehr
+    ok 4 - Mobil: Alt-Panel (Versand-Abschnitt) und Mail-Inhalt-Karte erscheinen nicht mehr
+      ---
+      duration_ms: 9.84243
+      type: 'test'
+      ...
+    1..4
+ok 15 - \#3332 Test 6 (AC-1): Trip-Anlegen, Schritt Zustellung
+  ---
+  duration_ms: 46.359438
+  type: 'suite'
+  ...
+# (node:887698) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: \#3332 Test 6 (AC-13): Ortsvergleich-Anlegen unverändert
+    # Subtest: Desktop: Schritt Zustellung zeigt weiter das Alt-Panel, keinen Reiter Zustellung
+    ok 1 - Desktop: Schritt Zustellung zeigt weiter das Alt-Panel, keinen Reiter Zustellung
+      ---
+      duration_ms: 566.013074
+      type: 'test'
+      ...
+    # Subtest: Mobil: Schritt Zustellung zeigt weiter das Alt-Panel, keinen Reiter Zustellung
+    ok 2 - Mobil: Schritt Zustellung zeigt weiter das Alt-Panel, keinen Reiter Zustellung
+      ---
+      duration_ms: 4.263735
+      type: 'test'
+      ...
+    1..2
+ok 16 - \#3332 Test 6 (AC-13): Ortsvergleich-Anlegen unverändert
+  ---
+  duration_ms: 570.530939
+  type: 'suite'
+  ...
+# Subtest: \#3332 Referenz-Fixture (Messaufbau)
+    # Subtest: Fixture liegt vor und trägt Versand-, Mail- und Alarm-Felder (nicht leer)
+    ok 1 - Fixture liegt vor und trägt Versand-, Mail- und Alarm-Felder (nicht leer)
+      ---
+      duration_ms: 1.111971
+      type: 'test'
+      ...
+    1..1
+ok 17 - \#3332 Referenz-Fixture (Messaufbau)
+  ---
+  duration_ms: 1.940203
+  type: 'suite'
+  ...
+# Subtest: \#3332 Test 3 (AC-4): Reiter nie bedient — POST bitgleich zu heute
+    # Subtest: report_config, Alarm-Felder und display_config.channels gleichen der Referenz
+    ok 1 - report_config, Alarm-Felder und display_config.channels gleichen der Referenz
+      ---
+      duration_ms: 561.705759
+      type: 'test'
+      ...
+    # Subtest: Reiter geöffnet (Desktop und Mobil gebaut, Profil geladen), aber nicht bedient: POST unverändert, keine Meldung nötig
+    ok 2 - Reiter geöffnet (Desktop und Mobil gebaut, Profil geladen), aber nicht bedient: POST unverändert, keine Meldung nötig
+      ---
+      duration_ms: 281.020055
+      type: 'test'
+      ...
+    # Subtest: Startstand des Reiters = was der POST ohne Bedienung sendet (Zeiten, Kanäle, Alarm-Kanäle, Dringlichkeit, Stille)
+    ok 3 - Startstand des Reiters = was der POST ohne Bedienung sendet (Zeiten, Kanäle, Alarm-Kanäle, Dringlichkeit, Stille)
+      ---
+      duration_ms: 180.31133
+      type: 'test'
+      ...
+    1..3
+ok 18 - \#3332 Test 3 (AC-4): Reiter nie bedient — POST bitgleich zu heute
+  ---
+  duration_ms: 1023.380354
+  type: 'suite'
+  ...
+# Subtest: \#3332 AC-10: Mail-Inhalt ohne MailInhaltCard — Karte „Was steht wo“ wirkt, Bestandsfelder behalten den Standard
+    # Subtest: Karte nicht bedient: E-Mail-Format, Etappen-Statistik, Vortagesvergleich, Großwetterlage wie heute
+    ok 1 - Karte nicht bedient: E-Mail-Format, Etappen-Statistik, Vortagesvergleich, Großwetterlage wie heute
+      ---
+      duration_ms: 174.189412
+      type: 'test'
+      ...
+    # Subtest: Karte bedient (Kompakt, Etappen-Statistik aus, Nacht-Block aus): genau diese Werte, show_stability bleibt Standard
+    ok 2 - Karte bedient (Kompakt, Etappen-Statistik aus, Nacht-Block aus): genau diese Werte, show_stability bleibt Standard
+      ---
+      duration_ms: 153.683752
+      type: 'test'
+      ...
+    1..2
+ok 19 - \#3332 AC-10: Mail-Inhalt ohne MailInhaltCard — Karte „Was steht wo“ wirkt, Bestandsfelder behalten den Standard
+  ---
+  duration_ms: 328.263695
+  type: 'suite'
+  ...
+# Subtest: \#3332 Test 2 (AC-2, AC-3, AC-5): Bedienung im Reiter -> genau der eine POST trägt sie
+    # Subtest: Zeiten, Kanäle, Dringlichkeit HIGH, Stille, Cooldown stehen im POST; kein PUT, kein Schreibaufruf
+    ok 1 - Zeiten, Kanäle, Dringlichkeit HIGH, Stille, Cooldown stehen im POST; kein PUT, kein Schreibaufruf
+      ---
+      duration_ms: 184.723634
+      type: 'test'
+      ...
+    # Subtest: Stille Stunden wieder aus: POST ohne Stille (null), Rest bleibt
+    ok 2 - Stille Stunden wieder aus: POST ohne Stille (null), Rest bleibt
+      ---
+      duration_ms: 185.310525
+      type: 'test'
+      ...
+    1..2
+ok 20 - \#3332 Test 2 (AC-2, AC-3, AC-5): Bedienung im Reiter -> genau der eine POST trägt sie
+  ---
+  duration_ms: 370.290829
+  type: 'suite'
+  ...
+# Subtest: \#3332 Test 4 (AC-7): rasterfremde Uhrzeit — der POST trägt die letzte gültige
+    # Subtest: 06:45, dann 06:50 eingegeben: POST morning_time 06:45:00
+    ok 1 - 06:45, dann 06:50 eingegeben: POST morning_time 06:45:00
+      ---
+      duration_ms: 197.613747
+      type: 'test'
+      ...
+    # Subtest: nur 06:50 eingegeben: POST behält die Startzeit, nie 06:50
+    ok 2 - nur 06:50 eingegeben: POST behält die Startzeit, nie 06:50
+      ---
+      duration_ms: 152.20566
+      type: 'test'
+      ...
+    1..2
+ok 21 - \#3332 Test 4 (AC-7): rasterfremde Uhrzeit — der POST trägt die letzte gültige
+  ---
+  duration_ms: 350.019157
+  type: 'suite'
+  ...
+# Subtest: \#3332 Test 7 (AC-6): Neuaufbau (Wechsel Desktop <-> Mobil, Schritte) behält den Stand
+    # Subtest: Desktop -> Mobil
+    ok 1 - Desktop -> Mobil
+      ---
+      duration_ms: 176.225645
+      type: 'test'
+      ...
+    # Subtest: Mobil -> Desktop
+    ok 2 - Mobil -> Desktop
+      ---
+      duration_ms: 162.74661
+      type: 'test'
+      ...
+    # Subtest: Desktop neu aufgebaut
+    ok 3 - Desktop neu aufgebaut
+      ---
+      duration_ms: 153.795891
+      type: 'test'
+      ...
+    1..3
+ok 22 - \#3332 Test 7 (AC-6): Neuaufbau (Wechsel Desktop <-> Mobil, Schritte) behält den Stand
+  ---
+  duration_ms: 493.017408
+  type: 'suite'
+  ...
+1..22
+# tests 78
+# suites 22
+# pass 78
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7111.944026
+
+=== Gesamtsuite: cd frontend && npm test -- 'src/**/*.test.ts' (Zusammenfassung, 2026-11-24) ===
+# tests 11499
+# suites 2188
+# pass 11496
+# fail 0
+# cancelled 0
+# skipped 2
+# todo 1
+
+=== svelte-check --output machine (vorher / nachher) ===
+vorher:  COMPLETED 2333 FILES 37 ERRORS 83 WARNINGS 55 FILES_WITH_PROBLEMS
+nachher: COMPLETED 2333 FILES 37 ERRORS 83 WARNINGS 55 FILES_WITH_PROBLEMS
+Fehlerliste identisch (keine neuen Fehler, Diff der ERROR-Zeilen leer).
+
+=== E2E (nicht ausgefuehrt, nur Uebersetzbarkeit) ===
+npx playwright test --list (7 Dateien): Total 46 tests in 8 files — ok
+tsc --noEmit (strict) auf den geaenderten E2E-Dateien: 0 Fehler

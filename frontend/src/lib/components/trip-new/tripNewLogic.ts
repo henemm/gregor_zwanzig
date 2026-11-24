@@ -24,6 +24,8 @@ import { baueReportConfigPayload, ladeReportZustand } from '../shared/versand-ta
 import { ladeMailZustand } from '../shared/mailInhaltZustand.ts';
 import { felderNutzlast, type KarteAnlegeStand } from '../shared/wetter-tab/wasStehtWoSpeicherung.ts';
 export type { KarteAnlegeStand };
+import { KANAELE, zeitFehler, type ZustellungStand } from '../shared/zustellung-tab/zustellungModell.ts';
+import { toHHMMSS } from '../../utils/time.ts';
 
 // ── TabId ────────────────────────────────────────────────────────────────────
 
@@ -350,6 +352,36 @@ function mitKarte(trip: Trip, karte: KarteAnlegeStand): void {
 	const diff = felderNutzlast('route', karte.felder, karte.felderStart) as { display_config?: object; report_config?: object };
 	trip.display_config = { ...(trip.display_config ?? {}), ...(diff.display_config ?? {}), placements: karte.placements } as unknown as Trip['display_config'];
 	if (diff.report_config) trip.report_config = { ...(trip.report_config ?? {}), ...diff.report_config } as ReportConfig;
+}
+
+/** #3332 (D1 von #3307, AC-2/AC-3/AC-7): Stand des Reiters Zustellung per Read-Modify-Write in
+ *  `report_config` und den Alarm-Zustand des einen Anlege-POST (Muster `mitKarte`). Rein; ohne Stand
+ *  (Reiter nie bedient) bleibt alles, wie es ist. Eine rasterfremde Uhrzeit wird nie uebernommen — der
+ *  vorhandene (letzte gueltige) Wert bleibt stehen, der Server verlangt das Viertelstunden-Raster. */
+export function mitZustellung(
+	reportConfig: ReportConfig | undefined,
+	alarm: CreateTripAlarmState,
+	stand: ZustellungStand | undefined
+): { reportConfig: ReportConfig | undefined; alarm: CreateTripAlarmState } {
+	if (!stand) return { reportConfig, alarm };
+	const rc: Record<string, unknown> = { ...((reportConfig ?? {}) as Record<string, unknown>) };
+	rc.morning_enabled = stand.morgenAn;
+	rc.evening_enabled = stand.abendAn;
+	rc.enabled = stand.morgenAn || stand.abendAn;
+	if (zeitFehler(stand.morgenZeit) === null) rc.morning_time = toHHMMSS(stand.morgenZeit);
+	if (zeitFehler(stand.abendZeit) === null) rc.evening_time = toHHMMSS(stand.abendZeit);
+	for (const k of KANAELE) rc[`send_${k}`] = stand.briefing[k];
+	return {
+		reportConfig: rc as ReportConfig,
+		alarm: {
+			...alarm,
+			channels: { ...stand.alarme },
+			channelThresholds: { ...stand.dringlichkeit },
+			quietFrom: stand.stilleAn ? stand.stilleVon : undefined,
+			quietTo: stand.stilleAn ? stand.stilleBis : undefined,
+			cooldownMinutes: stand.cooldown
+		}
+	};
 }
 
 // ── Standard-Versandeinstellungen im Speicherweg (Issue #1743, AC-21) ───────

@@ -49,33 +49,29 @@ async function openNewTripZeitplan(page: Page) {
 	}
 
 	await tabbar.getByRole('tab', { name: /Wetter/ }).click({ force: true });
-	// Issue #1743: kein Schritt Versand mehr — die Mail-Inhalt-Karte steht im
-	// Schritt Wetter-Metriken (oben aktiviert).
-
-	// MailInhaltCard wird sowohl im .tn-desktop- als auch im .tn-mobile-Baum
-	// gemountet (CSS-Media-Query-Toggle statt {#if}) — beide Instanzen stehen
-	// gleichzeitig im DOM. Daher hier wie bei den GPX-Inputs auf .tn-mobile scopen,
-	// sonst meldet Playwright einen Strict-Mode-Verstoß (2 Treffer).
-	await expect(page.locator('.tn-mobile').getByTestId('report-mail-content')).toBeVisible({ timeout: 15_000 });
+	// #3332 (AC-10): die Mail-Inhalt-Karte entfällt im Trip-Anlegen (Hub-Parität); die verbleibenden
+	// Inhalts-Bausteine bedient die Karte „Was steht wo“ im Schritt Wetter. Harter Surface-Check auf sie.
+	await expect(
+		page.locator('.tn-mobile [data-testid="was-steht-wo"] [data-testid="was-steht-wo-show_stage_stats"]'),
+	).toBeVisible({ timeout: 20_000 });
 }
 
 test.describe('Issue #774 / Fix #971: Metriken-Überblick-Checkbox entfernt', () => {
 	test('AC-4: keine Metriken-Überblick-Checkbox, verbleibende Inhalts-Bausteine sichtbar', async ({ page }) => {
 		await openNewTripZeitplan(page);
 
-		// Die entfernte Checkbox darf NICHT mehr existieren.
+		// Die entfernte Checkbox darf NICHT mehr existieren — auch nicht im Schritt Zustellung.
 		await expect(page.getByTestId('report-show-metrics-summary')).toHaveCount(0);
+		await page.getByTestId('tn-mobile-tabbar').getByRole('tab', { name: /Zustellung/ }).click({ force: true });
+		await expect(page.locator('.tn-mobile [data-testid="zustellung-tab"]')).toBeVisible({ timeout: 15_000 });
+		await expect(page.getByTestId('report-show-metrics-summary')).toHaveCount(0);
+		await expect(page.getByTestId('report-mail-content'), '#3332 AC-10: Mail-Inhalt-Karte noch im Trip-Anlegen').toHaveCount(0);
 
-		// Die verbleibenden Inhalts-Bausteine sind weiterhin sichtbar.
-		// (auf .tn-mobile scopen — .tn-desktop-Baum enthält dieselben Testids doppelt)
-		await expect(
-			page.locator('.tn-mobile [data-testid="report-show-outlook"] input[type="checkbox"]'),
-		).toBeVisible();
-		await expect(
-			page.locator('.tn-mobile [data-testid="report-show-stage-stats"] input[type="checkbox"]'),
-		).toBeVisible();
-		await expect(
-			page.locator('.tn-mobile [data-testid="report-show-yesterday-comparison"] input[type="checkbox"]'),
-		).toBeVisible();
+		// Die verbleibenden Inhalts-Bausteine sind weiterhin bedienbar — in der Karte „Was steht wo“.
+		await page.getByTestId('tn-mobile-tabbar').getByRole('tab', { name: /Wetter/ }).click({ force: true });
+		const karte = page.locator('.tn-mobile [data-testid="was-steht-wo"]');
+		await expect(karte.getByTestId('was-steht-wo-ausblick-morning')).toBeVisible({ timeout: 15_000 });
+		await expect(karte.getByTestId('was-steht-wo-show_stage_stats')).toBeVisible();
+		await expect(karte.getByTestId('was-steht-wo-show_yesterday_comparison')).toBeVisible();
 	});
 });

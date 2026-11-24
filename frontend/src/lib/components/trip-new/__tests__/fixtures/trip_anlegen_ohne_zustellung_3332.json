@@ -1,0 +1,57 @@
+{
+  "report_config": {
+    "telegram_style": "rich",
+    "enabled": true,
+    "morning_enabled": true,
+    "evening_enabled": true,
+    "morning_time": "07:00:00",
+    "evening_time": "18:00:00",
+    "multi_day_trend_reports": [
+      "evening"
+    ],
+    "send_email": true,
+    "send_telegram": false,
+    "send_sms": false,
+    "send_premium_sms": false,
+    "show_compact_summary": true,
+    "wind_exposition_min_elevation_m": null,
+    "show_stage_stats": true,
+    "show_quick_take_tags": true,
+    "show_stability": true,
+    "show_highlights": true,
+    "daily_summary_metrics": [
+      "precipitation",
+      "wind",
+      "visibility",
+      "thunder"
+    ],
+    "show_metrics_summary": false,
+    "show_outlook": true,
+    "email_format": "full",
+    "show_yesterday_comparison": true
+  },
+  "display_config_channels": {
+    "email": true,
+    "telegram": true,
+    "sms": false
+  },
+  "alert_channels": {
+    "email": true,
+    "telegram": true,
+    "sms": false,
+    "premium_sms": false
+  },
+  "alert_channel_thresholds": {
+    "email": "LOW",
+    "telegram": "LOW",
+    "sms": "LOW",
+    "premium_sms": "LOW"
+  },
+  "alert_quiet_from": null,
+  "alert_quiet_to": null,
+  "alert_cooldown_minutes": null,
+  "official_warnings": {
+    "enabled": true
+  },
+  "official_alerts_enabled": true
+}
