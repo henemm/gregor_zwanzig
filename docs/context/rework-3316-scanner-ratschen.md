@@ -66,3 +66,31 @@ Ursache nicht untersucht (Last/Drosselung des Macs ist nur eine Vermutung). Folg
 7. `timeout(180)` nur mit Messung zurücknehmen; wegen der Schwankung auch CI-Wert heranziehen.
 8. Umfang: 3 Testdateien, Scheibe 1 wuchs von +200 auf +487 Zeilen; ±250 im Blick behalten, sonst schneiden.
 9. `EXPIRY` von thunder (2026-11-01) und repo_path (2026-10-27) ist überschritten: gehört nach #1199, nicht hierher.
+
+## Analysis
+
+### Type
+Feature (Rework, reine Testdateien, kein Produktcode)
+
+### Messung 2026-11-24 14:23–14:26 (Mac, seriell, Last 2,2–3,2, ein Prozess, Wanduhr ≈ CPU)
+| Scanner | Ist | Prototyp | Gleichheit |
+|---|---|---|---|
+| thunder tests/ (A+D) | 6,97 s | D ungefiltert 4,88 · Wort im Rohtext 3,65 (974 Dateien) · **Wort hinter `#` 1,71 (414)** | 0 = 0, siehe Warnung |
+| thunder Backend, 4 Läufe | 5,8 s | 2 Läufe ca. 2,9 s (gerechnet, Rohlauf 1,44 s mit 9 Funden) | Ableitung noch nicht verglichen |
+| repo_path AC-3 | 5,37 s (davon `_module_constants` 2,1) | **4,22 s** | Konstanten inkl. Reihenfolge: 0 Abweichungen bei 1946 Dateien |
+| user_id AC-10 | 3,15 s | **1,80 s** (731 Dateien) | ohne Marker-Duldung 8 = 8 identische Funde |
+| reines Parsen tests/ (Untergrenze) | 1,67 s | | |
+
+Summe ca. 21,3 → ca. 10,6 s (gerechnet aus den Einzelwerten).
+
+- 🔴 **Regel D hat im echten Testbaum null Kandidaten**, auch ohne Positionsprüfung (Behauptung + ≥2 Token: 0; Listen mit
+  ≥2 Token überhaupt: 51). Gleichheit gefiltert/ungefiltert auf dem echten Baum beweist dort nichts; der Nachweis
+  braucht gepflanzte D-Verstöße (alle 5 Alternativen, Zeilenbruch, `ı`) im gefilterten Baumlauf.
+- **CI-Beleg:** main-Lauf 45202617843 (2026-11-23 15:12 UTC) riss das 30-s-Netz im Setup von `tests_baum_scan`, beide
+  Tests auf demselben Worker gw1, beide per Timeout. CI ist also >4× langsamer als dieser Mac. Danach kam `timeout(180)`
+  (bbd5b716e). CI protokolliert keine Einzelzeiten (kein `--durations`), mehr ist aus CI nicht zu holen.
+- Speicherlast/GC als Ursache der Schwankung: nicht bestätigt (6 Mio. Zusatzobjekte ändern nichts; GC aus: 6,9 → 5,7 s).
+- `_fund` liest nur `spec.marker`; `baseline`/`canonical_symbols` wirken nur in `scan_tree` (Risiko 4 geklärt).
+- `#`-Filter: `_kommentarblock_ueber` nimmt nur Text hinter `#` derselben Quellzeile, `splitlines()` trennt feiner als `\n`,
+  also ist `#[^\n]*Wort` notwendige Bedingung (eigene Prüfung; Gegenprüfung läuft).
+- Prototyp-Muster: `#[^\n]*(?:1:1|wortw(?:oe|ö)rt|identische|eingefroren|unver(?:ae|ä)ndert)`, IGNORECASE, Rohtext.
