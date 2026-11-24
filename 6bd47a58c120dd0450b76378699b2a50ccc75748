@@ -1,0 +1,96 @@
+{
+  "verified_commit": "6bd47a58c120dd0450b76378699b2a50ccc75748",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/api/trips",
+      "evidence": "Seed auf Staging (Commit 6bd47a5) Exit 0; Pr\u00fcfkonto hat Trip gz2967-archiv-kuestenpfad 'K\u00fcstenpfad Probelauf', 3 Etappen, archived_at gesetzt",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "/api/trips",
+      "evidence": "Seed zweimal hintereinander Exit 0; archived_at blieb 2026-11-24T13:00:22Z (vom Erstlauf), Trip weiter archiviert",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "Kern-Tests (Fake-Go-API) gr\u00fcn; auf Staging nicht von Hand ver\u00e4ndert",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "/trips",
+      "evidence": "stdout ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca; GR221 ohne archived_at und in der Trip-Liste sichtbar",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "/trips",
+      "evidence": "Trip-Liste des Pr\u00fcfkontos (SSR) zeigt GR221, nicht K\u00fcstenpfad; Archivseite /archiv zeigt K\u00fcstenpfad; Versandauswahl per Kern-Test",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "/funktionen/trips",
+      "evidence": "archiv.webp DE (16784 B) und en/archiv.webp (16106 B) auf Staging ausgeliefert; Sichtpr\u00fcfung: ein Eintrag K\u00fcstenpfad Probelauf, 3 Etappen/3 stages, Datum 2026-11-24",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "/funktionen/trips",
+      "evidence": "Funktionsseite DE und EN (Cookie gz_lang) enth\u00e4lt Alt-Text mit 'K\u00fcstenpfad Probelauf', kein 'leeres Archiv'",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-8",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "Runbooks und Spec-2967-Changelog gepr\u00fcft (Doku)",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-24T13:38:12.546362+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Seed zweimal Exit 0, Archiv-Trip archiviert und nur im Archiv, Funktionsseite DE/EN mit neuem Bild und Alt-Text",
+  "scope": "full-stack",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Seed zweimal Exit 0, Archiv-Trip archiviert und nur im Archiv, Funktionsseite DE/EN mit neuem Bild und Alt-Text",
+      "scope": "full-stack",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-24T13:38:12.546362+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
