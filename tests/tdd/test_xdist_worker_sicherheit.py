@@ -20,8 +20,10 @@ Anhebung gilt nur fuer diese Subprozess-Tests.
 """
 from __future__ import annotations
 
+import ast
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -73,12 +75,15 @@ def _sauberes_env(probe_dir: Path) -> dict[str, str]:
 
 def _innerer_lauf(
     ziele: list[str], probe_dir: Path, extra: list[str] | None = None,
+    *, projekt_addopts: bool = False,
 ) -> subprocess.CompletedProcess:
+    """``projekt_addopts=True`` (#3278): der Lauf behaelt die ``addopts`` des
+    Projekts -- fuer Nachweise an der woertlichen Gate-Form."""
+    ohne_addopts = [] if projekt_addopts else ["-o", "addopts=", "-p", "no:cacheprovider"]
     with tempfile.TemporaryDirectory(prefix="gz-inner-basetemp-3209-") as basetemp:
         cmd = [
             sys.executable, "-m", "pytest", *ziele,
-            "-o", "addopts=",
-            "-p", "no:cacheprovider",
+            *ohne_addopts,
             "--basetemp", basetemp,
             "-v", "-rfE", "--tb=short",
             *(extra or []),
@@ -419,7 +424,8 @@ def test_ac6_egress_und_loopback_guard_in_jedem_worker(probe_dir):
 
 
 # ---------------------------------------------------------------------------
-# AC-7: lokale Gate-Form bleibt seriell, ``-n`` bleibt gesperrt
+# AC-7: serielle Gate-Form bleibt frei; von den ``-n``-Formen ist genau das
+# parallele Literal frei (#3278), jede andere bleibt gesperrt
 # ---------------------------------------------------------------------------
 
 GATE = REPO_ROOT / ".claude" / "hooks" / "broad_test_run_gate.py"
@@ -436,9 +442,20 @@ def _gate(command: str) -> subprocess.CompletedProcess:
     )
 
 
-def test_ac7_sichere_offline_form_bleibt_frei_und_n_bleibt_gesperrt():
-    """AC-7: die woertliche Offline-Form bleibt freigegeben; dieselbe Form
-    mit ``-n 4`` bleibt gesperrt (lokale parallele Form ist #3278).
+def _paralleles_literal() -> str:
+    """``OFFLINE_PARALLEL_CALL`` per ``ast`` aus der Gate-Datei -- kein Import,
+    damit der Nachweis auch in CI (ohne Plugin agent-os-openspec) laeuft."""
+    for knoten in ast.parse(GATE.read_text(encoding="utf-8")).body:
+        if isinstance(knoten, ast.Assign) and any(
+            isinstance(z, ast.Name) and z.id == "OFFLINE_PARALLEL_CALL" for z in knoten.targets
+        ):
+            return ast.literal_eval(knoten.value)
+    raise AssertionError("OFFLINE_PARALLEL_CALL fehlt im Gate -- keine parallele Form (#3278)")
+
+
+def test_ac7_serielle_form_frei_und_andere_n_formen_bleiben_gesperrt():
+    """AC-7 (praezisiert durch #3278): die serielle Offline-Form bleibt frei,
+    das parallele Literal ist die EINZIGE freie ``-n``-Form.
 
     Ohne das Plugin agent-os-openspec (CI) bricht das Gate schon beim Import
     ab -- dann uebersprungen wie ``tests/tdd/test_broad_test_run_gate_*.py``."""
@@ -447,9 +464,122 @@ def test_ac7_sichere_offline_form_bleibt_frei_und_n_bleibt_gesperrt():
     pytest.importorskip("broad_test_run_gate", exc_type=ImportError)
     seriell = "uv run pytest " + " ".join(OFFLINE_FORM) + " --ignore=tests/red/"
     assert _gate(seriell).returncode == 0, _gate(seriell).stderr
-    parallel = _gate(seriell + " -n 4")
-    assert parallel.returncode != 0, "Gate laesst die lokale -n-Form durch"
-    assert "BLOCKED" in parallel.stderr + parallel.stdout
+    parallel = _paralleles_literal()
+    assert _gate(parallel).returncode == 0, _gate(parallel).stderr
+    for andere in (seriell + " -n 4", seriell + " -n 2 --dist loadgroup",
+                   parallel.replace("-n 2", "-n 4"), parallel + " -n 4"):
+        proc = _gate(andere)
+        assert proc.returncode == 2, f"Gate laesst eine andere -n-Form durch: {andere}"
+        assert "BLOCKED" in proc.stderr
+
+
+# ---------------------------------------------------------------------------
+# #3278 AC-3: Pflichtflags des parallelen Literals
+# ---------------------------------------------------------------------------
+
+PARALLEL_PRAEFIX = ["nice", "-n", "10", "uv", "run", "pytest"]
+PFLICHTFLAGS = (
+    ("-n", "2"),
+    ("--dist", "loadgroup"),
+    ("--disable-socket",),
+    ("--allow-unix-socket",),
+    ("--allow-hosts=127.0.0.1,::1,localhost",),
+    ("--loopback-own-ports",),
+    ("--ignore=tests/red/",),
+)
+
+
+def _literal_maengel(literal: str) -> list[str]:
+    """Abweichungen von Praefix und Pflichtflags (leer = in Ordnung): jedes
+    Pflichtflag genau einmal, nichts Zusaetzliches."""
+    worte = shlex.split(literal)
+    rest = worte[len(PARALLEL_PRAEFIX):]
+    maengel = [] if worte[:len(PARALLEL_PRAEFIX)] == PARALLEL_PRAEFIX else [f"Praefix: {worte[:6]}"]
+    for flag in PFLICHTFLAGS:
+        stellen = [i for i in range(len(rest)) if tuple(rest[i:i + len(flag)]) == flag]
+        if len(stellen) != 1:
+            maengel.append(f"{' '.join(flag)}: {len(stellen)}x")
+            continue
+        del rest[stellen[0]:stellen[0] + len(flag)]
+    return maengel + ([f"zusaetzlich: {rest}"] if rest else [])
+
+
+def test_3278_ac3_paralleles_literal_traegt_alle_pflichtflags():
+    assert _literal_maengel(_paralleles_literal()) == []
+
+
+@pytest.mark.parametrize("flag", PFLICHTFLAGS, ids=lambda f: f[0].split("=")[0].strip("-"))
+@pytest.mark.parametrize("art", ["fehlt", "tippfehler", "doppelt"])
+def test_3278_ac3_verfaelschtes_literal_faellt_auf(flag, art):
+    """Gegenprobe: dieselbe Pruefung erkennt jede Verfaelschung je Pflichtflag."""
+    teil = " " + " ".join(flag)
+    vorn, hinten = _paralleles_literal().rsplit(teil, 1)
+    ersatz = {"fehlt": "", "tippfehler": f"{teil[:-1]}x", "doppelt": teil * 2}[art]
+    maengel = _literal_maengel(vorn + ersatz + hinten)
+    assert any(m.startswith(teil.strip()) for m in maengel), maengel
+
+
+# ---------------------------------------------------------------------------
+# #3278 AC-4: Netzsperren in beiden Workern, an der WOERTLICHEN Form
+# ---------------------------------------------------------------------------
+
+NETZ_SOLL = {"ac6_egress": "blockiert", "ac6_fremd": "blockiert", "ac6_eigen": "erlaubt"}
+
+
+def _form_argumente() -> list[str]:
+    worte = shlex.split(_paralleles_literal())
+    assert worte[:len(PARALLEL_PRAEFIX)] == PARALLEL_PRAEFIX, worte
+    return worte[len(PARALLEL_PRAEFIX):]
+
+
+def _netz_befunde(protokoll: list[dict]) -> list[str]:
+    """Verstoesse: Pruefung fehlt in einem der zwei Worker oder Ergebnis falsch."""
+    befunde = []
+    for art, soll in NETZ_SOLL.items():
+        eintraege = [e for e in protokoll if e["art"] == art]
+        worker = {e["worker"] for e in eintraege}
+        if worker != {"gw0", "gw1"}:
+            befunde.append(f"{art}: nur in {sorted(worker)} gelaufen")
+        befunde += [
+            f"{art}: {e['worker']} meldet {e['ergebnis']} statt {soll}"
+            for e in eintraege if e["ergebnis"] != soll
+        ]
+    return befunde
+
+
+def _lauf_der_form(probe_dir: Path, argumente: list[str]) -> subprocess.CompletedProcess:
+    return _innerer_lauf(
+        _sonden("probe_netz_barriere.py"), probe_dir, argumente, projekt_addopts=True,
+    )
+
+
+def test_3278_ac4_woertliche_form_sperrt_netz_in_beiden_workern(probe_dir):
+    proc = _lauf_der_form(probe_dir, _form_argumente())
+    assert proc.returncode == 0, _ausgabe(proc)
+    protokoll = _protokoll(probe_dir)
+    assert _netz_befunde(protokoll) == [], _ausgabe(proc)
+    # Die Auswertung selbst darf einen einzelnen Worker nicht durchwinken.
+    for art in NETZ_SOLL:
+        einseitig = [e for e in protokoll if e["art"] != art or e["worker"] == "gw0"]
+        assert _netz_befunde(einseitig) == [f"{art}: nur in ['gw0'] gelaufen"]
+
+
+def test_3278_ac4_gegenprobe_ein_worker_laeuft_in_die_barriere(probe_dir):
+    argumente = _form_argumente()
+    argumente[argumente.index("-n") + 1] = "1"
+    proc = _lauf_der_form(probe_dir, argumente)
+    assert proc.returncode == 1, _ausgabe(proc)
+    assert "Barriere abgelaufen" in proc.stdout, _ausgabe(proc)
+    assert _netz_befunde(_protokoll(probe_dir)), "Auswertung winkt einen Worker durch"
+
+
+def test_3278_ac4_gegenprobe_ohne_port_guard_faellt_die_auswertung_durch(probe_dir):
+    argumente = [a for a in _form_argumente() if a != "--loopback-own-ports"]
+    proc = _lauf_der_form(probe_dir, argumente)
+    befunde = _netz_befunde(_protokoll(probe_dir))
+    assert len(befunde) == 2 and all(b.startswith("ac6_fremd: gw") for b in befunde), (
+        f"{befunde}\n" + _ausgabe(proc)
+    )
 
 
 # ---------------------------------------------------------------------------
