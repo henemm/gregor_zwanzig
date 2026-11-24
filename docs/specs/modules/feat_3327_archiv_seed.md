@@ -28,7 +28,7 @@ Das Bild „Archiv“ auf der Funktionsseite zeigt heute ein leeres Archiv und e
 > **Querschnitts-Prüfpunkte:**
 > - **Trip/Orts-Vergleich-Teilung:** n/a. Es entsteht kein UI-Baustein; ein Prüfwerkzeug füllt das Prüfkonto, die Archiv-Seite bleibt unverändert.
 > - **Mandantentrennung:** Der Seed schreibt nur unter der Anmeldung des eigenen Prüfkontos und nur auf die feste eigene ID `gz2967-archiv-kuestenpfad`; `user_id` kommt aus dem Auth-Kontext der API, nie `"default"`. Der bestehende Zwei-Nutzer-Test des Seeds (AC-10 aus #2967) deckt den neuen Trip mit ab.
-> - **Kanäle:** Kein Briefing- oder Alarm-Inhalt ändert sich. Der Seed sendet für den Archiv-Trip bewusst keine Wetter-, Kanal- oder Tabellenkonfiguration; Go vergibt bei der Neuanlage ohne `display_config` die Standardvorlage des Nutzers (#2794), das ist folgenlos. Der Trip erzeugt, weil archiviert und in der Vergangenheit liegend, keinen Versand über E-Mail, Telegram, SMS oder Premium-SMS.
+> - **Kanäle:** Kein Briefing- oder Alarm-Inhalt ändert sich. Der Archiv-Trip bekommt bewusst keine Kanal- und keine Wetterkonfiguration und erzeugt, weil archiviert und in der Vergangenheit liegend, keinen Versand über E-Mail, Telegram, SMS oder Premium-SMS.
 
 ## Estimated Scope
 
@@ -43,7 +43,7 @@ Das Bild „Archiv“ auf der Funktionsseite zeigt heute ein leeres Archiv und e
 | File | Change Type | Description |
 |------|-------------|-------------|
 | scripts/staging_pruefkonto_mockupdaten.py | MODIFY | Konstanten und `soll_archiv_trip()` (fiktiver Trip, 3 Etappen in der Vergangenheit); `sichere_archiviert` (PATCH nur, wenn `archived_at` fehlt); Aufruf in `fuehre_seed` nach Tarif und Haupt-Trip. Ausgabe `ELEMENTLISTE_TRIP_ID` bleibt der GR221-Trip |
-| tests/tdd/test_staging_pruefkonto_mockupdaten.py | MODIFY | Fake-Go-API: Route `PATCH /api/trips/{id}/state` (`{"archived": true}` setzt `archived_at`), PUT ersetzt und entfernt dabei `archived_at` (bewusst strenger als Go, s. u.); neue Tests zu AC-1 bis AC-4 |
+| tests/tdd/test_staging_pruefkonto_mockupdaten.py | MODIFY | Fake-Go-API: Route `PATCH /api/trips/{id}/state` (`{"archived": true}` setzt `archived_at`), PUT ohne `archived_at` auf archivierten Trip reaktiviert wie in Go; neue Tests zu AC-1 bis AC-4 |
 | frontend/src/lib/i18n/messages/de/funktionen.json | MODIFY | Alt-Text `funktionen.bild.archiv.alt` beschreibt den Bildinhalt (ein archivierter Trip) |
 | frontend/src/lib/i18n/messages/en/funktionen.json | MODIFY | Englischer Alt-Text `funktionen.bild.archiv.alt`, gleicher Inhalt |
 | frontend/static/funktionen/archiv.webp | MODIFY | Neu aufgenommen per `funktionen_screenshots.py --nur archiv` (DE) |
@@ -65,7 +65,7 @@ Das Bild „Archiv“ auf der Funktionsseite zeigt heute ein leeres Archiv und e
 |--------|------|---------|
 | `scripts/staging_pruefkonto_mockupdaten.py` (`sichere_datensatz`, `_merge`, `fuehre_seed`) | Bestand | Upsert nach festem ID-Muster `gz2967-…`; `_merge` = `{**ist, **soll}` erhält `archived_at` |
 | `tests/tdd/test_staging_pruefkonto_mockupdaten.py` (Fake-Go-API, `_trip_merge_wie_go`) | Bestand | Zustandsbehafteter Fake, Nachbildung des Go-Verhaltens (kein Mock-Theater) |
-| `internal/handler/trip.go` (`UpdateTripStateHandler` Z. 625–700, `CreateTripHandler` Z. 293, `UpdateTripHandler` Z. 393) | Quelle | PATCH mit `{"archived": true}` setzt `archived_at`; nur der POST-Upsert ohne `archived_at` auf einen archivierten Trip reaktiviert (Quote geprüft, Z. 293); der PUT merged auf den Bestand, sein DTO kennt kein `archived_at`, er reaktiviert nie |
+| `internal/handler/trip.go` (`UpdateTripStateHandler` Z. 625–700, PUT Z. 293) | Quelle | PATCH mit `{"archived": true}` setzt `archived_at`; PUT ohne `archived_at` auf archivierten Trip reaktiviert (Quote geprüft) |
 | `frontend/src/routes/archiv/+page.server.ts` | Quelle | Archiv listet Trips mit `archived_at`, zeigt Name, „N Etappen“, Datum |
 | `frontend/src/routes/trips/+page.server.ts` | Quelle | Trip-Liste blendet archivierte Trips aus |
 | Briefing-Auswahl (`next_briefing.py`, `loader.py`, `scheduler_dispatch_service.py`) | Quelle | Archivierte Trips werden übersprungen, also kein Versand |
@@ -83,7 +83,7 @@ Das Bild „Archiv“ auf der Funktionsseite zeigt heute ein leeres Archiv und e
 
 **Ablauf in `fuehre_seed` (nach Tarif und Haupt-Trip):**
 
-1. `sichere_datensatz("/api/trips", soll_archiv_trip())`: GET 404 ⇒ POST; sonst PUT nur bei Abweichung. Das `soll` enthält nie `archived_at`, `_merge` übernimmt es aus dem Ist-Stand. Der echte Go-PUT (`UpdateTripHandler`) merged ohnehin auf den Bestand und reaktiviert nie; reaktivieren kann nur der POST-Upsert (`trip.go` Z. 293), den der Seed für einen bestehenden Trip nicht nutzt. Der Erhalt von `archived_at` im Soll schützt gegen den strengeren Fake (s. u.) und gegen einen künftigen Wechsel auf ersetzendes Schreiben.
+1. `sichere_datensatz("/api/trips", soll_archiv_trip())`: GET 404 ⇒ POST; sonst PUT nur bei Abweichung. Das `soll` enthält nie `archived_at`, `_merge` übernimmt es aus dem Ist-Stand. So reaktiviert ein PUT den Trip nicht (Go `trip.go` Z. 293 würde sonst reaktivieren).
 2. `sichere_archiviert(trip)`: fehlt `archived_at` im Ergebnis, dann `PATCH /api/trips/{id}/state` mit Body `{"archived": true}` (nicht `{"state": …}`, das wirkt nicht). Ist `archived_at` gesetzt, passiert nichts. Das Archivdatum ist der Tag des ersten Seed-Laufs und bleibt danach stabil.
 3. Rückgabe und stdout von `main` bleiben unverändert (`ELEMENTLISTE_TRIP_ID` = GR221).
 
@@ -132,7 +132,7 @@ Das Bild „Archiv“ auf der Funktionsseite zeigt heute ein leeres Archiv und e
 - [ ] GIVEN Archiv-Trip archiviert WHEN Trip-Liste und fällige Briefings ermittelt werden THEN Trip fehlt in beiden (AC-5).
 - [ ] GIVEN zwei Nutzer im Fake-Server WHEN Seed als Prüfkonto läuft THEN der Archiv-Trip entsteht nur beim Prüfkonto (Erweiterung des Zwei-Nutzer-Tests).
 
-Die Fake-Go-API erhält dazu die Route `PATCH /api/trips/{id}/state` und ein PUT, der ersetzt und `archived_at` dabei entfernt. Das ist bewusst strenger als Go (der echte PUT merged und reaktiviert nie; reaktivieren kann nur der POST-Upsert): verlöre der Seed `archived_at` je aus dem Soll, würde ein Test rot. Die Tests laufen ohne Mock-Theater gegen diesen zustandsbehafteten Fake.
+Die Fake-Go-API erhält dazu die Route `PATCH /api/trips/{id}/state` und das Go-Verhalten „PUT ohne `archived_at` auf archivierten Trip reaktiviert“; die Tests laufen ohne Mock-Theater gegen diesen zustandsbehafteten Fake.
 
 ### Staging-Nachweis (E2E-Phase)
 
@@ -165,4 +165,3 @@ Der Seed wird nur von Hand gestartet; es gibt keinen Cronjob und keinen Dauerdie
 ## Changelog
 
 - 2026-11-24: Initial spec created (Issue #3327, Teil von #3318)
-- 2026-11-24: Adversary-Befunde F001/F002 Text korrigiert (PUT reaktiviert in Go nie, nur der POST-Upsert; Fake ist bewusst strenger. „Keine Wetterkonfiguration“ präzisiert: Seed sendet keine, Go vergibt bei Neuanlage die Standardvorlage, #2794)
