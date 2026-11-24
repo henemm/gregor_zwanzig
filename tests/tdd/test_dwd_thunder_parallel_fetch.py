@@ -46,7 +46,9 @@ from urllib.parse import urlparse
 
 import bz2
 import re
+import socket
 
+import httpx
 import numpy as np
 import pytest
 from rasterio.io import MemoryFile
@@ -656,6 +658,44 @@ def test_ac3_haenger_mit_unveraendertem_default_timeout_endet_nach_etwa_10s(monk
     assert len(anzahl) == 1, f"Haenger-URL {len(anzahl)}x angefragt"
     assert 9.5 <= dauer < 13.0, f"Abruf dauerte {dauer:.2f}s, erwartet ca. 10 s"
     assert ergebnis[haenger_param][haenger_off] is None
+
+
+@pytest.mark.timeout(60)
+def test_testserver_startet_ohne_namensaufloesung(monkeypatch):
+    """#3317 AC-5: Given `socket.getfqdn` (lokal gemessen 35 s fuer 127.0.0.1),
+    When der Testserver startet, Then ruft er es nicht auf."""
+    aufrufe: list = []
+    monkeypatch.setattr(socket, "getfqdn", lambda name="": aufrufe.append(name) or name)
+    with _dwd_server(monkeypatch):
+        pass
+    assert aufrufe == [], f"Testserver loest Namen auf: getfqdn({aufrufe})"
+
+
+@pytest.mark.timeout(60)
+def test_ac3_default_timeout_10s_wirkt_am_gewitter_request(monkeypatch):
+    """#3317 AC-5: Given der UNVERAENDERTE Default THUNDER_REQUEST_TIMEOUT und ein
+    sofort antwortender Server (Budget weit weg, keine Deckelung), When der Abruf
+    laeuft, Then geht jeder Gewitter-Request mit Lese-Timeout 10,0 s hinaus. Der
+    Spion reicht durch (echter Request). Abbruch am Timeout, kein Retry und
+    Zelle None prueft der 2-s-Test."""
+    assert dwd.THUNDER_REQUEST_TIMEOUT == 10.0
+    monkeypatch.setattr(dwd, "THUNDER_FETCH_DEADLINE_SECONDS", 600.0)
+    gesehen: list = []
+    echt = httpx.Client.send
+
+    def spion(self, request, **kwargs):
+        if any(f"/{p}/" in request.url.path for p in dwd.THUNDER_PARAMS):
+            gesehen.append(request.extensions["timeout"]["read"])
+        return echt(self, request, **kwargs)
+
+    monkeypatch.setattr(httpx.Client, "send", spion)
+    zeit = _Zeit()
+    with _dwd_server(monkeypatch) as server:
+        _abruf(zeit)
+        abrufe = server.kopie()
+    assert gesehen, "Spion hat keinen Gewitter-Request gesehen"
+    assert len(gesehen) == len(abrufe), "Spion und Testserver sahen verschieden viele Requests"
+    assert set(gesehen) == {10.0}, f"wirksame Lese-Timeouts: {sorted(set(gesehen))}"
 
 
 @pytest.mark.parametrize("budget", [1.2, 1.8])

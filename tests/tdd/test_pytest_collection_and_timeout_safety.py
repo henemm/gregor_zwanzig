@@ -50,6 +50,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -285,6 +286,30 @@ def _full_id_counts(output: str, files: tuple[str, ...]) -> dict[str, int]:
     kompakte "pfad: N"-Format nicht mehr greift."""
     lines = output.splitlines()
     return {f: sum(1 for ln in lines if ln.startswith(f"{f}::")) for f in files}
+
+
+@pytest.fixture(scope="module", autouse=True)
+def prozessstarts():
+    """#3317 AC-1: alle Prozessstarts dieser Datei mitschreiben (durchreichend)."""
+    befehle: list[list[str]] = []
+
+    class _Mitschreiber(subprocess.Popen):
+        def __init__(self, args, *rest, **kwargs):
+            if isinstance(args, (list, tuple)):
+                befehle.append([str(a) for a in args])
+            super().__init__(args, *rest, **kwargs)
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(subprocess, "Popen", _Mitschreiber)
+        yield befehle
+
+
+def _voll_sammlungen(befehle: list[list[str]]) -> list[list[str]]:
+    """Sammel-Laeufe ohne benannte Testdatei (= ganze Suite)."""
+    return [
+        b for b in befehle
+        if "--collect-only" in b and not any(a.split("::")[0].endswith(".py") for a in b)
+    ]
 
 
 @pytest.fixture(scope="module")
@@ -636,6 +661,66 @@ def test_c2_full_live_files_stay_excluded(default_collect):
     assert not leaked, f"Voll-Dialer-Dateien duerfen im Standardlauf nicht auftauchen: {leaked}"
 
 
+@pytest.mark.parametrize("marker,datei", [
+    # Gemischte Dateien: nur ein Teil traegt den Marker, die Auswahl ist also
+    # weder leer noch die ganze Datei.
+    ("email", "tests/tdd/test_issue_1147_resend_recipient_invariant.py"),
+    ("live", "tests/tdd/test_issue_608_sms_seven_io.py"),
+    ("staging", "tests/tdd/test_issue_1069_tier_channel_gating.py"),
+])
+def test_marker_auswahl_der_ableitung_deckt_sich_mit_pytest(sammlung, marker, datei):
+    """#3317 AC-2: Given die Ableitung aus der einen Sammlung, When pytest die
+    Datei wirklich mit `-m <marker>` sammelt (addopts bleibt wirksam, die
+    Kommandozeile ersetzt deren Auswahl), Then nennt es dieselben Kennungen.
+    `-v` hebt ein `-q` auf, damit Kennungen statt Zahlen erscheinen. Nur sammeln,
+    nie ausfuehren."""
+    res = _collect("-v", "-m", marker, datei, timeout=90)
+    assert res.returncode == 0, res.stdout + res.stderr
+    von_pytest = {ln for ln in res.stdout.splitlines() if ln.startswith(f"{datei}::")}
+    alle = {i for i in sammlung.gesamt if i.startswith(f"{datei}::")}
+    abgeleitet = {i for i in sammlung.mit_marker(marker) if i.startswith(f"{datei}::")}
+    assert von_pytest and von_pytest < alle, "Beleg-Datei muss gemischt markiert sein"
+    assert abgeleitet == von_pytest
+
+
+def test_wirksames_limit_aus_der_echten_konfiguration_ist_30(tmp_path):
+    """#3317 AC-3 (a): Given die echte pyproject.toml, When ein Kindprozess
+    einen Test ohne eigenen Marker startet, Then meldet pytest-timeout 30 s.
+    Gegenprobe: eine Kopie mit 300 meldet 300 -- die Messung liest wirklich die
+    Konfiguration und ist nicht fest verdrahtet."""
+    assert _wirksames_limit(_PYPROJECT, tmp_path) == 30.0
+
+    kopie = tmp_path / "pyproject.toml"
+    text = _PYPROJECT.read_text(encoding="utf-8")
+    assert text.count("\ntimeout = 30\n") == 1
+    kopie.write_text(text.replace("\ntimeout = 30\n", "\ntimeout = 300\n"), encoding="utf-8")
+    assert _wirksames_limit(kopie, tmp_path) == 300.0
+
+
+def test_haenger_wird_am_limit_nachweislich_abgebrochen(tmp_path):
+    """#3317 AC-3 (b): Given ein Test haengt 60 s, When er mit Limit 3 s laeuft,
+    Then bricht pytest-timeout ihn ab: Timeout-Meldung in der Ausgabe und
+    Laufzeit deutlich unter der Haengerdauer, nicht nur ein Exit-Code."""
+    start = time.monotonic()
+    res = _haenger_lauf(tmp_path, limit_s=3, haenger_s=60)
+    dauer = time.monotonic() - start
+    ausgabe = res.stdout + res.stderr
+    assert res.returncode != 0, ausgabe
+    assert re.search(r"Timeout \(>\s*3(\.0)?s\)", ausgabe), ausgabe[-2000:]
+    assert dauer < 40, f"Haenger lief {dauer:.1f}s trotz Limit 3 s"
+
+
+def test_nutzer_der_sammlung_teilen_eine_worker_gruppe(request):
+    """#3317 AC-1: unter `--dist loadgroup` entstehen Modul-Fixtures je Worker
+    neu; nur eine gemeinsame Gruppe haelt die eine Voll-Sammlung."""
+    gruppen: dict[str, set[str]] = {}
+    for item in request.session.items:
+        if item.path == Path(__file__) and "sammlung" in item.fixturenames:
+            marker = item.get_closest_marker("xdist_group")
+            gruppen.setdefault(str(marker.args[0]) if marker else "ohne", set()).add(item.name)
+    assert len(gruppen) == 1 and "ohne" not in gruppen, gruppen
+
+
 @pytest.mark.timeout(300)
 def test_timeout_ini_default_kills_hanging_test(tmp_path):
     """GIVEN ein Test haengt unerwartet WHEN der Standardlauf laeuft THEN
@@ -747,3 +832,13 @@ def test_rolling_trip_send_skips_at_runtime_when_port_closed():
     assert "passed" not in summary_line, summary_line
     assert "failed" not in summary_line, summary_line
     assert "error" not in summary_line, summary_line
+
+
+def test_genau_eine_voll_sammlung_je_dateilauf(
+    default_collect, email_collect, staging_collect, live_collect, prozessstarts,
+):
+    """#3317 AC-1: Given alle Auswahlen (Standard, email, staging, live) sind
+    abgerufen, When man die echten Sammel-Prozesse der ganzen Suite zaehlt, Then
+    war es genau einer. Steht bewusst als letzter Test der Datei."""
+    voll = _voll_sammlungen(prozessstarts)
+    assert len(voll) == 1, f"{len(voll)} Voll-Sammlungen statt einer: {voll}"

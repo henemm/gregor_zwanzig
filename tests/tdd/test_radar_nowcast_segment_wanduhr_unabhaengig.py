@@ -58,6 +58,7 @@ Pfadregel #1409: die vermessene Datei wird relativ zu DIESER Datei aufgeloest.
 from __future__ import annotations
 
 import os
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -140,10 +141,58 @@ def _funktionsnamen(nodeids) -> set[str]:
     return {nodeid.split("::")[-1].split("[")[0] for nodeid in nodeids}
 
 
+@pytest.fixture
+def prozessstarts(monkeypatch) -> list[str]:
+    """#3317 AC-6: echte Prozessstarts mitschreiben (durchreichend, kein Ersatz);
+    je Start das Kindprozess-Skript, das seine gestellte Uhrzeit enthaelt."""
+    skripte: list[str] = []
+
+    class _Mitschreiber(subprocess.Popen):
+        def __init__(self, args, *rest, **kwargs):
+            if isinstance(args, (list, tuple)) and len(args) == 3 and args[1] == "-c":
+                skripte.append(args[2])
+            super().__init__(args, *rest, **kwargs)
+
+    monkeypatch.setattr(subprocess, "Popen", _Mitschreiber)
+    return skripte
+
+
+def _starts_je_uhrzeit(skripte, uhrzeiten) -> dict[str, int]:
+    return {
+        u.isoformat(): sum(repr(u.isoformat()) in s for s in skripte) for u in uhrzeiten
+    }
+
+
+def test_matrix_verwendet_vorhandene_messung_wieder(tmp_path, prozessstarts):
+    """#3317 AC-6: Given eine bereits gemessene Uhrzeit, When ``matrix_differenz``
+    sie ueber ``vorhanden`` bekommt, Then startet dafuer kein zweiter Prozess,
+    und die Messung geht weiterhin in den Vergleich ein (eine leere Messung
+    gilt nicht als gleich)."""
+    datei = tmp_path / "test_kante.py"
+    datei.write_text(
+        "from datetime import datetime, timezone\n\n\n"
+        "def test_vormittags():\n"
+        "    assert datetime.now(timezone.utc).hour < 12\n",
+        encoding="utf-8",
+    )
+    vor, nach = UHRZEITEN[0], UHRZEITEN[2]
+    referenz = lauf_bei_uhrzeit(datei, vor)
+    assert set(referenz.values()) == {"passed"}
+
+    abweichend = matrix_differenz(datei, [vor, nach], vorhanden={vor: referenz})
+
+    assert _funktionsnamen(abweichend) == {"test_vormittags"}
+    assert _starts_je_uhrzeit(prozessstarts, [vor, nach]) == {
+        vor.isoformat(): 1, nach.isoformat(): 1,
+    }
+    mit_leerer = matrix_differenz(datei, [vor, nach], vorhanden={vor: {}})
+    assert _funktionsnamen(mit_leerer) == {"test_vormittags"}
+
+
 @pytest.mark.timeout(300)
 @pytest.mark.parametrize("datei,spec_umfang,uhrzeiten,referenzzeit", MESSFAELLE)
 def test_radar_segment_tests_liefern_zu_jeder_wanduhrzeit_dasselbe_ergebnis(
-    datei, spec_umfang, uhrzeiten, referenzzeit
+    datei, spec_umfang, uhrzeiten, referenzzeit, prozessstarts
 ):
     """#1940: die Testfaelle im Spec-Umfang duerfen ihr Ergebnis nicht mit der
     Wanduhr wechseln.
@@ -184,6 +233,11 @@ def test_radar_segment_tests_liefern_zu_jeder_wanduhrzeit_dasselbe_ergebnis(
     abweichend = _funktionsnamen(matrix_differenz(datei, uhrzeiten))
     betroffen = sorted(abweichend & spec_umfang)
 
+    starts = _starts_je_uhrzeit(prozessstarts, uhrzeiten)
+    assert set(starts.values()) == {1} and len(prozessstarts) == len(uhrzeiten), (
+        "#3317 AC-6: genau ein frischer Prozess je Datenpunkt, die "
+        f"Referenzmessung wird wiederverwendet; gestartet: {starts}"
+    )
     assert not betroffen, (
         f"{datei.name}: {betroffen} liefern je nach gestellter Wanduhrzeit ein "
         f"anderes Ergebnis (gemessen bei {[u.isoformat() for u in uhrzeiten]}). "
