@@ -1,0 +1,125 @@
+=== SERIELL ===
+.......s..................F............................................. [ 52%]
+..................................................................       [100%]
+=================================== FAILURES ===================================
+____ test_ac1_langsamer_dwd_liefert_mindestens_doppelt_so_viele_zeitpunkte _____
+tests/tdd/test_dwd_thunder_parallel_fetch.py:294: in test_ac1_langsamer_dwd_liefert_mindestens_doppelt_so_viele_zeitpunkte
+    assert len(da) >= 10, (
+E   AssertionError: 'lpi': nur 9 von 12 Zeitpunkten innerhalb des Budgets angekommen (erwartet >= 10) -- [1, 2, 3, 4, 5, 6, 7, 8, 9]
+E   assert 9 >= 10
+E    +  where 9 = len([1, 2, 3, 4, 5, 6, ...])
+----------------------------- Captured stderr call -----------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 63796)
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 63797)
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/socketserver.py", line 766, in __init__
+    self.handle()
+  File "/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/http/server.py", line 440, in handle
+    self.handle_one_request()
+  File "/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/http/server.py", line 428, in handle_one_request
+    method()
+  File "/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/tests/tdd/test_dwd_thunder_parallel_fetch.py", line 191, in do_GET
+    self.wfile.write(body)
+  File "/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/socketserver.py", line 845, in write
+    self._sock.sendall(b)
+BrokenPipeError: [Errno 32] Broken pipe
+----------------------------------------
+  File "/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/socketserver.py", line 766, in __init__
+    self.handle()
+  File "/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/http/server.py", line 440, in handle
+    self.handle_one_request()
+  File "/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/http/server.py", line 428, in handle_one_request
+    method()
+  File "/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/tests/tdd/test_dwd_thunder_parallel_fetch.py", line 191, in do_GET
+    self.wfile.write(body)
+  File "/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/socketserver.py", line 845, in write
+    self._sock.sendall(b)
+BrokenPipeError: [Errno 32] Broken pipe
+----------------------------------------
+------------------------------ Captured log call -------------------------------
+WARNING  dwd:dwd.py:710 Gewittersignal 'cape_ml' +14h nicht abrufbar: timed out
+WARNING  dwd:dwd.py:512 Gewitter-Budget (8s) erschoepft — Anreicherung bricht ab, Grundvorhersage unberuehrt
+WARNING  dwd:dwd.py:710 Gewittersignal 'cin_ml' +14h nicht abrufbar: timed out
+WARNING  dwd:dwd.py:512 Gewitter-Budget (8s) erschoepft — Anreicherung bricht ab, Grundvorhersage unberuehrt
+WARNING  dwd:dwd.py:512 Gewitter-Budget (8s) erschoepft — Anreicherung bricht ab, Grundvorhersage unberuehrt
+WARNING  dwd:dwd.py:710 Gewittersignal 'sdi_2' +14h nicht abrufbar: timed out
+WARNING  dwd:dwd.py:512 Gewitter-Budget (8s) erschoepft — Anreicherung bricht ab, Grundvorhersage unberuehrt
+WARNING  dwd:dwd.py:710 Gewittersignal 'grau_gsp' +14h nicht abrufbar: timed out
+WARNING  dwd:dwd.py:710 Gewittersignal 'lpi' +14h nicht abrufbar: timed out
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================= slowest 8 durations ==============================
+37.94s setup    tests/tdd/test_pytest_collection_and_timeout_safety.py::test_default_selection_excludes_b1_live_leak_files
+32.55s call     tests/tdd/test_pytest_collection_and_timeout_safety.py::test_friendly_format_footgun_not_collected_by_default
+13.96s call     tests/tdd/test_radar_nowcast_segment_wanduhr_unabhaengig.py::test_radar_segment_tests_liefern_zu_jeder_wanduhrzeit_dasselbe_ergebnis[822-nowcast-segment]
+8.24s call     tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac1_langsamer_dwd_liefert_mindestens_doppelt_so_viele_zeitpunkte
+7.92s call     tests/tdd/test_radar_nowcast_segment_wanduhr_unabhaengig.py::test_radar_segment_tests_liefern_zu_jeder_wanduhrzeit_dasselbe_ergebnis[818-briefing-integration]
+7.18s call     tests/tdd/test_fixture_wallclock_ratchet.py::test_echter_testbaum_ohne_fehlalarm_der_zweiten_regel
+7.09s call     tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac3_haengender_download_kostet_hoechstens_den_timeout_und_wird_nicht_wiederholt
+6.92s call     tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac8_totalausfall_ueber_http_500_wirft_thunder_source_unavailable
+=========================== short test summary info ============================
+FAILED tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac1_langsamer_dwd_liefert_mindestens_doppelt_so_viele_zeitpunkte
+SKIPPED [1] tests/tdd/test_issue_1010_1006_stille_fehler.py:60: Staging-Credentials (validator.env) fehlen — laeuft nur auf dem Server
+1 failed, 136 passed, 1 skipped, 4 deselected, 2 warnings in 180.86s (0:03:00)
+EXIT=1
+
+=== -n 4 --dist loadgroup ===
+bringing up nodes...
+bringing up nodes...
+
+s....................................................................... [ 52%]
+..................................................................       [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+tests/conftest.py:130
+tests/conftest.py:130
+tests/conftest.py:130
+tests/conftest.py:130
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================= slowest 6 durations ==============================
+25.63s setup    tests/tdd/test_pytest_collection_and_timeout_safety.py::test_default_selection_excludes_b1_live_leak_files@sammlung
+25.12s call     tests/tdd/test_pytest_collection_and_timeout_safety.py::test_friendly_format_footgun_not_collected_by_default@echtdaten
+15.53s call     tests/tdd/test_radar_nowcast_segment_wanduhr_unabhaengig.py::test_radar_segment_tests_liefern_zu_jeder_wanduhrzeit_dasselbe_ergebnis[822-nowcast-segment]
+12.61s call     tests/tdd/test_radar_nowcast_segment_wanduhr_unabhaengig.py::test_radar_segment_tests_liefern_zu_jeder_wanduhrzeit_dasselbe_ergebnis[818-briefing-integration]
+8.51s call     tests/tdd/test_dwd_thunder_parallel_fetch.py::test_ac1_langsamer_dwd_liefert_mindestens_doppelt_so_viele_zeitpunkte
+8.10s call     tests/tdd/test_fixture_wallclock_ratchet.py::test_echter_testbaum_ohne_fehlalarm_der_zweiten_regel@wallclock_ratsche
+=========================== short test summary info ============================
+SKIPPED [1] tests/tdd/test_issue_1010_1006_stille_fehler.py:60: Staging-Credentials (validator.env) fehlen — laeuft nur auf dem Server
+137 passed, 1 skipped, 10 warnings in 49.02s
+EXIT2=0

@@ -46,11 +46,16 @@ direkt/ohne diesen Fallback und bleiben live. Nur noch 5 Voll-Dialer-Dateien.
 from __future__ import annotations
 
 import importlib
+import json
+import os
 import re
 import shutil
 import subprocess
 import sys
+import time
+from collections import Counter
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -148,7 +153,6 @@ _B3_PARTIAL_MARKED = (
     ("tests/tdd/test_fix_853_842_837_tooling_gates.py", "live"),
     ("tests/tdd/test_issue_1035_vigilance_source.py", "live"),
 )
-_B3_PARTIAL_FILES = tuple(f for f, _ in _B3_PARTIAL_MARKED)
 
 # Spec Liste C: urspruenglich 6 Dateien OHNE echten Netzcall -- bleiben
 # unveraendert in der Standard-Selektion (Regressions-Wächter gegen
@@ -209,7 +213,6 @@ _C2_SPLIT_FILES = (
     # test_bug_338_openmeteo_call_counter.py.
     ("tests/tdd/test_bug_338_openmeteo_call_counter.py", 3, "live"),
 )
-_C2_SPLIT_PATHS = tuple(f for f, _, _ in _C2_SPLIT_FILES)
 
 # Scheibe 2c: 5 Voll-Dialer-Dateien (per Probe/Code 100% Netzcall) behalten
 # ihren Modul-Marker unveraendert -- Regressions-Waechter gegen
@@ -269,9 +272,76 @@ _BOOTSTRAP_CONNECTION_REFUSED = _SOCKET_BOOTSTRAP_TEMPLATE.format(
 )
 
 
-def _collect(*extra_args: str, timeout: int) -> subprocess.CompletedProcess:
+# #3317: Plugin fuer den Sammel-Kindprozess. Schreibt je Test (auch abgewaehlte)
+# die Marker und die Auswahl nach `-m` mit -- nie im Testprozess, dort gaelten
+# dessen eigene Optionen (CI: `--ignore`).
+_PLUGIN = "gz_mitschreiber"
+_PLUGIN_QUELLE = '''
+import json
+import os
+
+_items = []
+
+
+def pytest_itemcollected(item):
+    _items.append(item)
+
+
+def pytest_collection_finish(session):
+    with open(os.environ["GZ_SAMMLUNG_ZIEL"], "w", encoding="utf-8") as ziel:
+        json.dump({
+            "marker": {i.nodeid: sorted({m.name for m in i.iter_markers()}) for i in _items},
+            "gewaehlt": [i.nodeid for i in session.items],
+        }, ziel)
+'''
+
+# Nutzer der einen Voll-Sammlung laufen unter `--dist loadgroup` im selben
+# Worker. Nicht "echtdaten": die Sammlung allein dauert laenger als 20 s (Spec
+# #3317) und hielte die serielle Echtdaten-Gruppe auf.
+_sammlungsgruppe = pytest.mark.xdist_group("sammlung")
+
+
+def _umgebung(**zusatz: str) -> dict[str, str]:
+    """Ohne PYTEST_* des aeusseren Laufs (xdist-Worker, PYTEST_TIMEOUT, ...)."""
+    return {k: v for k, v in os.environ.items() if not k.startswith("PYTEST_")} | zusatz
+
+
+def _collect(*extra_args: str, timeout: int, **umgebung: str) -> subprocess.CompletedProcess:
     cmd = [sys.executable, "-m", "pytest", "--collect-only", "-q", *extra_args]
-    return subprocess.run(cmd, cwd=_REPO_ROOT, capture_output=True, text=True, timeout=timeout)
+    return subprocess.run(
+        cmd, cwd=_REPO_ROOT, capture_output=True, text=True, timeout=timeout,
+        env=_umgebung(**umgebung),
+    )
+
+
+def _kindlauf(
+    tmp_path: Path, rumpf: str, *optionen: str, konfiguration: Path = _PYPROJECT,
+) -> subprocess.CompletedProcess:
+    """Fuehrt einen einzelnen Wegwerf-Test mit der Konfiguration aus."""
+    datei = tmp_path / "test_kind.py"
+    datei.write_text(f"import time\n\n\ndef test_kind():\n    {rumpf}\n", encoding="utf-8")
+    cmd = [sys.executable, "-m", "pytest", "-c", str(konfiguration), *optionen, str(datei)]
+    return subprocess.run(
+        cmd, cwd=_REPO_ROOT, capture_output=True, text=True, timeout=60, env=_umgebung(),
+    )
+
+
+def _wirksames_limit(konfiguration: Path, tmp_path: Path) -> float:
+    """Das Limit, mit dem pytest-timeout im Kindprozess den Wecker stellt."""
+    ziel = tmp_path / "limit.txt"
+    ziel.unlink(missing_ok=True)
+    (tmp_path / "conftest.py").write_text(
+        "def pytest_timeout_set_timer(item, settings):\n"
+        f"    open({str(ziel)!r}, 'w').write(str(settings.timeout))\n",
+        encoding="utf-8",
+    )
+    res = _kindlauf(tmp_path, "pass", konfiguration=konfiguration)
+    assert res.returncode == 0, res.stdout + res.stderr
+    return float(ziel.read_text())
+
+
+def _haenger_lauf(tmp_path: Path, *, limit_s: int, haenger_s: int) -> subprocess.CompletedProcess:
+    return _kindlauf(tmp_path, f"time.sleep({haenger_s})", f"--timeout={limit_s}")
 
 
 def _collected_counts(output: str) -> dict[str, int]:
@@ -279,67 +349,65 @@ def _collected_counts(output: str) -> dict[str, int]:
     return {path: int(n) for path, n in _COLLECTED_LINE.findall(output)}
 
 
-def _full_id_counts(output: str, files: tuple[str, ...]) -> dict[str, int]:
-    """Wie _collected_counts, aber fuer volle Test-IDs (`pfad::test`) --
-    noetig, wenn `-o addopts=` die addopts-eigene "-q" entfernt und damit das
-    kompakte "pfad: N"-Format nicht mehr greift."""
-    lines = output.splitlines()
-    return {f: sum(1 for ln in lines if ln.startswith(f"{f}::")) for f in files}
+def _je_datei(kennungen) -> Counter:
+    return Counter(k.split("::")[0] for k in kennungen)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def prozessstarts():
+    """#3317 AC-1: alle Prozessstarts dieser Datei mitschreiben (durchreichend)."""
+    befehle: list[list[str]] = []
+
+    class _Mitschreiber(subprocess.Popen):
+        def __init__(self, args, *rest, **kwargs):
+            if isinstance(args, (list, tuple)):
+                befehle.append([str(a) for a in args])
+            super().__init__(args, *rest, **kwargs)
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(subprocess, "Popen", _Mitschreiber)
+        yield befehle
+
+
+def _voll_sammlungen(befehle: list[list[str]]) -> list[list[str]]:
+    """Sammel-Laeufe ohne benannte Testdatei (= ganze Suite)."""
+    return [
+        b for b in befehle
+        if "--collect-only" in b and not any(a.split("::")[0].endswith(".py") for a in b)
+    ]
 
 
 @pytest.fixture(scope="module")
-def default_collect() -> subprocess.CompletedProcess:
-    """Ein Standardlauf-Collect fuer AC-2/AC-3/AC-8 (ein Subprozess, geteilt)."""
-    return _collect(timeout=90)
+def sammlung(tmp_path_factory) -> SimpleNamespace:
+    """#3317: die EINE Voll-Sammlung (Standardauswahl) der Datei. Gesamt, Auswahl
+    und Marker stammen aus dem Mitschreib-Plugin; fehlt dessen Ergebnis oder
+    weicht es von pytests eigener Ausgabe ab, sind alle Nutzer rot."""
+    ordner = tmp_path_factory.mktemp("sammlung")
+    (ordner / f"{_PLUGIN}.py").write_text(_PLUGIN_QUELLE, encoding="utf-8")
+    ziel = ordner / "ergebnis.json"
+    lauf = _collect(
+        "-p", _PLUGIN, timeout=90, GZ_SAMMLUNG_ZIEL=str(ziel),
+        PYTHONPATH=os.pathsep.join(filter(None, [str(ordner), os.environ.get("PYTHONPATH")])),
+    )
+    assert ziel.exists(), lauf.stdout[-2000:] + lauf.stderr[-2000:]
+    daten = json.loads(ziel.read_text(encoding="utf-8"))
+    marker, gewaehlt = daten["marker"], set(daten["gewaehlt"])
+    assert gewaehlt and gewaehlt < set(marker), "Mitschrift leer oder ohne abgewaehlte Tests"
+    assert _collected_counts(lauf.stdout) == _je_datei(gewaehlt)
+    return SimpleNamespace(
+        lauf=lauf, gesamt=set(marker), gewaehlt=gewaehlt,
+        mit_marker=lambda name: {k for k, namen in marker.items() if name in namen},
+    )
 
 
 @pytest.fixture(scope="module")
-def email_collect() -> subprocess.CompletedProcess:
-    return _collect("-m", "email", timeout=60)
+def default_collect(sammlung) -> subprocess.CompletedProcess:
+    """Der Standardlauf-Collect selbst: Exit-Code und pytests eigene Ausgabe."""
+    return sammlung.lauf
 
 
-@pytest.fixture(scope="module")
-def staging_collect() -> subprocess.CompletedProcess:
-    """`-m staging`-Collect fuer AC-2 (ein Subprozess, geteilt)."""
-    return _collect("-m", "staging", timeout=90)
-
-
-@pytest.fixture(scope="module")
-def mixed_total_collect() -> subprocess.CompletedProcess:
-    """Marker-neutrale Collection NUR der gemischten Datei(en) (`-o addopts=`
-    schaltet die Marker-Filterung komplett ab) -- liefert den Gesamt-Count je
-    Datei fuer den Partitionsnachweis (kein Test darf verloren gehen/doppelt
-    zaehlen)."""
-    return _collect("-o", "addopts=", *_MIXED_B1_FILES, timeout=30)
-
-
-@pytest.fixture(scope="module")
-def live_collect() -> subprocess.CompletedProcess:
-    """`-m live`-Collect fuer Batch 3 (#1211b, ein Subprozess, geteilt)."""
-    return _collect("-m", "live", timeout=90)
-
-
-@pytest.fixture(scope="module")
-def b3_partial_total_collect() -> subprocess.CompletedProcess:
-    """Marker-neutrale Collection NUR der 9 Batch-3-Teil-markierten Dateien
-    (`-o addopts=` schaltet die Marker-Filterung komplett ab) -- liefert den
-    Gesamt-Count je Datei fuer den Partitionsnachweis (Muster
-    mixed_total_collect)."""
-    return _collect("-o", "addopts=", *_B3_PARTIAL_FILES, timeout=60)
-
-
-@pytest.fixture(scope="module")
-def c2_split_total_collect() -> subprocess.CompletedProcess:
-    """Marker-neutrale Collection NUR der 10 Scheibe-2c-teilgeschnittenen
-    Dateien (`-o addopts=` schaltet die Marker-Filterung komplett ab) --
-    liefert den Gesamt-Count je Datei fuer den Partitionsnachweis (Muster
-    b3_partial_total_collect)."""
-    return _collect("-o", "addopts=", *_C2_SPLIT_PATHS, timeout=90)
-
-
-def test_default_selection_excludes_b1_live_leak_files(
-    default_collect, email_collect, mixed_total_collect,
-):
+@_sammlungsgruppe
+def test_default_selection_excludes_b1_live_leak_files(default_collect, sammlung):
     """GIVEN 10 vollstaendig markierte B1-Dateien + 1 gemischt markierte
     (1147 -- nur real dialende Tests/Klassen) WHEN Standardlauf ohne `-m`
     sammelt THEN fehlen die 10 vollen Dateien komplett UND die gemischte
@@ -350,9 +418,8 @@ def test_default_selection_excludes_b1_live_leak_files(
     leaked = {f: default_counts[f] for f in _FULL_B1_FILES if default_counts.get(f, 0) > 0}
     assert not leaked, f"Voll markierte B1-Dateien duerfen im Standardlauf nicht erscheinen: {leaked}"
 
-    assert mixed_total_collect.returncode == 0, mixed_total_collect.stderr
-    email_counts = _collected_counts(email_collect.stdout)
-    total_counts = _full_id_counts(mixed_total_collect.stdout, _MIXED_B1_FILES)
+    email_counts = _je_datei(sammlung.mit_marker("email"))
+    total_counts = _je_datei(sammlung.gesamt)
     for f in _MIXED_B1_FILES:
         std_n, email_n, total_n = (
             default_counts.get(f, 0), email_counts.get(f, 0), total_counts.get(f, 0),
@@ -370,32 +437,33 @@ def test_default_selection_excludes_b1_live_leak_files(
 # seriellen Echtdaten-Gruppe (dort entfernt ein Gruppen-Test die
 # materialisierten Kopien kurzzeitig).
 @pytest.mark.xdist_group("echtdaten")
-def test_friendly_format_footgun_not_collected_by_default(default_collect):
+def test_friendly_format_footgun_not_collected_by_default():
     """GIVEN test_e2e_friendly_format_config.py (Docstring: NICHT als pytest)
     WHEN Standardselektion sammelt THEN keine Test-ID (AC-3, Collection-Teil)
-    UND ein zweiter Collect-Lauf veraendert keine mtime unter
-    data/users/default/trips/*.json (AC-3, Mutations-Teil)."""
-    collected = _collected_counts(default_collect.stdout)
-    assert _FRIENDLY_FORMAT_FOOTGUN not in collected, (
+    UND genau dieser Collect-Lauf veraendert keine mtime unter
+    data/users/default/trips/*.json (AC-3, Mutations-Teil). Eigene Sammlung,
+    weil nur die Gruppe "echtdaten" den Baum ungestoert sieht (#3317)."""
+    def zeitstempel() -> dict[Path, float]:
+        return {p: p.stat().st_mtime for p in sorted(_TRIPS_DIR.glob("*.json"))}
+
+    before = zeitstempel()
+    res = _collect("-p", f"no:{_PLUGIN}", timeout=90)  # fuer den Zaehler erkennbar
+    after = zeitstempel()
+    assert res.returncode == 0, res.stderr
+    collected = _collected_counts(res.stdout)
+    assert collected and _FRIENDLY_FORMAT_FOOTGUN not in collected, (
         f"{_FRIENDLY_FORMAT_FOOTGUN} darf im Standardlauf nicht erscheinen "
         f"(mutiert sonst data/users/default/trips/*.json)."
     )
-
-    if not _TRIPS_DIR.is_dir():
-        pytest.skip(f"{_TRIPS_DIR} nicht vorhanden -- mtime-Nachweis uebersprungen")
-    trip_files = sorted(_TRIPS_DIR.glob("*.json"))
-    if not trip_files:
-        pytest.skip(f"{_TRIPS_DIR} enthaelt keine *.json -- mtime-Nachweis uebersprungen")
-    before = {p: p.stat().st_mtime for p in trip_files}
-    second = _collect(timeout=90)
-    assert second.returncode == 0, second.stderr
-    after = {p: p.stat().st_mtime for p in trip_files}
     assert before == after, (
         f"Ein --collect-only-Lauf darf data/users/default/trips/*.json nicht "
         f"anfassen: vorher={before} nachher={after}"
     )
+    if not before:
+        pytest.skip(f"{_TRIPS_DIR} ohne *.json -- mtime-Nachweis uebersprungen")
 
 
+@_sammlungsgruppe
 def test_full_suite_collection_still_exits_zero(default_collect):
     """GIVEN Marker-Registry in pyproject.toml WHEN volle Suite per
     `--collect-only -q` sammelt THEN Exit 0, keine ERROR-Zeilen (Regressions-
@@ -404,16 +472,18 @@ def test_full_suite_collection_still_exits_zero(default_collect):
     assert "ERROR" not in default_collect.stdout, default_collect.stdout
 
 
-def test_email_marker_run_still_collects_b1_files(email_collect):
+@_sammlungsgruppe
+def test_email_marker_run_still_collects_b1_files(default_collect, sammlung):
     """GIVEN `-m email` wird bewusst aufgerufen WHEN alle 11 B1-Dateien
     (voll oder teilweise) markiert sind THEN erscheint jede mit mindestens
     einem Test -- Marker verschiebt, loescht nicht (AC-7)."""
-    assert email_collect.returncode == 0, email_collect.stderr
-    email_counts = _collected_counts(email_collect.stdout)
+    assert default_collect.returncode == 0, default_collect.stderr
+    email_counts = _je_datei(sammlung.mit_marker("email"))
     missing = sorted(f for f in _B1_FILES if email_counts.get(f, 0) == 0)
     assert not missing, f"B1-Dateien fehlen unter `-m email`: {missing}"
 
 
+@_sammlungsgruppe
 def test_default_selection_excludes_staging_dialers(default_collect):
     """GIVEN 22 Staging-/Prod-Dialer aus Liste A (#1211a) WHEN die
     Standard-Selektion `-m 'not email and not live and not staging'` sammelt
@@ -428,20 +498,22 @@ def test_default_selection_excludes_staging_dialers(default_collect):
     assert not leaked, f"Staging-Dialer duerfen im Standardlauf nicht erscheinen: {leaked}"
 
 
+@_sammlungsgruppe
 @pytest.mark.staging
-def test_staging_marker_run_still_collects_dialers(staging_collect):
+def test_staging_marker_run_still_collects_dialers(default_collect, sammlung):
     """GIVEN `-m staging` wird bewusst aufgerufen WHEN alle 22 Dialer aus
     Liste A markiert sind THEN erscheint jede Datei mit mindestens einem
     gesammelten Test -- der Marker verschiebt sie nur, loescht keinen Test
     (AC-2). Schlaegt heute fehl, weil der Marker noch fehlt (0 gesammelt).
     Host-gebunden (#1196 Batch 6/7): 1010_1006 skippt modul-weit ohne
     validator.env -- die Invariante gilt nur auf dem Server (Staging-Lane)."""
-    assert staging_collect.returncode == 0, staging_collect.stderr
-    staging_counts = _collected_counts(staging_collect.stdout)
+    assert default_collect.returncode == 0, default_collect.stderr
+    staging_counts = _je_datei(sammlung.mit_marker("staging"))
     missing = sorted(f for f in _STAGING_DIALER_FILES if staging_counts.get(f, 0) == 0)
     assert not missing, f"Staging-Dialer fehlen unter `-m staging`: {missing}"
 
 
+@_sammlungsgruppe
 @pytest.mark.staging
 def test_offline_files_remain_in_default_selection(default_collect):
     """GIVEN 6 Offline-Kern-Dateien aus Liste C (kein echter Netzcall) WHEN
@@ -457,21 +529,17 @@ def test_offline_files_remain_in_default_selection(default_collect):
     assert not missing, f"Offline-Dateien fehlen im Standardlauf: {missing}"
 
 
-def test_b3_module_files_excluded_from_default(default_collect, live_collect, staging_collect):
+@_sammlungsgruppe
+def test_b3_module_files_excluded_from_default(default_collect, sammlung):
     """GIVEN 3 Batch-3-Dateien (#1211b) mit Modul-Marker (2x live, 1x staging)
     WHEN der Standardlauf sammelt THEN fehlen alle 3 komplett, erscheinen aber
     unter ihrem jeweiligen Marker mit mindestens einem Test (Muster Scheibe
     2a). Schlaegt heute fehl, weil die Dateien noch keinen Marker tragen --
     sie erscheinen also weiterhin im Standardlauf statt unter ihrem Marker."""
     assert default_collect.returncode == 0, default_collect.stderr
-    assert live_collect.returncode == 0, live_collect.stderr
-    assert staging_collect.returncode == 0, staging_collect.stderr
 
     default_counts = _collected_counts(default_collect.stdout)
-    marker_counts = {
-        "live": _collected_counts(live_collect.stdout),
-        "staging": _collected_counts(staging_collect.stdout),
-    }
+    marker_counts = {m: _je_datei(sammlung.mit_marker(m)) for m in ("live", "staging")}
 
     leaked = {f: default_counts[f] for f, _ in _B3_MODULE_MARKED if default_counts.get(f, 0) > 0}
     assert not leaked, f"Modul-markierte Batch-3-Dateien duerfen im Standardlauf nicht erscheinen: {leaked}"
@@ -480,9 +548,8 @@ def test_b3_module_files_excluded_from_default(default_collect, live_collect, st
     assert not missing, f"Modul-markierte Batch-3-Dateien fehlen unter ihrem Marker: {missing}"
 
 
-def test_b3_partial_files_partition(
-    default_collect, live_collect, email_collect, staging_collect, b3_partial_total_collect,
-):
+@_sammlungsgruppe
+def test_b3_partial_files_partition(default_collect, sammlung):
     """GIVEN 9 Batch-3-Dateien (#1211b) mit Teil-Marker (nur real dialende
     Tests/Klassen) WHEN Standardlauf und markereigener Lauf gemeinsam
     betrachtet werden THEN hat jede Datei im Standardlauf WENIGER Tests als
@@ -490,15 +557,11 @@ def test_b3_partial_files_partition(
     eigener Marker == marker-neutraler Gesamt-Count (Muster
     test_default_selection_excludes_b1_live_leak_files). Schlaegt heute fehl,
     weil noch kein Teil-Marker sitzt -- Standardlauf-Count == Gesamt-Count."""
-    assert b3_partial_total_collect.returncode == 0, b3_partial_total_collect.stderr
+    assert default_collect.returncode == 0, default_collect.stderr
 
     default_counts = _collected_counts(default_collect.stdout)
-    marker_counts = {
-        "live": _collected_counts(live_collect.stdout),
-        "email": _collected_counts(email_collect.stdout),
-        "staging": _collected_counts(staging_collect.stdout),
-    }
-    total_counts = _full_id_counts(b3_partial_total_collect.stdout, _B3_PARTIAL_FILES)
+    marker_counts = {m: _je_datei(sammlung.mit_marker(m)) for m in ("live", "email", "staging")}
+    total_counts = _je_datei(sammlung.gesamt)
 
     for f, marker in _B3_PARTIAL_MARKED:
         std_n = default_counts.get(f, 0)
@@ -575,9 +638,8 @@ def test_811_gate_test_skips_when_hook_missing(tmp_path):
     assert control.returncode == 0, control.stderr
 
 
-def test_c2_returned_tests_in_default_selection(
-    default_collect, live_collect, c2_split_total_collect,
-):
+@_sammlungsgruppe
+def test_c2_returned_tests_in_default_selection(default_collect, sammlung):
     """GIVEN die 11 Scheibe-2c/#1708-B1-teilgeschnittenen Dateien (74
     Netz-Sperre-Probe-gruene Tests + 2 aus test_issue_338 + 3 aus
     test_bug_338, je Datei feinsortiert) WHEN Standardlauf und `-m
@@ -589,11 +651,11 @@ def test_c2_returned_tests_in_default_selection(
     Schlaegt heute fehl, weil alle 11 Dateien noch den kompletten
     Modul-Marker tragen -- der Standardlauf zeigt fuer jede 0 Tests statt
     der erwarteten Zahl."""
-    assert c2_split_total_collect.returncode == 0, c2_split_total_collect.stderr
+    assert default_collect.returncode == 0, default_collect.stderr
 
     default_counts = _collected_counts(default_collect.stdout)
-    marker_counts = {"live": _collected_counts(live_collect.stdout)}
-    total_counts = _full_id_counts(c2_split_total_collect.stdout, _C2_SPLIT_PATHS)
+    marker_counts = {"live": _je_datei(sammlung.mit_marker("live"))}
+    total_counts = _je_datei(sammlung.gesamt)
 
     for f, expected_standard, marker in _C2_SPLIT_FILES:
         std_n = default_counts.get(f, 0)
@@ -617,6 +679,7 @@ def test_c2_returned_tests_in_default_selection(
         )
 
 
+@_sammlungsgruppe
 def test_c2_full_live_files_stay_excluded(default_collect):
     """GIVEN die 5 Voll-Dialer-Dateien (per Netz-Sperre-Probe bzw. Code-Beleg
     100% Netzcall: snapshot_plausibility, geosphere_parsing,
@@ -636,31 +699,68 @@ def test_c2_full_live_files_stay_excluded(default_collect):
     assert not leaked, f"Voll-Dialer-Dateien duerfen im Standardlauf nicht auftauchen: {leaked}"
 
 
-@pytest.mark.timeout(300)
-def test_timeout_ini_default_kills_hanging_test(tmp_path):
-    """GIVEN ein Test haengt unerwartet WHEN der Standardlauf laeuft THEN
-    bricht er nach kurzer, fester Zeitschranke ab statt unbegrenzt zu
-    blockieren (AC-1). `@pytest.mark.timeout(300)`: deklarierter Langlaeufer --
-    dieser Meta-Test wartet selbst auf den verschachtelten Subprozess (bis zu
-    ~30s ini-Timeout + Prozess-Overhead) und darf dabei nicht vom globalen
-    ini-Timeout gekillt werden, den er gerade prueft.
-    """
-    scratch = tmp_path / "hang"
-    scratch.mkdir()
-    hang_file = scratch / "test_hangs.py"
-    hang_file.write_text("import time\n\ndef test_hangs():\n    time.sleep(90)\n")
-
-    cmd = [sys.executable, "-m", "pytest", "-c", str(_PYPROJECT), str(hang_file), "-q"]
-    try:
-        res = subprocess.run(cmd, cwd=_REPO_ROOT, capture_output=True, text=True, timeout=60)
-    except subprocess.TimeoutExpired:
-        pytest.fail(
-            "Kein Sicherheitsnetz: haengender Test lief volle 60s Wallclock "
-            "ohne Abbruch durch einen ini-Timeout-Mechanismus."
-        )
-    assert res.returncode != 0, f"Haengender Test muss fehlschlagen: rc={res.returncode}"
+@_sammlungsgruppe
+@pytest.mark.parametrize("marker,datei", [
+    # Gemischte Dateien: nur ein Teil traegt den Marker, die Auswahl ist also
+    # weder leer noch die ganze Datei.
+    ("email", "tests/tdd/test_issue_1147_resend_recipient_invariant.py"),
+    ("live", "tests/tdd/test_issue_608_sms_seven_io.py"),
+    ("staging", "tests/tdd/test_issue_1069_tier_channel_gating.py"),
+])
+def test_marker_auswahl_der_ableitung_deckt_sich_mit_pytest(sammlung, marker, datei):
+    """#3317 AC-2: Given die Ableitung aus der einen Sammlung, When pytest die
+    Datei wirklich mit `-m <marker>` sammelt (addopts bleibt wirksam, die
+    Kommandozeile ersetzt deren Auswahl), Then nennt es dieselben Kennungen.
+    `-v` hebt ein `-q` auf, damit Kennungen statt Zahlen erscheinen. Nur sammeln,
+    nie ausfuehren."""
+    res = _collect("-v", "-m", marker, datei, timeout=90)
+    assert res.returncode == 0, res.stdout + res.stderr
+    von_pytest = {ln for ln in res.stdout.splitlines() if ln.startswith(f"{datei}::")}
+    alle = {i for i in sammlung.gesamt if i.startswith(f"{datei}::")}
+    abgeleitet = {i for i in sammlung.mit_marker(marker) if i.startswith(f"{datei}::")}
+    assert von_pytest and von_pytest < alle, "Beleg-Datei muss gemischt markiert sein"
+    assert abgeleitet == von_pytest
 
 
+def test_wirksames_limit_aus_der_echten_konfiguration_ist_30(tmp_path):
+    """#3317 AC-3 (a): Given die echte pyproject.toml, When ein Kindprozess
+    einen Test ohne eigenen Marker startet, Then meldet pytest-timeout 30 s.
+    Gegenprobe: eine Kopie mit 300 meldet 300 -- die Messung liest wirklich die
+    Konfiguration und ist nicht fest verdrahtet."""
+    assert _wirksames_limit(_PYPROJECT, tmp_path) == 30.0
+
+    kopie = tmp_path / "pyproject.toml"
+    text = _PYPROJECT.read_text(encoding="utf-8")
+    assert text.count("\ntimeout = 30\n") == 1
+    kopie.write_text(text.replace("\ntimeout = 30\n", "\ntimeout = 300\n"), encoding="utf-8")
+    assert _wirksames_limit(kopie, tmp_path) == 300.0
+
+
+def test_haenger_wird_am_limit_nachweislich_abgebrochen(tmp_path):
+    """#3317 AC-3 (b): Given ein Test haengt 60 s, When er mit Limit 3 s laeuft,
+    Then bricht pytest-timeout ihn ab: Timeout-Meldung in der Ausgabe und
+    Laufzeit deutlich unter der Haengerdauer, nicht nur ein Exit-Code."""
+    start = time.monotonic()
+    res = _haenger_lauf(tmp_path, limit_s=3, haenger_s=60)
+    dauer = time.monotonic() - start
+    ausgabe = res.stdout + res.stderr
+    assert res.returncode != 0, ausgabe
+    assert re.search(r"Timeout \(>\s*3(\.0)?s\)", ausgabe), ausgabe[-2000:]
+    assert dauer < 40, f"Haenger lief {dauer:.1f}s trotz Limit 3 s"
+
+
+def test_nutzer_der_sammlung_teilen_eine_worker_gruppe(request):
+    """#3317 AC-1: unter `--dist loadgroup` entstehen Modul-Fixtures je Worker
+    neu; nur eine gemeinsame Gruppe haelt die eine Voll-Sammlung."""
+    gruppen: dict[str, set[str]] = {}
+    for item in request.session.items:
+        if item.path == Path(__file__) and "sammlung" in item.fixturenames:
+            marker = item.get_closest_marker("xdist_group")
+            gruppen.setdefault(str(marker.args[0]) if marker else "ohne", set()).add(item.name)
+    assert len(gruppen) == 1 and "ohne" not in gruppen, gruppen
+
+
+@_sammlungsgruppe
 def test_rolling_trip_dialer_excluded_from_default(default_collect):
     """GIVEN der Rolling-Trip-Dialer aus #937 WHEN die Standard-Selektion
     (`not email and not live and not staging`) sammelt THEN erscheint die
@@ -674,14 +774,15 @@ def test_rolling_trip_dialer_excluded_from_default(default_collect):
     )
 
 
+@_sammlungsgruppe
 @pytest.mark.staging
-def test_rolling_trip_dialer_collected_under_staging(staging_collect):
+def test_rolling_trip_dialer_collected_under_staging(default_collect, sammlung):
     """GIVEN `-m staging` wird bewusst aufgerufen WHEN der Rolling-Trip-Dialer
     seinen Modul-Marker traegt THEN erscheint die Datei mit mindestens einem
     gesammelten Test -- der Marker verschiebt, loescht nicht (AC-2). Schlaegt
     heute fehl, weil der Marker noch fehlt (0 gesammelt unter `-m staging`)."""
-    assert staging_collect.returncode == 0, staging_collect.stderr
-    staging_counts = _collected_counts(staging_collect.stdout)
+    assert default_collect.returncode == 0, default_collect.stderr
+    staging_counts = _je_datei(sammlung.mit_marker("staging"))
     assert staging_counts.get(_ROLLING_TRIP_DIALER, 0) > 0, (
         f"{_ROLLING_TRIP_DIALER} fehlt unter `-m staging`: "
         f"{staging_counts.get(_ROLLING_TRIP_DIALER, 0)} gesammelt."
@@ -747,3 +848,17 @@ def test_rolling_trip_send_skips_at_runtime_when_port_closed():
     assert "passed" not in summary_line, summary_line
     assert "failed" not in summary_line, summary_line
     assert "error" not in summary_line, summary_line
+
+
+@_sammlungsgruppe
+def test_genau_eine_voll_sammlung_je_dateilauf(sammlung, prozessstarts):
+    """#3317 AC-1: Given alle Auswahlen (Standard, email, staging, live) sind
+    abgerufen, When man die echten Sammel-Prozesse der ganzen Suite zaehlt, Then
+    war es genau einer, dazu hoechstens die eigene Sammlung des mtime-Tests
+    (Gruppe "echtdaten", je nach Verteilung im selben Prozess). Steht bewusst
+    als letzter Test der Datei."""
+    voll = _voll_sammlungen(prozessstarts)
+    mtime_test = [b for b in voll if f"no:{_PLUGIN}" in b]
+    assert len(mtime_test) <= 1 and len(voll) - len(mtime_test) == 1, (
+        f"Voll-Sammlungen (erwartet eine, dazu hoechstens die des mtime-Tests): {voll}"
+    )

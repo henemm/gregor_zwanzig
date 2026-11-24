@@ -1,0 +1,140 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.15, pytest-9.2.0, pluggy-1.6.0
+rootdir: /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo
+configfile: pyproject.toml
+plugins: socket-0.8.0, xdist-3.8.0, timeout-2.4.0, anyio-4.14.2
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 50 items / 38 deselected / 12 selected
+
+tests/tdd/test_pytest_collection_and_timeout_safety.py EEEFFFF           [ 58%]
+tests/tdd/test_radar_nowcast_segment_wanduhr_unabhaengig.py FFF          [ 83%]
+tests/tdd/test_dwd_thunder_parallel_fetch.py F.                          [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of test_marker_auswahl_der_ableitung_deckt_sich_mit_pytest[email-tests/tdd/test_issue_1147_resend_recipient_invariant.py] _
+file /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/tests/tdd/test_pytest_collection_and_timeout_safety.py, line 664
+  @pytest.mark.parametrize("marker,datei", [
+      # Gemischte Dateien: nur ein Teil traegt den Marker, die Auswahl ist also
+      # weder leer noch die ganze Datei.
+      ("email", "tests/tdd/test_issue_1147_resend_recipient_invariant.py"),
+      ("live", "tests/tdd/test_issue_608_sms_seven_io.py"),
+      ("staging", "tests/tdd/test_issue_1069_tier_channel_gating.py"),
+  ])
+  def test_marker_auswahl_der_ableitung_deckt_sich_mit_pytest(sammlung, marker, datei):
+E       fixture 'sammlung' not found
+>       available fixtures: _clear_tdd_638_throttle, _core_auth_secret_configured, _dwd_raster_cache_leeren, _e2e_nachweis_nicht_veroeffentlichen, _egress_guard, _freezegun_stapel_waechter, _gestellte_wanduhr, _guard_repo_data_users_session, _importbindung_vorladen, _isolate_data_root, _isolate_data_root_module, _isolate_warn_calls_path, _materialize_real_data_root_fixtures, _pruefstrecken_server_beenden, _raeume_budget_spur_bei_real_data_root, _redirect_data_root_session, _reset_parallel_fetch, _reset_shared_radar_cache, _reset_shared_weather_cache, _reset_telegram_rate_limit, _reset_thunder_window_cache, _telegram_herkunftsbeleg_leeren, _use_fixture_provider, anyio_backend, anyio_backend_name, anyio_backend_options, b3_partial_total_collect, c2_split_total_collect, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, default_collect, doctest_namespace, dotenv_env, email_collect, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, ground_truth, live_collect, mixed_total_collect, monkeypatch, prozessstarts, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, socket_disabled, socket_enabled, staging_collect, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, worker_id
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/tests/tdd/test_pytest_collection_and_timeout_safety.py:664
+_ ERROR at setup of test_marker_auswahl_der_ableitung_deckt_sich_mit_pytest[live-tests/tdd/test_issue_608_sms_seven_io.py] _
+file /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/tests/tdd/test_pytest_collection_and_timeout_safety.py, line 664
+  @pytest.mark.parametrize("marker,datei", [
+      # Gemischte Dateien: nur ein Teil traegt den Marker, die Auswahl ist also
+      # weder leer noch die ganze Datei.
+      ("email", "tests/tdd/test_issue_1147_resend_recipient_invariant.py"),
+      ("live", "tests/tdd/test_issue_608_sms_seven_io.py"),
+      ("staging", "tests/tdd/test_issue_1069_tier_channel_gating.py"),
+  ])
+  def test_marker_auswahl_der_ableitung_deckt_sich_mit_pytest(sammlung, marker, datei):
+E       fixture 'sammlung' not found
+>       available fixtures: _clear_tdd_638_throttle, _core_auth_secret_configured, _dwd_raster_cache_leeren, _e2e_nachweis_nicht_veroeffentlichen, _egress_guard, _freezegun_stapel_waechter, _gestellte_wanduhr, _guard_repo_data_users_session, _importbindung_vorladen, _isolate_data_root, _isolate_data_root_module, _isolate_warn_calls_path, _materialize_real_data_root_fixtures, _pruefstrecken_server_beenden, _raeume_budget_spur_bei_real_data_root, _redirect_data_root_session, _reset_parallel_fetch, _reset_shared_radar_cache, _reset_shared_weather_cache, _reset_telegram_rate_limit, _reset_thunder_window_cache, _telegram_herkunftsbeleg_leeren, _use_fixture_provider, anyio_backend, anyio_backend_name, anyio_backend_options, b3_partial_total_collect, c2_split_total_collect, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, default_collect, doctest_namespace, dotenv_env, email_collect, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, ground_truth, live_collect, mixed_total_collect, monkeypatch, prozessstarts, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, socket_disabled, socket_enabled, staging_collect, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, worker_id
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/tests/tdd/test_pytest_collection_and_timeout_safety.py:664
+_ ERROR at setup of test_marker_auswahl_der_ableitung_deckt_sich_mit_pytest[staging-tests/tdd/test_issue_1069_tier_channel_gating.py] _
+file /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/tests/tdd/test_pytest_collection_and_timeout_safety.py, line 664
+  @pytest.mark.parametrize("marker,datei", [
+      # Gemischte Dateien: nur ein Teil traegt den Marker, die Auswahl ist also
+      # weder leer noch die ganze Datei.
+      ("email", "tests/tdd/test_issue_1147_resend_recipient_invariant.py"),
+      ("live", "tests/tdd/test_issue_608_sms_seven_io.py"),
+      ("staging", "tests/tdd/test_issue_1069_tier_channel_gating.py"),
+  ])
+  def test_marker_auswahl_der_ableitung_deckt_sich_mit_pytest(sammlung, marker, datei):
+E       fixture 'sammlung' not found
+>       available fixtures: _clear_tdd_638_throttle, _core_auth_secret_configured, _dwd_raster_cache_leeren, _e2e_nachweis_nicht_veroeffentlichen, _egress_guard, _freezegun_stapel_waechter, _gestellte_wanduhr, _guard_repo_data_users_session, _importbindung_vorladen, _isolate_data_root, _isolate_data_root_module, _isolate_warn_calls_path, _materialize_real_data_root_fixtures, _pruefstrecken_server_beenden, _raeume_budget_spur_bei_real_data_root, _redirect_data_root_session, _reset_parallel_fetch, _reset_shared_radar_cache, _reset_shared_weather_cache, _reset_telegram_rate_limit, _reset_thunder_window_cache, _telegram_herkunftsbeleg_leeren, _use_fixture_provider, anyio_backend, anyio_backend_name, anyio_backend_options, b3_partial_total_collect, c2_split_total_collect, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, default_collect, doctest_namespace, dotenv_env, email_collect, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, ground_truth, live_collect, mixed_total_collect, monkeypatch, prozessstarts, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, socket_disabled, socket_enabled, staging_collect, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, worker_id
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/tests/tdd/test_pytest_collection_and_timeout_safety.py:664
+=================================== FAILURES ===================================
+___________ test_wirksames_limit_aus_der_echten_konfiguration_ist_30 ___________
+tests/tdd/test_pytest_collection_and_timeout_safety.py:691: in test_wirksames_limit_aus_der_echten_konfiguration_ist_30
+    assert _wirksames_limit(_PYPROJECT, tmp_path) == 30.0
+           ^^^^^^^^^^^^^^^^
+E   NameError: name '_wirksames_limit' is not defined
+_____________ test_haenger_wird_am_limit_nachweislich_abgebrochen ______________
+tests/tdd/test_pytest_collection_and_timeout_safety.py:705: in test_haenger_wird_am_limit_nachweislich_abgebrochen
+    res = _haenger_lauf(tmp_path, limit_s=3, haenger_s=60)
+          ^^^^^^^^^^^^^
+E   NameError: name '_haenger_lauf' is not defined
+______________ test_nutzer_der_sammlung_teilen_eine_worker_gruppe ______________
+tests/tdd/test_pytest_collection_and_timeout_safety.py:721: in test_nutzer_der_sammlung_teilen_eine_worker_gruppe
+    assert len(gruppen) == 1 and "ohne" not in gruppen, gruppen
+E   AssertionError: {'ohne': {'test_marker_auswahl_der_ableitung_deckt_sich_mit_pytest[email-tests/tdd/test_issue_1147_resend_recipient_in..., 'test_marker_auswahl_der_ableitung_deckt_sich_mit_pytest[staging-tests/tdd/test_issue_1069_tier_channel_gating.py]'}}
+E   assert (1 == 1 and 'ohne' not in {'ohne': {'test_marker_auswahl_der_ableitung_deckt_sich_mit_pytest[email-tests/tdd/test_issue_1147_resend_recipient_in..., 'test_marker_auswahl_der_ableitung_deckt_sich_mit_pytest[staging-tests/tdd/test_issue_1069_tier_channel_gating.py]'}})
+E    +  where 1 = len({'ohne': {'test_marker_auswahl_der_ableitung_deckt_sich_mit_pytest[email-tests/tdd/test_issue_1147_resend_recipient_in..., 'test_marker_auswahl_der_ableitung_deckt_sich_mit_pytest[staging-tests/tdd/test_issue_1069_tier_channel_gating.py]'}})
+__________________ test_genau_eine_voll_sammlung_je_dateilauf __________________
+tests/tdd/test_pytest_collection_and_timeout_safety.py:844: in test_genau_eine_voll_sammlung_je_dateilauf
+    assert len(voll) == 1, f"{len(voll)} Voll-Sammlungen statt einer: {voll}"
+E   AssertionError: 4 Voll-Sammlungen statt einer: [['/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/.venv/bin/python', '-m', 'pytest', '--collect-only', '-q'], ['/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/.venv/bin/python', '-m', 'pytest', '--collect-only', '-q', '-m', 'email'], ['/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/.venv/bin/python', '-m', 'pytest', '--collect-only', '-q', '-m', 'staging'], ['/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/.venv/bin/python', '-m', 'pytest', '--collect-only', '-q', '-m', 'live']]
+E   assert 4 == 1
+E    +  where 4 = len([['/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/.venv/bin/python', '-m', 'pytest'...ig/.claude/worktrees/rework-3279-testsuite-tempo/.venv/bin/python', '-m', 'pytest', '--collect-only', '-q', '-m', ...]])
+_______________ test_matrix_verwendet_vorhandene_messung_wieder ________________
+tests/tdd/test_radar_nowcast_segment_wanduhr_unabhaengig.py:182: in test_matrix_verwendet_vorhandene_messung_wieder
+    abweichend = matrix_differenz(datei, [vor, nach], vorhanden={vor: referenz})
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: matrix_differenz() got an unexpected keyword argument 'vorhanden'
+_ test_radar_segment_tests_liefern_zu_jeder_wanduhrzeit_dasselbe_ergebnis[822-nowcast-segment] _
+tests/tdd/test_radar_nowcast_segment_wanduhr_unabhaengig.py:237: in test_radar_segment_tests_liefern_zu_jeder_wanduhrzeit_dasselbe_ergebnis
+    assert set(starts.values()) == {1} and len(prozessstarts) == len(uhrzeiten), (
+E   AssertionError: #3317 AC-6: genau ein frischer Prozess je Datenpunkt, die Referenzmessung wird wiederverwendet; gestartet: {'2026-08-18T09:00:00+00:00': 2, '2026-08-18T12:30:00+00:00': 1, '2026-08-18T16:00:00+00:00': 1, '2026-08-18T23:30:00+00:00': 1}
+E   assert ({1, 2} == {1}
+E     
+E     Extra items in the left set:
+E     2
+E     Use -v to get more diff)
+_ test_radar_segment_tests_liefern_zu_jeder_wanduhrzeit_dasselbe_ergebnis[818-briefing-integration] _
+tests/tdd/test_radar_nowcast_segment_wanduhr_unabhaengig.py:237: in test_radar_segment_tests_liefern_zu_jeder_wanduhrzeit_dasselbe_ergebnis
+    assert set(starts.values()) == {1} and len(prozessstarts) == len(uhrzeiten), (
+E   AssertionError: #3317 AC-6: genau ein frischer Prozess je Datenpunkt, die Referenzmessung wird wiederverwendet; gestartet: {'2026-08-18T09:00:00+00:00': 2, '2026-08-18T11:55:00+00:00': 1, '2026-08-18T12:05:00+00:00': 1, '2026-08-18T15:55:00+00:00': 1, '2026-08-18T16:05:00+00:00': 1}
+E   assert ({1, 2} == {1}
+E     
+E     Extra items in the left set:
+E     2
+E     Use -v to get more diff)
+________________ test_testserver_startet_ohne_namensaufloesung _________________
+tests/tdd/test_dwd_thunder_parallel_fetch.py:671: in test_testserver_startet_ohne_namensaufloesung
+    assert aufrufe == [], f"Testserver loest Namen auf: getfqdn({aufrufe})"
+E   AssertionError: Testserver loest Namen auf: getfqdn(['127.0.0.1'])
+E   assert ['127.0.0.1'] == []
+E     
+E     Left contains one more item: '127.0.0.1'
+E     Use -v to get more diff
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/tdd/test_pytest_collection_and_timeout_safety.py::test_wirksames_limit_aus_der_echten_konfiguration_ist_30
+FAILED tests/tdd/test_pytest_collection_and_timeout_safety.py::test_haenger_wird_am_limit_nachweislich_abgebrochen
+FAILED tests/tdd/test_pytest_collection_and_timeout_safety.py::test_nutzer_der_sammlung_teilen_eine_worker_gruppe
+FAILED tests/tdd/test_pytest_collection_and_timeout_safety.py::test_genau_eine_voll_sammlung_je_dateilauf
+FAILED tests/tdd/test_radar_nowcast_segment_wanduhr_unabhaengig.py::test_matrix_verwendet_vorhandene_messung_wieder
+FAILED tests/tdd/test_radar_nowcast_segment_wanduhr_unabhaengig.py::test_radar_segment_tests_liefern_zu_jeder_wanduhrzeit_dasselbe_ergebnis[822-nowcast-segment]
+FAILED tests/tdd/test_radar_nowcast_segment_wanduhr_unabhaengig.py::test_radar_segment_tests_liefern_zu_jeder_wanduhrzeit_dasselbe_ergebnis[818-briefing-integration]
+FAILED tests/tdd/test_dwd_thunder_parallel_fetch.py::test_testserver_startet_ohne_namensaufloesung
+ERROR tests/tdd/test_pytest_collection_and_timeout_safety.py::test_marker_auswahl_der_ableitung_deckt_sich_mit_pytest[email-tests/tdd/test_issue_1147_resend_recipient_invariant.py]
+ERROR tests/tdd/test_pytest_collection_and_timeout_safety.py::test_marker_auswahl_der_ableitung_deckt_sich_mit_pytest[live-tests/tdd/test_issue_608_sms_seven_io.py]
+ERROR tests/tdd/test_pytest_collection_and_timeout_safety.py::test_marker_auswahl_der_ableitung_deckt_sich_mit_pytest[staging-tests/tdd/test_issue_1069_tier_channel_gating.py]
+= 8 failed, 1 passed, 38 deselected, 2 warnings, 3 errors in 255.69s (0:04:15) =

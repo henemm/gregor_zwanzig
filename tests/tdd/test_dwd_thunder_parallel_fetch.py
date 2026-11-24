@@ -41,12 +41,15 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from socketserver import TCPServer
 from typing import Callable, Optional
 from urllib.parse import urlparse
 
 import bz2
 import re
+import socket
 
+import httpx
 import numpy as np
 import pytest
 from rasterio.io import MemoryFile
@@ -133,6 +136,11 @@ class _Server(ThreadingHTTPServer):
         self.freigabe = threading.Event()  # beendet alle Haenger beim Abbau
         self.abrufe: list = []  # (monotone Ankunft, param, lauf, ttt, status)
         self._lock = threading.Lock()
+
+    def server_bind(self):
+        # Ohne HTTPServer.server_bind: dessen socket.getfqdn kostete lokal 35 s (#3317).
+        TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
 
     def protokolliere(self, eintrag) -> None:
         with self._lock:
@@ -630,32 +638,42 @@ def test_ac8_nicht_schreibbares_journal_bricht_den_abruf_nicht(monkeypatch):
 # Fix-Loop 1 (#2554): Zusicherungen dort pruefen, wo sie WIRKEN
 # ---------------------------------------------------------------------------
 
+@pytest.mark.timeout(30)
+def test_testserver_startet_ohne_namensaufloesung(monkeypatch):
+    """#3317 AC-5: Given `socket.getfqdn` (lokal gemessen 35 s fuer 127.0.0.1),
+    When der Testserver startet, Then ruft er es nicht auf."""
+    aufrufe: list = []
+    monkeypatch.setattr(socket, "getfqdn", lambda name="": aufrufe.append(name) or name)
+    with _dwd_server(monkeypatch):
+        pass
+    assert aufrufe == [], f"Testserver loest Namen auf: getfqdn({aufrufe})"
+
+
 @pytest.mark.timeout(40)
-def test_ac3_haenger_mit_unveraendertem_default_timeout_endet_nach_etwa_10s(monkeypatch):
-    """AC-3 / F001: Given der UNVERAENDERTE Default THUNDER_REQUEST_TIMEOUT (10 s,
-    NICHT gepatcht) und ein Download, der 15 s schweigt, When der Abruf laeuft,
-    Then endet er nach ca. 10 s (nicht 15 s und nicht 30 s), die URL wurde genau
-    einmal angefragt und die Zelle ist None. Faengt ein Zuruecksetzen der
-    Konstante auf 30."""
+def test_ac3_default_timeout_10s_wirkt_am_gewitter_request(monkeypatch):
+    """#3317 AC-5: Given der UNVERAENDERTE Default THUNDER_REQUEST_TIMEOUT und ein
+    sofort antwortender Server (Budget weit weg, keine Deckelung), When der Abruf
+    laeuft, Then geht jeder Gewitter-Request mit Lese-Timeout 10,0 s hinaus. Der
+    Spion reicht durch (echter Request). Abbruch am Timeout, kein Retry und
+    Zelle None prueft der 2-s-Test."""
     assert dwd.THUNDER_REQUEST_TIMEOUT == 10.0
+    monkeypatch.setattr(dwd, "THUNDER_FETCH_DEADLINE_SECONDS", 600.0)
+    gesehen: list = []
+    echt = httpx.Client.send
+
+    def spion(self, request, **kwargs):
+        if any(f"/{p}/" in request.url.path for p in dwd.THUNDER_PARAMS):
+            gesehen.append(request.extensions["timeout"]["read"])
+        return echt(self, request, **kwargs)
+
+    monkeypatch.setattr(httpx.Client, "send", spion)
     zeit = _Zeit()
-    haenger_off, haenger_param = 3, "cin_ml"
-    haenger_ttt = zeit.ttt(0, haenger_off)
-
-    def regel(param, lauf, ttt):
-        if param == haenger_param and lauf == zeit.laeufe[0] and ttt == haenger_ttt:
-            return ("hang", 15.0)
-        return None
-
-    t0 = time.monotonic()
-    with _dwd_server(monkeypatch, regel=regel) as server:
-        ergebnis = _abruf(zeit)
-        dauer = time.monotonic() - t0
+    with _dwd_server(monkeypatch) as server:
+        _abruf(zeit)
         abrufe = server.kopie()
-    anzahl = [a for a in abrufe if a[1] == haenger_param and a[3] == haenger_ttt]
-    assert len(anzahl) == 1, f"Haenger-URL {len(anzahl)}x angefragt"
-    assert 9.5 <= dauer < 13.0, f"Abruf dauerte {dauer:.2f}s, erwartet ca. 10 s"
-    assert ergebnis[haenger_param][haenger_off] is None
+    assert gesehen, "Spion hat keinen Gewitter-Request gesehen"
+    assert len(gesehen) == len(abrufe), "Spion und Testserver sahen verschieden viele Requests"
+    assert set(gesehen) == {10.0}, f"wirksame Lese-Timeouts: {sorted(set(gesehen))}"
 
 
 @pytest.mark.parametrize("budget", [1.2, 1.8])

@@ -318,9 +318,8 @@ seriell und parallel, Gruppenbildung, Materialisierung, Egress-Sperre je Worker)
 
 Timing-empfindliche Tests, die nur unter Parallelität wackeln, kommen in die Gruppe `echtdaten`;
 Zusicherungen werden nicht gelockert, der globale `timeout = 30` bleibt. Anhebungen nur einzeln per
-`@pytest.mark.timeout(N)` mit Begründungskommentar am Test; wegen Parallel-Last in CI (#3209) bisher:
-`tests/refactor/test_epic_129a_3_ui_removed.py::test_ac7_collection_clean` (120 s; sammelt die ganze
-Suite per Subprozess, seriell ca. 16 s).
+`@pytest.mark.timeout(N)` mit Begründungskommentar am Test. Die Nutzer der einen Voll-Sammlung in
+`tests/tdd/test_pytest_collection_and_timeout_safety.py` teilen sich die Gruppe `sammlung` (#3317).
 
 ## CI-Ratschen
 

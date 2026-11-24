@@ -9,7 +9,8 @@ Diese Tests pruefen den Ziel-Zustand nach der Loesch-Aktion:
   - test_ac3_seven_test_files_deleted (AC-3) -> 7 spezifische Test-Files sind weg
   - test_ac4_pyproject_no_nicegui_apscheduler (AC-4) -> Dependencies entfernt
   - test_ac5_no_web_main_in_hooks   (AC-5) -> .claude/validate.py + e2e-verify.md sauber
-  - test_ac7_collection_clean       (AC-7) -> pytest collect-only ohne Errors
+  - AC-7 (pytest collect-only ohne Errors) prueft seit #3317 allein
+    tests/tdd/test_pytest_collection_and_timeout_safety.py::test_full_suite_collection_still_exits_zero
 
 AC-6 (systemctl is-active gregor_zwanzig.service -> inactive) ist ein Live-Smoke-Check
 nach Prod-Deploy und kein pytest-Test (siehe Spec, Verification-Sektion).
@@ -135,43 +136,4 @@ def test_ac5_no_web_main_in_hooks():
     assert offenders == [], (
         "Verbleibende Hook-/Command-Referenzen auf NiceGUI-Entrypoints:\n  - "
         + "\n  - ".join(offenders)
-    )
-
-
-# Issue #3209 (CI-Befund 2026-11-23, Parallel-Last in CI): der Test sammelt per
-# Subprozess die GANZE Suite; seriell ca. 16 s (lokal gemessen 2026-11-23), unter
-# `-n 4` teilt er sich die 4 Kerne des CI-Runners mit drei Workern und riss den
-# globalen `timeout = 30`. 120 s = ca. 7x serielle Laufzeit (Faktor ~4 fuer die
-# Kernteilung plus Wachstum der Sammlung). Die Zusicherung bleibt unveraendert.
-@pytest.mark.timeout(120)
-def test_ac7_collection_clean():
-    """AC-7: pytest --collect-only laeuft ohne Collection-Errors.
-
-    Wir pruefen nicht die genaue Test-Anzahl (Spec sagt "mind. 50 Tests
-    weniger"), sondern dass keine Imports auf gestrichene Module crashen.
-    """
-    result = subprocess.run(
-        [
-            "uv",
-            "run",
-            "pytest",
-            "tests/",
-            "--collect-only",
-            "-q",
-            "--no-header",
-        ],
-        capture_output=True,
-        text=True,
-        cwd=REPO,
-    )
-    combined = (result.stdout + result.stderr).lower()
-    # pytest meldet Collection-Probleme als "error during collection" (Singular)
-    # oder "errors during collection" (Plural). Wir matchen den gemeinsamen
-    # Substring "error during collection", der beide Varianten abdeckt.
-    assert "error during collection" not in combined, (
-        f"Collection errors:\n{combined[-2500:]}"
-    )
-    # Defensiv zusaetzlich: pytest-Exit-Code 0 (= keine Errors).
-    assert result.returncode == 0, (
-        f"pytest --collect-only returncode={result.returncode}:\n{combined[-2500:]}"
     )

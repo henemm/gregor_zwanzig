@@ -36,9 +36,10 @@ import os
 import subprocess
 import sys
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
-from typing import Sequence
+from typing import Mapping, Sequence
 
 # Wurzel DIESES Checkouts (Pfadregel #1409) — der Kindprozess wird mit dieser
 # cwd gestartet, damit fuer Pruefling-Dateien INNERHALB des Repos (z.B. echte
@@ -146,16 +147,25 @@ def lauf_bei_uhrzeit(testdatei: Path, uhrzeit: datetime) -> dict[str, str]:
         return json.loads(ausgabe.read_text(encoding="utf-8"))
 
 
-def matrix_differenz(testdatei: Path, uhrzeiten: Sequence[datetime]) -> frozenset[str]:
+def matrix_differenz(
+    testdatei: Path, uhrzeiten: Sequence[datetime], *,
+    vorhanden: Mapping[datetime, dict[str, str]] | None = None,
+) -> frozenset[str]:
     """Misst ``testdatei`` zu jeder Uhrzeit (je ein frischer Prozess, s.
     ``lauf_bei_uhrzeit``) und gibt die Menge der Test-Nodeids zurueck, deren
     Ergebnis NICHT bei ALLEN Uhrzeiten identisch ist.
 
     Bei zwei Uhrzeiten derselben Seite einer Kippkante ist das Ergebnis leer
     -- absolute Fehlerzahlen werden nie ausgewertet (s. Modul-Docstring,
-    Punkt 2).
+    Punkt 2). ``vorhanden`` (Uhrzeit -> Messung derselben Datei) wird
+    wiederverwendet statt erneut gemessen; die uebrigen Prozesse laufen
+    gleichzeitig (unter ``-n 4`` gemessen schneller, #3317).
     """
-    messungen = [lauf_bei_uhrzeit(testdatei, uhrzeit) for uhrzeit in uhrzeiten]
+    vorhanden = vorhanden or {}
+    offen = [uhrzeit for uhrzeit in uhrzeiten if uhrzeit not in vorhanden]
+    with ThreadPoolExecutor() as pool:
+        neu = pool.map(lambda uhrzeit: lauf_bei_uhrzeit(testdatei, uhrzeit), offen)
+        messungen = [vorhanden[u] for u in uhrzeiten if u in vorhanden] + list(neu)
     alle_nodeids: set[str] = set()
     for messung in messungen:
         alle_nodeids.update(messung)
