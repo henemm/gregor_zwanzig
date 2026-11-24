@@ -1,0 +1,110 @@
+{
+  "verified_commit": "94916407413ae7de5382654272e64dcbc1adf3cb",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/trips/new",
+      "evidence": "Staging 9491640, TA-1 gruen: Karte Was steht wo im Schritt Wetter in Desktop und Mobil, Haken bleibt bei Ansichts- und Schrittwechsel",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "/trips/new",
+      "evidence": "TA-2 gruen: ein POST /api/trips mit display_config.placements in eingestellter Reihenfolge, Haken und Formate wie gesetzt",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "/trips/new",
+      "evidence": "TA-2 gruen: Schalterfelder (Nacht-Block, Etappen-Statistik, Vortagesvergleich, Mail-Format, Telegram-Stil) im POST",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "/trips/new",
+      "evidence": "TA-2 gruen: kein PUT/Autosave vor dem Anlegen, genau ein POST",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "/trips/new",
+      "evidence": "TA-3 gruen: Metrik entfernen/hinzufuegen aendert nur die Zeile, Haken bleibt",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "/trips/new",
+      "evidence": "Spaete-Antwort-Schutz laut Spec-Testplan durch Komponententests belegt; auf Staging in TA-2/TA-3 kein Haken-Verlust nach Metrikwechsel",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "/trips/new",
+      "evidence": "TA-4 gruen: Karte unbedient, POST ohne placements.rows und ohne Schalterfelder",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-8",
+      "status": "PASS",
+      "url": "/trips",
+      "evidence": "TA-5 gruen: Reiter Wetter des neuen Trips zeigt dieselben Haken, Formate, Reihenfolge, Schalter",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "/trips",
+      "evidence": "TA-6 gruen mit zwei Nutzern: B sieht Trip und Tabelle von A nicht, Vorschau als B ohne Daten von A",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-10",
+      "status": "PASS",
+      "url": "/trips/new",
+      "evidence": "TA-2/TA-3 gruen: reine Kartenbedienung ohne neue Vorschau, je Metrikwechsel genau eine entprellte Vorschau; begriff-erklaerung AC-16 /trips/new Desktop+Mobil ohne Konsolenfehler; Mail-Regression trip de und en Exit 0",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    }
+  ],
+  "verified_at": "2026-11-24T09:38:59.490790+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: 3305 Tabelle Was steht wo beim Trip-Anlegen, Staging 9491640, Playwright 9/9 gruen, Trip-Mail de+en Exit 0",
+  "scope": "full-stack",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "fix-3273-trip-grundauswahl-ohne-metrics": {
+      "verdict": "VERIFIED: 3305 Tabelle Was steht wo beim Trip-Anlegen, Staging 9491640, Playwright 9/9 gruen, Trip-Mail de+en Exit 0",
+      "scope": "full-stack",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-24T09:38:59.490790+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
