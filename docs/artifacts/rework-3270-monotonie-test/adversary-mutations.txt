@@ -1,0 +1,91 @@
+Backup: /var/folders/9n/w5wl_q1x7j17v9y0b5nw6vj80000gn/T/advmut-6qxpbmkb/ts.py
+SHA256 Original: 0a25a3feeedb8f2c24eb71442d8137ff7226938b997ad784d2d576e5f4b1b19e
+
+## M1 monotonie aus (AC-3)
+2 failed, 9 passed, 2 warnings in 1.56s
+FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac2b_nicht_steigend_am_selben_ort_faellt_zurueck[gleich]
+FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac2b_nicht_steigend_am_selben_ort_faellt_zurueck[leicht-fallend]
+SHA nach Restore: 0a25a3feeedb8f2c24eb71442d8137ff7226938b997ad784d2d576e5f4b1b19e identisch
+
+## M2 span<0 (AC-4)
+1 failed, 10 passed, 2 warnings in 1.47s
+FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac2b_nicht_steigend_am_selben_ort_faellt_zurueck[gleich]
+SHA nach Restore: 0a25a3feeedb8f2c24eb71442d8137ff7226938b997ad784d2d576e5f4b1b19e identisch
+
+## M3 continue statt return None (Monotonie)
+4 failed, 7 passed, 2 warnings in 1.30s
+FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac2_nicht_strikt_steigend_faellt_zurueck[gleich]
+FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac2_nicht_strikt_steigend_faellt_zurueck[kleiner]
+FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac2b_nicht_steigend_am_selben_ort_faellt_zurueck[gleich]
+FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac2b_nicht_steigend_am_selben_ort_faellt_zurueck[leicht-fallend]
+SHA nach Restore: 0a25a3feeedb8f2c24eb71442d8137ff7226938b997ad784d2d576e5f4b1b19e identisch
+
+## M4 Toleranz span < -0.01
+2 failed, 9 passed, 2 warnings in 1.43s
+FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac2b_nicht_steigend_am_selben_ort_faellt_zurueck[gleich]
+FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac2b_nicht_steigend_am_selben_ort_faellt_zurueck[leicht-fallend]
+SHA nach Restore: 0a25a3feeedb8f2c24eb71442d8137ff7226938b997ad784d2d576e5f4b1b19e identisch
+
+## M5 Toleranz span <= -0.01
+2 failed, 9 passed, 2 warnings in 1.62s
+FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac2b_nicht_steigend_am_selben_ort_faellt_zurueck[gleich]
+FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac2b_nicht_steigend_am_selben_ort_faellt_zurueck[leicht-fallend]
+SHA nach Restore: 0a25a3feeedb8f2c24eb71442d8137ff7226938b997ad784d2d576e5f4b1b19e identisch
+
+## M6 Toleranz span <= 0.001
+11 passed, 2 warnings in 1.52s
+
+SHA nach Restore: 0a25a3feeedb8f2c24eb71442d8137ff7226938b997ad784d2d576e5f4b1b19e identisch
+
+## M7 nur erstes Paar
+11 passed, 2 warnings in 1.54s
+
+SHA nach Restore: 0a25a3feeedb8f2c24eb71442d8137ff7226938b997ad784d2d576e5f4b1b19e identisch
+
+## M8 nur letztes Paar
+2 failed, 9 passed, 2 warnings in 1.60s
+FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac2b_nicht_steigend_am_selben_ort_faellt_zurueck[gleich]
+FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac2b_nicht_steigend_am_selben_ort_faellt_zurueck[leicht-fallend]
+SHA nach Restore: 0a25a3feeedb8f2c24eb71442d8137ff7226938b997ad784d2d576e5f4b1b19e identisch
+
+## M9 Plausibilitaet aus
+1 failed, 10 passed, 2 warnings in 1.57s
+FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac1_unplausibler_abschnitt_entwertet_die_ganze_etappe
+SHA nach Restore: 0a25a3feeedb8f2c24eb71442d8137ff7226938b997ad784d2d576e5f4b1b19e identisch
+
+## M10 Plausibilitaet continue
+1 failed, 10 passed, 2 warnings in 1.63s
+FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac1_unplausibler_abschnitt_entwertet_die_ganze_etappe
+SHA nach Restore: 0a25a3feeedb8f2c24eb71442d8137ff7226938b997ad784d2d576e5f4b1b19e identisch
+
+## M11 Monotonie nur bei Luftlinie>0
+2 failed, 9 passed, 2 warnings in 0.83s
+FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac2b_nicht_steigend_am_selben_ort_faellt_zurueck[gleich]
+FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac2b_nicht_steigend_am_selben_ort_faellt_zurueck[leicht-fallend]
+SHA nach Restore: 0a25a3feeedb8f2c24eb71442d8137ff7226938b997ad784d2d576e5f4b1b19e identisch
+
+## M12 Slack 10m->100m
+11 passed, 2 warnings in 0.97s
+
+SHA nach Restore: 0a25a3feeedb8f2c24eb71442d8137ff7226938b997ad784d2d576e5f4b1b19e identisch
+
+## M13 span == 0 (nur gleich)
+1 failed, 10 passed, 2 warnings in 0.85s
+FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac2b_nicht_steigend_am_selben_ort_faellt_zurueck[leicht-fallend]
+SHA nach Restore: 0a25a3feeedb8f2c24eb71442d8137ff7226938b997ad784d2d576e5f4b1b19e identisch
+
+## M14 keine Normierung
+11 passed, 2 warnings in 0.92s
+
+SHA nach Restore: 0a25a3feeedb8f2c24eb71442d8137ff7226938b997ad784d2d576e5f4b1b19e identisch
+
+## M15 immer None
+2 failed, 9 passed, 2 warnings in 0.92s
+FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac4_vermessene_plausible_etappe_rechnet_gemessen
+FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac8_paritaet_erwartungswerte_fuer_die_go_seite
+SHA nach Restore: 0a25a3feeedb8f2c24eb71442d8137ff7226938b997ad784d2d576e5f4b1b19e identisch
+
+## M16 Plausibilitaet vor Monotonie vertauscht (nur Reihenfolge)
+11 passed, 2 warnings in 0.85s
+
+SHA nach Restore: 0a25a3feeedb8f2c24eb71442d8137ff7226938b997ad784d2d576e5f4b1b19e identisch
