@@ -132,5 +132,5 @@ Beleg: `docs/artifacts/rework-3317-wartezeiten/test-red-output.txt` (8 failed, 3
 - **DWD**: `_Server.server_bind` ohne `getfqdn`. `test_ac3_default_timeout_10s_wirkt_am_gewitter_request` ist schon GRÜN (Ersatz für den 10-s-Test, Schutz sind die vier Mutationen aus AC-5); danach den alten 10-s-Test entfernen.
 - **Radar**: `matrix_differenz(datei, uhrzeiten, *, vorhanden=None)` (Uhrzeit -> Messung); der Radar-Test übergibt `{referenzzeit: referenz}`. Zähler belegt heute 2 Starts für die Referenzzeit.
 - **ac7**: kein eigener RED-Test, Entscheidung per Mutation (vor UND nach dem Umbau, AC-4).
-- Offen für `/50-implement`: Vorher-Messung je Datei (AC-8) gegen Stand `5a442bd41` im selben Zeitfenster wie Nachher; Umfang beachten (RED-Tests bereits +190 Zeilen von ±250, Entfernungen zählen mit).
+- Offen für `/50-implement`: Vorher-Messung je Datei (AC-8) gegen Stand `a6ccf6ca7` (main nach Rebase, Elter des RED-Commits) im selben Zeitfenster wie Nachher; Umfang beachten (RED-Tests bereits +190 Zeilen von ±250, Entfernungen zählen mit).
 - Ruff meldet bis zur Umsetzung F821 (`_wirksames_limit`, `_haenger_lauf`): erwarteter RED-Zustand.
