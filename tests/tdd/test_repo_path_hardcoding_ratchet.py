@@ -689,3 +689,39 @@ def scan_for_hardcoded_repo_paths(tests_root, repo_root) -> list:
             set(),
         )
     return funde
+
+
+# --- #3316 Scheibe 2: Zuweisungen einmal sammeln ------------------------------
+# Am Dateiende, weil andere Dateien auf Zeilennummern weiter oben verweisen.
+
+
+class _ZaehlModul(ast.Module):
+    """Zaehlt, wie oft der Baum ab der Wurzel durchlaufen wird."""
+
+    durchlaeufe = 0
+
+    def __getattribute__(self, name):
+        if name == "body":
+            type(self).durchlaeufe += 1
+        return super().__getattribute__(name)
+
+
+def test_konstanten_lesen_den_baum_unabhaengig_von_der_rundenzahl_nur_einmal():
+    """#3316 AC-7: drei Glieder rueckwaerts brauchen mehrere Runden."""
+    rumpf = ast.parse("C = B\nB = A\nA = 'x'\n").body
+    baum = _ZaehlModul(body=rumpf, type_ignores=[])
+    _ZaehlModul.durchlaeufe = 0
+    assert _module_constants(baum) == {"A": "x", "B": "x", "C": "x"}
+    assert _ZaehlModul.durchlaeufe == 1
+
+
+@pytest.mark.parametrize("quelle, erwartet", [
+    ("A = 'x'\nB = 'y'\nA, B = B, A\n", {"A": "y", "B": "x"}),
+    ("C = B\nB = A\nA = 'x'\n", {"A": "x", "B": "x", "C": "x"}),
+    ("A = 'x'\nA = 'y'\n", {"A": "y"}),
+    ("def f():\n    A = 'innen'\nA = 'aussen'\n", {"A": "innen"}),
+    ("A: str = 'x'\nB = C = 'z'\n", {"A": "x", "B": "z", "C": "z"}),
+], ids=["tausch", "fixpunkt", "letzte-bindung", "ebenenweise", "annotiert-und-kette"])
+def test_konstanten_behalten_reihenfolge_und_fixpunkt(quelle, erwartet):
+    """#3316 AC-7: Reihenfolge wie ``ast.walk`` (Ebene fuer Ebene)."""
+    assert _module_constants(ast.parse(quelle)) == erwartet
