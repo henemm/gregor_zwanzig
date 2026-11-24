@@ -552,7 +552,7 @@ def _aggregat(detail: dict[str, tuple[int, int]]) -> dict[str, int]:
 #   schreibt (AC-3). Eigene Schreibzugriffe werden nie entschuldigt.
 # * Der Session-Vergleich laeuft unter xdist im Controller nach dem Ende aller
 #   Worker (Netto-Vergleich ohne jede Ausnahme).
-# * Ohne xdist (lokaler Volllauf, Gate-Form) gibt es kein Journal: jede
+# * Ohne xdist (serielle Gate-Form des Volllaufs) gibt es kein Journal: jede
 #   Aenderung ist wie bisher ein Fehler (Fingerprint je Datei, also eher
 #   strenger als der fruehere Aggregat-Vergleich).
 

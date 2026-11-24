@@ -68,7 +68,7 @@ jobs:
         #    nacheinander in EINEM Worker; die Echtbaum-Waechter sind
         #    worker-fest (tests/conftest.py), die Ratsche
         #    tests/tdd/test_xdist_echtbaum_ratsche.py haelt Neuzugaenge aus.
-        #    Die lokale sichere Offline-Form bleibt seriell (#3278).
+        #    Lokal gibt das Gate genau eine parallele Form frei (-n 2, #3278).
         run: |
           TDD_EXCLUDES=$(grep -v '^#' .github/ci_tdd_excludes.txt | sed 's/^/--ignore=/' | tr '\n' ' ')
           uv run pytest \

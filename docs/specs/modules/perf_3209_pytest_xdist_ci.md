@@ -102,6 +102,7 @@ Entscheidung (Tech Lead, Analyse `docs/context/perf-3209-pytest-laufzeit.md`): V
   - Test: Subprozesslauf mit `-n 2`; beide Worker melden Blockade des Egress-Versuchs, eigener `:0`-Port funktioniert.
 
 - **AC-7:** Given die Umstellung ist umgesetzt / When die lokale sichere Offline-Form des Volllaufs durch `broad_test_run_gate.py` geprueft wird / Then bleibt das Gate unveraendert (kein Gate-Config-Change), die Form laeuft seriell, und ein Aufruf mit `-n` wird weiterhin blockiert (lokale parallele Form ist #3278).
+  - **Abgelöst durch #3278:** die lokale `-n`-Sperre gilt nicht mehr ausnahmslos; genau eine parallele Form ist frei (`rework_3278_lokaler_volllauf_parallel.md`), jede andere bleibt blockiert.
   - Test: bestehende Gate-Tests (`test_broad_test_run_gate*.py`) bleiben gruen; ein Gate-Aufruf mit `-n 4` liefert weiterhin die Sperrmeldung.
 
 - **AC-8:** Given `tests/tdd/test_bug305_mobile_email.py` nutzt feste `/tmp`-Namen und die Doku nennt noch einen seriellen CI-Lauf / When die Datei auf `tmp_path` umgestellt und `docs/reference/gates_und_ratschen.md` aktualisiert ist / Then verwendet der Test keine festen `/tmp`-Pfade mehr und laeuft parallel kollisionsfrei, und die Doku beschreibt den parallelen CI-Lauf sowie die Regel "Echtbaum-Tests nur mit `real_data_root`".
@@ -127,7 +128,7 @@ Entscheidung (Tech Lead, Analyse `docs/context/perf-3209-pytest-laufzeit.md`): V
   - Gruppenbildung und kein Fehlalarm: alle `real_data_root`-Tests im selben Worker, unbeteiligte Tests gruen, Materialisierung genau einmal (AC-4).
   - Egress-Sperre und Loopback-Port-Guard je Worker (AC-6).
 - `tests/tdd/test_xdist_echtbaum_ratsche.py` (neu): Ratsche rot gegen Verstoss-Beispieldatei, gruen gegen konforme Datei und gegen den echten `tests/`-Baum (AC-5).
-- Bestehende Gate-Tests `tests/tdd/test_broad_test_run_gate*.py` bleiben gruen; `-n` lokal weiterhin gesperrt (AC-7).
+- Bestehende Gate-Tests `tests/tdd/test_broad_test_run_gate*.py` bleiben gruen; `-n` lokal weiterhin gesperrt (AC-7, abgelöst durch #3278: genau eine parallele Form ist frei).
 - `tests/tdd/test_bug305_mobile_email.py` laeuft mit `-n 2` kollisionsfrei (AC-8).
 - CI-Nachweis: `--collect-only`-Knotenlisten-Vergleich (AC-1) und Jobdauer dreier gruener Laeufe (AC-2).
 - Kein Mock-Theater: alle Nachweise ueber echte pytest-Subprozesse.
