@@ -1,0 +1,201 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.15, pytest-9.2.0, pluggy-1.6.0
+rootdir: /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull
+configfile: pyproject.toml
+plugins: socket-0.8.0, xdist-3.8.0, timeout-2.4.0, anyio-4.14.2
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 185 items
+
+tests/tdd/test_thunder_scale_local_copy_guard.py ....................... [ 12%]
+.....................EE.................................FFFFFFFFFFFFFFFF [ 51%]
+FFFFFFFFFFFFFFFFFFFFFFFF.E                                               [ 65%]
+tests/tdd/test_repo_path_hardcoding_ratchet.py ......................... [ 78%]
+.......F.....                                                            [ 85%]
+tests/test_test_suite_passes_user_id_explicitly.py FFFFFFF               [ 89%]
+tests/tdd/test_bezeichner_vorfilter.py .................FF               [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of test_regel_d_ueber_den_echten_tests_baum_meldet_keine_unerfuellte_behauptung _
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+_ ERROR at setup of test_regel_d_nullbefund_ist_nicht_trivial_der_lauf_erreicht_den_echten_tests_baum _
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+_____ ERROR at setup of test_beide_bestaende_folgen_aus_demselben_rohlauf ______
+file /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py, line 1841
+  def test_beide_bestaende_folgen_aus_demselben_rohlauf(
+E       fixture 'backend_rohlauf' not found
+>       available fixtures: _clear_tdd_638_throttle, _core_auth_secret_configured, _dwd_raster_cache_leeren, _e2e_nachweis_nicht_veroeffentlichen, _egress_guard, _freezegun_stapel_waechter, _gestellte_wanduhr, _guard_repo_data_users_session, _importbindung_vorladen, _isolate_data_root, _isolate_data_root_module, _isolate_warn_calls_path, _materialize_real_data_root_fixtures, _pruefstrecken_server_beenden, _raeume_budget_spur_bei_real_data_root, _redirect_data_root_session, _reset_parallel_fetch, _reset_shared_radar_cache, _reset_shared_weather_cache, _reset_telegram_rate_limit, _reset_thunder_window_cache, _telegram_herkunftsbeleg_leeren, _use_fixture_provider, anyio_backend, anyio_backend_name, anyio_backend_options, bestand_ohne_basislinie, bestand_ohne_whitelist, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, dotenv_env, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, ground_truth, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, socket_disabled, socket_enabled, subtests, testrun_uid, tests_baum_scan, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, worker_id
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1841
+=================================== FAILURES ===================================
+E   NameError: name '_PARITAETS_ALTERNATIVEN' is not defined
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1755: NameError: name '_PARITAETS_ALTERNATIVEN' is not defined
+E   NameError: name '_kann_paritaet_behaupten' is not defined
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1771: NameError: name '_kann_paritaet_behaupten' is not defined
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1794: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1808: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1808: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1808: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1808: TypeError: scan_tree() got an unexpected keyword argument 'geparst'
+E   NameError: name '_ist_geduldet' is not defined
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_thunder_scale_local_copy_guard.py:1821: NameError: name '_ist_geduldet' is not defined
+E   assert 4 == 1
+     +  where 4 = _ZaehlModul.durchlaeufe
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_repo_path_hardcoding_ratchet.py:715: assert 4 == 1
+E   TypeError: _sammle_verstoesse() takes 0 positional arguments but 1 was given
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/test_test_suite_passes_user_id_explicitly.py:222: TypeError: _sammle_verstoesse() takes 0 positional arguments but 1 was given
+E   TypeError: _sammle_verstoesse() takes 0 positional arguments but 1 was given
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/test_test_suite_passes_user_id_explicitly.py:245: TypeError: _sammle_verstoesse() takes 0 positional arguments but 1 was given
+E   TypeError: _sammle_verstoesse() takes 0 positional arguments but 1 was given
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/test_test_suite_passes_user_id_explicitly.py:245: TypeError: _sammle_verstoesse() takes 0 positional arguments but 1 was given
+E   TypeError: _sammle_verstoesse() takes 0 positional arguments but 1 was given
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/test_test_suite_passes_user_id_explicitly.py:245: TypeError: _sammle_verstoesse() takes 0 positional arguments but 1 was given
+E   TypeError: _sammle_verstoesse() takes 0 positional arguments but 1 was given
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/test_test_suite_passes_user_id_explicitly.py:257: TypeError: _sammle_verstoesse() takes 0 positional arguments but 1 was given
+E   TypeError: _sammle_verstoesse() takes 0 positional arguments but 1 was given
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/test_test_suite_passes_user_id_explicitly.py:257: TypeError: _sammle_verstoesse() takes 0 positional arguments but 1 was given
+E   TypeError: _sammle_verstoesse() takes 0 positional arguments but 1 was given
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/test_test_suite_passes_user_id_explicitly.py:263: TypeError: _sammle_verstoesse() takes 0 positional arguments but 1 was given
+E   AttributeError: module 'tests.tdd.test_thunder_scale_local_copy_guard' has no attribute 'pytestmark'. Did you mean: '@pytest_ar'?
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_bezeichner_vorfilter.py:113: AttributeError: module 'tests.tdd.test_thunder_scale_local_copy_guard' has no attribute 'pytestmark'. Did you mean: '@pytest_ar'?
+E   AttributeError: module 'tests.tdd.test_thunder_scale_local_copy_guard' has no attribute 'pytestmark'. Did you mean: '@pytest_ar'?
+/Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/tdd/test_bezeichner_vorfilter.py:143: AttributeError: module 'tests.tdd.test_thunder_scale_local_copy_guard' has no attribute 'pytestmark'. Did you mean: '@pytest_ar'?
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_filter_und_muster_von_regel_d_stammen_aus_derselben_liste
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_filter_von_regel_d_sieht_nur_text_hinter_der_raute
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[1:1 aus der Quelle-darueber]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[1:1 aus der Quelle-zeilenkommentar]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[1:1 aus der Quelle-zeilenbruch]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[wortwoertlich-darueber]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[wortwoertlich-zeilenkommentar]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[wortwoertlich-zeilenbruch]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[wortw\xf6rtlich-darueber]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[wortw\xf6rtlich-zeilenkommentar]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[wortw\xf6rtlich-zeilenbruch]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[WORTW\xd6RTLICH-darueber]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[WORTW\xd6RTLICH-zeilenkommentar]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[WORTW\xd6RTLICH-zeilenbruch]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[identische Reihenfolge-darueber]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[identische Reihenfolge-zeilenkommentar]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[identische Reihenfolge-zeilenbruch]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[\u0131dent\u0131sche re\u0131henfolge-darueber]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[\u0131dent\u0131sche re\u0131henfolge-zeilenkommentar]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[\u0131dent\u0131sche re\u0131henfolge-zeilenbruch]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[eingefroren aus dem Stand-darueber]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[eingefroren aus dem Stand-zeilenkommentar]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[eingefroren aus dem Stand-zeilenbruch]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[unveraendert aus x-darueber]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[unveraendert aus x-zeilenkommentar]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[unveraendert aus x-zeilenbruch]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[unver\xe4ndert aus x-darueber]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[unver\xe4ndert aus x-zeilenkommentar]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[unver\xe4ndert aus x-zeilenbruch]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[unveraendert uebernommen-darueber]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[unveraendert uebernommen-zeilenkommentar]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[unveraendert uebernommen-zeilenbruch]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[unver\xe4ndert uebernommen-darueber]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[unver\xe4ndert uebernommen-zeilenkommentar]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf[unver\xe4ndert uebernommen-zeilenbruch]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_der_filter_greift_nur_wenn_regel_d_allein_laeuft[ABCD]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_der_filter_greift_nur_wenn_regel_d_allein_laeuft[ABC]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_der_filter_greift_nur_wenn_regel_d_allein_laeuft[AD]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_der_filter_greift_nur_wenn_regel_d_allein_laeuft[D]
+FAILED tests/tdd/test_thunder_scale_local_copy_guard.py::test_duldungsfunktion_kennt_whitelist_und_altlasten_und_sonst_nichts
+FAILED tests/tdd/test_repo_path_hardcoding_ratchet.py::test_konstanten_lesen_den_baum_unabhaengig_von_der_rundenzahl_nur_einmal
+FAILED tests/test_test_suite_passes_user_id_explicitly.py::test_ac10_alle_testaufrufe_reichen_user_id_explizit_durch
+FAILED tests/test_test_suite_passes_user_id_explicitly.py::test_gepflanzter_verstoss_wird_im_gefilterten_lauf_gefunden[name]
+FAILED tests/test_test_suite_passes_user_id_explicitly.py::test_gepflanzter_verstoss_wird_im_gefilterten_lauf_gefunden[attribut]
+FAILED tests/test_test_suite_passes_user_id_explicitly.py::test_gepflanzter_verstoss_wird_im_gefilterten_lauf_gefunden[fullwidth]
+FAILED tests/test_test_suite_passes_user_id_explicitly.py::test_kaputte_kandidaten_bleiben_rot[syntax]
+FAILED tests/test_test_suite_passes_user_id_explicitly.py::test_kaputte_kandidaten_bleiben_rot[utf8]
+FAILED tests/test_test_suite_passes_user_id_explicitly.py::test_die_eigene_datei_bleibt_ausgenommen
+FAILED tests/tdd/test_bezeichner_vorfilter.py::test_cache_dateien_laufen_je_in_einem_worker
+FAILED tests/tdd/test_bezeichner_vorfilter.py::test_jedes_item_der_cache_dateien_traegt_nur_die_gruppe_seiner_datei
+ERROR tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_ueber_den_echten_tests_baum_meldet_keine_unerfuellte_behauptung
+ERROR tests/tdd/test_thunder_scale_local_copy_guard.py::test_regel_d_nullbefund_ist_nicht_trivial_der_lauf_erreicht_den_echten_tests_baum
+ERROR tests/tdd/test_thunder_scale_local_copy_guard.py::test_beide_bestaende_folgen_aus_demselben_rohlauf
+============ 50 failed, 132 passed, 2 warnings, 3 errors in 14.83s =============

@@ -54,6 +54,10 @@ import importlib
 import inspect
 from pathlib import Path
 
+import pytest
+
+from tests.helpers.bezeichner_vorfilter import quelltext_mit_bezeichnern
+
 _REPO = Path(__file__).resolve().parents[1]
 _TESTS_DIR = _REPO / "tests"
 _SELBST = Path(__file__).resolve()
@@ -193,17 +197,22 @@ class _AufrufSammler(ast.NodeVisitor):
         return _MARKER in self._zeilen[lineno - 1]
 
 
-def _sammle_verstoesse() -> list[str]:
+def _sammle_verstoesse(wurzel: Path) -> list[str]:
+    """Verstoesse unter ``wurzel``. Geparst wird nur, was einen Zielnamen traegt
+    (#3316); Lese- und Syntaxfehler solcher Dateien fliegen weiterhin."""
     name_ziele, attribut_ziele = _baue_ziel_register()
+    ziel_namen = (*name_ziele, *attribut_ziele)
     fundliste: list[str] = []
-    for datei in sorted(_TESTS_DIR.rglob("*.py")):
+    for datei in sorted(wurzel.rglob("*.py")):
         if datei.resolve() == _SELBST:
             continue
-        quelltext = datei.read_text(encoding="utf-8")
+        quelltext = quelltext_mit_bezeichnern(datei, eines_aus=ziel_namen)
+        if quelltext is None:
+            continue
         baum = ast.parse(quelltext, filename=str(datei))
         sammler = _AufrufSammler(quelltext.splitlines(), name_ziele, attribut_ziele)
         sammler.visit(baum)
-        rel = datei.relative_to(_REPO).as_posix()
+        rel = (datei.relative_to(_REPO) if datei.is_relative_to(_REPO) else datei).as_posix()
         for zeile, name in sammler.funde:
             fundliste.append(f"{rel}:{zeile} {name}(...)")
     return fundliste
@@ -217,9 +226,47 @@ def test_ac10_alle_testaufrufe_reichen_user_id_explizit_durch():
     RED heute: die Migration (Item 5, ~277 Aufrufe in ~81 Dateien) steht noch
     aus -- die vollstaendige Fundliste steht unten im Fehlertext.
     """
-    verstoesse = _sammle_verstoesse()
+    verstoesse = _sammle_verstoesse(_TESTS_DIR)
     assert verstoesse == [], (
         f"AC-10: {len(verstoesse)} Testaufrufe ohne explizites user_id "
         "gefunden -- mechanisch auf explizite Kennung umstellen (Konto "
         f"'default' bleibt gueltig, siehe AC-9): {verstoesse}"
     )
+
+
+# --- #3316 Scheibe 2: Bezeichner-Filter und Wurzel-Parameter ------------------
+
+
+@pytest.mark.parametrize("aufruf, name", [
+    ("load_all_trips()", "load_all_trips"),
+    ("leser._find_trip_id()", "_find_trip_id"),
+    ("ｌoad_all_trips()", "load_all_trips"),
+], ids=["name", "attribut", "fullwidth"])
+def test_gepflanzter_verstoss_wird_im_gefilterten_lauf_gefunden(tmp_path, aufruf, name):
+    """AC-8: Pfadausgabe auch ausserhalb des Repos. Die kaputte Datei ohne
+    Zielnamen zeigt, dass der Filter greift (sonst ``SyntaxError``)."""
+    assert all(_baue_ziel_register()), "leeres Ziel-Register"
+    (tmp_path / "unter").mkdir()
+    (tmp_path / "unter" / "test_x.py").write_text(f"x = 1\n{aufruf}\n", encoding="utf-8")
+    (tmp_path / "ohne_ziel.py").write_text("def kaputt(:\n", encoding="utf-8")
+    verstoesse = _sammle_verstoesse(tmp_path)
+    assert len(verstoesse) == 1
+    assert verstoesse[0].endswith(f"unter/test_x.py:2 {name}(...)")
+
+
+@pytest.mark.parametrize("inhalt, fehler", [
+    (b"load_all_trips()\ndef kaputt(:\n", SyntaxError),
+    (b"x = '\xff'\n", UnicodeDecodeError),
+], ids=["syntax", "utf8"])
+def test_kaputte_kandidaten_bleiben_rot(tmp_path, inhalt, fehler):
+    (tmp_path / "kaputt.py").write_bytes(inhalt)
+    with pytest.raises(fehler):
+        _sammle_verstoesse(tmp_path)
+
+
+def test_die_eigene_datei_bleibt_ausgenommen(tmp_path, monkeypatch):
+    eigene = tmp_path / "eigene.py"
+    eigene.write_text("load_all_trips()\n", encoding="utf-8")
+    assert len(_sammle_verstoesse(tmp_path)) == 1
+    monkeypatch.setitem(globals(), "_SELBST", eigene.resolve())
+    assert _sammle_verstoesse(tmp_path) == []
