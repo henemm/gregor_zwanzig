@@ -120,7 +120,7 @@
 	"funktionen.befehle.titel": "Befehle im Überblick",
 	"funktionen.befehle.text": "Auf ein Briefing kannst du mit einem Befehl antworten, zum Beispiel um das Wetter für morgen abzurufen oder Briefings zu pausieren. Die Befehle gibt es auf Deutsch und Englisch.",
 	"funktionen.befehle.kanaele": "Befehle kommen per E-Mail, Telegram und Premium-SMS an. Normale SMS wird nur empfangen, Antworten darauf verarbeitet Gregor nicht.",
-	"funktionen.befehle.ortsvergleich": "Für einen Ortsvergleich gelten nur Pause, Weiter und Hilfe.",
+	"funktionen.befehle.ortsvergleich": "Beim Ortsvergleich gelten Heute, Morgen, Report, Pause, Weiter, Hilfe und Kürzel; Pause gilt dort ohne Dauer bis Weiter.",
 	"funktionen.befehle.spalte.befehl": "Befehl",
 	"funktionen.befehle.spalte.wirkung": "Wirkung",
 	"funktionen.wetterdaten.titel": "Woher die Wetterdaten kommen",

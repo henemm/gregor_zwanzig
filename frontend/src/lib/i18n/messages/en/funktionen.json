@@ -120,7 +120,7 @@
 	"funktionen.befehle.titel": "Commands at a glance",
 	"funktionen.befehle.text": "You can reply to a briefing with a command, for example to get tomorrow's weather or to pause briefings. The commands exist in German and English.",
 	"funktionen.befehle.kanaele": "Commands arrive by email, Telegram and Premium-SMS. Normal SMS is receive only, Gregor does not process replies to it.",
-	"funktionen.befehle.ortsvergleich": "For a location comparison only pause, resume and help apply.",
+	"funktionen.befehle.ortsvergleich": "For a location comparison, the commands today, tomorrow, report, pause, resume, help and codes apply; there, pause has no duration and lasts until resume.",
 	"funktionen.befehle.spalte.befehl": "Command",
 	"funktionen.befehle.spalte.wirkung": "Effect",
 	"funktionen.wetterdaten.titel": "Where the weather data comes from",
