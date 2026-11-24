@@ -1,0 +1,124 @@
+{
+  "verified_commit": "5a442bd419817f6310b8c5a9536036156ca61e95",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/",
+      "evidence": "Startseite DE ohne 'in Arbeit/auf Anfrage/auf Wunsch' (curl); Kanaltexte per Unit-Test",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "/",
+      "evidence": "Playwright: Startseite zeigt Level-Tabelle, Link fuehrt zu /funktionen",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "/funktionen",
+      "evidence": "Playwright DE+EN: alle elf Seiten ohne Anmeldung 200, kein /api-Aufruf",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "/funktionen/unbekannt",
+      "evidence": "Playwright: unbekannte Unterseite ohne Login fuehrt zum Login",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "/funktionen",
+      "evidence": "Playwright: Kachel fuehrt zur Unterseite, Brotkrumen zurueck, Sprachumschalter ohne Login",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-8",
+      "status": "PASS",
+      "url": "/funktionen/*",
+      "evidence": "Playwright DE+EN: Bilder laden auf allen Unterseiten",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-10",
+      "status": "PASS",
+      "url": "/funktionen/befehle",
+      "evidence": "curl: korrigierter Ortsvergleich-Befehlstext live",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-11",
+      "status": "PASS",
+      "url": "/funktionen/*",
+      "evidence": "Playwright 375 px DE+EN: keine horizontale Scrollleiste, Kontrast WCAG-AA auf allen elf Seiten",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-12",
+      "status": "PASS",
+      "url": "/funktionen/trips",
+      "evidence": "Playwright: Weiter-Kette von erster bis letzter Unterseite",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-13",
+      "status": "PASS",
+      "url": "/funktionen/briefings",
+      "evidence": "Playwright: Galerie Klick/Enter/Leertaste, Pfeil/Wischen, Esc/X/Klick daneben, Fokus zurueck, 375 px DE+EN, Uebersicht ohne Galerie",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "Regression-Mail",
+      "status": "PASS",
+      "url": "staging",
+      "evidence": "staging_mail_pruefen --typ trip DE und EN Exit 0 (Stand enthaelt Backend-Commits #3305)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "Telegram-Live",
+      "status": "PASS",
+      "url": "staging",
+      "evidence": "pytest -m live test_issue_686 (9 passed) + test_telegram_live_zweisprachig (1 passed) aus Staging-Checkout",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-24T10:26:36.533662+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Funktionsseiten #3319 auf Staging 18/18 Playwright DE+EN, Trip-Mail DE+EN Exit 0, Telegram-Live gruen",
+  "scope": "full-stack",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Funktionsseiten #3319 auf Staging 18/18 Playwright DE+EN, Trip-Mail DE+EN Exit 0, Telegram-Live gruen",
+      "scope": "full-stack",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-24T10:26:36.533662+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
