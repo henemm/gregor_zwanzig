@@ -684,13 +684,29 @@ test.describe('Anlege-Ablauf (mobil 390)', () => {
 			const name = einName('AN10');
 			const post = postMitschnitt(page, kind);
 			try {
+				if (kind === 'route') {
+					// #3332 (AC-9): im Trip-Anlegen steht die Kanal-Stufe im Reiter Zustellung, sichtbar nur für einen
+					// VERBUNDENEN Kanal — wie AN-6 ergänzt nur die Profil-Lesung eine Test-Chat-ID (nichts wird verändert).
+					await page.route('**/api/auth/profile', async (route) => {
+						if (route.request().method() !== 'GET') return route.continue();
+						const echt = await route.fetch();
+						const profil = (await echt.json()) as Record<string, unknown>;
+						await route.fulfill({ response: echt, json: { ...profil, telegram_chat_id: 'e2e-an10-test-chat' } });
+					});
+				}
 				await anlegenPflicht(page, kind, { name, mobil: true });
 				await bisAlarme(page, kind, true);
-				const gruppe = page.locator('[data-testid="alert-channel-threshold-telegram"]:visible').first();
-				await expect(gruppe, 'AN-10: Stufen-Auswahl im Alarme-Schritt fehlt').toBeVisible({ timeout: 15_000 });
-				const gering = gruppe.locator('[data-testid="alert-channel-threshold-telegram-LOW"]');
+				// Kind-Kontrast #3332 (D1): Trip im Reiter Zustellung (Segment, aria-checked), Vergleich bis D2 (#3333)
+				// im Reiter Alarme (AlertChannelPicker, aria-pressed).
+				const STUFE: Record<HubKind, { gruppe: string; gering: string; attr: string }> = {
+					route: { gruppe: '[data-testid="zustellung-tab"]:visible [data-testid="zustellung-kanal-telegram-dringlichkeit"]', gering: '[data-testid="zustellung-kanal-telegram-dringlichkeit-LOW"]', attr: 'aria-checked' },
+					vergleich: { gruppe: '[data-testid="alert-channel-threshold-telegram"]:visible', gering: '[data-testid="alert-channel-threshold-telegram-LOW"]', attr: 'aria-pressed' }
+				};
+				const gruppe = page.locator(STUFE[kind].gruppe).first();
+				await expect(gruppe, 'AN-10: Stufen-Auswahl im Zustellungs-Schritt fehlt').toBeVisible({ timeout: 15_000 });
+				const gering = gruppe.locator(STUFE[kind].gering);
 				await expect(gering).toHaveText('gering');
-				await expect(gering, 'AN-10: Startwert ist nicht „gering"').toHaveAttribute('aria-pressed', 'true');
+				await expect(gering, 'AN-10: Startwert ist nicht „gering"').toHaveAttribute(STUFE[kind].attr, 'true');
 
 				const antwortKommt = anlegePost(page, kind);
 				await sel.abschluss(page, true).click();

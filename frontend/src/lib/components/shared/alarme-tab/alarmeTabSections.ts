@@ -22,8 +22,8 @@ const BASE_SECTIONS = [
 	'quiet-hours'
 ] as const;
 
-export function alarmeTabSections(context: AlarmeContext): string[] {
-	const sections: string[] = [...BASE_SECTIONS];
+export function alarmeTabSections(context: AlarmeContext, ohneZustellung = false): string[] {
+	const sections: string[] = BASE_SECTIONS.filter((s) => !ohneZustellung || !ZUSTELLUNGS_ABSCHNITTE.includes(s));
 	if (context === 'vergleich') {
 		const officialIdx = sections.indexOf('official-warnings');
 		sections.splice(officialIdx + 1, 0, 'radar');
@@ -37,3 +37,10 @@ export function alarmeTabSections(context: AlarmeContext): string[] {
 export function triggerGroupHeading(context: AlarmeContext): string {
 	return context === 'vergleich' ? tr('alarme.gruppe.amtlich_radar') : tr('alarme.gruppe.amtlich');
 }
+
+// Issue #3332 (D1 von #3307, AC-9): im Trip-Anlegen besitzt der Reiter Zustellung Alarm-Kanaele
+// (mit Dringlichkeit), Cooldown und Stille Stunden — der Reiter Alarme blendet sie dort aus, damit
+// jedes Feld genau eine Bedienstelle hat. Kontext-Unterschied als Daten (Ratsche
+// context_herkunft_zweige_eingefroren): im Ortsvergleich-Anlegen bleibt die Liste vollstaendig (bis D2).
+const ZUSTELLUNGS_ABSCHNITTE: readonly string[] = ['channels', 'cooldown', 'quiet-hours'];
+export const ZUSTELLUNG_IM_ANLEGEN_AUSGELAGERT: Record<AlarmeContext, boolean> = { route: true, vergleich: false };

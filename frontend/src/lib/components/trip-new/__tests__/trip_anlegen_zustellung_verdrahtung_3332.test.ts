@@ -238,8 +238,10 @@ const BEDIENT = (s: J): J => ({
 	...s,
 	morgenZeit: '06:45',
 	abendAn: false,
-	briefing: { ...s.briefing, telegram: true, sms: true },
-	alarme: { ...s.alarme, sms: true },
+	// Fix-Loop 2 (Adversary F004, Mutationen N05/N06): Briefing- und Alarm-Kanäle GETRENNT und vollständig
+	// belegt (kein Kanal in beiden gleich), sonst bleibt eine Verwechslung der beiden Auswahlen unbemerkt.
+	briefing: { email: true, telegram: true, sms: true, premium_sms: false },
+	alarme: { email: false, telegram: false, sms: false, premium_sms: true },
 	dringlichkeit: { ...s.dringlichkeit, telegram: 'HIGH' },
 	stilleAn: true,
 	stilleVon: '22:30',
@@ -260,15 +262,17 @@ describe('#3332 Test 2 (AC-2, AC-3, AC-5): Bedienung im Reiter -> genau der eine
 		assert.equal(rc.morning_enabled, true);
 		assert.equal(rc.evening_enabled, false, 'AC-2: Abend-Schalter');
 		assert.equal(rc.enabled, true, 'Gesamtschalter folgt den Slots');
-		assert.equal(rc.send_email, true);
-		assert.equal(rc.send_telegram, true, 'AC-2: Briefing-Kanal Telegram');
-		assert.equal(rc.send_sms, true, 'AC-2: Briefing-Kanal SMS');
-		assert.equal(rc.send_premium_sms, false);
+		assert.equal(rc.send_email, true, 'AC-2: Briefing-Kanal E-Mail (nicht der Alarm-Kanal)');
+		assert.equal(rc.send_telegram, true, 'AC-2: Briefing-Kanal Telegram (nicht der Alarm-Kanal)');
+		assert.equal(rc.send_sms, true, 'AC-2: Briefing-Kanal SMS (nicht der Alarm-Kanal)');
+		assert.equal(rc.send_premium_sms, false, 'AC-2: Briefing-Kanal Premium-SMS (nicht der Alarm-Kanal)');
 		assert.deepEqual(rc.multi_day_trend_reports, ['morning'], '3-Tages-Ausblick folgt den eingestellten Briefings (nur Morgen an, #3155)');
 		assert.equal(rc.day_window_start_hour, 4, 'Read-Modify-Write: Tagesfenster des Reiters Wetter verloren');
 		assert.equal(rc.day_window_end_hour, 19);
-		assert.equal(p.alert_channels.sms, true, 'AC-3: Alarm-Kanal SMS');
-		assert.equal(p.alert_channels.email, true);
+		assert.equal(p.alert_channels.email, false, 'AC-3: Alarm-Kanal E-Mail (nicht der Briefing-Kanal)');
+		assert.equal(p.alert_channels.telegram, false, 'AC-3: Alarm-Kanal Telegram (nicht der Briefing-Kanal)');
+		assert.equal(p.alert_channels.sms, false, 'AC-3: Alarm-Kanal SMS (nicht der Briefing-Kanal)');
+		assert.equal(p.alert_channels.premium_sms, true, 'AC-3: Alarm-Kanal Premium-SMS (nicht der Briefing-Kanal)');
 		assert.equal(p.alert_channel_thresholds.telegram, 'HIGH', 'AC-3: Dringlichkeit Telegram');
 		assert.equal(p.alert_quiet_from, '22:30', 'AC-2: Stille von');
 		assert.equal(p.alert_quiet_to, '06:15', 'AC-2: Stille bis');
@@ -328,4 +332,63 @@ describe('#3332 Test 7 (AC-6): Neuaufbau (Wechsel Desktop <-> Mobil, Schritte) b
 			assert.equal(p.alert_cooldown_minutes, 90);
 		});
 	}
+});
+
+// Fix-Loop 1 (Adversary F001, Mutationen M11/M12/M12b): Test 7 oben bleibt grün, auch wenn der Reiter
+// `zustellungStart` ignoriert oder der Editor ihn nicht durchreicht — der Eintrittstrip spiegelt dort jede
+// gültige Eingabe zurück. Bedienstände, die NICHT über den Eintrittstrip zurückkommen, trennen beides:
+// Stille Stunden auf 22:30–06:15 gestellt und wieder ausgeschaltet (der Trip kennt die Zeiten danach nicht
+// mehr, er fiele auf 22:00–06:00 zurück) und eine rasterfremde Morgenzeit 06:50 (der POST behält 06:45, der
+// Reiter zeigt aber, was der Nutzer eingetippt hat). Der NEU gebaute Reiter muss genau den bedienten Stand
+// ANZEIGEN — für beide Mounts (Desktop und Mobil), in beide Richtungen.
+const BEDIENT_NICHT_RUECKSPIEGELBAR = (s: J): J => ({ ...BEDIENT(s), stilleAn: false, morgenZeit: '06:50' });
+
+describe('#3332 Test 7b (AC-6, F001): Neuaufbau zeigt den bedienten Stand, auch wo der Trip ihn nicht trägt', () => {
+	for (const [von, nach, name] of [[0, 1, 'Desktop -> Mobil'], [1, 0, 'Mobil -> Desktop'], [0, 0, 'Desktop neu aufgebaut'], [1, 1, 'Mobil neu aufgebaut']] as const) {
+		test(name, async () => {
+			const ed = await editor();
+			const r1 = await reiter(ed, von);
+			r1.aendern(BEDIENT);
+			r1.aendern(BEDIENT_NICHT_RUECKSPIEGELBAR);
+			const erwartet = r1.stand();
+			assert.equal(erwartet.stilleVon, '22:30', 'Messaufbau: Stille-Zeiten nicht im Stand');
+			const r2 = await reiter(ed, nach);
+			const gezeigt = r2.stand();
+			assert.equal(gezeigt.morgenZeit, '06:50', 'neu gebauter Reiter zeigt nicht die eingetippte Morgenzeit (Startstand vom Editor fehlt)');
+			assert.equal(gezeigt.stilleAn, false);
+			assert.equal(gezeigt.stilleVon, '22:30', 'neu gebauter Reiter verliert die Stille-Zeiten (fällt auf den Standard zurück)');
+			assert.equal(gezeigt.stilleBis, '06:15');
+			assert.deepEqual(gezeigt, erwartet, 'neu gebauter Reiter zeigt nicht den bedienten Stand');
+			// Stille wieder an: die früher eingestellten Zeiten gelten, nicht der Standard.
+			r2.aendern((s) => ({ ...s, stilleAn: true }));
+			const p = await ed.speichern();
+			assert.equal(p.alert_quiet_from, '22:30', 'Stille-Zeiten nach dem Neuaufbau verloren');
+			assert.equal(p.alert_quiet_to, '06:15');
+			assert.equal(p.report_config.morning_time, '06:45:00', 'POST trägt die letzte gültige Morgenzeit');
+		});
+	}
+});
+
+// Fix-Loop 1 (Adversary F003, Mutation M20): der Editor übernimmt eine Meldung mit unverändertem Inhalt
+// nicht erneut. Der Anlege-Speicherer meldet jede Geste (auch eine ohne Änderung); ohne den Gleichheits-
+// Schutz entstünde je Meldung ein neues `reportConfig`/`alarm`-Objekt — neue Referenz, neue Herleitungen
+// (Eintrittstrip, Reiter Wetter), im Browser die Gefahr einer Effekt-Schleife.
+describe('#3332 F003: Meldung mit gleichem Inhalt ändert den Editor-Stand nicht', () => {
+	test('zweimal dieselbe Geste: reportConfig, alarm und zustellungStand behalten ihre Objekte', async () => {
+		const ed = await editor();
+		const r = await reiter(ed, 0);
+		r.aendern(BEDIENT);
+		const rc = ed.u.reportConfig;
+		const al = ed.u.alarm;
+		const st = ed.u.zustellungStand;
+		assert.ok(rc && al && st, 'Messaufbau: Editor-Stand nach der ersten Geste fehlt');
+		r.aendern((s) => s); // Geste ohne inhaltliche Änderung
+		assert.equal(ed.u.reportConfig, rc, 'gleiche Meldung erzeugt ein neues reportConfig');
+		assert.equal(ed.u.alarm, al, 'gleiche Meldung erzeugt einen neuen Alarm-Zustand');
+		assert.equal(ed.u.zustellungStand, st, 'gleiche Meldung ersetzt den gehaltenen Stand');
+		// Gegenprobe: eine echte Änderung wird übernommen.
+		r.aendern((s) => ({ ...s, cooldown: 75 }));
+		assert.notEqual(ed.u.alarm, al);
+		assert.equal(ed.u.alarm.cooldownMinutes, 75);
+	});
 });

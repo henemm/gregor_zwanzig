@@ -45,8 +45,10 @@ function bedient(): ZustellungStand {
 		morgenZeit: '06:45',
 		abendAn: false,
 		abendZeit: '19:30',
-		briefing: { email: true, telegram: true, sms: true, premium_sms: false },
-		alarme: { email: true, telegram: true, sms: true, premium_sms: false },
+		// Fix-Loop 2 (Adversary F004, Mutationen N05/N06): Briefing- und Alarm-Kanäle GETRENNT belegt,
+		// sonst bleibt unbemerkt, wenn der Helfer die eine Kanal-Auswahl aus der anderen liest.
+		briefing: { email: true, telegram: false, sms: true, premium_sms: false },
+		alarme: { email: false, telegram: true, sms: false, premium_sms: true },
 		dringlichkeit: { email: 'LOW', telegram: 'HIGH', sms: 'MODERATE', premium_sms: 'LOW' },
 		stilleAn: true,
 		stilleVon: '22:30',
@@ -71,10 +73,10 @@ describe('#3332 Test 2 (AC-2, AC-3): mitZustellung mischt den Stand in report_co
 		assert.equal(reportConfig.enabled, true);
 		assert.equal(reportConfig.morning_time, '06:45:00');
 		assert.equal(reportConfig.evening_time, '19:30:00');
-		assert.equal(reportConfig.send_email, true);
-		assert.equal(reportConfig.send_telegram, true);
-		assert.equal(reportConfig.send_sms, true);
-		assert.equal(reportConfig.send_premium_sms, false);
+		assert.equal(reportConfig.send_email, true, 'Briefing-Kanal E-Mail (aus stand.briefing)');
+		assert.equal(reportConfig.send_telegram, false, 'Briefing-Kanal Telegram (aus stand.briefing, nicht aus stand.alarme)');
+		assert.equal(reportConfig.send_sms, true, 'Briefing-Kanal SMS (aus stand.briefing)');
+		assert.equal(reportConfig.send_premium_sms, false, 'Briefing-Kanal Premium-SMS (aus stand.briefing, nicht aus stand.alarme)');
 		for (const [k, v] of Object.entries(RC)) if (k !== 'morning_time') assert.deepEqual(reportConfig[k], v, `Bestandsfeld ${k} verloren`);
 	});
 
@@ -83,10 +85,29 @@ describe('#3332 Test 2 (AC-2, AC-3): mitZustellung mischt den Stand in report_co
 		assert.equal(reportConfig.enabled, false);
 	});
 
+	// Fix-Loop 1 (Adversary F002, Mutation M28): der Gesamtschalter folgt BEIDEN Slots. `enabled === false`
+	// schaltet über reportSlotAktiv beide Briefings ab — ein Abend-Briefing allein käme sonst nie.
+	test('nur Abend an: enabled true (Abend-Briefing kommt)', () => {
+		const { reportConfig, alarm } = mitZustellung(klon(RC), alarm0(), { ...bedient(), morgenAn: false, abendAn: true });
+		assert.equal(reportConfig.morning_enabled, false);
+		assert.equal(reportConfig.evening_enabled, true);
+		assert.equal(reportConfig.enabled, true, 'Gesamtschalter aus, obwohl das Abend-Briefing an ist');
+		assert.equal(post(reportConfig, alarm).report_config.enabled, true);
+	});
+
+	test('nur Morgen an: enabled true', () => {
+		const { reportConfig } = mitZustellung(klon(RC), alarm0(), { ...bedient(), morgenAn: true, abendAn: false });
+		assert.equal(reportConfig.enabled, true);
+	});
+
 	test('Alarm-Kanäle, Dringlichkeit, Stille, Cooldown in den Alarm-Zustand; Metrik-Stufen und Warnungen bleiben', () => {
 		const a0 = alarm0();
 		const { alarm } = mitZustellung(klon(RC), a0, bedient());
-		assert.deepEqual(alarm.channels, { email: true, telegram: true, sms: true, premium_sms: false });
+		assert.equal(alarm.channels.email, false, 'Alarm-Kanal E-Mail (aus stand.alarme, nicht aus stand.briefing)');
+		assert.equal(alarm.channels.telegram, true, 'Alarm-Kanal Telegram (aus stand.alarme)');
+		assert.equal(alarm.channels.sms, false, 'Alarm-Kanal SMS (aus stand.alarme, nicht aus stand.briefing)');
+		assert.equal(alarm.channels.premium_sms, true, 'Alarm-Kanal Premium-SMS (aus stand.alarme)');
+		assert.deepEqual(alarm.channels, { email: false, telegram: true, sms: false, premium_sms: true });
 		assert.deepEqual(alarm.channelThresholds, { email: 'LOW', telegram: 'HIGH', sms: 'MODERATE', premium_sms: 'LOW' });
 		assert.equal(alarm.quietFrom, '22:30');
 		assert.equal(alarm.quietTo, '06:15');
@@ -109,8 +130,15 @@ describe('#3332 Test 2 (AC-2, AC-3): mitZustellung mischt den Stand in report_co
 		const p = post(reportConfig, alarm);
 		assert.equal(p.report_config.morning_time, '06:45:00');
 		assert.equal(p.report_config.evening_enabled, false);
-		assert.equal(p.report_config.send_telegram, true);
-		assert.deepEqual(p.alert_channels, { email: true, telegram: true, sms: true, premium_sms: false });
+		assert.equal(p.report_config.send_email, true, 'POST: Briefing-Kanal E-Mail');
+		assert.equal(p.report_config.send_telegram, false, 'POST: Briefing-Kanal Telegram (nicht der Alarm-Kanal)');
+		assert.equal(p.report_config.send_sms, true, 'POST: Briefing-Kanal SMS');
+		assert.equal(p.report_config.send_premium_sms, false, 'POST: Briefing-Kanal Premium-SMS (nicht der Alarm-Kanal)');
+		assert.equal(p.alert_channels.email, false, 'POST: Alarm-Kanal E-Mail (nicht der Briefing-Kanal)');
+		assert.equal(p.alert_channels.telegram, true, 'POST: Alarm-Kanal Telegram');
+		assert.equal(p.alert_channels.sms, false, 'POST: Alarm-Kanal SMS (nicht der Briefing-Kanal)');
+		assert.equal(p.alert_channels.premium_sms, true, 'POST: Alarm-Kanal Premium-SMS');
+		assert.deepEqual(p.alert_channels, { email: false, telegram: true, sms: false, premium_sms: true });
 		assert.equal(p.alert_channel_thresholds.telegram, 'HIGH');
 		assert.equal(p.alert_quiet_from, '22:30');
 		assert.equal(p.alert_quiet_to, '06:15');

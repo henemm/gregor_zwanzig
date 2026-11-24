@@ -55,31 +55,29 @@ async function openNewTripZeitplan(page: Page) {
 	}
 
 	await tabbar.getByRole('tab', { name: /Wetter/ }).click({ force: true });
-	// Issue #1743: kein Schritt Versand mehr — die Mail-Inhalt-Karte steht im
-	// Schritt Wetter-Metriken (oben aktiviert).
-
-	// Harter Surface-Check: die Mail-Inhalt-Karte MUSS sichtbar sein — sonst prüfen
-	// wir versehentlich einen leeren DOM und count()==0 wäre bedeutungslos.
-	// MailInhaltCard wird sowohl im .tn-desktop- als auch im .tn-mobile-Baum
-	// gemountet (CSS-Media-Query-Toggle statt {#if}) — beide Instanzen stehen
-	// gleichzeitig im DOM, daher hier wie bei den GPX-Inputs auf .tn-mobile scopen.
-	await expect(page.locator('.tn-mobile').getByTestId('report-mail-content')).toBeVisible({ timeout: 15_000 });
+	// #3332 (AC-10): die Mail-Inhalt-Karte entfällt im Trip-Anlegen (Hub-Parität); E-Mail-Format und
+	// Inhalts-Bausteine bedient die Karte „Was steht wo“ im Schritt Wetter. Harter Surface-Check auf sie —
+	// sonst prüfen wir versehentlich einen leeren DOM und count()==0 wäre bedeutungslos.
+	await expect(
+		page.locator('.tn-mobile [data-testid="was-steht-wo"] [data-testid="was-steht-wo-email-format-compact"]'),
+	).toBeVisible({ timeout: 20_000 });
 }
 
 test.describe('Issue #776 / Fix #971: Metriken-Überblick fest in der Mail, kein Opt-out', () => {
-	test('kein Metriken-Überblick-Opt-out; Kompakt-Hinweis bestätigt festen Block', async ({ page }) => {
+	test('kein Metriken-Überblick-Opt-out, auch nicht im Kompakt-Modus', async ({ page }) => {
 		await openNewTripZeitplan(page);
 
 		// (a) Kein Opt-out-Schalter mehr für den Metriken-Überblick.
 		await expect(page.getByTestId('report-show-metrics-summary')).toHaveCount(0);
 		await expect(page.locator('[data-testid="report-content-modules-toggle"]')).toHaveCount(0);
 
-		// (b) Kompakt-Modus wählen → der Hinweis bestätigt, dass der Metriken-Überblick
-		//     FIX (immer) gezeigt wird — der Block ist kein optionaler Baustein.
-		// (auf .tn-mobile scopen — .tn-desktop-Baum enthält dieselben Testids doppelt)
-		await page.locator('.tn-mobile [data-testid="report-email-format-compact"]').check();
-		const hint = page.locator('.tn-mobile').getByTestId('report-compact-hint');
-		await expect(hint).toBeVisible();
-		await expect(hint).toContainText('Metriken-Überblick');
+		// (b) Kompakt-Modus in der Karte wählen → es taucht kein Opt-out für den Metriken-Überblick auf
+		//     (der Block bleibt fester Bestandteil). #3332: der frühere Kompakt-Hinweis stand in der
+		//     Mail-Inhalt-Karte, die im Trip-Anlegen entfällt.
+		const kompakt = page.locator('.tn-mobile [data-testid="was-steht-wo"] [data-testid="was-steht-wo-email-format-compact"]');
+		await kompakt.click();
+		await expect(kompakt).toHaveAttribute('aria-checked', 'true');
+		await expect(page.getByTestId('report-show-metrics-summary')).toHaveCount(0);
+		await expect(page.getByTestId('report-mail-content'), '#3332 AC-10: Mail-Inhalt-Karte noch im Trip-Anlegen').toHaveCount(0);
 	});
 });

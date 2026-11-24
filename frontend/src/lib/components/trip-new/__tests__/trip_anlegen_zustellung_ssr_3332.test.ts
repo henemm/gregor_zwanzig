@@ -45,6 +45,48 @@ describe('#3332 Test 6 (AC-1): Trip-Anlegen, Schritt Zustellung', () => {
 	}
 });
 
+// Fix-Loop 1 (Adversary F001, Mutation M11): der Reiter baut seinen Startstand aus `zustellungStart`, wenn der
+// Editor ihn mitgibt (Neuaufbau beim Wechsel Desktop/Mobil oder nach Schrittwechsel) — nicht aus dem Trip.
+// Gemessen am echten Server-Render des Reiters: die SICHTBARE Morgenzeit, der Stille-Schalter und die
+// Stille-Zeiten folgen dem mitgegebenen Stand, obwohl der Trip etwas anderes trägt (07:00, keine Stille).
+describe('#3332 Test 7 (AC-6, F001): Reiter zeigt den Startstand des Editors', () => {
+	const EINTRITT = { id: '__new__', name: 'SSR-3332', stages: [], report_config: undefined };
+	const text = (h: string) => h.replace(/<!--[\s\S]*?-->/g, '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+	async function zeige(zustellungStart?: Record<string, unknown>): Promise<string> {
+		const { render } = await import('svelte/server');
+		const { pathToFileURL } = await import('node:url');
+		const { FRONTEND } = await import('./tripNewSsr.ts');
+		const pfad = `${FRONTEND}/src/lib/components/shared/zustellung-tab/ZustellungTab.svelte`;
+		const ZustellungTab = (await import(pathToFileURL(pfad).href)).default;
+		return render(ZustellungTab, { props: { context: 'route', trip: EINTRITT, createMode: true, zustellungStart, onAnlegeStand: () => {} } }).body;
+	}
+	function karte(h: string, id: string): string {
+		const i = h.indexOf(`data-testid="${id}"`);
+		assert.ok(i >= 0, `${id} fehlt im Render`);
+		return h.slice(i, i + 4000);
+	}
+	const segmente = (h: string, id: string) => text(karte(h, id).split(`data-testid="${id}-schalter"`)[0]).replace(/\s/g, '');
+
+	test('ohne zustellungStart: Startstand aus dem Trip (Messaufbau-Gegenprobe)', async () => {
+		const h = await zeige();
+		assert.match(segmente(h, 'zustellung-morgen-karte'), /07:?00/, 'Messaufbau: Trip-Startzeit 07:00 nicht sichtbar');
+	});
+
+	test('mit zustellungStart (Morgen 06:45, Stille an 22:30–06:15): genau dieser Stand ist sichtbar', async () => {
+		const { standAusTrip } = await import('../../shared/zustellung-tab/zustellungModell.ts');
+		const start = { ...standAusTrip(EINTRITT as never), morgenZeit: '06:45', stilleAn: true, stilleVon: '22:30', stilleBis: '06:15' };
+		const h = await zeige(start);
+		const ohne = await zeige();
+		const morgen = segmente(h, 'zustellung-morgen-karte');
+		assert.match(morgen, /06:?45/, `Reiter ignoriert zustellungStart: Morgenzeit ${morgen}`);
+		assert.doesNotMatch(morgen, /07:?00/);
+		const stille = karte(h, 'zustellung-stille-schalter').slice(0, 600);
+		const stilleOhne = karte(ohne, 'zustellung-stille-schalter').slice(0, 600);
+		assert.notEqual(stille, stilleOhne, 'Stille-Schalter folgt nicht dem zustellungStart');
+		assert.match(text(karte(h, 'zustellung-stille-von')).replace(/\s/g, ''), /22:?30/, 'Stille-von folgt nicht dem zustellungStart');
+	});
+});
+
 describe('#3332 Test 6 (AC-13): Ortsvergleich-Anlegen unverändert', () => {
 	for (const mobil of [false, true]) {
 		test(`${mobil ? 'Mobil' : 'Desktop'}: Schritt Zustellung zeigt weiter das Alt-Panel, keinen Reiter Zustellung`, async () => {

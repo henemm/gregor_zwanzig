@@ -23,7 +23,7 @@
 	import StilleStunden from '../../organisms/zustellung-tab/StilleStunden.svelte';
 	import UebergangBlock from '../../organisms/zustellung-tab/UebergangBlock.svelte';
 	import { kanalStatus, standAusPreset, standAusTrip, type ZustellungProfil, type ZustellungStand } from './zustellungModell.ts';
-	import { erstelleZustellungSpeicherung } from './zustellungSpeicherung.ts';
+	import { erstelleZustellungAnlegeSpeicherer, erstelleZustellungSpeicherung, type ZustellungAnlegeMeldung } from './zustellungSpeicherung.ts';
 
 	interface Props {
 		context: 'route' | 'vergleich';
@@ -41,6 +41,12 @@
 		activation?: Snippet;
 		/** Orts-Briefing: Regeln des Beispiel-Alarms (aus der Metrik-Auswahl des Hubs). */
 		beispielAlarmRegeln?: AlertRule[];
+		/** #3332: Anlege-Seite — kein Speichern, jede Aenderung geht als Meldung an den Editor. */
+		createMode?: boolean;
+		/** #3332: Startstand vom Editor (Neuaufbau beim Wechsel Desktop/Mobil, Schritte); sonst aus Trip/Preset. */
+		zustellungStart?: ZustellungStand;
+		/** #3332: Rueckkanal im Anlegen (`{stand, nutzlast}`), fliesst nie in die Eingangs-Props zurueck. */
+		onAnlegeStand?: (m: ZustellungAnlegeMeldung) => void;
 	}
 
 	let { context, activation, beispielAlarmRegeln = [], versandSprung = 0, onJump, ...panel }: Props = $props();
@@ -66,10 +72,12 @@
 		route: { stand: () => standAusTrip(panel.trip as Trip), id: () => panel.trip?.id, uebernimm: (a) => panel.onTripUpdate?.(a as Trip) },
 		vergleich: { stand: () => standAusPreset(panel.preset as ComparePreset), id: () => panel.preset?.id, uebernimm: (a) => panel.onCompareUpdate?.(a as ComparePreset) }
 	};
-	const startStand = untrack(() => KONTEXT[context].stand());
+	const startStand = untrack(() => panel.zustellungStart ?? KONTEXT[context].stand());
 	let stand = $state<ZustellungStand>(startStand);
 
 	const speicherung = untrack(() => {
+		// #3332: im Anlegen meldet der Reiter nur nach oben (kein PUT, kein saveController).
+		if (panel.createMode) return erstelleZustellungAnlegeSpeicherer({ context, basis: startStand, anlegen: (m) => panel.onAnlegeStand?.(m) });
 		const id = KONTEXT[context].id();
 		if (!panel.saveController || !id) return null;
 		return erstelleZustellungSpeicherung({

@@ -1,30 +1,22 @@
 // TDD RED — Issue #1738, Struktur-Zusicherungen der Migration.
 // Spec: docs/specs/modules/fix_1738_trips_new_versand_tab.md — AC-4, AC-5, AC-6, AC-7.
 //
-// Die Trip-Anlage soll ihren Versand-Bereich aus dem geteilten Baustein
-// `shared/VersandTab.svelte` (context="route") beziehen statt aus einer zweiten
-// Kanal-Implementierung (Teilungsregel CLAUDE.md, Epic #1230, #1199). Gemessen
-// wird am serverseitigen Render der echten Anlege-Komponente — nicht am
-// Quelltext. Renderharness + Test-Seam: ./tripNewSsr.ts.
+// Die Trip-Anlage soll ihren Versand-Bereich aus EINEM geteilten Baustein beziehen statt aus einer
+// zweiten Kanal-Implementierung (Teilungsregel CLAUDE.md, Epic #1230, #1199). Gemessen wird am
+// serverseitigen Render der echten Anlege-Komponente — nicht am Quelltext. Renderharness + Test-Seam:
+// ./tripNewSsr.ts.
 //
-// RED heute:
-//   - AC-4: der Kanal-Block kommt aus die frühere Report-Config-Section (#2277 S5 entfernt), die zweimal
-//     gleichzeitig gemountet ist (TripNewEditor.svelte:800/:1036, CSS-only
-//     umgeschaltet) — Testids stehen doppelt bzw. (metrik-gegated) gar nicht.
-//   - AC-5: `versand-tab` existiert auf /trips/new ueberhaupt nicht.
-//   - AC-6: `report-mail-content` steht doppelt im Dokument (derselbe
-//     Doppel-Mount) statt genau einmal.
-//   - AC-7: die Laufzeit-Anzeige gibt es nicht; `stubTrip.stages` ist zudem
-//     fest leer (TripNewEditor.svelte:86-93), sodass `computeTripEnd` auch nach
-//     dem Einbau kein Datum faende, wenn die Etappen nicht befuellt werden.
+// Issue #1743 (feat_1743_reiter_aufraeumen, AC-8/AC-19): kein Reiter „Versand" mehr.
 //
-// Issue #1743 (feat_1743_reiter_aufraeumen, AC-8/AC-19): es gibt keinen Reiter „Versand" mehr — der
-// Versand-Inhalt steht als Abschnitt `versand-abschnitt` unten im Schritt Wetter-Metriken. Alle
-// Zusicherungen unten gelten unveraendert, gemessen im Schritt Wetter-Metriken.
+// #3332 (D1 von #3307, Spec feat_3332_zustellung_anlegen_trip.md, AC-1/AC-10): der geteilte Baustein ist
+// jetzt der Reiter Zustellung — derselbe wie im Hub (Anlegen = Bearbeiten) — im Schritt Zustellung, statt
+// des Alt-Panels mit Versand-Abschnitt (`versand-tab`). Die Zusicherungen gelten fuer ihn: genau eine
+// Implementierung, genau eine Instanz je Ansicht im richtigen Baum, Laufzeit mit abgeleitetem Enddatum.
+// Die Mail-Inhalt-Karte entfaellt (Hub-Paritaet); das E-Mail-Format bedient die Karte „Was steht wo“ im
+// Reiter Wetter (Wirkung im POST: trip_anlegen_zustellung_verdrahtung_3332, AC-10).
 //
 // Ausfuehrung:
-//   cd frontend && node --experimental-strip-types --test \
-//     src/lib/components/trip-new/__tests__/trip_new_zeitplan_tab_nutzt_geteilten_versand_baustein.test.ts
+//   cd frontend && npm test -- src/lib/components/trip-new/__tests__/trip_new_zeitplan_tab_nutzt_geteilten_versand_baustein.test.ts
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
@@ -42,52 +34,54 @@ const ALLE_AN = { email: true, telegram: true, sms: true };
 
 function zeitplan(extra: TripNewStateOverride = {}): string {
 	const html = renderTripNew({
-		activeTab: 'wetter-metriken',
+		activeTab: 'zustellung',
 		isMobileViewport: false,
 		channels: ALLE_AN,
+		wtVisited: true,
+		zuVisited: true,
+		name: 'X',
+		startDate: '2026-09-01',
+		stageNames: ['E1'],
 		...extra
 	});
-	assertTabOffen(html, 'wetter-metriken');
+	assertTabOffen(html, 'zustellung');
 	return html;
 }
 
-// ─── #1743 AC-19: Versand-Abschnitt unten im Schritt Wetter-Metriken ─────────
+// ─── #1743 AC-19 → #3332 AC-1: Versand-Bereich im Schritt Zustellung ─────────
 
-describe('#1743 AC-19: der Versand-Abschnitt steht unten im Schritt Wetter-Metriken', () => {
+describe('#1743 AC-19 / #3332 AC-1: der Versand-Bereich ist der Reiter Zustellung im Schritt Zustellung', () => {
 	for (const isMobileViewport of [false, true]) {
-		test(`versand_abschnitt_nach_wetter_metriken__${isMobileViewport ? 'mobil' : 'desktop'}`, () => {
+		test(`versand_bereich_ist_reiter_zustellung__${isMobileViewport ? 'mobil' : 'desktop'}`, () => {
 			const html = zeitplan({ isMobileViewport });
-			const iWm = html.indexOf('data-testid="infobox-wetter-metriken-route"');
-			const iAb = html.indexOf('data-testid="versand-abschnitt"');
-			assert.notEqual(iWm, -1, 'Messaufbau: Wetter-Metriken-Inhalt nicht gerendert');
-			assert.notEqual(iAb, -1, 'Kein Versand-Abschnitt (data-testid="versand-abschnitt") im Schritt Wetter-Metriken');
-			assert.equal(countTestid(html, 'versand-abschnitt'), 1, 'Versand-Abschnitt nicht genau einmal im Dokument');
-			assert.ok(iWm < iAb, 'Versand-Abschnitt steht nicht UNTER dem Wetter-Metriken-Inhalt');
-			assert.ok(html.indexOf('data-testid="versand-tab"') > iAb, 'Versand-Inhalt steht nicht im Versand-Abschnitt');
+			const iTab = html.indexOf('data-testid="zustellung-tab"');
+			const iVersand = html.indexOf('id="versand"');
+			assert.notEqual(iTab, -1, 'Kein Reiter Zustellung im Schritt Zustellung');
+			assert.equal(countTestid(html, 'zustellung-tab'), 1, 'Reiter Zustellung nicht genau einmal im Dokument');
+			assert.equal(countTestid(html, 'versand-abschnitt'), 0, 'Alt-Panel (Versand-Abschnitt) noch im Trip-Anlegen');
+			assert.ok(iVersand > iTab, 'Briefing-Zeiten (Sprungziel #versand) stehen nicht im Reiter Zustellung');
+			assert.equal(html.split('id="versand"').length - 1, 1, 'Sprungziel #versand nicht genau einmal');
 		});
 	}
 });
 
 // ─── AC-4 ────────────────────────────────────────────────────────────────────
 
-describe('AC-4: der Kanal-Block kommt aus genau EINER Implementierung', () => {
-	test('jede_kanal_testid_erscheint_genau_einmal_im_zeitplan_tab', () => {
+describe('AC-4: der Versand-Bereich kommt aus genau EINER Implementierung', () => {
+	test('jede_versand_testid_erscheint_genau_einmal_im_schritt_zustellung', () => {
 		const html = zeitplan();
-		for (const testid of [
-			'channel-email',
-			'channel-telegram',
-			'channel-sms',
-			'channel-premium-sms'
-		]) {
+		for (const testid of ['zustellung-morgen-schalter', 'zustellung-abend-schalter', 'zustellung-morgen-zeit', 'zustellung-abend-zeit', 'zustellung-stille-schalter']) {
 			assert.equal(
 				countTestid(html, testid),
 				1,
-				`AC-4: "${testid}" steht ${countTestid(html, testid)}x im Zeitplan-Tab. Zwei Treffer ` +
-					'heissen zwei parallel lebende Kanal-Implementierungen bzw. Mounts — zwei ' +
+				`AC-4: "${testid}" steht ${countTestid(html, testid)}x im Schritt Zustellung. Zwei Treffer ` +
+					'heissen zwei parallel lebende Implementierungen bzw. Mounts — zwei ' +
 					'unabhaengige Schreibpfade auf dieselben report_config-Felder (Fehlerklasse ' +
 					'Fix-Loop 4).'
 			);
 		}
+		for (const testid of ['channel-email', 'channel-telegram', 'channel-sms', 'channel-premium-sms'])
+			assert.equal(countTestid(html, testid), 0, `#3332 AC-1: Kanal-Schalter "${testid}" des Alt-Panels noch im Trip-Anlegen (zweiter Schreiber).`);
 	});
 });
 
@@ -104,18 +98,18 @@ describe('AC-5: genau eine Versand-Instanz im Dokument, in jeder Ansicht', () =>
 			const html = zeitplan({ isMobileViewport });
 
 			assert.equal(
-				countTestid(html, 'versand-tab'),
+				countTestid(html, 'zustellung-tab'),
 				1,
-				`AC-5 (${name}): ${countTestid(html, 'versand-tab')} Versand-Instanzen im Dokument. ` +
-					'Zwei gleichzeitig gemountete Instanzen halten je einen eigenen Schnappschuss von ' +
-					'report_config und ueberschreiben sich gegenseitig (Last-Write-Wins, ohne ' +
+				`AC-5 (${name}): ${countTestid(html, 'zustellung-tab')} Zustellungs-Instanzen im Dokument. ` +
+					'Zwei gleichzeitig gemountete Instanzen halten je einen eigenen Stand ' +
+					'und ueberschreiben sich gegenseitig (Last-Write-Wins, ohne ' +
 					'Fehlermeldung); null heisst, der Versand-Bereich fehlt ganz.'
 			);
 
 			assert.equal(
-				bereichVon(html, 'versand-tab'),
+				bereichVon(html, 'zustellung-tab'),
 				erwarteterBaum,
-				`AC-5 (${name}): Die einzige Versand-Instanz steht im falschen Markup-Baum. Die ` +
+				`AC-5 (${name}): Die einzige Zustellungs-Instanz steht im falschen Markup-Baum. Die ` +
 					'beiden Baeume werden per CSS umgeschaltet — im falschen Baum ist der ' +
 					'Versand-Bereich in dieser Ansicht unsichtbar.'
 			);
@@ -125,23 +119,22 @@ describe('AC-5: genau eine Versand-Instanz im Dokument, in jeder Ansicht', () =>
 
 // ─── AC-6 ────────────────────────────────────────────────────────────────────
 
-describe('AC-6: die Mail-Inhalt-Karte bleibt im Anlege-Flow erreichbar', () => {
-	test('mail_inhalt_karte_steht_genau_einmal_im_zeitplan_tab', () => {
+describe('AC-6 (#3332 AC-10): das Mail-Format bleibt im Anlege-Flow erreichbar — in der Karte „Was steht wo“', () => {
+	test('keine_mail_inhalt_karte_mehr_der_wetter_reiter_traegt_die_karte', () => {
 		const html = zeitplan();
-
 		assert.equal(
 			countTestid(html, 'report-mail-content'),
-			1,
-			`AC-6: Die Mail-Inhalt-Karte steht ${countTestid(html, 'report-mail-content')}x im ` +
-				'Zeitplan-Tab. Sie darf durch die Migration weder verschwinden (im Metriken-Tab ist ' +
-				'sie im createMode ausgeblendet, WeatherMetricsTab.svelte:1737) noch doppelt ' +
-				'erscheinen.'
+			0,
+			'#3332 AC-10: Die Mail-Inhalt-Karte steht noch im Trip-Anlegen — der Hub hat keine (Anlegen = Bearbeiten), ' +
+				'und das E-Mail-Format haette zwei Bedienstellen.'
 		);
+		assert.equal(countTestid(html, 'report-email-format-switcher'), 0, '#3332 AC-10: zweite Bedienstelle des E-Mail-Formats.');
+		const wetter = zeitplan({ activeTab: 'wetter' });
 		assert.equal(
-			countTestid(html, 'report-email-format-switcher'),
+			countTestid(wetter, 'wetter-tab'),
 			1,
-			'AC-6: Die Format-Umschaltung full/compact fehlt (oder steht doppelt) — ohne sie ist ' +
-				'das Mail-Format beim Anlegen nicht einstellbar.'
+			'AC-6: Der Reiter Wetter (Traeger der Karte „Was steht wo“ mit dem E-Mail-Format) fehlt im Anlege-Flow — ' +
+				'ohne ihn ist das Mail-Format beim Anlegen nicht einstellbar.'
 		);
 	});
 });
@@ -156,15 +149,14 @@ describe('AC-7: die Laufzeit-Angabe nennt das abgeleitete Enddatum', () => {
 			stageNames: ['Etappe 1', 'Etappe 2', 'Etappe 3']
 		});
 
-		const text = visibleText(outerHtml(html, 'briefings-laufzeit'));
+		const text = visibleText(outerHtml(html, 'zustellung-laufzeit-satz'));
 		assert.ok(
-			text.includes('03.09.2026'),
-			'AC-7: Die Laufzeit-Zeile nennt nicht das erwartete Enddatum 03.09.2026 (Start ' +
-				'01.09.2026 + 3 Etappen), sondern: "' +
+			text.includes('1.–3. September 2026'),
+			'AC-7: Die Laufzeit-Zeile des Reiters Zustellung nennt nicht den erwarteten Zeitraum 1.–3. September 2026 ' +
+				'(Start 01.09.2026 + 3 Etappen), sondern: "' +
 				text +
-				'". Ein "endet —" heisst, dass die Etappen den geteilten Baustein nicht datiert ' +
-				'erreichen — `stageDate()` (dd.mm. ohne Jahr) ist dafuer unbrauchbar, gebraucht wird ' +
-				'die ISO-Ableitung aus `buildCreateTripPayload`.'
+				'". Fehlt das Enddatum, erreichen die Etappen den Reiter nicht datiert — `stageDate()` ' +
+				'(dd.mm. ohne Jahr) ist dafuer unbrauchbar, gebraucht wird die ISO-Ableitung aus `buildCreateTripPayload`.'
 		);
 	});
 });

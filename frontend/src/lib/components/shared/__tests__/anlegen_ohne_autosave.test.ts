@@ -45,25 +45,33 @@ const VERBOTEN = ['saveController', 'onTripUpdate', 'preset', 'enqueueHubWrite',
 describe('#1743: Anlege-Seiten ohne Autosave', () => {
 	for (const mobil of [false, true]) {
 		test(`/trips/new ${mobil ? 'mobil' : 'Desktop'}: Versand-Inhalt ohne Speicherknopf des Trip-Hubs`, () => {
-			// #2794 S3a: der Versand-Inhalt steht im Schritt Zustellung.
+			// #2794 S3a: der Versand-Inhalt steht im Schritt Zustellung. #3332 (AC-1): dort steht jetzt der
+			// Reiter Zustellung (wie im Hub) statt des Versand-Abschnitts des Alt-Panels.
 			const html = renderTripNew({ activeTab: 'zustellung', isMobileViewport: mobil, name: 'X', startDate: '2026-07-01' });
-			assert.equal(countTestid(html, 'versand-tab'), 1, 'Messaufbau: Versand-Inhalt fehlt im Schritt Zustellung');
+			assert.equal(countTestid(html, 'zustellung-tab'), 1, 'Messaufbau: Reiter Zustellung fehlt im Schritt Zustellung');
 			assert.equal(countTestid(html, 'briefings-save'), 0, 'Anlege-Seite zeigt den Speicherknopf des Trip-Hubs (PUT auf trip.id)');
 		});
 	}
 
+	// #3332 (Entscheidung RED Nr. 4): im Trip-Anlegen bedient der Reiter Zustellung die Versand-Felder;
+	// der Ortsvergleich behaelt bis D2 (#3333) das Alt-Panel. Je Seite ihr Zustellungs-Baustein.
+	const ZUSTELLUNGS_BAUSTEIN: Record<string, string> = { '/trips/new': 'ZustellungTab', '/compare/new': 'WetterMetrikenVersandPanel' };
 	for (const [name, datei] of [['/trips/new', TRIP_NEW], ['/compare/new', COMPARE_NEW]] as const) {
 		test(`${name}: Baustein-Mounts tragen keine Speicher-Verdrahtung`, () => {
-			const mounts = panelMounts(datei);
-			// #2794 S3a Teil-PR 3: beide Seiten halten je Geraet einen Panel-Mount im Schritt Zustellung
+			const mounts = panelMounts(datei, ZUSTELLUNGS_BAUSTEIN[name]);
+			// #2794 S3a Teil-PR 3: beide Seiten halten je Geraet einen Zustellungs-Mount im Schritt Zustellung
 			// (der Schritt Wetter ist der WetterTab, unten eigens geprueft).
 			const soll = 2;
 			assert.equal(mounts.length, soll, `${name}: erwartet ${soll} Baustein-Mounts`);
 			for (const m of mounts) {
 				const props = propNamen(m);
 				for (const v of VERBOTEN) assert.ok(!props.includes(v), `${name}: Prop „${v}" verdrahtet einen Speicherweg (Autosave)`);
-				if (datei === TRIP_NEW) assert.ok(props.includes('createMode'), `${name}: Baustein ohne createMode — mountet BriefingScheduleTab`);
+				if (datei === TRIP_NEW) {
+					assert.ok(props.includes('createMode'), `${name}: Reiter Zustellung ohne createMode — er speichert selbst (PUT)`);
+					assert.ok(props.includes('onAnlegeStand'), `${name}: Reiter Zustellung ohne Anlege-Rueckkanal onAnlegeStand`);
+				}
 			}
+			if (datei === TRIP_NEW) assert.equal(panelMounts(datei).length, 0, `${name}: Alt-Panel noch gemountet (zweiter Schreiber der Versand-Felder)`);
 		});
 
 		// #2794 S3a Teil-PR 3: der WetterTab im Schritt Wetter speichert beim Anlegen nie selbst —

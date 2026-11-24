@@ -1,0 +1,385 @@
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/components/shared/__tests__/alarme_tab_ohne_zustellung_3332.test.ts src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_ssr_3332.test.ts src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts
+
+TAP version 13
+# Subtest: \#3332 Test 5 (AC-9): Abschnittsliste mit und ohne Zustellungs-Abschnitte
+    # Subtest: route, ohneZustellung: channels, cooldown, quiet-hours fehlen; Rest in unveränderter Reihenfolge
+    ok 1 - route, ohneZustellung: channels, cooldown, quiet-hours fehlen; Rest in unveränderter Reihenfolge
+      ---
+      duration_ms: 1.007421
+      type: 'test'
+      ...
+    # Subtest: ohne den Parameter bzw. mit false: Liste unverändert (Hub, Ortsvergleich)
+    ok 2 - ohne den Parameter bzw. mit false: Liste unverändert (Hub, Ortsvergleich)
+      ---
+      duration_ms: 0.181061
+      type: 'test'
+      ...
+    1..2
+ok 1 - \#3332 Test 5 (AC-9): Abschnittsliste mit und ohne Zustellungs-Abschnitte
+  ---
+  duration_ms: 1.956292
+  type: 'suite'
+  ...
+# Subtest: \#3332 Test 5 (AC-9): Wirkort — der gerenderte Reiter Alarme
+    # Subtest: Trip-Anlegen (route, createMode): keine Abschnitte Kanäle, Cooldown, Stille Stunden; Warnungen und Metrik-Stufen bleiben
+    ok 1 - Trip-Anlegen (route, createMode): keine Abschnitte Kanäle, Cooldown, Stille Stunden; Warnungen und Metrik-Stufen bleiben
+      ---
+      duration_ms: 8.575551
+      type: 'test'
+      ...
+    # Subtest: Trip-Hub (route, ohne createMode): Liste vollständig
+    ok 2 - Trip-Hub (route, ohne createMode): Liste vollständig
+      ---
+      duration_ms: 4.046125
+      type: 'test'
+      ...
+    # Subtest: Ortsvergleich-Anlegen (vergleich, createMode): Liste vollständig, D1 ändert dort nichts (AC-13)
+    ok 3 - Ortsvergleich-Anlegen (vergleich, createMode): Liste vollständig, D1 ändert dort nichts (AC-13)
+      ---
+      duration_ms: 1.619571
+      type: 'test'
+      ...
+    1..3
+ok 2 - \#3332 Test 5 (AC-9): Wirkort — der gerenderte Reiter Alarme
+  ---
+  duration_ms: 14.421207
+  type: 'suite'
+  ...
+# Subtest: \#3332 Test 2 (AC-2, AC-3): mitZustellung mischt den Stand in report_config und Alarm-Felder
+    # Subtest: Zeiten, Schalter, Briefing-Kanäle in report_config; bestehende Felder erhalten
+    ok 1 - Zeiten, Schalter, Briefing-Kanäle in report_config; bestehende Felder erhalten
+      ---
+      duration_ms: 1.268162
+      type: 'test'
+      ...
+    # Subtest: beide Briefings aus: enabled false
+    ok 2 - beide Briefings aus: enabled false
+      ---
+      duration_ms: 0.166809
+      type: 'test'
+      ...
+    # Subtest: nur Abend an: enabled true (Abend-Briefing kommt)
+    ok 3 - nur Abend an: enabled true (Abend-Briefing kommt)
+      ---
+      duration_ms: 2.480213
+      type: 'test'
+      ...
+    # Subtest: nur Morgen an: enabled true
+    ok 4 - nur Morgen an: enabled true
+      ---
+      duration_ms: 0.15276
+      type: 'test'
+      ...
+    # Subtest: Alarm-Kanäle, Dringlichkeit, Stille, Cooldown in den Alarm-Zustand; Metrik-Stufen und Warnungen bleiben
+    ok 5 - Alarm-Kanäle, Dringlichkeit, Stille, Cooldown in den Alarm-Zustand; Metrik-Stufen und Warnungen bleiben
+      ---
+      duration_ms: 0.51405
+      type: 'test'
+      ...
+    # Subtest: Stille Stunden aus: quietFrom/quietTo leer, im POST null
+    ok 6 - Stille Stunden aus: quietFrom/quietTo leer, im POST null
+      ---
+      duration_ms: 0.22843
+      type: 'test'
+      ...
+    # Subtest: im POST: report_config und Alarm-Felder tragen genau die eingestellten Werte
+    ok 7 - im POST: report_config und Alarm-Felder tragen genau die eingestellten Werte
+      ---
+      duration_ms: 0.26355
+      type: 'test'
+      ...
+    # Subtest: Reiter nie bedient (stand undefined): Ausgabe gleich Eingabe
+    ok 8 - Reiter nie bedient (stand undefined): Ausgabe gleich Eingabe
+      ---
+      duration_ms: 0.36891
+      type: 'test'
+      ...
+    # Subtest: rein: Eingaben bleiben unverändert
+    ok 9 - rein: Eingaben bleiben unverändert
+      ---
+      duration_ms: 0.273482
+      type: 'test'
+      ...
+    # Subtest: ohne report_config im Editor: Helfer legt ihn an
+    ok 10 - ohne report_config im Editor: Helfer legt ihn an
+      ---
+      duration_ms: 0.39099
+      type: 'test'
+      ...
+    1..10
+ok 3 - \#3332 Test 2 (AC-2, AC-3): mitZustellung mischt den Stand in report_config und Alarm-Felder
+  ---
+  duration_ms: 7.15659
+  type: 'suite'
+  ...
+# Subtest: \#3332 Test 4 (AC-7): rasterfremde Uhrzeit wird nie übernommen
+    # Subtest: 06:50: vorhandene gültige Zeit bleibt, 06:50 nirgends im POST
+    ok 1 - 06:50: vorhandene gültige Zeit bleibt, 06:50 nirgends im POST
+      ---
+      duration_ms: 0.28832
+      type: 'test'
+      ...
+    # Subtest: Abendzeit 18:07 ohne vorhandenen Wert: kein evening_time aus dem Stand (Standard aus dem POST-Ergänzer)
+    ok 2 - Abendzeit 18:07 ohne vorhandenen Wert: kein evening_time aus dem Stand (Standard aus dem POST-Ergänzer)
+      ---
+      duration_ms: 0.3436
+      type: 'test'
+      ...
+    # Subtest: gültige Zeiten derselben Meldung gehen trotzdem durch
+    ok 3 - gültige Zeiten derselben Meldung gehen trotzdem durch
+      ---
+      duration_ms: 0.655001
+      type: 'test'
+      ...
+    1..3
+ok 4 - \#3332 Test 4 (AC-7): rasterfremde Uhrzeit wird nie übernommen
+  ---
+  duration_ms: 1.453311
+  type: 'suite'
+  ...
+# Subtest: \#3332 Test 6 (AC-1): Trip-Anlegen, Schritt Zustellung
+    # Subtest: Desktop: Reiter Zustellung mit Briefing-Zeiten, Kanal-Tabelle, Stille Stunden — genau einmal, im richtigen Baum
+    ok 1 - Desktop: Reiter Zustellung mit Briefing-Zeiten, Kanal-Tabelle, Stille Stunden — genau einmal, im richtigen Baum
+      ---
+      duration_ms: 31.57023
+      type: 'test'
+      ...
+    # Subtest: Desktop: Alt-Panel (Versand-Abschnitt) und Mail-Inhalt-Karte erscheinen nicht mehr
+    ok 2 - Desktop: Alt-Panel (Versand-Abschnitt) und Mail-Inhalt-Karte erscheinen nicht mehr
+      ---
+      duration_ms: 5.174606
+      type: 'test'
+      ...
+    # Subtest: Mobil: Reiter Zustellung mit Briefing-Zeiten, Kanal-Tabelle, Stille Stunden — genau einmal, im richtigen Baum
+    ok 3 - Mobil: Reiter Zustellung mit Briefing-Zeiten, Kanal-Tabelle, Stille Stunden — genau einmal, im richtigen Baum
+      ---
+      duration_ms: 5.316036
+      type: 'test'
+      ...
+    # Subtest: Mobil: Alt-Panel (Versand-Abschnitt) und Mail-Inhalt-Karte erscheinen nicht mehr
+    ok 4 - Mobil: Alt-Panel (Versand-Abschnitt) und Mail-Inhalt-Karte erscheinen nicht mehr
+      ---
+      duration_ms: 3.842616
+      type: 'test'
+      ...
+    1..4
+ok 5 - \#3332 Test 6 (AC-1): Trip-Anlegen, Schritt Zustellung
+  ---
+  duration_ms: 46.98492
+  type: 'suite'
+  ...
+# Subtest: \#3332 Test 7 (AC-6, F001): Reiter zeigt den Startstand des Editors
+    # Subtest: ohne zustellungStart: Startstand aus dem Trip (Messaufbau-Gegenprobe)
+    ok 1 - ohne zustellungStart: Startstand aus dem Trip (Messaufbau-Gegenprobe)
+      ---
+      duration_ms: 20.090514
+      type: 'test'
+      ...
+    # Subtest: mit zustellungStart (Morgen 06:45, Stille an 22:30–06:15): genau dieser Stand ist sichtbar
+    ok 2 - mit zustellungStart (Morgen 06:45, Stille an 22:30–06:15): genau dieser Stand ist sichtbar
+      ---
+      duration_ms: 7.029269
+      type: 'test'
+      ...
+    1..2
+ok 6 - \#3332 Test 7 (AC-6, F001): Reiter zeigt den Startstand des Editors
+  ---
+  duration_ms: 27.391565
+  type: 'suite'
+  ...
+# (node:1365797) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: \#3332 Test 6 (AC-13): Ortsvergleich-Anlegen unverändert
+    # Subtest: Desktop: Schritt Zustellung zeigt weiter das Alt-Panel, keinen Reiter Zustellung
+    ok 1 - Desktop: Schritt Zustellung zeigt weiter das Alt-Panel, keinen Reiter Zustellung
+      ---
+      duration_ms: 501.792396
+      type: 'test'
+      ...
+    # Subtest: Mobil: Schritt Zustellung zeigt weiter das Alt-Panel, keinen Reiter Zustellung
+    ok 2 - Mobil: Schritt Zustellung zeigt weiter das Alt-Panel, keinen Reiter Zustellung
+      ---
+      duration_ms: 2.689653
+      type: 'test'
+      ...
+    1..2
+ok 7 - \#3332 Test 6 (AC-13): Ortsvergleich-Anlegen unverändert
+  ---
+  duration_ms: 504.87157
+  type: 'suite'
+  ...
+# Subtest: \#3332 Referenz-Fixture (Messaufbau)
+    # Subtest: Fixture liegt vor und trägt Versand-, Mail- und Alarm-Felder (nicht leer)
+    ok 1 - Fixture liegt vor und trägt Versand-, Mail- und Alarm-Felder (nicht leer)
+      ---
+      duration_ms: 0.997981
+      type: 'test'
+      ...
+    1..1
+ok 8 - \#3332 Referenz-Fixture (Messaufbau)
+  ---
+  duration_ms: 1.695243
+  type: 'suite'
+  ...
+# Subtest: \#3332 Test 3 (AC-4): Reiter nie bedient — POST bitgleich zu heute
+    # Subtest: report_config, Alarm-Felder und display_config.channels gleichen der Referenz
+    ok 1 - report_config, Alarm-Felder und display_config.channels gleichen der Referenz
+      ---
+      duration_ms: 524.290644
+      type: 'test'
+      ...
+    # Subtest: Reiter geöffnet (Desktop und Mobil gebaut, Profil geladen), aber nicht bedient: POST unverändert, keine Meldung nötig
+    ok 2 - Reiter geöffnet (Desktop und Mobil gebaut, Profil geladen), aber nicht bedient: POST unverändert, keine Meldung nötig
+      ---
+      duration_ms: 256.214204
+      type: 'test'
+      ...
+    # Subtest: Startstand des Reiters = was der POST ohne Bedienung sendet (Zeiten, Kanäle, Alarm-Kanäle, Dringlichkeit, Stille)
+    ok 3 - Startstand des Reiters = was der POST ohne Bedienung sendet (Zeiten, Kanäle, Alarm-Kanäle, Dringlichkeit, Stille)
+      ---
+      duration_ms: 202.647667
+      type: 'test'
+      ...
+    1..3
+ok 9 - \#3332 Test 3 (AC-4): Reiter nie bedient — POST bitgleich zu heute
+  ---
+  duration_ms: 983.483988
+  type: 'suite'
+  ...
+# Subtest: \#3332 AC-10: Mail-Inhalt ohne MailInhaltCard — Karte „Was steht wo“ wirkt, Bestandsfelder behalten den Standard
+    # Subtest: Karte nicht bedient: E-Mail-Format, Etappen-Statistik, Vortagesvergleich, Großwetterlage wie heute
+    ok 1 - Karte nicht bedient: E-Mail-Format, Etappen-Statistik, Vortagesvergleich, Großwetterlage wie heute
+      ---
+      duration_ms: 171.455337
+      type: 'test'
+      ...
+    # Subtest: Karte bedient (Kompakt, Etappen-Statistik aus, Nacht-Block aus): genau diese Werte, show_stability bleibt Standard
+    ok 2 - Karte bedient (Kompakt, Etappen-Statistik aus, Nacht-Block aus): genau diese Werte, show_stability bleibt Standard
+      ---
+      duration_ms: 155.122996
+      type: 'test'
+      ...
+    1..2
+ok 10 - \#3332 AC-10: Mail-Inhalt ohne MailInhaltCard — Karte „Was steht wo“ wirkt, Bestandsfelder behalten den Standard
+  ---
+  duration_ms: 327.002504
+  type: 'suite'
+  ...
+# Subtest: \#3332 Test 2 (AC-2, AC-3, AC-5): Bedienung im Reiter -> genau der eine POST trägt sie
+    # Subtest: Zeiten, Kanäle, Dringlichkeit HIGH, Stille, Cooldown stehen im POST; kein PUT, kein Schreibaufruf
+    ok 1 - Zeiten, Kanäle, Dringlichkeit HIGH, Stille, Cooldown stehen im POST; kein PUT, kein Schreibaufruf
+      ---
+      duration_ms: 164.546328
+      type: 'test'
+      ...
+    # Subtest: Stille Stunden wieder aus: POST ohne Stille (null), Rest bleibt
+    ok 2 - Stille Stunden wieder aus: POST ohne Stille (null), Rest bleibt
+      ---
+      duration_ms: 180.90617
+      type: 'test'
+      ...
+    1..2
+ok 11 - \#3332 Test 2 (AC-2, AC-3, AC-5): Bedienung im Reiter -> genau der eine POST trägt sie
+  ---
+  duration_ms: 345.763149
+  type: 'suite'
+  ...
+# Subtest: \#3332 Test 4 (AC-7): rasterfremde Uhrzeit — der POST trägt die letzte gültige
+    # Subtest: 06:45, dann 06:50 eingegeben: POST morning_time 06:45:00
+    ok 1 - 06:45, dann 06:50 eingegeben: POST morning_time 06:45:00
+      ---
+      duration_ms: 163.858788
+      type: 'test'
+      ...
+    # Subtest: nur 06:50 eingegeben: POST behält die Startzeit, nie 06:50
+    ok 2 - nur 06:50 eingegeben: POST behält die Startzeit, nie 06:50
+      ---
+      duration_ms: 187.274927
+      type: 'test'
+      ...
+    1..2
+ok 12 - \#3332 Test 4 (AC-7): rasterfremde Uhrzeit — der POST trägt die letzte gültige
+  ---
+  duration_ms: 351.358087
+  type: 'suite'
+  ...
+# Subtest: \#3332 Test 7 (AC-6): Neuaufbau (Wechsel Desktop <-> Mobil, Schritte) behält den Stand
+    # Subtest: Desktop -> Mobil
+    ok 1 - Desktop -> Mobil
+      ---
+      duration_ms: 231.222434
+      type: 'test'
+      ...
+    # Subtest: Mobil -> Desktop
+    ok 2 - Mobil -> Desktop
+      ---
+      duration_ms: 204.219759
+      type: 'test'
+      ...
+    # Subtest: Desktop neu aufgebaut
+    ok 3 - Desktop neu aufgebaut
+      ---
+      duration_ms: 189.737962
+      type: 'test'
+      ...
+    1..3
+ok 13 - \#3332 Test 7 (AC-6): Neuaufbau (Wechsel Desktop <-> Mobil, Schritte) behält den Stand
+  ---
+  duration_ms: 625.441623
+  type: 'suite'
+  ...
+# Subtest: \#3332 Test 7b (AC-6, F001): Neuaufbau zeigt den bedienten Stand, auch wo der Trip ihn nicht trägt
+    # Subtest: Desktop -> Mobil
+    ok 1 - Desktop -> Mobil
+      ---
+      duration_ms: 197.52599
+      type: 'test'
+      ...
+    # Subtest: Mobil -> Desktop
+    ok 2 - Mobil -> Desktop
+      ---
+      duration_ms: 163.079427
+      type: 'test'
+      ...
+    # Subtest: Desktop neu aufgebaut
+    ok 3 - Desktop neu aufgebaut
+      ---
+      duration_ms: 174.0006
+      type: 'test'
+      ...
+    # Subtest: Mobil neu aufgebaut
+    ok 4 - Mobil neu aufgebaut
+      ---
+      duration_ms: 178.842097
+      type: 'test'
+      ...
+    1..4
+ok 14 - \#3332 Test 7b (AC-6, F001): Neuaufbau zeigt den bedienten Stand, auch wo der Trip ihn nicht trägt
+  ---
+  duration_ms: 713.780975
+  type: 'suite'
+  ...
+# Subtest: \#3332 F003: Meldung mit gleichem Inhalt ändert den Editor-Stand nicht
+    # Subtest: zweimal dieselbe Geste: reportConfig, alarm und zustellungStand behalten ihre Objekte
+    ok 1 - zweimal dieselbe Geste: reportConfig, alarm und zustellungStand behalten ihre Objekte
+      ---
+      duration_ms: 151.021391
+      type: 'test'
+      ...
+    1..1
+ok 15 - \#3332 F003: Meldung mit gleichem Inhalt ändert den Editor-Stand nicht
+  ---
+  duration_ms: 151.156662
+  type: 'suite'
+  ...
+1..15
+# tests 44
+# suites 15
+# pass 44
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5157.788684

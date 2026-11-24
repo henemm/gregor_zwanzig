@@ -273,10 +273,13 @@ describe('AC-2.T2 Trip-Anlegen (TripNewEditor): eine dauerhafte WMT-Instanz je V
 
 	// Teil-PR 3 (AC-38): die dauerhafte Instanz traegt fest den Bereich zustellung (Auswahl, Ampel,
 	// Tagesfenster meldet allein der WetterTab) — nie bereich=wetter, in keinem Schritt.
+	// #3332 (AC-1): der Träger im Trip-Anlegen ist der Reiter Zustellung (wie im Hub) — er IST der Bereich
+	// Zustellung (bereichLiteral); ein Alt-Panel bräuchte weiter bereich='zustellung' als Literal.
 	test('s3a2794_t2_trip_neu_bereich_fest_zustellung', () => {
 		const { e, quelle } = traeger(DATEI.tripNeu);
 		assert.ok(e.length > 0, 'kein WMT-Träger');
-		for (const x of e) assert.equal(attribut(x.knoten, quelle, 'bereich')?.literal, 'zustellung', `${beschreibe(x, quelle)}: bereich ≠ 'zustellung'`);
+		for (const x of e) assert.equal(bereichLiteral(x, quelle), 'zustellung', `${beschreibe(x, quelle)}: bereich ≠ 'zustellung'`);
+		assert.deepEqual(e.map((x) => x.name), ['ZustellungTab', 'ZustellungTab'], '#3332: Trip-Anlegen trägt im Schritt Zustellung den Reiter Zustellung (Desktop + Mobil)');
 	});
 
 	test('s3a2794_t2_trip_neu_wmt_sichtbar_nur_in_zustellung_wettertab_nur_in_wetter', async () => {
