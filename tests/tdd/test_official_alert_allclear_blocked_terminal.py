@@ -14,11 +14,20 @@ an den Ausgangs-Klassen. Kein Mock.
 """
 from __future__ import annotations
 
+import pytest
+
 from tests.helpers.transport_mitschrift import aufzeichner_installieren
 from tests.tdd._official_alert_allclear_fixtures import (
     Szenario, basis_jetzt, entwarnungen_gesamt, fehlschlag_installieren,
-    lauf_erstwarnung, quellen,
+    feste_uhr, lauf_erstwarnung, quellen,
 )
+
+
+@pytest.fixture(autouse=True)
+def _feste_uhr():
+    """Ganzer Test unter fester Uhr (``BASIS``), nicht unter der Wanduhr."""
+    with feste_uhr():
+        yield
 
 _NUR_SMS = {"email": False, "telegram": False, "sms": True, "premium_sms": False}
 

@@ -1027,6 +1027,12 @@ def soll_aus_daten(daten: dict, lang: str = "de", ortsnamen: dict | None = None)
     """Erkennt Trip bzw. Orte am Inhalt. Orte duerfen als Huelle
     ``{"preset": {...}, "orte": {"<id>": "<Name>"}}`` kommen (Ortsfolge) oder
     als rohes Preset mit ``ortsnamen`` (aus ``lade_ortsnamen``, ``--orte``)."""
+    if not isinstance(daten, dict):  # #3246: Liste/Text/Zahl -> klare Meldung
+        raise ValueError(
+            "oberste Ebene muss ein Objekt sein, nicht "
+            f"{type(daten).__name__} -- erwartet die Huelle "
+            "{\"preset\": {...}, \"orte\": {\"<Kennung>\": \"<Name>\"}}, "
+            "ein rohes Preset-Objekt oder ein Trip-Objekt")
     if isinstance(daten.get("preset"), dict):
         if daten.get("orte") is not None and not isinstance(daten["orte"], dict):
             raise ValueError(

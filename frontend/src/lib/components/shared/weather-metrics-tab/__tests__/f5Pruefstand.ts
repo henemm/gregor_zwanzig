@@ -9,7 +9,8 @@
 // aufgezeichnete Backend-Daten (fixtures/f5_*.json, erzeugt aus api/routers/*.py):
 // Register-Namen (label_en, col_label, sms_code), /api/sms-symbols, /api/compare/metrics.
 // Golden: tests/golden/f5_wertebereiche/<fall>.de.(html|txt) = Ist-Stand VOR der
-// Umstellung (nie neu schreiben); <fall>.en.* = Review-Hilfe:
+// Umstellung (nie neu schreiben); <fall>.en.* = englische Referenz, ebenfalls verglichen
+// (#3024); nach gepruefter absichtlicher Aenderung neu schreiben:
 //   cd frontend && GZ_GOLDEN_SCHREIBEN=en npm test -- src/lib/components/shared/weather-metrics-tab/__tests__/wertebereiche_sprache.test.ts
 // Spec: docs/specs/modules/i18n_f5_wertebereiche_tab_2654.md
 // Pfadregel #1409: alles relativ zu DIESER Datei.

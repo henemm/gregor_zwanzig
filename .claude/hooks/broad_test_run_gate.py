@@ -56,6 +56,11 @@ breiter Lauf mit Netz ist genau der Weg des Produktiv-Versands aus #1477.
 Verzeichnisse (``pytest tests/``, ``pytest tests/unit/``) gelten NICHT als
 konkrete Auswahl — genau so faengt man sich einen ungemarkerten Live-Test ein.
 
+``pytest`` und die Launcher werden in jeder Schreibweise erkannt (``PyTest``,
+``PYTEST``, ``NICE``): auf Dateisystemen ohne Gross-/Kleinunterscheidung
+(macOS) starten sie dieselbe Executable (Issue #3322). Die freien
+Offline-Formen (Regel 3) bleiben woertlich, also nur kleingeschrieben frei.
+
 Obfuskations-Fallback wie in ``prod_send_gate.py``: bei ``sh -c``/``eval`` oder
 kaputten Quotes wird auf einen Roh-Scan des kompletten Kommandos zurueckgefallen.
 Dort zaehlt jedes ``pytest``-Token als eigener Aufruf und wird einzeln mit
@@ -150,10 +155,19 @@ _PYTHON_LAUNCHER_RE = re.compile(r"^python3?(\.\d+)?$")
 
 
 def _basename(token: str) -> str:
-    """Letztes Pfadsegment -- 'pytest'-Erkennung soll pfad-qualifizierte
-    Launcher (/usr/bin/python3, .venv/bin/python3) genauso treffen wie
-    nackte Namen (Issue #1478 Teil 1, Adversary-Runde 3, Finding F007)."""
-    return token.rsplit("/", 1)[-1]
+    """Letztes Pfadsegment, kleingeschrieben -- 'pytest'-Erkennung soll
+    pfad-qualifizierte Launcher (/usr/bin/python3, .venv/bin/python3) genauso
+    treffen wie nackte Namen (Issue #1478 Teil 1, Adversary-Runde 3, Finding
+    F007) und jede Schreibweise wie die kleine (``NICE``, ``PYTHON3``: auf
+    macOS dieselbe Executable, Issue #3322)."""
+    return token.rsplit("/", 1)[-1].lower()
+
+
+def _is_pytest_token(token: str) -> bool:
+    """'pytest' bzw. '<pfad>/pytest' in jeder Schreibweise (#3322: auf
+    Dateisystemen ohne Gross-/Kleinunterscheidung startet ``PyTest``
+    dieselbe Executable)."""
+    return _basename(token) == "pytest"
 
 
 def _nearest_non_flag_predecessor(tokens: list[str], index: int) -> "str | None":
@@ -198,7 +212,7 @@ def _pytest_invocations(tokens: list[str]) -> list[int]:
     """
     hits: list[int] = []
     for i, tok in enumerate(tokens):
-        if tok != "pytest" and not tok.endswith("/pytest"):
+        if not _is_pytest_token(tok):
             continue
         if i > 0 and tokens[i - 1].startswith("-"):
             launcher = _nearest_non_flag_predecessor(tokens, i)
@@ -365,7 +379,7 @@ def _check_raw(command: str) -> None:
     frei sein; keine Fruehausgaenge auf '--co'/'.py' irgendwo im Kommando
     (Fix-Loop 2). Kein 'pytest'-Token -> Block."""
     flat = _raw_split(command)
-    starts = [i for i, t in enumerate(flat) if t == "pytest" or t.endswith("/pytest")]
+    starts = [i for i, t in enumerate(flat) if _is_pytest_token(t)]
     if starts and all(_invocation_ok(_args_after(flat, s)) for s in starts):
         sys.exit(0)
     _block(
@@ -380,7 +394,7 @@ def main() -> None:
         command = tool_input.get("command", "") if isinstance(tool_input, dict) else ""
     except Exception:
         command = ""
-    if not command or "pytest" not in command:
+    if not command or "pytest" not in command.lower():  # #3322: jede Schreibweise
         sys.exit(0)
     if _offline_form_is_safe(command):
         sys.exit(0)  # Rohstring-Vergleich vor jeder Zerlegung (Fix-Loop 6)

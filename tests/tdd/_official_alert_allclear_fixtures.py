@@ -26,8 +26,12 @@ Grundsaetze (Projekt-Testpolitik, kein Mock-Theater):
   Schluessel (der Zeitraum steckt im Schluessel).
 * **Uhr:** ``check_official_alert_triggers`` ueberschreibt ``now_utc`` mit der
   Wanduhr -- ``freeze_time`` ist die einzige Uhr-Steuerung. Basis ist die
-  ECHTE Jetzt-Minute (``basis_jetzt()``), damit Briefing-Vorlauf (#1594) und
-  Profil-Zeitstempel zur Laufzeit passen.
+  FESTE Zeit ``BASIS`` (``basis_jetzt()``); die Testmodule laufen komplett
+  unter ``feste_uhr()`` (autouse), damit auch Trip-Anlage, Etappentag,
+  Briefing-Zeiten (Vorlauf #1594) und Profil-Zeitstempel unter DERSELBEN Uhr
+  entstehen. Vorher war die Basis die echte Jetzt-Minute: nachts (Ortstag-
+  wechsel, #3053), zur vollen Stunde (SMS-Kurzformat, #2911/#3054) und in der
+  Zeitumstellungsnacht (Briefing-Vorlauf) kippten Vorbedingungen.
 * Nutzerkennungen ohne "test"/"tdd" (Herkunftssperre #2406) ueber
   ``frisches_profil`` -- je Aufruf ein eigener Datenordner.
 """
@@ -63,9 +67,37 @@ OFFICIAL_PREFIX = "official_alert:"
 EMPFEHLUNGS_WOERTER = ("sicher", "kannst", "empfehlen", "gefahrlos", "aufbrechen", "losgehen")
 
 
+#: Feste Basiszeit aller Entwarnungs-Szenarien: Mittwoch 2026-07-08 10:17 UTC
+#: = 12:17 Ortszeit Wien (Sommerzeit). Bewusst mittags (Ortstag wechselt erst
+#: in ~12 h, auch nach ``bis_stunden``-Laeufen von bis zu einer Stunde), weit
+#: weg von den Zeitumstellungen (29.03./25.10.2026) und mit Minute != 0 (das
+#: SMS-Kurzformat kuerzt volle Stunden auf ``13-Mi10``; AC-12 braucht die
+#: lange Form ``HH:MM-WdHH:MM``, damit acht Warnungen das Budget sicher fuellen).
+BASIS = datetime(2026, 7, 8, 10, 17, tzinfo=timezone.utc)
+
+
+@contextmanager
+def feste_uhr(basis: datetime = BASIS):
+    """Friert die Uhr fuer den GANZEN Test auf ``basis`` ein (Aufbau + Laeufe).
+
+    Die Laeufe (``trip_lauf``/``compare_lauf``/Briefings) frieren verschachtelt
+    auf ``basis + minuten``; danach gilt wieder ``basis``. Ohne diese aeussere
+    Uhr laesen Trip-Anlage (``date.today()``, ``trip_local_today``), Briefing-
+    Zeiten (``briefing_zeiten_fuer_trip``) und Profil-Zeitstempel die Wanduhr."""
+    with freeze_time(basis):
+        yield basis
+
+
 def basis_jetzt() -> datetime:
-    """Echte Jetzt-Minute (UTC), Sekunden abgeschnitten."""
-    return datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    """Die feste Basiszeit ``BASIS`` -- nur unter ``feste_uhr()`` gueltig.
+
+    Der Waechter verhindert den Rueckfall auf die Wanduhr: ohne eingefrorene
+    Uhr entstuende der Aufbau zur echten Zeit, die Laeufe aber zu ``BASIS``."""
+    jetzt = datetime.now(timezone.utc)
+    assert jetzt == BASIS, (
+        f"basis_jetzt() nur unter feste_uhr() aufrufen (Uhr steht auf {jetzt.isoformat()}, "
+        f"erwartet {BASIS.isoformat()}) -- sonst haengt das Szenario von der Wanduhr ab")
+    return BASIS
 
 
 # ---------------------------------------------------------------------------
@@ -497,10 +529,10 @@ def trip_briefing(sz: Szenario, minuten: float) -> str:
 
     assert sz.flaeche == "trip", "Briefing-Helfer nur fuer die Trip-Flaeche"
     # Zieltag fest auf die Etappe MORGEN (#3047 p9): ohne ihn loest das Produkt
-    # "Abend = Ortstag+1" zur Briefing-Minute auf. Liegt zwischen Trip-Anlage
-    # (echte Jetzt-Minute) und ``t0+minuten`` die ORTS-Mitternacht (Wien,
-    # 22:40-23:00 UTC im Winter), zielte das Briefing auf uebermorgen -> "no_stage"
-    # und die Vorbedingung "Briefing zugestellt" war wanduhrabhaengig rot.
+    # "Abend = Ortstag+1" zur Briefing-Minute auf. Laege zwischen Trip-Anlage
+    # und ``t0+minuten`` die ORTS-Mitternacht, zielte das Briefing auf
+    # uebermorgen -> "no_stage" (#3053). Unter ``feste_uhr()`` (BASIS mittags)
+    # tritt das nicht mehr auf; der feste Zieltag bleibt als explizite Absicht.
     zieltag = sz.trip.stages[-1].date
     with freeze_time(sz.zeit(minuten)):
         try:

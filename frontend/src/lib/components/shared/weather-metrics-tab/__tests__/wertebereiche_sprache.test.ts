@@ -58,7 +58,8 @@ const { toggleGlobalMetric } = await import(pathToFileURL(path.join(WMT, 'channe
 
 before(() => {
 	// Die de-Golden sind der Ist-Stand VOR der Umstellung und werden nie neu geschrieben;
-	// nur die en-Ansicht (Review-Hilfe, nicht verglichen) wird aktualisiert.
+	// nur die en-Golden werden (nach Review des Diffs) neu geschrieben — verglichen wird
+	// danach beides (#3024).
 	if (process.env.GZ_GOLDEN_SCHREIBEN === 'en') schreibeGolden('en');
 });
 afterEach(() => locale.set('de'));
@@ -156,6 +157,30 @@ describe('AC-5: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 			'Amtliche Warnungen im Bericht', 'rote Gewitterwarnung', 'Gespeichert', 'Ungespeicherte Änderungen', 'Winter / Schnee', 'Eigene',
 			'So heißen diese Größen in SMS und Telegram-Kurzform:', 'Temperatur Maximum'
 		])
+			assert.ok(alle.includes(s), s);
+	});
+});
+
+// #3024: die en-Golden werden genauso verglichen wie die de-Golden — eine Aenderung an
+// der englischen Ausgabe (oder an der Golden) faellt auf. Absichtliche Aenderung:
+// Diff pruefen, dann mit GZ_GOLDEN_SCHREIBEN=en neu schreiben (Kopf von f5Pruefstand.ts).
+describe('Englisch byte-gleich zur en-Golden (Golden golden-de, Sprache en)', () => {
+	const FAELLE = htmlFaelle();
+	for (const fall of Object.keys(FAELLE)) {
+		test(`${fall}.en.html`, () => {
+			const golden = readFileSync(path.join(GOLDEN_DIR, `${fall}.en.html`), 'utf-8');
+			const { en } = deDannEn(() => FAELLE[fall]());
+			assert.equal(leerraum(en + '\n'), leerraum(golden));
+		});
+	}
+	test('funktionen.en.txt: Funktionsergebnisse in en (byte-gleich, ohne Normalisierung)', () => {
+		const golden = readFileSync(path.join(GOLDEN_DIR, 'funktionen.en.txt'), 'utf-8');
+		const { en } = deDannEn(() => funktionsTabelle());
+		assert.equal(en + '\n', golden);
+	});
+	test('Messaufbau: en-Golden enthaelt die englischen Texte aller Bausteine', () => {
+		const alle = Object.keys(FAELLE).map((f) => sichtbar(readFileSync(path.join(GOLDEN_DIR, `${f}.en.html`), 'utf-8'))).join(' ');
+		for (const s of ['01 — Profile', '04 — Thresholds', 'Loading metrics…', 'Retry', 'Unsaved changes', 'Save as your own template', 'Overwrite'])
 			assert.ok(alle.includes(s), s);
 	});
 });

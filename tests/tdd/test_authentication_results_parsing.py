@@ -470,10 +470,13 @@ class TestSpfDkimPass:
 # ---------------------------------------------------------------------------
 
 def _settings(mail_to: str, authserv: str | None) -> Settings:
-    # mail_from explizit != Absender (Loop-Guard), unabhaengig von einer lokalen .env.
+    # System-Adressen des Loop-Guards (mail_from, Eingangsadresse, Postfach-
+    # Login) explizit != Absender, unabhaengig von Umgebung/.env (#3108).
     return Settings(
         mail_to=mail_to,
         mail_from="system@example.invalid",
+        inbound_address="inbound@example.invalid",
+        smtp_user="postfach@example.invalid",
         email_verified_at="2026-01-01T00:00:00Z",
         mail_server_hostname=authserv,
     )

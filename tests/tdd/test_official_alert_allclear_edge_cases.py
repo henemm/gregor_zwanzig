@@ -17,11 +17,18 @@ import pytest
 from output.tokens.hazard_symbols import sms_symbol_for
 from tests.helpers.transport_mitschrift import aufzeichner_installieren
 from tests.tdd._official_alert_allclear_fixtures import (
-    Szenario, basis_jetzt, entwarnungen_gesamt, entwarnungs_sendungen,
+    Szenario, basis_jetzt, entwarnungen_gesamt, entwarnungs_sendungen, feste_uhr,
     lauf_erstwarnung, quellen,
 )
 
 HT = sms_symbol_for("extreme_heat")
+
+
+@pytest.fixture(autouse=True)
+def _feste_uhr():
+    """Ganzer Test unter fester Uhr (``BASIS``), nicht unter der Wanduhr."""
+    with feste_uhr():
+        yield
 
 
 @pytest.fixture

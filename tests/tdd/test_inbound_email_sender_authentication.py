@@ -484,6 +484,9 @@ def _authz_settings(mail_to: str, authserv: str) -> Settings:
     return Settings(
         mail_to=mail_to,
         mail_from=_SYSTEM_FROM,
+        # Schleifenschutz (#2961) prueft auch die Eingangsadresse: explizit
+        # setzen, sonst greift GZ_INBOUND_ADDRESS aus Umgebung/.env (#3108).
+        inbound_address="inbound@example.invalid",
         email_verified_at=_VERIFIED,
         mail_server_hostname=authserv,
         smtp_host="smtp.example.com",
