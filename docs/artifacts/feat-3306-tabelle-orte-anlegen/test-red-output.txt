@@ -1,0 +1,750 @@
+===== red-1-payload.txt =====
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/components/compare/__tests__/vergleich_anlegen_karte_payload_3306.test.ts
+
+TAP version 13
+# Subtest: \#3306 Test 1 (AC-2, AC-3): karte gesetzt — placements und Schalter-Differenz im POST
+    # Subtest: Tabelle der Karte steht unverändert in display_config.placements (Reihenfolge, Haken, Formate, Ausblick)
+    not ok 1 - Tabelle der Karte steht unverändert in display_config.placements (Reihenfolge, Haken, Formate, Ausblick)
+      ---
+      duration_ms: 2.985596
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare/__tests__/vergleich_anlegen_karte_payload_3306.test.ts:75:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        bediente Karte, aber Rumpf ohne ihren Stand
+        + actual - expected
+        
+        + undefined
+        - {
+        -   outlook_reports: [
+        -     'morning'
+        -   ],
+        -   rows: [
+        -     {
+        -       formats: {
+        -         email: 'raw'
+        -       },
+        -       metric_id: 'wind'
+        -     },
+        -     {
+        -       metric_id: 'gust',
+        -       places: {
+        -         telegram: false
+        -       }
+        -     },
+        -     {
+        -       metric_id: 'temperature'
+        -     }
+        -   ],
+        -   version: 1
+        - }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        version: 1
+        rows:
+          0:
+            metric_id: 'wind'
+            formats:
+              email: 'raw'
+          1:
+            metric_id: 'gust'
+            places:
+              telegram: false
+          2:
+            metric_id: 'temperature'
+        outlook_reports:
+          0: 'morning'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare/__tests__/vergleich_anlegen_karte_payload_3306.test.ts:77:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: Stundenverlauf und Telegram-Kurzstil geändert: Werte an ihrem Ort, sonst weicht nichts ab
+    not ok 2 - Stundenverlauf und Telegram-Kurzstil geändert: Werte an ihrem Ort, sonst weicht nichts ab
+      ---
+      duration_ms: 0.514781
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare/__tests__/vergleich_anlegen_karte_payload_3306.test.ts:81:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        hourly_enabled (top-level) nicht aus der Karte
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare/__tests__/vergleich_anlegen_karte_payload_3306.test.ts:85:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: keiner der sechs Altschlüssel im Rumpf mit Karte (\#3276)
+    ok 3 - keiner der sechs Altschlüssel im Rumpf mit Karte (\#3276)
+      ---
+      duration_ms: 0.445992
+      type: 'test'
+      ...
+    # Subtest: Tabelle bedient, Schalter unverändert: keine Schalterfelder aus der Karte im POST
+    not ok 4 - Tabelle bedient, Schalter unverändert: keine Schalterfelder aus der Karte im POST
+      ---
+      duration_ms: 0.509642
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare/__tests__/vergleich_anlegen_karte_payload_3306.test.ts:105:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + []
+        - [
+        -   'display_config.placements'
+        - ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'display_config.placements'
+      actual:
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare/__tests__/vergleich_anlegen_karte_payload_3306.test.ts:108:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Karte ohne Ampel aus dem Reiter: Tabelle und Schalter trotzdem im Rumpf (display_config wird angelegt)
+    not ok 5 - Karte ohne Ampel aus dem Reiter: Tabelle und Schalter trotzdem im Rumpf (display_config wird angelegt)
+      ---
+      duration_ms: 0.528071
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare/__tests__/vergleich_anlegen_karte_payload_3306.test.ts:111:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + undefined
+        - {
+        -   outlook_reports: [
+        -     'morning'
+        -   ],
+        -   rows: [
+        -     {
+        -       formats: {
+        -         email: 'raw'
+        -       },
+        -       metric_id: 'wind'
+        -     },
+        -     {
+        -       metric_id: 'gust',
+        -       places: {
+        -         telegram: false
+        -       }
+        -     },
+        -     {
+        -       metric_id: 'temperature'
+        -     }
+        -   ],
+        -   version: 1
+        - }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        version: 1
+        rows:
+          0:
+            metric_id: 'wind'
+            formats:
+              email: 'raw'
+          1:
+            metric_id: 'gust'
+            places:
+              telegram: false
+          2:
+            metric_id: 'temperature'
+        outlook_reports:
+          0: 'morning'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare/__tests__/vergleich_anlegen_karte_payload_3306.test.ts:114:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: der Eingabezustand bleibt unverändert (reine Funktion)
+    ok 6 - der Eingabezustand bleibt unverändert (reine Funktion)
+      ---
+      duration_ms: 0.24284
+      type: 'test'
+      ...
+    # Subtest: legeVergleichAn sendet genau einen POST auf /api/compare/presets mit Tabelle und Schaltern
+    not ok 7 - legeVergleichAn sendet genau einen POST auf /api/compare/presets mit Tabelle und Schaltern
+      ---
+      duration_ms: 0.73094
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare/__tests__/vergleich_anlegen_karte_payload_3306.test.ts:126:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        legeVergleichAn reicht die Karte nicht durch
+        + actual - expected
+        
+        + undefined
+        - {
+        -   outlook_reports: [
+        -     'morning'
+        -   ],
+        -   rows: [
+        -     {
+        -       formats: {
+        -         email: 'raw'
+        -       },
+        -       metric_id: 'wind'
+        -     },
+        -     {
+        -       metric_id: 'gust',
+        -       places: {
+        -         telegram: false
+        -       }
+        -     },
+        -     {
+        -       metric_id: 'temperature'
+        -     }
+        -   ],
+        -   version: 1
+        - }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        version: 1
+        rows:
+          0:
+            metric_id: 'wind'
+            formats:
+              email: 'raw'
+          1:
+            metric_id: 'gust'
+            places:
+              telegram: false
+          2:
+            metric_id: 'temperature'
+        outlook_reports:
+          0: 'morning'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare/__tests__/vergleich_anlegen_karte_payload_3306.test.ts:134:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..7
+not ok 1 - \#3306 Test 1 (AC-2, AC-3): karte gesetzt — placements und Schalter-Differenz im POST
+  ---
+  duration_ms: 7.062266
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare/__tests__/vergleich_anlegen_karte_payload_3306.test.ts:74:1'
+  failureType: 'subtestsFailed'
+  error: '5 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3306 Test 2 (AC-5): karte nicht gesetzt — Rumpf wie heute (Regressionsschutz)
+    # Subtest: keine placements und keine Schalterfelder aus der Karte
+    ok 1 - keine placements und keine Schalterfelder aus der Karte
+      ---
+      duration_ms: 0.38359
+      type: 'test'
+      ...
+    # Subtest: karte: undefined ist bitgleich zu einem Aufruf ohne das Feld
+    ok 2 - karte: undefined ist bitgleich zu einem Aufruf ohne das Feld
+      ---
+      duration_ms: 0.493122
+      type: 'test'
+      ...
+    1..2
+ok 2 - \#3306 Test 2 (AC-5): karte nicht gesetzt — Rumpf wie heute (Regressionsschutz)
+  ---
+  duration_ms: 1.340472
+  type: 'suite'
+  ...
+# Subtest: \#3306 Test 3 (AC-9): zwei Bedienstellen bis \#3307 — nur gegenüber dem Kartenstart Geändertes gilt
+    # Subtest: Altblock hat Kurzstil und Stundenverlauf gesetzt, Karte unverändert: Altblock-Werte gelten
+    not ok 1 - Altblock hat Kurzstil und Stundenverlauf gesetzt, Karte unverändert: Altblock-Werte gelten
+      ---
+      duration_ms: 0.551061
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare/__tests__/vergleich_anlegen_karte_payload_3306.test.ts:153:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + []
+        - [
+        -   'display_config.placements'
+        - ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'display_config.placements'
+      actual:
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare/__tests__/vergleich_anlegen_karte_payload_3306.test.ts:159:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: Karte startete mit dem Altblock-Wert, wurde dann geändert: Karten-Wert gilt
+    not ok 2 - Karte startete mit dem Altblock-Wert, wurde dann geändert: Karten-Wert gilt
+      ---
+      duration_ms: 0.29034
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare/__tests__/vergleich_anlegen_karte_payload_3306.test.ts:162:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        geänderter Kartenwert gilt nicht
+        
+        'kurzform' !== 'rich'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'rich'
+      actual: 'kurzform'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare/__tests__/vergleich_anlegen_karte_payload_3306.test.ts:166:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: nur ein Schalter in der Karte geändert: der andere bleibt beim Altblock-Wert
+    not ok 3 - nur ein Schalter in der Karte geändert: der andere bleibt beim Altblock-Wert
+      ---
+      duration_ms: 0.31348
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare/__tests__/vergleich_anlegen_karte_payload_3306.test.ts:170:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare/__tests__/vergleich_anlegen_karte_payload_3306.test.ts:174:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 3 - \#3306 Test 3 (AC-9): zwei Bedienstellen bis \#3307 — nur gegenüber dem Kartenstart Geändertes gilt
+  ---
+  duration_ms: 1.333482
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare/__tests__/vergleich_anlegen_karte_payload_3306.test.ts:152:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..3
+# tests 12
+# suites 3
+# pass 4
+# fail 8
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 298.844596
+
+===== red-2-verdrahtung.txt =====
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts
+
+TAP version 13
+# (node:458170) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: \#3306 V1 (AC-1): die Karte steht beim Ortsvergleich-Anlegen an beiden Stellen (Desktop, Mobil)
+    # Subtest: Desktop: Einbettung reicht Rückkanal und Startstand durch, die Karte ist sichtbar
+    not ok 1 - Desktop: Einbettung reicht Rückkanal und Startstand durch, die Karte ist sichtbar
+      ---
+      duration_ms: 3013.707194
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:208:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Desktop: onAnlegeKarte fehlt — ohne Rückkanal keine Karte (ihr Stand käme nicht in den POST)
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:215:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: Mobil: Einbettung reicht Rückkanal und Startstand durch, die Karte ist sichtbar
+    not ok 2 - Mobil: Einbettung reicht Rückkanal und Startstand durch, die Karte ist sichtbar
+      ---
+      duration_ms: 81.645767
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:208:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Mobil: onAnlegeKarte fehlt — ohne Rückkanal keine Karte (ihr Stand käme nicht in den POST)
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:215:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 1 - \#3306 V1 (AC-1): die Karte steht beim Ortsvergleich-Anlegen an beiden Stellen (Desktop, Mobil)
+  ---
+  duration_ms: 3096.303904
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:206:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3306 V2 (AC-2, AC-4): Kartenbedienung -> Editor -> genau der Anlege-POST trägt die Tabelle
+    # Subtest: Haken, Format, Reihenfolge und Ausblick in der Karte stehen im POST display_config.placements; kein PUT
+    not ok 1 - Haken, Format, Reihenfolge und Ausblick in der Karte stehen im POST display_config.placements; kein PUT
+      ---
+      duration_ms: 575.913906
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:223:2'
+      failureType: 'testCodeFailure'
+      error: 'Kartenmeldung kam nicht beim Editor an (onAnlegeKarte -> karteStand)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:231:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..1
+not ok 2 - \#3306 V2 (AC-2, AC-4): Kartenbedienung -> Editor -> genau der Anlege-POST trägt die Tabelle
+  ---
+  duration_ms: 576.327579
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:222:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3306 V3 (AC-3): Schalter der Karte -> POST
+    # Subtest: Stundenverlauf aus und Telegram-Kurzstil: hourly_enabled=false, display_config.telegram_style=kurzform; keine Altschlüssel
+    not ok 1 - Stundenverlauf aus und Telegram-Kurzstil: hourly_enabled=false, display_config.telegram_style=kurzform; keine Altschlüssel
+      ---
+      duration_ms: 115.546348
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:243:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Stundenverlauf der Karte fehlt im POST
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:249:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..1
+not ok 3 - \#3306 V3 (AC-3): Schalter der Karte -> POST
+  ---
+  duration_ms: 115.839199
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:242:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3306 V4 (AC-1): Neuaufbau (Desktop <-> Mobil, Schritt vor und zurück) behält den Kartenstand
+    # Subtest: Desktop -> Mobil
+    not ok 1 - Desktop -> Mobil
+      ---
+      duration_ms: 168.951039
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:261:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        neu aufgebaute Karte hat den Haken verloren
+        + actual - expected
+        
+        + undefined
+        - false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:270:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Mobil -> Desktop
+    not ok 2 - Mobil -> Desktop
+      ---
+      duration_ms: 145.59769
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:261:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        neu aufgebaute Karte hat den Haken verloren
+        + actual - expected
+        
+        + undefined
+        - false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:270:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Schritt Zustellung und zurück
+    not ok 3 - Schritt Zustellung und zurück
+      ---
+      duration_ms: 173.455147
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:261:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        neu aufgebaute Karte hat den Haken verloren
+        + actual - expected
+        
+        + undefined
+        - false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:270:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 4 - \#3306 V4 (AC-1): Neuaufbau (Desktop <-> Mobil, Schritt vor und zurück) behält den Kartenstand
+  ---
+  duration_ms: 488.539268
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:259:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3306 V5 (AC-1, AC-7): Vorschau-Entwurf trägt die gewählten Orte und die Schalter des Feldsatzes
+    # Subtest: erste Vorschau der Karte: location_ids = gewählte Orte, hourly_enabled und display_config.telegram_style aus dem Feldsatz
+    not ok 1 - erste Vorschau der Karte: location_ids = gewählte Orte, hourly_enabled und display_config.telegram_style aus dem Feldsatz
+      ---
+      duration_ms: 115.119667
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:283:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Vorschau ohne die gewählten Orte — keine Beispielwerte
+        + actual - expected
+        
+        + undefined
+        - [
+        -   'ort-a',
+        -   'ort-b'
+        - ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'ort-a'
+        1: 'ort-b'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:289:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Standard-Feldsatz: hourly_enabled=true, telegram_style=rich im Entwurf
+    not ok 2 - Standard-Feldsatz: hourly_enabled=true, telegram_style=rich im Entwurf
+      ---
+      duration_ms: 107.994892
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:295:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + undefined
+        - [
+        -   'ort-a',
+        -   'ort-b'
+        - ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'ort-a'
+        1: 'ort-b'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:299:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 5 - \#3306 V5 (AC-1, AC-7): Vorschau-Entwurf trägt die gewählten Orte und die Schalter des Feldsatzes
+  ---
+  duration_ms: 223.46428
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_karte_verdrahtung_3306.test.ts:282:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3306 V6 (AC-5): Karte nie bedient — POST wie heute
+    # Subtest: Schritt Wetter geöffnet, Karte geladen, nichts geändert: POST ohne placements, kein PUT
+    ok 1 - Schritt Wetter geöffnet, Karte geladen, nichts geändert: POST ohne placements, kein PUT
+      ---
+      duration_ms: 103.731124
+      type: 'test'
+      ...
+    1..1
+ok 6 - \#3306 V6 (AC-5): Karte nie bedient — POST wie heute
+  ---
+  duration_ms: 103.952765
+  type: 'suite'
+  ...
+1..6
+# tests 10
+# suites 6
+# pass 1
+# fail 9
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5901.943639
+
+===== red-3-pytest.txt =====
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl
+configfile: pyproject.toml
+plugins: xdist-3.8.0, timeout-2.4.0, anyio-4.14.2, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 8 items
+
+tests/tdd/test_3306_vorschau_vergleich_entwurf_frueh.py ........         [100%]
+
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  /home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 8 passed, 2 warnings in 2.23s =========================
+
+===== red-4-e2e-list.txt =====
+Listing tests:
+  [setup] › global.setup.ts:10:1 › authenticate and seed test data
+  [tests] › vergleich-anlegen-was-steht-wo-3306.spec.ts:172:2 › #3306 Tabelle „Was steht wo“ beim Ortsvergleich-Anlegen › VA-1 (AC-1): Karte in Desktop und Mobil mit Beispielwerten der Orte, Stand überlebt Ansichts- und Schrittwechsel
+  [tests] › vergleich-anlegen-was-steht-wo-3306.spec.ts:203:2 › #3306 Tabelle „Was steht wo“ beim Ortsvergleich-Anlegen › VA-2 (AC-2/3/4): genau ein POST mit Tabelle und Schaltern, kein PUT, keine Altschlüssel
+  [tests] › vergleich-anlegen-was-steht-wo-3306.spec.ts:232:2 › #3306 Tabelle „Was steht wo“ beim Ortsvergleich-Anlegen › VA-3 (AC-5): Karte nicht bedient — POST ohne placements.rows und ohne Schalterfelder aus der Karte
+  [tests] › vergleich-anlegen-was-steht-wo-3306.spec.ts:244:2 › #3306 Tabelle „Was steht wo“ beim Ortsvergleich-Anlegen › VA-4 (AC-6): Reiter Wetter des neuen Ortsvergleichs zeigt das beim Anlegen Eingestellte
+  [tests] › vergleich-anlegen-was-steht-wo-3306.spec.ts:265:2 › #3306 Tabelle „Was steht wo“ beim Ortsvergleich-Anlegen › VA-5 (AC-7): zweiter Nutzer sieht Ortsvergleich und Tabelle von A nicht; Vorschau als B ohne Orte von A
+Total: 6 tests in 2 files
+
