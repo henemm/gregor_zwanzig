@@ -1,0 +1,1642 @@
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts src/lib/components/shared/__tests__/alarme_tab_ohne_zustellung_3332.test.ts src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_ssr_3332.test.ts src/lib/components/shared/__tests__/infobox_nur_beim_anlegen.test.ts
+
+TAP version 13
+# Subtest: \#3332 Test 5 (AC-9): Abschnittsliste mit und ohne Zustellungs-Abschnitte
+    # Subtest: route, ohneZustellung: channels, cooldown, quiet-hours fehlen; Rest in unveränderter Reihenfolge
+    not ok 1 - route, ohneZustellung: channels, cooldown, quiet-hours fehlen; Rest in unveränderter Reihenfolge
+      ---
+      duration_ms: 1.746052
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/alarme_tab_ohne_zustellung_3332.test.ts:60:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        ohneZustellung liefert ["official-warnings","metric-levels","channels","cooldown","quiet-hours","sample"]
+        + actual - expected
+        
+          [
+            'official-warnings',
+            'metric-levels',
+        +   'channels',
+        +   'cooldown',
+        +   'quiet-hours',
+            'sample'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'official-warnings'
+        1: 'metric-levels'
+        2: 'sample'
+      actual:
+        0: 'official-warnings'
+        1: 'metric-levels'
+        2: 'channels'
+        3: 'cooldown'
+        4: 'quiet-hours'
+        5: 'sample'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/alarme_tab_ohne_zustellung_3332.test.ts:63:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: ohne den Parameter bzw. mit false: Liste unverändert (Hub, Ortsvergleich)
+    ok 2 - ohne den Parameter bzw. mit false: Liste unverändert (Hub, Ortsvergleich)
+      ---
+      duration_ms: 0.296751
+      type: 'test'
+      ...
+    1..2
+not ok 1 - \#3332 Test 5 (AC-9): Abschnittsliste mit und ohne Zustellungs-Abschnitte
+  ---
+  duration_ms: 2.775542
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/alarme_tab_ohne_zustellung_3332.test.ts:59:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3332 Test 5 (AC-9): Wirkort — der gerenderte Reiter Alarme
+    # Subtest: Trip-Anlegen (route, createMode): keine Abschnitte Kanäle, Cooldown, Stille Stunden; Warnungen und Metrik-Stufen bleiben
+    not ok 1 - Trip-Anlegen (route, createMode): keine Abschnitte Kanäle, Cooldown, Stille Stunden; Warnungen und Metrik-Stufen bleiben
+      ---
+      duration_ms: 12.936102
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/alarme_tab_ohne_zustellung_3332.test.ts:76:2'
+      failureType: 'testCodeFailure'
+      error: 'Trip-Anlegen: Abschnitt "channels" hat eine zweite Bedienstelle (Reiter Zustellung besitzt ihn) — gerendert: ["official-warnings","metric-levels","channels","cooldown","quiet-hours","sample"]'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/alarme_tab_ohne_zustellung_3332.test.ts:79:38)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: Trip-Hub (route, ohne createMode): Liste vollständig
+    ok 2 - Trip-Hub (route, ohne createMode): Liste vollständig
+      ---
+      duration_ms: 1.407002
+      type: 'test'
+      ...
+    # Subtest: Ortsvergleich-Anlegen (vergleich, createMode): Liste vollständig, D1 ändert dort nichts (AC-13)
+    ok 3 - Ortsvergleich-Anlegen (vergleich, createMode): Liste vollständig, D1 ändert dort nichts (AC-13)
+      ---
+      duration_ms: 1.631301
+      type: 'test'
+      ...
+    1..3
+not ok 2 - \#3332 Test 5 (AC-9): Wirkort — der gerenderte Reiter Alarme
+  ---
+  duration_ms: 16.207726
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/alarme_tab_ohne_zustellung_3332.test.ts:75:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# (node:645876) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: AC-1/AC-3/AC-4: /trips/new zeigt die Infobox in jedem überspringbaren Reiter
+    # Subtest: Desktop: Reiter alarme trägt genau eine Infobox mit dem freigegebenen Text
+    ok 1 - Desktop: Reiter alarme trägt genau eine Infobox mit dem freigegebenen Text
+      ---
+      duration_ms: 7554.262517
+      type: 'test'
+      ...
+    # Subtest: Desktop: Reiter wegpunkte trägt genau eine Infobox mit dem freigegebenen Text
+    ok 2 - Desktop: Reiter wegpunkte trägt genau eine Infobox mit dem freigegebenen Text
+      ---
+      duration_ms: 10.808601
+      type: 'test'
+      ...
+    # Subtest: Desktop: \#3332 AC-11 — Schritt Zustellung des Trips: Reiter Zustellung ohne Infobox, Alarme-Infobox bleibt
+    not ok 3 - Desktop: \#3332 AC-11 — Schritt Zustellung des Trips: Reiter Zustellung ohne Infobox, Alarme-Infobox bleibt
+      ---
+      duration_ms: 4.388344
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/infobox_nur_beim_anlegen.test.ts:130:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Messaufbau: Reiter Zustellung nicht im Schritt Zustellung
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/infobox_nur_beim_anlegen.test.ts:132:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Mobil: Reiter alarme trägt genau eine Infobox mit dem freigegebenen Text
+    ok 4 - Mobil: Reiter alarme trägt genau eine Infobox mit dem freigegebenen Text
+      ---
+      duration_ms: 5.569796
+      type: 'test'
+      ...
+    # Subtest: Mobil: Reiter wegpunkte trägt genau eine Infobox mit dem freigegebenen Text
+    ok 5 - Mobil: Reiter wegpunkte trägt genau eine Infobox mit dem freigegebenen Text
+      ---
+      duration_ms: 6.919327
+      type: 'test'
+      ...
+    # Subtest: Mobil: \#3332 AC-11 — Schritt Zustellung des Trips: Reiter Zustellung ohne Infobox, Alarme-Infobox bleibt
+    not ok 6 - Mobil: \#3332 AC-11 — Schritt Zustellung des Trips: Reiter Zustellung ohne Infobox, Alarme-Infobox bleibt
+      ---
+      duration_ms: 5.761966
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/infobox_nur_beim_anlegen.test.ts:130:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Messaufbau: Reiter Zustellung nicht im Schritt Zustellung
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/infobox_nur_beim_anlegen.test.ts:132:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..6
+not ok 3 - AC-1/AC-3/AC-4: /trips/new zeigt die Infobox in jedem überspringbaren Reiter
+  ---
+  duration_ms: 7589.0278
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/infobox_nur_beim_anlegen.test.ts:105:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-5: Trip-Pflichtreiter Route und Etappen tragen keine Infobox
+    # Subtest: Desktop: Reiter route — keine Infobox für diesen Reiter, keine fremde
+    ok 1 - Desktop: Reiter route — keine Infobox für diesen Reiter, keine fremde
+      ---
+      duration_ms: 19.410279
+      type: 'test'
+      ...
+    # Subtest: Desktop: Reiter etappen — keine Infobox für diesen Reiter, keine fremde
+    ok 2 - Desktop: Reiter etappen — keine Infobox für diesen Reiter, keine fremde
+      ---
+      duration_ms: 13.379403
+      type: 'test'
+      ...
+    # Subtest: Mobil: Reiter route — keine Infobox für diesen Reiter, keine fremde
+    ok 3 - Mobil: Reiter route — keine Infobox für diesen Reiter, keine fremde
+      ---
+      duration_ms: 7.540928
+      type: 'test'
+      ...
+    # Subtest: Mobil: Reiter etappen — keine Infobox für diesen Reiter, keine fremde
+    ok 4 - Mobil: Reiter etappen — keine Infobox für diesen Reiter, keine fremde
+      ---
+      duration_ms: 4.141934
+      type: 'test'
+      ...
+    1..4
+ok 4 - AC-5: Trip-Pflichtreiter Route und Etappen tragen keine Infobox
+  ---
+  duration_ms: 44.897414
+  type: 'suite'
+  ...
+# Subtest: AC-2/AC-3: /compare/new zeigt die Infobox (Versand), Desktop UND Mobil
+    # Subtest: Desktop: Schritt Wetter — keine Wertebereiche-Infobox mehr (Korridor-Editor entfernt)
+    ok 1 - Desktop: Schritt Wetter — keine Wertebereiche-Infobox mehr (Korridor-Editor entfernt)
+      ---
+      duration_ms: 201.315196
+      type: 'test'
+      ...
+    # Subtest: Desktop: Versand-Abschnitt im Schritt Zustellung — Infobox je Abschnitt mit Vergleichs-Text (nur 07:00, kein 18:00)
+    ok 2 - Desktop: Versand-Abschnitt im Schritt Zustellung — Infobox je Abschnitt mit Vergleichs-Text (nur 07:00, kein 18:00)
+      ---
+      duration_ms: 2.900243
+      type: 'test'
+      ...
+    # Subtest: Mobil: Schritt Wetter — keine Wertebereiche-Infobox mehr (Korridor-Editor entfernt)
+    ok 3 - Mobil: Schritt Wetter — keine Wertebereiche-Infobox mehr (Korridor-Editor entfernt)
+      ---
+      duration_ms: 14.816575
+      type: 'test'
+      ...
+    # Subtest: Mobil: Versand-Abschnitt im Schritt Zustellung — Infobox je Abschnitt mit Vergleichs-Text (nur 07:00, kein 18:00)
+    ok 4 - Mobil: Versand-Abschnitt im Schritt Zustellung — Infobox je Abschnitt mit Vergleichs-Text (nur 07:00, kein 18:00)
+      ---
+      duration_ms: 3.528704
+      type: 'test'
+      ...
+    # Subtest: Wetter-Metriken (Desktop): Infobox mit Vergleichs-Text, nicht dem Trip-Text
+    ok 5 - Wetter-Metriken (Desktop): Infobox mit Vergleichs-Text, nicht dem Trip-Text
+      ---
+      duration_ms: 1.821802
+      type: 'test'
+      ...
+    1..5
+ok 5 - AC-2/AC-3: /compare/new zeigt die Infobox (Versand), Desktop UND Mobil
+  ---
+  duration_ms: 224.72863
+  type: 'suite'
+  ...
+# Subtest: AC-5: Ortsvergleich-Pflichtreiter Vergleich und Orte tragen keine Infobox
+    # Subtest: Desktop: Reiter vergleich — gar keine Infobox im Dokument
+    ok 1 - Desktop: Reiter vergleich — gar keine Infobox im Dokument
+      ---
+      duration_ms: 2.711512
+      type: 'test'
+      ...
+    # Subtest: Desktop: Reiter orte — gar keine Infobox im Dokument
+    ok 2 - Desktop: Reiter orte — gar keine Infobox im Dokument
+      ---
+      duration_ms: 4.967956
+      type: 'test'
+      ...
+    # Subtest: Mobil: Reiter vergleich — gar keine Infobox im Dokument
+    ok 3 - Mobil: Reiter vergleich — gar keine Infobox im Dokument
+      ---
+      duration_ms: 5.263025
+      type: 'test'
+      ...
+    # Subtest: Mobil: Reiter orte — gar keine Infobox im Dokument
+    ok 4 - Mobil: Reiter orte — gar keine Infobox im Dokument
+      ---
+      duration_ms: 1.650462
+      type: 'test'
+      ...
+    1..4
+ok 6 - AC-5: Ortsvergleich-Pflichtreiter Vergleich und Orte tragen keine Infobox
+  ---
+  duration_ms: 14.788374
+  type: 'suite'
+  ...
+# Subtest: \#1743 AC-22: Anlegen — Versand-Infobox steht im Schritt Wetter-Metriken über dem Versand-Inhalt
+    # Subtest: Desktop: /compare/new
+    ok 1 - Desktop: /compare/new
+      ---
+      duration_ms: 1.290161
+      type: 'test'
+      ...
+    # Subtest: Mobil: /compare/new
+    ok 2 - Mobil: /compare/new
+      ---
+      duration_ms: 1.246832
+      type: 'test'
+      ...
+    1..2
+ok 7 - \#1743 AC-22: Anlegen — Versand-Infobox steht im Schritt Wetter-Metriken über dem Versand-Inhalt
+  ---
+  duration_ms: 2.619193
+  type: 'suite'
+  ...
+# Subtest: AC-1/AC-2/AC-3: Organismus MIT showInfobox rendert die Infobox (auch im Lade-Zustand)
+    # Subtest: AlarmeTab (route): genau eine Infobox "alarme" mit dem freigegebenen Text
+    ok 1 - AlarmeTab (route): genau eine Infobox "alarme" mit dem freigegebenen Text
+      ---
+      duration_ms: 13.801414
+      type: 'test'
+      ...
+    # Subtest: AlarmeTab (vergleich): genau eine Infobox "alarme" mit dem freigegebenen Text
+    ok 2 - AlarmeTab (vergleich): genau eine Infobox "alarme" mit dem freigegebenen Text
+      ---
+      duration_ms: 2.251332
+      type: 'test'
+      ...
+    # Subtest: WeatherMetricsTab (vergleich): genau eine Infobox "wetter-metriken" mit dem freigegebenen Text
+    ok 3 - WeatherMetricsTab (vergleich): genau eine Infobox "wetter-metriken" mit dem freigegebenen Text
+      ---
+      duration_ms: 1.068271
+      type: 'test'
+      ...
+    # Subtest: VersandTab (vergleich): genau eine Infobox "versand" mit dem freigegebenen Text
+    ok 4 - VersandTab (vergleich): genau eine Infobox "versand" mit dem freigegebenen Text
+      ---
+      duration_ms: 1.668161
+      type: 'test'
+      ...
+    1..4
+ok 8 - AC-1/AC-2/AC-3: Organismus MIT showInfobox rendert die Infobox (auch im Lade-Zustand)
+  ---
+  duration_ms: 19.002668
+  type: 'suite'
+  ...
+# Subtest: AC-6: Organismus OHNE showInfobox (Bearbeiten-Hub): keine Infobox, aber die ⓘ-Erklärungen
+    # Subtest: AlarmeTab (route): kein Infobox-Element, ⓘ kanal_schwelle + cooldown vorhanden
+    ok 1 - AlarmeTab (route): kein Infobox-Element, ⓘ kanal_schwelle + cooldown vorhanden
+      ---
+      duration_ms: 1.108171
+      type: 'test'
+      ...
+    # Subtest: AlarmeTab (vergleich): kein Infobox-Element, ⓘ kanal_schwelle + cooldown vorhanden
+    ok 2 - AlarmeTab (vergleich): kein Infobox-Element, ⓘ kanal_schwelle + cooldown vorhanden
+      ---
+      duration_ms: 1.977072
+      type: 'test'
+      ...
+    # Subtest: WeatherMetricsTab (vergleich): kein Infobox-Element
+    ok 3 - WeatherMetricsTab (vergleich): kein Infobox-Element
+      ---
+      duration_ms: 0.939651
+      type: 'test'
+      ...
+    # Subtest: VersandTab (vergleich): kein Infobox-Element
+    ok 4 - VersandTab (vergleich): kein Infobox-Element
+      ---
+      duration_ms: 2.136532
+      type: 'test'
+      ...
+    1..4
+ok 9 - AC-6: Organismus OHNE showInfobox (Bearbeiten-Hub): keine Infobox, aber die ⓘ-Erklärungen
+  ---
+  duration_ms: 6.332077
+  type: 'suite'
+  ...
+# Subtest: Verdrahtung: jeder Anlege-Mount setzt showInfobox explizit auf true
+    # Subtest: TripNewEditor: Mount-Anzahl stimmt (sonst beweist „alle" nichts) und jeder trägt showInfobox
+    not ok 1 - TripNewEditor: Mount-Anzahl stimmt (sonst beweist „alle" nichts) und jeder trägt showInfobox
+      ---
+      duration_ms: 207.271232
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/infobox_nur_beim_anlegen.test.ts:450:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TripNewEditor: WetterMetrikenVersandPanel hat 2 statt 0 Mounts
+        
+        2 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 2
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/infobox_nur_beim_anlegen.test.ts:454:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: CompareNewEditor: Mount-Anzahl stimmt (sonst beweist „alle" nichts) und jeder trägt showInfobox
+    ok 2 - CompareNewEditor: Mount-Anzahl stimmt (sonst beweist „alle" nichts) und jeder trägt showInfobox
+      ---
+      duration_ms: 57.042496
+      type: 'test'
+      ...
+    # Subtest: \#3332 AC-11: TripNewEditor mountet den Reiter Zustellung zweimal (Desktop + Mobil), nie mit showInfobox
+    not ok 3 - \#3332 AC-11: TripNewEditor mountet den Reiter Zustellung zweimal (Desktop + Mobil), nie mit showInfobox
+      ---
+      duration_ms: 103.411951
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/infobox_nur_beim_anlegen.test.ts:466:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        TripNewEditor: ZustellungTab hat 0 statt 2 Mounts
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/infobox_nur_beim_anlegen.test.ts:469:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: TripNewEditor: das Wegpunkte-Panel trägt eine Infobox (Desktop- und Mobil-Baum)
+    ok 4 - TripNewEditor: das Wegpunkte-Panel trägt eine Infobox (Desktop- und Mobil-Baum)
+      ---
+      duration_ms: 66.327834
+      type: 'test'
+      ...
+    1..4
+not ok 10 - Verdrahtung: jeder Anlege-Mount setzt showInfobox explizit auf true
+  ---
+  duration_ms: 434.266804
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/infobox_nur_beim_anlegen.test.ts:430:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-6 Verdrahtung: die Bearbeiten-Hubs und die Wertprop-Bündel setzen showInfobox NIE
+    # Subtest: Trip-Hub (TripTabs + Reiter Zustellung): mountet die Organismen (nicht vakuum) ohne showInfobox
+    ok 1 - Trip-Hub (TripTabs + Reiter Zustellung): mountet die Organismen (nicht vakuum) ohne showInfobox
+      ---
+      duration_ms: 83.973213
+      type: 'test'
+      ...
+    # Subtest: CompareTabs: mountet die Organismen (nicht vakuum) ohne showInfobox
+    ok 2 - CompareTabs: mountet die Organismen (nicht vakuum) ohne showInfobox
+      ---
+      duration_ms: 67.050365
+      type: 'test'
+      ...
+    # Subtest: wetterMetriken-/alarme-/versandPropsAus liefern kein showInfobox-Feld
+    ok 3 - wetterMetriken-/alarme-/versandPropsAus liefern kein showInfobox-Feld
+      ---
+      duration_ms: 37.081635
+      type: 'test'
+      ...
+    1..3
+ok 11 - AC-6 Verdrahtung: die Bearbeiten-Hubs und die Wertprop-Bündel setzen showInfobox NIE
+  ---
+  duration_ms: 188.368814
+  type: 'suite'
+  ...
+# Subtest: \#3332 Test 1 (AC-2, AC-3, AC-5): Anlege-Speicherer meldet {stand, nutzlast} statt zu speichern
+    # Subtest: Trip: Zeiten, Kanäle, Dringlichkeit, Stille, Cooldown geändert — eine Meldung, Nutzlast nur Geändertes, kein Netz
+    not ok 1 - Trip: Zeiten, Kanäle, Dringlichkeit, Stille, Cooldown geändert — eine Meldung, Nutzlast nur Geändertes, kein Netz
+      ---
+      duration_ms: 1.740162
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts:55:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        zustellungSpeicherung.ts exportiert keinen Anlege-Speicherer `erstelleZustellungAnlegeSpeicherer`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        speicherer (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts:32:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts:57:29)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: nur Geändertes: eine Uhrzeit allein ergibt nur den Versand-Teil, Alarme null
+    not ok 2 - nur Geändertes: eine Uhrzeit allein ergibt nur den Versand-Teil, Alarme null
+      ---
+      duration_ms: 0.40283
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts:89:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        zustellungSpeicherung.ts exportiert keinen Anlege-Speicherer `erstelleZustellungAnlegeSpeicherer`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        speicherer (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts:32:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts:91:29)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Delta immer gegen den Anlege-Start, nicht gegen die letzte Meldung (im Anlegen wird nichts gespeichert)
+    not ok 3 - Delta immer gegen den Anlege-Start, nicht gegen die letzte Meldung (im Anlegen wird nichts gespeichert)
+      ---
+      duration_ms: 0.412701
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts:96:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        zustellungSpeicherung.ts exportiert keinen Anlege-Speicherer `erstelleZustellungAnlegeSpeicherer`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        speicherer (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts:32:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts:98:29)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: zurück auf den Start: Meldung mit leerer Nutzlast (kein Rest der früheren Änderung)
+    not ok 4 - zurück auf den Start: Meldung mit leerer Nutzlast (kein Rest der früheren Änderung)
+      ---
+      duration_ms: 0.41028
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts:106:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        zustellungSpeicherung.ts exportiert keinen Anlege-Speicherer `erstelleZustellungAnlegeSpeicherer`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        speicherer (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts:32:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts:108:29)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: rasterfremde Uhrzeit (06:50): Stand wird gemeldet, die Nutzlast trägt keine Uhrzeit (AC-7)
+    not ok 5 - rasterfremde Uhrzeit (06:50): Stand wird gemeldet, die Nutzlast trägt keine Uhrzeit (AC-7)
+      ---
+      duration_ms: 0.32233
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts:115:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        zustellungSpeicherung.ts exportiert keinen Anlege-Speicherer `erstelleZustellungAnlegeSpeicherer`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        speicherer (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts:32:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts:117:29)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: die Meldung hängt nicht am Objekt des Aufrufers (spätere Mutation ändert die Meldung nicht)
+    not ok 6 - die Meldung hängt nicht am Objekt des Aufrufers (spätere Mutation ändert die Meldung nicht)
+      ---
+      duration_ms: 0.327301
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts:123:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        zustellungSpeicherung.ts exportiert keinen Anlege-Speicherer `erstelleZustellungAnlegeSpeicherer`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        speicherer (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts:32:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts:125:29)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Ortsvergleich (vorbereitet für D2): Felder top-level, gleiche reine Funktion
+    not ok 7 - Ortsvergleich (vorbereitet für D2): Felder top-level, gleiche reine Funktion
+      ---
+      duration_ms: 0.29369
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts:132:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        zustellungSpeicherung.ts exportiert keinen Anlege-Speicherer `erstelleZustellungAnlegeSpeicherer`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        speicherer (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts:32:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts:134:29)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..7
+not ok 12 - \#3332 Test 1 (AC-2, AC-3, AC-5): Anlege-Speicherer meldet {stand, nutzlast} statt zu speichern
+  ---
+  duration_ms: 4.907275
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/zustellung-tab/__tests__/zustellung_anlege_speicherer_3332.test.ts:54:1'
+  failureType: 'subtestsFailed'
+  error: '7 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3332 Test 2 (AC-2, AC-3): mitZustellung mischt den Stand in report_config und Alarm-Felder
+    # Subtest: Zeiten, Schalter, Briefing-Kanäle in report_config; bestehende Felder erhalten
+    not ok 1 - Zeiten, Schalter, Briefing-Kanäle in report_config; bestehende Felder erhalten
+      ---
+      duration_ms: 1.467922
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:67:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        tripNewLogic.ts exportiert keinen reinen Helfer `mitZustellung`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellung (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:31:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:68:28)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+      ...
+    # Subtest: beide Briefings aus: enabled false
+    not ok 2 - beide Briefings aus: enabled false
+      ---
+      duration_ms: 0.255519
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:81:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        tripNewLogic.ts exportiert keinen reinen Helfer `mitZustellung`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellung (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:31:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:82:28)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: Alarm-Kanäle, Dringlichkeit, Stille, Cooldown in den Alarm-Zustand; Metrik-Stufen und Warnungen bleiben
+    not ok 3 - Alarm-Kanäle, Dringlichkeit, Stille, Cooldown in den Alarm-Zustand; Metrik-Stufen und Warnungen bleiben
+      ---
+      duration_ms: 0.2354
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:86:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        tripNewLogic.ts exportiert keinen reinen Helfer `mitZustellung`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellung (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:31:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:88:21)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Stille Stunden aus: quietFrom/quietTo leer, im POST null
+    not ok 4 - Stille Stunden aus: quietFrom/quietTo leer, im POST null
+      ---
+      duration_ms: 0.151851
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:98:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        tripNewLogic.ts exportiert keinen reinen Helfer `mitZustellung`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellung (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:31:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:99:35)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: im POST: report_config und Alarm-Felder tragen genau die eingestellten Werte
+    not ok 5 - im POST: report_config und Alarm-Felder tragen genau die eingestellten Werte
+      ---
+      duration_ms: 0.1673
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:107:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        tripNewLogic.ts exportiert keinen reinen Helfer `mitZustellung`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellung (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:31:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:108:35)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Reiter nie bedient (stand undefined): Ausgabe gleich Eingabe
+    not ok 6 - Reiter nie bedient (stand undefined): Ausgabe gleich Eingabe
+      ---
+      duration_ms: 0.149059
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:122:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        tripNewLogic.ts exportiert keinen reinen Helfer `mitZustellung`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellung (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:31:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:125:13)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: rein: Eingaben bleiben unverändert
+    not ok 7 - rein: Eingaben bleiben unverändert
+      ---
+      duration_ms: 0.22391
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:130:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        tripNewLogic.ts exportiert keinen reinen Helfer `mitZustellung`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellung (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:31:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:135:3)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: ohne report_config im Editor: Helfer legt ihn an
+    not ok 8 - ohne report_config im Editor: Helfer legt ihn an
+      ---
+      duration_ms: 0.188139
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:139:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        tripNewLogic.ts exportiert keinen reinen Helfer `mitZustellung`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellung (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:31:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:140:28)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..8
+not ok 13 - \#3332 Test 2 (AC-2, AC-3): mitZustellung mischt den Stand in report_config und Alarm-Felder
+  ---
+  duration_ms: 3.758893
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:66:1'
+  failureType: 'subtestsFailed'
+  error: '8 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3332 Test 4 (AC-7): rasterfremde Uhrzeit wird nie übernommen
+    # Subtest: 06:50: vorhandene gültige Zeit bleibt, 06:50 nirgends im POST
+    not ok 1 - 06:50: vorhandene gültige Zeit bleibt, 06:50 nirgends im POST
+      ---
+      duration_ms: 0.484722
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:146:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        tripNewLogic.ts exportiert keinen reinen Helfer `mitZustellung`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellung (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:31:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:147:35)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+      ...
+    # Subtest: Abendzeit 18:07 ohne vorhandenen Wert: kein evening_time aus dem Stand (Standard aus dem POST-Ergänzer)
+    not ok 2 - Abendzeit 18:07 ohne vorhandenen Wert: kein evening_time aus dem Stand (Standard aus dem POST-Ergänzer)
+      ---
+      duration_ms: 0.288571
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:152:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        tripNewLogic.ts exportiert keinen reinen Helfer `mitZustellung`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellung (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:31:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:153:35)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gültige Zeiten derselben Meldung gehen trotzdem durch
+    not ok 3 - gültige Zeiten derselben Meldung gehen trotzdem durch
+      ---
+      duration_ms: 0.16198
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:158:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        tripNewLogic.ts exportiert keinen reinen Helfer `mitZustellung`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellung (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:31:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:159:28)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 14 - \#3332 Test 4 (AC-7): rasterfremde Uhrzeit wird nie übernommen
+  ---
+  duration_ms: 1.081781
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts:145:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# (node:645943) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: \#3332 Test 6 (AC-1): Trip-Anlegen, Schritt Zustellung
+    # Subtest: Desktop: Reiter Zustellung mit Briefing-Zeiten, Kanal-Tabelle, Stille Stunden — genau einmal, im richtigen Baum
+    not ok 1 - Desktop: Reiter Zustellung mit Briefing-Zeiten, Kanal-Tabelle, Stille Stunden — genau einmal, im richtigen Baum
+      ---
+      duration_ms: 31.30772
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_ssr_3332.test.ts:25:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Reiter Zustellung nicht genau einmal im Schritt Zustellung
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_ssr_3332.test.ts:28:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: Desktop: Alt-Panel (Versand-Abschnitt) und Mail-Inhalt-Karte erscheinen nicht mehr
+    not ok 2 - Desktop: Alt-Panel (Versand-Abschnitt) und Mail-Inhalt-Karte erscheinen nicht mehr
+      ---
+      duration_ms: 3.563173
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_ssr_3332.test.ts:38:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Alt-Panel noch im Trip-Anlegen (zweiter Schreiber der Versand-Felder)
+        
+        1 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 1
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_ssr_3332.test.ts:41:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: Mobil: Reiter Zustellung mit Briefing-Zeiten, Kanal-Tabelle, Stille Stunden — genau einmal, im richtigen Baum
+    not ok 3 - Mobil: Reiter Zustellung mit Briefing-Zeiten, Kanal-Tabelle, Stille Stunden — genau einmal, im richtigen Baum
+      ---
+      duration_ms: 3.555554
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_ssr_3332.test.ts:25:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Reiter Zustellung nicht genau einmal im Schritt Zustellung
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_ssr_3332.test.ts:28:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Mobil: Alt-Panel (Versand-Abschnitt) und Mail-Inhalt-Karte erscheinen nicht mehr
+    not ok 4 - Mobil: Alt-Panel (Versand-Abschnitt) und Mail-Inhalt-Karte erscheinen nicht mehr
+      ---
+      duration_ms: 2.911202
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_ssr_3332.test.ts:38:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Alt-Panel noch im Trip-Anlegen (zweiter Schreiber der Versand-Felder)
+        
+        1 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 1
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_ssr_3332.test.ts:41:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..4
+not ok 15 - \#3332 Test 6 (AC-1): Trip-Anlegen, Schritt Zustellung
+  ---
+  duration_ms: 44.048563
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_ssr_3332.test.ts:22:1'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3332 Test 6 (AC-13): Ortsvergleich-Anlegen unverändert
+    # Subtest: Desktop: Schritt Zustellung zeigt weiter das Alt-Panel, keinen Reiter Zustellung
+    ok 1 - Desktop: Schritt Zustellung zeigt weiter das Alt-Panel, keinen Reiter Zustellung
+      ---
+      duration_ms: 246.632671
+      type: 'test'
+      ...
+    # Subtest: Mobil: Schritt Zustellung zeigt weiter das Alt-Panel, keinen Reiter Zustellung
+    ok 2 - Mobil: Schritt Zustellung zeigt weiter das Alt-Panel, keinen Reiter Zustellung
+      ---
+      duration_ms: 3.512244
+      type: 'test'
+      ...
+    1..2
+ok 16 - \#3332 Test 6 (AC-13): Ortsvergleich-Anlegen unverändert
+  ---
+  duration_ms: 250.528875
+  type: 'suite'
+  ...
+# Subtest: \#3332 Referenz-Fixture (Messaufbau)
+    # Subtest: Fixture liegt vor und trägt Versand-, Mail- und Alarm-Felder (nicht leer)
+    ok 1 - Fixture liegt vor und trägt Versand-, Mail- und Alarm-Felder (nicht leer)
+      ---
+      duration_ms: 10.546
+      type: 'test'
+      ...
+    1..1
+ok 17 - \#3332 Referenz-Fixture (Messaufbau)
+  ---
+  duration_ms: 11.413881
+  type: 'suite'
+  ...
+# Subtest: \#3332 Test 3 (AC-4): Reiter nie bedient — POST bitgleich zu heute
+    # Subtest: report_config, Alarm-Felder und display_config.channels gleichen der Referenz
+    not ok 1 - report_config, Alarm-Felder und display_config.channels gleichen der Referenz
+      ---
+      duration_ms: 1090.349935
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:182:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        ... Skipped lines
+        
+          {
+            alert_channel_thresholds: {
+              email: 'LOW',
+              premium_sms: 'LOW',
+              sms: 'LOW',
+        ...
+            report_config: {
+        -     daily_summary_metrics: [
+        -       'precipitation',
+        -       'wind',
+        -       'visibility',
+        -       'thunder'
+        -     ],
+        -     email_format: 'full',
+              enabled: true,
+              evening_enabled: true,
+              evening_time: '18:00:00',
+              morning_enabled: true,
+              morning_time: '07:00:00',
+        ...
+              send_telegram: false,
+        -     show_compact_summary: true,
+        -     show_highlights: true,
+        -     show_metrics_summary: false,
+        -     show_outlook: true,
+        -     show_quick_take_tags: true,
+        -     show_stability: true,
+        -     show_stage_stats: true,
+        -     show_yesterday_comparison: true,
+              telegram_style: 'rich',
+        -     wind_exposition_min_elevation_m: null
+            }
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        report_config:
+          telegram_style: 'rich'
+          enabled: true
+          morning_enabled: true
+          evening_enabled: true
+          morning_time: '07:00:00'
+          evening_time: '18:00:00'
+          multi_day_trend_reports:
+            0: 'evening'
+          send_email: true
+          send_telegram: false
+          send_sms: false
+          send_premium_sms: false
+          show_compact_summary: true
+          wind_exposition_min_elevation_m: ~
+          show_stage_stats: true
+          show_quick_take_tags: true
+          show_stability: true
+          show_highlights: true
+          daily_summary_metrics:
+            0: 'precipitation'
+            1: 'wind'
+            2: 'visibility'
+            3: 'thunder'
+          show_metrics_summary: false
+          show_outlook: true
+          email_format: 'full'
+          show_yesterday_comparison: true
+        display_config_channels:
+          email: true
+          telegram: true
+          sms: false
+        alert_channels:
+          email: true
+          telegram: true
+          sms: false
+          premium_sms: false
+        alert_channel_thresholds:
+          email: 'LOW'
+          telegram: 'LOW'
+          sms: 'LOW'
+          premium_sms: 'LOW'
+        alert_quiet_from: ~
+        alert_quiet_to: ~
+        alert_cooldown_minutes: ~
+        official_warnings:
+          enabled: true
+        official_alerts_enabled: true
+      actual:
+        report_config:
+          telegram_style: 'rich'
+          enabled: true
+          morning_enabled: true
+          evening_enabled: true
+          morning_time: '07:00:00'
+          evening_time: '18:00:00'
+          multi_day_trend_reports:
+            0: 'evening'
+          send_email: true
+          send_telegram: false
+          send_sms: false
+          send_premium_sms: false
+        display_config_channels:
+          email: true
+          telegram: true
+          sms: false
+        alert_channels:
+          email: true
+          telegram: true
+          sms: false
+          premium_sms: false
+        alert_channel_thresholds:
+          email: 'LOW'
+          telegram: 'LOW'
+          sms: 'LOW'
+          premium_sms: 'LOW'
+        alert_quiet_from: ~
+        alert_quiet_to: ~
+        alert_cooldown_minutes: ~
+        official_warnings:
+          enabled: true
+        official_alerts_enabled: true
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:184:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Reiter geöffnet (Desktop und Mobil gebaut, Profil geladen), aber nicht bedient: POST unverändert, keine Meldung nötig
+    not ok 2 - Reiter geöffnet (Desktop und Mobil gebaut, Profil geladen), aber nicht bedient: POST unverändert, keine Meldung nötig
+      ---
+      duration_ms: 260.541696
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:187:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        TripNewEditor bettet 0 statt 2 ZustellungTab ein (Desktop + Mobil, AC-1)
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        reiter (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:106:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:189:9)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Startstand des Reiters = was der POST ohne Bedienung sendet (Zeiten, Kanäle, Alarm-Kanäle, Dringlichkeit, Stille)
+    not ok 3 - Startstand des Reiters = was der POST ohne Bedienung sendet (Zeiten, Kanäle, Alarm-Kanäle, Dringlichkeit, Stille)
+      ---
+      duration_ms: 247.681861
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:194:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        TripNewEditor bettet 0 statt 2 ZustellungTab ein (Desktop + Mobil, AC-1)
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        reiter (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:106:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:197:20)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 18 - \#3332 Test 3 (AC-4): Reiter nie bedient — POST bitgleich zu heute
+  ---
+  duration_ms: 1600.515214
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:181:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3332 AC-10: Mail-Inhalt ohne MailInhaltCard — Karte „Was steht wo“ wirkt, Bestandsfelder behalten den Standard
+    # Subtest: Karte nicht bedient: E-Mail-Format, Etappen-Statistik, Vortagesvergleich, Großwetterlage wie heute
+    not ok 1 - Karte nicht bedient: E-Mail-Format, Etappen-Statistik, Vortagesvergleich, Großwetterlage wie heute
+      ---
+      duration_ms: 239.313474
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:213:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        report_config.email_format weicht vom heutigen Körper ab
+        + actual - expected
+        
+        + undefined
+        - 'full'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'full'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:217:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Karte bedient (Kompakt, Etappen-Statistik aus, Nacht-Block aus): genau diese Werte, show_stability bleibt Standard
+    not ok 2 - Karte bedient (Kompakt, Etappen-Statistik aus, Nacht-Block aus): genau diese Werte, show_stability bleibt Standard
+      ---
+      duration_ms: 202.107677
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:220:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Großwetterlage nicht auf dem Standard
+        + actual - expected
+        
+        + undefined
+        - true
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:232:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 19 - \#3332 AC-10: Mail-Inhalt ohne MailInhaltCard — Karte „Was steht wo“ wirkt, Bestandsfelder behalten den Standard
+  ---
+  duration_ms: 442.167822
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:211:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3332 Test 2 (AC-2, AC-3, AC-5): Bedienung im Reiter -> genau der eine POST trägt sie
+    # Subtest: Zeiten, Kanäle, Dringlichkeit HIGH, Stille, Cooldown stehen im POST; kein PUT, kein Schreibaufruf
+    not ok 1 - Zeiten, Kanäle, Dringlichkeit HIGH, Stille, Cooldown stehen im POST; kein PUT, kein Schreibaufruf
+      ---
+      duration_ms: 179.568625
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:251:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        TripNewEditor bettet 0 statt 2 ZustellungTab ein (Desktop + Mobil, AC-1)
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        reiter (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:106:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:254:19)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Stille Stunden wieder aus: POST ohne Stille (null), Rest bleibt
+    not ok 2 - Stille Stunden wieder aus: POST ohne Stille (null), Rest bleibt
+      ---
+      duration_ms: 165.592002
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:281:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        TripNewEditor bettet 0 statt 2 ZustellungTab ein (Desktop + Mobil, AC-1)
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        reiter (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:106:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:283:19)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 20 - \#3332 Test 2 (AC-2, AC-3, AC-5): Bedienung im Reiter -> genau der eine POST trägt sie
+  ---
+  duration_ms: 345.623908
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:250:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3332 Test 4 (AC-7): rasterfremde Uhrzeit — der POST trägt die letzte gültige
+    # Subtest: 06:45, dann 06:50 eingegeben: POST morning_time 06:45:00
+    not ok 1 - 06:45, dann 06:50 eingegeben: POST morning_time 06:45:00
+      ---
+      duration_ms: 140.732597
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:294:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        TripNewEditor bettet 0 statt 2 ZustellungTab ein (Desktop + Mobil, AC-1)
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        reiter (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:106:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:296:19)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: nur 06:50 eingegeben: POST behält die Startzeit, nie 06:50
+    not ok 2 - nur 06:50 eingegeben: POST behält die Startzeit, nie 06:50
+      ---
+      duration_ms: 162.596049
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:303:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        TripNewEditor bettet 0 statt 2 ZustellungTab ein (Desktop + Mobil, AC-1)
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        reiter (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:106:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:305:19)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 21 - \#3332 Test 4 (AC-7): rasterfremde Uhrzeit — der POST trägt die letzte gültige
+  ---
+  duration_ms: 303.646726
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:293:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3332 Test 7 (AC-6): Neuaufbau (Wechsel Desktop <-> Mobil, Schritte) behält den Stand
+    # Subtest: Desktop -> Mobil
+    not ok 1 - Desktop -> Mobil
+      ---
+      duration_ms: 238.868024
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:316:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TripNewEditor bettet 0 statt 2 ZustellungTab ein (Desktop + Mobil, AC-1)
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        reiter (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:106:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:318:21)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Mobil -> Desktop
+    not ok 2 - Mobil -> Desktop
+      ---
+      duration_ms: 143.614379
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:316:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TripNewEditor bettet 0 statt 2 ZustellungTab ein (Desktop + Mobil, AC-1)
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        reiter (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:106:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:318:21)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Desktop neu aufgebaut
+    not ok 3 - Desktop neu aufgebaut
+      ---
+      duration_ms: 133.35184
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:316:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TripNewEditor bettet 0 statt 2 ZustellungTab ein (Desktop + Mobil, AC-1)
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        reiter (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:106:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:318:21)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 22 - \#3332 Test 7 (AC-6): Neuaufbau (Wechsel Desktop <-> Mobil, Schritte) behält den Stand
+  ---
+  duration_ms: 516.256714
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts:314:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..22
+# tests 78
+# suites 22
+# pass 38
+# fail 40
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 9561.986499

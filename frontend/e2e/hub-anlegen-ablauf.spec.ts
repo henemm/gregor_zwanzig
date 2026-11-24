@@ -367,6 +367,17 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 			expect(vorherRes.ok(), `GET ${ANLEGE_SEL[kind].postPfad} HTTP ${vorherRes.status()}`).toBeTruthy();
 			const vorherIds = ((await vorherRes.json()) as Array<{ id: string }>).map((e) => e.id);
 			try {
+				if (kind === 'route') {
+					// #3332 (AC-3): im Trip-Anlegen steht die Dringlichkeit im Reiter Zustellung, sichtbar nur für einen
+					// VERBUNDENEN Kanal. Wie unten im Hub ergänzt NUR die Profil-Lesung im Browser eine Test-Chat-ID
+					// (kein Profil wird verändert); der Reiter liest das Profil beim Aufbau der Anlege-Seite.
+					await page.route('**/api/auth/profile', async (route) => {
+						if (route.request().method() !== 'GET') return route.continue();
+						const echt = await route.fetch();
+						const profil = (await echt.json()) as Record<string, unknown>;
+						await route.fulfill({ response: echt, json: { ...profil, telegram_chat_id: 'e2e-an6-test-chat' } });
+					});
+				}
 				await anlegenPflicht(page, kind, { name });
 
 				// #2794 S3a: Schritt Wetter = Metrik-Auswahl + Wertebereiche; Schritt Zustellung =
@@ -382,10 +393,20 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 
 				await schrittOeffnen(page, kind, 'zustellung');
 				// #3276: die Stundenverlauf-Auswahl des Vergleichs ist entfernt (nur noch Karte „Was steht wo“).
-				const hoch = page.locator('[data-testid="alert-channel-threshold-telegram-HIGH"]:visible').first();
+				// Kind-Kontrast #3332 (D1): der Trip bedient die Dringlichkeit im Reiter Zustellung (Segment, role=radio,
+				// aria-checked); der Vergleich bis D2 (#3333) im Reiter Alarme (AlertChannelPicker, aria-pressed).
+				const STUFE: Record<HubKind, { sel: string; attr: string }> = {
+					route: { sel: '[data-testid="zustellung-tab"]:visible [data-testid="zustellung-kanal-telegram-dringlichkeit-HIGH"]', attr: 'aria-checked' },
+					vergleich: { sel: '[data-testid="alert-channel-threshold-telegram-HIGH"]:visible', attr: 'aria-pressed' }
+				};
+				const hoch = page.locator(STUFE[kind].sel).first();
 				await expect(hoch, 'AN-6: Kanal-Stufe im Zustellungs-Schritt fehlt').toBeVisible({ timeout: 15_000 });
 				await hoch.click();
-				await expect(hoch).toHaveAttribute('aria-pressed', 'true');
+				await expect(hoch).toHaveAttribute(STUFE[kind].attr, 'true');
+				if (kind === 'route') {
+					// #3332 AC-9: genau eine Bedienstelle — die alte Stufen-Wahl des Reiters Alarme ist im Trip-Anlegen weg.
+					await expect(page.locator('[data-testid="alert-channel-threshold-telegram-HIGH"]:visible'), 'AN-6: zweite Bedienstelle der Kanal-Stufe').toHaveCount(0);
+				}
 
 				const antwortKommt = anlegePost(page, kind);
 				await sel.abschluss(page).click();
