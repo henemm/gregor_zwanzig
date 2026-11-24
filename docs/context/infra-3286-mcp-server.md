@@ -133,3 +133,16 @@ Startwarnung für `GZ_MCP_USER_IDS` ohne Konto (`cmd/server/main.go`, `warnPrivi
 - [ ] Spec: gilt `.env.example` im Deploy-Gate als docs-only? Vor dem Commit am Scope-Detektor prüfen.
 - [ ] Rechte-Eintrag in `.env`: sperrt der Auto-Modus, die Freigabe beim PO einholen, nicht umgehen.
 - [ ] Keine Produktfrage an den PO offen.
+
+## Stand nach TDD RED (2026-11-24)
+
+- Kern-Test `tests/tdd/test_staging_mcp_pruefen.py` (76 rot, Werkzeug fehlt). Der Kopf der Datei ist der Schnittstellen-Vertrag
+  für `.claude/tools/staging_mcp_pruefen.py`: `main(argv, *, env, basis, server_merkmal)`, Schalter `--vor-freigabe` für AC-6.
+- Textvertrag nginx (Test 7): henemm-infra, Branch `feat-gregor-3286-mcp-staging`, `tests/test_staging_mcp_nginx.py` (35 rot), gepusht.
+  Dort fehlt noch die Conf-Änderung; Klon fürs Weiterarbeiten: `gh repo clone henemm/henemm-infra` in den Scratchpad.
+- Live-Ist-Stand vor der Änderung: `docs/artifacts/infra-3286-mcp-server/red-live-pfade.txt`. Den Exit-1-Lauf des Skripts gegen
+  Staging (AC-10) in Phase 6 **vor** dem nginx-Rollout nachholen, sobald das Skript existiert.
+- Zugangsdaten liegen nicht auf dem iMac, sondern auf dem Server: `/home/hem/gregor_zwanzig/.claude/validator.env`
+  (`GZ_VALIDATOR_*`), `/home/hem/gregor_zwanzig/.claude/staging_admin.env` (`GZ_STAGING_ADMIN_*`), Staging-`.env` (`GZ_AUTH_*`).
+  Für den Lauf per Umgebung reichen, nie ausgeben oder ablegen.
+- AC-12 (Produktion) per curl prüfen, das Skript ist nur für Staging.

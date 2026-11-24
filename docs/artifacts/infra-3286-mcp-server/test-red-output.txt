@@ -1,0 +1,2110 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.15, pytest-9.2.0, pluggy-1.6.0
+rootdir: /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull
+configfile: pyproject.toml
+plugins: socket-0.8.0, xdist-3.8.0, timeout-2.4.0, anyio-4.14.2
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 76 items
+
+tests/tdd/test_staging_mcp_pruefen.py FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF [ 44%]
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF                               [100%]
+
+=================================== FAILURES ===================================
+_______________________ test_vollstaendiges_soll_besteht _______________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10950b500>
+lauf = <function lauf.<locals>._lauf at 0x10954c720>
+
+    def test_vollstaendiges_soll_besteht(staging, lauf):
+        """Test 3 (AC-1 bis AC-5, AC-9): alles wie gefordert -> Exit 0, alle Pfade wirklich abgefragt."""
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:240: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_________________ test_basic_zugangsdaten_nur_an_die_anmeldung _________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x109548980>
+lauf = <function lauf.<locals>._lauf at 0x1095d1760>
+
+    def test_basic_zugangsdaten_nur_an_die_anmeldung(staging, lauf):
+        """Sonst bewiese die Probe nichts: mit Basic ist jeder Pfad offen."""
+>       lauf(staging.basis)
+
+tests/tdd/test_staging_mcp_pruefen.py:248: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_ test_einzelner_blockierter_soll_pfad[/.well-known/oauth-authorization-server] _
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x109549790>
+lauf = <function lauf.<locals>._lauf at 0x1095d1d00>
+pfad = '/.well-known/oauth-authorization-server'
+
+    @pytest.mark.parametrize("pfad", SOLL)
+    def test_einzelner_blockierter_soll_pfad(staging, lauf, pfad):
+        """Test 1 (AC-1, AC-2, AC-10)."""
+        staging.blockiert = {pfad}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:256: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_ test_einzelner_blockierter_soll_pfad[/.well-known/oauth-protected-resource] __
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10954a630>
+lauf = <function lauf.<locals>._lauf at 0x1095d28e0>
+pfad = '/.well-known/oauth-protected-resource'
+
+    @pytest.mark.parametrize("pfad", SOLL)
+    def test_einzelner_blockierter_soll_pfad(staging, lauf, pfad):
+        """Test 1 (AC-1, AC-2, AC-10)."""
+        staging.blockiert = {pfad}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:256: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_ test_einzelner_blockierter_soll_pfad[/.well-known/oauth-protected-resource/api/mcp] _
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10954b590>
+lauf = <function lauf.<locals>._lauf at 0x1095d3100>
+pfad = '/.well-known/oauth-protected-resource/api/mcp'
+
+    @pytest.mark.parametrize("pfad", SOLL)
+    def test_einzelner_blockierter_soll_pfad(staging, lauf, pfad):
+        """Test 1 (AC-1, AC-2, AC-10)."""
+        staging.blockiert = {pfad}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:256: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+________________ test_einzelner_blockierter_soll_pfad[/api/mcp] ________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10954a150>
+lauf = <function lauf.<locals>._lauf at 0x1095d1ee0>, pfad = '/api/mcp'
+
+    @pytest.mark.parametrize("pfad", SOLL)
+    def test_einzelner_blockierter_soll_pfad(staging, lauf, pfad):
+        """Test 1 (AC-1, AC-2, AC-10)."""
+        staging.blockiert = {pfad}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:256: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+________ test_einzelner_blockierter_soll_pfad[/api/mcp/oauth/register] _________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x107844f80>
+lauf = <function lauf.<locals>._lauf at 0x107794540>
+pfad = '/api/mcp/oauth/register'
+
+    @pytest.mark.parametrize("pfad", SOLL)
+    def test_einzelner_blockierter_soll_pfad(staging, lauf, pfad):
+        """Test 1 (AC-1, AC-2, AC-10)."""
+        staging.blockiert = {pfad}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:256: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+________ test_einzelner_blockierter_soll_pfad[/api/mcp/oauth/authorize] ________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x107844a10>
+lauf = <function lauf.<locals>._lauf at 0x107451a80>
+pfad = '/api/mcp/oauth/authorize'
+
+    @pytest.mark.parametrize("pfad", SOLL)
+    def test_einzelner_blockierter_soll_pfad(staging, lauf, pfad):
+        """Test 1 (AC-1, AC-2, AC-10)."""
+        staging.blockiert = {pfad}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:256: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+__________ test_einzelner_blockierter_soll_pfad[/api/mcp/oauth/token] __________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10781d250>
+lauf = <function lauf.<locals>._lauf at 0x107452520>
+pfad = '/api/mcp/oauth/token'
+
+    @pytest.mark.parametrize("pfad", SOLL)
+    def test_einzelner_blockierter_soll_pfad(staging, lauf, pfad):
+        """Test 1 (AC-1, AC-2, AC-10)."""
+        staging.blockiert = {pfad}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:256: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_____________ test_alle_soll_pfade_blockiert_wie_vor_der_aenderung _____________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10781cec0>
+lauf = <function lauf.<locals>._lauf at 0x107453420>
+
+    def test_alle_soll_pfade_blockiert_wie_vor_der_aenderung(staging, lauf):
+        """Test 1 / AC-13: Ist-Stand bzw. Rollback -> Exit 1 (nicht 2), alle Pfade genannt."""
+        staging.blockiert = set(SOLL)
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:264: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_______________________ test_offener_verbotspfad[/-200] ________________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10781d1c0>
+lauf = <function lauf.<locals>._lauf at 0x10746f6a0>, pfad = '/', status = 200
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_______________________ test_offener_verbotspfad[/-302] ________________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1077e9d60>
+lauf = <function lauf.<locals>._lauf at 0x10746e3e0>, pfad = '/', status = 302
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_______________________ test_offener_verbotspfad[/-401] ________________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1077eb6e0>
+lauf = <function lauf.<locals>._lauf at 0x10746c040>, pfad = '/', status = 401
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_______________________ test_offener_verbotspfad[/-404] ________________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1077e81a0>
+lauf = <function lauf.<locals>._lauf at 0x10746f100>, pfad = '/', status = 404
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_____________________ test_offener_verbotspfad[/login-200] _____________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1077e9010>
+lauf = <function lauf.<locals>._lauf at 0x10746f380>, pfad = '/login'
+status = 200
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_____________________ test_offener_verbotspfad[/login-302] _____________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10776d100>
+lauf = <function lauf.<locals>._lauf at 0x107620540>, pfad = '/login'
+status = 302
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_____________________ test_offener_verbotspfad[/login-401] _____________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10776e840>
+lauf = <function lauf.<locals>._lauf at 0x107623e20>, pfad = '/login'
+status = 401
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_____________________ test_offener_verbotspfad[/login-404] _____________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10776ce90>
+lauf = <function lauf.<locals>._lauf at 0x107623420>, pfad = '/login'
+status = 404
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+___________________ test_offener_verbotspfad[/api/trips-200] ___________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10776fa40>
+lauf = <function lauf.<locals>._lauf at 0x10746c9a0>, pfad = '/api/trips'
+status = 200
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+___________________ test_offener_verbotspfad[/api/trips-302] ___________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10776f860>
+lauf = <function lauf.<locals>._lauf at 0x10746f4c0>, pfad = '/api/trips'
+status = 302
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+___________________ test_offener_verbotspfad[/api/trips-401] ___________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10776fe90>
+lauf = <function lauf.<locals>._lauf at 0x10746e160>, pfad = '/api/trips'
+status = 401
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+___________________ test_offener_verbotspfad[/api/trips-404] ___________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1077e9010>
+lauf = <function lauf.<locals>._lauf at 0x107451120>, pfad = '/api/trips'
+status = 404
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+___________________ test_offener_verbotspfad[/api/mcpx-200] ____________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1077ea840>
+lauf = <function lauf.<locals>._lauf at 0x107451940>, pfad = '/api/mcpx'
+status = 200
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+___________________ test_offener_verbotspfad[/api/mcpx-302] ____________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1077e81a0>
+lauf = <function lauf.<locals>._lauf at 0x1074523e0>, pfad = '/api/mcpx'
+status = 302
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+___________________ test_offener_verbotspfad[/api/mcpx-401] ____________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10781e810>
+lauf = <function lauf.<locals>._lauf at 0x107795440>, pfad = '/api/mcpx'
+status = 401
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+___________________ test_offener_verbotspfad[/api/mcpx-404] ____________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10781c920>
+lauf = <function lauf.<locals>._lauf at 0x107794f40>, pfad = '/api/mcpx'
+status = 404
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+___________ test_offener_verbotspfad[/api/_internal/mcp/wetter-200] ____________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10765f020>
+lauf = <function lauf.<locals>._lauf at 0x1076239c0>
+pfad = '/api/_internal/mcp/wetter', status = 200
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+___________ test_offener_verbotspfad[/api/_internal/mcp/wetter-302] ____________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10765dac0>
+lauf = <function lauf.<locals>._lauf at 0x107622b60>
+pfad = '/api/_internal/mcp/wetter', status = 302
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+___________ test_offener_verbotspfad[/api/_internal/mcp/wetter-401] ____________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10765e6f0>
+lauf = <function lauf.<locals>._lauf at 0x107623600>
+pfad = '/api/_internal/mcp/wetter', status = 401
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+___________ test_offener_verbotspfad[/api/_internal/mcp/wetter-404] ____________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10765e450>
+lauf = <function lauf.<locals>._lauf at 0x107622340>
+pfad = '/api/_internal/mcp/wetter', status = 404
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_______ test_offener_verbotspfad[/.well-known/openid-configuration-200] ________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10765fb30>
+lauf = <function lauf.<locals>._lauf at 0x1074523e0>
+pfad = '/.well-known/openid-configuration', status = 200
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_______ test_offener_verbotspfad[/.well-known/openid-configuration-302] ________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10765dd60>
+lauf = <function lauf.<locals>._lauf at 0x107453d80>
+pfad = '/.well-known/openid-configuration', status = 302
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_______ test_offener_verbotspfad[/.well-known/openid-configuration-401] ________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10765f2f0>
+lauf = <function lauf.<locals>._lauf at 0x107795580>
+pfad = '/.well-known/openid-configuration', status = 401
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_______ test_offener_verbotspfad[/.well-known/openid-configuration-404] ________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10781eff0>
+lauf = <function lauf.<locals>._lauf at 0x10746e840>
+pfad = '/.well-known/openid-configuration', status = 404
+
+    @pytest.mark.parametrize("status", [200, 302, 401, 404])
+    @pytest.mark.parametrize("pfad", VERBOTEN)
+    def test_offener_verbotspfad(staging, lauf, pfad, status):
+        """Test 2 (AC-3): nur 401 MIT Basic gilt; 401 der App, Weiterleitung und 404 sind offen."""
+        staging.offen = {pfad: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:274: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+___________________ test_interner_pfad_muss_403_bleiben[200] ___________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10781e060>
+lauf = <function lauf.<locals>._lauf at 0x10746fe20>, status = 200
+
+    @pytest.mark.parametrize("status", [200, 401, 404])
+    def test_interner_pfad_muss_403_bleiben(staging, lauf, status):
+        """AC-3."""
+        staging.offen = {INTERN: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:283: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+___________________ test_interner_pfad_muss_403_bleiben[401] ___________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1077e9340>
+lauf = <function lauf.<locals>._lauf at 0x10746d4e0>, status = 401
+
+    @pytest.mark.parametrize("status", [200, 401, 404])
+    def test_interner_pfad_muss_403_bleiben(staging, lauf, status):
+        """AC-3."""
+        staging.offen = {INTERN: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:283: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+___________________ test_interner_pfad_muss_403_bleiben[404] ___________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10776d790>
+lauf = <function lauf.<locals>._lauf at 0x107622480>, status = 404
+
+    @pytest.mark.parametrize("status", [200, 401, 404])
+    def test_interner_pfad_muss_403_bleiben(staging, lauf, status):
+        """AC-3."""
+        staging.offen = {INTERN: status}
+>       rc, text = lauf(staging.basis)
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:283: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+____________ test_metadaten_und_bearer_hinweis_falsch[abweichung0] _____________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10776c2f0>
+lauf = <function lauf.<locals>._lauf at 0x107621580>
+abweichung = {'meta_basis': 'https://gregor20.henemm.com'}
+
+    @pytest.mark.parametrize("abweichung", [
+        {"meta_basis": "https://gregor20.henemm.com"}, {"meta_html": True},
+        {"www": "Bearer"}, {"www": 'Basic realm="Staging"'},
+        {"www": 'Bearer resource_metadata="https://gregor20.henemm.com/.well-known/oauth-protected-resource/api/mcp"'},
+    ])
+    def test_metadaten_und_bearer_hinweis_falsch(staging, lauf, abweichung):
+        """AC-1, AC-2: falscher Issuer, HTML statt JSON, falscher WWW-Authenticate."""
+        vars(staging).update(abweichung)
+>       assert lauf(staging.basis)[0] == 1
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:296: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+____________ test_metadaten_und_bearer_hinweis_falsch[abweichung1] _____________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x107443890>
+lauf = <function lauf.<locals>._lauf at 0x107621c60>
+abweichung = {'meta_html': True}
+
+    @pytest.mark.parametrize("abweichung", [
+        {"meta_basis": "https://gregor20.henemm.com"}, {"meta_html": True},
+        {"www": "Bearer"}, {"www": 'Basic realm="Staging"'},
+        {"www": 'Bearer resource_metadata="https://gregor20.henemm.com/.well-known/oauth-protected-resource/api/mcp"'},
+    ])
+    def test_metadaten_und_bearer_hinweis_falsch(staging, lauf, abweichung):
+        """AC-1, AC-2: falscher Issuer, HTML statt JSON, falscher WWW-Authenticate."""
+        vars(staging).update(abweichung)
+>       assert lauf(staging.basis)[0] == 1
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:296: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+____________ test_metadaten_und_bearer_hinweis_falsch[abweichung2] _____________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1074428a0>
+lauf = <function lauf.<locals>._lauf at 0x1076227a0>
+abweichung = {'www': 'Bearer'}
+
+    @pytest.mark.parametrize("abweichung", [
+        {"meta_basis": "https://gregor20.henemm.com"}, {"meta_html": True},
+        {"www": "Bearer"}, {"www": 'Basic realm="Staging"'},
+        {"www": 'Bearer resource_metadata="https://gregor20.henemm.com/.well-known/oauth-protected-resource/api/mcp"'},
+    ])
+    def test_metadaten_und_bearer_hinweis_falsch(staging, lauf, abweichung):
+        """AC-1, AC-2: falscher Issuer, HTML statt JSON, falscher WWW-Authenticate."""
+        vars(staging).update(abweichung)
+>       assert lauf(staging.basis)[0] == 1
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:296: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+____________ test_metadaten_und_bearer_hinweis_falsch[abweichung3] _____________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1074402f0>
+lauf = <function lauf.<locals>._lauf at 0x1076214e0>
+abweichung = {'www': 'Basic realm="Staging"'}
+
+    @pytest.mark.parametrize("abweichung", [
+        {"meta_basis": "https://gregor20.henemm.com"}, {"meta_html": True},
+        {"www": "Bearer"}, {"www": 'Basic realm="Staging"'},
+        {"www": 'Bearer resource_metadata="https://gregor20.henemm.com/.well-known/oauth-protected-resource/api/mcp"'},
+    ])
+    def test_metadaten_und_bearer_hinweis_falsch(staging, lauf, abweichung):
+        """AC-1, AC-2: falscher Issuer, HTML statt JSON, falscher WWW-Authenticate."""
+        vars(staging).update(abweichung)
+>       assert lauf(staging.basis)[0] == 1
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:296: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+____________ test_metadaten_und_bearer_hinweis_falsch[abweichung4] _____________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10741a600>
+lauf = <function lauf.<locals>._lauf at 0x10748e200>
+abweichung = {'www': 'Bearer resource_metadata="https://gregor20.henemm.com/.well-known/oauth-protected-resource/api/mcp"'}
+
+    @pytest.mark.parametrize("abweichung", [
+        {"meta_basis": "https://gregor20.henemm.com"}, {"meta_html": True},
+        {"www": "Bearer"}, {"www": 'Basic realm="Staging"'},
+        {"www": 'Bearer resource_metadata="https://gregor20.henemm.com/.well-known/oauth-protected-resource/api/mcp"'},
+    ])
+    def test_metadaten_und_bearer_hinweis_falsch(staging, lauf, abweichung):
+        """AC-1, AC-2: falscher Issuer, HTML statt JSON, falscher WWW-Authenticate."""
+        vars(staging).update(abweichung)
+>       assert lauf(staging.basis)[0] == 1
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:296: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+________________ test_oauth_ablauf_unvollstaendig[abweichung0] _________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1074409b0>
+lauf = <function lauf.<locals>._lauf at 0x107623b00>
+abweichung = {'frei': set()}
+
+    @pytest.mark.parametrize("abweichung", [
+        {"frei": set()}, {"code_status": 200}, {"ohne_code": True}, {"werkzeuge": ["ort_suchen"]},
+        {"wetter": {"ort": {"name": "Innsbruck"}, "stunden": []}}, {"wetter": {"ort": {}, "stunden": [{"t2m_c": 1}]}},
+        {"wetter": "Der Wetterdienst antwortet nicht."}, {"wetter_fehler": True},
+    ])
+    def test_oauth_ablauf_unvollstaendig(staging, lauf, abweichung):
+        """AC-4: jeder einzelne Schritt zählt."""
+        vars(staging).update(abweichung)
+>       assert lauf(staging.basis)[0] == 1
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:307: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+________________ test_oauth_ablauf_unvollstaendig[abweichung1] _________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1074408c0>
+lauf = <function lauf.<locals>._lauf at 0x107621800>
+abweichung = {'code_status': 200}
+
+    @pytest.mark.parametrize("abweichung", [
+        {"frei": set()}, {"code_status": 200}, {"ohne_code": True}, {"werkzeuge": ["ort_suchen"]},
+        {"wetter": {"ort": {"name": "Innsbruck"}, "stunden": []}}, {"wetter": {"ort": {}, "stunden": [{"t2m_c": 1}]}},
+        {"wetter": "Der Wetterdienst antwortet nicht."}, {"wetter_fehler": True},
+    ])
+    def test_oauth_ablauf_unvollstaendig(staging, lauf, abweichung):
+        """AC-4: jeder einzelne Schritt zählt."""
+        vars(staging).update(abweichung)
+>       assert lauf(staging.basis)[0] == 1
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:307: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+________________ test_oauth_ablauf_unvollstaendig[abweichung2] _________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10776ea80>
+lauf = <function lauf.<locals>._lauf at 0x10746e160>
+abweichung = {'ohne_code': True}
+
+    @pytest.mark.parametrize("abweichung", [
+        {"frei": set()}, {"code_status": 200}, {"ohne_code": True}, {"werkzeuge": ["ort_suchen"]},
+        {"wetter": {"ort": {"name": "Innsbruck"}, "stunden": []}}, {"wetter": {"ort": {}, "stunden": [{"t2m_c": 1}]}},
+        {"wetter": "Der Wetterdienst antwortet nicht."}, {"wetter_fehler": True},
+    ])
+    def test_oauth_ablauf_unvollstaendig(staging, lauf, abweichung):
+        """AC-4: jeder einzelne Schritt zählt."""
+        vars(staging).update(abweichung)
+>       assert lauf(staging.basis)[0] == 1
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:307: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+________________ test_oauth_ablauf_unvollstaendig[abweichung3] _________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1077ea4b0>
+lauf = <function lauf.<locals>._lauf at 0x10746de40>
+abweichung = {'werkzeuge': ['ort_suchen']}
+
+    @pytest.mark.parametrize("abweichung", [
+        {"frei": set()}, {"code_status": 200}, {"ohne_code": True}, {"werkzeuge": ["ort_suchen"]},
+        {"wetter": {"ort": {"name": "Innsbruck"}, "stunden": []}}, {"wetter": {"ort": {}, "stunden": [{"t2m_c": 1}]}},
+        {"wetter": "Der Wetterdienst antwortet nicht."}, {"wetter_fehler": True},
+    ])
+    def test_oauth_ablauf_unvollstaendig(staging, lauf, abweichung):
+        """AC-4: jeder einzelne Schritt zählt."""
+        vars(staging).update(abweichung)
+>       assert lauf(staging.basis)[0] == 1
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:307: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+________________ test_oauth_ablauf_unvollstaendig[abweichung4] _________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10781e060>
+lauf = <function lauf.<locals>._lauf at 0x10746c540>
+abweichung = {'wetter': {'ort': {'name': 'Innsbruck'}, 'stunden': []}}
+
+    @pytest.mark.parametrize("abweichung", [
+        {"frei": set()}, {"code_status": 200}, {"ohne_code": True}, {"werkzeuge": ["ort_suchen"]},
+        {"wetter": {"ort": {"name": "Innsbruck"}, "stunden": []}}, {"wetter": {"ort": {}, "stunden": [{"t2m_c": 1}]}},
+        {"wetter": "Der Wetterdienst antwortet nicht."}, {"wetter_fehler": True},
+    ])
+    def test_oauth_ablauf_unvollstaendig(staging, lauf, abweichung):
+        """AC-4: jeder einzelne Schritt zählt."""
+        vars(staging).update(abweichung)
+>       assert lauf(staging.basis)[0] == 1
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:307: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+________________ test_oauth_ablauf_unvollstaendig[abweichung5] _________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10765f020>
+lauf = <function lauf.<locals>._lauf at 0x107795580>
+abweichung = {'wetter': {'ort': {}, 'stunden': [{'t2m_c': 1}]}}
+
+    @pytest.mark.parametrize("abweichung", [
+        {"frei": set()}, {"code_status": 200}, {"ohne_code": True}, {"werkzeuge": ["ort_suchen"]},
+        {"wetter": {"ort": {"name": "Innsbruck"}, "stunden": []}}, {"wetter": {"ort": {}, "stunden": [{"t2m_c": 1}]}},
+        {"wetter": "Der Wetterdienst antwortet nicht."}, {"wetter_fehler": True},
+    ])
+    def test_oauth_ablauf_unvollstaendig(staging, lauf, abweichung):
+        """AC-4: jeder einzelne Schritt zählt."""
+        vars(staging).update(abweichung)
+>       assert lauf(staging.basis)[0] == 1
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:307: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+________________ test_oauth_ablauf_unvollstaendig[abweichung6] _________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10765f860>
+lauf = <function lauf.<locals>._lauf at 0x107453b00>
+abweichung = {'wetter': 'Der Wetterdienst antwortet nicht.'}
+
+    @pytest.mark.parametrize("abweichung", [
+        {"frei": set()}, {"code_status": 200}, {"ohne_code": True}, {"werkzeuge": ["ort_suchen"]},
+        {"wetter": {"ort": {"name": "Innsbruck"}, "stunden": []}}, {"wetter": {"ort": {}, "stunden": [{"t2m_c": 1}]}},
+        {"wetter": "Der Wetterdienst antwortet nicht."}, {"wetter_fehler": True},
+    ])
+    def test_oauth_ablauf_unvollstaendig(staging, lauf, abweichung):
+        """AC-4: jeder einzelne Schritt zählt."""
+        vars(staging).update(abweichung)
+>       assert lauf(staging.basis)[0] == 1
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:307: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+________________ test_oauth_ablauf_unvollstaendig[abweichung7] _________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10741a180>
+lauf = <function lauf.<locals>._lauf at 0x107451f80>
+abweichung = {'wetter_fehler': True}
+
+    @pytest.mark.parametrize("abweichung", [
+        {"frei": set()}, {"code_status": 200}, {"ohne_code": True}, {"werkzeuge": ["ort_suchen"]},
+        {"wetter": {"ort": {"name": "Innsbruck"}, "stunden": []}}, {"wetter": {"ort": {}, "stunden": [{"t2m_c": 1}]}},
+        {"wetter": "Der Wetterdienst antwortet nicht."}, {"wetter_fehler": True},
+    ])
+    def test_oauth_ablauf_unvollstaendig(staging, lauf, abweichung):
+        """AC-4: jeder einzelne Schritt zählt."""
+        vars(staging).update(abweichung)
+>       assert lauf(staging.basis)[0] == 1
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:307: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_____________ test_zweites_konto_erhaelt_zustimmung_oder_code[GET] _____________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x107418830>
+lauf = <function lauf.<locals>._lauf at 0x10748d9e0>, methode = 'GET'
+
+    @pytest.mark.parametrize("methode", ["GET", "POST"])
+    def test_zweites_konto_erhaelt_zustimmung_oder_code(staging, lauf, methode):
+        """Test 4 (AC-5): Mandantentrennung, auch wenn erst der POST leckt."""
+        staging.leck = methode
+>       assert lauf(staging.basis)[0] == 1
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:314: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+____________ test_zweites_konto_erhaelt_zustimmung_oder_code[POST] _____________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10741ad50>
+lauf = <function lauf.<locals>._lauf at 0x10748c900>, methode = 'POST'
+
+    @pytest.mark.parametrize("methode", ["GET", "POST"])
+    def test_zweites_konto_erhaelt_zustimmung_oder_code(staging, lauf, methode):
+        """Test 4 (AC-5): Mandantentrennung, auch wenn erst der POST leckt."""
+        staging.leck = methode
+>       assert lauf(staging.basis)[0] == 1
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:314: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+____________________ test_csp_nicht_genau_die_der_api[csp0] ____________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1073f1790>
+lauf = <function lauf.<locals>._lauf at 0x10748e3e0>
+csp = ["default-src 'none'; style-src 'unsafe-inline'; form-action 'self' http://localhost:* http://127.0.0.1:*; frame-ances...rc 'unsafe-inline'; form-action 'self' http://localhost:* http://127.0.0.1:*; frame-ancestors 'none'; base-uri 'none'"]
+
+    @pytest.mark.parametrize("csp", [[CSP, CSP], [CSP, "default-src 'self'"], ["default-src 'self'"], []])
+    def test_csp_nicht_genau_die_der_api(staging, lauf, csp):
+        """Test 5 (AC-9)."""
+        staging.csp = csp
+>       assert lauf(staging.basis)[0] == 1
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:321: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+____________________ test_csp_nicht_genau_die_der_api[csp1] ____________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1073f14c0>
+lauf = <function lauf.<locals>._lauf at 0x10748c220>
+csp = ["default-src 'none'; style-src 'unsafe-inline'; form-action 'self' http://localhost:* http://127.0.0.1:*; frame-ancestors 'none'; base-uri 'none'", "default-src 'self'"]
+
+    @pytest.mark.parametrize("csp", [[CSP, CSP], [CSP, "default-src 'self'"], ["default-src 'self'"], []])
+    def test_csp_nicht_genau_die_der_api(staging, lauf, csp):
+        """Test 5 (AC-9)."""
+        staging.csp = csp
+>       assert lauf(staging.basis)[0] == 1
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:321: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+____________________ test_csp_nicht_genau_die_der_api[csp2] ____________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10741ba10>
+lauf = <function lauf.<locals>._lauf at 0x10748ed40>
+csp = ["default-src 'self'"]
+
+    @pytest.mark.parametrize("csp", [[CSP, CSP], [CSP, "default-src 'self'"], ["default-src 'self'"], []])
+    def test_csp_nicht_genau_die_der_api(staging, lauf, csp):
+        """Test 5 (AC-9)."""
+        staging.csp = csp
+>       assert lauf(staging.basis)[0] == 1
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:321: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+____________________ test_csp_nicht_genau_die_der_api[csp3] ____________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10741a9f0>
+lauf = <function lauf.<locals>._lauf at 0x1074531a0>, csp = []
+
+    @pytest.mark.parametrize("csp", [[CSP, CSP], [CSP, "default-src 'self'"], ["default-src 'self'"], []])
+    def test_csp_nicht_genau_die_der_api(staging, lauf, csp):
+        """Test 5 (AC-9)."""
+        staging.csp = csp
+>       assert lauf(staging.basis)[0] == 1
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:321: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+______________________ test_vor_freigabe_ist_fail_closed _______________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10741bce0>
+lauf = <function lauf.<locals>._lauf at 0x107451f80>
+
+    def test_vor_freigabe_ist_fail_closed(staging, lauf):
+        """AC-6: ohne GZ_MCP_USER_IDS erhält auch default 403; nie wird ein Code ausgestellt."""
+        staging.frei = set()
+>       rc, text = lauf(staging.basis, ["--vor-freigabe"])
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:327: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_____________ test_vor_freigabe_schlaegt_an_wenn_schon_freigegeben _____________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x107419400>
+lauf = <function lauf.<locals>._lauf at 0x1077945e0>
+
+    def test_vor_freigabe_schlaegt_an_wenn_schon_freigegeben(staging, lauf):
+        """AC-6: default erhält bereits einen Code -> Exit 1."""
+>       assert lauf(staging.basis, ["--vor-freigabe"])[0] == 1
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:334: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+________________ test_fehlende_zugangsdaten[True-GZ_AUTH_PASS] _________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x107419460>
+lauf = <function lauf.<locals>._lauf at 0x10746f4c0>, fehlt = 'GZ_AUTH_PASS'
+leer = True
+
+    @pytest.mark.parametrize("fehlt", sorted(ENV))
+    @pytest.mark.parametrize("leer", [True, False])
+    def test_fehlende_zugangsdaten(staging, lauf, fehlt, leer):
+        """Test 6 (AC-10): Exit 2 ohne Netzzugriff, Name der Variable genannt."""
+        env = {**ENV, fehlt: ""} if leer else {k: v for k, v in ENV.items() if k != fehlt}
+>       rc, text = lauf(staging.basis, env=env)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:342: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+________________ test_fehlende_zugangsdaten[True-GZ_AUTH_USER] _________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x107442b40>
+lauf = <function lauf.<locals>._lauf at 0x10746c5e0>, fehlt = 'GZ_AUTH_USER'
+leer = True
+
+    @pytest.mark.parametrize("fehlt", sorted(ENV))
+    @pytest.mark.parametrize("leer", [True, False])
+    def test_fehlende_zugangsdaten(staging, lauf, fehlt, leer):
+        """Test 6 (AC-10): Exit 2 ohne Netzzugriff, Name der Variable genannt."""
+        env = {**ENV, fehlt: ""} if leer else {k: v for k, v in ENV.items() if k != fehlt}
+>       rc, text = lauf(staging.basis, env=env)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:342: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+____________ test_fehlende_zugangsdaten[True-GZ_STAGING_ADMIN_PASS] ____________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1074406b0>
+lauf = <function lauf.<locals>._lauf at 0x10746dbc0>
+fehlt = 'GZ_STAGING_ADMIN_PASS', leer = True
+
+    @pytest.mark.parametrize("fehlt", sorted(ENV))
+    @pytest.mark.parametrize("leer", [True, False])
+    def test_fehlende_zugangsdaten(staging, lauf, fehlt, leer):
+        """Test 6 (AC-10): Exit 2 ohne Netzzugriff, Name der Variable genannt."""
+        env = {**ENV, fehlt: ""} if leer else {k: v for k, v in ENV.items() if k != fehlt}
+>       rc, text = lauf(staging.basis, env=env)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:342: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+____________ test_fehlende_zugangsdaten[True-GZ_STAGING_ADMIN_USER] ____________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1073f1850>
+lauf = <function lauf.<locals>._lauf at 0x107621080>
+fehlt = 'GZ_STAGING_ADMIN_USER', leer = True
+
+    @pytest.mark.parametrize("fehlt", sorted(ENV))
+    @pytest.mark.parametrize("leer", [True, False])
+    def test_fehlende_zugangsdaten(staging, lauf, fehlt, leer):
+        """Test 6 (AC-10): Exit 2 ohne Netzzugriff, Name der Variable genannt."""
+        env = {**ENV, fehlt: ""} if leer else {k: v for k, v in ENV.items() if k != fehlt}
+>       rc, text = lauf(staging.basis, env=env)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:342: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+______________ test_fehlende_zugangsdaten[True-GZ_VALIDATOR_PASS] ______________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1073f0e90>
+lauf = <function lauf.<locals>._lauf at 0x107621800>
+fehlt = 'GZ_VALIDATOR_PASS', leer = True
+
+    @pytest.mark.parametrize("fehlt", sorted(ENV))
+    @pytest.mark.parametrize("leer", [True, False])
+    def test_fehlende_zugangsdaten(staging, lauf, fehlt, leer):
+        """Test 6 (AC-10): Exit 2 ohne Netzzugriff, Name der Variable genannt."""
+        env = {**ENV, fehlt: ""} if leer else {k: v for k, v in ENV.items() if k != fehlt}
+>       rc, text = lauf(staging.basis, env=env)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:342: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+______________ test_fehlende_zugangsdaten[True-GZ_VALIDATOR_USER] ______________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1073870e0>
+lauf = <function lauf.<locals>._lauf at 0x107620c20>
+fehlt = 'GZ_VALIDATOR_USER', leer = True
+
+    @pytest.mark.parametrize("fehlt", sorted(ENV))
+    @pytest.mark.parametrize("leer", [True, False])
+    def test_fehlende_zugangsdaten(staging, lauf, fehlt, leer):
+        """Test 6 (AC-10): Exit 2 ohne Netzzugriff, Name der Variable genannt."""
+        env = {**ENV, fehlt: ""} if leer else {k: v for k, v in ENV.items() if k != fehlt}
+>       rc, text = lauf(staging.basis, env=env)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:342: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+________________ test_fehlende_zugangsdaten[False-GZ_AUTH_PASS] ________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1073862a0>
+lauf = <function lauf.<locals>._lauf at 0x1073e3ba0>, fehlt = 'GZ_AUTH_PASS'
+leer = False
+
+    @pytest.mark.parametrize("fehlt", sorted(ENV))
+    @pytest.mark.parametrize("leer", [True, False])
+    def test_fehlende_zugangsdaten(staging, lauf, fehlt, leer):
+        """Test 6 (AC-10): Exit 2 ohne Netzzugriff, Name der Variable genannt."""
+        env = {**ENV, fehlt: ""} if leer else {k: v for k, v in ENV.items() if k != fehlt}
+>       rc, text = lauf(staging.basis, env=env)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:342: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+________________ test_fehlende_zugangsdaten[False-GZ_AUTH_USER] ________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x10954af90>
+lauf = <function lauf.<locals>._lauf at 0x1073e2de0>, fehlt = 'GZ_AUTH_USER'
+leer = False
+
+    @pytest.mark.parametrize("fehlt", sorted(ENV))
+    @pytest.mark.parametrize("leer", [True, False])
+    def test_fehlende_zugangsdaten(staging, lauf, fehlt, leer):
+        """Test 6 (AC-10): Exit 2 ohne Netzzugriff, Name der Variable genannt."""
+        env = {**ENV, fehlt: ""} if leer else {k: v for k, v in ENV.items() if k != fehlt}
+>       rc, text = lauf(staging.basis, env=env)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:342: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+___________ test_fehlende_zugangsdaten[False-GZ_STAGING_ADMIN_PASS] ____________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1073f2630>
+lauf = <function lauf.<locals>._lauf at 0x10746ee80>
+fehlt = 'GZ_STAGING_ADMIN_PASS', leer = False
+
+    @pytest.mark.parametrize("fehlt", sorted(ENV))
+    @pytest.mark.parametrize("leer", [True, False])
+    def test_fehlende_zugangsdaten(staging, lauf, fehlt, leer):
+        """Test 6 (AC-10): Exit 2 ohne Netzzugriff, Name der Variable genannt."""
+        env = {**ENV, fehlt: ""} if leer else {k: v for k, v in ENV.items() if k != fehlt}
+>       rc, text = lauf(staging.basis, env=env)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:342: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+___________ test_fehlende_zugangsdaten[False-GZ_STAGING_ADMIN_USER] ____________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1073f1dc0>
+lauf = <function lauf.<locals>._lauf at 0x10746e160>
+fehlt = 'GZ_STAGING_ADMIN_USER', leer = False
+
+    @pytest.mark.parametrize("fehlt", sorted(ENV))
+    @pytest.mark.parametrize("leer", [True, False])
+    def test_fehlende_zugangsdaten(staging, lauf, fehlt, leer):
+        """Test 6 (AC-10): Exit 2 ohne Netzzugriff, Name der Variable genannt."""
+        env = {**ENV, fehlt: ""} if leer else {k: v for k, v in ENV.items() if k != fehlt}
+>       rc, text = lauf(staging.basis, env=env)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:342: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_____________ test_fehlende_zugangsdaten[False-GZ_VALIDATOR_PASS] ______________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1073f28d0>
+lauf = <function lauf.<locals>._lauf at 0x10746fba0>
+fehlt = 'GZ_VALIDATOR_PASS', leer = False
+
+    @pytest.mark.parametrize("fehlt", sorted(ENV))
+    @pytest.mark.parametrize("leer", [True, False])
+    def test_fehlende_zugangsdaten(staging, lauf, fehlt, leer):
+        """Test 6 (AC-10): Exit 2 ohne Netzzugriff, Name der Variable genannt."""
+        env = {**ENV, fehlt: ""} if leer else {k: v for k, v in ENV.items() if k != fehlt}
+>       rc, text = lauf(staging.basis, env=env)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:342: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_____________ test_fehlende_zugangsdaten[False-GZ_VALIDATOR_USER] ______________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1073f1760>
+lauf = <function lauf.<locals>._lauf at 0x10746d300>
+fehlt = 'GZ_VALIDATOR_USER', leer = False
+
+    @pytest.mark.parametrize("fehlt", sorted(ENV))
+    @pytest.mark.parametrize("leer", [True, False])
+    def test_fehlende_zugangsdaten(staging, lauf, fehlt, leer):
+        """Test 6 (AC-10): Exit 2 ohne Netzzugriff, Name der Variable genannt."""
+        env = {**ENV, fehlt: ""} if leer else {k: v for k, v in ENV.items() if k != fehlt}
+>       rc, text = lauf(staging.basis, env=env)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:342: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+__________________________ test_start_auf_dem_server ___________________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1073f0620>
+lauf = <function lauf.<locals>._lauf at 0x107453740>
+tmp_path = PosixPath('/private/var/folders/9n/w5wl_q1x7j17v9y0b5nw6vj80000gn/T/pytest-of-hem/pytest-1217/test_start_auf_dem_server0')
+
+    def test_start_auf_dem_server(staging, lauf, tmp_path):
+        """Test 6 (AC-10): die Server-IP umgeht die Schranke -> Exit 2 ohne Netzzugriff."""
+>       assert lauf(staging.basis, merkmal=tmp_path)[0] == 2
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:350: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+___________________ test_server_merkmal_ist_der_staging_klon ___________________
+
+    def test_server_merkmal_ist_der_staging_klon():
+>       assert str(_werkzeug().SERVER_MERKMAL) == "/home/hem/gregor_zwanzig_staging"
+                   ^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:355: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+__________________________ test_unbekanntes_argument ___________________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x107419fd0>
+lauf = <function lauf.<locals>._lauf at 0x107451440>
+
+    def test_unbekanntes_argument(staging, lauf):
+>       assert lauf(staging.basis, ["--vor-freigab"])[0] == 2
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:359: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_________________ test_anmeldung_abgelehnt_ist_umgebungsfehler _________________
+
+staging = <tdd.test_staging_mcp_pruefen._Staging object at 0x1095483e0>
+lauf = <function lauf.<locals>._lauf at 0x10748f6a0>
+
+    def test_anmeldung_abgelehnt_ist_umgebungsfehler(staging, lauf):
+>       assert lauf(staging.basis, env={**ENV, "GZ_AUTH_PASS": "falsch"})[0] == 2
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:364: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+_______________ test_server_nicht_erreichbar_ist_umgebungsfehler _______________
+
+lauf = <function lauf.<locals>._lauf at 0x10748dbc0>
+
+    def test_server_nicht_erreichbar_ist_umgebungsfehler(lauf):
+        with socket.socket() as s:
+            s.bind(("127.0.0.1", 0))
+            port = s.getsockname()[1]
+>       assert lauf(f"http://127.0.0.1:{port}")[0] == 2
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_staging_mcp_pruefen.py:371: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_staging_mcp_pruefen.py:225: in _lauf
+    rc = _werkzeug().main(list(argv), env=env, basis=basis,
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+____________________ test_aufruf_als_programm_ohne_umgebung ____________________
+
+    def test_aufruf_als_programm_ohne_umgebung():
+        """Test 6: der echte Programmaufruf endet mit Exit 2 (auf dem Server wie anderswo)."""
+>       _werkzeug()
+
+tests/tdd/test_staging_mcp_pruefen.py:376: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _werkzeug():
+        if not WERKZEUG.exists():
+>           pytest.fail(f"Prüfwerkzeug fehlt: {WERKZEUG.relative_to(REPO_ROOT)}")
+E           Failed: Prüfwerkzeug fehlt: .claude/tools/staging_mcp_pruefen.py
+
+tests/tdd/test_staging_mcp_pruefen.py:213: Failed
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/swift-scribbling-catmull/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_vollstaendiges_soll_besteht
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_basic_zugangsdaten_nur_an_die_anmeldung
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_einzelner_blockierter_soll_pfad[/.well-known/oauth-authorization-server]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_einzelner_blockierter_soll_pfad[/.well-known/oauth-protected-resource]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_einzelner_blockierter_soll_pfad[/.well-known/oauth-protected-resource/api/mcp]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_einzelner_blockierter_soll_pfad[/api/mcp]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_einzelner_blockierter_soll_pfad[/api/mcp/oauth/register]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_einzelner_blockierter_soll_pfad[/api/mcp/oauth/authorize]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_einzelner_blockierter_soll_pfad[/api/mcp/oauth/token]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_alle_soll_pfade_blockiert_wie_vor_der_aenderung
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/-200]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/-302]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/-401]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/-404]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/login-200]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/login-302]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/login-401]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/login-404]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/api/trips-200]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/api/trips-302]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/api/trips-401]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/api/trips-404]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/api/mcpx-200]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/api/mcpx-302]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/api/mcpx-401]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/api/mcpx-404]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/api/_internal/mcp/wetter-200]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/api/_internal/mcp/wetter-302]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/api/_internal/mcp/wetter-401]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/api/_internal/mcp/wetter-404]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/.well-known/openid-configuration-200]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/.well-known/openid-configuration-302]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/.well-known/openid-configuration-401]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_offener_verbotspfad[/.well-known/openid-configuration-404]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_interner_pfad_muss_403_bleiben[200]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_interner_pfad_muss_403_bleiben[401]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_interner_pfad_muss_403_bleiben[404]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_metadaten_und_bearer_hinweis_falsch[abweichung0]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_metadaten_und_bearer_hinweis_falsch[abweichung1]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_metadaten_und_bearer_hinweis_falsch[abweichung2]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_metadaten_und_bearer_hinweis_falsch[abweichung3]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_metadaten_und_bearer_hinweis_falsch[abweichung4]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_oauth_ablauf_unvollstaendig[abweichung0]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_oauth_ablauf_unvollstaendig[abweichung1]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_oauth_ablauf_unvollstaendig[abweichung2]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_oauth_ablauf_unvollstaendig[abweichung3]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_oauth_ablauf_unvollstaendig[abweichung4]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_oauth_ablauf_unvollstaendig[abweichung5]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_oauth_ablauf_unvollstaendig[abweichung6]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_oauth_ablauf_unvollstaendig[abweichung7]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_zweites_konto_erhaelt_zustimmung_oder_code[GET]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_zweites_konto_erhaelt_zustimmung_oder_code[POST]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_csp_nicht_genau_die_der_api[csp0]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_csp_nicht_genau_die_der_api[csp1]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_csp_nicht_genau_die_der_api[csp2]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_csp_nicht_genau_die_der_api[csp3]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_vor_freigabe_ist_fail_closed
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_vor_freigabe_schlaegt_an_wenn_schon_freigegeben
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_fehlende_zugangsdaten[True-GZ_AUTH_PASS]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_fehlende_zugangsdaten[True-GZ_AUTH_USER]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_fehlende_zugangsdaten[True-GZ_STAGING_ADMIN_PASS]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_fehlende_zugangsdaten[True-GZ_STAGING_ADMIN_USER]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_fehlende_zugangsdaten[True-GZ_VALIDATOR_PASS]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_fehlende_zugangsdaten[True-GZ_VALIDATOR_USER]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_fehlende_zugangsdaten[False-GZ_AUTH_PASS]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_fehlende_zugangsdaten[False-GZ_AUTH_USER]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_fehlende_zugangsdaten[False-GZ_STAGING_ADMIN_PASS]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_fehlende_zugangsdaten[False-GZ_STAGING_ADMIN_USER]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_fehlende_zugangsdaten[False-GZ_VALIDATOR_PASS]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_fehlende_zugangsdaten[False-GZ_VALIDATOR_USER]
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_start_auf_dem_server - Fai...
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_server_merkmal_ist_der_staging_klon
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_unbekanntes_argument - Fai...
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_anmeldung_abgelehnt_ist_umgebungsfehler
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_server_nicht_erreichbar_ist_umgebungsfehler
+FAILED tests/tdd/test_staging_mcp_pruefen.py::test_aufruf_als_programm_ohne_umgebung
+======================== 76 failed, 2 warnings in 2.09s ========================
