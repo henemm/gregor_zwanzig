@@ -492,6 +492,65 @@ describe('AC-7: nur Funktionsbeschreibung, nichts Internes', () => {
 			assert.doesNotMatch(s, EMPFEHLUNG_EN, s);
 		}
 	});
+	// Issue #3324 (Spec pruefregeln_funktionsseiten_3324, AC-1/AC-2): gaengige
+	// Ratschlag-Formulierungen, die die Regeln oben bisher uebersehen. Alle Saetze fiktiv.
+	test('#3324 AC-1: weitere Ratschlag-Formulierungen DE werden erkannt', () => {
+		for (const s of [
+			'Es empfiehlt sich, früh zu starten.',
+			'Ein früher Start ist empfehlenswert.',
+			'Am sichersten ist ein früher Start.',
+			'Plane die Etappe um.',
+			'Bei Gewitter: Plane die Etappe um.',
+			'Beachte die Gewitterwarnung.',
+			'Denk an die Regenjacke.',
+			'Achte auf die Böen am Grat.'
+		]) {
+			assert.match(s, EMPFEHLUNG_DE, s);
+		}
+	});
+	test('#3324 AC-1: weitere Ratschlag-Formulierungen EN werden erkannt', () => {
+		for (const s of [
+			'A prudent hiker turns back.',
+			'It is wise to start early.',
+			"It's wise to start early.",
+			'It is advisable to carry water.',
+			'It is safer to start early.',
+			"It's best to start early.",
+			'You would be wise to start early.',
+			"You'd want to leave early.",
+			'Be sure to carry water.',
+			'Keep in mind that storms build up.',
+			'Consider a rain jacket.',
+			'Gusts increase. Consider a rain jacket.'
+		]) {
+			assert.match(s, EMPFEHLUNG_EN, s);
+		}
+	});
+	test('#3324 AC-2: Funktionsbeschreibungen mit aehnlichen Woertern bleiben frei', () => {
+		for (const s of [
+			'Plane dienen als Schutz.',
+			'Plan: Free, Standard, Premium',
+			'Die Planung der Etappe übernimmst du im Editor.',
+			'Gregor achtet auf die Böen am Grat.',
+			'Die Warnung beachtet alle amtlichen Stufen.'
+		]) {
+			assert.doesNotMatch(s, EMPFEHLUNG_DE, s);
+		}
+		for (const s of [
+			'Gregor shows the gusts and you check the waypoints.',
+			'The table considers every location.',
+			'Gregor keeps the stage in the briefing.',
+			'Note that the table has no ranking.'
+		]) {
+			assert.doesNotMatch(s, EMPFEHLUNG_EN, s);
+		}
+	});
+	test('#3324 AC-2 Gegenprobe: eingefuegter Ratschlag in einem Katalogtext wird rot', () => {
+		const k = funktionenKeys.find((x) => !x.endsWith('.src'));
+		assert.ok(k);
+		assert.match(`${txt('de', k)} Es empfiehlt sich, früh zu starten.`, EMPFEHLUNG_DE);
+		assert.match(`${txt('en', k)} It is advisable to carry water.`, EMPFEHLUNG_EN);
+	});
 	test('kein funktionen.*-Text nennt Konnektor/MCP/Admin/Design oder empfiehlt etwas', () => {
 		assert.ok(funktionenKeys.length >= 28, `zu wenige funktionen.*-Texte: ${funktionenKeys.length}`);
 		for (const k of funktionenKeys) {
