@@ -98,7 +98,7 @@ Drei weitere Wächter-Tests lesen und parsen den ganzen `tests/`-Baum und liegen
   - Test: Mengenvergleich `besucht` gegen `rglob("*.py")`; Zusicherungen auf `geparst`; ersetzt die Positivkontrolle „Regel A > 0".
 
 - **AC-5:** Given die Backend-Läufe der Gewitterskala / When die Duldungsfunktion aus einem Rohlauf die Fixtures „ohne Basislinie" und „ohne Whitelist" ableitet / Then sind sie gleich dem Ergebnis der bisherigen Einzelläufe, der AC-12-Lauf bleibt ein echter `scan_tree`-Lauf, und es laufen 3 statt 4 Scans.
-  - Test: Backend-Tests bleiben grün; Mutation der herausgelösten Funktion „Whitelist bzw. Altlasten ignoriert“ macht den AC-12-Lauf rot (beweist, dass `scan_tree` sie selbst benutzt), Mutation „duldet alles“ macht die Leerlauf-Tests rot; Gleichheit zu vorher einmalig im Artefakt.
+  - Test: Backend-Tests bleiben grün; Mutation der herausgelösten Funktion „Whitelist ignoriert“ macht den AC-12-Lauf rot, „Altlasten ignoriert“ macht `test_scan_tree_wendet_die_altlasten_basislinie_selbst_an` rot (`ALTLASTEN` ist leer, der AC-12-Lauf kann dort nicht rot werden; beide beweisen, dass `scan_tree` die Duldung selbst benutzt), Mutation „duldet alles“ macht die Leerlauf-Tests rot; Gleichheit zu vorher einmalig im Artefakt.
 
 - **AC-6:** Given alle drei Cache-Dateien tragen je eine eigene `xdist_group` / When sie mit `-n 2 --dist loadgroup` laufen / Then laufen alle Tests jeder Datei in einem Worker, der Lauf ist grün und führt keinen Echtbaum-Scan aus.
   - Test: erweiterter Subprozess-Nachweis in `test_bezeichner_vorfilter.py` mit drei Dateien und je Datei passendem Auswahlkriterium; `len(gruppen) == 3`, Worker-Kennung je Datei einheitlich, Exit-Code 0.
@@ -153,3 +153,4 @@ Drei weitere Wächter-Tests lesen und parsen den ganzen `tests/`-Baum und liegen
 ## Changelog
 
 - 2026-11-24: Initial spec created (Workflow rework-3316-scanner-ratschen, Issue #3316, Scheibe 2)
+- 2026-11-24: Validierung: Test-Zeile AC-5 an leeres `ALTLASTEN` angepasst (AC unverändert); PO-Ausnahme zum Umfang (410 Zeilen, keine Abtrennung) siehe Kommentar in #3316; Messwerte in `docs/artifacts/rework-3316-scanner-ratschen/laufzeiten.md` ersetzen die Schätzung aus der Messbasis
