@@ -185,3 +185,4 @@ Test-Politik: kein Mock-Theater; Kern-Tests deterministisch ohne Netz (`node --t
 ## Changelog
 
 - 2026-11-24: Initial spec created (Teil D1 von #3307, Issue #3332, Epic #3122).
+- 2026-11-24: Nachtrag (docs-updater, #3333 / Teil D2 von #3307): Die Known-Limitations-Punkte „bis D2 (#3333)“ (Ortsvergleich-Anlegen: Alt-Panel, Karte „Layout je Kanal“, ⓘ-Erklärungen, Reiter Alarme) sind mit D2 erledigt, soweit sie den Ortsvergleich betreffen. Der Reiter Alarme bleibt im Trip-Anlegen mit Metrik-Alarmstufen und amtlichen Warnungen bestehen (D2 entfernt ihn nicht).

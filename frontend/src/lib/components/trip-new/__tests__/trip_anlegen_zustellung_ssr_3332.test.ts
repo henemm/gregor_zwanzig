@@ -8,7 +8,7 @@
 //                      Stille Stunden: zustellung-kanal-tabelle, zustellung-morgen-karte, zustellung-stille-schalter)
 //   Alt-Panel          data-testid="versand-abschnitt", Kanal-Schalter channel-email
 //   Mail-Inhalt-Karte  data-testid="report-mail-content"
-// Ortsvergleich-Anlegen bleibt unverändert (AC-13): dort weiter der Versand-Abschnitt des Alt-Panels.
+// Ortsvergleich-Anlegen: AC-13 (unverändert) ist seit D2 (#3333) abgelöst — dort ebenfalls der Reiter Zustellung.
 //
 //   cd frontend && npm test -- src/lib/components/trip-new/__tests__/trip_anlegen_zustellung_ssr_3332.test.ts
 
@@ -87,12 +87,15 @@ describe('#3332 Test 7 (AC-6, F001): Reiter zeigt den Startstand des Editors', (
 	});
 });
 
-describe('#3332 Test 6 (AC-13): Ortsvergleich-Anlegen unverändert', () => {
+// #3333 (D2, AC-1) löst AC-13 von D1 ab: das Ortsvergleich-Anlegen zeigt jetzt ebenfalls den Reiter Zustellung
+// (context="vergleich") statt des Alt-Panels. Ausführlich: compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts.
+describe('#3332 Test 6 (AC-13, abgelöst durch #3333): Ortsvergleich-Anlegen folgt seit D2', () => {
 	for (const mobil of [false, true]) {
-		test(`${mobil ? 'Mobil' : 'Desktop'}: Schritt Zustellung zeigt weiter das Alt-Panel, keinen Reiter Zustellung`, async () => {
+		test(`${mobil ? 'Mobil' : 'Desktop'}: Schritt Zustellung zeigt den Reiter Zustellung (vergleich), kein Alt-Panel`, async () => {
 			const html = await renderVergleichNeu({ metrikenVisited: true, zustellungVisited: true, activeTab: 'zustellung', isMobileViewport: mobil });
-			assert.ok(countTestid(html, 'versand-abschnitt') >= 1, 'Ortsvergleich-Anlegen ohne Versand-Abschnitt (D1 darf dort nichts ändern)');
-			assert.equal(countTestid(html, 'zustellung-tab'), 0, 'Ortsvergleich-Anlegen zeigt bereits den Reiter Zustellung (gehört zu D2, #3333)');
+			assert.equal(countTestid(html, 'versand-abschnitt'), 0, 'Ortsvergleich-Anlegen zeigt noch den Versand-Abschnitt des Alt-Panels');
+			assert.equal(countTestid(html, 'zustellung-tab'), 1, 'Ortsvergleich-Anlegen ohne Reiter Zustellung');
+			assert.match(html, /data-testid="zustellung-tab"[^>]*data-context="vergleich"/);
 		});
 	}
 });

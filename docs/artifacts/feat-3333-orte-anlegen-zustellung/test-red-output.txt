@@ -1,0 +1,1602 @@
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts src/lib/components/shared/__tests__/alarme_tab_ohne_zustellung_3333.test.ts src/lib/components/shared/__tests__/anlegeseiten_ohne_versand_panel_3333.test.ts
+
+TAP version 13
+# Subtest: \#3333 Test 1 (AC-2, AC-3): mitZustellungVergleich schreibt den Stand Feld für Feld in den Feldsatz
+    # Subtest: Zeiten, Schalter, Briefing-Kanäle, Laufzeit
+    not ok 1 - Zeiten, Schalter, Briefing-Kanäle, Laufzeit
+      ---
+      duration_ms: 1.510592
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:93:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        compareEditorSave.ts exportiert keinen reinen Helfer `mitZustellungVergleich`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellungVergleich (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:44:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:95:3)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+      ...
+    # Subtest: Alarm-Kanäle, Dringlichkeit, Stille, Cooldown
+    not ok 2 - Alarm-Kanäle, Dringlichkeit, Stille, Cooldown
+      ---
+      duration_ms: 0.23651
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:107:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        compareEditorSave.ts exportiert keinen reinen Helfer `mitZustellungVergleich`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellungVergleich (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:44:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:109:3)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: Read-Modify-Write: alle übrigen Felder des Feldsatzes bleiben (Name, Orte, Tagesfenster, Metrik-Stufen, Radar, Kurzstil …)
+    not ok 3 - Read-Modify-Write: alle übrigen Felder des Feldsatzes bleiben (Name, Orte, Tagesfenster, Metrik-Stufen, Radar, Kurzstil …)
+      ---
+      duration_ms: 0.280032
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:117:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        compareEditorSave.ts exportiert keinen reinen Helfer `mitZustellungVergleich`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellungVergleich (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:44:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:120:3)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Stille Stunden aus: alertQuietFrom/To leer, im POST keine Stille-Zeiten
+    not ok 4 - Stille Stunden aus: alertQuietFrom/To leer, im POST keine Stille-Zeiten
+      ---
+      duration_ms: 5.205558
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:128:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        compareEditorSave.ts exportiert keinen reinen Helfer `mitZustellungVergleich`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellungVergleich (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:44:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:130:3)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Laufzeit zurück auf „bis auf Weiteres“: endDate null, kein end_date im POST
+    not ok 5 - Laufzeit zurück auf „bis auf Weiteres“: endDate null, kein end_date im POST
+      ---
+      duration_ms: 0.191349
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:139:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        compareEditorSave.ts exportiert keinen reinen Helfer `mitZustellungVergleich`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellungVergleich (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:44:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:141:3)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Stand nicht verändert und nicht geteilt (spätere Änderung am Stand wirkt nicht im Feldsatz)
+    not ok 6 - Stand nicht verändert und nicht geteilt (spätere Änderung am Stand wirkt nicht im Feldsatz)
+      ---
+      duration_ms: 0.251249
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:147:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        compareEditorSave.ts exportiert keinen reinen Helfer `mitZustellungVergleich`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellungVergleich (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:44:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:151:3)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Reiter nie bedient (stand undefined): Feldsatz unverändert
+    not ok 7 - Reiter nie bedient (stand undefined): Feldsatz unverändert
+      ---
+      duration_ms: 0.12972
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:159:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        compareEditorSave.ts exportiert keinen reinen Helfer `mitZustellungVergleich`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellungVergleich (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:44:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:161:3)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: im POST: genau die eingestellten Werte (Zeiten, Kanäle, Dringlichkeit HIGH, Stille, Cooldown, Laufzeit)
+    not ok 8 - im POST: genau die eingestellten Werte (Zeiten, Kanäle, Dringlichkeit HIGH, Stille, Cooldown, Laufzeit)
+      ---
+      duration_ms: 0.24207
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:165:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        compareEditorSave.ts exportiert keinen reinen Helfer `mitZustellungVergleich`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellungVergleich (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:44:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:167:3)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..8
+not ok 1 - \#3333 Test 1 (AC-2, AC-3): mitZustellungVergleich schreibt den Stand Feld für Feld in den Feldsatz
+  ---
+  duration_ms: 8.975283
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:92:1'
+  failureType: 'subtestsFailed'
+  error: '8 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3333 Test 2 (AC-8): rasterfremde Uhrzeit wird nie übernommen
+    # Subtest: 06:45, dann 06:50: Feldsatz behält 06:45, POST 06:45:00, 06:50 nirgends
+    not ok 1 - 06:45, dann 06:50: Feldsatz behält 06:45, POST 06:45:00, 06:50 nirgends
+      ---
+      duration_ms: 0.40852
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:192:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        compareEditorSave.ts exportiert keinen reinen Helfer `mitZustellungVergleich`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellungVergleich (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:44:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:194:3)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+      ...
+    # Subtest: nur 06:50 / 18:07: Startzeiten bleiben; gültige Änderungen derselben Meldung gehen durch
+    not ok 2 - nur 06:50 / 18:07: Startzeiten bleiben; gültige Änderungen derselben Meldung gehen durch
+      ---
+      duration_ms: 3.385144
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:202:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        compareEditorSave.ts exportiert keinen reinen Helfer `mitZustellungVergleich`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellungVergleich (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:44:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:204:3)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 2 - \#3333 Test 2 (AC-8): rasterfremde Uhrzeit wird nie übernommen
+  ---
+  duration_ms: 3.921416
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:191:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3333 Test 3 (AC-4): send_email reist immer im Anlege-POST
+    # Subtest: wiz.sendEmail = true: baueVergleichAnlegeRumpf sendet send_email: true
+    not ok 1 - wiz.sendEmail = true: baueVergleichAnlegeRumpf sendet send_email: true
+      ---
+      duration_ms: 0.557231
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:214:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        send_email fehlt im POST (Server nähme still „an“)
+        
+        false !== true
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:216:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: wiz.sendEmail = true: legeVergleichAn postet send_email: true an /api/compare/presets
+    not ok 2 - wiz.sendEmail = true: legeVergleichAn postet send_email: true an /api/compare/presets
+      ---
+      duration_ms: 3.384525
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:220:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + undefined
+        - true
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:226:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wiz.sendEmail = false: baueVergleichAnlegeRumpf sendet send_email: false
+    not ok 3 - wiz.sendEmail = false: baueVergleichAnlegeRumpf sendet send_email: false
+      ---
+      duration_ms: 0.153331
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:214:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        send_email fehlt im POST (Server nähme still „an“)
+        
+        false !== true
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:216:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wiz.sendEmail = false: legeVergleichAn postet send_email: false an /api/compare/presets
+    not ok 4 - wiz.sendEmail = false: legeVergleichAn postet send_email: false an /api/compare/presets
+      ---
+      duration_ms: 0.17147
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:220:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + undefined
+        - false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:226:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: E-Mail im Reiter abgewählt: über den Helfer send_email: false im POST
+    not ok 5 - E-Mail im Reiter abgewählt: über den Helfer send_email: false im POST
+      ---
+      duration_ms: 0.20589
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:230:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        compareEditorSave.ts exportiert keinen reinen Helfer `mitZustellungVergleich`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellungVergleich (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:44:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:232:3)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..5
+not ok 3 - \#3333 Test 3 (AC-4): send_email reist immer im Anlege-POST
+  ---
+  duration_ms: 4.634408
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:212:1'
+  failureType: 'subtestsFailed'
+  error: '5 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3333 Referenz-Fixture (Messaufbau)
+    # Subtest: Fixture liegt vor, trägt Zeiten, Kanäle, Alarm-Kanäle und (noch) kein send_email
+    ok 1 - Fixture liegt vor, trägt Zeiten, Kanäle, Alarm-Kanäle und (noch) kein send_email
+      ---
+      duration_ms: 0.268301
+      type: 'test'
+      ...
+    1..1
+ok 4 - \#3333 Referenz-Fixture (Messaufbau)
+  ---
+  duration_ms: 0.36895
+  type: 'suite'
+  ...
+# Subtest: \#3333 Test 4 (AC-5): Reiter nie bedient — POST bitgleich zu heute plus send_email: true
+    # Subtest: Standard-Feldsatz: Körper = Referenz + send_email: true
+    not ok 1 - Standard-Feldsatz: Körper = Referenz + send_email: true
+      ---
+      duration_ms: 1.520483
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:263:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        ... Skipped lines
+        
+          {
+            alert_channels: {
+              email: true,
+              premium_sms: false,
+              sms: false,
+        ...
+            schedule: 'daily',
+        -   send_email: true,
+            send_premium_sms: false,
+            send_sms: false,
+            send_telegram: false
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        name: 'Neu-3333'
+        location_ids:
+          0: 'loc-a'
+          1: 'loc-b'
+        profil: 'allgemein'
+        schedule: 'daily'
+        official_alerts_enabled: true
+        radar_alert_enabled: false
+        hourly_enabled: true
+        outlook_enabled: true
+        official_alert_triggers_enabled: true
+        send_telegram: false
+        send_sms: false
+        send_premium_sms: false
+        alert_channels:
+          telegram: true
+          sms: false
+          email: true
+          premium_sms: false
+        official_warnings:
+          enabled: true
+        morning_enabled: true
+        morning_time: '07:00:00'
+        evening_enabled: false
+        evening_time: '18:00:00'
+        day_window_start_hour: 4
+        day_window_end_hour: 19
+        empfaenger:
+        corridors:
+        display_config:
+          region: ''
+          ampel:
+            template: 'allgemein'
+        send_email: true
+      actual:
+        name: 'Neu-3333'
+        location_ids:
+          0: 'loc-a'
+          1: 'loc-b'
+        profil: 'allgemein'
+        schedule: 'daily'
+        official_alerts_enabled: true
+        radar_alert_enabled: false
+        hourly_enabled: true
+        outlook_enabled: true
+        official_alert_triggers_enabled: true
+        send_telegram: false
+        send_sms: false
+        send_premium_sms: false
+        alert_channels:
+          telegram: true
+          sms: false
+          email: true
+          premium_sms: false
+        official_warnings:
+          enabled: true
+        morning_enabled: true
+        morning_time: '07:00:00'
+        evening_enabled: false
+        evening_time: '18:00:00'
+        day_window_start_hour: 4
+        day_window_end_hour: 19
+        empfaenger:
+        corridors:
+        display_config:
+          region: ''
+          ampel:
+            template: 'allgemein'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:264:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: Startstand des Reiters über den Helfer zurückgeschrieben: Zeiten, Kanäle, Alarm-Felder wie heute
+    not ok 2 - Startstand des Reiters über den Helfer zurückgeschrieben: Zeiten, Kanäle, Alarm-Felder wie heute
+      ---
+      duration_ms: 0.22652
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:267:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        compareEditorSave.ts exportiert keinen reinen Helfer `mitZustellungVergleich`
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        mitZustellungVergleich (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:44:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:271:3)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 5 - \#3333 Test 4 (AC-5): Reiter nie bedient — POST bitgleich zu heute plus send_email: true
+  ---
+  duration_ms: 7.910912
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_payload_3333.test.ts:262:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# (node:2802704) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: \#3333 Test 6 (AC-1): Orte-Anlegen, Schritt Zustellung
+    # Subtest: Desktop: Reiter Zustellung mit Briefing-Zeiten, Kanal-Tabelle, Stille Stunden — genau einmal, im richtigen Baum
+    not ok 1 - Desktop: Reiter Zustellung mit Briefing-Zeiten, Kanal-Tabelle, Stille Stunden — genau einmal, im richtigen Baum
+      ---
+      duration_ms: 11932.784173
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts:39:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Reiter Zustellung nicht genau einmal im Schritt Zustellung
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts:41:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: Desktop: Alt-Panel (Versand-Abschnitt, Kanal-Schalter, Karte „Layout je Kanal“) erscheint nicht mehr
+    not ok 2 - Desktop: Alt-Panel (Versand-Abschnitt, Kanal-Schalter, Karte „Layout je Kanal“) erscheint nicht mehr
+      ---
+      duration_ms: 11.014175
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts:51:3'
+      failureType: 'testCodeFailure'
+      error: 'Messaufbau: Schritt Zustellung ohne Reiter gerendert'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts:53:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Desktop: Aktivierungs-Banner steht im Reiter Zustellung, genau einmal, mit data-ready (AC-11)
+    not ok 3 - Desktop: Aktivierungs-Banner steht im Reiter Zustellung, genau einmal, mit data-ready (AC-11)
+      ---
+      duration_ms: 6.069348
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts:60:3'
+      failureType: 'testCodeFailure'
+      error: 'Testid "zustellung-tab" (Nr. 0) fehlt im gerenderten Dokument.'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        innen (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/infoboxSsr.ts:111:25)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts:63:19)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Desktop: Banner „nicht bereit“, solange der Schritt Zustellung nicht freigeschaltet ist (data-ready false)
+    not ok 4 - Desktop: Banner „nicht bereit“, solange der Schritt Zustellung nicht freigeschaltet ist (data-ready false)
+      ---
+      duration_ms: 5.286298
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts:69:3'
+      failureType: 'testCodeFailure'
+      error: 'Testid "zustellung-tab" (Nr. 0) fehlt im gerenderten Dokument.'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        innen (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/infoboxSsr.ts:111:25)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts:71:19)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Mobil: Reiter Zustellung mit Briefing-Zeiten, Kanal-Tabelle, Stille Stunden — genau einmal, im richtigen Baum
+    not ok 5 - Mobil: Reiter Zustellung mit Briefing-Zeiten, Kanal-Tabelle, Stille Stunden — genau einmal, im richtigen Baum
+      ---
+      duration_ms: 6.097469
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts:39:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Reiter Zustellung nicht genau einmal im Schritt Zustellung
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts:41:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Mobil: Alt-Panel (Versand-Abschnitt, Kanal-Schalter, Karte „Layout je Kanal“) erscheint nicht mehr
+    not ok 6 - Mobil: Alt-Panel (Versand-Abschnitt, Kanal-Schalter, Karte „Layout je Kanal“) erscheint nicht mehr
+      ---
+      duration_ms: 24.660895
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts:51:3'
+      failureType: 'testCodeFailure'
+      error: 'Messaufbau: Schritt Zustellung ohne Reiter gerendert'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts:53:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Mobil: Aktivierungs-Banner steht im Reiter Zustellung, genau einmal, mit data-ready (AC-11)
+    not ok 7 - Mobil: Aktivierungs-Banner steht im Reiter Zustellung, genau einmal, mit data-ready (AC-11)
+      ---
+      duration_ms: 2.580493
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts:60:3'
+      failureType: 'testCodeFailure'
+      error: 'Testid "zustellung-tab" (Nr. 0) fehlt im gerenderten Dokument.'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        innen (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/infoboxSsr.ts:111:25)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts:63:19)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Mobil: Banner „nicht bereit“, solange der Schritt Zustellung nicht freigeschaltet ist (data-ready false)
+    not ok 8 - Mobil: Banner „nicht bereit“, solange der Schritt Zustellung nicht freigeschaltet ist (data-ready false)
+      ---
+      duration_ms: 5.804508
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts:69:3'
+      failureType: 'testCodeFailure'
+      error: 'Testid "zustellung-tab" (Nr. 0) fehlt im gerenderten Dokument.'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        innen (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/infoboxSsr.ts:111:25)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts:71:19)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..8
+not ok 6 - \#3333 Test 6 (AC-1): Orte-Anlegen, Schritt Zustellung
+  ---
+  duration_ms: 11995.61868
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts:36:1'
+  failureType: 'subtestsFailed'
+  error: '8 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3333 Test 8 (AC-12): keine Infobox des Alt-Panels im Reiter Zustellung
+    # Subtest: Desktop: Reiter Zustellung ohne Infobox; keine Versand-/Wetter-Metriken-Infobox im Schritt
+    not ok 1 - Desktop: Reiter Zustellung ohne Infobox; keine Versand-/Wetter-Metriken-Infobox im Schritt
+      ---
+      duration_ms: 14.924902
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts:81:3'
+      failureType: 'testCodeFailure'
+      error: 'Testid "zustellung-tab" (Nr. 0) fehlt im gerenderten Dokument.'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        innen (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/infoboxSsr.ts:111:25)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts:83:29)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Mobil: Reiter Zustellung ohne Infobox; keine Versand-/Wetter-Metriken-Infobox im Schritt
+    not ok 2 - Mobil: Reiter Zustellung ohne Infobox; keine Versand-/Wetter-Metriken-Infobox im Schritt
+      ---
+      duration_ms: 6.78536
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts:81:3'
+      failureType: 'testCodeFailure'
+      error: 'Testid "zustellung-tab" (Nr. 0) fehlt im gerenderten Dokument.'
+      code: 'ERR_TEST_FAILURE'
+      stack: |-
+        innen (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/infoboxSsr.ts:111:25)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts:83:29)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 7 - \#3333 Test 8 (AC-12): keine Infobox des Alt-Panels im Reiter Zustellung
+  ---
+  duration_ms: 22.0849
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_ssr_3333.test.ts:79:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3333 Test 7 (AC-7): Reiter context="vergleich" createMode zeigt zustellungStart, Stub-Abo wirft nicht
+    # Subtest: ohne zustellungStart: Startstand aus dem Stub-Abo (07:00), kein Wurf
+    ok 1 - ohne zustellungStart: Startstand aus dem Stub-Abo (07:00), kein Wurf
+      ---
+      duration_ms: 196.403007
+      type: 'test'
+      ...
+    # Subtest: mit zustellungStart 06:45: genau dieser Stand ist sichtbar
+    ok 2 - mit zustellungStart 06:45: genau dieser Stand ist sichtbar
+      ---
+      duration_ms: 13.589698
+      type: 'test'
+      ...
+    1..2
+ok 8 - \#3333 Test 7 (AC-7): Reiter context="vergleich" createMode zeigt zustellungStart, Stub-Abo wirft nicht
+  ---
+  duration_ms: 210.290887
+  type: 'suite'
+  ...
+# Subtest: \#3333 Test 6 (AC-1, AC-11, AC-13): Einbettung im Schritt Zustellung
+    # Subtest: Desktop und Mobil: ZustellungTab context="vergleich" createMode mit Stub-Abo, Startstand und Rückkanal
+    not ok 1 - Desktop und Mobil: ZustellungTab context="vergleich" createMode mit Stub-Abo, Startstand und Rückkanal
+      ---
+      duration_ms: 991.272404
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:152:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareNewEditor bettet 0 statt 2 ZustellungTab ein (Desktop + Mobil, AC-1)
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        einbettungen (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:108:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:155:27)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: kein Alt-Panel mehr im Editor (WetterMetrikenVersandPanel nicht eingebettet)
+    not ok 2 - kein Alt-Panel mehr im Editor (WetterMetrikenVersandPanel nicht eingebettet)
+      ---
+      duration_ms: 355.208504
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:167:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Alt-Panel noch im Orte-Anlegen (zweiter Schreiber der Versand-Felder)
+        
+        2 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 2
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:169:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 9 - \#3333 Test 6 (AC-1, AC-11, AC-13): Einbettung im Schritt Zustellung
+  ---
+  duration_ms: 1347.619188
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:151:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3333 Test 4 (AC-5): Reiter nie bedient — POST bitgleich zu heute plus send_email: true
+    # Subtest: ohne Öffnen des Reiters
+    not ok 1 - ohne Öffnen des Reiters
+      ---
+      duration_ms: 203.433228
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:174:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        ... Skipped lines
+        
+          {
+            alert_channels: {
+              email: true,
+              premium_sms: false,
+              sms: false,
+        ...
+            schedule: 'daily',
+        -   send_email: true,
+            send_premium_sms: false,
+            send_sms: false,
+            send_telegram: false
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        name: 'Neu-3333'
+        location_ids:
+          0: 'loc-a'
+          1: 'loc-b'
+        profil: 'allgemein'
+        schedule: 'daily'
+        official_alerts_enabled: true
+        radar_alert_enabled: false
+        hourly_enabled: true
+        outlook_enabled: true
+        official_alert_triggers_enabled: true
+        send_telegram: false
+        send_sms: false
+        send_premium_sms: false
+        alert_channels:
+          telegram: true
+          sms: false
+          email: true
+          premium_sms: false
+        official_warnings:
+          enabled: true
+        morning_enabled: true
+        morning_time: '07:00:00'
+        evening_enabled: false
+        evening_time: '18:00:00'
+        day_window_start_hour: 4
+        day_window_end_hour: 19
+        empfaenger:
+        corridors:
+        display_config:
+          region: ''
+          ampel:
+            template: 'allgemein'
+        send_email: true
+      actual:
+        name: 'Neu-3333'
+        location_ids:
+          0: 'loc-a'
+          1: 'loc-b'
+        profil: 'allgemein'
+        schedule: 'daily'
+        official_alerts_enabled: true
+        radar_alert_enabled: false
+        hourly_enabled: true
+        outlook_enabled: true
+        official_alert_triggers_enabled: true
+        send_telegram: false
+        send_sms: false
+        send_premium_sms: false
+        alert_channels:
+          telegram: true
+          sms: false
+          email: true
+          premium_sms: false
+        official_warnings:
+          enabled: true
+        morning_enabled: true
+        morning_time: '07:00:00'
+        evening_enabled: false
+        evening_time: '18:00:00'
+        day_window_start_hour: 4
+        day_window_end_hour: 19
+        empfaenger:
+        corridors:
+        display_config:
+          region: ''
+          ampel:
+            template: 'allgemein'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:176:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Reiter geöffnet (Desktop und Mobil gebaut, Profil geladen), aber nicht bedient: POST unverändert, kein Schreibaufruf
+    not ok 2 - Reiter geöffnet (Desktop und Mobil gebaut, Profil geladen), aber nicht bedient: POST unverändert, kein Schreibaufruf
+      ---
+      duration_ms: 213.062531
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:179:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareNewEditor bettet 0 statt 2 ZustellungTab ein (Desktop + Mobil, AC-1)
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        einbettungen (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:108:9)
+        reiter (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:115:15)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:181:9)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Startstand des Reiters = was der POST ohne Bedienung sendet (Zeiten, Kanäle, Alarm-Kanäle, Dringlichkeit, Stille)
+    not ok 3 - Startstand des Reiters = was der POST ohne Bedienung sendet (Zeiten, Kanäle, Alarm-Kanäle, Dringlichkeit, Stille)
+      ---
+      duration_ms: 304.331061
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:187:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareNewEditor bettet 0 statt 2 ZustellungTab ein (Desktop + Mobil, AC-1)
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        einbettungen (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:108:9)
+        reiter (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:115:15)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:189:20)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 10 - \#3333 Test 4 (AC-5): Reiter nie bedient — POST bitgleich zu heute plus send_email: true
+  ---
+  duration_ms: 721.312141
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:173:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3333 Test 1 (AC-2, AC-3, AC-4, AC-6): Bedienung im Reiter -> genau der eine POST trägt sie
+    # Subtest: Zeiten, Kanäle, E-Mail aus, Dringlichkeit HIGH, Stille, Cooldown, Laufzeit stehen im POST; kein PUT, kein Schreibaufruf
+    not ok 1 - Zeiten, Kanäle, E-Mail aus, Dringlichkeit HIGH, Stille, Cooldown, Laufzeit stehen im POST; kein PUT, kein Schreibaufruf
+      ---
+      duration_ms: 126.279329
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:220:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareNewEditor bettet 0 statt 2 ZustellungTab ein (Desktop + Mobil, AC-1)
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        einbettungen (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:108:9)
+        reiter (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:115:15)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:223:19)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Mobil-Einbettung meldet ebenso in den POST
+    not ok 2 - Mobil-Einbettung meldet ebenso in den POST
+      ---
+      duration_ms: 196.728239
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:246:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareNewEditor bettet 0 statt 2 ZustellungTab ein (Desktop + Mobil, AC-1)
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        einbettungen (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:108:9)
+        reiter (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:115:15)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:248:19)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Stille Stunden wieder aus: POST ohne Stille-Zeiten, Rest bleibt
+    not ok 3 - Stille Stunden wieder aus: POST ohne Stille-Zeiten, Rest bleibt
+      ---
+      duration_ms: 144.121284
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:256:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareNewEditor bettet 0 statt 2 ZustellungTab ein (Desktop + Mobil, AC-1)
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        einbettungen (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:108:9)
+        reiter (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:115:15)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:258:19)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 11 - \#3333 Test 1 (AC-2, AC-3, AC-4, AC-6): Bedienung im Reiter -> genau der eine POST trägt sie
+  ---
+  duration_ms: 467.990442
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:219:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3333 Test 2 (AC-8): rasterfremde Uhrzeit — der POST trägt die letzte gültige
+    # Subtest: 06:45, dann 06:50 eingegeben: POST morning_time 06:45:00
+    not ok 1 - 06:45, dann 06:50 eingegeben: POST morning_time 06:45:00
+      ---
+      duration_ms: 211.51869
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:269:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareNewEditor bettet 0 statt 2 ZustellungTab ein (Desktop + Mobil, AC-1)
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        einbettungen (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:108:9)
+        reiter (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:115:15)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:271:19)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: nur 06:50 eingegeben: POST behält die Startzeit, nie 06:50; gültige Änderung derselben Geste wirkt
+    not ok 2 - nur 06:50 eingegeben: POST behält die Startzeit, nie 06:50; gültige Änderung derselben Geste wirkt
+      ---
+      duration_ms: 180.144506
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:278:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareNewEditor bettet 0 statt 2 ZustellungTab ein (Desktop + Mobil, AC-1)
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        einbettungen (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:108:9)
+        reiter (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:115:15)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:280:19)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 12 - \#3333 Test 2 (AC-8): rasterfremde Uhrzeit — der POST trägt die letzte gültige
+  ---
+  duration_ms: 392.003895
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:268:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3333 Test 7 (AC-7): Neuaufbau (Wechsel Desktop <-> Mobil, Schritte) behält den Stand
+    # Subtest: Desktop -> Mobil
+    not ok 1 - Desktop -> Mobil
+      ---
+      duration_ms: 214.349673
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:297:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareNewEditor bettet 0 statt 2 ZustellungTab ein (Desktop + Mobil, AC-1)
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        einbettungen (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:108:9)
+        reiter (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:115:15)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:299:21)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Mobil -> Desktop
+    not ok 2 - Mobil -> Desktop
+      ---
+      duration_ms: 209.517786
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:297:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareNewEditor bettet 0 statt 2 ZustellungTab ein (Desktop + Mobil, AC-1)
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        einbettungen (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:108:9)
+        reiter (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:115:15)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:299:21)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Desktop neu aufgebaut
+    not ok 3 - Desktop neu aufgebaut
+      ---
+      duration_ms: 299.681864
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:297:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareNewEditor bettet 0 statt 2 ZustellungTab ein (Desktop + Mobil, AC-1)
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        einbettungen (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:108:9)
+        reiter (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:115:15)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:299:21)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Mobil neu aufgebaut
+    not ok 4 - Mobil neu aufgebaut
+      ---
+      duration_ms: 298.629013
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:297:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareNewEditor bettet 0 statt 2 ZustellungTab ein (Desktop + Mobil, AC-1)
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        einbettungen (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:108:9)
+        reiter (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:115:15)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:299:21)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..4
+not ok 13 - \#3333 Test 7 (AC-7): Neuaufbau (Wechsel Desktop <-> Mobil, Schritte) behält den Stand
+  ---
+  duration_ms: 1022.658287
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:295:1'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3333 Inhaltsgleichheits-Guard: Meldung mit gleichem Inhalt ändert den Editor-Stand nicht
+    # Subtest: zweimal dieselbe Geste: zustellungStand und wiz.channels behalten ihre Objekte
+    not ok 1 - zweimal dieselbe Geste: zustellungStand und wiz.channels behalten ihre Objekte
+      ---
+      duration_ms: 190.593419
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:326:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareNewEditor bettet 0 statt 2 ZustellungTab ein (Desktop + Mobil, AC-1)
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        einbettungen (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:108:9)
+        reiter (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:115:15)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:328:19)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..1
+not ok 14 - \#3333 Inhaltsgleichheits-Guard: Meldung mit gleichem Inhalt ändert den Editor-Stand nicht
+  ---
+  duration_ms: 190.830859
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/compare-new/__tests__/vergleich_anlegen_zustellung_verdrahtung_3333.test.ts:325:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3333 Test 5 (AC-10): Tabelle und Abschnittsliste
+    # Subtest: ZUSTELLUNG_IM_ANLEGEN_AUSGELAGERT: im Orte-Anlegen ausgelagert, Trip unverändert
+    not ok 1 - ZUSTELLUNG_IM_ANLEGEN_AUSGELAGERT: im Orte-Anlegen ausgelagert, Trip unverändert
+      ---
+      duration_ms: 7.902041
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/alarme_tab_ohne_zustellung_3333.test.ts:58:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          {
+            route: true,
+        +   vergleich: false
+        -   vergleich: true
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        route: true
+        vergleich: true
+      actual:
+        route: true
+        vergleich: false
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/alarme_tab_ohne_zustellung_3333.test.ts:59:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: vergleich, ohneZustellung: channels, cooldown, quiet-hours fehlen; Radar und Rest in unveränderter Reihenfolge
+    not ok 2 - vergleich, ohneZustellung: channels, cooldown, quiet-hours fehlen; Radar und Rest in unveränderter Reihenfolge
+      ---
+      duration_ms: 2.802964
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/alarme_tab_ohne_zustellung_3333.test.ts:62:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Orte-Anlegen: ["official-warnings","radar","metric-levels","channels","cooldown","quiet-hours","sample"]
+        + actual - expected
+        
+          [
+            'official-warnings',
+            'radar',
+            'metric-levels',
+        +   'channels',
+        +   'cooldown',
+        +   'quiet-hours',
+            'sample'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'official-warnings'
+        1: 'radar'
+        2: 'metric-levels'
+        3: 'sample'
+      actual:
+        0: 'official-warnings'
+        1: 'radar'
+        2: 'metric-levels'
+        3: 'channels'
+        4: 'cooldown'
+        5: 'quiet-hours'
+        6: 'sample'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/alarme_tab_ohne_zustellung_3333.test.ts:64:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: Hub-Listen (ohne ohneZustellung) unverändert
+    ok 3 - Hub-Listen (ohne ohneZustellung) unverändert
+      ---
+      duration_ms: 0.14301
+      type: 'test'
+      ...
+    1..3
+not ok 15 - \#3333 Test 5 (AC-10): Tabelle und Abschnittsliste
+  ---
+  duration_ms: 11.782117
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/alarme_tab_ohne_zustellung_3333.test.ts:57:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3333 Test 5 (AC-10): Wirkort — der gerenderte Reiter Alarme
+    # Subtest: Orte-Anlegen (vergleich, createMode): keine Abschnitte Kanäle, Cooldown, Stille Stunden; Warnungen, Radar, Metrik-Stufen, Beispiel bleiben
+    not ok 1 - Orte-Anlegen (vergleich, createMode): keine Abschnitte Kanäle, Cooldown, Stille Stunden; Warnungen, Radar, Metrik-Stufen, Beispiel bleiben
+      ---
+      duration_ms: 26.122738
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/alarme_tab_ohne_zustellung_3333.test.ts:74:2'
+      failureType: 'testCodeFailure'
+      error: 'Orte-Anlegen: Abschnitt "channels" hat eine zweite Bedienstelle (Reiter Zustellung besitzt ihn) — gerendert: ["official-warnings","radar","metric-levels","channels","cooldown","quiet-hours","sample"]'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/alarme_tab_ohne_zustellung_3333.test.ts:78:38)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: Orts-Hub (vergleich, ohne createMode): Liste vollständig
+    ok 2 - Orts-Hub (vergleich, ohne createMode): Liste vollständig
+      ---
+      duration_ms: 4.389477
+      type: 'test'
+      ...
+    # Subtest: Trip-Anlegen und Trip-Hub unverändert wie nach D1 (AC-15)
+    ok 3 - Trip-Anlegen und Trip-Hub unverändert wie nach D1 (AC-15)
+      ---
+      duration_ms: 1.331192
+      type: 'test'
+      ...
+    1..3
+not ok 16 - \#3333 Test 5 (AC-10): Wirkort — der gerenderte Reiter Alarme
+  ---
+  duration_ms: 32.004956
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/alarme_tab_ohne_zustellung_3333.test.ts:73:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3333 AC-13: Anlegeseiten ohne WetterMetrikenVersandPanel (Strukturwächter)
+    # Subtest: Vakuum-Schutz: die Panel-Datei besteht bis zum Rückbau (\#3020, \#3036)
+    ok 1 - Vakuum-Schutz: die Panel-Datei besteht bis zum Rückbau (\#3020, \#3036)
+      ---
+      duration_ms: 0.76546
+      type: 'test'
+      ...
+    # Subtest: TripNewEditor importiert das Alt-Panel nicht
+    ok 2 - TripNewEditor importiert das Alt-Panel nicht
+      ---
+      duration_ms: 652.030562
+      type: 'test'
+      ...
+    # Subtest: TripNewEditor mountet das Alt-Panel nicht
+    ok 3 - TripNewEditor mountet das Alt-Panel nicht
+      ---
+      duration_ms: 325.01453
+      type: 'test'
+      ...
+    # Subtest: CompareNewEditor importiert das Alt-Panel nicht
+    not ok 4 - CompareNewEditor importiert das Alt-Panel nicht
+      ---
+      duration_ms: 187.152975
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/anlegeseiten_ohne_versand_panel_3333.test.ts:42:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareNewEditor importiert das Alt-Panel
+        + actual - expected
+        
+        + [
+        +   '$lib/components/shared/WetterMetrikenVersandPanel.svelte'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: '$lib/components/shared/WetterMetrikenVersandPanel.svelte'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/anlegeseiten_ohne_versand_panel_3333.test.ts:46:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: CompareNewEditor mountet das Alt-Panel nicht
+    not ok 5 - CompareNewEditor mountet das Alt-Panel nicht
+      ---
+      duration_ms: 55.91302
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/anlegeseiten_ohne_versand_panel_3333.test.ts:49:3'
+      failureType: 'testCodeFailure'
+      error: 'Messaufbau: CompareNewEditor bettet den Reiter Zustellung nicht ein'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/anlegeseiten_ohne_versand_panel_3333.test.ts:51:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..5
+not ok 17 - \#3333 AC-13: Anlegeseiten ohne WetterMetrikenVersandPanel (Strukturwächter)
+  ---
+  duration_ms: 1222.027959
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/frontend/src/lib/components/shared/__tests__/anlegeseiten_ohne_versand_panel_3333.test.ts:36:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..17
+# tests 56
+# suites 17
+# pass 9
+# fail 47
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 13578.976802

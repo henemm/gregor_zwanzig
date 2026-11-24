@@ -21,22 +21,25 @@
 //   node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks \
 //     --test src/lib/components/shared/__tests__/hub_geteilte_felder_cooldown_quiet_konsistent.test.ts
 
-import { test, describe } from 'node:test';
+import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { parse } from 'svelte/compiler';
 import { versandPropsAus } from '../../compare/versandPropsAus.ts';
 import { alarmePropsAus } from '../../compare/alarmePropsAus.ts';
 import { neuerFeldsatz } from './compareFeldsatzPruefstand.ts';
-import type { Knoten } from './svelteInstanzPruefstand.ts';
+import { buendelAus, fetchMitschnitt, vergleichEditor, zustellungsGeste } from './compareNeuEditorPruefstand.ts';
 
 // #2795 S3b Teilschritt 1b: im Hub ersetzt der neue Reiter Zustellung (EIN Speicherer fuer
-// Briefing und Alarme, Stand direkt aus dem Preset) beide Adapter. Einziger verbliebener Ort, an dem
-// versandPropsAus und alarmePropsAus nebeneinander gemountet werden, ist das Anlegen
-// (CompareNewEditor) — dort gilt dieselbe Zusicherung „ein Feldsatz fuer beide“.
-const HUB = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'compare-new', 'CompareNewEditor.svelte');
+// Briefing und Alarme, Stand direkt aus dem Preset) beide Adapter. #3333 (D2 von #3307): auch im Anlegen
+// (CompareNewEditor) steht statt des Versand-Adapters der Reiter Zustellung; er schreibt Cooldown und
+// Stille Stunden in DENSELBEN Feldsatz, aus dem der Reiter Alarme liest — dort gilt die Zusicherung
+// „ein Feldsatz fuer beide“ weiter, jetzt am echten Editor gemessen.
+let netz: ReturnType<typeof fetchMitschnitt>;
+beforeEach(() => {
+	netz = fetchMitschnitt('cmp-neu');
+});
+afterEach(() => {
+	netz.abbauen();
+});
 
 describe('AC-14: Cooldown/Ruhezeit — Versand und Alarme zeigen denselben Wert', () => {
 	test('Ausgangslage: beide Reiter zeigen den Standard „nicht gesetzt"', () => {
@@ -80,23 +83,20 @@ describe('AC-14: Cooldown/Ruhezeit — Versand und Alarme zeigen denselben Wert'
 	});
 });
 
-describe('AC-14 (Wirkort Hub): Versand- und Alarme-Adapter bekommen DENSELBEN Feldsatz', () => {
-	test('CompareNewEditor übergibt versandPropsAus(…) und alarmePropsAus(…) denselben Bezeichner', () => {
-		const quelle = readFileSync(HUB, 'utf-8');
-		const ast: Knoten = parse(quelle, { modern: true });
-		const argumente: Record<string, Set<string>> = { versandPropsAus: new Set(), alarmePropsAus: new Set() };
-		(function lauf(n: unknown): void {
-			if (n === null || typeof n !== 'object') return;
-			if (Array.isArray(n)) return n.forEach(lauf);
-			const k = n as Knoten;
-			if (k.type === 'CallExpression' && k.callee?.type === 'Identifier' && k.callee.name in argumente) {
-				const a = k.arguments?.[0];
-				argumente[k.callee.name].add(a?.type === 'Identifier' ? a.name : quelle.slice(a?.start, a?.end));
-			}
-			for (const key of Object.keys(k)) if (key !== 'parent' && key !== 'loc') lauf(k[key]);
-		})(ast.fragment);
-		assert.equal(argumente.versandPropsAus.size, 1, `Messaufbau: versandPropsAus-Aufrufe im Hub: ${[...argumente.versandPropsAus]}`);
-		assert.equal(argumente.alarmePropsAus.size, 1, `Messaufbau: alarmePropsAus-Aufrufe im Hub: ${[...argumente.alarmePropsAus]}`);
-		assert.deepEqual([...argumente.versandPropsAus], [...argumente.alarmePropsAus], 'Versand und Alarme lesen aus verschiedenen Feldsätzen (Variante A\')');
+describe('AC-14 (Wirkort Anlegen, #3333): Reiter Zustellung und Reiter Alarme teilen DENSELBEN Feldsatz', () => {
+	test('Cooldown und Stille Stunden aus dem Reiter Zustellung kommen im Buendel des Reiters Alarme und im POST an', async () => {
+		const e = await vergleichEditor({
+			stateOverride: { activeTab: 'zustellung', isMobileViewport: false, metrikenVisited: true, zustellungVisited: true, name: 'AC-14', pickedIds: ['loc-a', 'loc-b'] }
+		});
+		zustellungsGeste(e, (st) => ({ ...st, cooldown: 45, stilleAn: true, stilleVon: '23:00', stilleBis: '05:00' }));
+		const alarme = buendelAus(e, 'AlarmeTab');
+		assert.equal(alarme.cooldownMinutes, 45, 'Reiter Alarme liest einen anderen Feldsatz als der Reiter Zustellung schreibt');
+		assert.equal(alarme.quietFrom, '23:00');
+		assert.equal(alarme.quietTo, '05:00');
+		await e.u.handleActivate();
+		const b = netz.presetPosts()[0]?.koerper as Record<string, unknown>;
+		assert.equal(b.alert_cooldown_minutes, 45);
+		assert.equal(b.alert_quiet_from, '23:00');
+		assert.equal(b.alert_quiet_to, '05:00');
 	});
 });

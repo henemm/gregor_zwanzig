@@ -96,8 +96,9 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 	});
 	test('Messaufbau: Golden enthaelt die deutschen Texte der Flaechen', () => {
 		// #3276: 'Erscheint nur in der E-Mail.' stand nur in den entfernten Flaechen Stundenverlauf/Ausblick.
+		// #3333: 'Stundenverlauf' stand nur noch in der Wetter-Metriken-Infobox des Alt-Panels im Orte-Anlegen (entfallen, AC-12).
 		const alle = [...Object.keys(FAELLE).map((f) => `${f}.de.html`), 'funktionen.de.txt'].map((f) => readFileSync(path.join(P.GOLDEN_DIR, f), 'utf-8')).join('');
-		for (const s of ['Läuft automatisch', 'Läuft autom.', 'Verglichene Orte', 'Ort hinzufügen', 'Nächster Versand', 'Zuletzt raus', '3 Kandidaten', 'Bearbeiten →', 'Orts-Vergleiche', 'Laufzeit überschritten', 'Setup abschließen', 'Stundenverlauf', 'Neuer Ort', 'Erkannt · Vorschau', 'min. 2 erforderlich', 'viel — Empfehlung 3–5', 'Eckdaten', 'noch 1 Ort nötig', 'noch 2 Orte nötig', 'erst Vergleich benennen', 'Gesperrt — erst Vergleich benennen', 'Keine weiteren gespeicherten Orte verfügbar.', 'Status-Änderung fehlgeschlagen', 'Täglich 7–9 Uhr', 'vor 1 Woche', 'vor 2 Wochen', 'Neuer Auto-Report'])
+		for (const s of ['Läuft automatisch', 'Läuft autom.', 'Verglichene Orte', 'Ort hinzufügen', 'Nächster Versand', 'Zuletzt raus', '3 Kandidaten', 'Bearbeiten →', 'Orts-Vergleiche', 'Laufzeit überschritten', 'Setup abschließen', 'Neuer Ort', 'Erkannt · Vorschau', 'min. 2 erforderlich', 'viel — Empfehlung 3–5', 'Eckdaten', 'noch 1 Ort nötig', 'noch 2 Orte nötig', 'erst Vergleich benennen', 'Gesperrt — erst Vergleich benennen', 'Keine weiteren gespeicherten Orte verfügbar.', 'Status-Änderung fehlgeschlagen', 'Täglich 7–9 Uhr', 'vor 1 Woche', 'vor 2 Wochen', 'Neuer Auto-Report'])
 			assert.ok(alle.includes(s), s);
 	});
 	test('Messaufbau: jeder deutsche Anker-Text (Festteile) steht im Golden oder in der Funktionstabelle', () => {

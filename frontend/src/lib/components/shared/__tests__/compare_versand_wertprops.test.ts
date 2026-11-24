@@ -513,123 +513,42 @@ function wizStand(): Knoten {
 
 // #2795 S3b Teilschritt 1b: Mount B (Hub) entfaellt — der neue Reiter Zustellung speichert Briefing
 // und Alarme ueber EINEN eigenen Speicherer (zustellungSpeicherung.ts) und bettet keinen VersandTab
-// mehr ein. Die Anlege-Seite (Mounts C/D) bleibt auf VersandTab (Spec §Scope), ihre Zusicherung bleibt.
-const MOUNTS: [string, string, number][] = [
-	['Anlege-Seite /compare/new, Desktop + Mobil (Mounts C und D)', ANLEGE, 2]
+// mehr ein. #3333 (D2 von #3307, AC-1/AC-13): ebenso die Anlege-Seite (Mounts C/D) — sie mountet den
+// Reiter Zustellung im Anlege-Modus statt des Alt-Panels. Das Buendel `versandPropsAus` selbst bleibt
+// bis zum Rueckbau des Panels (#3020/#3036) bestehen und wird unten direkt (ohne Mount) bewacht.
+const OHNE_VERSANDTAB: [string, string][] = [
+	['Hub /compare/[id] (#2795 S3b 1b)', HUB],
+	['Anlege-Seite /compare/new, Desktop + Mobil (#3333)', ANLEGE]
 ];
 
-describe('#2795 S3b 1b: der Vergleichs-Hub bettet keinen VersandTab mehr ein', () => {
-	test('Hub /compare/[id]: 0 VersandTab-Einbettungen (kein zweiter Speicherweg neben dem Reiter)', () => {
-		assert.strictEqual(einbettungen(HUB).treffer.length, 0, 'der Hub bettet noch einen VersandTab ein');
-	});
-});
-
-describe('AC-3: die Vergleichs-Mounts der Anlege-Seite speisen dasselbe Buendel ein', () => {
-	for (const [was, datei, anzahl] of MOUNTS) {
-		test(`${was}: ruft \`versandPropsAus(<zustand>)\` IM Markup-Ausdruck auf und reicht kein \`wiz\` mehr durch`, () => {
+describe('#2795 S3b 1b / #3333: kein Vergleichs-Mount bettet einen VersandTab mehr ein', () => {
+	for (const [was, datei] of OHNE_VERSANDTAB) {
+		test(`${was}: 0 VersandTab-Einbettungen (kein zweiter Speicherweg neben dem Reiter Zustellung)`, () => {
 			const { quelle, treffer } = einbettungen(datei);
-			assert.strictEqual(
-				treffer.length,
-				anzahl,
-				`AC-3 FAIL: ${treffer.length} VersandTab-Einbettungen in ${relative(FRONTEND, datei)} ` +
-					`statt ${anzahl}.`
-			);
-			for (const [i, einbettung] of treffer.entries()) {
-				const s = streuung(einbettung, quelle);
-				assert.ok(
-					s,
-					`AC-3 FAIL: Einbettung ${i + 1} in ${relative(FRONTEND, datei)} streut kein ` +
-						'`{...versandPropsAus(<zustand>)}`. 🔴 Form-Auflage der Spec (Design-Entscheidung ' +
-						'1): der Aufruf steht IM Markup-Ausdruck, nicht in einer Skript-Variablen — ein ' +
-						'einmal berechnetes, eingefrorenes Objekt bestuende SSR-Pruefstand und ' +
-						'AST-Waechter anstandslos und fiele erst im Browser auf. Attribute heute: ' +
-						`${attributNamen(einbettung).join(', ') || '—'}.`
-				);
-				assert.ok(
-					!attributNamen(einbettung).includes('wiz'),
-					`AC-3 FAIL: Einbettung ${i + 1} in ${relative(FRONTEND, datei)} reicht weiterhin ` +
-						'`wiz` durch.'
-				);
-			}
-		});
-
-		test(`${was}: das gestreute Buendel traegt alle zwoelf Werte/Lesewerte und alle neun Rueckrufe`, async () => {
-			const { quelle: q0, treffer } = einbettungen(datei);
-			const gestreut = treffer.map((e) => streuung(e, q0));
-			assert.ok(
-				gestreut.length > 0 && gestreut.every((s) => s !== null),
-				`AC-3 FAIL: nicht jede VersandTab-Einbettung in ${relative(FRONTEND, datei)} streut ` +
-					'`versandPropsAus(...)` — siehe vorigen Test.'
-			);
-
-			for (const [i, s] of gestreut.entries()) {
-				const wiz = wizStand();
-				const { u } = await umgebungFuer(datei, {
-					[s!.zustand]: wiz,
-					untrack: (fn: () => unknown) => fn()
-				});
-				const buendel = holeAusdruck(
-					u,
-					s!.ausdruck,
-					`AC-3 FAIL: \`${s!.ausdruck}\` (Einbettung ${i + 1}) laesst sich nicht auswerten.`
-				) as Knoten;
-				assert.ok(
-					buendel && typeof buendel === 'object',
-					`AC-3 FAIL: \`${s!.ausdruck}\` liefert kein Objekt.`
-				);
-
-				for (const feld of [...WERTPROPS, ...LEGACY_LESEWERTE]) {
-					assert.deepStrictEqual(
-						buendel[feld],
-						wiz[feld],
-						`AC-3 FAIL: das Buendel traegt \`${feld}\` nicht unveraendert aus dem ` +
-							`Wizard-Zustand (Einbettung ${i + 1}, ${relative(FRONTEND, datei)}). Jedes ` +
-							'Feld, das der Weg vom Zustand zum Baustein verliert, faellt beim naechsten ' +
-							'Speichern aus der Nutzlast.'
-					);
-				}
-				for (const r of RUECKRUFE) {
-					assert.strictEqual(
-						typeof buendel[r],
-						'function',
-						`AC-3 FAIL: dem Buendel fehlt der Rueckruf \`${r}\` (Einbettung ${i + 1}, ` +
-							`${relative(FRONTEND, datei)}). Ohne Rueckruf verpufft die zugehoerige Geste ` +
-							'an diesem Mount — und Mounts C/D sind in der CI-Ampel strukturell unbewacht.'
-					);
-				}
-				assert.strictEqual(
-					typeof buendel[ROLLBACK_SENKE],
-					'function',
-					`AC-3 FAIL: dem Buendel fehlt die Rollback-Senke \`${ROLLBACK_SENKE}\` (Einbettung ` +
-						`${i + 1}, ${relative(FRONTEND, datei)}) — ohne sie bliebe ein gescheiterter PUT ` +
-						'ohne Schreibweg fuer die drei toten Legacy-Restfelder.'
-				);
-
-				// Rueckschreiben: jeder Rueckruf trifft GENAU sein Feld im Zustand.
-				(buendel.onSendTelegramChange as (v: boolean) => void)(!wiz.sendTelegram);
-				assert.strictEqual(
-					wiz.sendTelegram,
-					!wizStand().sendTelegram,
-					'AC-3 FAIL: `onSendTelegramChange` schreibt nicht nach `sendTelegram`.'
-				);
-				(buendel.onEndDateChange as (v: string | null) => void)(null);
-				assert.strictEqual(
-					wiz.endDate,
-					null,
-					'AC-3 FAIL: `onEndDateChange` schreibt nicht nach `endDate` — „Bis auf Weiteres" ' +
-						'bliebe wirkungslos.'
-				);
-				(buendel[ROLLBACK_SENKE] as (feld: string, wert: unknown) => void)(
-					'alertCooldownMinutes',
-					99
-				);
-				assert.strictEqual(
-					wiz.alertCooldownMinutes,
-					99,
-					`AC-3 FAIL: \`${ROLLBACK_SENKE}\` schreibt nicht auf das benannte Feld zurueck — ` +
-						'der diff-basierte Rollback der drei toten Legacy-Restfelder liefe ins Leere.'
-				);
-			}
+			assert.strictEqual(treffer.length, 0, `${relative(FRONTEND, datei)} bettet noch einen VersandTab ein`);
+			const zt = findeKomponenten(parse(quelle, { modern: true }) as Knoten, 'ZustellungTab');
+			assert.ok(zt.length >= 1, `Messaufbau: ${relative(FRONTEND, datei)} bettet den Reiter Zustellung nicht ein`);
+			for (const e of zt) assert.ok(!attributNamen(e).includes('wiz') && streuung(e, quelle) === null, 'Reiter Zustellung bekommt das Versand-Buendel');
 		});
 	}
 });
+
+describe('AC-3: das Buendel `versandPropsAus` (bis #3020/#3036, ohne Mount)', () => {
+	test('traegt alle zwoelf Werte/Lesewerte und alle neun Rueckrufe; jeder Rueckruf trifft sein Feld', async () => {
+		const { versandPropsAus } = await import('../../compare/versandPropsAus.ts');
+		const wiz = wizStand();
+		const buendel = holeAusdruck({ versandPropsAus, wiz }, 'versandPropsAus(wiz)', 'AC-3 FAIL: `versandPropsAus(wiz)` laesst sich nicht auswerten.') as Knoten;
+		assert.ok(buendel && typeof buendel === 'object', 'AC-3 FAIL: `versandPropsAus` liefert kein Objekt.');
+		for (const feld of [...WERTPROPS, ...LEGACY_LESEWERTE])
+			assert.deepStrictEqual(buendel[feld], wiz[feld], `AC-3 FAIL: das Buendel traegt \`${feld}\` nicht unveraendert aus dem Zustand.`);
+		for (const r of RUECKRUFE) assert.strictEqual(typeof buendel[r], 'function', `AC-3 FAIL: dem Buendel fehlt der Rueckruf \`${r}\`.`);
+		assert.strictEqual(typeof buendel[ROLLBACK_SENKE], 'function', `AC-3 FAIL: dem Buendel fehlt die Rollback-Senke \`${ROLLBACK_SENKE}\`.`);
+		(buendel.onSendTelegramChange as (v: boolean) => void)(!wiz.sendTelegram);
+		assert.strictEqual(wiz.sendTelegram, !wizStand().sendTelegram, 'AC-3 FAIL: `onSendTelegramChange` schreibt nicht nach `sendTelegram`.');
+		(buendel.onEndDateChange as (v: string | null) => void)(null);
+		assert.strictEqual(wiz.endDate, null, 'AC-3 FAIL: `onEndDateChange` schreibt nicht nach `endDate`.');
+		(buendel[ROLLBACK_SENKE] as (feld: string, wert: unknown) => void)('alertCooldownMinutes', 99);
+		assert.strictEqual(wiz.alertCooldownMinutes, 99, `AC-3 FAIL: \`${ROLLBACK_SENKE}\` schreibt nicht auf das benannte Feld zurueck.`);
+	});
+});
+

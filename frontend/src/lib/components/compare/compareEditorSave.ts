@@ -26,6 +26,7 @@ import type { CompareChannelActiveMetrics } from '../shared/weather-metrics-tab/
 import { baueDiff, type KanalMap } from '../shared/alarme-tab/alertMetricChannels.ts';
 import { STANDARD_VORLAGE } from '../shared/wetter-tab/ampelModell.ts';
 import { felderNutzlast, type KarteAnlegeStand } from '../shared/wetter-tab/wasStehtWoSpeicherung.ts';
+import { KANAELE, zeitFehler, type ZustellungStand } from '../shared/zustellung-tab/zustellungModell.ts';
 
 /** Issue #1895 S3b1: `{alert_metric_channels: Diff}` oder `{}` (kein Diff ⇒ Feld fehlt). */
 function kanalDiffFeld(basis: KanalMap | undefined, aktuell: KanalMap | undefined): { alert_metric_channels?: KanalMap } {
@@ -320,6 +321,8 @@ export interface NewComparePresetFields {
 	// funktionieren (der Wizard setzt es immer).
 	outlookEnabled?: boolean;
 	officialAlertTriggersEnabled: boolean;
+	// #3333 (AC-4): Briefing-Kanal E-Mail; der Anlege-Editor setzt ihn immer (baueVergleichAnlegeRumpf).
+	sendEmail?: boolean;
 	sendTelegram: boolean;
 	sendSms: boolean;
 	// Issue #1745 A (AC-11) / #2293 S2: Premium-SMS-BRIEFING-Opt-in. Pflichtfeld
@@ -395,6 +398,7 @@ export function buildNewComparePresetPayload(fields: NewComparePresetFields): Re
 		...(fields.outlookEnabled !== undefined ? { outlook_enabled: fields.outlookEnabled } : {}),
 		// Issue #1216 Slice 2b: Amtliche-Warnungen-Alarm-Trigger + Kanal-Opt-in.
 		official_alert_triggers_enabled: fields.officialAlertTriggersEnabled,
+		...(fields.sendEmail !== undefined ? { send_email: fields.sendEmail } : {}), // #3333 AC-4
 		send_telegram: fields.sendTelegram,
 		send_sms: fields.sendSms,
 		// Issue #1745 A (AC-11) / #2293 S2: unconditional wie die beiden Geschwister oben.
@@ -599,6 +603,7 @@ export function baueVergleichAnlegeRumpf(
 		hourlyEnabled: wiz.hourlyEnabled, // Issue #1107
 		outlookEnabled: wiz.outlookEnabled, // Issue #1361/#1368
 		officialAlertTriggersEnabled: wiz.officialAlertTriggersEnabled, // Issue #1216 Slice 2b
+		sendEmail: wiz.sendEmail, // #3333 (AC-4): immer, der Reiter Zustellung kann E-Mail abwaehlen
 		sendTelegram: wiz.sendTelegram,
 		sendSms: wiz.sendSms,
 		sendPremiumSms: wiz.sendPremiumSms, // Issue #1745 A (AC-11) / #2293 S2
@@ -634,6 +639,29 @@ export function baueVergleichAnlegeRumpf(
 		};
 	if (wetter.karte) mitKarte(payload, wetter.karte);
 	return payload;
+}
+
+/** #3333 (D2 von #3307, AC-2/AC-3/AC-7/AC-8): Stand des Reiters Zustellung Feld fuer Feld in den
+ *  Feldsatz des Anlege-Editors (Read-Modify-Write, Orte-Pendant zu `mitZustellung` im Trip). Rein bis auf
+ *  den uebergebenen Feldsatz; ohne Stand (Reiter nie bedient) bleibt alles. Eine rasterfremde Uhrzeit wird
+ *  nie uebernommen — der vorhandene (letzte gueltige) Wert bleibt, der Server verlangt das Viertelstunden-
+ *  Raster. Kanal-Objekte sind Kopien (der Stand wird weder veraendert noch geteilt). */
+export function mitZustellungVergleich(wiz: CompareFeldsatz, stand: ZustellungStand | undefined): void {
+	if (!stand) return;
+	wiz.morningEnabled = stand.morgenAn;
+	wiz.eveningEnabled = stand.abendAn;
+	if (zeitFehler(stand.morgenZeit) === null) wiz.morningTime = stand.morgenZeit.slice(0, 5);
+	if (zeitFehler(stand.abendZeit) === null) wiz.eveningTime = stand.abendZeit.slice(0, 5);
+	wiz.sendEmail = stand.briefing.email;
+	wiz.sendTelegram = stand.briefing.telegram;
+	wiz.sendSms = stand.briefing.sms;
+	wiz.sendPremiumSms = stand.briefing.premium_sms;
+	wiz.endDate = stand.endDate;
+	wiz.channels = { ...stand.alarme };
+	wiz.channelThresholds = Object.fromEntries(KANAELE.map((k) => [k, stand.dringlichkeit[k]]));
+	wiz.alertQuietFrom = stand.stilleAn ? stand.stilleVon : undefined;
+	wiz.alertQuietTo = stand.stilleAn ? stand.stilleBis : undefined;
+	wiz.alertCooldownMinutes = stand.cooldown;
 }
 
 /** #3306 (AC-2, AC-3): Tabelle der Karte und die gegenüber ihrem Start geänderten Schalter in den POST

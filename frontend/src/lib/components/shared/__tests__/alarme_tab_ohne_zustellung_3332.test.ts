@@ -3,7 +3,7 @@
 //
 // Im Trip-Anlegen besitzt der Reiter Zustellung Alarm-Kanäle (mit Dringlichkeit), Stille Stunden und Cooldown.
 // Der Reiter Alarme blendet dort genau diese drei Abschnitte aus; amtliche Warnungen, Metrik-Alarmstufen und
-// der Beispiel-Alarm bleiben bis D2. Im Hub und im Ortsvergleich-Anlegen bleibt die Liste vollständig.
+// der Beispiel-Alarm bleiben. Im Hub bleibt die Liste vollständig; das Ortsvergleich-Anlegen folgt seit D2 (#3333).
 //
 // FESTGELEGTE SCHNITTSTELLE:
 //   alarmeTabSections(context, ohneZustellung?: boolean): string[]   (shared/alarme-tab/alarmeTabSections.ts)
@@ -85,7 +85,13 @@ describe('#3332 Test 5 (AC-9): Wirkort — der gerenderte Reiter Alarme', () => 
 		assert.deepEqual(abschnitte(renderRoute(false)), alarmeTabSections('route'));
 	});
 
-	test('Ortsvergleich-Anlegen (vergleich, createMode): Liste vollständig, D1 ändert dort nichts (AC-13)', () => {
-		assert.deepEqual(abschnitte(renderVergleich(true)), alarmeTabSections('vergleich'));
+	// #3333 (D2, AC-10) löst die D1-Zusicherung „Ortsvergleich-Anlegen vollständig“ ab: dort blendet der Reiter
+	// Alarme jetzt dieselben drei Abschnitte aus (Details: alarme_tab_ohne_zustellung_3333.test.ts).
+	test('Ortsvergleich-Anlegen (vergleich, createMode): seit D2 (#3333) ohne Kanäle, Cooldown, Stille Stunden', () => {
+		assert.deepEqual(abschnitte(renderVergleich(true)), alarmeTabSections('vergleich', true));
+	});
+
+	test('Ortsvergleich-Hub (vergleich, ohne createMode): Liste vollständig', () => {
+		assert.deepEqual(abschnitte(renderVergleich(false)), alarmeTabSections('vergleich'));
 	});
 });

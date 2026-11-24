@@ -24,6 +24,7 @@
 	import {
 		legeVergleichAn,
 		compareFeldsatzStandard,
+		mitZustellungVergleich,
 		type CompareFeldsatz
 	} from '../compare/compareEditorSave.ts';
 	import type { KarteAnlegeStand } from '../shared/wetter-tab/wasStehtWoSpeicherung.ts';
@@ -47,7 +48,11 @@
 	} from '$lib/components/shared/anlegeLockEngine';
 	import Step2Orte from '$lib/components/compare/steps/Step2Orte.svelte';
 	import { groupLocations } from '$lib/components/compare/locationHelpers';
-	import WetterMetrikenVersandPanel from '$lib/components/shared/WetterMetrikenVersandPanel.svelte';
+	// #3333 (D2 von #3307): Schritt Zustellung = derselbe Reiter wie im Hub (Anlegen = Bearbeiten).
+	import ZustellungTab from '$lib/components/shared/zustellung-tab/ZustellungTab.svelte';
+	import type { ZustellungStand } from '$lib/components/shared/zustellung-tab/zustellungModell';
+	import type { ZustellungAnlegeMeldung } from '$lib/components/shared/zustellung-tab/zustellungSpeicherung';
+	import { newEntityAlertChannelDefault } from '$lib/components/shared/alarme-tab/alertChannelState';
 	// Issue #2794 S3a Teil-PR 3 (AC-38): Schritt Wetter = WetterTab (createMode, kein PUT).
 	import WetterTab from '$lib/components/shared/WetterTab.svelte';
 	import type { vergleichNutzlast } from '$lib/components/shared/wetter-tab/wetterTabSpeicherung';
@@ -56,10 +61,8 @@
 	type WetterAnlegeNutzlast = ReturnType<typeof vergleichNutzlast>;
 	import { anlegeKette } from '$lib/components/shared/subscriptionTabs';
 	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
-	// Issue #2276 S6c: EIN Buendel-Bauer fuer alle drei Vergleichs-Mounts.
+	// Issue #2276 S6c: Buendel-Bauer des Alarme-Mounts (#3333: Versand/Wetter-Metriken entfallen mit dem Alt-Panel).
 	import { alarmePropsAus } from '../compare/alarmePropsAus.ts';
-	import { versandPropsAus } from '../compare/versandPropsAus.ts';
-	import { wetterMetrikenPropsAus } from '../compare/wetterMetrikenPropsAus.ts';
 	// #1435 E1a-2: der Alarme-Reiter leitet seine Zeilen aus dem Register-Katalog
 	// ab — die Anlege-Seite muss ihn deshalb ebenfalls laden (geteilter
 	// Promise-Cache, kein zweiter Netzwerk-Request) und durchreichen.
@@ -201,6 +204,37 @@
 		wiz.dayWindowStartHour = s.day_window_start_hour;
 		wiz.dayWindowEndHour = s.day_window_end_hour;
 	}
+
+	// ── Reiter Zustellung im Anlegen (#3333, D2 von #3307; Muster TripNewEditor #3332) ──
+	// Der Editor haelt den gemeldeten Stand (ueberlebt Neuaufbau Desktop/Mobil und Schrittwechsel,
+	// zurueck als `zustellungStart`) und schreibt ihn Feld fuer Feld in `wiz` (`mitZustellungVergleich`).
+	// Die Meldung fliesst nie in `zustellungAbo` zurueck (der Reiter liest seinen Start einmal).
+	let zustellungStand = $state<ZustellungStand | undefined>(undefined);
+	function handleZustellungAnlegeStand(m: ZustellungAnlegeMeldung) {
+		if (JSON.stringify(m.stand) === JSON.stringify(zustellungStand)) return;
+		zustellungStand = m.stand;
+		mitZustellungVergleich(wiz, m.stand);
+	}
+	// Stub-Abo (id '': kein Serverstand); `standAusPreset` liefert daraus die heutigen Anlege-Startwerte.
+	const zustellungAbo = $derived({
+		id: '',
+		name: wiz.name,
+		location_ids: wiz.pickedIds,
+		send_email: wiz.sendEmail,
+		send_telegram: wiz.sendTelegram,
+		send_sms: wiz.sendSms,
+		send_premium_sms: wiz.sendPremiumSms,
+		morning_enabled: wiz.morningEnabled,
+		morning_time: wiz.morningTime,
+		evening_enabled: wiz.eveningEnabled,
+		evening_time: wiz.eveningTime,
+		end_date: wiz.endDate ?? undefined,
+		alert_channels: wiz.channels ?? newEntityAlertChannelDefault(),
+		alert_channel_thresholds: wiz.channelThresholds,
+		alert_quiet_from: wiz.alertQuietFrom,
+		alert_quiet_to: wiz.alertQuietTo,
+		alert_cooldown_minutes: wiz.alertCooldownMinutes
+	} as ComparePreset);
 
 	// #2521 S3: Vergleichs-Katalog (GET /api/compare/metrics, geteilter
 	// Promise-Cache) ist Voraussetzung fuer „Mit Standardwerten speichern";
@@ -442,7 +476,7 @@
 	const mobileEyebrow = $derived(wiz.name.trim() || $t('vergleich.neu.neuer_vergleich'));
 </script>
 
-<!-- Create-Aktivierungs-Banner als Snippet-Prop für VersandTab (1:1 Muster). -->
+<!-- Create-Aktivierungs-Banner als Snippet-Prop für den Reiter Zustellung (#3333 AC-11, vorher VersandTab). -->
 {#snippet versandActivationBanner()}
 	<div
 		data-testid="compare-step5-activation-banner"
@@ -529,12 +563,14 @@
 			</div>
 		</div>
 	{:else if activeTab === 'zustellung'}
-		<!-- Issue #2794 S3a: Schritt Zustellung = Zustellungs-Bloecke + Versand + Alarme. -->
+		<!-- #3333 (AC-1, AC-11): derselbe Reiter Zustellung wie im Hub (createMode, kein PUT) statt Alt-Panel;
+		     einziger Schreiber der Versand- und Alarm-Zustellungsfelder, Aktivierungs-Banner im Reiter.
+		     Der Reiter Alarme blendet im Anlegen Kanaele, Cooldown und Stille Stunden aus (AC-10). -->
 		{#if !isMobileViewport}
-			<WetterMetrikenVersandPanel context="vergleich" bereich="zustellung" {...wetterMetrikenPropsAus(wiz)} versand={versandPropsAus(wiz)} vergleichTelegramStyle={wiz.telegramStyle ?? 'rich'} activation={versandActivationBanner} showInfobox={true} />
+			<ZustellungTab context="vergleich" preset={zustellungAbo} createMode={true} zustellungStart={zustellungStand} onAnlegeStand={handleZustellungAnlegeStand} activation={versandActivationBanner} />
 		{/if}
 		{#if alarmeHydrated}
-			<AlarmeTab context="vergleich" {...alarmePropsAus(wiz)} catalog={alarmeCatalogMitNamen} showInfobox={true} />
+			<AlarmeTab context="vergleich" createMode={true} {...alarmePropsAus(wiz)} catalog={alarmeCatalogMitNamen} showInfobox={true} />
 		{/if}
 	{/if}
 	</AnlegeRahmen>
@@ -578,10 +614,11 @@
 			{/if}
 		{:else if activeTab === 'zustellung'}
 			{#if isMobileViewport}
-				<WetterMetrikenVersandPanel context="vergleich" bereich="zustellung" {...wetterMetrikenPropsAus(wiz)} versand={versandPropsAus(wiz)} vergleichTelegramStyle={wiz.telegramStyle ?? 'rich'} activation={versandActivationBanner} showInfobox={true} />
+				<!-- #3333 (AC-1, AC-7): Reiter Zustellung, XOR zum Desktop-Mount oben; Startstand vom Editor. -->
+				<ZustellungTab context="vergleich" preset={zustellungAbo} createMode={true} zustellungStart={zustellungStand} onAnlegeStand={handleZustellungAnlegeStand} activation={versandActivationBanner} />
 			{/if}
 			{#if alarmeHydrated}
-				<AlarmeTab context="vergleich" {...alarmePropsAus(wiz)} catalog={alarmeCatalogMitNamen} showInfobox={true} />
+				<AlarmeTab context="vergleich" createMode={true} {...alarmePropsAus(wiz)} catalog={alarmeCatalogMitNamen} showInfobox={true} />
 			{/if}
 		{/if}
 	</div>

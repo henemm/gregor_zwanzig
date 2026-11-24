@@ -367,17 +367,15 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 			expect(vorherRes.ok(), `GET ${ANLEGE_SEL[kind].postPfad} HTTP ${vorherRes.status()}`).toBeTruthy();
 			const vorherIds = ((await vorherRes.json()) as Array<{ id: string }>).map((e) => e.id);
 			try {
-				if (kind === 'route') {
-					// #3332 (AC-3): im Trip-Anlegen steht die Dringlichkeit im Reiter Zustellung, sichtbar nur für einen
-					// VERBUNDENEN Kanal. Wie unten im Hub ergänzt NUR die Profil-Lesung im Browser eine Test-Chat-ID
-					// (kein Profil wird verändert); der Reiter liest das Profil beim Aufbau der Anlege-Seite.
-					await page.route('**/api/auth/profile', async (route) => {
-						if (route.request().method() !== 'GET') return route.continue();
-						const echt = await route.fetch();
-						const profil = (await echt.json()) as Record<string, unknown>;
-						await route.fulfill({ response: echt, json: { ...profil, telegram_chat_id: 'e2e-an6-test-chat' } });
-					});
-				}
+				// #3332/#3333 (AC-3): in beiden Anlegeseiten steht die Dringlichkeit im Reiter Zustellung, sichtbar nur
+				// für einen VERBUNDENEN Kanal. Wie unten im Hub ergänzt NUR die Profil-Lesung im Browser eine Test-Chat-ID
+				// (kein Profil wird verändert); der Reiter liest das Profil beim Aufbau der Anlege-Seite.
+				await page.route('**/api/auth/profile', async (route) => {
+					if (route.request().method() !== 'GET') return route.continue();
+					const echt = await route.fetch();
+					const profil = (await echt.json()) as Record<string, unknown>;
+					await route.fulfill({ response: echt, json: { ...profil, telegram_chat_id: 'e2e-an6-test-chat' } });
+				});
 				await anlegenPflicht(page, kind, { name });
 
 				// #2794 S3a: Schritt Wetter = Metrik-Auswahl + Wertebereiche; Schritt Zustellung =
@@ -393,20 +391,14 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 
 				await schrittOeffnen(page, kind, 'zustellung');
 				// #3276: die Stundenverlauf-Auswahl des Vergleichs ist entfernt (nur noch Karte „Was steht wo“).
-				// Kind-Kontrast #3332 (D1): der Trip bedient die Dringlichkeit im Reiter Zustellung (Segment, role=radio,
-				// aria-checked); der Vergleich bis D2 (#3333) im Reiter Alarme (AlertChannelPicker, aria-pressed).
-				const STUFE: Record<HubKind, { sel: string; attr: string }> = {
-					route: { sel: '[data-testid="zustellung-tab"]:visible [data-testid="zustellung-kanal-telegram-dringlichkeit-HIGH"]', attr: 'aria-checked' },
-					vergleich: { sel: '[data-testid="alert-channel-threshold-telegram-HIGH"]:visible', attr: 'aria-pressed' }
-				};
-				const hoch = page.locator(STUFE[kind].sel).first();
+				// #3332 (D1) / #3333 (D2): beide Anlegeseiten bedienen die Dringlichkeit im Reiter Zustellung
+				// (Segment, role=radio, aria-checked) wie im Hub.
+				const hoch = page.locator('[data-testid="zustellung-tab"]:visible [data-testid="zustellung-kanal-telegram-dringlichkeit-HIGH"]').first();
 				await expect(hoch, 'AN-6: Kanal-Stufe im Zustellungs-Schritt fehlt').toBeVisible({ timeout: 15_000 });
 				await hoch.click();
-				await expect(hoch).toHaveAttribute(STUFE[kind].attr, 'true');
-				if (kind === 'route') {
-					// #3332 AC-9: genau eine Bedienstelle — die alte Stufen-Wahl des Reiters Alarme ist im Trip-Anlegen weg.
-					await expect(page.locator('[data-testid="alert-channel-threshold-telegram-HIGH"]:visible'), 'AN-6: zweite Bedienstelle der Kanal-Stufe').toHaveCount(0);
-				}
+				await expect(hoch).toHaveAttribute('aria-checked', 'true');
+				// #3332 AC-9 / #3333 AC-10: genau eine Bedienstelle — die alte Stufen-Wahl des Reiters Alarme ist im Anlegen weg.
+				await expect(page.locator('[data-testid="alert-channel-threshold-telegram-HIGH"]:visible'), 'AN-6: zweite Bedienstelle der Kanal-Stufe').toHaveCount(0);
 
 				const antwortKommt = anlegePost(page, kind);
 				await sel.abschluss(page).click();
@@ -684,29 +676,22 @@ test.describe('Anlege-Ablauf (mobil 390)', () => {
 			const name = einName('AN10');
 			const post = postMitschnitt(page, kind);
 			try {
-				if (kind === 'route') {
-					// #3332 (AC-9): im Trip-Anlegen steht die Kanal-Stufe im Reiter Zustellung, sichtbar nur für einen
-					// VERBUNDENEN Kanal — wie AN-6 ergänzt nur die Profil-Lesung eine Test-Chat-ID (nichts wird verändert).
-					await page.route('**/api/auth/profile', async (route) => {
-						if (route.request().method() !== 'GET') return route.continue();
-						const echt = await route.fetch();
-						const profil = (await echt.json()) as Record<string, unknown>;
-						await route.fulfill({ response: echt, json: { ...profil, telegram_chat_id: 'e2e-an10-test-chat' } });
-					});
-				}
+				// #3332 (AC-9) / #3333 (AC-10): in beiden Anlegeseiten steht die Kanal-Stufe im Reiter Zustellung, sichtbar
+				// nur für einen VERBUNDENEN Kanal — wie AN-6 ergänzt nur die Profil-Lesung eine Test-Chat-ID (nichts wird verändert).
+				await page.route('**/api/auth/profile', async (route) => {
+					if (route.request().method() !== 'GET') return route.continue();
+					const echt = await route.fetch();
+					const profil = (await echt.json()) as Record<string, unknown>;
+					await route.fulfill({ response: echt, json: { ...profil, telegram_chat_id: 'e2e-an10-test-chat' } });
+				});
 				await anlegenPflicht(page, kind, { name, mobil: true });
 				await bisAlarme(page, kind, true);
-				// Kind-Kontrast #3332 (D1): Trip im Reiter Zustellung (Segment, aria-checked), Vergleich bis D2 (#3333)
-				// im Reiter Alarme (AlertChannelPicker, aria-pressed).
-				const STUFE: Record<HubKind, { gruppe: string; gering: string; attr: string }> = {
-					route: { gruppe: '[data-testid="zustellung-tab"]:visible [data-testid="zustellung-kanal-telegram-dringlichkeit"]', gering: '[data-testid="zustellung-kanal-telegram-dringlichkeit-LOW"]', attr: 'aria-checked' },
-					vergleich: { gruppe: '[data-testid="alert-channel-threshold-telegram"]:visible', gering: '[data-testid="alert-channel-threshold-telegram-LOW"]', attr: 'aria-pressed' }
-				};
-				const gruppe = page.locator(STUFE[kind].gruppe).first();
+				// #3332 (D1) / #3333 (D2): beide Anlegeseiten im Reiter Zustellung (Segment, aria-checked).
+				const gruppe = page.locator('[data-testid="zustellung-tab"]:visible [data-testid="zustellung-kanal-telegram-dringlichkeit"]').first();
 				await expect(gruppe, 'AN-10: Stufen-Auswahl im Zustellungs-Schritt fehlt').toBeVisible({ timeout: 15_000 });
-				const gering = gruppe.locator(STUFE[kind].gering);
+				const gering = gruppe.locator('[data-testid="zustellung-kanal-telegram-dringlichkeit-LOW"]');
 				await expect(gering).toHaveText('gering');
-				await expect(gering, 'AN-10: Startwert ist nicht „gering"').toHaveAttribute(STUFE[kind].attr, 'true');
+				await expect(gering, 'AN-10: Startwert ist nicht „gering"').toHaveAttribute('aria-checked', 'true');
 
 				const antwortKommt = anlegePost(page, kind);
 				await sel.abschluss(page, true).click();
@@ -827,30 +812,18 @@ test('AN-12 (vergleich): kein eigener Stundenverlauf-Schalter (#3276), keine Lay
 	await expect(page.locator('[data-testid="compare-layout-hourly-metrics"]')).toHaveCount(0);
 	await expect(page.locator('[data-testid="weather-metrics-stundenverlauf"]')).toHaveCount(0);
 
-	// Alt slice4 AC-11 / flow Slice 4 AC-9 „keine channel_layouts-Attrappe". Die frühere
-	// DOM-Aussage `channel-tab-email` count 0 ist seit #1703 S8 überholt: der geteilte
-	// LayoutTab-Organism (LTChannelPicker, `channel-tab-<kanal>`) steht legitim im
-	// Abschnitt „Reihenfolge" von Wetter-Metriken und schreibt die kanal-eigene Auswahl
-	// nach `display_config.channel_active_metrics` (compareEditorSave.ts
-	// buildNewComparePresetPayload) — NICHT nach `channel_layouts`, das im Vergleich
-	// Ballast ist (#1301-Grundbefund, #1351: kein Compare-Renderer liest es). Was heute
-	// wirkt, wird deshalb so geprüft: (1) der Kanal-Umschalter existiert genau einmal und
-	// nur im LayoutTab, der die Reihenfolge-Karte trägt — kein eigener Kanal-Reiter, kein
-	// Anlege-Schritt „Layout"/„Versand", keine Layout-Vorschau; (2) der Anlege-POST und
-	// der Roundtrip tragen keine `channel_layouts`-Attrappe (AN-6, Zweig vergleich).
-	// `has` wird relativ zur Hülle aufgelöst — das innere Locator-Stück darf daher
-	// kein `.cm-desktop`-Präfix tragen (der Vorfahr liegt AUSSERHALB der Hülle).
-	const reihenfolgeKarte = page.locator('[data-testid="weather-metrics-vergleich-reihenfolge"]');
-	const layoutHuelle = page.locator('.cm-desktop [data-testid="layout-tab"]').filter({ has: reihenfolgeKarte });
-	await expect(layoutHuelle, 'AN-12: der Kanal-Umschalter hängt nicht an der Reihenfolge-Karte').toHaveCount(1);
-	await expect(
-		layoutHuelle.locator('[data-testid="channel-tab-email"]'),
-		'AN-12: Kanal-Umschalter fehlt im Abschnitt Reihenfolge'
-	).toHaveCount(1);
+	// Alt slice4 AC-11 / flow Slice 4 AC-9 „keine channel_layouts-Attrappe". #3333 (D2, AC-1): der Schritt
+	// Zustellung ist der Reiter Zustellung wie im Hub; das Alt-Panel samt Karte „Layout je Kanal“
+	// (Reihenfolge, Kanal-Umschalter `channel-tab-<kanal>`, #3301 wirkungslos) ist aus dem Orte-Anlegen
+	// verschwunden. Geprüft wird: (1) der Reiter steht da, Reihenfolge-Karte und Kanal-Umschalter nicht — kein
+	// eigener Kanal-Reiter, kein Anlege-Schritt „Layout"/„Versand", keine Layout-Vorschau; (2) der Anlege-POST
+	// und der Roundtrip tragen keine `channel_layouts`-Attrappe (AN-6, Zweig vergleich).
+	await expect(page.locator('.cm-desktop [data-testid="zustellung-tab"][data-context="vergleich"]'), 'AN-12: Reiter Zustellung fehlt').toBeVisible({ timeout: 10_000 });
+	await expect(page.locator('[data-testid="weather-metrics-vergleich-reihenfolge"]'), 'AN-12: Karte „Layout je Kanal“ noch im Anlegen (#3301)').toHaveCount(0);
 	await expect(
 		page.locator('.cm-desktop [data-testid="channel-tab-email"]'),
-		'AN-12: Kanal-Umschalter außerhalb des Abschnitts Reihenfolge (Attrappe/eigener Kanal-Reiter)'
-	).toHaveCount(1);
+		'AN-12: Kanal-Umschalter des Alt-Panels noch im Anlegen'
+	).toHaveCount(0);
 	await expect(page.locator('[data-testid="compare-editor-tab-layout"]'), 'AN-12: eigener Anlege-Schritt „Layout"').toHaveCount(0);
 	await expect(page.locator('[data-testid="compare-editor-tab-versand"]'), 'AN-12: eigener Anlege-Schritt „Versand"').toHaveCount(0);
 	await expect(page.locator('[data-testid="compare-step4-layout-preview"]')).toHaveCount(0);

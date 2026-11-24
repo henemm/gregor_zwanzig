@@ -98,7 +98,9 @@ const OHNE_KORRIDOR_EDITOR = (r: string) => r !== 'wertebereiche';
 // Issue #3332 (Spec feat_3332_zustellung_anlegen_trip.md, AC-11, Tech-Entscheidung Hub-Parität): im Schritt
 // Zustellung des Trip-Anlegens steht der Reiter Zustellung statt des Alt-Panels. Er zeigt keine Infobox — weder
 // die Versand-Infobox noch die Wetter-Metriken-Infobox, die bisher im (dort sichtbaren) Alt-Panel stand. Die
-// Alarme-Infobox im Trip-Anlegen und alle Infoboxen des Ortsvergleich-Anlegens (Alt-Panel bis D2) bleiben.
+// Alarme-Infobox im Trip-Anlegen bleibt. #3333 (D2, AC-12): ebenso im Ortsvergleich-Anlegen — dort entfallen
+// Versand- und Wetter-Metriken-Infobox mit dem Alt-Panel; die Alarme-Infobox bleibt (im SSR nicht gemountet,
+// der Reiter Alarme wartet auf den Katalog-Abruf in onMount).
 const TRIP_OHNE_INFOBOX_SEIT_3332 = ['versand', 'wetter-metriken'];
 const MIT_INFOBOX_IM_TRIP_ANLEGEN = (r: string) => !TRIP_OHNE_INFOBOX_SEIT_3332.includes(r);
 
@@ -192,31 +194,16 @@ describe('AC-2/AC-3: /compare/new zeigt die Infobox (Versand), Desktop UND Mobil
 			assert.ok(!/data-testid="corridor-editor/.test(vergleich + trip), 'Korridor-Editor noch im Anlege-Markup');
 		});
 
-		test(`${ansicht}: Versand-Abschnitt im Schritt Zustellung — Infobox je Abschnitt mit Vergleichs-Text (nur 07:00, kein 18:00)`, async () => {
+		// #3333 AC-12: ersetzt „Versand-Abschnitt mit Vergleichs-Text“ — der Reiter Zustellung hat keine Infobox,
+		// die Infoboxen des Alt-Panels (Versand, Wetter-Metriken) sind aus dem Orte-Anlegen verschwunden.
+		test(`${ansicht}: #3333 AC-12 — Schritt Zustellung des Ortsvergleichs: Reiter Zustellung ohne Infobox, keine Alt-Panel-Infobox`, async () => {
 			const html = await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'zustellung', isMobileViewport: mobil });
-			const anzahl = tagsMitTestid(html, 'infobox-versand-vergleich').length;
-			// Je gerendertem Versand-Abschnitt genau eine Infobox.
-			assert.equal(anzahl, tagsMitTestid(html, 'versand-abschnitt').length, 'nicht jeder Versand-Abschnitt trägt eine Infobox');
-			assert.ok(anzahl >= 1, 'Versand-Abschnitt im Schritt Zustellung ohne Infobox');
-			for (let nr = 0; nr < anzahl; nr++) {
-				const text = infoboxText(html, 'versand', 'vergleich', nr);
-				assert.equal(text, erwartet('versand', 'vergleich'));
-				assert.match(text, /07:00/);
-				assert.doesNotMatch(text, /18:00/, 'Vergleichs-Text darf den Abend-Slot nicht nennen (Abend ist aus)');
-			}
+			assert.equal(tagsMitTestid(html, 'zustellung-tab').length, 1, 'Messaufbau: Reiter Zustellung nicht im Schritt Zustellung');
+			assert.deepEqual(testids(innen(html, 'zustellung-tab'), 'infobox-'), [], 'Reiter Zustellung trägt eine Infobox');
+			for (const reiter of ['versand', 'wetter-metriken'])
+				assert.equal(tagsMitTestid(html, `infobox-${reiter}-vergleich`).length, 0, `Infobox "${reiter}" noch im Ortsvergleich-Anlegen`);
 		});
 	}
-
-	// #2794 S3a Teil-PR 3: die Metrik-Oberflaeche (Stundenverlauf, 3-Tages-Ausblick) steht nur noch im
-	// Schritt Zustellung — die Infobox folgt ihr dorthin, Text und Kontext unveraendert.
-	test('Wetter-Metriken (Desktop): Infobox mit Vergleichs-Text, nicht dem Trip-Text', async () => {
-		const html = await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'zustellung', isMobileViewport: false });
-		assert.ok(tagsMitTestid(html, 'infobox-wetter-metriken-vergleich').length >= 1, `gefunden: ${JSON.stringify(infoboxIds(html))}`);
-		const text = infoboxText(html, 'wetter-metriken', 'vergleich');
-		assert.equal(text, erwartet('wetter-metriken', 'vergleich'));
-		assert.match(text, /Stundenverlauf/);
-		assert.match(text, /3-Tages-Ausblick/);
-	});
 });
 
 describe('AC-5: Ortsvergleich-Pflichtreiter Vergleich und Orte tragen keine Infobox', () => {
@@ -229,12 +216,13 @@ describe('AC-5: Ortsvergleich-Pflichtreiter Vergleich und Orte tragen keine Info
 				}
 				assert.deepEqual(infoboxIds(html), [], 'Pflichtreiter trägt eine Infobox');
 				assert.equal((html.match(/<aside\b/g) ?? []).length, 0, 'Pflichtreiter enthält ein <aside>');
-				// Positivkontrolle (macht den Fall ohne Implementierung rot): derselbe Editor MIT
-				// geoeffnetem Zustellungs-Schritt zeigt die Versand-Infobox — sonst waere „keine“ vakuum.
-				const versand = await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'zustellung', isMobileViewport: mobil });
+				// Positivkontrolle (sonst waere „keine“ vakuum): seit #3333 (AC-12) zeigt das Orte-Anlegen im SSR gar
+				// keine Infobox mehr (Alt-Panel weg, Alarme-Reiter erst nach onMount) — die Messung selbst wird deshalb
+				// am Trip-Anlegen gegengeprueft, dessen Schritt Zustellung die Alarme-Infobox im SSR traegt.
+				const trip = await renderTrip({ ...TRIP_BASIS, activeTab: 'zustellung', isMobileViewport: mobil });
 				assert.ok(
-					tagsMitTestid(versand, 'infobox-versand-vergleich').length >= 1,
-					'Positivkontrolle: Zustellungs-Schritt zeigt keine Versand-Infobox — Verdrahtung fehlt'
+					tagsMitTestid(trip, 'infobox-alarme-route').length >= 1,
+					'Positivkontrolle: die Infobox-Messung findet die Alarme-Infobox des Trip-Anlegens nicht — Messaufbau kaputt'
 				);
 			});
 		}
@@ -245,26 +233,20 @@ describe('AC-5: Ortsvergleich-Pflichtreiter Vergleich und Orte tragen keine Info
 // #1743 AC-22: Versand-Infobox beim Anlegen UEBER dem Versand-Inhalt, unter dem
 // Wetter-Metriken-Inhalt — beide Anlege-Seiten, Desktop UND Mobil.
 // ─────────────────────────────────────────────────────────────────────────────
-describe('#1743 AC-22: Anlegen — Versand-Infobox steht im Schritt Wetter-Metriken über dem Versand-Inhalt', () => {
-	function reihenfolge(html: string, kontext: Kontext): void {
-		const iWm = html.indexOf(`data-testid="infobox-wetter-metriken-${kontext}"`);
-		const iVi = html.indexOf(`data-testid="infobox-versand-${kontext}"`);
-		const iAb = html.indexOf('data-testid="versand-abschnitt"');
-		// Vergleichs-Zweig des VersandTab traegt die Kennung `compare-step5-channel-email`.
-		const iKanal = html.search(kontext === 'vergleich' ? /data-testid="compare-step5-channel-email"/ : /data-testid="channel-email"/);
-		assert.notEqual(iWm, -1, `Messaufbau: Wetter-Metriken-Infobox fehlt — gefunden: ${JSON.stringify(infoboxIds(html))}`);
-		assert.notEqual(iAb, -1, 'Versand-Abschnitt (data-testid="versand-abschnitt") fehlt im Schritt Wetter-Metriken');
-		assert.notEqual(iVi, -1, `Versand-Infobox fehlt im Schritt Wetter-Metriken — gefunden: ${JSON.stringify(infoboxIds(html))}`);
-		assert.notEqual(iKanal, -1, 'Versand-Kanalschalter (channel-email) fehlen im Schritt Wetter-Metriken');
-		assert.ok(iWm < iVi, 'Versand-Infobox steht vor dem Wetter-Metriken-Inhalt');
-		assert.ok(iVi < iKanal, 'Versand-Infobox steht nicht über dem Versand-Inhalt');
-	}
+describe('#1743 AC-22 (abgelöst durch #3332/#3333): Anlegen — keine Versand-Infobox und kein Versand-Abschnitt mehr', () => {
+	// #3332 AC-11 / #3333 AC-12: beide Anlegeseiten zeigen im Schritt Zustellung den Reiter Zustellung (ohne Infobox)
+	// statt des Alt-Panels — die frühere Reihenfolge-Zusicherung (Versand-Infobox über dem Versand-Inhalt) hat
+	// kein Objekt mehr. Geprüft wird, dass weder Abschnitt noch Infobox zurückkehren.
 	for (const mobil of [false, true]) {
 		const ansicht = mobil ? 'Mobil' : 'Desktop';
-		// #3332 AC-11: /trips/new hat im Schritt Zustellung kein Alt-Panel und keine Versand-Infobox mehr
-		// (Gegenprobe im Block AC-1/AC-3/AC-4 oben); die Reihenfolge gilt nur noch im Ortsvergleich (bis D2).
-		test(`${ansicht}: /compare/new`, async () => {
-			reihenfolge(await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'zustellung', isMobileViewport: mobil }), 'vergleich');
+		test(`${ansicht}: /trips/new und /compare/new`, async () => {
+			const trip = await renderTrip({ ...TRIP_BASIS, activeTab: 'zustellung', isMobileViewport: mobil });
+			const vergleich = await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'zustellung', isMobileViewport: mobil });
+			for (const [html, kontext] of [[trip, 'route'], [vergleich, 'vergleich']] as const) {
+				assert.equal(tagsMitTestid(html, 'zustellung-tab').length, 1, `Messaufbau (${kontext}): Reiter Zustellung fehlt`);
+				assert.equal(tagsMitTestid(html, 'versand-abschnitt').length, 0, `${kontext}: Versand-Abschnitt des Alt-Panels noch im Anlegen`);
+				assert.equal(tagsMitTestid(html, `infobox-versand-${kontext}`).length, 0, `${kontext}: Versand-Infobox noch im Anlegen`);
+			}
 		});
 	}
 });
@@ -440,10 +422,10 @@ describe('Verdrahtung: jeder Anlege-Mount setzt showInfobox explizit auf true', 
 		[
 			'CompareNewEditor',
 			join(COMPONENTS, 'compare-new/CompareNewEditor.svelte'),
-			// #2794 S3a Teil-PR 3 (AC-38): der Schritt Wetter ist der WetterTab; das Panel steht je Gerät
-			// nur noch im Schritt Zustellung (2 statt 4). Teil-PR 4a: die unsichtbaren Wertebereiche-Mounts
-			// sind entfernt (Soll 0).
-			{ WeatherMetricsTab: 0, CorridorEditor: 0, CorridorEditorMobile: 0, AlarmeTab: 2, VersandTab: 0, WetterMetrikenVersandPanel: 2 }
+			// #2794 S3a Teil-PR 3 (AC-38): der Schritt Wetter ist der WetterTab; das Panel stand je Gerät
+			// nur noch im Schritt Zustellung. Teil-PR 4a: die unsichtbaren Wertebereiche-Mounts sind entfernt
+			// (Soll 0). #3333 (AC-1/AC-12): der Reiter Zustellung ersetzt das Panel (Soll 0); ohne Infobox (Block unten).
+			{ WeatherMetricsTab: 0, CorridorEditor: 0, CorridorEditorMobile: 0, AlarmeTab: 2, VersandTab: 0, WetterMetrikenVersandPanel: 0 }
 		]
 	];
 	for (const [name, datei, erwartetAnzahl] of EDITOREN) {
@@ -463,12 +445,14 @@ describe('Verdrahtung: jeder Anlege-Mount setzt showInfobox explizit auf true', 
 		});
 	}
 
-	test('#3332 AC-11: TripNewEditor mountet den Reiter Zustellung zweimal (Desktop + Mobil), nie mit showInfobox', () => {
-		const ast = parse(readFileSync(join(COMPONENTS, 'trip-new/TripNewEditor.svelte'), 'utf-8'), { modern: true }) as Knoten;
-		const zt = findeKomponenten(ast, 'ZustellungTab');
-		assert.equal(zt.length, 2, `TripNewEditor: ZustellungTab hat ${zt.length} statt 2 Mounts`);
-		for (const e of zt) assert.ok(!attributNamen(e).includes('showInfobox'), 'Reiter Zustellung im Anlegen mit showInfobox (Hub-Parität verletzt)');
-	});
+	for (const [name, datei] of [['#3332 AC-11: TripNewEditor', 'trip-new/TripNewEditor.svelte'], ['#3333 AC-12: CompareNewEditor', 'compare-new/CompareNewEditor.svelte']] as const) {
+		test(`${name} mountet den Reiter Zustellung zweimal (Desktop + Mobil), nie mit showInfobox`, () => {
+			const ast = parse(readFileSync(join(COMPONENTS, datei), 'utf-8'), { modern: true }) as Knoten;
+			const zt = findeKomponenten(ast, 'ZustellungTab');
+			assert.equal(zt.length, 2, `${name}: ZustellungTab hat ${zt.length} statt 2 Mounts`);
+			for (const e of zt) assert.ok(!attributNamen(e).includes('showInfobox'), 'Reiter Zustellung im Anlegen mit showInfobox (Hub-Parität verletzt)');
+		});
+	}
 
 	test('TripNewEditor: das Wegpunkte-Panel trägt eine Infobox (Desktop- und Mobil-Baum)', () => {
 		const quelle = readFileSync(join(COMPONENTS, 'trip-new/TripNewEditor.svelte'), 'utf-8');
@@ -555,11 +539,12 @@ describe('AC-6 Verdrahtung: die Bearbeiten-Hubs und die Wertprop-Bündel setzen 
 				`${fn} enthält showInfobox — das Bündel speist auch den Bearbeiten-Hub`
 			);
 		}
-		// Gegenstueck (rot ohne Implementierung): der Anlege-Editor setzt das Prop AUSSERHALB der Bündel.
+		// Gegenstueck (rot ohne Implementierung): der Anlege-Editor setzt das Prop AUSSERHALB der Bündel —
+		// seit #3333 am Reiter Alarme (das Panel mit dem Versand-Bündel ist im Anlegen nicht mehr gemountet).
 		const editor = join(COMPONENTS, 'compare-new/CompareNewEditor.svelte');
 		const quelle = readFileSync(editor, 'utf-8');
-		const panel = mounts(editor).WetterMetrikenVersandPanel[0];
-		assert.ok(panel, '#1743: CompareNewEditor mountet den geteilten WetterMetrikenVersandPanel nicht');
-		assert.equal(showInfoboxWert(panel, quelle), 'true', 'Anlege-Editor setzt showInfobox nicht');
+		const alarme = mounts(editor).AlarmeTab[0];
+		assert.ok(alarme, 'CompareNewEditor mountet den Reiter Alarme nicht');
+		assert.equal(showInfoboxWert(alarme, quelle), 'true', 'Anlege-Editor setzt showInfobox nicht');
 	});
 });

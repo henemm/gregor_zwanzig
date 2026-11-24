@@ -18,6 +18,11 @@
 // Versand-Abschnitt (`versand={versandPropsAus(…)}`) und den Wetter-Metriken-Reiter
 // (`{...wetterMetrikenPropsAus(…)}`) haengt. Gemessen wird der gesendete Koerper an der
 // Netzgrenze (fetch) — kein gespiegeltes Soll.
+// #3333 (D2 von #3307): im Schritt Zustellung steht statt des Alt-Panels der Reiter Zustellung wie im Hub;
+// Briefing- und Alarm-Kanaele setzt der Test deshalb ueber dessen echten Rueckkanal `onAnlegeStand`
+// (`zustellungsGeste`). Die Kanal-Overrides der Uebersicht haben im Anlegen keine Bedienstelle mehr
+// (Karte „Layout je Kanal“ entfallen, #3301) — der #3276-Fall setzt sie deshalb direkt im Feldsatz
+// (wie eine Vorlage sie mitbringt) und prueft, dass sie nie in den POST reisen.
 //
 // Warum heute rot: der Editor holt seinen Zustand nur per getContext — ohne Context gibt es
 // weder Name/Orte noch einen sendbaren Zustand.
@@ -32,9 +37,9 @@ import assert from 'node:assert/strict';
 import type { CompareChannelActiveMetrics } from '../../shared/weather-metrics-tab/compareChannelMetricLayouts.ts';
 import {
 	VERTRAG_FEHLT_EDITOR,
-	buendelAus,
 	fetchMitschnitt,
-	vergleichEditor
+	vergleichEditor,
+	zustellungsGeste
 } from '../../shared/__tests__/compareNeuEditorPruefstand.ts';
 
 let netz: ReturnType<typeof fetchMitschnitt>;
@@ -62,13 +67,8 @@ async function anlegen(
 		}
 	});
 	assert.equal(e.u.nameOk, true, VERTRAG_FEHLT_EDITOR);
-	(buendelAus(e, 'WetterMetrikenVersandPanel', 'versand').onSendPremiumSmsChange as (an: boolean) => void)(sendPremiumSms);
-	if (channelActiveMetricKeys) {
-		(buendelAus(e, 'WetterMetrikenVersandPanel').onVergleichsMetrikenChange as (
-			a: string[] | null,
-			k: CompareChannelActiveMetrics
-		) => void)(null, channelActiveMetricKeys);
-	}
+	zustellungsGeste(e, (s) => ({ ...s, briefing: { ...s.briefing, premium_sms: sendPremiumSms } }));
+	if (channelActiveMetricKeys) (e.u.wiz as Record<string, unknown>).channelActiveMetricKeys = channelActiveMetricKeys;
 	await e.u.handleActivate();
 	const posts = netz.presetPosts();
 	assert.equal(posts.length, 1, `der Editor muss genau einen POST senden, gesehen: ${posts.length}`);
@@ -110,7 +110,7 @@ test('Anlegen: sendPremiumSms=false landet als send_premium_sms:false im tatsaec
 	);
 });
 
-test('Anlegen: Alarm-Kanal-Geste im Alarme-Bereich (Schritt Zustellung) landet als alert_channels im POST-Body', async () => {
+test('Anlegen: Alarm-Kanal-Geste im Reiter Zustellung (#3333) landet als alert_channels im POST-Body', async () => {
 	const e = await vergleichEditor({
 		stateOverride: {
 			activeTab: 'zustellung',
@@ -122,9 +122,10 @@ test('Anlegen: Alarm-Kanal-Geste im Alarme-Bereich (Schritt Zustellung) landet a
 		}
 	});
 	assert.equal(e.u.nameOk, true, VERTRAG_FEHLT_EDITOR);
-	const vorher = buendelAus(e, 'AlarmeTab').existingChannels as Record<string, boolean>;
-	(buendelAus(e, 'AlarmeTab').onChannelToggle as (k: string) => void)('premium_sms');
+	let vorher: Record<string, boolean> = {};
+	zustellungsGeste(e, (s) => ((vorher = { ...s.alarme }), { ...s, alarme: { ...s.alarme, premium_sms: !s.alarme.premium_sms } }));
 	await e.u.handleActivate();
 	const body = netz.presetPosts()[0]?.koerper as Record<string, unknown>;
+	assert.deepEqual(vorher, { email: true, telegram: true, sms: false, premium_sms: false }, 'Messaufbau: Startstand der Alarm-Kanaele = Neuanlage-Default');
 	assert.deepEqual(body.alert_channels, { ...vorher, premium_sms: !vorher.premium_sms });
 });
