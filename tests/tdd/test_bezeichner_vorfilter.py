@@ -10,6 +10,7 @@ Spec: ``docs/specs/modules/rework_3279_scanner_ratschen_tempo_s1.md``.
 from __future__ import annotations
 
 import importlib
+import json
 import os
 import re
 import subprocess
@@ -100,7 +101,7 @@ def test_cache_dateien_laufen_je_in_einem_worker(tmp_path):
     gruppen = set()
     for datei in CACHE_DATEIEN:
         zeilen = re.findall(
-            rf"^\[(gw\d)\].*(?:PASSED|FAILED) {re.escape(datei)}::(\S+)", lauf.stdout, re.M)
+            rf"^\[(gw\d)\].*(?:PASSED|FAILED) {re.escape(datei)}::(.+?)\s*$", lauf.stdout, re.M)
         assert len(zeilen) >= 4, f"{datei}: {lauf.stdout}\n{lauf.stderr}"
         assert len({worker for worker, _ in zeilen}) == 1, (
             f"{datei} verteilt sich auf mehrere Worker, der Cache wirkt nicht: {zeilen}")
@@ -110,3 +111,31 @@ def test_cache_dateien_laufen_je_in_einem_worker(tmp_path):
         gruppen.add(marke.args[0])
     assert len(gruppen) == 2 and "echtdaten" not in gruppen, gruppen
     assert lauf.returncode == 0, lauf.stdout + lauf.stderr
+
+
+def test_jedes_item_der_cache_dateien_traegt_nur_die_gruppe_seiner_datei(tmp_path):
+    """AC-8 fuer ALLE Items, auch die Echtbaum-Tests: eine fremde Gruppe an
+    einem einzelnen Test wuerde ihn auf einen anderen Worker holen."""
+    (tmp_path / "gruppen_plugin.py").write_text(
+        "import json, pathlib\n"
+        "def pytest_collection_finish(session):\n"
+        "    zeilen = [(i.nodeid, [str(x) for m in i.iter_markers('xdist_group')\n"
+        "               for x in (*m.args, *m.kwargs.values())]) for i in session.items]\n"
+        "    pathlib.Path(__file__).with_name('gruppen.json').write_text(json.dumps(zeilen))\n",
+        encoding="utf-8")
+    pfade = os.pathsep.join(filter(None, [str(tmp_path), os.environ.get("PYTHONPATH")]))
+    env = {k: v for k, v in os.environ.items() if not k.startswith("PYTEST_")}
+    lauf = subprocess.run(
+        [sys.executable, "-m", "pytest", *CACHE_DATEIEN, "-o", "addopts=",
+         "-p", "no:cacheprovider", "-p", "gruppen_plugin", "--collect-only"],
+        cwd=REPO_ROOT, capture_output=True, text=True, timeout=28,
+        env=env | {"PYTHONPATH": pfade},
+    )
+    assert lauf.returncode == 0, lauf.stdout + lauf.stderr
+    zeilen = json.loads((tmp_path / "gruppen.json").read_text(encoding="utf-8"))
+    for datei in CACHE_DATEIEN:
+        eigene = {k: gruppen for k, gruppen in zeilen if k.startswith(f"{datei}::")}
+        erwartet = [importlib.import_module(datei[:-3].replace("/", ".")).pytestmark.args[0]]
+        assert any("known_violations" in k for k in eigene), "Echtbaum-Tests fehlen"
+        falsch = {k: g for k, g in eigene.items() if g != erwartet}
+        assert not falsch, falsch

@@ -1,0 +1,190 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.15, pytest-9.2.0, pluggy-1.6.0 -- /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo
+configfile: pyproject.toml
+plugins: socket-0.8.0, xdist-3.8.0, timeout-2.4.0, anyio-4.14.2
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+created: 2/2 workers
+2 workers [74 items]
+
+scheduling tests via LoadGroupScheduling
+
+tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_bestand_liefert_keine_neuen_funde@gestellte_uhr_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_keine_fixture_baut_ankunft_aus_der_rohen_wanduhr@wallclock_ratsche 
+[gw1] [  1%] PASSED tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_bestand_liefert_keine_neuen_funde@gestellte_uhr_ratsche 
+tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_known_violations_enthaelt_keine_veralteten_eintraege@gestellte_uhr_ratsche 
+[gw1] [  2%] PASSED tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_known_violations_enthaelt_keine_veralteten_eintraege@gestellte_uhr_ratsche 
+tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_scanner_meldet_das_antimuster@gestellte_uhr_ratsche 
+[gw1] [  4%] PASSED tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_scanner_meldet_das_antimuster@gestellte_uhr_ratsche 
+tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_scanner_schweigt_wenn_geschuetzt[def test_x():\n    with frozen_active_window(): trip = make_trip('t'); save_trip(trip, 'uid')\n]@gestellte_uhr_ratsche 
+[gw1] [  5%] PASSED tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_scanner_schweigt_wenn_geschuetzt[def test_x():\n    with frozen_active_window(): trip = make_trip('t'); save_trip(trip, 'uid')\n]@gestellte_uhr_ratsche 
+tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_scanner_schweigt_wenn_geschuetzt[def test_x():\n    with freeze_time('2026-01-01'): trip = make_trip('t'); save_trip(trip, 'uid')\n]@gestellte_uhr_ratsche 
+[gw1] [  6%] PASSED tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_scanner_schweigt_wenn_geschuetzt[def test_x():\n    with freeze_time('2026-01-01'): trip = make_trip('t'); save_trip(trip, 'uid')\n]@gestellte_uhr_ratsche 
+tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_scanner_schweigt_wenn_geschuetzt[@freeze_time('2026-01-01')\ndef test_x():\n    trip = make_trip('t'); save_trip(trip, 'uid')\n]@gestellte_uhr_ratsche 
+[gw1] [  8%] PASSED tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_scanner_schweigt_wenn_geschuetzt[@freeze_time('2026-01-01')\ndef test_x():\n    trip = make_trip('t'); save_trip(trip, 'uid')\n]@gestellte_uhr_ratsche 
+tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_regel_budget_pruefdatum_steht_als_text_in_der_datei@gestellte_uhr_ratsche 
+[gw1] [  9%] PASSED tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_regel_budget_pruefdatum_steht_als_text_in_der_datei@gestellte_uhr_ratsche 
+tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[make_trip-\uff4d\uff41\uff4b\uff45_trip]@gestellte_uhr_ratsche 
+[gw1] [ 10%] PASSED tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[make_trip-\uff4d\uff41\uff4b\uff45_trip]@gestellte_uhr_ratsche 
+tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[save_trip-\uff53\uff41\uff56\uff45_trip]@gestellte_uhr_ratsche 
+[gw1] [ 12%] PASSED tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[save_trip-\uff53\uff41\uff56\uff45_trip]@gestellte_uhr_ratsche 
+tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_braucht_auch_make_trip@gestellte_uhr_ratsche 
+[gw1] [ 13%] PASSED tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_braucht_auch_make_trip@gestellte_uhr_ratsche 
+tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_scanner_ueberspringt_kaputte_kandidaten[syntax]@gestellte_uhr_ratsche 
+[gw1] [ 14%] PASSED tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_scanner_ueberspringt_kaputte_kandidaten[syntax]@gestellte_uhr_ratsche 
+tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_scanner_ueberspringt_kaputte_kandidaten[utf8]@gestellte_uhr_ratsche 
+[gw1] [ 16%] PASSED tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_scanner_ueberspringt_kaputte_kandidaten[utf8]@gestellte_uhr_ratsche 
+tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_echtbaum_cache_scannt_nur_einmal@gestellte_uhr_ratsche 
+[gw1] [ 17%] PASSED tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_echtbaum_cache_scannt_nur_einmal@gestellte_uhr_ratsche 
+tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_echtbaum_pruefungen_nutzen_den_cache@gestellte_uhr_ratsche 
+[gw1] [ 18%] PASSED tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_echtbaum_pruefungen_nutzen_den_cache@gestellte_uhr_ratsche 
+[gw0] [ 20%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_keine_fixture_baut_ankunft_aus_der_rohen_wanduhr@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_known_violations_enthaelt_keine_veralteten_eintraege@wallclock_ratsche 
+[gw0] [ 21%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_known_violations_enthaelt_keine_veralteten_eintraege@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_meldet_das_antimuster@wallclock_ratsche 
+[gw0] [ 22%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_meldet_das_antimuster@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_geklemmtem_muster@wallclock_ratsche 
+[gw0] [ 24%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_geklemmtem_muster@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_ohne_etappendatum@wallclock_ratsche 
+[gw0] [ 25%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_ohne_etappendatum@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_astimezone_zwischenschritt@wallclock_ratsche 
+[gw0] [ 27%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_astimezone_zwischenschritt@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_den_bypass_ueber_eine_zwischenvariable@wallclock_ratsche 
+[gw0] [ 28%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_den_bypass_ueber_eine_zwischenvariable@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_die_kette_ueber_astimezone_und_namen@wallclock_ratsche 
+[gw0] [ 29%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_die_kette_ueber_astimezone_und_namen@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_uhrzeiten_in_einer_liste@wallclock_ratsche 
+[gw0] [ 31%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_uhrzeiten_in_einer_liste@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_uhrzeiten_in_einer_tupel_rueckgabe@wallclock_ratsche 
+[gw0] [ 32%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_uhrzeiten_in_einer_tupel_rueckgabe@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_einem_nur_verglichenen_erwartungswert@wallclock_ratsche 
+[gw0] [ 33%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_einem_nur_verglichenen_erwartungswert@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_geklemmtem_namen@wallclock_ratsche 
+[gw0] [ 35%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_geklemmtem_namen@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_date_today_als_etappendatum@wallclock_ratsche 
+[gw0] [ 36%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_date_today_als_etappendatum@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_ortstag_ohne_now_utc_als_etappendatum@wallclock_ratsche 
+[gw0] [ 37%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_ortstag_ohne_now_utc_als_etappendatum@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_ortstag_mit_gepinnter_uhr@wallclock_ratsche 
+[gw0] [ 39%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_ortstag_mit_gepinnter_uhr@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_ortstag_mit_wanduhr_als_now_utc[datetime.now(timezone.utc)]@wallclock_ratsche 
+[gw0] [ 40%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_ortstag_mit_wanduhr_als_now_utc[datetime.now(timezone.utc)]@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_ortstag_mit_wanduhr_als_now_utc[now_utc]@wallclock_ratsche 
+[gw0] [ 41%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_ortstag_mit_wanduhr_als_now_utc[now_utc]@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_ortstag_mit_wanduhr_als_now_utc[now_utc - timedelta(hours=1)]@wallclock_ratsche 
+[gw0] [ 43%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_ortstag_mit_wanduhr_als_now_utc[now_utc - timedelta(hours=1)]@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_ortstag_mit_literalem_zeitpunkt@wallclock_ratsche 
+[gw0] [ 44%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_ortstag_mit_literalem_zeitpunkt@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_utc_tag_ohne_now_utc_als_etappendatum@wallclock_ratsche 
+[gw0] [ 45%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_utc_tag_ohne_now_utc_als_etappendatum@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_utc_tag_mit_gepinnter_uhr@wallclock_ratsche 
+[gw0] [ 47%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_utc_tag_mit_gepinnter_uhr@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_regel_budget_pruefdatum_steht_als_text_in_der_datei@wallclock_ratsche 
+[gw0] [ 48%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_regel_budget_pruefdatum_steht_als_text_in_der_datei@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_meldet_die_indirekte_variante@wallclock_ratsche 
+[gw0] [ 50%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_meldet_die_indirekte_variante@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_nur_einem_wegpunkt@wallclock_ratsche 
+[gw0] [ 51%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_nur_einem_wegpunkt@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_gesetztem_arrival_calculated@wallclock_ratsche 
+[gw0] [ 52%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_gesetztem_arrival_calculated@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_gesetztem_arrival_override@wallclock_ratsche 
+[gw0] [ 54%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_gesetztem_arrival_override@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_gesetztem_stage_start_time@wallclock_ratsche 
+[gw0] [ 55%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_gesetztem_stage_start_time@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_arrival_window_fixtures_import@wallclock_ratsche 
+[gw0] [ 56%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_arrival_window_fixtures_import@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_briefing_zeiten_import@wallclock_ratsche 
+[gw0] [ 58%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_briefing_zeiten_import@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_ohne_alarmpfad_import@wallclock_ratsche 
+[gw0] [ 59%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_ohne_alarmpfad_import@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_wegpunkte_aus_einer_hilfsfunktion@wallclock_ratsche 
+[gw0] [ 60%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_wegpunkte_aus_einer_hilfsfunktion@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_stage_aus_kwargs_entpackung@wallclock_ratsche 
+[gw0] [ 62%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_stage_aus_kwargs_entpackung@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_wegpunkte_aus_einer_comprehension@wallclock_ratsche 
+[gw0] [ 63%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_wegpunkte_aus_einer_comprehension@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_ungehaertete_funktion_trotz_dateiweitem_import@wallclock_ratsche 
+[gw0] [ 64%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_ungehaertete_funktion_trotz_dateiweitem_import@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_stage_und_waypoint_hinter_import_alias@wallclock_ratsche 
+[gw0] [ 66%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_stage_und_waypoint_hinter_import_alias@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_literalem_etappendatum@wallclock_ratsche 
+[gw0] [ 67%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_literalem_etappendatum@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_start_time_vor_unaufloesbaren_wegpunkten@wallclock_ratsche 
+[gw0] [ 68%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_schweigt_bei_start_time_vor_unaufloesbaren_wegpunkten@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_alarmpfad_ueber_modulimport@wallclock_ratsche 
+[gw0] [ 70%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_erkennt_alarmpfad_ueber_modulimport@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_echter_testbaum_ohne_fehlalarm_der_zweiten_regel@wallclock_ratsche 
+[gw0] [ 71%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_echter_testbaum_ohne_fehlalarm_der_zweiten_regel@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_known_violations_der_neuen_regel_ohne_veraltete_eintraege@wallclock_ratsche 
+[gw0] [ 72%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_known_violations_der_neuen_regel_ohne_veraltete_eintraege@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_known_violations_der_neuen_regel_ist_leer@wallclock_ratsche 
+[gw0] [ 74%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_known_violations_der_neuen_regel_ist_leer@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_regel_budget_pruefdatum_der_neuen_regel_steht_als_text@wallclock_ratsche 
+[gw0] [ 75%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_regel_budget_pruefdatum_der_neuen_regel_steht_als_text@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_neue_waechter_sind_nicht_von_der_ci_ausgenommen@wallclock_ratsche 
+[gw0] [ 77%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_neue_waechter_sind_nicht_von_der_ci_ausgenommen@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[direkt]@wallclock_ratsche 
+[gw0] [ 78%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[direkt]@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[indirekt]@wallclock_ratsche 
+[gw0] [ 79%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[indirekt]@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[trip_alert]@wallclock_ratsche 
+[gw0] [ 81%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[trip_alert]@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[compare_alert]@wallclock_ratsche 
+[gw0] [ 82%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[compare_alert]@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[trip_report_scheduler]@wallclock_ratsche 
+[gw0] [ 83%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[trip_report_scheduler]@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[compare_slot_scheduler]@wallclock_ratsche 
+[gw0] [ 85%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[compare_slot_scheduler]@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[alert_gate]@wallclock_ratsche 
+[gw0] [ 86%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[alert_gate]@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[deviation_alert]@wallclock_ratsche 
+[gw0] [ 87%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[deviation_alert]@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[alert_daily_limit]@wallclock_ratsche 
+[gw0] [ 89%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[alert_daily_limit]@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[official_alert]@wallclock_ratsche 
+[gw0] [ 90%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[official_alert]@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_ueberspringt_kaputte_kandidaten[syntax-direkt]@wallclock_ratsche 
+[gw0] [ 91%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_ueberspringt_kaputte_kandidaten[syntax-direkt]@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_ueberspringt_kaputte_kandidaten[syntax-indirekt]@wallclock_ratsche 
+[gw0] [ 93%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_ueberspringt_kaputte_kandidaten[syntax-indirekt]@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_ueberspringt_kaputte_kandidaten[utf8-direkt]@wallclock_ratsche 
+[gw0] [ 94%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_ueberspringt_kaputte_kandidaten[utf8-direkt]@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_ueberspringt_kaputte_kandidaten[utf8-indirekt]@wallclock_ratsche 
+[gw0] [ 95%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_scanner_ueberspringt_kaputte_kandidaten[utf8-indirekt]@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_echtbaum_cache_scannt_je_regel_nur_einmal[direkt-scan_wallclock_arrival_fixtures]@wallclock_ratsche 
+[gw0] [ 97%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_echtbaum_cache_scannt_je_regel_nur_einmal[direkt-scan_wallclock_arrival_fixtures]@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_echtbaum_cache_scannt_je_regel_nur_einmal[indirekt-scan_indirekte_wanduhr_fixtures]@wallclock_ratsche 
+[gw0] [ 98%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_echtbaum_cache_scannt_je_regel_nur_einmal[indirekt-scan_indirekte_wanduhr_fixtures]@wallclock_ratsche 
+tests/tdd/test_fixture_wallclock_ratchet.py::test_echtbaum_pruefungen_nutzen_den_cache@wallclock_ratsche 
+[gw0] [100%] PASSED tests/tdd/test_fixture_wallclock_ratchet.py::test_echtbaum_pruefungen_nutzen_den_cache@wallclock_ratsche 
+
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+tests/conftest.py:130
+tests/conftest.py:130
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================= slowest 5 durations ==============================
+7.48s call     tests/tdd/test_fixture_wallclock_ratchet.py::test_echter_testbaum_ohne_fehlalarm_der_zweiten_regel@wallclock_ratsche
+1.63s call     tests/tdd/test_fixture_wallclock_ratchet.py::test_keine_fixture_baut_ankunft_aus_der_rohen_wanduhr@wallclock_ratsche
+1.28s call     tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_bestand_liefert_keine_neuen_funde@gestellte_uhr_ratsche
+0.51s setup    tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_bestand_liefert_keine_neuen_funde@gestellte_uhr_ratsche
+0.51s setup    tests/tdd/test_fixture_wallclock_ratchet.py::test_keine_fixture_baut_ankunft_aus_der_rohen_wanduhr@wallclock_ratsche
+======================= 74 passed, 6 warnings in 11.90s ========================
+Exit 0
+  60 [gw0]  PASSED tests/tdd/test_fixture_wallclock_ratchet.py
+  14 [gw1]  PASSED tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py

@@ -46,6 +46,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.helpers.bezeichner_vorfilter import quelltext_mit_bezeichnern
+
 # Pfadregel #1409: Repo-Wurzel relativ zu DIESER Testdatei.
 _TESTS_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _TESTS_DIR.parent
@@ -120,22 +122,30 @@ def _real_calls_to(tree: ast.AST, target_name: str) -> list[ast.Call]:
     return calls
 
 
+def aufrufer_von_get_trips_dir(wurzel: Path) -> dict[str, int]:
+    """Datei (relativ zu ``wurzel``) -> Anzahl echter Aufrufe. Geparst wird nur,
+    was den Bezeichner nennt (#3279); eine kaputte Kandidatendatei wirft."""
+    aufrufer: dict[str, int] = {}
+    for path in sorted(wurzel.rglob("*.py")):
+        text = quelltext_mit_bezeichnern(path, alle=("get_trips_dir",))
+        if text is None:
+            continue
+        calls = _real_calls_to(ast.parse(text, filename=str(path)), "get_trips_dir")
+        if calls:
+            aufrufer[path.relative_to(wurzel).as_posix()] = len(calls)
+    return aufrufer
+
+
 def test_no_test_file_still_calls_get_trips_dir():
     """N3/AC-1: ueber alle .py-Dateien unter tests/ -- eine echte AST-Pruefung,
     kein Textvergleich (verboten waere z.B. ``assert 'get_trips_dir' not in
     text``, das traefe auch Kommentare/Docstrings, die AC-7 bewusst als
     Altbestands-Hinweis stehen laesst)."""
-    offenders: dict[str, int] = {}
-    for path in sorted(_TESTS_DIR.rglob("*.py")):
-        text = path.read_text(encoding="utf-8")
-        tree = ast.parse(text, filename=str(path))
-        calls = _real_calls_to(tree, "get_trips_dir")
-        if calls:
-            offenders[str(path.relative_to(_REPO_ROOT))] = len(calls)
+    offenders = aufrufer_von_get_trips_dir(_TESTS_DIR)
 
     assert not offenders, (
         "Echte Aufrufe von get_trips_dir() in "
-        f"{len(offenders)} Testdatei(en) (AC-1 verlangt: keine mehr nach der "
+        f"{len(offenders)} Testdatei(en) unter tests/ (AC-1 verlangt: keine mehr nach der "
         f"Umstellung auf get_briefings_dir()): {sorted(offenders.items())}"
     )
 
@@ -158,6 +168,14 @@ def test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst(
     monkeypatch.setattr(ast, "parse", lambda q, *a, **k: (geparst.append(q), parse(q, *a, **k))[1])
     assert aufrufer_von_get_trips_dir(tmp_path) == {"unter/test_attrappe.py": 2}
     assert sorted(geparst) == sorted([nennung, text])
+
+
+def test_echtbaum_pruefung_durchsucht_den_ganzen_testbaum(monkeypatch):
+    wurzeln: list[Path] = []
+    monkeypatch.setitem(globals(), "aufrufer_von_get_trips_dir",
+                        lambda wurzel: (wurzeln.append(wurzel), {})[1])
+    test_no_test_file_still_calls_get_trips_dir()
+    assert wurzeln == [Path(__file__).resolve().parent]
 
 
 def test_kaputte_kandidatendatei_bleibt_rot(tmp_path):

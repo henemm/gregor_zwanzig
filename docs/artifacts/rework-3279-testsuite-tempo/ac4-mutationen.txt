@@ -1,0 +1,517 @@
+69 Mutationen, Start Tue Nov 24 07:50:14 2026
+Gegenprobe ohne Mutation ['tests/tdd/test_bezeichner_vorfilter.py', 'tests/tdd/test_fixture_wallclock_ratchet.py', 'tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py', 'tests/test_trips_pfad_rueckbau.py'] Exit 0 ['99 passed, 1 deselected, 2 warnings in 35.88s'] []
+Gegenprobe ohne Mutation ['AC8'] Exit 0 ['1 passed, 17 deselected, 1 warning in 5.85s'] []
+
+ROT        H01 alle: UND -> ODER [bezeichner_vorfilter.py] ['4 failed, 95 passed, 1 deselected, 2 warnings in 39.14s']
+     rot: test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[make_trip()\n-alle6-eines_aus6-False]
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[make_trip-\uff4d\uff41\uff4b\uff45_trip]
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[save_trip-\uff53\uff41\uff56\uff45_trip]
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_braucht_auch_make_trip
+
+ROT        H02 eines_aus: ODER -> UND [bezeichner_vorfilter.py] ['18 failed, 81 passed, 1 deselected, 2 warnings in 25.03s']
+     rot: test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[import alert_gate\nStage()\n-alle8-eines_aus8-True]
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_meldet_die_indirekte_variante
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_wegpunkte_aus_einer_hilfsfunktion
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_stage_aus_kwargs_entpackung
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_wegpunkte_aus_einer_comprehension
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_ungehaertete_funktion_trotz_dateiweitem_import
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_stage_und_waypoint_hinter_import_alias
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_alarmpfad_ueber_modulimport
+     ... und 10 weitere
+
+ROT        H03 NFKC weg [bezeichner_vorfilter.py] ['6 failed, 93 passed, 1 deselected, 2 warnings in 35.01s']
+     rot: test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[x.\uff53\uff54\uff52\uff46\uff54\uff49\uff4d\uff45('%H')\n-alle1-eines_aus1-True]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[direkt]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[indirekt]
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[make_trip-\uff4d\uff41\uff4b\uff45_trip]
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[save_trip-\uff53\uff41\uff56\uff45_trip]
+     rot: test_trips_pfad_rueckbau.py::test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst[\uff47\uff45\uff54_trips_dir]
+
+ROT        H04 NFKC -> NFC [bezeichner_vorfilter.py] ['6 failed, 93 passed, 1 deselected, 2 warnings in 35.80s']
+     rot: test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[x.\uff53\uff54\uff52\uff46\uff54\uff49\uff4d\uff45('%H')\n-alle1-eines_aus1-True]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[direkt]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[indirekt]
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[make_trip-\uff4d\uff41\uff4b\uff45_trip]
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[save_trip-\uff53\uff41\uff56\uff45_trip]
+     rot: test_trips_pfad_rueckbau.py::test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst[\uff47\uff45\uff54_trips_dir]
+
+ROT        H05 Filter immer None [bezeichner_vorfilter.py] ['48 failed, 51 passed, 1 deselected, 2 warnings in 22.25s']
+     rot: test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[x.strftime('%H')\n-alle0-eines_aus0-True]
+     rot: test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[x.\uff53\uff54\uff52\uff46\uff54\uff49\uff4d\uff45('%H')\n-alle1-eines_aus1-True]
+     rot: test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[# \xdcberschrift\nx.strftime('%H')\n-alle2-eines_aus2-True]
+     rot: test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[from a import Stage as S\n-alle3-eines_aus3-True]
+     rot: test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[make_trip(); save_trip()\n-alle7-eines_aus7-True]
+     rot: test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[import alert_gate\nStage()\n-alle8-eines_aus8-True]
+     rot: test_fixture_wallclock_ratchet.py::test_known_violations_enthaelt_keine_veralteten_eintraege
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_meldet_das_antimuster
+     ... und 40 weitere
+     Kandidatenzaehlung >= 20 ( test_echter_testbaum_ohne_fehlalarm_der_zweiten_regel ) trotz kaputtem Helfer: GRUEN
+
+ROT        H06 Filter laesst alles durch [bezeichner_vorfilter.py] ['24 failed, 75 passed, 1 deselected, 2 warnings in 200.41s (0:03:20)']
+     rot: test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[x = 1\n-alle4-eines_aus4-False]
+     rot: test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[# \xdcberschrift\nx = 1\n-alle5-eines_aus5-False]
+     rot: test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[make_trip()\n-alle6-eines_aus6-False]
+     rot: test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[import q\nStage()\n-alle9-eines_aus9-False]
+     rot: test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[import alert_gate\n-alle10-eines_aus10-False]
+     rot: test_fixture_wallclock_ratchet.py::test_echter_testbaum_ohne_fehlalarm_der_zweiten_regel
+     rot: test_fixture_wallclock_ratchet.py::test_known_violations_der_neuen_regel_ohne_veraltete_eintraege
+     rot: test_fixture_wallclock_ratchet.py::test_known_violations_der_neuen_regel_ist_leer
+     ... und 16 weitere
+
+ROT        H07 eines_aus ignoriert [bezeichner_vorfilter.py] ['9 failed, 90 passed, 1 deselected, 2 warnings in 36.01s']
+     rot: test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[import q\nStage()\n-alle9-eines_aus9-False]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[trip_alert]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[compare_alert]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[trip_report_scheduler]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[compare_slot_scheduler]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[alert_gate]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[deviation_alert]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[alert_daily_limit]
+     ... und 1 weitere
+
+ROT        H08 gibt normalisierten Text zurueck [bezeichner_vorfilter.py] ['6 failed, 93 passed, 1 deselected, 2 warnings in 39.48s']
+     rot: test_bezeichner_vorfilter.py::test_vorfilter_liefert_quelltext_nur_bei_treffer[x.\uff53\uff54\uff52\uff46\uff54\uff49\uff4d\uff45('%H')\n-alle1-eines_aus1-True]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[direkt]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[indirekt]
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[make_trip-\uff4d\uff41\uff4b\uff45_trip]
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[save_trip-\uff53\uff41\uff56\uff45_trip]
+     rot: test_trips_pfad_rueckbau.py::test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst[\uff47\uff45\uff54_trips_dir]
+
+ROT        H09 verschluckt Lesefehler [bezeichner_vorfilter.py] ['1 failed, 98 passed, 1 deselected, 2 warnings in 35.53s']
+     rot: test_bezeichner_vorfilter.py::test_vorfilter_verschluckt_keine_lesefehler
+
+ROT        H10 Parsebarkeit ohne OSError [bezeichner_vorfilter.py] ['1 failed, 16 passed, 1 deselected, 2 warnings in 13.00s']
+     rot: test_bezeichner_vorfilter.py::test_unparsbare_datei_ergibt_befund_mit_dateiname[oserror]
+
+ROT        H11 Parsebarkeit ohne SyntaxError [bezeichner_vorfilter.py] ['2 failed, 15 passed, 1 deselected, 2 warnings in 11.76s']
+     rot: test_bezeichner_vorfilter.py::test_unparsbare_datei_ergibt_befund_mit_dateiname[syntax]
+     rot: test_bezeichner_vorfilter.py::test_unparsbare_datei_ergibt_befund_mit_dateiname[nullbyte]
+
+ROT        H12 Parsebarkeit ohne ValueError [bezeichner_vorfilter.py] ['1 failed, 16 passed, 1 deselected, 2 warnings in 11.77s']
+     rot: test_bezeichner_vorfilter.py::test_unparsbare_datei_ergibt_befund_mit_dateiname[utf8]
+
+UEBERLEBT  H13 Parsebarkeit nur UnicodeDecodeError statt ValueError [bezeichner_vorfilter.py] ['17 passed, 1 deselected, 2 warnings in 11.24s']
+
+ROT        H14 Parsebarkeit: Befund verschluckt [bezeichner_vorfilter.py] ['4 failed, 13 passed, 1 deselected, 2 warnings in 11.75s']
+     rot: test_bezeichner_vorfilter.py::test_unparsbare_datei_ergibt_befund_mit_dateiname[syntax]
+     rot: test_bezeichner_vorfilter.py::test_unparsbare_datei_ergibt_befund_mit_dateiname[nullbyte]
+     rot: test_bezeichner_vorfilter.py::test_unparsbare_datei_ergibt_befund_mit_dateiname[utf8]
+     rot: test_bezeichner_vorfilter.py::test_unparsbare_datei_ergibt_befund_mit_dateiname[oserror]
+
+ROT        H15 Parsebarkeit: nur oberste Ebene [bezeichner_vorfilter.py] ['4 failed, 13 passed, 1 deselected, 2 warnings in 2.46s']
+     rot: test_bezeichner_vorfilter.py::test_unparsbare_datei_ergibt_befund_mit_dateiname[syntax]
+     rot: test_bezeichner_vorfilter.py::test_unparsbare_datei_ergibt_befund_mit_dateiname[nullbyte]
+     rot: test_bezeichner_vorfilter.py::test_unparsbare_datei_ergibt_befund_mit_dateiname[utf8]
+     rot: test_bezeichner_vorfilter.py::test_unparsbare_datei_ergibt_befund_mit_dateiname[oserror]
+
+ROT        H16 Parsebarkeit: Dateiname fehlt [bezeichner_vorfilter.py] ['4 failed, 13 passed, 1 deselected, 2 warnings in 11.57s']
+     rot: test_bezeichner_vorfilter.py::test_unparsbare_datei_ergibt_befund_mit_dateiname[syntax]
+     rot: test_bezeichner_vorfilter.py::test_unparsbare_datei_ergibt_befund_mit_dateiname[nullbyte]
+     rot: test_bezeichner_vorfilter.py::test_unparsbare_datei_ergibt_befund_mit_dateiname[utf8]
+     rot: test_bezeichner_vorfilter.py::test_unparsbare_datei_ergibt_befund_mit_dateiname[oserror]
+
+ROT        H17 Parsebarkeit: parst nicht [bezeichner_vorfilter.py] ['2 failed, 15 passed, 1 deselected, 2 warnings in 2.03s']
+     rot: test_bezeichner_vorfilter.py::test_unparsbare_datei_ergibt_befund_mit_dateiname[syntax]
+     rot: test_bezeichner_vorfilter.py::test_unparsbare_datei_ergibt_befund_mit_dateiname[nullbyte]
+
+ROT        W01 direkt: falscher Bezeichner [test_fixture_wallclock_ratchet.py] ['16 failed, 44 passed, 2 warnings in 18.56s']
+     rot: test_fixture_wallclock_ratchet.py::test_known_violations_enthaelt_keine_veralteten_eintraege
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_meldet_das_antimuster
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_astimezone_zwischenschritt
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_den_bypass_ueber_eine_zwischenvariable
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_die_kette_ueber_astimezone_und_namen
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_uhrzeiten_in_einer_liste
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_uhrzeiten_in_einer_tupel_rueckgabe
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_date_today_als_etappendatum
+     ... und 8 weitere
+
+ROT        W02 direkt: zusaetzlicher Bezeichner Waypoint verlangt [test_fixture_wallclock_ratchet.py] ['14 failed, 46 passed, 2 warnings in 18.40s']
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_meldet_das_antimuster
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_astimezone_zwischenschritt
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_den_bypass_ueber_eine_zwischenvariable
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_die_kette_ueber_astimezone_und_namen
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_uhrzeiten_in_einer_liste
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_uhrzeiten_in_einer_tupel_rueckgabe
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_date_today_als_etappendatum
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_ortstag_ohne_now_utc_als_etappendatum
+     ... und 6 weitere
+
+ROT        W03 direkt: Filter weg [test_fixture_wallclock_ratchet.py] ['1 failed, 59 passed, 2 warnings in 44.28s']
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[direkt]
+
+ROT        W04 indirekt: falscher Bezeichner [test_fixture_wallclock_ratchet.py] ['14 failed, 46 passed, 2 warnings in 21.01s']
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_wegpunkte_aus_einer_hilfsfunktion
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_stage_aus_kwargs_entpackung
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_wegpunkte_aus_einer_comprehension
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_ungehaertete_funktion_trotz_dateiweitem_import
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_stage_und_waypoint_hinter_import_alias
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_alarmpfad_ueber_modulimport
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[trip_alert]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[compare_alert]
+     ... und 6 weitere
+
+ROT        W05 indirekt: UND -> ODER [test_fixture_wallclock_ratchet.py] ['8 failed, 52 passed, 2 warnings in 33.46s']
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[trip_alert]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[compare_alert]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[trip_report_scheduler]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[compare_slot_scheduler]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[alert_gate]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[deviation_alert]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[alert_daily_limit]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[official_alert]
+
+ROT        W06 indirekt: alle Alarmpfade verlangt (ODER -> UND) [test_fixture_wallclock_ratchet.py] ['17 failed, 43 passed, 2 warnings in 11.65s']
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_meldet_die_indirekte_variante
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_wegpunkte_aus_einer_hilfsfunktion
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_stage_aus_kwargs_entpackung
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_wegpunkte_aus_einer_comprehension
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_ungehaertete_funktion_trotz_dateiweitem_import
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_stage_und_waypoint_hinter_import_alias
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_erkennt_alarmpfad_ueber_modulimport
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[indirekt]
+     ... und 9 weitere
+
+ROT        W07 indirekt: Alarmpfad-Bedingung weg [test_fixture_wallclock_ratchet.py] ['8 failed, 52 passed, 2 warnings in 20.38s']
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[trip_alert]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[compare_alert]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[trip_report_scheduler]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[compare_slot_scheduler]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[alert_gate]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[deviation_alert]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[alert_daily_limit]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[official_alert]
+
+ROT        W08 indirekt: Stage-Bedingung weg [test_fixture_wallclock_ratchet.py] ['8 failed, 52 passed, 2 warnings in 32.79s']
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[trip_alert]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[compare_alert]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[trip_report_scheduler]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[compare_slot_scheduler]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[alert_gate]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[deviation_alert]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[alert_daily_limit]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[official_alert]
+
+ROT        W09 indirekt: nur der erste Alarmpfad [test_fixture_wallclock_ratchet.py] ['7 failed, 53 passed, 2 warnings in 17.11s']
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[compare_alert]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[trip_report_scheduler]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[compare_slot_scheduler]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[alert_gate]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[deviation_alert]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[alert_daily_limit]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[official_alert]
+
+ROT        W10 indirekt: Waypoint statt Stage [test_fixture_wallclock_ratchet.py] ['8 failed, 52 passed, 2 warnings in 20.96s']
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[trip_alert]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[compare_alert]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[trip_report_scheduler]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[compare_slot_scheduler]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[alert_gate]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[deviation_alert]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[alert_daily_limit]
+     rot: test_fixture_wallclock_ratchet.py::test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad[official_alert]
+
+ROT        W11 direkt: SyntaxError nicht mehr uebersprungen [test_fixture_wallclock_ratchet.py] ['1 failed, 59 passed, 2 warnings in 20.10s']
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_ueberspringt_kaputte_kandidaten[syntax-direkt]
+
+ROT        W12 direkt: UnicodeDecodeError nicht mehr uebersprungen [test_fixture_wallclock_ratchet.py] ['1 failed, 59 passed, 2 warnings in 22.12s']
+     rot: test_fixture_wallclock_ratchet.py::test_scanner_ueberspringt_kaputte_kandidaten[utf8-direkt]
+
+ROT        W13 Kandidaten: falscher Vorab-Filter [test_fixture_wallclock_ratchet.py] ['1 failed, 59 passed, 2 warnings in 16.07s']
+     rot: test_fixture_wallclock_ratchet.py::test_echter_testbaum_ohne_fehlalarm_der_zweiten_regel
+
+UEBERLEBT  W14 Kandidaten: NFKC weg [test_fixture_wallclock_ratchet.py] ['60 passed, 2 warnings in 21.41s']
+
+ROT        W15 direkt: Pruefung scannt am Cache vorbei [test_fixture_wallclock_ratchet.py] ['1 failed, 59 passed, 2 warnings in 23.57s']
+     rot: test_fixture_wallclock_ratchet.py::test_echtbaum_pruefungen_nutzen_den_cache
+
+ROT        W16 indirekt: Veraltet-Pruefung scannt am Cache vorbei [test_fixture_wallclock_ratchet.py] ['1 failed, 59 passed, 2 warnings in 29.15s']
+     rot: test_fixture_wallclock_ratchet.py::test_echtbaum_pruefungen_nutzen_den_cache
+
+ABBRUCH Exit 1 W17 xdist_group entfernt [test_fixture_wallclock_ratchet.py] ['1 failed, 17 deselected, 1 warning in 4.40s']
+
+ABBRUCH Exit 1 W18 xdist_group wie in der anderen Datei [test_fixture_wallclock_ratchet.py] ['1 failed, 17 deselected, 1 warning in 5.45s']
+
+ABBRUCH Exit 1 W19 xdist_group = echtdaten [test_fixture_wallclock_ratchet.py] ['1 failed, 17 deselected, 1 warning in 5.53s']
+
+ROT        WD Cache liefert leere Liste [test_fixture_wallclock_ratchet.py] ['3 failed, 57 passed, 2 warnings in 16.07s']
+     rot: test_fixture_wallclock_ratchet.py::test_known_violations_enthaelt_keine_veralteten_eintraege
+     rot: test_fixture_wallclock_ratchet.py::test_echtbaum_cache_scannt_je_regel_nur_einmal[direkt-scan_wallclock_arrival_fixtures]
+     rot: test_fixture_wallclock_ratchet.py::test_echtbaum_pruefungen_nutzen_den_cache
+
+ROT        WD Abfrage liefert leere Liste [test_fixture_wallclock_ratchet.py] ['3 failed, 57 passed, 2 warnings in 15.32s']
+     rot: test_fixture_wallclock_ratchet.py::test_known_violations_enthaelt_keine_veralteten_eintraege
+     rot: test_fixture_wallclock_ratchet.py::test_echtbaum_cache_scannt_je_regel_nur_einmal[direkt-scan_wallclock_arrival_fixtures]
+     rot: test_fixture_wallclock_ratchet.py::test_echtbaum_pruefungen_nutzen_den_cache
+
+ROT        WD Cache auch auf tmp_path (Scan selbst gecacht) [test_fixture_wallclock_ratchet.py] ['1 failed, 59 passed, 2 warnings in 21.02s']
+     rot: test_fixture_wallclock_ratchet.py::test_echtbaum_cache_scannt_je_regel_nur_einmal[direkt-scan_wallclock_arrival_fixtures]
+
+ROT        WD Cache umgangen (Abfrage scannt neu) [test_fixture_wallclock_ratchet.py] ['2 failed, 58 passed, 2 warnings in 27.95s']
+     rot: test_fixture_wallclock_ratchet.py::test_echtbaum_cache_scannt_je_regel_nur_einmal[direkt-scan_wallclock_arrival_fixtures]
+     rot: test_fixture_wallclock_ratchet.py::test_echtbaum_pruefungen_nutzen_den_cache
+
+ROT        WD functools.cache entfernt [test_fixture_wallclock_ratchet.py] ['2 failed, 58 passed, 2 warnings in 27.59s']
+     rot: test_fixture_wallclock_ratchet.py::test_echtbaum_cache_scannt_je_regel_nur_einmal[direkt-scan_wallclock_arrival_fixtures]
+     rot: test_fixture_wallclock_ratchet.py::test_echtbaum_pruefungen_nutzen_den_cache
+
+ROT        WD Cache gibt dieselbe Liste zurueck [test_fixture_wallclock_ratchet.py] ['1 failed, 59 passed, 2 warnings in 21.13s']
+     rot: test_fixture_wallclock_ratchet.py::test_echtbaum_cache_scannt_je_regel_nur_einmal[direkt-scan_wallclock_arrival_fixtures]
+
+ROT        WI Cache liefert leere Liste [test_fixture_wallclock_ratchet.py] ['1 failed, 59 passed, 2 warnings in 11.56s']
+     rot: test_fixture_wallclock_ratchet.py::test_echtbaum_cache_scannt_je_regel_nur_einmal[indirekt-scan_indirekte_wanduhr_fixtures]
+
+ROT        WI Abfrage liefert leere Liste [test_fixture_wallclock_ratchet.py] ['1 failed, 59 passed, 2 warnings in 11.59s']
+     rot: test_fixture_wallclock_ratchet.py::test_echtbaum_cache_scannt_je_regel_nur_einmal[indirekt-scan_indirekte_wanduhr_fixtures]
+
+ROT        WI Cache auch auf tmp_path (Scan selbst gecacht) [test_fixture_wallclock_ratchet.py] ['1 failed, 59 passed, 2 warnings in 20.58s']
+     rot: test_fixture_wallclock_ratchet.py::test_echtbaum_cache_scannt_je_regel_nur_einmal[indirekt-scan_indirekte_wanduhr_fixtures]
+
+ROT        WI Cache umgangen (Abfrage scannt neu) [test_fixture_wallclock_ratchet.py] ['2 failed, 58 passed, 2 warnings in 51.94s']
+     rot: test_fixture_wallclock_ratchet.py::test_echtbaum_cache_scannt_je_regel_nur_einmal[indirekt-scan_indirekte_wanduhr_fixtures]
+     rot: test_fixture_wallclock_ratchet.py::test_echtbaum_pruefungen_nutzen_den_cache
+
+ROT        WI functools.cache entfernt [test_fixture_wallclock_ratchet.py] ['2 failed, 58 passed, 2 warnings in 47.78s']
+     rot: test_fixture_wallclock_ratchet.py::test_echtbaum_cache_scannt_je_regel_nur_einmal[indirekt-scan_indirekte_wanduhr_fixtures]
+     rot: test_fixture_wallclock_ratchet.py::test_echtbaum_pruefungen_nutzen_den_cache
+
+ROT        WI Cache gibt dieselbe Liste zurueck [test_fixture_wallclock_ratchet.py] ['1 failed, 59 passed, 2 warnings in 21.14s']
+     rot: test_fixture_wallclock_ratchet.py::test_echtbaum_cache_scannt_je_regel_nur_einmal[indirekt-scan_indirekte_wanduhr_fixtures]
+
+ROT        U01 falscher Bezeichner [test_trip_fixtures_laufen_unter_gestellter_uhr.py] ['6 failed, 8 passed, 2 warnings in 2.44s']
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_known_violations_enthaelt_keine_veralteten_eintraege
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_scanner_meldet_das_antimuster
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[make_trip-\uff4d\uff41\uff4b\uff45_trip]
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[save_trip-\uff53\uff41\uff56\uff45_trip]
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_echtbaum_cache_scannt_nur_einmal
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_echtbaum_pruefungen_nutzen_den_cache
+
+ROT        U02 UND -> ODER [test_trip_fixtures_laufen_unter_gestellter_uhr.py] ['3 failed, 11 passed, 2 warnings in 5.07s']
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[make_trip-\uff4d\uff41\uff4b\uff45_trip]
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[save_trip-\uff53\uff41\uff56\uff45_trip]
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_braucht_auch_make_trip
+
+ROT        U03 save_trip-Bedingung weg [test_trip_fixtures_laufen_unter_gestellter_uhr.py] ['2 failed, 12 passed, 2 warnings in 3.77s']
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[make_trip-\uff4d\uff41\uff4b\uff45_trip]
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[save_trip-\uff53\uff41\uff56\uff45_trip]
+
+ROT        U04 make_trip-Bedingung weg [test_trip_fixtures_laufen_unter_gestellter_uhr.py] ['1 failed, 13 passed, 2 warnings in 6.37s']
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_braucht_auch_make_trip
+
+ROT        U05 zusaetzlich freeze_time verlangt [test_trip_fixtures_laufen_unter_gestellter_uhr.py] ['6 failed, 8 passed, 2 warnings in 2.79s']
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_known_violations_enthaelt_keine_veralteten_eintraege
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_scanner_meldet_das_antimuster
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[make_trip-\uff4d\uff41\uff4b\uff45_trip]
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten[save_trip-\uff53\uff41\uff56\uff45_trip]
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_echtbaum_cache_scannt_nur_einmal
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_echtbaum_pruefungen_nutzen_den_cache
+
+ROT        U06 SyntaxError nicht mehr uebersprungen [test_trip_fixtures_laufen_unter_gestellter_uhr.py] ['1 failed, 13 passed, 2 warnings in 3.41s']
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_scanner_ueberspringt_kaputte_kandidaten[syntax]
+
+ROT        U07 UnicodeDecodeError nicht mehr uebersprungen [test_trip_fixtures_laufen_unter_gestellter_uhr.py] ['1 failed, 13 passed, 2 warnings in 3.73s']
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_scanner_ueberspringt_kaputte_kandidaten[utf8]
+
+ABBRUCH Exit 1 U08 xdist_group entfernt [test_trip_fixtures_laufen_unter_gestellter_uhr.py] ['1 failed, 17 deselected, 1 warning in 5.73s']
+
+ROT        UC Cache liefert leere Liste [test_trip_fixtures_laufen_unter_gestellter_uhr.py] ['3 failed, 11 passed, 2 warnings in 1.54s']
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_known_violations_enthaelt_keine_veralteten_eintraege
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_echtbaum_cache_scannt_nur_einmal
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_echtbaum_pruefungen_nutzen_den_cache
+
+ROT        UC Abfrage liefert leere Liste [test_trip_fixtures_laufen_unter_gestellter_uhr.py] ['3 failed, 11 passed, 2 warnings in 1.67s']
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_known_violations_enthaelt_keine_veralteten_eintraege
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_echtbaum_cache_scannt_nur_einmal
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_echtbaum_pruefungen_nutzen_den_cache
+
+ROT        UC Cache auch auf tmp_path (Scan selbst gecacht) [test_trip_fixtures_laufen_unter_gestellter_uhr.py] ['1 failed, 13 passed, 2 warnings in 3.81s']
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_echtbaum_cache_scannt_nur_einmal
+
+ROT        UC Cache umgangen (Abfrage scannt neu) [test_trip_fixtures_laufen_unter_gestellter_uhr.py] ['2 failed, 12 passed, 2 warnings in 6.87s']
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_echtbaum_cache_scannt_nur_einmal
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_echtbaum_pruefungen_nutzen_den_cache
+
+ROT        UC functools.cache entfernt [test_trip_fixtures_laufen_unter_gestellter_uhr.py] ['2 failed, 12 passed, 2 warnings in 6.77s']
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_echtbaum_cache_scannt_nur_einmal
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_echtbaum_pruefungen_nutzen_den_cache
+
+ROT        UC Cache gibt dieselbe Liste zurueck [test_trip_fixtures_laufen_unter_gestellter_uhr.py] ['1 failed, 13 passed, 2 warnings in 3.50s']
+     rot: test_trip_fixtures_laufen_unter_gestellter_uhr.py::test_echtbaum_cache_scannt_nur_einmal
+
+ROT        T01 falscher Bezeichner [test_trips_pfad_rueckbau.py] ['3 failed, 5 passed, 2 warnings in 1.74s']
+     rot: test_trips_pfad_rueckbau.py::test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst[get_trips_dir]
+     rot: test_trips_pfad_rueckbau.py::test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst[\uff47\uff45\uff54_trips_dir]
+     rot: test_trips_pfad_rueckbau.py::test_kaputte_kandidatendatei_bleibt_rot
+
+ROT        T02 zusaetzlicher Bezeichner verlangt [test_trips_pfad_rueckbau.py] ['3 failed, 5 passed, 2 warnings in 1.85s']
+     rot: test_trips_pfad_rueckbau.py::test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst[get_trips_dir]
+     rot: test_trips_pfad_rueckbau.py::test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst[\uff47\uff45\uff54_trips_dir]
+     rot: test_trips_pfad_rueckbau.py::test_kaputte_kandidatendatei_bleibt_rot
+
+ROT        T03 Filter weg [test_trips_pfad_rueckbau.py] ['2 failed, 6 passed, 2 warnings in 15.05s']
+     rot: test_trips_pfad_rueckbau.py::test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst[get_trips_dir]
+     rot: test_trips_pfad_rueckbau.py::test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst[\uff47\uff45\uff54_trips_dir]
+
+ROT        T04 Baumlauf liefert leer [test_trips_pfad_rueckbau.py] ['2 failed, 6 passed, 2 warnings in 2.79s']
+     rot: test_trips_pfad_rueckbau.py::test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst[get_trips_dir]
+     rot: test_trips_pfad_rueckbau.py::test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst[\uff47\uff45\uff54_trips_dir]
+
+ROT        T05 SyntaxError verschluckt [test_trips_pfad_rueckbau.py] ['1 failed, 7 passed, 2 warnings in 1.71s']
+     rot: test_trips_pfad_rueckbau.py::test_kaputte_kandidatendatei_bleibt_rot
+
+ROT        T06 nur oberste Ebene [test_trips_pfad_rueckbau.py] ['2 failed, 6 passed, 2 warnings in 1.06s']
+     rot: test_trips_pfad_rueckbau.py::test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst[get_trips_dir]
+     rot: test_trips_pfad_rueckbau.py::test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst[\uff47\uff45\uff54_trips_dir]
+
+ROT        T07 Wurzel-Parameter ignoriert [test_trips_pfad_rueckbau.py] ['3 failed, 5 passed, 2 warnings in 3.89s']
+     rot: test_trips_pfad_rueckbau.py::test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst[get_trips_dir]
+     rot: test_trips_pfad_rueckbau.py::test_gepflanzter_aufruf_wird_gefunden_und_nur_kandidaten_geparst[\uff47\uff45\uff54_trips_dir]
+     rot: test_trips_pfad_rueckbau.py::test_kaputte_kandidatendatei_bleibt_rot
+
+UEBERLEBT: ['H13 Parsebarkeit nur UnicodeDecodeError statt ValueError', 'W14 Kandidaten: NFKC weg', 'W17 xdist_group entfernt', 'W18 xdist_group wie in der anderen Datei', 'W19 xdist_group = echtdaten', 'U08 xdist_group entfernt']
+Hashes zurueckgespielt: True Tue Nov 24 08:14:16 2026
+
+
+===== NACHTRAG =====
+1) Die vier xdist-Mutationen (W17, W18, W19, U08) oben als "ABBRUCH Exit 1" sind ROT: der Auswerter erkannte nur den
+   Testnamen aus dem externen Pfad nicht. Wiederholung mit Fehlergrund:
+   WICHTIG: geprueft mit einer externen KOPIE des AC-8-Tests, deren Regex ::(\S+) durch ::(.+?)\s*$ ersetzt ist. Das
+   Original im Repo ist am Umbau vorbei rot (schneidet Parameter-IDs mit Leerzeichen ab) und wurde nicht geaendert.
+4 Mutationen, Start Tue Nov 24 08:14:32 2026
+
+ROT        W17 xdist_group entfernt [test_fixture_wallclock_ratchet.py] ['1 failed, 17 deselected, 1 warning in 5.69s']
+     /private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-rework-3279-testsuite-tempo/21599332-b39a-4eaf-88e7-e31483280c9d/scratchpad/ac8/test_ac8_kopie.py:105: in test_cache_dateien_laufen_je_in_einem_worker
+     E   AssertionError: tests/tdd/test_fixture_wallclock_ratchet.py verteilt sich auf mehrere Worker, der Cache wirkt nicht: [('gw1', 'test_scanner_meldet_das_antimuster'), ('gw1', 'test_scanner_schweigt_bei_geklemmtem_muster'), ('gw1', 'test_scanner_schweigt_ohne_etappendatum'), ('gw1', 'test_scanner_e
+     E   assert 2 == 1
+     E    +  where 2 = len({'gw0', 'gw1'})
+
+ROT        W18 xdist_group wie in der anderen Datei [test_fixture_wallclock_ratchet.py] ['1 failed, 17 deselected, 1 warning in 4.91s']
+     /private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-rework-3279-testsuite-tempo/21599332-b39a-4eaf-88e7-e31483280c9d/scratchpad/ac8/test_ac8_kopie.py:111: in test_cache_dateien_laufen_je_in_einem_worker
+     E   AssertionError: {'gestellte_uhr_ratsche'}
+     E   assert (1 == 2)
+     E    +  where 1 = len({'gestellte_uhr_ratsche'})
+
+ROT        W19 xdist_group = echtdaten [test_fixture_wallclock_ratchet.py] ['1 failed, 17 deselected, 1 warning in 5.27s']
+     /private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-rework-3279-testsuite-tempo/21599332-b39a-4eaf-88e7-e31483280c9d/scratchpad/ac8/test_ac8_kopie.py:111: in test_cache_dateien_laufen_je_in_einem_worker
+     E   AssertionError: {'echtdaten', 'gestellte_uhr_ratsche'}
+     E   assert (2 == 2 and 'echtdaten' not in {'echtdaten', 'gestellte_uhr_ratsche'})
+     E    +  where 2 = len({'echtdaten', 'gestellte_uhr_ratsche'})
+
+ROT        U08 xdist_group entfernt [test_trip_fixtures_laufen_unter_gestellter_uhr.py] ['1 failed, 17 deselected, 1 warning in 5.36s']
+     /private/tmp/claude-501/-Users-hem-Developer-gregor-zwanzig--claude-worktrees-rework-3279-testsuite-tempo/21599332-b39a-4eaf-88e7-e31483280c9d/scratchpad/ac8/test_ac8_kopie.py:107: in test_cache_dateien_laufen_je_in_einem_worker
+     E   AttributeError: module 'tests.tdd.test_trip_fixtures_laufen_unter_gestellter_uhr' has no attribute 'pytestmark'. Did you mean: '@pytest_ar'?
+
+UEBERLEBT: []
+Hashes zurueckgespielt: True Tue Nov 24 08:14:57 2026
+
+2) Ueberlebende: H13 (gleichwertig auf Python 3.12: Nullbyte ist dort SyntaxError, andere ValueError entstehen nicht) und
+   W14 (NFKC im Vorab-Filter der Kandidatenzaehlung; der Baum enthaelt keine Fullwidth-Schreibweise von Waypoint, geprueft
+   wird nur die Untergrenze >= 20, ein Verstoss kann dadurch nicht durchrutschen).
+3) Erster (abgebrochener) Lauf vor den Zusatztests: W05, W07, W08, W09, W10, W11, W12 ueberlebten. Deshalb ergaenzt:
+   test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad, test_scanner_ueberspringt_kaputte_kandidaten (beide
+   Cache-Dateien), test_vorfilter_des_scanner_braucht_auch_make_trip. Lauf oben ist danach, alle sieben ROT.
+
+
+===== NACHTRAG 2 (massgeblich fuer W17, W18, W19, U08) =====
+Regex im AC-8-Test des Repos freigegeben korrigiert. Wiederholung gegen den ECHTEN Test
+tests/tdd/test_bezeichner_vorfilter.py (keine externe Kopie mehr). Ohne Mutation: test-green-output.txt, 100 passed.
+Nach dem Rueckspielen zusaetzlich shasum -a 256 -c ueber alle 5 Dateien: OK.
+4 Mutationen, Start Tue Nov 24 08:21:05 2026
+
+ROT        W17 xdist_group entfernt [test_fixture_wallclock_ratchet.py] ['1 failed, 17 deselected, 2 warnings in 7.08s']
+     tests/tdd/test_bezeichner_vorfilter.py:105: in test_cache_dateien_laufen_je_in_einem_worker
+     E   AssertionError: tests/tdd/test_fixture_wallclock_ratchet.py verteilt sich auf mehrere Worker, der Cache wirkt nicht: [('gw1', 'test_scanner_meldet_das_antimuster'), ('gw1', 'test_scanner_schweigt_bei_geklemmtem_muster'), ('gw1', 'test_scanner_schweigt_ohne_etappendatum'), ('gw1', 'test_scanner_e
+     E   assert 2 == 1
+     E    +  where 2 = len({'gw0', 'gw1'})
+     FAILED tests/tdd/test_bezeichner_vorfilter.py::test_cache_dateien_laufen_je_in_einem_worker
+     rot: test_bezeichner_vorfilter.py::test_cache_dateien_laufen_je_in_einem_worker
+
+ROT        W18 xdist_group wie in der anderen Datei [test_fixture_wallclock_ratchet.py] ['1 failed, 17 deselected, 2 warnings in 8.09s']
+     tests/tdd/test_bezeichner_vorfilter.py:111: in test_cache_dateien_laufen_je_in_einem_worker
+     E   AssertionError: {'gestellte_uhr_ratsche'}
+     E   assert (1 == 2)
+     E    +  where 1 = len({'gestellte_uhr_ratsche'})
+     FAILED tests/tdd/test_bezeichner_vorfilter.py::test_cache_dateien_laufen_je_in_einem_worker
+     rot: test_bezeichner_vorfilter.py::test_cache_dateien_laufen_je_in_einem_worker
+
+ROT        W19 xdist_group = echtdaten [test_fixture_wallclock_ratchet.py] ['1 failed, 17 deselected, 2 warnings in 7.54s']
+     tests/tdd/test_bezeichner_vorfilter.py:111: in test_cache_dateien_laufen_je_in_einem_worker
+     E   AssertionError: {'echtdaten', 'gestellte_uhr_ratsche'}
+     E   assert (2 == 2 and 'echtdaten' not in {'echtdaten', 'gestellte_uhr_ratsche'})
+     E    +  where 2 = len({'echtdaten', 'gestellte_uhr_ratsche'})
+     FAILED tests/tdd/test_bezeichner_vorfilter.py::test_cache_dateien_laufen_je_in_einem_worker
+     rot: test_bezeichner_vorfilter.py::test_cache_dateien_laufen_je_in_einem_worker
+
+ROT        U08 xdist_group entfernt [test_trip_fixtures_laufen_unter_gestellter_uhr.py] ['1 failed, 17 deselected, 2 warnings in 6.92s']
+     tests/tdd/test_bezeichner_vorfilter.py:107: in test_cache_dateien_laufen_je_in_einem_worker
+     E   AttributeError: module 'tests.tdd.test_trip_fixtures_laufen_unter_gestellter_uhr' has no attribute 'pytestmark'. Did you mean: '@pytest_ar'?
+     FAILED tests/tdd/test_bezeichner_vorfilter.py::test_cache_dateien_laufen_je_in_einem_worker
+     rot: test_bezeichner_vorfilter.py::test_cache_dateien_laufen_je_in_einem_worker
+
+UEBERLEBT: []
+Hashes zurueckgespielt: True Tue Nov 24 08:21:40 2026
+
+===== NACHTRAG 3 (Fix-Loop 1, F001/F002/F003; gegen die echten Tests im Repo) =====
+V3 im Original (== 1 durch >= 1 im Test) ist eine Testverfaelschung; hier die Entsprechung: Gruppe fehlt an einem
+Echtbaum-Test. V3b zeigt, dass der Vergleich je Item selbst greift (nicht nur das fehlende pytestmark).
+Nach dem Rueckspielen shasum -a 256 -c ueber alle 5 Dateien: OK.
+8 Mutationen, Start Tue Nov 24 09:24:33 2026
+
+ROT        W20 vierter Verbraucher scannt am Cache vorbei [test_fixture_wallclock_ratchet.py] ['1 failed, 59 passed, 2 warnings in 29.43s']
+     rot: test_fixture_wallclock_ratchet.py::test_echtbaum_pruefungen_nutzen_den_cache
+
+ROT        MA fremde xdist_group an einem Echtbaum-Test [test_fixture_wallclock_ratchet.py] ['1 failed, 17 passed, 1 deselected, 2 warnings in 9.84s']
+     tests/tdd/test_bezeichner_vorfilter.py:141: in test_jedes_item_der_cache_dateien_traegt_nur_die_gruppe_seiner_datei
+     E   AssertionError: {'tests/tdd/test_fixture_wallclock_ratchet.py::test_known_violations_der_neuen_regel_ist_leer': ['fremd', 'wallclock_ratsche']}
+     E   assert not {'tests/tdd/test_fixture_wallclock_ratchet.py::test_known_violations_der_neuen_regel_ist_leer': ['fremd', 'wallclock_ratsche']}
+     rot: test_bezeichner_vorfilter.py::test_jedes_item_der_cache_dateien_traegt_nur_die_gruppe_seiner_datei
+
+ROT        MA2 fremde Gruppe als Schluesselwort [test_fixture_wallclock_ratchet.py] ['1 failed, 17 passed, 1 deselected, 2 warnings in 7.00s']
+     tests/tdd/test_bezeichner_vorfilter.py:141: in test_jedes_item_der_cache_dateien_traegt_nur_die_gruppe_seiner_datei
+     E   AssertionError: {'tests/tdd/test_fixture_wallclock_ratchet.py::test_known_violations_der_neuen_regel_ist_leer': ['fremd', 'wallclock_ratsche']}
+     E   assert not {'tests/tdd/test_fixture_wallclock_ratchet.py::test_known_violations_der_neuen_regel_ist_leer': ['fremd', 'wallclock_ratsche']}
+     rot: test_bezeichner_vorfilter.py::test_jedes_item_der_cache_dateien_traegt_nur_die_gruppe_seiner_datei
+
+ROT        V3 Gruppe fehlt an einem Echtbaum-Test (Marke je Funktion statt Modul) [test_fixture_wallclock_ratchet.py] ['2 failed, 16 passed, 1 deselected, 2 warnings in 7.86s']
+     tests/tdd/test_bezeichner_vorfilter.py:108: in test_cache_dateien_laufen_je_in_einem_worker
+     E   AttributeError: module 'tests.tdd.test_fixture_wallclock_ratchet' has no attribute 'pytestmark'. Did you mean: '@pytest_ar'?
+     tests/tdd/test_bezeichner_vorfilter.py:138: in test_jedes_item_der_cache_dateien_traegt_nur_die_gruppe_seiner_datei
+     E   AttributeError: module 'tests.tdd.test_fixture_wallclock_ratchet' has no attribute 'pytestmark'. Did you mean: '@pytest_ar'?
+     rot: test_bezeichner_vorfilter.py::test_cache_dateien_laufen_je_in_einem_worker
+     rot: test_bezeichner_vorfilter.py::test_jedes_item_der_cache_dateien_traegt_nur_die_gruppe_seiner_datei
+
+ROT        T5 Baumlauf nur ueber tests/unit [test_trips_pfad_rueckbau.py] ['1 failed, 8 passed, 2 warnings in 1.31s']
+     rot: test_trips_pfad_rueckbau.py::test_echtbaum_pruefung_durchsucht_den_ganzen_testbaum
+
+ROT        W13 Kandidaten: falscher Vorab-Filter [test_fixture_wallclock_ratchet.py] ['1 failed, 59 passed, 2 warnings in 16.17s']
+     rot: test_fixture_wallclock_ratchet.py::test_echter_testbaum_ohne_fehlalarm_der_zweiten_regel
+
+ROT        W17 xdist_group entfernt [test_fixture_wallclock_ratchet.py] ['2 failed, 16 passed, 1 deselected, 2 warnings in 9.63s']
+     tests/tdd/test_bezeichner_vorfilter.py:106: in test_cache_dateien_laufen_je_in_einem_worker
+     E   AssertionError: tests/tdd/test_fixture_wallclock_ratchet.py verteilt sich auf mehrere Worker, der Cache wirkt nicht: [('gw1', 'test_scanner_meldet_das_antimuster'), ('gw1', 'test_scanner_schweigt_bei_geklemmtem_muster'), ('gw1', 'test_scanner_schweigt_ohne_etappendatum'), ('gw1', 'test_scanner_e
+     E   assert 2 == 1
+     E    +  where 2 = len({'gw0', 'gw1'})
+     tests/tdd/test_bezeichner_vorfilter.py:138: in test_jedes_item_der_cache_dateien_traegt_nur_die_gruppe_seiner_datei
+     E   AttributeError: module 'tests.tdd.test_fixture_wallclock_ratchet' has no attribute 'pytestmark'. Did you mean: '@pytest_ar'?
+     rot: test_bezeichner_vorfilter.py::test_cache_dateien_laufen_je_in_einem_worker
+     rot: test_bezeichner_vorfilter.py::test_jedes_item_der_cache_dateien_traegt_nur_die_gruppe_seiner_datei
+
+ROT        U08 xdist_group entfernt [test_trip_fixtures_laufen_unter_gestellter_uhr.py] ['2 failed, 16 passed, 1 deselected, 2 warnings in 9.40s']
+     tests/tdd/test_bezeichner_vorfilter.py:108: in test_cache_dateien_laufen_je_in_einem_worker
+     E   AttributeError: module 'tests.tdd.test_trip_fixtures_laufen_unter_gestellter_uhr' has no attribute 'pytestmark'. Did you mean: '@pytest_ar'?
+     tests/tdd/test_bezeichner_vorfilter.py:138: in test_jedes_item_der_cache_dateien_traegt_nur_die_gruppe_seiner_datei
+     E   AttributeError: module 'tests.tdd.test_trip_fixtures_laufen_unter_gestellter_uhr' has no attribute 'pytestmark'. Did you mean: '@pytest_ar'?
+     rot: test_bezeichner_vorfilter.py::test_cache_dateien_laufen_je_in_einem_worker
+     rot: test_bezeichner_vorfilter.py::test_jedes_item_der_cache_dateien_traegt_nur_die_gruppe_seiner_datei
+
+UEBERLEBT: []
+Hashes zurueckgespielt: True Tue Nov 24 09:26:13 2026
+1 Mutationen, Start Tue Nov 24 09:26:33 2026
+
+ROT        V3b wie V3, pytestmark aber fuer den aeusseren Vergleich sichtbar [test_fixture_wallclock_ratchet.py] ['1 failed, 17 passed, 1 deselected, 2 warnings in 9.78s']
+     tests/tdd/test_bezeichner_vorfilter.py:141: in test_jedes_item_der_cache_dateien_traegt_nur_die_gruppe_seiner_datei
+     E   AssertionError: {'tests/tdd/test_fixture_wallclock_ratchet.py::test_known_violations_der_neuen_regel_ist_leer': []}
+     E   assert not {'tests/tdd/test_fixture_wallclock_ratchet.py::test_known_violations_der_neuen_regel_ist_leer': []}
+     rot: test_bezeichner_vorfilter.py::test_jedes_item_der_cache_dateien_traegt_nur_die_gruppe_seiner_datei
+
+UEBERLEBT: []
+Hashes zurueckgespielt: True Tue Nov 24 09:26:44 2026

@@ -132,11 +132,17 @@ from __future__ import annotations
 import ast
 import functools
 import re
+import unicodedata
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
 import pytest
+
+from tests.helpers.bezeichner_vorfilter import quelltext_mit_bezeichnern
+
+# Der Ergebnis-Cache wirkt nur je Prozess, also ein Worker fuer die Datei (#3279).
+pytestmark = pytest.mark.xdist_group("wallclock_ratsche")
 
 # Wurzel DIESES Checkouts (Worktree) — bewusst nicht das Hauptrepo (#1409):
 # der Waechter muss den Baum pruefen, in dem gerade gearbeitet wird.
@@ -536,7 +542,10 @@ def scan_wallclock_arrival_fixtures(tests_root: Path) -> list[Finding]:
     funde: list[Finding] = []
     for datei in sorted(tests_root.rglob("*.py")):
         try:
-            baum = ast.parse(datei.read_text(encoding="utf-8"))
+            quelltext = quelltext_mit_bezeichnern(datei, alle=("strftime",))
+            if quelltext is None:
+                continue
+            baum = ast.parse(quelltext)
         except (SyntaxError, UnicodeDecodeError):
             continue
         for knoten in ast.walk(baum):
@@ -554,6 +563,17 @@ def scan_wallclock_arrival_fixtures(tests_root: Path) -> list[Finding]:
                 funde.append(Finding(path=datei, function=knoten.name,
                                      line=treffer.lineno))
     return funde
+
+
+@functools.cache
+def _echtbaum_direkt() -> tuple[Finding, ...]:
+    """Ein Scan des echten Baums je Prozess (#3279); Tupel, damit kein
+    Aufrufer den Cache veraendert. ``tmp_path``-Laeufe scannen direkt."""
+    return tuple(scan_wallclock_arrival_fixtures(TESTS_ROOT))
+
+
+def funde_echtbaum_direkt() -> list[Finding]:
+    return list(_echtbaum_direkt())
 
 
 def _relativ(f: Finding) -> str:
@@ -596,7 +616,7 @@ def _fall_indirekt(name: str) -> str:
 def test_keine_fixture_baut_ankunft_aus_der_rohen_wanduhr():
     """#1667 S1: keine Trip-Fixture kombiniert ein Wanduhr-Etappendatum mit
     einer ungeklemmten ``(now +/- timedelta).strftime("%H:%M")``-Ankunft."""
-    funde = scan_wallclock_arrival_fixtures(TESTS_ROOT)
+    funde = funde_echtbaum_direkt()
     offen = [f for f in funde if (_relativ(f), f.function) not in KNOWN_VIOLATIONS]
     zeilen = "\n".join(f"  - {_relativ(f)}:{f.line} in {f.function}()" for f in offen)
     dateien = sorted({_relativ(f) for f in offen})
@@ -616,7 +636,7 @@ def test_known_violations_enthaelt_keine_veralteten_eintraege():
     """Die Ausnahmeliste darf nur schrumpfen: was der Scanner nicht mehr
     findet, muss raus — sonst schleppt sie tote Ausnahmen mit."""
     aktuell = {(_relativ(f), f.function)
-               for f in scan_wallclock_arrival_fixtures(TESTS_ROOT)}
+               for f in funde_echtbaum_direkt()}
     veraltet = sorted(KNOWN_VIOLATIONS - aktuell)
     assert not veraltet, (
         "Diese KNOWN_VIOLATIONS-Eintraege werden nicht mehr gefunden und "
@@ -1084,7 +1104,11 @@ def scan_indirekte_wanduhr_fixtures(tests_root: Path) -> list[Finding]:
     funde: list[Finding] = []
     for datei in sorted(tests_root.rglob("*.py")):
         try:
-            baum = ast.parse(datei.read_text(encoding="utf-8"))
+            quelltext = quelltext_mit_bezeichnern(
+                datei, alle=("Stage",), eines_aus=_ALARMPFADE_INDIREKT)
+            if quelltext is None:
+                continue
+            baum = ast.parse(quelltext)
         except (SyntaxError, UnicodeDecodeError):
             continue
 
@@ -1110,6 +1134,16 @@ def scan_indirekte_wanduhr_fixtures(tests_root: Path) -> list[Finding]:
             funde.append(Finding(path=datei, function=knoten.name,
                                  line=anfaellige_stages[0].lineno))
     return funde
+
+
+@functools.cache
+def _echtbaum_indirekt() -> tuple[Finding, ...]:
+    """Wie ``_echtbaum_direkt``, fuer die zweite Regel."""
+    return tuple(scan_indirekte_wanduhr_fixtures(TESTS_ROOT))
+
+
+def funde_echtbaum_indirekt() -> list[Finding]:
+    return list(_echtbaum_indirekt())
 
 
 # 🔴 Wie bei KNOWN_VIOLATIONS oben: nur SCHRUMPFEN, nie fuellen um gruen zu
@@ -1313,21 +1347,15 @@ def test_scanner_erkennt_alarmpfad_ueber_modulimport(tmp_path):
     assert funde[0].function == "_trip_ohne_ankunftszeiten_modulimport"
 
 
-def test_echter_testbaum_ohne_fehlalarm_der_zweiten_regel():
-    """AC-5: der echte Baum tests/ erzeugt keinen Fehlalarm — Fundmenge leer
-    oder vollstaendig durch KNOWN_VIOLATIONS_INDIREKT gedeckt, UND mindestens
-    20 geprueft Kandidatenfunktionen.
-
-    Die Kandidatenzaehlung ist ABSICHTLICH UNABHAENGIG von
-    scan_indirekte_wanduhr_fixtures() implementiert (Vorbild
-    test_ac3_echter_testbaum_ohne_fehlalarm in
-    test_repo_path_hardcoding_ratchet.py) — sonst wuerde ein Bug in der
-    Kandidatensuche des Scanners auch die Sicherung selbst reissen und ein
-    leerer Scan waere von einem kaputten Scanner nicht zu unterscheiden."""
+def _waypoint_kandidaten(tests_root: Path) -> list[str]:
+    """Funktionen mit mindestens zwei ``Waypoint(...)``-Aufrufen."""
     kandidaten: list[str] = []
-    for datei in sorted(TESTS_ROOT.rglob("*.py")):
+    for datei in sorted(tests_root.rglob("*.py")):
         try:
-            baum = ast.parse(datei.read_text(encoding="utf-8", errors="replace"))
+            quelltext = datei.read_text(encoding="utf-8", errors="replace")
+            if "Waypoint" not in unicodedata.normalize("NFKC", quelltext):
+                continue
+            baum = ast.parse(quelltext)
         except (SyntaxError, UnicodeDecodeError):
             continue
         for knoten in ast.walk(baum):
@@ -1341,13 +1369,30 @@ def test_echter_testbaum_ohne_fehlalarm_der_zweiten_regel():
             )
             if waypoint_aufrufe >= 2:
                 kandidaten.append(f"{datei}:{knoten.name}")
+    return kandidaten
+
+
+def test_echter_testbaum_ohne_fehlalarm_der_zweiten_regel():
+    """AC-5: der echte Baum tests/ erzeugt keinen Fehlalarm — Fundmenge leer
+    oder vollstaendig durch KNOWN_VIOLATIONS_INDIREKT gedeckt, UND mindestens
+    20 geprueft Kandidatenfunktionen.
+
+    Die Kandidatenzaehlung ist ABSICHTLICH UNABHAENGIG von
+    scan_indirekte_wanduhr_fixtures() implementiert (Vorbild
+    test_ac3_echter_testbaum_ohne_fehlalarm in
+    test_repo_path_hardcoding_ratchet.py) — sonst wuerde ein Bug in der
+    Kandidatensuche des Scanners auch die Sicherung selbst reissen und ein
+    leerer Scan waere von einem kaputten Scanner nicht zu unterscheiden. Aus
+    demselben Grund nutzt auch ihr Vorab-Filter den Helfer der Scanner nicht
+    (#3279)."""
+    kandidaten = _waypoint_kandidaten(TESTS_ROOT)
     assert len(kandidaten) >= 20, (
         f"nur {len(kandidaten)} Kandidatenfunktionen (>=2 Waypoint(...)-Aufrufe) "
         "im Testbaum gefunden — die Untergrenze verhindert, dass ein leerer "
         "Scan durch eine kaputte Kandidatensuche vorgetaeuscht wird"
     )
 
-    funde = scan_indirekte_wanduhr_fixtures(TESTS_ROOT)
+    funde = funde_echtbaum_indirekt()
     offen = [f for f in funde if (_relativ(f), f.function) not in KNOWN_VIOLATIONS_INDIREKT]
     zeilen = "\n".join(f"  - {_relativ(f)}:{f.line} in {f.function}()" for f in offen)
     assert not offen, (
@@ -1362,7 +1407,7 @@ def test_known_violations_der_neuen_regel_ohne_veraltete_eintraege():
     nicht mehr findet, muss raus. Muster der bestehenden Regel oben
     (test_known_violations_enthaelt_keine_veralteten_eintraege)."""
     aktuell = {(_relativ(f), f.function)
-               for f in scan_indirekte_wanduhr_fixtures(TESTS_ROOT)}
+               for f in funde_echtbaum_indirekt()}
     veraltet = sorted(KNOWN_VIOLATIONS_INDIREKT - aktuell)
     assert not veraltet, (
         "Diese KNOWN_VIOLATIONS_INDIREKT-Eintraege werden nicht mehr gefunden "
@@ -1397,7 +1442,7 @@ def test_known_violations_der_neuen_regel_ist_leer():
         "stage.start_time setzen, oder einen Haertungs-Helfer nutzen). "
         "PO-Entscheidung 2026-08-15."
     )
-    funde = scan_indirekte_wanduhr_fixtures(TESTS_ROOT)
+    funde = funde_echtbaum_indirekt()
     assert funde == [], (
         f"{len(funde)} Fundstelle(n) im echten Testbaum, obwohl "
         "KNOWN_VIOLATIONS_INDIREKT leer sein und bleiben soll -- Haerten "
@@ -1466,6 +1511,33 @@ def test_vorfilter_des_scanner_findet_nfkc_und_parst_nur_kandidaten(
     assert geparst == [text]
 
 
+@pytest.mark.parametrize("alarmpfad", _ALARMPFADE_INDIREKT)
+def test_vorfilter_des_scanner_indirekt_kennt_jeden_alarmpfad(tmp_path, monkeypatch, alarmpfad):
+    """#3279 AC-4: JEDER Alarmpfad laesst eine Datei durch, auch ohne das Wort
+    fuer Wegpunkte; ``Stage`` bzw. der Alarmpfad allein genuegt nicht."""
+    text = (f"from datetime import date\nfrom services import {alarmpfad}\n"
+            f"def bau(kw):\n    return Stage(date=date.today(), **kw)\n")
+    _attrappe(tmp_path, text)
+    (tmp_path / "test_nur_stage.py").write_text("Stage()\n", encoding="utf-8")
+    (tmp_path / "test_nur_pfad.py").write_text(f"import {alarmpfad}\n", encoding="utf-8")
+    geparst: list[str] = []
+    parse = ast.parse
+    monkeypatch.setattr(ast, "parse", lambda q, *a, **k: (geparst.append(q), parse(q, *a, **k))[1])
+    assert [f.function for f in scan_indirekte_wanduhr_fixtures(tmp_path)] == ["bau"]
+    assert geparst == [text]
+
+
+@pytest.mark.parametrize("scan", [
+    scan_wallclock_arrival_fixtures, scan_indirekte_wanduhr_fixtures], ids=["direkt", "indirekt"])
+@pytest.mark.parametrize("inhalt", [
+    b"strftime = Stage = trip_alert(\n", b"# strftime Stage trip_alert \xff\n"],
+    ids=["syntax", "utf8"])
+def test_scanner_ueberspringt_kaputte_kandidaten(tmp_path, scan, inhalt):
+    """Wie vor #3279; rot macht sie ``test_jede_testdatei_ist_parsbar``."""
+    (tmp_path / "test_kaputt.py").write_bytes(inhalt)
+    assert scan(tmp_path) == []
+
+
 @pytest.mark.parametrize("regel, scan_name", [
     ("direkt", "scan_wallclock_arrival_fixtures"),
     ("indirekt", "scan_indirekte_wanduhr_fixtures"),
@@ -1508,3 +1580,6 @@ def test_echtbaum_pruefungen_nutzen_den_cache(monkeypatch):
     test_known_violations_enthaelt_keine_veralteten_eintraege()
     test_known_violations_der_neuen_regel_ohne_veraltete_eintraege()
     test_known_violations_der_neuen_regel_ist_leer()
+    # Die teure Kandidatenzaehlung laeuft schon im Test selbst.
+    monkeypatch.setitem(globals(), "_waypoint_kandidaten", lambda wurzel: ["x"] * 20)
+    test_echter_testbaum_ohne_fehlalarm_der_zweiten_regel()

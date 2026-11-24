@@ -1,0 +1,27 @@
+AC-1: alte Scanner (Stand 57b3dc04f, Sicherungskopie) gegen neue, gleicher Arbeitsbaum
+Tue Nov 24 08:15:19 2026 Last (3.70166015625, 3.6220703125, 3.84765625)
+Dateien unter tests/: 1939
+wallclock direkt     ungefiltert: 1 Funde, 1939 geparst, 23.3s | gefiltert: 1 Funde, 105 geparst, 3.3s | Mengen gleich: True
+      ('unit/test_alarm_zeitfenster_ziel.py', '_radar_mails_fuer_spaetankunft', 430)
+wallclock indirekt   ungefiltert: 0 Funde, 1939 geparst, 26.0s | gefiltert: 0 Funde, 198 geparst, 6.6s | Mengen gleich: True
+gestellte_uhr        ungefiltert: 10 Funde, 1939 geparst, 15.9s | gefiltert: 10 Funde, 59 geparst, 1.8s | Mengen gleich: True
+      ('tdd/test_alert_suppression_reason.py', 'test_ac4_doppel_alarm_guard_wird_protokolliert_und_deutsch_beschriftet', 497)
+      ('tdd/test_nowcast_suppression_logging.py', '_run_trip', 242)
+      ('tdd/test_nowcast_suppression_logging.py', 'test_f004_gescheitertes_protokoll_stoppt_den_trip_lauf_nicht', 517)
+      ('tdd/test_onset_ende_kanalparitaet.py', '_text_vom_trip_pfad', 260)
+      ('tdd/test_onset_reichweite_guete_kanalparitaet.py', '_text_vom_trip_pfad', 265)
+      ('tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py', 'lauf', 570)
+      ('tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py', 'test_ac3_stelle5_nowcast_schranke', 570)
+      ('tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py', 'trip_mit_ruhezeit', 308)
+      ('tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py', 'trip_zwei_zonen', 1592)
+      ('tdd/test_trip_radar_nowcast_gate_migration.py', '_run_trip_scenario', 62)
+trips_pfad           ungefiltert: 0 Funde, 1939 geparst, 10.6s | gefiltert: 0 Funde, 9 geparst, 0.9s | Mengen gleich: True
+Waypoint-Kandidaten  ungefiltert: 165 Funde, 1939 geparst, 13.6s | gefiltert: 165 Funde, 288 geparst, 2.5s | Mengen gleich: True
+KNOWN_VIOLATIONS gleich: True True True
+EXPIRY gleich: True True True
+Last (3.8974609375, 3.658203125, 3.8310546875)
+GESAMT OK
+
+Dateizahl 1939 statt 1937 (Vorab-Messung), weil tests/helpers/bezeichner_vorfilter.py und
+tests/tdd/test_bezeichner_vorfilter.py hinzugekommen sind. Funde wie erwartet 1 / 0 / 10 / 0.
+Alte und neue Scanner im selben Prozess, Vergleich als Mengen (Datei, Funktion, Zeile) plus Anzahl.
