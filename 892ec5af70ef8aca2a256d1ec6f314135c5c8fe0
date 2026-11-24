@@ -1,0 +1,108 @@
+{
+  "verified_commit": "892ec5af70ef8aca2a256d1ec6f314135c5c8fe0",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/.well-known/oauth-authorization-server",
+      "evidence": "Au\u00dfen-Probe vom iMac ohne Basic: drei Metadatenpfade 200 JSON, Issuer/Resource = Staging-Host. Alte nginx-Datei: 401.",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "/api/mcp",
+      "evidence": "POST /api/mcp 401 mit genau dem Header Bearer resource_metadata; register 201, authorize 400 von Go, token OAuth-Fehler; keine Basic-Schranke.",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "/api/mcpx",
+      "evidence": "Sechs Verbotspfade weiter 401 Basic, /api/internal/ weiter 403 (gleiche Probe, vor und nach Rollout).",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "/api/mcp/oauth/authorize",
+      "evidence": "Konto default nach Eintrag: Code per 303, Token mit PKCE, tools/list, Wetterantwort mit Ortsname und Stundenwerten; Exit 0.",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "/api/mcp/oauth/authorize",
+      "evidence": "Zweites Konto gz-staging-admin (nicht gelistet): GET und POST 403 von Go, kein Code.",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "/api/mcp/oauth/authorize",
+      "evidence": "Nach nginx-Reload, vor dem Env-Eintrag: default erh\u00e4lt 403 (Lauf --vor-freigabe, Exit 0).",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-7/AC-8",
+      "status": "PASS",
+      "url": "/api/mcp",
+      "evidence": "Nur Regressionsschutz per Textvertrag in henemm-infra, laut Spec kein Verhaltensnachweis.",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "/api/mcp/oauth/authorize",
+      "evidence": "Zustimmungsseite liefert genau eine CSP, identisch mit der von Go gesetzten.",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-10",
+      "status": "PASS",
+      "url": "/",
+      "evidence": "Probe endet mit Exit 1 bei gesperrten Soll-Pfaden (alte nginx-Datei live), Kern-Test gr\u00fcn in CI.",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-13",
+      "status": "PASS",
+      "url": "/api/mcp",
+      "evidence": "Rollback-\u00dcbung: Sicherung eingespielt, sieben Soll-Pfade 401, Exit 1; neue Datei wieder eingespielt, Exit 0.",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-11/AC-12",
+      "status": "SKIP",
+      "url": "/api/mcp",
+      "evidence": "Offen: PO-Abnahme in der Claude-App und danach Produktions-Freischaltung; laut Spec erst nach diesem Nachweis.",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "MAIL",
+      "status": "PASS",
+      "url": "/",
+      "evidence": "staging_mail_pruefen --typ beide in de und en Exit 0; Windrichtung Briefing und Vergleich in de und en je Validator rc=0.",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-24T21:55:20.608478+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Staging-nginx, Freischaltung default, OAuth mit zwei Konten, Rollback von aussen belegt; AC-11/AC-12 offen",
+  "scope": "backend",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Staging-nginx, Freischaltung default, OAuth mit zwei Konten, Rollback von aussen belegt; AC-11/AC-12 offen",
+      "scope": "backend",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-24T21:55:20.608478+00:00"
+    }
+  }
+}
