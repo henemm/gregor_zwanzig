@@ -36,7 +36,7 @@
 	/* Hoher Kontrast (Design-Leitprinzip): Primaertext-Tinte, kein gedaempftes Token. */
 	.sprach-hinweis {
 		margin: 0;
-		font-size: 14px;
+		font-size: var(--g-text-sm);
 		color: var(--g-ink);
 	}
 	.sprach-hinweis a {
@@ -44,7 +44,7 @@
 		text-decoration: underline;
 	}
 	.sprach-hinweis a:focus-visible {
-		outline: 2px solid var(--g-accent);
-		outline-offset: 2px;
+		outline: var(--g-size-2px) solid var(--g-accent);
+		outline-offset: var(--g-size-2px);
 	}
 </style>

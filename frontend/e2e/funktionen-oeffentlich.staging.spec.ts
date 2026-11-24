@@ -430,8 +430,8 @@ test.describe('#3337: Angemeldete sehen den Konto-Hinweis statt des Umschalters'
 	});
 });
 
-test('AC-5 (#3337): /login und /register ohne Anmeldung zeigen keinen Konto-Hinweis', async ({ page }) => {
-	for (const pfad of ['/login', '/register']) {
+test('AC-5 (#3337): /, /login und /register ohne Anmeldung zeigen keinen Konto-Hinweis', async ({ page }) => {
+	for (const pfad of ['/', '/login', '/register']) {
 		await page.goto(pfad);
 		await expect(page.locator('[data-testid="sprach-hinweis"]'), `${pfad}: Hinweis darf nicht erscheinen`).toHaveCount(0);
 	}
