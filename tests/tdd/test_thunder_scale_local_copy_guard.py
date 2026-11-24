@@ -1333,45 +1333,38 @@ def test_ac18_regel_d_erkennt_phrase_die_mitten_im_wortlaut_ueber_die_zeile_bric
 
 @pytest.fixture(scope="module")
 def tests_baum_scan():
-    """EIN Lauf ueber ``tests/**/*.py`` fuer beide Zusicherungen unten (Regel D
-    und ihre Positivkontrolle) -- zwei getrennte Laeufe kosteten die doppelte
-    Zeit im Commit-Gate."""
-    return scan_tree(  # noqa: F821
-        [TESTS_ROOT], _thunder_spec(), rules=("A", "D")
+    """EIN Lauf ueber ``tests/**/*.py`` fuer beide Zusicherungen unten:
+    ``(Funde, besuchte Dateien, geparste Dateien)``."""
+    besucht: set = set()
+    geparst: set = set()
+    funde = scan_tree(
+        [TESTS_ROOT], _thunder_spec(), rules=("D",), besucht=besucht, geparst=geparst
     )
+    return funde, besucht, geparst
 
 
-# Baumlauf ueber tests/**/*.py (ein gemeinsamer Modul-Fixture-Lauf) braucht mit
-# wachsendem Testbestand > 30 s (CI seit 2026-11-23 rot, lokal 30 s+); deklarierte
-# Ausnahme vom globalen Haenger-Netz (pyproject, Issue #1210), kein Aufweichen.
-@pytest.mark.timeout(180)
 def test_regel_d_ueber_den_echten_tests_baum_meldet_keine_unerfuellte_behauptung(
     tests_baum_scan,
 ):
     """Die zweite Scanflaeche dieses Waechters: Regel D laeuft auf
     ``tests/**/*.py`` (Regel A/P/C dort nicht -- eine korrekte Fixture fuehrt
     zwangslaeufig alle vier Stufen-Woerter und erzeugte Dauerfeuer)."""
-    findings = [f for f in tests_baum_scan if f.rule == "D"]
+    findings = tests_baum_scan[0]
     assert findings == [], (
         f"Behauptete Paritaet ohne Deckung im Testbestand: {_refs(findings)}"
     )
 
 
-# Baumlauf ueber tests/**/*.py (ein gemeinsamer Modul-Fixture-Lauf) braucht mit
-# wachsendem Testbestand > 30 s (CI seit 2026-11-23 rot, lokal 30 s+); deklarierte
-# Ausnahme vom globalen Haenger-Netz (pyproject, Issue #1210), kein Aufweichen.
-@pytest.mark.timeout(180)
-def test_regel_d_nullbefund_ist_nicht_trivial_der_lauf_erreicht_die_testdateien(
+def test_regel_d_nullbefund_ist_nicht_trivial_der_lauf_erreicht_den_echten_tests_baum(
     tests_baum_scan,
 ):
-    """Positivkontrolle zum Nullbefund darueber: derselbe Baumlauf trifft mit
-    Regel A sehr wohl -- ohne diese Kontrolle waere ``findings == []`` auch
-    dann wahr, wenn der Lauf keine einzige Datei besucht haette."""
-    treffer = [f for f in tests_baum_scan if f.rule == "A"]
-    assert len(treffer) > 0, (
-        "Der Testbaum-Lauf hat keine einzige Datei erreicht -- der Nullbefund "
-        "von Regel D waere damit trivial wahr"
-    )
+    """#3316 AC-4, Positivkontrolle zum Nullbefund darueber: besucht ist genau
+    die Soll-Menge, geparst eine echte, nicht leere Teilmenge. Diese Datei
+    traegt selbst Filterwoerter in Kommentaren, MUSS also geparst sein."""
+    _, besucht, geparst = tests_baum_scan
+    assert besucht == set(TESTS_ROOT.rglob("*.py"))
+    assert geparst < besucht
+    assert Path(__file__).resolve() in geparst
 
 
 def test_ac20_wirkungsnachweis_trefferzahl_ist_selbst_groesser_null():
@@ -1731,3 +1724,129 @@ def test_ac24_auch_der_namens_scope_von_regel_c_stammt_aus_den_parametern():
         "Gewitter-Parameter duerfen auf einer Funktion ohne thunder/gewitter im "
         f"Namen nicht melden: {_refs(thunder_findings)}"
     )
+
+
+# ---------------------------------------------------------------------------
+# #3316 Scheibe 2: Kommentar-Filter fuer Regel D, Duldungsfunktion
+# Spec: docs/specs/modules/rework_3316_scanner_ratschen_tempo_s2.md
+# ---------------------------------------------------------------------------
+
+# Eingefrorener Stand des Musters VOR dem Umbau (AC-1) -- bewusst eigene Kopie.
+_MUSTER_VOR_3316 = re.compile(
+    r"1:1|wortw(?:oe|ö)rt|identische reihenfolge|eingefroren aus dem"
+    r"|unver(?:ae|ä)ndert (?:aus|uebernommen)",
+    re.IGNORECASE,
+)
+_BEHAUPTUNGEN = (
+    "1:1 aus der Quelle", "wortwoertlich", "wortwörtlich", "WORTWÖRTLICH",
+    "identische Reihenfolge", "ıdentısche reıhenfolge", "eingefroren aus dem Stand",
+    "unveraendert aus x", "unverändert aus x",
+    "unveraendert uebernommen", "unverändert uebernommen",
+)
+_KEINE_BEHAUPTUNGEN = (
+    "1 : 1", "wortwahl", "wortw", "identische Werte", "identisch Reihenfolge",
+    "eingefroren am", "unveraendert", "unverändert lassen", "unverandert aus",
+)
+
+
+def test_filter_und_muster_von_regel_d_stammen_aus_derselben_liste():
+    """AC-1: je Alternative ein Paar (Filterwort, Rest). Ein Filterwort mit
+    Leerzeichen verloere Phrasen, die ueber den Zeilenbruch laufen."""
+    assert len(_PARITAETS_ALTERNATIVEN) == 5
+    for filterwort, _ in _PARITAETS_ALTERNATIVEN:
+        assert filterwort and not re.search(r"\s|\\s", filterwort), filterwort
+    assert _PARITAETS_BEHAUPTUNG.pattern == "|".join(
+        wort + rest for wort, rest in _PARITAETS_ALTERNATIVEN
+    )
+    for text in _BEHAUPTUNGEN + _KEINE_BEHAUPTUNGEN:
+        erwartet = bool(_MUSTER_VOR_3316.search(text))
+        assert erwartet == (text in _BEHAUPTUNGEN), text
+        assert bool(_PARITAETS_BEHAUPTUNG.search(text)) == erwartet, text
+        assert not erwartet or _kann_paritaet_behaupten(f"x = 1  # {text}\n"), text
+
+
+def test_filter_von_regel_d_sieht_nur_text_hinter_der_raute():
+    """AC-1: zeilenweise ab der ersten Raute, ohne quadratische Suche (eine
+    solche risse bei 200.000 Rauten das globale 30-s-Netz)."""
+    assert _kann_paritaet_behaupten("x = 1  # a # b IDENTISCHE\n")
+    for quelle in ("", "identische = 1\n", "identische = 1  # x\n",
+                   "# x\nidentische = 1\n", "#" * 200_000):
+        assert not _kann_paritaet_behaupten(quelle), quelle[:40]
+
+
+@pytest.mark.parametrize("form", ["darueber", "zeilenkommentar", "zeilenbruch"])
+@pytest.mark.parametrize("text", _BEHAUPTUNGEN)
+def test_regel_d_findet_jede_behauptung_im_gefilterten_baumlauf(tmp_path, text, form):
+    """AC-2: der echte Baum hat fuer Regel D keinen Kandidaten -- dass der
+    Filter nichts verliert, beweisen allein diese gepflanzten Verstoesse. Die
+    Datei ohne Behauptung zeigt, dass der Filter wirklich greift."""
+    ohne = tmp_path / "ohne.py"
+    ohne.write_text(_fall("d18-unbehauptet-gleiche-abweichung"), encoding="utf-8")
+    liste = ohne.read_text("utf-8").strip().splitlines()[-1]
+    mit = tmp_path / "mit.py"
+    mit.write_text({
+        "darueber": f"# {text}\n{liste}\n",
+        "zeilenkommentar": f"{liste}  # {text}\n",
+        "zeilenbruch": "# " + text.replace(" ", "\n# ") + f"\n{liste}\n",
+    }[form], encoding="utf-8")
+    besucht: set = set()
+    geparst: set = set()
+    funde = scan_tree(
+        [tmp_path], _thunder_spec(), rules=("D",), besucht=besucht, geparst=geparst
+    )
+    assert [(f.file, f.rule) for f in funde] == [(str(mit), "D")]
+    assert besucht == {mit, ohne} and geparst == {mit}
+
+
+@pytest.mark.parametrize("regeln", ["ABCD", "ABC", "AD", "D"])
+def test_der_filter_greift_nur_wenn_regel_d_allein_laeuft(tmp_path, regeln):
+    """AC-3: jede Regelmenge mit A findet den Verstoss ohne Filterwort."""
+    datei = tmp_path / "x.py"
+    datei.write_text(_fall("a1-enum-attribut-dict"), encoding="utf-8")
+    besucht: set = set()
+    geparst: set = set()
+    funde = scan_tree(
+        [tmp_path], _thunder_spec(), rules=tuple(regeln), besucht=besucht, geparst=geparst
+    )
+    nur_d = regeln == "D"
+    assert [f.rule for f in funde] == ([] if nur_d else ["A"])
+    assert besucht == {datei} and geparst == (set() if nur_d else {datei})
+
+
+def test_duldungsfunktion_kennt_whitelist_und_altlasten_und_sonst_nichts():
+    """AC-5: ``_ist_geduldet`` ist die EINE Duldungslogik."""
+    datei, symbol = _THUNDER_KWARGS["canonical_symbols"][0]
+    spec = _thunder_spec()
+    kanonisch = Finding(f"/x/{datei}", 1, "A", symbol)
+    assert _ist_geduldet(kanonisch, spec, ())
+    assert not _ist_geduldet(kanonisch, _thunder_spec(canonical_symbols=()), ())
+    altlast = Altlast("src/a.py", "_RANG", "A", "Testeintrag")
+    assert _ist_geduldet(Finding("/x/src/a.py", 1, "A", "_RANG"), spec, (altlast,))
+    for fremd in (Finding("/x/src/b.py", 1, "A", "_RANG"),
+                  Finding("/x/src/a.py", 1, "B", "_RANG"),
+                  Finding("/x/src/a.py", 1, "A", "_ANDERS")):
+        assert not _ist_geduldet(fremd, spec, (altlast,)), fremd
+    assert not _ist_geduldet(Finding("/x/src/a.py", 1, "A", "_RANG"), spec, ())
+
+
+def test_scan_tree_wendet_die_altlasten_basislinie_selbst_an(tmp_path):
+    """AC-5/AC-9: ``ALTLASTEN`` ist leer, der AC-12-Lauf merkt eine ignorierte
+    Basislinie also nicht -- dieser gepflanzte Fall schon."""
+    (tmp_path / "x.py").write_text(_fall("a1-enum-attribut-dict"), encoding="utf-8")
+    altlast = Altlast("x.py", "_RANG", "A", "Testeintrag")
+    assert scan_tree([tmp_path], _thunder_spec(), baseline=(altlast,)) == []
+    assert len(scan_tree([tmp_path], _thunder_spec(), baseline=())) == 1
+
+
+def test_beide_bestaende_folgen_aus_demselben_rohlauf(
+    backend_rohlauf, bestand_ohne_basislinie, bestand_ohne_whitelist,
+):
+    """AC-5: ein Rohlauf ohne jede Duldung, zwei Ableitungen -- hier mit einer
+    unabhaengigen Rechnung (exakter Repo-Pfad) verglichen."""
+    kanonisch = set(_THUNDER_KWARGS["canonical_symbols"])
+    altlasten = {e.key for e in ALTLASTEN}
+    assert {(_rel(f.file), f.symbol) for f in backend_rohlauf} >= kanonisch
+    assert bestand_ohne_basislinie == [
+        f for f in backend_rohlauf if (_rel(f.file), f.symbol) not in kanonisch]
+    assert bestand_ohne_whitelist == [
+        f for f in backend_rohlauf if (_rel(f.file), f.symbol, f.rule) not in altlasten]

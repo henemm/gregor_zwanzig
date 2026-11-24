@@ -21,10 +21,13 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TESTS_ROOT = REPO_ROOT / "tests"
-CACHE_DATEIEN = (
-    "tests/tdd/test_fixture_wallclock_ratchet.py",
-    "tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py",
-)
+# Datei -> (Tests ohne Echtbaum fuer den inneren Lauf, Kennung der Echtbaum-Tests)
+CACHE_DATEIEN = {
+    "tests/tdd/test_fixture_wallclock_ratchet.py": ("scanner", "known_violations"),
+    "tests/tdd/test_trip_fixtures_laufen_unter_gestellter_uhr.py": (
+        "scanner", "known_violations"),
+    "tests/tdd/test_thunder_scale_local_copy_guard.py": ("ac18", "echten_tests_baum"),
+}
 
 
 @pytest.fixture
@@ -87,7 +90,7 @@ def test_jede_testdatei_ist_parsbar(helfer):
 
 def test_cache_dateien_laufen_je_in_einem_worker(tmp_path):
     """AC-8. Der innere Lauf beschraenkt sich auf die Faelle ohne Echtbaum
-    (``-k scanner``), sonst fraesse er die Einsparung auf; dass die Gruppe
+    (``-k`` je Datei), sonst fraesse er die Einsparung auf; dass die Gruppe
     ALLE Tests der Datei traegt, folgt aus der Modul-Markierung, die ueber
     ``pytestmark`` geprueft wird."""
     env = {k: v for k, v in os.environ.items()
@@ -95,21 +98,23 @@ def test_cache_dateien_laufen_je_in_einem_worker(tmp_path):
     lauf = subprocess.run(
         [sys.executable, "-m", "pytest", *CACHE_DATEIEN, "-o", "addopts=",
          "-p", "no:cacheprovider", "--basetemp", str(tmp_path / "innen"),
-         "-v", "-n", "2", "--dist", "loadgroup", "-k", "scanner"],
+         "-v", "-n", "2", "--dist", "loadgroup",
+         "-k", " or ".join(sorted({wahl for wahl, _ in CACHE_DATEIEN.values()}))],
         cwd=REPO_ROOT, capture_output=True, text=True, timeout=28, env=env,
     )
     gruppen = set()
-    for datei in CACHE_DATEIEN:
+    for datei, (wahl, echtbaum) in CACHE_DATEIEN.items():
         zeilen = re.findall(
             rf"^\[(gw\d)\].*(?:PASSED|FAILED) {re.escape(datei)}::(.+?)\s*$", lauf.stdout, re.M)
         assert len(zeilen) >= 4, f"{datei}: {lauf.stdout}\n{lauf.stderr}"
+        assert all(wahl in k and echtbaum not in k for _, k in zeilen), zeilen
         assert len({worker for worker, _ in zeilen}) == 1, (
             f"{datei} verteilt sich auf mehrere Worker, der Cache wirkt nicht: {zeilen}")
         marke = importlib.import_module(datei[:-3].replace("/", ".")).pytestmark
         assert marke.name == "xdist_group"
         assert {k.rpartition("@")[2] for _, k in zeilen} == {marke.args[0]}
         gruppen.add(marke.args[0])
-    assert len(gruppen) == 2 and "echtdaten" not in gruppen, gruppen
+    assert len(gruppen) == 3 and "echtdaten" not in gruppen, gruppen
     assert lauf.returncode == 0, lauf.stdout + lauf.stderr
 
 
@@ -133,9 +138,9 @@ def test_jedes_item_der_cache_dateien_traegt_nur_die_gruppe_seiner_datei(tmp_pat
     )
     assert lauf.returncode == 0, lauf.stdout + lauf.stderr
     zeilen = json.loads((tmp_path / "gruppen.json").read_text(encoding="utf-8"))
-    for datei in CACHE_DATEIEN:
+    for datei, (_, echtbaum) in CACHE_DATEIEN.items():
         eigene = {k: gruppen for k, gruppen in zeilen if k.startswith(f"{datei}::")}
         erwartet = [importlib.import_module(datei[:-3].replace("/", ".")).pytestmark.args[0]]
-        assert any("known_violations" in k for k in eigene), "Echtbaum-Tests fehlen"
+        assert any(echtbaum in k for k in eigene), "Echtbaum-Tests fehlen"
         falsch = {k: g for k, g in eigene.items() if g != erwartet}
         assert not falsch, falsch

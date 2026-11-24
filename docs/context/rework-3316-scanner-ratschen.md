@@ -141,3 +141,23 @@ Umbau; nach oben unbelegt). Mehr gäbe nur ein Umbau von `_sammle`/`_resolve` (c
 
 ### Open Questions
 Keine Produktfrage offen.
+
+## TDD RED (Stand 2026-11-24)
+50 failed, 3 errors, 132 passed. Beleg: `docs/artifacts/rework-3316-scanner-ratschen/test-red-output.txt`.
+
+Von den Tests festgelegte Symbole (GREEN liefert sie):
+- thunder: `_PARITAETS_ALTERNATIVEN` (5 Paare `(filterwort, rest)`; Muster ist `"|".join(wort + rest)`),
+  `_kann_paritaet_behaupten(quelle) -> bool`, `_ist_geduldet(fund, spec, altlasten) -> bool`,
+  `scan_tree(..., geparst=set)`, Fixture `backend_rohlauf` (ohne Whitelist, ohne Basislinie; die zwei Bestands-Fixtures
+  werden daraus abgeleitet), `pytestmark = pytest.mark.xdist_group("gewitterskala")`. `timeout(180)` ist schon entfernt.
+- user_id: `_sammle_verstoesse(wurzel)`. repo_path: `_module_constants` liest den Baum genau einmal.
+
+Bewusst schon gruen (halten bestehendes Verhalten fest, Beweis per Mutation in GREEN):
+`test_konstanten_behalten_reihenfolge_und_fixpunkt` (5 Faelle), `test_scan_tree_wendet_die_altlasten_basislinie_selbst_an`.
+
+Abweichungen/Befunde:
+- AC-5 sagt, "Altlasten ignoriert" mache den AC-12-Lauf rot. `ALTLASTEN` ist leer, das kann dort nicht rot werden;
+  den Nachweis fuehrt der gepflanzte Test `test_scan_tree_wendet_die_altlasten_basislinie_selbst_an`.
+- 🔴 Umfang: allein RED ist +234/-34 (268; thunder 165, vorfilter 25, repo_path 36, user_id 42). Die Schnittregel der Spec
+  (nach dem thunder-Commit zaehlen, zuerst user_id abtrennen) wird voraussichtlich greifen. Deshalb liegen die RED-Tests
+  in drei getrennten Commits: abtrennen heisst den jeweiligen RED-Commit per `git revert` zuruecknehmen und neues Issue anlegen.
