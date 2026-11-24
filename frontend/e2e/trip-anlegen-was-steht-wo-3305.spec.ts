@@ -226,9 +226,16 @@ test.describe('#3305 Tabelle „Was steht wo“ beim Trip-Anlegen', () => {
 		await anlegen(page, m);
 		const rumpf = anlegePosts(m)[0].rumpf!;
 		expect(rumpf.display_config?.placements?.rows, 'AC-7: rows im POST').toBeUndefined();
-		expect(rumpf.display_config?.show_night_block).toBeUndefined();
-		expect(rumpf.report_config?.show_stage_stats).toBeUndefined();
-		expect(rumpf.report_config?.show_yesterday_comparison).toBeUndefined();
+		expect(rumpf.display_config?.show_night_block, 'AC-7: Nacht-Block aus der Karte im POST').toBeUndefined();
+		// Fix-Loop 4: `report_config` trägt die Blöcke und Formate schon ohne Karte (Mail-Inhalt und Zustellung
+		// schreiben sie in den Entwurf). AC-7 heißt: die Karte fügt nichts hinzu und ändert nichts — der POST
+		// trägt genau die Werte des Entwurfs, den die Karte selbst als Vorschau gesendet hat (ohne Kartenstand).
+		const entwuerfe = m.alle.filter((x) => x.methode === 'POST' && x.pfad === VORSCHAU_PFAD).map((x) => x.rumpf!);
+		expect(entwuerfe.length, 'Messaufbau: die Karte hat keine Vorschau geladen').toBeGreaterThanOrEqual(1);
+		const ohneKarte = entwuerfe.at(-1)!;
+		expect(ohneKarte.display_config?.placements, 'Messaufbau: unbediente Karte sendet einen Tabellenstand').toBeUndefined();
+		for (const feld of ['show_stage_stats', 'show_yesterday_comparison', 'email_format', 'telegram_style'])
+			expect(rumpf.report_config?.[feld], `AC-7: report_config.${feld} weicht vom Stand ohne Karte ab`).toEqual(ohneKarte.report_config?.[feld]);
 	});
 
 	test('TA-5 (AC-8): Reiter Wetter des neuen Trips zeigt das beim Anlegen Eingestellte', async ({ page }) => {

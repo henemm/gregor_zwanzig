@@ -1,0 +1,476 @@
+# Fix-Loop 4 (#3305): Vorschau-422 fuer fruehen Entwurf
+## RED vorher: uv run pytest tests/tdd/test_3305_vorschau_entwurf_frueh.py
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  /home/hem/gregor_zwanzig/.claude/worktrees/fix-3273-trip-grundauswahl/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/tdd/test_3305_vorschau_entwurf_frueh.py::test_frueher_entwurf_ohne_datum_liefert_tabelle_statt_422
+FAILED tests/tdd/test_3305_vorschau_entwurf_frueh.py::test_frueher_entwurf_gleiche_ansicht_wie_mit_datum
+FAILED tests/tdd/test_3305_vorschau_entwurf_frueh.py::test_etappe_ganz_ohne_datum_schluessel_liefert_tabelle
+
+## GREEN: uv run pytest -p no:warnings -q tests/tdd/test_3305_vorschau_entwurf_frueh.py tests/tdd/test_3304_placements_vorschau.py tests/tdd/test_3237_placements_aus_grundauswahl.py tests/tdd/test_placements_tabelle_endpoint.py
+........................................................................ [ 52%]
+..................................................................       [100%]
+
+=> 138 passed, 0 failed
+## Frontend 3305: npm test -- <5 Dateien 3305>
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/components/shared/wetter-tab/__tests__/was_steht_wo_anlegen_3305.test.ts src/lib/components/organisms/__tests__/was_steht_wo_karte_anlegen_3305.test.ts src/lib/components/organisms/__tests__/was_steht_wo_karte_anlegen_3305_fixloop1.test.ts src/lib/components/trip-new/__tests__/trip_anlegen_karte_payload_3305.test.ts src/lib/components/trip-new/__tests__/trip_anlegen_karte_verdrahtung_3305.test.ts
+
+TAP version 13
+# (node:3474135) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: \#3305 Test 1 (AC-2, AC-4): Anlege-Modus meldet den Stand auch bei stored=false, kein PUT
+    # Subtest: Haken: onAnlegeStand meldet die Änderung in placements; kein Schreibaufruf
+    ok 1 - Haken: onAnlegeStand meldet die Änderung in placements; kein Schreibaufruf
+      ---
+      duration_ms: 15276.698665
+      type: 'test'
+      ...
+    # Subtest: Format und Reihenfolge: gemeldeter Stand trägt beides
+    ok 2 - Format und Reihenfolge: gemeldeter Stand trägt beides
+      ---
+      duration_ms: 270.806025
+      type: 'test'
+      ...
+    # Subtest: Schalter (Nacht-Block): gemeldet mit felder und felderStart, kein Teilfeld-PUT
+    ok 3 - Schalter (Nacht-Block): gemeldet mit felder und felderStart, kein Teilfeld-PUT
+      ---
+      duration_ms: 94.56152
+      type: 'test'
+      ...
+    # Subtest: placementsZumMitspeichern: lokaler Stand ohne stored-Bedingung
+    ok 4 - placementsZumMitspeichern: lokaler Stand ohne stored-Bedingung
+      ---
+      duration_ms: 145.242983
+      type: 'test'
+      ...
+    1..4
+ok 1 - \#3305 Test 1 (AC-2, AC-4): Anlege-Modus meldet den Stand auch bei stored=false, kein PUT
+  ---
+  duration_ms: 15794.544806
+  type: 'suite'
+  ...
+# Subtest: \#3305 Test 6 (AC-10): Kartenbedienung ohne Metrikänderung lädt keine Vorschau nach
+    # Subtest: Haken, Format, Reihenfolge, Ausblick; Zeitgeber läuft ab: weiterhin genau ein Vorschau-Aufruf
+    ok 1 - Haken, Format, Reihenfolge, Ausblick; Zeitgeber läuft ab: weiterhin genau ein Vorschau-Aufruf
+      ---
+      duration_ms: 94.794961
+      type: 'test'
+      ...
+    1..1
+ok 2 - \#3305 Test 6 (AC-10): Kartenbedienung ohne Metrikänderung lädt keine Vorschau nach
+  ---
+  duration_ms: 95.710193
+  type: 'suite'
+  ...
+# Subtest: \#3305 Test 2 (AC-5): Metrik hinzu/weg — Zeilen ergänzt/entfernt, Einstellungen bleiben
+    # Subtest: Haken/Format/Reihenfolge bleiben nach grundauswahlGeaendert und nach der folgenden Vorschau-Antwort
+    ok 1 - Haken/Format/Reihenfolge bleiben nach grundauswahlGeaendert und nach der folgenden Vorschau-Antwort
+      ---
+      duration_ms: 129.680501
+      type: 'test'
+      ...
+    1..1
+ok 3 - \#3305 Test 2 (AC-5): Metrik hinzu/weg — Zeilen ergänzt/entfernt, Einstellungen bleiben
+  ---
+  duration_ms: 130.077152
+  type: 'suite'
+  ...
+# (node:3474136) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: \#3305 F007: Metrikwechsel vor der ersten Vorschau-Antwort verfälscht den Stand nicht
+    # Subtest: ohne Startstand: ältere Antwort (alte Metriken) wird verworfen, der Stand trägt die neue Auswahl
+    ok 1 - ohne Startstand: ältere Antwort (alte Metriken) wird verworfen, der Stand trägt die neue Auswahl
+      ---
+      duration_ms: 15491.799731
+      type: 'test'
+      ...
+    # Subtest: ältere Antwort NACH der neueren: bleibt verworfen
+    ok 2 - ältere Antwort NACH der neueren: bleibt verworfen
+      ---
+      duration_ms: 153.92274
+      type: 'test'
+      ...
+    # Subtest: nach Neuaufbau mit Startstand: Haken bleibt, entfernte Zeile entfällt, neue kommt hinzu, Stand wird gemeldet
+    ok 3 - nach Neuaufbau mit Startstand: Haken bleibt, entfernte Zeile entfällt, neue kommt hinzu, Stand wird gemeldet
+      ---
+      duration_ms: 134.785271
+      type: 'test'
+      ...
+    1..3
+ok 4 - \#3305 F007: Metrikwechsel vor der ersten Vorschau-Antwort verfälscht den Stand nicht
+  ---
+  duration_ms: 15781.754825
+  type: 'suite'
+  ...
+# Subtest: \#3305 M8/M13 (AC-7): eine nie bediente Karte meldet auch nach einem Metrikwechsel nichts
+    # Subtest: geladen, nicht bedient, Metrik weg/hinzu: kein gemeldeter Stand (POST bleibt ohne rows)
+    ok 1 - geladen, nicht bedient, Metrik weg/hinzu: kein gemeldeter Stand (POST bleibt ohne rows)
+      ---
+      duration_ms: 96.247743
+      type: 'test'
+      ...
+    1..1
+ok 5 - \#3305 M8/M13 (AC-7): eine nie bediente Karte meldet auch nach einem Metrikwechsel nichts
+  ---
+  duration_ms: 96.433994
+  type: 'suite'
+  ...
+# Subtest: \#3305 Fix-Loop 1: gescheitertes Nachladen der Vorschau lässt die Karte nicht endlos laden
+    # Subtest: noch keine Antwort (erste verworfen), entprelltes Nachladen scheitert: sichtbarer Fehlerzustand
+    ok 1 - noch keine Antwort (erste verworfen), entprelltes Nachladen scheitert: sichtbarer Fehlerzustand
+      ---
+      duration_ms: 113.161378
+      type: 'test'
+      ...
+    # Subtest: Antwort schon da, Nachladen scheitert: alte Ansicht bleibt stehen
+    ok 2 - Antwort schon da, Nachladen scheitert: alte Ansicht bleibt stehen
+      ---
+      duration_ms: 153.185457
+      type: 'test'
+      ...
+    1..2
+ok 6 - \#3305 Fix-Loop 1: gescheitertes Nachladen der Vorschau lässt die Karte nicht endlos laden
+  ---
+  duration_ms: 266.827145
+  type: 'suite'
+  ...
+# Subtest: \#3305 Fix-Loop 2 (F-A3b): Start der Schalter bleibt der Start der Karte
+    # Subtest: spätere Vorschau mit anderen Schalterwerten (Zustellung: Kompakt) verschiebt felderStart nicht
+    ok 1 - spätere Vorschau mit anderen Schalterwerten (Zustellung: Kompakt) verschiebt felderStart nicht
+      ---
+      duration_ms: 158.096998
+      type: 'test'
+      ...
+    1..1
+ok 7 - \#3305 Fix-Loop 2 (F-A3b): Start der Schalter bleibt der Start der Karte
+  ---
+  duration_ms: 158.424347
+  type: 'suite'
+  ...
+# Subtest: \#3305 Fix-Loop 3 (F-B1, AC-5): Metrik entfernt, keine neue Vorschau — Ansicht und Klick bringen die Zeile nicht zurück
+    # Subtest: Ansicht ohne die Zeile; ein Haken danach meldet einen Stand ohne die entfernte Metrik
+    ok 1 - Ansicht ohne die Zeile; ein Haken danach meldet einen Stand ohne die entfernte Metrik
+      ---
+      duration_ms: 47.468434
+      type: 'test'
+      ...
+    1..1
+ok 8 - \#3305 Fix-Loop 3 (F-B1, AC-5): Metrik entfernt, keine neue Vorschau — Ansicht und Klick bringen die Zeile nicht zurück
+  ---
+  duration_ms: 47.616705
+  type: 'suite'
+  ...
+# (node:3474144) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: \#3305 Anlege-Variante: Laden über die Vorschau (kein GET, kein PUT)
+    # Subtest: laden(): genau ein POST auf die Vorschau mit dem Entwurf als Rumpf; Antwort wird übernommen
+    ok 1 - laden(): genau ein POST auf die Vorschau mit dem Entwurf als Rumpf; Antwort wird übernommen
+      ---
+      duration_ms: 24.159039
+      type: 'test'
+      ...
+    # Subtest: laden() mit lokalem Stand: display_config.placements trägt ihn, metrics/channels des Entwurfs bleiben
+    ok 2 - laden() mit lokalem Stand: display_config.placements trägt ihn, metrics/channels des Entwurfs bleiben
+      ---
+      duration_ms: 22.275297
+      type: 'test'
+      ...
+    # Subtest: zumMitsenden: im Anlegen der lokale Stand auch ohne gespeicherte Tabelle (Datenverlust-Schutz)
+    ok 3 - zumMitsenden: im Anlegen der lokale Stand auch ohne gespeicherte Tabelle (Datenverlust-Schutz)
+      ---
+      duration_ms: 0.703292
+      type: 'test'
+      ...
+    1..3
+ok 9 - \#3305 Anlege-Variante: Laden über die Vorschau (kein GET, kein PUT)
+  ---
+  duration_ms: 51.272024
+  type: 'suite'
+  ...
+# Subtest: \#3305 AC-4/AC-10 (Test 6): Kartenbedienung ohne Metrikänderung lädt nichts und schreibt nichts
+    # Subtest: mehrere Änderungen, Zeitgeber läuft ab: null Aufrufe (kein PUT, keine Vorschau)
+    ok 1 - mehrere Änderungen, Zeitgeber läuft ab: null Aufrufe (kein PUT, keine Vorschau)
+      ---
+      duration_ms: 14.110628
+      type: 'test'
+      ...
+    # Subtest: Metrikwechsel: genau EINE entprellte Vorschau, erst nach dem Zeitgeber
+    ok 2 - Metrikwechsel: genau EINE entprellte Vorschau, erst nach dem Zeitgeber
+      ---
+      duration_ms: 10.390052
+      type: 'test'
+      ...
+    # Subtest: die entprellte Vorschau liest den Entwurf beim Senden (neue Metrik steht im Rumpf)
+    ok 3 - die entprellte Vorschau liest den Entwurf beim Senden (neue Metrik steht im Rumpf)
+      ---
+      duration_ms: 5.973242
+      type: 'test'
+      ...
+    1..3
+ok 10 - \#3305 AC-4/AC-10 (Test 6): Kartenbedienung ohne Metrikänderung lädt nichts und schreibt nichts
+  ---
+  duration_ms: 30.774551
+  type: 'suite'
+  ...
+# Subtest: \#3305 AC-6 (Test 3): späte Vorschau-Antworten überschreiben keinen neueren Stand
+    # Subtest: Antwort, die nach einem Klick eintrifft, wird verworfen
+    ok 1 - Antwort, die nach einem Klick eintrifft, wird verworfen
+      ---
+      duration_ms: 22.002604
+      type: 'test'
+      ...
+    # Subtest: Antwort, die nach einem Metrikwechsel eintrifft, wird verworfen; die neuere gilt
+    ok 2 - Antwort, die nach einem Metrikwechsel eintrifft, wird verworfen; die neuere gilt
+      ---
+      duration_ms: 0.936841
+      type: 'test'
+      ...
+    # Subtest: ältere Antwort NACH der neueren: bleibt verworfen
+    ok 3 - ältere Antwort NACH der neueren: bleibt verworfen
+      ---
+      duration_ms: 1.140382
+      type: 'test'
+      ...
+    1..3
+ok 11 - \#3305 AC-6 (Test 3): späte Vorschau-Antworten überschreiben keinen neueren Stand
+  ---
+  duration_ms: 35.087112
+  type: 'suite'
+  ...
+# Subtest: \#3305 Test 4 (AC-2, AC-3): karte gesetzt — placements und Schalter-Differenz im POST
+    # Subtest: Tabelle der Karte steht unverändert in display_config.placements (Reihenfolge, Haken, Formate)
+    ok 1 - Tabelle der Karte steht unverändert in display_config.placements (Reihenfolge, Haken, Formate)
+      ---
+      duration_ms: 25.00651
+      type: 'test'
+      ...
+    # Subtest: alle fünf Schalter geändert: Werte an ihrem Ort, sonst weicht nichts ab (Versandzeiten, Kanäle gleich)
+    ok 2 - alle fünf Schalter geändert: Werte an ihrem Ort, sonst weicht nichts ab (Versandzeiten, Kanäle gleich)
+      ---
+      duration_ms: 8.412138
+      type: 'test'
+      ...
+    # Subtest: nur gegenüber dem Kartenstart Geändertes wird angewandt (zwei Bedienstellen bis \#3307)
+    ok 3 - nur gegenüber dem Kartenstart Geändertes wird angewandt (zwei Bedienstellen bis \#3307)
+      ---
+      duration_ms: 0.604202
+      type: 'test'
+      ...
+    # Subtest: Tabelle bedient, Schalter unverändert: keine Schalterfelder im POST
+    ok 4 - Tabelle bedient, Schalter unverändert: keine Schalterfelder im POST
+      ---
+      duration_ms: 0.338241
+      type: 'test'
+      ...
+    # Subtest: ohne reportConfig im Zustand: Schalter-Differenz legt report_config an
+    ok 5 - ohne reportConfig im Zustand: Schalter-Differenz legt report_config an
+      ---
+      duration_ms: 0.35611
+      type: 'test'
+      ...
+    # Subtest: der Eingabezustand bleibt unverändert (reine Funktion)
+    ok 6 - der Eingabezustand bleibt unverändert (reine Funktion)
+      ---
+      duration_ms: 0.351072
+      type: 'test'
+      ...
+    1..6
+ok 12 - \#3305 Test 4 (AC-2, AC-3): karte gesetzt — placements und Schalter-Differenz im POST
+  ---
+  duration_ms: 36.013834
+  type: 'suite'
+  ...
+# Subtest: \#3305 Test 5 (AC-7): karte nicht gesetzt — Rumpf wie heute (Regressionsschutz)
+    # Subtest: keine placements und keine Schalterfelder aus der Karte
+    ok 1 - keine placements und keine Schalterfelder aus der Karte
+      ---
+      duration_ms: 10.584702
+      type: 'test'
+      ...
+    # Subtest: karte: undefined ist bitgleich zu einem Zustand ohne das Feld
+    ok 2 - karte: undefined ist bitgleich zu einem Zustand ohne das Feld
+      ---
+      duration_ms: 0.463521
+      type: 'test'
+      ...
+    1..2
+ok 13 - \#3305 Test 5 (AC-7): karte nicht gesetzt — Rumpf wie heute (Regressionsschutz)
+  ---
+  duration_ms: 11.319303
+  type: 'suite'
+  ...
+# (node:3474470) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: \#3305 M4 (AC-2): Kartenbedienung -> Editor -> genau der Anlege-POST trägt die Tabelle
+    # Subtest: Haken in der Karte steht im POST display_config.placements
+    ok 1 - Haken in der Karte steht im POST display_config.placements
+      ---
+      duration_ms: 17316.456394
+      type: 'test'
+      ...
+    # Subtest: Karte nie bedient: POST ohne placements (AC-7, Gegenprobe)
+    ok 2 - Karte nie bedient: POST ohne placements (AC-7, Gegenprobe)
+      ---
+      duration_ms: 545.977004
+      type: 'test'
+      ...
+    1..2
+ok 14 - \#3305 M4 (AC-2): Kartenbedienung -> Editor -> genau der Anlege-POST trägt die Tabelle
+  ---
+  duration_ms: 17863.287949
+  type: 'suite'
+  ...
+# Subtest: \#3305 M5 (AC-1): Neuaufbau beim Wechsel Desktop <-> Mobil behält den Kartenstand
+    # Subtest: Desktop -> Mobil
+    ok 1 - Desktop -> Mobil
+      ---
+      duration_ms: 1133.067089
+      type: 'test'
+      ...
+    # Subtest: Mobil -> Desktop
+    ok 2 - Mobil -> Desktop
+      ---
+      duration_ms: 551.857275
+      type: 'test'
+      ...
+    1..2
+ok 15 - \#3305 M5 (AC-1): Neuaufbau beim Wechsel Desktop <-> Mobil behält den Kartenstand
+  ---
+  duration_ms: 1685.235754
+  type: 'suite'
+  ...
+# Subtest: \#3305 M6 (AC-10): Metrikwechsel lädt die Vorschau der Karte nach — nach dem Melden an den Editor
+    # Subtest: Metrik entfernt: genau ein Nachladen, Editor kennt die neue Auswahl schon; Nicht-Metrik-Änderung lädt nichts
+    ok 1 - Metrik entfernt: genau ein Nachladen, Editor kennt die neue Auswahl schon; Nicht-Metrik-Änderung lädt nichts
+      ---
+      duration_ms: 399.144048
+      type: 'test'
+      ...
+    1..1
+ok 16 - \#3305 M6 (AC-10): Metrikwechsel lädt die Vorschau der Karte nach — nach dem Melden an den Editor
+  ---
+  duration_ms: 399.331959
+  type: 'suite'
+  ...
+# Subtest: \#3305 M10: die Karte steht im Anlegen nur mit Rückkanal
+    # Subtest: Orte-Anlegen ohne onAnlegeKarte: keine Karte (ihr Stand käme nicht in den POST)
+    ok 1 - Orte-Anlegen ohne onAnlegeKarte: keine Karte (ihr Stand käme nicht in den POST)
+      ---
+      duration_ms: 63.345157
+      type: 'test'
+      ...
+    # Subtest: Trip-Anlegen mit Rückkanal: Karte
+    ok 2 - Trip-Anlegen mit Rückkanal: Karte
+      ---
+      duration_ms: 69.273279
+      type: 'test'
+      ...
+    # Subtest: Hub (gespeicherter Trip): Karte
+    ok 3 - Hub (gespeicherter Trip): Karte
+      ---
+      duration_ms: 42.279626
+      type: 'test'
+      ...
+    1..3
+ok 17 - \#3305 M10: die Karte steht im Anlegen nur mit Rückkanal
+  ---
+  duration_ms: 181.594163
+  type: 'suite'
+  ...
+# Subtest: \#3305 Fix-Loop 2 (AC-5, AC-10): Metrikwechsel im Reiter -> Karte -> Vorschau und POST, über die echten Einbettungen
+    # Subtest: F-A1/F-A2: Metrik entfernen — Zeile entfällt im Kartenstand und im POST, Haken bleibt; Vorschau-Rumpf trägt die neue Auswahl
+    ok 1 - F-A1/F-A2: Metrik entfernen — Zeile entfällt im Kartenstand und im POST, Haken bleibt; Vorschau-Rumpf trägt die neue Auswahl
+      ---
+      duration_ms: 273.516766
+      type: 'test'
+      ...
+    # Subtest: F-A3: eine Kartenmeldung baut den Reiter Wetter nicht neu auf
+    ok 2 - F-A3: eine Kartenmeldung baut den Reiter Wetter nicht neu auf
+      ---
+      duration_ms: 444.133017
+      type: 'test'
+      ...
+    1..2
+ok 18 - \#3305 Fix-Loop 2 (AC-5, AC-10): Metrikwechsel im Reiter -> Karte -> Vorschau und POST, über die echten Einbettungen
+  ---
+  duration_ms: 717.896046
+  type: 'suite'
+  ...
+1..18
+# tests 41
+# suites 18
+# pass 41
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 26777.708972
+
+## Mutationsgegenprobe Fix (String-Ersetzung, Sicherung, byte-gleich zurueck)
+P1
+  GEFANGEN
+  FAILED tests/tdd/test_3305_vorschau_entwurf_frueh.py::test_frueher_entwurf_ohne_datum_liefert_tabelle_statt_422
+  FAILED tests/tdd/test_3305_vorschau_entwurf_frueh.py::test_frueher_entwurf_gleiche_ansicht_wie_mit_datum
+  FAILED tests/tdd/test_3305_vorschau_entwurf_frueh.py::test_etappe_ganz_ohne_datum_schluessel_liefert_tabelle
+P2
+  GEFANGEN
+  FAILED tests/tdd/test_3305_vorschau_entwurf_frueh.py::test_etappe_ganz_ohne_datum_schluessel_liefert_tabelle
+P3
+  GEFANGEN
+  FAILED tests/tdd/test_3305_vorschau_entwurf_frueh.py::test_wirklich_unlesbare_etappen_bleiben_422[datum-falsches-format]
+  FAILED tests/tdd/test_3305_vorschau_entwurf_frueh.py::test_wirklich_unlesbare_etappen_bleiben_422[datum-zahl]
+P4
+  GEFANGEN
+  FAILED tests/tdd/test_3305_vorschau_entwurf_frueh.py::test_dienst_veraendert_den_entwurf_des_aufrufers_nicht
+
+## Lokaler Stack (ci-stack-Aufbau, eigene Ports, Playwright begriff-erklaerung + trip-anlegen-was-steht-wo-3305) nach dem Fix:
+[1A[2K[24/26] [tests] › e2e/trip-anlegen-was-steht-wo-3305.spec.ts:223:2 › #3305 Tabelle „Was steht wo“ beim Trip-Anlegen › TA-4 (AC-7): Karte nicht bedient — POST ohne placements.rows und ohne Schalterfelder
+[1A[2K  1) [tests] › e2e/trip-anlegen-was-steht-wo-3305.spec.ts:223:2 › #3305 Tabelle „Was steht wo“ beim Trip-Anlegen › TA-4 (AC-7): Karte nicht bedient — POST ohne placements.rows und ohne Schalterfelder 
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBeUndefined[2m()[22m
+    Received: [31mtrue[39m
+      228 | 		expect(rumpf.display_config?.placements?.rows, 'AC-7: rows im POST').toBeUndefined();
+      229 | 		expect(rumpf.display_config?.show_night_block).toBeUndefined();
+    > 230 | 		expect(rumpf.report_config?.show_stage_stats).toBeUndefined();
+      231 | 		expect(rumpf.report_config?.show_yesterday_comparison).toBeUndefined();
+[1A[2K  1 failed
+    [tests] › e2e/trip-anlegen-was-steht-wo-3305.spec.ts:223:2 › #3305 Tabelle „Was steht wo“ beim Trip-Anlegen › TA-4 (AC-7): Karte nicht bedient — POST ohne placements.rows und ohne Schalterfelder 
+  25 passed (1.9m)
+
+## Nachtrag Fix-Loop 4: TA-4 korrigiert (AC-7 = nichts AUS DER KARTE; report_config gleich dem Entwurf ohne Kartenstand)
+# Lokaler Stack wie ci-stack.sh (eigene Ports, Telegram-Token leer, kein setMyCommands), Fix aktiv:
+# npx playwright test e2e/trip-anlegen-was-steht-wo-3305.spec.ts e2e/begriff-erklaerung.spec.ts --workers=1
+# Vorschau-Aufrufe im Lauf: 29, davon abgelehnt: 0
+[1A[2K[2/26] [tests] › e2e/begriff-erklaerung.spec.ts:251:3 › /trips/new (Desktop): Infobox je Reiter › Pflichtreiter Route/Etappen ohne Infobox; Wegpunkte, Wetter (Metriken, Wertebereiche), Zustellung (Versand, Alarme) mit Infobox
+[1A[2K[3/26] [tests] › e2e/begriff-erklaerung.spec.ts:251:3 › /trips/new (Mobil): Infobox je Reiter › Pflichtreiter Route/Etappen ohne Infobox; Wegpunkte, Wetter (Metriken, Wertebereiche), Zustellung (Versand, Alarme) mit Infobox
+[1A[2K[4/26] [tests] › e2e/begriff-erklaerung.spec.ts:285:2 › /compare/new (Desktop): Infobox je Reiter › Pflichtreiter Vergleich/Orte ohne Infobox; Wetter (Metriken, Wertebereiche), Zustellung (Versand, Alarme) mit Vergleichs-Text
+[1A[2K[5/26] [tests] › e2e/begriff-erklaerung.spec.ts:315:2 › AC-7: die Infobox ist zustandslos › bleibt beim Reiterwechsel und nach Neuladen sichtbar; schreibt weder Browser-Speicher noch Server
+[1A[2K[6/26] [tests] › e2e/begriff-erklaerung.spec.ts:370:2 › AC-8/12/13 Trip (Desktop): ⓘ Wertebereiche entfällt (#2794 Teil 3 §6 d) — Grenzen im WetterTab
+[1A[2K[7/26] [tests] › e2e/begriff-erklaerung.spec.ts:375:2 › AC-8/12/13 Ortsvergleich (Desktop): ⓘ Wertebereiche entfällt (#2794 Teil 3 §6 d) — Grenzen im WetterTab
+[1A[2K[8/26] [tests] › e2e/begriff-erklaerung.spec.ts:370:2 › AC-8/12/13 Trip (Mobil): ⓘ Wertebereiche entfällt (#2794 Teil 3 §6 d) — Grenzen im WetterTab
+[1A[2K[9/26] [tests] › e2e/begriff-erklaerung.spec.ts:375:2 › AC-8/12/13 Ortsvergleich (Mobil): ⓘ Wertebereiche entfällt (#2794 Teil 3 §6 d) — Grenzen im WetterTab
+[1A[2K[10/26] [tests] › e2e/begriff-erklaerung.spec.ts:387:2 › AC-9 Trip (Desktop): sichtbares Label „Dringlichkeits-Schwelle“ + ⓘ, Erklärung öffnet
+[1A[2K[11/26] [tests] › e2e/begriff-erklaerung.spec.ts:394:2 › AC-11 Trip (Desktop): ⓘ Cooldown öffnet die Erklärung, Hinweistext bleibt
+[1A[2K[12/26] [tests] › e2e/begriff-erklaerung.spec.ts:387:2 › AC-9 Trip (Mobil): sichtbares Label „Dringlichkeits-Schwelle“ + ⓘ, Erklärung öffnet
+[1A[2K[13/26] [tests] › e2e/begriff-erklaerung.spec.ts:394:2 › AC-11 Trip (Mobil): ⓘ Cooldown öffnet die Erklärung, Hinweistext bleibt
+[1A[2K[14/26] [tests] › e2e/begriff-erklaerung.spec.ts:410:2 › /compare/new (Desktop): Alarme › AC-9: ⓘ Dringlichkeits-Schwelle; AC-11: ⓘ Cooldown samt unverändertem Hinweistext
+[1A[2K[15/26] [tests] › e2e/begriff-erklaerung.spec.ts:431:2 › AC-16 /trips/new (Desktop): alle Reiter, Sprechblasen öffnen und schließen — keine Konsolenfehler
+[1A[2K[16/26] [tests] › e2e/begriff-erklaerung.spec.ts:453:2 › AC-16 /compare/new (Desktop): alle Reiter, Sprechblasen öffnen und schließen — keine Konsolenfehler
+[1A[2K[17/26] [tests] › e2e/begriff-erklaerung.spec.ts:431:2 › AC-16 /trips/new (Mobil): alle Reiter, Sprechblasen öffnen und schließen — keine Konsolenfehler
+[1A[2K[18/26] [tests] › e2e/begriff-erklaerung.spec.ts:453:2 › AC-16 /compare/new (Mobil): alle Reiter, Sprechblasen öffnen und schließen — keine Konsolenfehler
+[1A[2K[19/26] [tests] › e2e/begriff-erklaerung.spec.ts:481:2 › AC-14 (Desktop): das ⓘ ist mindestens 24 × 24 px groß
+[1A[2K[20/26] [tests] › e2e/begriff-erklaerung.spec.ts:481:2 › AC-14 (Mobil): das ⓘ ist mindestens 24 × 24 px groß
+[1A[2K[21/26] [tests] › e2e/trip-anlegen-was-steht-wo-3305.spec.ts:157:2 › #3305 Tabelle „Was steht wo“ beim Trip-Anlegen › TA-1 (AC-1): Karte in Desktop und Mobil, Haken überlebt Ansichtswechsel und Schrittwechsel
+[1A[2K[22/26] [tests] › e2e/trip-anlegen-was-steht-wo-3305.spec.ts:175:2 › #3305 Tabelle „Was steht wo“ beim Trip-Anlegen › TA-2 (AC-2/3/4/10): genau ein POST mit Tabelle und Schaltern, kein PUT, keine Vorschau bei reiner Bedienung
+[1A[2K[23/26] [tests] › e2e/trip-anlegen-was-steht-wo-3305.spec.ts:199:2 › #3305 Tabelle „Was steht wo“ beim Trip-Anlegen › TA-3 (AC-5/AC-10): Metrik weg und hinzu — Zeilen folgen, Haken bleibt, je Wechsel genau eine Vorschau
+[1A[2K[24/26] [tests] › e2e/trip-anlegen-was-steht-wo-3305.spec.ts:223:2 › #3305 Tabelle „Was steht wo“ beim Trip-Anlegen › TA-4 (AC-7): Karte nicht bedient — POST ohne placements.rows und ohne Schalterfelder
+[1A[2K[25/26] [tests] › e2e/trip-anlegen-was-steht-wo-3305.spec.ts:241:2 › #3305 Tabelle „Was steht wo“ beim Trip-Anlegen › TA-5 (AC-8): Reiter Wetter des neuen Trips zeigt das beim Anlegen Eingestellte
+[1A[2K[26/26] [tests] › e2e/trip-anlegen-was-steht-wo-3305.spec.ts:261:2 › #3305 Tabelle „Was steht wo“ beim Trip-Anlegen › TA-6 (AC-9): zweiter Nutzer sieht Trip und Tabelle von A nicht; Vorschau als B ohne Daten von A
+[1A[2K  26 passed (2.0m)
