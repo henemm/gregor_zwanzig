@@ -13,8 +13,13 @@
 //   AC-16       keine Konsolenfehler beim Durchlauf aller Reiter und Oeffnen/Schliessen
 //
 // #3332 (feat_3332_zustellung_anlegen_trip.md): im Trip-Anlegen ist der Schritt Zustellung der Reiter
-// Zustellung wie im Hub (ohne Infobox, ohne ⓘ); Dringlichkeit und Cooldown stehen dort. Die ⓘ-Faelle
-// (Sprechblase, Tastatur, Tippflaeche) laufen deshalb am Ortsvergleich-Anlegen (Alt-Panel bis D2, #3333).
+// Zustellung wie im Hub (ohne Infobox, ohne ⓘ); Dringlichkeit und Cooldown stehen dort.
+// #3333 (feat_3333_zustellung_anlegen_orte.md AC-1/AC-10/AC-12): ebenso im Ortsvergleich-Anlegen. Der Reiter
+// Alarme zeigt im Anlegen weder Kanal-Block noch Cooldown — die ⓘ Dringlichkeits-Schwelle und ⓘ Cooldown
+// (AlertChannelPicker, AlertCooldownCard) sind damit in keiner Anlegeseite mehr gemountet (Known Limitation
+// der Spec, Hub-Paritaet). Geprueft wird deshalb in beiden Anlegeseiten: Felder im Reiter Zustellung
+// bedienbar, kein verwaistes ⓘ. Die frueheren Sprechblasen-Faelle (Tastatur, Klick daneben, Tippflaeche)
+// haben kein Bauteil mehr auf einer Seite und entfallen.
 //
 // Warum im Browser: das Popover-Portal, die Fokus-Rueckgabe und `onOpenChange`
 // laufen im SSR-Harness nie (Kernsuite = svelte/server). Die Texte selbst sind
@@ -84,11 +89,11 @@ const TRIP_KETTE: TripReiter[] = ['wetter', 'zustellung'];
 // gemountet (§6 (d): „verschwindet im Schritt wetter aus der Sicht") — die Infobox entfällt.
 // #3332 (Spec feat_3332_zustellung_anlegen_trip.md AC-1/AC-11): im Trip-Anlegen ist der Schritt Zustellung
 // der Reiter Zustellung wie im Hub (ohne Infobox); das Alt-Panel mit den Infoboxen „wetter-metriken" und
-// „versand" gibt es dort nicht mehr. Der Reiter Alarme behaelt seine Infobox. Im Ortsvergleich-Anlegen
-// bleibt das Alt-Panel bis D2 (#3333) — dort unveraendert alle drei.
+// „versand" gibt es dort nicht mehr. Der Reiter Alarme behaelt seine Infobox. #3333 (AC-12): ebenso im
+// Ortsvergleich-Anlegen.
 const INFOBOXEN_JE_REITER: Record<Kontext, Record<'wetter' | 'zustellung', string[]>> = {
 	route: { wetter: [], zustellung: ['alarme'] },
-	vergleich: { wetter: [], zustellung: ['wetter-metriken', 'versand', 'alarme'] }
+	vergleich: { wetter: [], zustellung: ['alarme'] }
 };
 
 function tripTab(page: Page, mobil: boolean, reiter: TripReiter): Locator {
@@ -211,45 +216,6 @@ function sprechblase(page: Page, begriff: Begriff): Locator {
 	return page.getByText(TIP_TEXTE[`tip.${begriff}`]);
 }
 
-/** Oeffnen per Klick, Esc, Enter, Leertaste, Klick daneben — Fokus kehrt jedes Mal zum ⓘ zurueck. */
-async function pruefePopover(page: Page, begriff: Begriff, daneben: Locator): Promise<void> {
-	const knopf = iiKnopf(page, begriff);
-	await expect(knopf, `ⓘ ${begriff}: genau ein sichtbarer Knopf mit sprechendem Namen`).toHaveCount(1);
-	const blase = sprechblase(page, begriff);
-	await expect(blase).toBeHidden();
-
-	// Klick -> offen -> Esc -> zu, Fokus auf dem ⓘ
-	await knopf.click();
-	await expect(blase).toBeVisible();
-	await page.keyboard.press('Escape');
-	await expect(blase).toBeHidden();
-	await expect(knopf).toBeFocused();
-
-	// Tastatur: Fokus setzen (ohne Mauszeiger), Enter
-	await knopf.focus();
-	await expect(knopf).toBeFocused();
-	await page.keyboard.press('Enter');
-	await expect(blase).toBeVisible();
-	await page.keyboard.press('Escape');
-	await expect(blase).toBeHidden();
-	await expect(knopf).toBeFocused();
-
-	// Leertaste
-	await page.keyboard.press('Space');
-	await expect(blase).toBeVisible();
-
-	// Klick daneben (auf die neutrale Infobox) schliesst, Fokus zurueck auf dem ⓘ.
-	// bits-ui haengt die Aussenklick-Erkennung erst kurz nach dem Oeffnen ein —
-	// ein sofortiger Klick kann davor landen. Deshalb wird Klick+Pruefung wiederholt
-	// (ohne Uhr-Wartezeit); schliesst das Produkt nie, bleibt der Fall rot.
-	await expect(blase).toBeVisible();
-	await expect(async () => {
-		await daneben.click();
-		await expect(blase).toBeHidden({ timeout: 500 });
-	}).toPass({ timeout: 5000 });
-	await expect(knopf).toBeFocused();
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // AC-1, AC-3, AC-4, AC-5 — /trips/new, Desktop UND Mobil
 // ─────────────────────────────────────────────────────────────────────────────
@@ -298,7 +264,7 @@ for (const mobil of [false, true]) {
 // AC-2, AC-3, AC-5 — /compare/new
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('/compare/new (Desktop): Infobox je Reiter', () => {
-	test('Pflichtreiter Vergleich/Orte ohne Infobox; Wetter (Metriken, Wertebereiche), Zustellung (Versand, Alarme) mit Vergleichs-Text', async ({ page }) => {
+	test('Pflichtreiter Vergleich/Orte ohne Infobox; Wetter ohne, Zustellung nur Alarme-Infobox (Reiter Zustellung ohne, #3333 AC-12)', async ({ page }) => {
 		await vergleichBis(page, false, 'vergleich');
 		await expect(infoboxen(page), 'Vergleich-Reiter trägt eine Infobox').toHaveCount(0);
 		await vergleichBis(page, false, 'orte');
@@ -315,12 +281,17 @@ test.describe('/compare/new (Desktop): Infobox je Reiter', () => {
 				await expect(infoboxen(page), `Schritt ${reiter} trägt eine Infobox (#2794 Teil 3 §4)`).toHaveCount(0);
 			}
 		}
-		// Ortsvergleich-Versand (#2794 S3a: Abschnitt im Schritt Zustellung): nur Morgen 07:00, kein Abend-Slot.
+		// #3333 (AC-1/AC-12): Schritt Zustellung = Reiter Zustellung wie im Hub, ohne Infobox; die Infoboxen des
+		// Alt-Panels („versand", „wetter-metriken") sind weg. Die Standard-Morgenzeit 07:00, die bisher die
+		// Versand-Infobox nannte, steht in den Briefing-Zeiten des Reiters selbst.
 		await vergleichTab(page, false, 'zustellung').click();
-		await pruefeInfobox(page, 'versand', 'vergleich');
-		await expect(infobox(page, 'versand', 'vergleich')).toContainText('07:00');
-		await expect(infobox(page, 'versand', 'vergleich')).not.toContainText('18:00');
-		await expect(infobox(page, 'wetter-metriken', 'vergleich')).toContainText('3-Tages-Ausblick');
+		const zt = page.locator('[data-testid="zustellung-tab"]:visible');
+		await expect(zt, 'Reiter Zustellung fehlt im Ortsvergleich-Anlegen').toHaveCount(1);
+		await expect(zt.locator('[data-testid^="infobox-"]'), 'Reiter Zustellung trägt eine Infobox (#3333 AC-12)').toHaveCount(0);
+		await expect(infobox(page, 'versand', 'vergleich'), 'Versand-Infobox des Alt-Panels noch da').toHaveCount(0);
+		await expect(infobox(page, 'wetter-metriken', 'vergleich'), 'Metrik-Infobox des Alt-Panels noch da').toHaveCount(0);
+		await expect(infoboxen(page), 'Schritt Zustellung: genau die Infobox des Reiters Alarme').toHaveCount(1);
+		expect(await angezeigteZeit(zt.getByTestId(ZT.zeit('morgen')))).toBe('07:00');
 	});
 });
 
@@ -400,18 +371,16 @@ for (const mobil of [false, true]) {
 for (const mobil of [false, true]) {
 	const ansicht = mobil ? 'Mobil' : 'Desktop';
 
-	// #3332 (Spec feat_3332_zustellung_anlegen_trip.md AC-1/AC-9): im Trip-Anlegen besitzt der Reiter
-	// Zustellung (wie im Hub) Alarm-Kanaele mit Dringlichkeit und den Cooldown; der Reiter Alarme blendet
-	// Kanal-Block, Cooldown und Stille Stunden dort aus. Damit gibt es im Trip-Anlegen weder die alte
-	// Schwellen-Auswahl noch die beiden ⓘ (Hub-Paritaet) — auch kein verwaistes. Geprueft: beide Felder
-	// sind im Reiter Zustellung sichtbar und bedienbar. Das Verhalten der Sprechblasen selbst (Klick,
-	// Esc, Enter, Leertaste, Klick daneben, Fokus) pruefen die Ortsvergleich-Faelle unten in beiden Ansichten.
-	test(`AC-9/AC-11 Trip (${ansicht}): Dringlichkeit und Cooldown im Reiter Zustellung (#3332), keine alte Auswahl, kein verwaistes ⓘ`, async ({ page }) => {
-		await tripBis(page, mobil, 'zustellung');
+	// #3332 (Spec feat_3332_zustellung_anlegen_trip.md AC-1/AC-9) und #3333 (feat_3333_zustellung_anlegen_orte.md
+	// AC-1/AC-10): in beiden Anlegeseiten besitzt der Reiter Zustellung (wie im Hub) Alarm-Kanaele mit
+	// Dringlichkeit und den Cooldown; der Reiter Alarme blendet Kanal-Block, Cooldown und Stille Stunden dort
+	// aus. Damit gibt es im Anlegen weder die alte Schwellen-Auswahl noch die beiden ⓘ (Hub-Paritaet) — auch
+	// kein verwaistes. Geprueft: beide Felder sind im Reiter Zustellung sichtbar und bedienbar.
+	async function pruefeZustellungStattAlarmKanaelen(page: Page): Promise<void> {
 		const zt = page.locator('[data-testid="zustellung-tab"]:visible');
 		await expect(zt).toHaveCount(1);
 		await expect(zt.getByTestId(ZT.tabelle)).toBeVisible({ timeout: 15_000 });
-		await expect(page.locator('[data-testid="alert-channel-picker"]:visible'), 'alte Schwellen-Auswahl noch im Trip-Anlegen').toHaveCount(0);
+		await expect(page.locator('[data-testid="alert-channel-picker"]:visible'), 'alte Schwellen-Auswahl noch im Anlegen').toHaveCount(0);
 		await expect(iiKnopf(page, 'kanal_schwelle'), 'verwaistes ⓘ Dringlichkeits-Schwelle').toHaveCount(0);
 		await expect(iiKnopf(page, 'cooldown'), 'verwaistes ⓘ Cooldown').toHaveCount(0);
 		// Dringlichkeit: Spalte der Kanal-Tabelle (E-Mail-Alarm ist im Anlegen an).
@@ -421,43 +390,24 @@ for (const mobil of [false, true]) {
 		await expect(cd).toHaveValue('120');
 		await cd.fill('45');
 		await expect(cd).toHaveValue('45');
+	}
+
+	test(`AC-9/AC-11 Trip (${ansicht}): Dringlichkeit und Cooldown im Reiter Zustellung (#3332), keine alte Auswahl, kein verwaistes ⓘ`, async ({ page }) => {
+		await tripBis(page, mobil, 'zustellung');
+		await pruefeZustellungStattAlarmKanaelen(page);
+	});
+
+	test(`AC-9/AC-11 Ortsvergleich (${ansicht}): Dringlichkeit und Cooldown im Reiter Zustellung (#3333), keine alte Auswahl, kein verwaistes ⓘ`, async ({ page }) => {
+		await vergleichBis(page, mobil, 'zustellung');
+		await pruefeZustellungStattAlarmKanaelen(page);
 	});
 }
-
-// AC-9 + AC-11 auch am Handy (vorher ueber die Trip-Faelle abgedeckt, seit #3332 hat das Trip-Anlegen
-// keine ⓘ mehr): ⓘ Dringlichkeits-Schwelle und ⓘ Cooldown im Ortsvergleich-Anlegen, Mobil-Baum.
-test('AC-9/AC-11 Ortsvergleich (Mobil): ⓘ Dringlichkeits-Schwelle und ⓘ Cooldown öffnen die Erklärung, Hinweistext bleibt', async ({ page }) => {
-	await vergleichBis(page, true, 'zustellung');
-	const mobilBaum = page.locator('.cm-mobile');
-	await expect(mobilBaum.getByTestId('alert-channel-picker').getByText(/^Dringlichkeits-Schwelle$/)).toBeVisible();
-	await pruefePopover(page, 'kanal_schwelle', infobox(page, 'alarme', 'vergleich'));
-	await pruefePopover(page, 'cooldown', infobox(page, 'alarme', 'vergleich'));
-	await expect(
-		mobilBaum.getByText('Mindestabstand zwischen zwei Alerts derselben Metrik — verhindert Spam bei zappelnden Werten.')
-	).toBeVisible();
-});
 
 // AC-10 hat hier bewusst KEINEN Browserfall: `cape` ist seit #1585 `selectable=False`
 // (metric_catalog.py), die Alarm-Zeilen im Anlege-Flow werden aus dem waehlbaren Katalog
 // abgeleitet (deriveActiveAlertMetricsForTrip) -- die CAPE-Zeile ist in /trips/new und
 // /compare/new nicht erreichbar. Ein Fall hier waere dauerhaft rot. AC-10 ist am Baustein
 // bewacht: begriff_erklaerung_an_den_vier_begriffen.test.ts (SSR von AlertMetricLevelRow).
-
-test.describe('/compare/new (Desktop): Alarme', () => {
-	test('AC-9: ⓘ Dringlichkeits-Schwelle; AC-11: ⓘ Cooldown samt unverändertem Hinweistext', async ({ page }) => {
-		await vergleichBis(page, false, 'zustellung');
-		// CompareNewEditor mountet den Alarme-Reiter in .cm-desktop UND .cm-mobile (nicht per
-		// Viewport gegatet) — ohne Scope waeren Kanal-Block und Hinweistext je doppelt (strict mode).
-		const desktop = page.locator('.cm-desktop');
-		const kanalBlock = desktop.getByTestId('alert-channel-picker');
-		await expect(kanalBlock.getByText(/^Dringlichkeits-Schwelle$/)).toBeVisible();
-		await pruefePopover(page, 'kanal_schwelle', infobox(page, 'alarme', 'vergleich'));
-		await pruefePopover(page, 'cooldown', infobox(page, 'alarme', 'vergleich'));
-		await expect(
-			desktop.getByText('Mindestabstand zwischen zwei Alerts derselben Metrik — verhindert Spam bei zappelnden Werten.')
-		).toBeVisible();
-	});
-});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AC-16 — keine Konsolenfehler (Frontend-Browser-Gate), Desktop und Mobil
@@ -512,24 +462,21 @@ for (const mobil of [false, true]) {
 				}
 			}
 		}
-		// #2794 Teil 3 (§6 d): ⓘ Wertebereiche entfällt im Schritt Wetter — es bleiben Schwelle und Cooldown.
-		expect(geoeffnet, 'Messaufbau: es wurden zu wenige Sprechblasen geöffnet (Schwelle, Cooldown)').toBeGreaterThanOrEqual(2);
+		// #2794 Teil 3 (§6 d): ⓘ Wertebereiche entfällt im Schritt Wetter. #3333 (AC-1/AC-10): Schwelle und
+		// Cooldown stehen im Reiter Zustellung (Hub-Paritaet, ohne ⓘ) — wie im Trip-Anlegen gibt es kein ⓘ mehr.
+		// Statt der Sprechblasen wird der Reiter Zustellung bedient (Aufklapper „Anpassen“, Cooldown).
+		expect(geoeffnet, 'ⓘ im Ortsvergleich-Anlegen sichtbar, obwohl Schwelle/Cooldown im Reiter Zustellung stehen (#3333)').toBe(0);
+		const zt = page.locator('[data-testid="zustellung-tab"]:visible');
+		await expect(zt.getByTestId(ZT.tabelle)).toBeVisible({ timeout: 15_000 });
+		const cd = await cooldownFeld(zt);
+		await cd.fill('60');
+		await expect(cd).toHaveValue('60');
 		expect(fehler, `Konsolenfehler: ${fehler.join(' | ')}`).toEqual([]);
 	});
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// AC-14 (Browser-Teil) — Tippflaeche des ⓘ gemessen
+// AC-14 (Browser-Teil) — Tippflaeche des ⓘ: entfallen mit #3333. Nach #3332 (Trip) und #3333 (Ortsvergleich)
+// mountet keine Seite mehr ein ⓘ Cooldown oder ⓘ Dringlichkeits-Schwelle (der Reiter Alarme blendet beide
+// Abschnitte im Anlegen aus, der Hub nutzt den Reiter Zustellung ohne ⓘ).
 // ─────────────────────────────────────────────────────────────────────────────
-// #3332: im Trip-Anlegen gibt es kein ⓘ Cooldown mehr (Reiter Zustellung, Hub-Paritaet) — gemessen wird
-// am ⓘ Cooldown des Ortsvergleich-Anlegens (derselbe Baustein AlertCooldownCard), Desktop- und Mobil-Baum.
-for (const mobil of [false, true]) {
-	test(`AC-14 (${mobil ? 'Mobil' : 'Desktop'}): das ⓘ ist mindestens 24 × 24 px groß`, async ({ page }) => {
-		await vergleichBis(page, mobil, 'zustellung');
-		await expect(iiKnopf(page, 'cooldown'), 'ⓘ Cooldown: genau ein sichtbarer Knopf').toHaveCount(1);
-		const box = await iiKnopf(page, 'cooldown').boundingBox();
-		expect(box, 'ⓘ Cooldown nicht sichtbar').not.toBeNull();
-		expect(box!.width).toBeGreaterThanOrEqual(24);
-		expect(box!.height).toBeGreaterThanOrEqual(24);
-	});
-}

@@ -218,9 +218,9 @@ const FESTER_KONTEXT = new Set(['Trip-Hub', 'Ortsvergleich-Hub']);
 // DENSELBEN geteilten Baustein weiter.
 const ZUSTELLUNG_HUELLE = join(SHARED, 'zustellung-tab/ZustellungTab.svelte');
 // #3332 (D1 von #3307, AC-1): auch /trips/new bettet im Schritt Zustellung die Huelle ZustellungTab ein
-// (Anlegen = Bearbeiten), je Geraet einmal (Desktop + Mobil); /compare/new folgt in D2 (#3333).
-const UEBER_HUELLE = new Set(['Trip-Hub', 'Ortsvergleich-Hub', '/trips/new']);
-const HUELLEN_ANZAHL: Record<string, number> = { 'Trip-Hub': 1, 'Ortsvergleich-Hub': 1, '/trips/new': 2 };
+// (Anlegen = Bearbeiten), je Geraet einmal (Desktop + Mobil); #3333 (D2, AC-1/AC-13): ebenso /compare/new.
+const UEBER_HUELLE = new Set(['Trip-Hub', 'Ortsvergleich-Hub', '/trips/new', '/compare/new']);
+const HUELLEN_ANZAHL: Record<string, number> = { 'Trip-Hub': 1, 'Ortsvergleich-Hub': 1, '/trips/new': 2, '/compare/new': 2 };
 const UEBERGANG = join(COMPONENTS, 'organisms/zustellung-tab/UebergangBlock.svelte');
 
 function pruefeHuelle(flaeche: string, datei: string, ctx: string): void {

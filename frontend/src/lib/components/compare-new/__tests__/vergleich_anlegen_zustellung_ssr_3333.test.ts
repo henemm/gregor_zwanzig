@@ -67,7 +67,10 @@ describe('#3333 Test 6 (AC-1): Orte-Anlegen, Schritt Zustellung', () => {
 		});
 
 		test(`${ansicht}: Banner „nicht bereit“, solange der Schritt Zustellung nicht freigeschaltet ist (data-ready false)`, async () => {
-			const html = await renderVergleichNeu({ ...BESUCHT, isMobileViewport: mobil, pickedIds: ['loc-a'] });
+			// GREEN-Korrektur: „bereit“ folgt unverändert (AC-11) allein dem Besuch des Schritts Zustellung
+			// (anlegeLockEngine.canFinish); ein Ort weniger ändert data-ready nicht. Nicht freigeschaltet =
+			// Schritt Zustellung noch nicht besucht.
+			const html = await renderVergleichNeu({ ...BESUCHT, isMobileViewport: mobil, zustellungVisited: false });
 			const reiter = innen(html, 'zustellung-tab');
 			const banner = tagsMitTestid(reiter, 'compare-step5-activation-banner');
 			assert.equal(banner.length, 1, 'Banner nicht im Reiter Zustellung');

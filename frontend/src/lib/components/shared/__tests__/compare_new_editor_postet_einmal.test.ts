@@ -36,7 +36,8 @@ import {
 	VERTRAG_FEHLT_EDITOR,
 	buendelAus,
 	fetchMitschnitt,
-	vergleichEditor
+	vergleichEditor,
+	zustellungsGeste
 } from './compareNeuEditorPruefstand.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
@@ -107,10 +108,10 @@ describe('AC-5: Anlegen postet genau einmal, mit allen Eingaben, und navigiert',
 		assert.equal(netz.presetPosts().length, 0);
 	});
 
-	test('eine Nutzergeste im Versand-Reiter (Premium-SMS an) landet im selben POST', async () => {
+	test('eine Nutzergeste im Reiter Zustellung (Premium-SMS an) landet im selben POST', async () => {
 		const e = await vergleichEditor({ stateOverride: { ...ALLE_BESUCHT, ...EINGABEN }, locations: ORTE });
 		assert.equal(e.u.nameOk, true, VERTRAG_FEHLT_EDITOR);
-		(buendelAus(e, 'WetterMetrikenVersandPanel', 'versand').onSendPremiumSmsChange as (an: boolean) => void)(true);
+		zustellungsGeste(e, (s) => ({ ...s, briefing: { ...s.briefing, premium_sms: true } }));
 		await e.u.handleActivate();
 		assert.equal(netz.presetPosts()[0]?.koerper?.send_premium_sms, true);
 	});
@@ -181,7 +182,7 @@ describe('AC-7: Prop `vorlage` belegt einmalig vor', () => {
 	test('einmalig: eine spätere Änderung überlebt Mount und alle Effekte (die Vorlage überschreibt nicht)', async () => {
 		const e = await vergleichEditor({ stateOverride: ALLE_BESUCHT, vorlage: vorlage(), locations: ORTE });
 		assert.equal(e.u.nameOk, true, 'VERTRAG FEHLT (#2727): Prop `vorlage` belegt den Namen nicht vor');
-		(buendelAus(e, 'WetterMetrikenVersandPanel', 'versand').onSendTelegramChange as (an: boolean) => void)(false);
+		zustellungsGeste(e, (s) => ({ ...s, briefing: { ...s.briefing, telegram: false } }));
 		await mountenUndWarten(e);
 		await e.u.handleActivate();
 		assert.equal(netz.presetPosts()[0]?.koerper?.send_telegram, false, 'die Vorlage wurde nach der Nutzeränderung erneut angewendet');

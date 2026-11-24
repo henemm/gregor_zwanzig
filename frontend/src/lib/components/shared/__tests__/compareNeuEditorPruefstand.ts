@@ -21,6 +21,7 @@
 
 import { COMPARE_EDITOR, editorUmgebung, type EditorUmgebung } from './standardwerteEditorPruefstand.ts';
 import { findeKomponenten, attributAusdruck, werte, type Knoten } from './svelteInstanzPruefstand.ts';
+import { standAusPreset, type ZustellungStand } from '../zustellung-tab/zustellungModell.ts';
 
 export const MATCH_MEDIA = {
 	matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} })
@@ -126,4 +127,15 @@ export function buendelAus(e: EditorUmgebung, komponente: string, attribut?: str
 	}
 	if (!ausdruck) throw new Error(`Messaufbau: <${komponente}> traegt kein Prop-Buendel ${attribut ?? '{...xPropsAus()}'}.`);
 	return werte(ausdruck, e.u) as Knoten;
+}
+
+/**
+ * #3333 (D2 von #3307): eine Geste im Reiter Zustellung des Anlege-Editors — über den ECHTEN Rückkanal
+ * `onAnlegeStand` der `<ZustellungTab>`-Einbettung (ersetzt das Versand-Bündel des Alt-Panels). Startstand
+ * wie im Reiter: der vom Editor gehaltene Stand, sonst die Abo-Sicht (`preset`) der Einbettung.
+ */
+export function zustellungsGeste(e: EditorUmgebung, f: (s: ZustellungStand) => ZustellungStand): void {
+	const start = (e.u.zustellungStand as ZustellungStand | undefined) ?? standAusPreset(buendelAus(e, 'ZustellungTab', 'preset') as never);
+	const melden = buendelAus(e, 'ZustellungTab', 'onAnlegeStand') as unknown as (m: unknown) => void;
+	melden({ stand: f(JSON.parse(JSON.stringify(start))), nutzlast: { versand: null, alarme: null } });
 }
