@@ -1,0 +1,103 @@
+{
+  "verified_commit": "61ae0e9fbdf0a1fa86106885969ef00febd701b1",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/funktionen:AC-1",
+      "evidence": "Pruefkonto de, /funktionen und /funktionen/trips: sprach-umschalter count 0, sprach-hinweis Die Sprache stellst du in deinem Konto ein., Link Zum Konto",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/funktionen/trips:AC-2",
+      "evidence": "Profilsprache en: kein Umschalter, Hinweis You set your language in your account., Link Go to account, href /account#sprache",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/funktionen/trips:AC-3",
+      "evidence": "Klick auf Link: URL /account#sprache, select#sprache sichtbar",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/funktionen:AC-4",
+      "evidence": "ohne Cookie auf beiden Pfaden: Umschalter da, kein sprach-hinweis, Klick EN wechselt Sprache",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/login:AC-5",
+      "evidence": "/, /login, /register ohne Anmeldung: sprach-hinweis count 0",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/funktionen:AC-6",
+      "evidence": "Kontrast Hinweis und Link >=4.5, underline, Link per Tab erreichbar",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/funktionen:AC-7",
+      "evidence": "Katalogtexte DE und EN auf Staging exakt gerendert; Paritaetstest ist CI-Schicht",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-8",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/funktionen:AC-8",
+      "evidence": "Bestandstest AC-4 (3319) gruen: zehn Funktions-Pfade ohne Anmeldung 200, kein /api-Aufruf",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/funktionen:AC-9",
+      "evidence": "angemeldet DE/EN genau Hinweis ohne Umschalter; abgemeldet genau Umschalter ohne Hinweis; Staging-Spec 27/27 gruen",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-24T17:27:22.305856+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: 9/9 ACs gruen",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: 9/9 ACs gruen",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-24T17:27:22.305856+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
