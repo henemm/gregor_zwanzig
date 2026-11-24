@@ -1,0 +1,103 @@
+{
+  "verified_commit": "a6ccf6ca7cdac41c87867ee1a2f90df048959597",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "VERIFIED",
+      "url": "https://staging.gregor20.henemm.com/compare/new (Schritt Wetter, Desktop+Mobil, de+en)",
+      "evidence": "VA-1 gruen: Karte Was steht wo mit Beispielwerten der 2 Orte; Haken/Schalter bleiben bei Desktop/Mobil- und Schrittwechsel; auf Englisch (Profil language=en) Karte 'What goes where' sichtbar, VA-1..5 auch dort gruen",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-2",
+      "status": "VERIFIED",
+      "url": "https://staging.gregor20.henemm.com/compare/new",
+      "evidence": "VA-2 gruen: genau ein POST /api/compare/presets mit display_config.placements (Haken, Format, Reihenfolge)",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-3",
+      "status": "VERIFIED",
+      "url": "https://staging.gregor20.henemm.com/compare/new",
+      "evidence": "VA-2 gruen: hourly_enabled, display_config.telegram_style, Ausblick im POST; keine Altschluessel",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-4",
+      "status": "VERIFIED",
+      "url": "https://staging.gregor20.henemm.com/compare/new",
+      "evidence": "VA-2 gruen: kein PUT/Autosave vor dem Anlegen, genau ein POST",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-5",
+      "status": "VERIFIED",
+      "url": "https://staging.gregor20.henemm.com/compare/new",
+      "evidence": "VA-3 gruen: Karte unbedient => POST ohne placements.rows und Schalterfelder",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-6",
+      "status": "VERIFIED",
+      "url": "https://staging.gregor20.henemm.com/compare (Reiter Wetter des neuen Ortsvergleichs)",
+      "evidence": "VA-4 gruen: gleiche Haken, Formate, Reihenfolge, Schalter nach Anlegen",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-7",
+      "status": "VERIFIED",
+      "url": "https://staging.gregor20.henemm.com/api/briefings/placements/vorschau",
+      "evidence": "VA-5 gruen: Nutzer B sieht Vergleich/Tabelle von A nicht, Vorschau als B mit Orts-IDs von A rechnet mit null Orten",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-8",
+      "status": "VERIFIED",
+      "url": "https://staging.gregor20.henemm.com/api/briefings/placements/vorschau?kind=vergleich",
+      "evidence": "Direkt gemessen: Entwurf {}, {location_ids:[]}, {location_ids:[unbekannt]} => je HTTP 200",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "AC-9",
+      "status": "VERIFIED",
+      "url": "frontend node --test",
+      "evidence": "node --test payload_3306 + verdrahtung_3306: 22/22 gruen (Altblock-Schalter gilt bei unbedienter Karte, Kartenwert sonst); Regression hub-anlegen-ablauf 30/30 gruen auf Staging",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    }
+  ],
+  "verified_at": "2026-11-24T12:20:40.091880+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: #3306 Karte Was steht wo im Ortsvergleich-Anlegen, AC-1..9, de+en, Staging a6ccf6ca7",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "fix-3273-trip-grundauswahl-ohne-metrics": {
+      "verdict": "VERIFIED: #3306 Karte Was steht wo im Ortsvergleich-Anlegen, AC-1..9, de+en, Staging a6ccf6ca7",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-24T12:20:40.091880+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
