@@ -3,7 +3,7 @@ entity_id: feat_3332_zustellung_anlegen_trip
 type: module
 created: 2026-11-24
 updated: 2026-11-24
-status: draft
+status: approved
 version: "1.0"
 workflow: feat-3307-zustellung-anlegen
 tags: [zustellung, anlegen, trip, alarme, epic-3122]
@@ -13,7 +13,7 @@ tags: [zustellung, anlegen, trip, alarme, epic-3122]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (automatisch, Ampel grün, 2026-11-24)
 
 ## Purpose
 
