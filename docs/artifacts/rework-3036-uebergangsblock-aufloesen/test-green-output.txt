@@ -1,0 +1,44 @@
+# rework-3036-uebergangsblock-aufloesen — TDD GREEN (2026-11-24T21:49:48Z, HEAD 3a1d9c184 + Arbeitsstand)
+
+node --test src/lib/components/organisms/__tests__/rework_3036_bloecke_schalter.test.ts: 10/10 grün, fail 0
+node --test src/lib/components/shared/wetter-tab/__tests__/rework_3036_bloecke_speicherung.test.ts: 11/11 grün, fail 0
+node --test src/lib/i18n/__tests__/rework_3036_katalog.test.ts: 7/7 grün, fail 0
+node --test src/lib/components/shared/__tests__/rework_3036_zustellung_ohne_uebergang.test.ts: 8/8 grün, fail 0
+node --test src/lib/components/shared/__tests__/s3b2795_zustellung_katalog.test.ts: 39/39 grün, fail 0
+node --test src/lib/components/shared/__tests__/s3b2795_zustellung_struktur.test.ts: 13/13 grün, fail 0
+node --test src/lib/components/shared/__tests__/s3b2795_zustellung_profil_einmal.test.ts: 3/3 grün, fail 0
+node --test src/lib/components/shared/__tests__/s3a2794_zustellung_ziel_und_bereich.test.ts: 3/3 grün, fail 0
+node --test src/lib/components/shared/__tests__/s3a2794_hub_zustellung_verdrahtung.test.ts: 12/12 grün, fail 0
+node --test src/lib/components/shared/__tests__/wetter_metriken_versand_panel_paritaet.test.ts: 9/9 grün, fail 0
+node --test src/lib/components/shared/__tests__/infobox_nur_beim_anlegen.test.ts: 36/36 grün, fail 0
+node --test src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts: 28/28 grün, fail 0
+node --test src/lib/components/compare/__tests__/compare_layout_tab_dissolution.test.ts: 13/13 grün, fail 0
+node --test src/lib/components/shared/wetter-tab/__tests__/was_steht_wo_speicherung.test.ts: 19/19 grün, fail 0
+node --test src/lib/i18n/__tests__/deutsch_unveraendert.test.ts: 5/5 grün, fail 0
+node --test src/lib/components/organisms/__tests__/wetter_tab_i18n.test.ts: 10/10 grün, fail 0
+node --test src/lib/__tests__/elementliste_besitzer_kern.test.ts: 7/7 grün, fail 0
+node --test src/lib/__tests__/bausteine_waechter.test.ts: 88/88 grün, fail 0
+node --test src/lib/components/shared/__tests__/context_herkunft_zweige_eingefroren.test.ts: 18/18 grün, fail 0
+node --test src/lib/components/trip-detail/__tests__/trip_hub_sprache.test.ts: 361/361 grün, fail 0
+node --test src/lib/components/trip-new/__tests__/trip_anlegen_sprache.test.ts: 11/11 grün, fail 0
+node --test src/lib/components/compare/__tests__/vergleich_hub_sprache.test.ts: 187/187 grün, fail 0
+
+## pytest
+timeout func_only: False
+collected 87 items
+tests/tdd/test_rework_3036_placements_bloecke.py ......                  [  6%]
+tests/tdd/test_placements_tabelle_endpoint.py .......................... [ 36%]
+...............                                                          [ 54%]
+tests/test_2913_c2_besitzerliste.py ...................................  [ 94%]
+tests/test_3007_besitzerliste.py .....                                   [100%]
+============================== 87 passed in 6.55s ==============================
+
+## Breiter Lauf (node --test, 469 Dateien in organisms/shared/wetter-tab/zustellung-tab/i18n/compare/compare-new/trip-new/trip-detail/lib __tests__)
+
+## Breiter Lauf nach Rebase auf origin/main 892ec5af7 (node --test, alle src/lib/**/__tests__, 2026-11-24T22:01:34Z)
+# tests 8750
+# pass 8749
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 1

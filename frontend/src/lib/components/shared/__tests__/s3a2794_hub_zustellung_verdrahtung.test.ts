@@ -42,7 +42,6 @@ const DATEI = {
 	zustellung: join(KOMP, 'shared', 'zustellung-tab', 'ZustellungTab.svelte'),
 	panel: join(KOMP, 'shared', 'WetterMetrikenVersandPanel.svelte'),
 	// #2795 S3b Teilschritt 1b: neue Bausteine des Reiters.
-	uebergang: join(KOMP, 'organisms', 'zustellung-tab', 'UebergangBlock.svelte'),
 	briefingZeiten: join(KOMP, 'organisms', 'zustellung-tab', 'BriefingZeiten.svelte')
 };
 
@@ -123,15 +122,10 @@ describe('AC-7 (F001): Vergleichs-Hub übergibt ZustellungTab den Alarm-Baustein
 		assert.equal(attributAusdruck(knopf!, quelle, 'onclick'), 'handleToggleActive', 'F001: der Aktivieren-Knopf ruft nicht handleToggleActive');
 	});
 
-	// #2795 S3b Teilschritt 1b: die Aktivierungs-Karte steht im Uebergangsblock (der alte
-	// Versand-Abschnitt des Panels entfaellt im Reiter). Gemessen wird die Kette Hub -> ZustellungTab
-	// -> UebergangBlock -> {@render activation()}.
-	test('s3b2795_zustellungtab_reicht_activation_an_den_uebergangsblock_der_sie_rendert', () => {
-		const { ast, quelle } = svelteAst(DATEI.zustellung);
-		const ueb = einbettungenMitWeichen(ast, quelle, ['UebergangBlock']);
-		assert.equal(ueb.length, 1, 'Messaufbau: ZustellungTab bettet den Uebergangsblock nicht genau einmal ein');
-		assert.ok(attribut(ueb[0].knoten, quelle, 'activation'), 'F001: ZustellungTab reicht activation nicht an den Uebergangsblock');
-		const { ast: uAst, quelle: uQ } = svelteAst(DATEI.uebergang);
+	// #3036: der Uebergangsblock ist aufgeloest; ZustellungTab rendert die Aktivierungs-Karte selbst im
+	// festen Abschnitt direkt unter dem Kopf. Gemessen wird die Kette Hub -> ZustellungTab -> {@render activation()}.
+	test('rework3036_zustellungtab_rendert_activation_selbst', () => {
+		const { ast: uAst, quelle: uQ } = svelteAst(DATEI.zustellung);
 		let rendert = false;
 		(function lauf(n: unknown): void {
 			if (rendert || n === null || typeof n !== 'object') return;
@@ -143,7 +137,7 @@ describe('AC-7 (F001): Vergleichs-Hub übergibt ZustellungTab den Alarm-Baustein
 			}
 			for (const [f, v] of Object.entries(k)) if (f !== 'parent' && f !== 'loc' && f !== 'metadata') lauf(v);
 		})(uAst.fragment);
-		assert.ok(rendert, 'F001: der Uebergangsblock rendert das Snippet activation nicht');
+		assert.ok(rendert, 'F001: ZustellungTab rendert das Snippet activation nicht');
 	});
 });
 

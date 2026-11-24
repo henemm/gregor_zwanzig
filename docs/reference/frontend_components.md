@@ -742,7 +742,7 @@ Reiter „Zustellung" (S3b Teilschritt 1b, #2795, 2026-11-13, neu gebaut): `shar
 (ein Code, `context="route"|"vergleich"`) setzt unter dem Kopf aus dem Baustein `molecules/Bereichskopf` (#3006) die Organismen in `organisms/zustellung-tab/` zusammen:
 `BriefingZeiten` (Viertelstunden-Raster), `LaufzeitKarte`, `KanalTabelle` (E-Mail/Telegram/SMS/Premium-SMS
 mit Briefing-/Alarm-Schalter und Dringlichkeit je Kanal), `StilleStunden` (inkl. Mindestabstand) und
-`UebergangBlock` (bis #3036 nur Beispiel-Alarm, bei Orten die Pausieren-Karte). Logik: `zustellungModell.ts`,
+Beispiel-Alarm (`BeispielAlarm.svelte`, letzter Abschnitt, testid `zustellung-beispiel-alarm`) und bei Orten die Pausieren-Karte (fester Abschnitt `zustellung-aktivierung` vor den Briefing-Zeiten; seit #3036 ohne Rahmen „Vorübergehend hier“). Logik: `zustellungModell.ts`,
 `zustellungSpeicherung.ts` (ein Speicherer, Owner `versand`/`alarme`, Profil nur einmal geladen). Seit #3154
 (#3122 B3b, Spec `feat_3122_was_steht_wo.md` Teil B Nr. 14) sind `KanalStil` und die Metrik-Oberfläche
 (`WetterMetrikenVersandPanel`, `bereich="zustellung"`) aus dem Reiter entfernt: Listen je Kanal, Stundenverlauf,
@@ -757,9 +757,10 @@ der Karte und liest die Altfelder. Das Panel mit `bereich="zustellung"` steht nu
 > **#3122 (ADR-0124, PO 2026-11-17), Stand #3154:** Im Reiter Wetter ersetzt die Tabelle „Was steht wo“
 > (Schalter für Blöcke und Kanal-Einstellungen darunter) die geplante Karte „Inhalt je Kanal und Fläche“; die
 > doppelten Bedienelemente im Übergangsblock sind entfernt. Offen: Die Schalter ohne Platz im Soll-Bild
-> (Kurz-Zusammenfassung, Quick-Take-Chips, Metriken-Überblick, Großwetterlage, Zusammenfassung, Tages-Summe)
-> haben weiter keine Bedienung, ihre gespeicherten Werte bleiben unberührt (#3036). `WeatherMetricsTab` und die
-> Altfelder entfallen erst mit #3036/#3020/B6.
+> (Quick-Take-Chips, Metriken-Überblick, Zusammenfassung, Tages-Summe) haben weiter keine Bedienung, ihre
+> gespeicherten Werte bleiben unberührt. Stand #3036 (2026-11-24): Kurz-Zusammenfassung und Großwetterlage
+> haben eigene Schalter unter „Ganze Blöcke ein- und ausschalten“ (`WasStehtWoKarte.svelte`, nur ausführliche
+> Mail). `WeatherMetricsTab` und die Altfelder entfallen erst mit #3020/B6.
 
 Reiter „Wetter" (Teil-PR 3, #2794, 2026-11-10): `shared/wetter-tab/*` + `WetterTab.svelte`
 (ein Code, `context="route"|"vergleich"`) mit Vorlage-Karte, Ampel-Zeilen je Metrik,

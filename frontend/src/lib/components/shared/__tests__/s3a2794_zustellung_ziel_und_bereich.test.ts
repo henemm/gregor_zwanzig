@@ -38,8 +38,8 @@ register(
 const DATEI = {
 	tripNeu: join(KOMP, 'trip-new', 'TripNewEditor.svelte'),
 	zustellung: join(KOMP, 'shared', 'zustellung-tab', 'ZustellungTab.svelte'),
-	// #2795 S3b Teilschritt 1b: das Panel steht im Uebergangsblock des Reiters (Mount-Ort).
-	uebergang: join(KOMP, 'organisms', 'zustellung-tab', 'UebergangBlock.svelte'),
+	// #3036: Uebergangsblock aufgeloest — der Beispiel-Alarm ist der Abschnitt am Ende des Reiters.
+	beispiel: join(KOMP, 'organisms', 'zustellung-tab', 'BeispielAlarm.svelte'),
 	panel: join(KOMP, 'shared', 'WetterMetrikenVersandPanel.svelte')
 };
 
@@ -121,9 +121,9 @@ describe('AC-1/AC-7 (F008): Reiter Zustellung ohne Wetter-Abschnitte', () => {
 	test('s3a2794_f008_zustellungtab_ohne_panel_und_filter_wirkt', () => {
 		const z = svelteAst(DATEI.zustellung);
 		assert.equal(einbettungenMitWeichen(z.ast, z.quelle, ['WetterMetrikenVersandPanel', 'WeatherMetricsTab']).length, 0, 'F008: ZustellungTab bettet die Metrik-Oberflaeche direkt ein');
-		assert.equal(einbettungenMitWeichen(z.ast, z.quelle, ['UebergangBlock']).length, 1, 'Messaufbau: ZustellungTab bettet den Uebergangsblock nicht genau einmal ein');
-		const u = svelteAst(DATEI.uebergang);
-		assert.equal(einbettungenMitWeichen(u.ast, u.quelle, ['WetterMetrikenVersandPanel', 'WeatherMetricsTab']).length, 0, 'F008: der Uebergangsblock traegt noch die Metrik-Oberflaeche (#3154)');
+		assert.equal(einbettungenMitWeichen(z.ast, z.quelle, ['BeispielAlarm']).length, 1, 'Messaufbau: ZustellungTab bettet den Beispiel-Alarm nicht genau einmal ein');
+		const u = svelteAst(DATEI.beispiel);
+		assert.equal(einbettungenMitWeichen(u.ast, u.quelle, ['WetterMetrikenVersandPanel', 'WeatherMetricsTab']).length, 0, 'F008: der Beispiel-Alarm traegt die Metrik-Oberflaeche (#3154)');
 
 		// Wirkung des Filters im echten Abschnitts-Filter (Anlege-Seiten), beide Kontexte: keine Wetter-Abschnitte.
 		for (const ctx of ['route', 'vergleich'] as const) {
