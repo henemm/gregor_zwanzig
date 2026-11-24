@@ -4,7 +4,7 @@ type: module
 created: 2026-11-24
 updated: 2026-11-24
 status: draft
-version: "1.0"
+version: "1.1"
 workflow: rework-3278-lokaler-volllauf-parallel
 tags: [testsuite, gate, xdist, performance, sicherheit, epic-1196]
 ---
@@ -28,15 +28,15 @@ Das Gate `broad_test_run_gate.py` gibt heute nur den seriellen sicheren Offline-
 
 ## Estimated Scope
 
-- **LoC:** ca. +215/-20 (Grenze ±250 eingehalten)
+- **LoC:** ca. +350/-20 (Tests allein +329/-10). Die Grenze ±250 ist überschritten; der PO hat sie am 2026-11-24 für #3278 auf 500 angehoben.
 - **Files:** 5 im Kern, dazu 3 mit nur Kommentar- oder Vermerkzeilen. Die Grenze von 4-5 Dateien ist überschritten, weil sonst Doku und Kommentare dem Gate widersprechen würden (`ci.yml`, `tests/conftest.py`, Vermerk in `perf_3209`).
 - **Effort:** medium (Risiko MEDIUM: Sicherheits-Gate gegen Produktiv-Versand, die Änderung selbst ist sehr klein)
 
 ## Scope
 
-**Enthalten:** genau eine neue parallele Form im Gate, Fang-Nachweise im Gate-Test, Nachweis der Netzsperren je Worker, Doku, Blockmeldung und Sync-Test, Messung am Server (AC-7).
+**Enthalten:** genau eine neue parallele Form im Gate, Fang-Nachweise im Gate-Test, Nachweis der Netzsperren je Worker, Doku, Blockmeldung und Sync-Test.
 
-**Nicht enthalten:** Änderung der Vergleichslogik des Gates, weitere Worker-Zahlen, Änderung am CI-Aufruf, Reparatur roter Server-Artefakte, `README.md` mit nacktem `uv run pytest`.
+**Nicht enthalten:** Änderung der Vergleichslogik des Gates, weitere Worker-Zahlen, Änderung am CI-Aufruf, Reparatur roter Server-Artefakte, Messung am Server (früheres AC-7, jetzt #3323), Gate-Lücke Großschreibung auf macOS (#3322, vorbestehend), `README.md` mit nacktem `uv run pytest`.
 
 ### Affected Files
 
@@ -46,10 +46,9 @@ Das Gate `broad_test_run_gate.py` gibt heute nur den seriellen sicheren Offline-
 | `tests/tdd/test_broad_test_run_gate_offline_form.py` | MODIFY | Freigabe- und Blockfälle, Sync-Test Doku und Konstante, Blockmeldung, Override-Fall (AC-6) |
 | `tests/tdd/test_xdist_worker_sicherheit.py` | MODIFY | Pflichtflag-Prüfung und Worker-Nachweis an der wörtlichen Form (per `ast` gelesen, laufen damit auch in CI); bisheriger AC-7-Test (`-n` bleibt gesperrt) wird auf "andere `-n`-Formen bleiben gesperrt" präzisiert |
 | `tests/probes_xdist/` (erweiterte oder neue Sonde) | MODIFY/CREATE | Barriere-Sonde, zweifach parametrisiert, die je Aufruf alle drei Netz-Prüfungen ausführt |
-| `docs/reference/gates_und_ratschen.md` | MODIFY | Abschnitte "Breiter Testlauf gesperrt" und "Parallele Kern-Suite in CI": parallele Form, "bleibt seriell" und "sperrt `-n` lokal" ersetzt |
+| `docs/reference/gates_und_ratschen.md` | MODIFY | Abschnitte "Breiter Testlauf gesperrt" und "Parallele Kern-Suite in CI": parallele Form, "bleibt seriell" und "sperrt `-n` lokal" ersetzt; der Hinweis auf die fehlende Laufzeitmessung verweist auf #3323 |
 | `.github/workflows/ci.yml` (Z. 71), `tests/conftest.py` (Z. 555-558) | MODIFY | nur Kommentare, die "lokal seriell" bzw. "ohne xdist (lokaler Volllauf, Gate-Form)" behaupten |
 | `docs/specs/modules/perf_3209_pytest_xdist_ci.md` | MODIFY | Vermerk: AC-7 (`-n` lokal gesperrt) abgelöst durch #3278 |
-| `docs/artifacts/` (Messprotokoll) | CREATE | erst mit Serverzugang, Beleg für AC-7 |
 
 Unverändert: `tests/tdd/test_broad_test_run_gate_ignores_override.py` (nutzt `OFFLINE_CALL`, Name bleibt), `tests/tdd/test_loopback_port_guard_offline_lauf.py`, `tests/tdd/test_xdist_doku_3209.py` (verlangt `#3278` und `-n 4 --dist loadgroup` im CI-Abschnitt, beide Zeichenketten bleiben beim Umformulieren erhalten). Außerhalb des Scopes: `README.md` mit nacktem `uv run pytest`.
 
@@ -80,7 +79,7 @@ Unverändert: `tests/tdd/test_broad_test_run_gate_ignores_override.py` (nutzt `O
 6. **Sync-Test Doku und Konstante:** `gates_und_ratschen.md` muss das serielle und das parallele Literal wörtlich enthalten, gelesen aus der Konstante, nicht abgeschrieben. Die Blockmeldung nennt beide Formen.
 7. **Worker-Nachweis:** Das Literal wird per `ast` aus der Gate-Datei gelesen (wirkt auch in CI, wo der Gate-Import ohne Plugin scheitert). `nice -n 10 uv run pytest` wird abgetrennt, der Rest läuft als innerer pytest-Subprozess auf den Netz-Sonden. Unter `loadgroup` läuft jeder Test nur einmal. Deshalb gibt es eine zweifach parametrisierte Sonde, deren Aufrufe je alle drei Prüfungen ausführen und vorher in einer Barriere warten, bis sich zwei verschiedene Worker eingetragen haben. Die Barriere hat ein Zeitlimit (unter dem globalen `timeout = 30`) und endet bei Ablauf mit klarem Fehler statt zu hängen. Der innere Lauf für diesen Nachweis setzt weder `-o addopts=` noch Flags, die eine Option der Form überschreiben; nur Sonden-Pfad, `--basetemp` und Ausgabeoptionen kommen hinzu. Dafür braucht `_innerer_lauf` einen Weg ohne `-o addopts=`; die bestehenden Aufrufer behalten ihr Verhalten. Geprüft wird je Worker: Egress gesperrt, fremder Loopback-Port gesperrt, eigener Port erlaubt. Der bestehende `--dist each`-Test bleibt zusätzlich.
 8. **Gate-Adversary (2 Runden).** Zu blocken: `-n 3`, `-n2`, `-n auto`, `--numprocesses`, doppeltes `-n`, `--dist` fehlt oder anders, `--tx`, `-p no:xdist`, `-p no:_loopback_port_guard`, `--boxed`, fehlende oder umgestellte Flags, `nice` fehlt, andere Stufe, doppelt oder vor anderem Kommando, `ionice`/`sudo`/`env` davor, `PYTEST_ADDOPTS=`/`PYTEST_XDIST_*=` davor, `;`, `&&`, `|`, Substitution im Umleitungsziel, NBSP, `\` plus Zeilenumbruch, Mehrzeiler. Nicht Teil der Blockliste sind Zusätze, die schon heute jeden Aufruf freigeben (benannte Testdatei, `--collect-only`, `--co`, `--version`, `--help`): Regel 1 und 2 des Gates bleiben unverändert.
-9. **Reihenfolge:** Gate-Tests ROT, Literal, Sync-Test, Worker-Nachweis, Doku und Kommentare, Adversary 2 Runden, Server-Abschlussnachweis.
+9. **Reihenfolge:** Gate-Tests ROT, Literal, Sync-Test, Worker-Nachweis, Doku und Kommentare, Adversary 2 Runden. Die Servermessung folgt getrennt in #3323.
 
 ## Expected Behavior
 
@@ -108,9 +107,6 @@ Unverändert: `tests/tdd/test_broad_test_run_gate_ignores_override.py` (nutzt `O
 - **AC-6:** Given der Nutzer hat `override` gesetzt / When das parallele Literal mit einer unzulässigen Abweichung (z. B. `-n auto`) aufgerufen wird / Then öffnet `override` das Gate nicht, und es bleibt bei Exit 2.
   - Test: bestehende `test_broad_test_run_gate_ignores_override.py` bleibt unverändert grün; zusätzlicher Fall mit der parallelen Abweichung und echtem Override-Token in `test_broad_test_run_gate_offline_form.py`.
 
-- **AC-7:** Given der Abschlusslauf auf dem Server, auf demselben Commit wie die serielle Baseline und neben laufendem Prod und Staging / When die parallele Form einmal vollständig läuft und währenddessen `prod_selftest.py` ausgeführt wird / Then ist die Laufzeit kleiner als die des seriellen Laufs auf demselben Commit und Server (Referenz 56:17 min vom 2026-11-22, anderer Commit), es gibt keine zusätzlichen roten Tests gegenüber der seriellen Baseline auf demselben Commit, Spitzen-RSS und CPU sind gemessen und protokolliert, und der Prod-Selftest ist während des Laufs grün.
-  - Test: Mess-Nachweis, kein pytest-Test. Beide Läufe (seriell und parallel, nacheinander) protokolliert mit Laufzeit, Spitzen-RSS/CPU, rote Tests je Lauf und Selftest-Ergebnis unter `docs/artifacts/`.
-
 ## Test Plan
 
 | AC | Nachweis | Ort | Läuft in CI |
@@ -120,7 +116,6 @@ Unverändert: `tests/tdd/test_broad_test_run_gate_ignores_override.py` (nutzt `O
 | AC-4 | innerer pytest-Lauf mit der wörtlichen Form und Barriere-Sonde, dazu Gegenproben | `tests/tdd/test_xdist_worker_sicherheit.py`, `tests/probes_xdist/` | ja |
 | AC-5 | Doku gegen Konstante, Blockmeldung aus echtem Gate-Aufruf | `tests/tdd/test_broad_test_run_gate_offline_form.py` | nein |
 | AC-6 | Gate-Subprozess mit echtem Override-Token | `tests/tdd/test_broad_test_run_gate_offline_form.py` | nein |
-| AC-7 | Messlauf seriell und parallel, Selftest während des parallelen Laufs | `docs/artifacts/` | nein (Server) |
 
 Mutations-Gegenproben (Phase 6/7): je Pflichtflag aus dem Literal entfernen ⇒ AC-3 rot; `startswith` statt exaktem Vergleich ⇒ AC-2 rot; Port-Guard in den Workern nicht installieren ⇒ AC-4 rot; Literal in der Doku ändern ⇒ AC-5 rot. Gate-Adversary mindestens 2 Runden. Weiter grün bleiben: `test_broad_test_run_gate_ignores_override.py`, `test_broad_test_run_gate_pytest_word_position.py`, `test_loopback_port_guard_offline_lauf.py`, `test_xdist_doku_3209.py`.
 
@@ -129,13 +124,13 @@ Mutations-Gegenproben (Phase 6/7): je Pflichtflag aus dem Literal entfernen ⇒ 
 - AC-1 bis AC-6 durch automatische Tests belegt, Kern-Schicht und CI grün.
 - Gate-Adversary 2 Runden ohne Lücke, Mutations-Gegenproben rot wie beschrieben.
 - Doku, Blockmeldung, Kommentare und der Vermerk in `perf_3209` stimmen mit dem Gate überein.
-- AC-7 am Server belegt. Erst dann wird Issue #3278 geschlossen; vorher ist die Lieferung eine Teillieferung.
+- Diese Lieferung ist eine Teillieferung von #3278: Issue #3278 bleibt offen, bis die Servermessung (#3323) belegt ist.
 
 ## Known Limitations
 
-- **AC-7 ist offen.** Der Serverzugang (`ssh henemm`) wurde am 2026-11-24 von der Berechtigungsprüfung der Sitzung abgelehnt und nicht umgangen. Erreichbarkeit ist ungeprüft. AC-7 kann erst mit Serverzugang erbracht werden. Das Issue #3278 bleibt bis dahin offen. Gate, Tests und Doku (AC-1 bis AC-6) sind Teillieferung. Mac-Messungen (10 Kerne, 16 GB, kein Prod daneben) ersetzen den Nachweis nicht.
-- **Worker-Zahl 2** ist eine Vorsichtswahl ohne Messung. Die Laufzeit-Schätzung für `-n 2` (ca. 30-35 min) ist eine Extrapolation, die Schätzung für `-n 3` (22-28 min) stammt aus #3209. Beides ist nicht gemessen, ebenso die Wirkung von `nice -n 10`. Ein Wechsel auf 3 erst nach Servermessung, mit Literal- und Doku-Änderung und erneutem Adversary.
-- **Ungeprüft:** dass `--dist loadgroup` die Sonden beim Start auf beide Worker verteilt. Die Barriere macht ein Ausbleiben sichtbar (roter Test), erzwingt die Verteilung aber nicht.
+- **Abgetrennt: die Servermessung (früheres AC-7) liegt wortgleich in #3323.** Grund: Der Serverzugang (`ssh henemm`) wurde am 2026-11-24 von der Berechtigungsprüfung der Sitzung abgelehnt und nicht umgangen; Erreichbarkeit ist ungeprüft. Solange AC-7 in dieser Spec stand, hielt es die Prüfung der fertigen Teile auf (QA-Gate verlangt alle Punkte, Verdict BROKEN). Folge: Zwei der drei Abschlusskriterien des Issues ("belegt schneller", "Prod-Dienste während des Laufs unbeeinträchtigt") sind mit dieser Lieferung NICHT belegt. Die parallele Form wird freigegeben, bevor Laufzeitgewinn und Last neben Prod gemessen sind. Mac-Messungen (10 Kerne, 16 GB, kein Prod daneben) ersetzen den Nachweis nicht.
+- **Worker-Zahl 2** ist eine Vorsichtswahl ohne Messung. Die Laufzeit-Schätzung für `-n 2` (ca. 30-35 min) ist eine Extrapolation, die Schätzung für `-n 3` (22-28 min) stammt aus #3209. Beides ist nicht gemessen, ebenso die Wirkung von `nice -n 10`. Ein Wechsel auf 3 erst nach der Servermessung (#3323), mit Literal- und Doku-Änderung und erneutem Adversary.
+- **Verteilung:** `--dist loadgroup` legte die zwei Sonden-Aufrufe im Direktlauf auf `gw0` und `gw1` (2026-11-24). Die Barriere macht ein Ausbleiben sichtbar (roter Test), erzwingt die Verteilung aber nicht.
 - **Grün ist kein Kriterium des lokalen Laufs:** Seriell waren auf dem Server 9 Tests rot und 2 Fehler (Server-Artefakte, CI auf demselben Commit grün). Vergleichsgröße sind Laufzeit und keine zusätzlichen Roten.
 - **Last:** Server 4 vCPU, 8 GB, geteilt mit Prod und Staging. Serieller Lauf: 0,9 GB RSS, 51 % eines Kerns. Unter Last können `timeout = 30` und timing-empfindliche Tests häufiger wackeln. Zusicherungen werden nicht gelockert. Die serielle Gruppe `echtdaten` läuft in einem Worker und begrenzt den Gewinn.
 - **Restrisiken (wie seriell, nicht neu gelöst):** `PYTEST_ADDOPTS` aus der geerbten Umgebung ist für den Rohstring-Vergleich unsichtbar. Kindprozesse (curl, Go, Playwright) und UDP sind vom Port-Guard nicht erfasst. Die Premium-SMS-Doubles nutzen `_free_port()` mit kleinem Race-Fenster, das einen Test rot machen kann. Eine Mustersuche nach fest gebundenen Ports in `tests/` blieb ohne Treffer, ist aber kein Vollständigkeitsbeweis.
@@ -150,5 +145,6 @@ Mutations-Gegenproben (Phase 6/7): je Pflichtflag aus dem Literal entfernen ⇒ 
 
 ## Changelog
 
+- 2026-11-24 (1.1): nach Umsetzung und Gate-Adversary zurück in die Spec-Phase. AC-7 (Servermessung) wortgleich nach #3323 abgetrennt, weil ohne Serverzugang nicht belegbar; Issue #3278 bleibt bis dahin offen. AC-1 bis AC-6 unverändert. Umfang (500) und Verteilungsbefund nachgetragen.
 - 2026-11-24: Nach Abgleich mit dem Code präzisiert (AC-2 bis AC-4, AC-6, AC-7): Prüfungen je Worker statt Sonden je Worker, Vergleich auf demselben Commit, Regel 1 und 2 bleiben frei.
 - 2026-11-24: Initial spec created (Workflow rework-3278-lokaler-volllauf-parallel, Issue #3278)

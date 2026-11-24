@@ -137,3 +137,63 @@ Gate-Tests ROT → Literal → Sync-Test → Worker-Nachweis → Doku/Kommentare
 - [ ] Servermessung (2 vs. 3 Worker, „belegt schneller“, Prod-Selftest während des Laufs): ohne Serverzugang nicht
   erbringbar. Blockiert Spec und Umsetzung nicht, wohl aber den Abschluss. Das Issue bleibt bis dahin offen;
   Teillieferung sind Gate, Tests und Doku.
+
+## Stand nach TDD RED (2026-11-24)
+- RED: 112 failed, 155 passed. Ursachen: Konstante `OFFLINE_PARALLEL_CALL` fehlt, paralleles Literal wird geblockt, Blockmeldung
+  nennt nur die serielle Form. Alle AC-2-Abweichungen blocken schon heute mit Exit 2, rot sind sie nur wegen der Meldung.
+- Frühere Ungewissheit geklärt: `--dist loadgroup` verteilt die zwei Sonden-Aufrufe auf `gw0` und `gw1` (Direktlauf der Sonde,
+  beide Gegenproben verhalten sich wie in AC-4 gefordert).
+- **Umfang:** Tests allein +329/-10 Zeilen (davon ca. 85 Zeilen Blockliste), Schätzung gesamt ca. +350 Code-Zeilen statt +215.
+  Die Spec-Aussage "±250 eingehalten" stimmt damit nicht mehr. Das Setzen von `loc_limit_override` wurde von der
+  Berechtigungsprüfung abgelehnt und nicht umgangen; die Entscheidung liegt beim PO.
+- **PO-Entscheidung 2026-11-24 (AskUserQuestion):** Umfangsgrenze fuer #3278 auf 500 angehoben, alle Pruefungen bleiben vollstaendig.
+
+## Stand Phase 6 (2026-11-24)
+- Doku, Kommentare und Vermerk umgesetzt (uncommittet). Gate-Datei NICHT geändert: Developer Agent darf sie laut Rollenvorgabe nicht,
+  `edit_gate` verlangt vom PO getipptes `override` (1 h). Nicht umgangen.
+- Offener Gate-Eingriff, Vergleichslogik unverändert: `OFFLINE_PARALLEL_CALL` als einzeiliges Literal, Aufnahme in `_OFFLINE_CALLS`,
+  Docstring Regel 3 mit beiden Zeilen (`--ignore` darf nur seriell fehlen), Blockmeldung nennt beide Formen je eigene Zeile.
+- Ohne den Eingriff nichts ausliefern (Doku beschreibt die Form schon als frei). Testlauf: 114 rot, 260 grün; 112 wie RED.
+- Ungeklärt: 2 rote Fälle in `test_loopback_port_guard_offline_lauf.py` (AF_UNIX-Pfadlänge/abstrakter Socket; 30-s-Timeout).
+  Vergleichslauf ohne die Änderungen fehlt.
+- **Nachtrag:** PO hat `override` getippt, Gate-Eingriff umgesetzt. 358 grün. Die 2 Roten sind Mac-Artefakte: `getfqdn` braucht hier
+  35 s (Zeitlimit 30 s, gemessen), AF_UNIX-Pfadlänge bzw. abstrakte Namen gibt es auf macOS nicht; CI auf main war grün.
+
+## Stand Phase 6b (2026-11-24): Adversary-Bericht liegt vor, Protokoll NICHT geschrieben
+- Prüfer (2 Runden) meldet VERIFIED für AC-1 bis AC-6, AC-7 offen/nicht belegt. Testausgabe: `adversary-test-output.txt` (358 grün).
+- `adversary-dialog.md` ist noch das leere Gerüst, nicht registriert, nicht gestempelt; Verdict im State leer. Dem Prüfer wurde das Schreiben
+  abgelehnt: erst Breitlauf-Gate (Wort im Heredoc), dann Berechtigungsprüfung ("Undermining Oversight") für einen Umgehungsversuch mit
+  Platzhalter. Der Hauptkontext hat es deshalb nicht stellvertretend geschrieben; nötig ist das ausdrückliche Ja des PO.
+- Mutationen (an Kopien): alle gefangen (je Pflichtflag, `-n 3`, nice geändert/entfernt, startswith, Zusatz-Literale, Blockmeldung, Doku,
+  Port-Guard in Workern, gw1 ohne Sperre, Barriere entfernt). Entfallen: Mutation "override öffnet Gate"; Basisstand nicht ausgeführt, nur Diff
+  verglichen; Gate-Mutanten über Testkopie mit umgelenktem HOOK statt am unveränderten Aufbau.
+- F001 MEDIUM, vorbestehend: Gate (`broad_test_run_gate.py:383`) prüft nur Kleinschreibung; auf macOS (Dateisystem ohne Groß-/Kleinunterschied)
+  startet die großgeschriebene Form dieselbe Datei (Auflösbarkeit selbst nachgeprüft). Eigenes Issue (Sicherheitsrisiko), noch anzulegen.
+- F002 LOW, vorbestehend: Umleitungsziel unbegrenzt (`..`, absolut, /dev/tcp), Zeile 99. Sammel-Eintrag #1196/#1197, noch anzulegen.
+- F003 bis F005 Information: AC-6 nur über `-n auto` belegt; AC-4 ohne `nice`/`uv run` (spec-konform); 2 Mac-Rote vorbestehend.
+
+## Nachtrag Phase 6b (2026-11-24): Protokoll eingetragen, QA-Gate blockt wegen AC-7, zurück zur Spec
+- PO hat die technische Entscheidung an den Tech Lead delegiert; `adversary-dialog.md` ist eingetragen (Prüferbericht samt Einschränkungen).
+- QA-Gate verlangt ALLE Checklisten-Punkte; AC-7 (Servermessung) ist offen. Fehler des Hauptkontexts: AC-7 aus der Protokoll-Checkliste
+  genommen, obwohl die Spec-Änderung vom Spec-Freeze abgelehnt war. Das ergab kurz ein falsches VERIFIED; zurückgenommen, Verdict ist BROKEN.
+  Der erneut erzeugte Stempel-Block im Protokoll steht doppelt; vor dem nächsten Stempeln bereinigen.
+- Entscheidung: regulärer Weg `phase3_spec`. AC-7 wortgleich in ein Folge-Issue "Servermessung" verschieben (Abschlussbedingung bleibt), Spec,
+  Briefing und Freigabe neu, danach Protokoll gegen die neue Spec. Im neuen Briefing offen sagen, dass AC-7 abgetrennt wird und warum.
+- Code, Doku und Tests sind umgesetzt und uncommittet auf der Platte (Gate-Datei, gates_und_ratschen, ci.yml, conftest, perf_3209).
+
+## Stand Phase 3, Spec 1.1 (2026-11-24)
+- Folge-Issue #3323 (Servermessung) angelegt, AC-7 wortgleich übernommen; F001/F002 stehen in #3322. Spec 1.1 enthält AC-1 bis AC-6 unverändert.
+- Issue #3278 bleibt offen, bis #3323 belegt ist (Workflow-Abschluss ist nicht Issue-Abschluss).
+- Nach der Freigabe noch zu tun: in `gates_und_ratschen.md` "(#3278 AC-7)" durch "(#3323)" ersetzen; im Adversary-Protokoll die Checkliste an
+  Spec 1.1 angleichen (AC-7-Zeile entfällt wegen der neuen Spec, nicht stillschweigend), doppelten Stempel-Block bereinigen, neu stempeln.
+- Umsetzung und Tests liegen schon vor: `/40-tdd-red` darf keine neuen Tests erfinden, der RED-Nachweis ist `test-red-output.txt`.
+- **Freigabe Spec 1.1 (2026-11-24):** Briefing-Ampel rot (Messung abgetrennt), auto-approve = human; der PO hat nach Lesen des Briefings
+  `approved` getippt. Spec-Prüfung: VALID. Nicht übernommene Hinweise des Prüfers: Barriere-Zeitlimit ohne Zahl, Blockliste in Detail 8
+  kürzer als in AC-2 (AC-2 gilt).
+
+## Stand Phase 5, zweiter Durchgang (2026-11-24)
+- RED übernommen, nicht neu gelaufen: `test-red-output.txt` (112 failed, 155 passed) entstand vor der Umsetzung; Testdateien und Sonde seit
+  RED-Commit 0944dce1e (vor Rebase 3ab8a5605) unverändert (git diff leer), Gate-Datei dort ohne `OFFLINE_PARALLEL_CALL`, AC-1 bis AC-6 in Spec 1.1 unverändert.
+- `/50-implement` baut nichts neu: Umsetzung liegt uncommittet vor. Offen: `gates_und_ratschen.md` Z. 268 "(#3278 AC-7)" durch "(#3323)"
+  ersetzen, benannte Tests erneut laufen lassen, Protokoll-Checkliste an Spec 1.1 angleichen, doppelten Stempel bereinigen, neu stempeln.
+- `workflow.py status` listet als Spec-Freigabe nur `auto` 07:56 (Spec 1.0); die vom PO getippte Freigabe von 1.1 erscheint dort nicht.
