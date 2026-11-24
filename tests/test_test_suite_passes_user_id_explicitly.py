@@ -56,6 +56,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.helpers.bezeichner_vorfilter import quelltext_mit_bezeichnern
+
 _REPO = Path(__file__).resolve().parents[1]
 _TESTS_DIR = _REPO / "tests"
 _SELBST = Path(__file__).resolve()
@@ -195,17 +197,22 @@ class _AufrufSammler(ast.NodeVisitor):
         return _MARKER in self._zeilen[lineno - 1]
 
 
-def _sammle_verstoesse() -> list[str]:
+def _sammle_verstoesse(wurzel: Path) -> list[str]:
+    """Verstoesse unter ``wurzel``. Geparst wird nur, was einen Zielnamen traegt
+    (#3316); Lese- und Syntaxfehler solcher Dateien fliegen weiterhin."""
     name_ziele, attribut_ziele = _baue_ziel_register()
+    ziel_namen = (*name_ziele, *attribut_ziele)
     fundliste: list[str] = []
-    for datei in sorted(_TESTS_DIR.rglob("*.py")):
+    for datei in sorted(wurzel.rglob("*.py")):
         if datei.resolve() == _SELBST:
             continue
-        quelltext = datei.read_text(encoding="utf-8")
+        quelltext = quelltext_mit_bezeichnern(datei, eines_aus=ziel_namen)
+        if quelltext is None:
+            continue
         baum = ast.parse(quelltext, filename=str(datei))
         sammler = _AufrufSammler(quelltext.splitlines(), name_ziele, attribut_ziele)
         sammler.visit(baum)
-        rel = datei.relative_to(_REPO).as_posix()
+        rel = (datei.relative_to(_REPO) if datei.is_relative_to(_REPO) else datei).as_posix()
         for zeile, name in sammler.funde:
             fundliste.append(f"{rel}:{zeile} {name}(...)")
     return fundliste
