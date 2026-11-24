@@ -6,6 +6,7 @@ import { assertSessionSecretConfigured } from '$lib/sessionSecretGate.js';
 import { resolveLang } from '$lib/i18n/resolveLang.js';
 import { sicherheitsKopfzeilenSetzen } from '$lib/server/sicherheitsKopfzeilen.js';
 import { OAUTH_METADATEN_PFADE } from '$lib/server/oauthMetadaten.js';
+import { FUNKTIONEN_PFADE } from '$lib/funktionen_seiten.js';
 
 assertSessionSecretConfigured(env.GZ_SESSION_SECRET, env.GZ_TEST_FIXTURE_DIR);
 
@@ -19,6 +20,16 @@ assertSessionSecretConfigured(env.GZ_SESSION_SECRET, env.GZ_TEST_FIXTURE_DIR);
  * Gerätespeicher kein Klarname stehen muss.
  */
 const MANDANT_HEADER = 'x-gz-mandant';
+
+/**
+ * Issue #2520 / #3319 — oeffentliche Seiten fuer Ausgeloggte: exakt `/`
+ * (Startseite), exakt `/funktionen` und exakt `/funktionen/<slug>` je Seite der
+ * Seitenliste (`$lib/funktionen_seiten`, dieselbe Quelle wie Uebersicht und
+ * Navigation). Bewusst ein Set exakter Pfade, KEIN `startsWith`:
+ * `/funktionen/unbekannt`, `/funktionen/trips/x`, `/funktionenx`, `/funktionen/`
+ * bleiben geschuetzt. Kein userId, kein Mandant-Header (#2131).
+ */
+const OEFFENTLICHE_SEITEN: ReadonlySet<string> = new Set(['/', ...FUNKTIONEN_PFADE]);
 
 function mandantenKennung(userId: string): string {
 	return createHash('sha256').update(userId).digest('hex').slice(0, 16);
@@ -55,10 +66,10 @@ const kern: Handle = async ({ event, resolve: weiter }) => {
 	const result = session ? verifySession(session, secret) : null;
 
 	if (!result) {
-		// Issue #2520 — einzige oeffentliche Seite ausser den Auth-Pfaden: exakt
-		// `/` (Query egal) zeigt Ausgeloggten die Startseite. Bewusst KEIN
-		// `startsWith`; kein userId, kein Mandant-Header (#2131).
-		if (event.url.pathname === '/') {
+		// Issue #2520 / #3319 — oeffentliche Seiten ausser den Auth-Pfaden: exakt
+		// `/` und exakt die Funktionsseiten (Query egal). Bewusst KEIN `startsWith`;
+		// kein userId, kein Mandant-Header (#2131).
+		if (OEFFENTLICHE_SEITEN.has(event.url.pathname)) {
 			const oeffentlich = await resolve(event);
 			if ((oeffentlich.headers.get('content-type') ?? '').includes('text/html')) {
 				oeffentlich.headers.set('cache-control', 'no-cache');

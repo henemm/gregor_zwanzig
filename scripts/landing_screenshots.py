@@ -23,9 +23,22 @@ Testdaten, keine Netz-Abrufe, keine Wanduhr) PNG-Dateien unter
 Die deutschen Bilder unter ``frontend/static/landing/*.png`` fasst das Skript
 nie an (Ausgabe ausschliesslich in den Unterordner ``en/``).
 
+Issue #3319 (Spec docs/specs/modules/oeffentliche_doku_3319.md, AC-8): mit
+``--funktionen`` entstehen statt der Startseiten-Bilder die Renderer-Bilder der
+oeffentlichen Funktionsseiten, je Sprache (DE und EN) als WebP unter
+``frontend/static/funktionen/`` bzw. ``frontend/static/funktionen/en/``:
+``briefing-mail``, ``briefing-telegram``, ``alarm-mail``, ``briefing-sms``
+(SMS-Zeile aus demselben ``format_email``-Aufruf wie die Mail),
+``premium-sms`` (Premium-SMS-Zeile, hoechstens 153 Zeichen),
+``befehle-mail`` (Abschnitt Antwort-Befehle der Briefing-Mail) und
+``briefing-quelle`` (Fusszeile der Mail mit Datenquelle und Modell). Masse landen
+in ``frontend/src/lib/components/organisms/funktionen/bildmasse.json`` (Merge, andere Eintraege
+bleiben). Runbook: docs/runbooks/funktionen_screenshots.md.
+
 Usage:
     uv run python scripts/landing_screenshots.py
     uv run python scripts/landing_screenshots.py --mail /pfad/briefing_en.eml  (optional)
+    uv run python scripts/landing_screenshots.py --funktionen
 """
 from __future__ import annotations
 
@@ -44,6 +57,15 @@ LANDING_DIR = PROJECT_ROOT / "frontend" / "static" / "landing"
 OUT_DIR = LANDING_DIR / "en"
 LANG = "en"
 UTC = timezone.utc
+# Fiktive Beispielnamen je Sprache (kein Nutzerinhalt).
+_TRIP_NAME = {"en": "Example trip GR20", "de": "Beispiel-Trip GR20"}
+_ETAPPE = {"en": "Stage 3", "de": "Etappe 3"}
+
+# Issue #3319: Renderer-Bilder der Funktionsseiten (WebP je Sprache).
+FUNKTIONEN_DIR = PROJECT_ROOT / "frontend" / "static" / "funktionen"
+FUNKTIONEN_SPRACHEN = ("de", "en")
+SMS_WIDTH = 420
+BEFEHLE_WIDTH = 800
 
 # Ausschnitte wie die deutschen Bilder (#2520).
 ALARM_WIDTH = 600
@@ -52,7 +74,7 @@ MAIL_WIDTH = 800
 MAIL_HEIGHT = 724
 
 
-def alarm_html() -> str:
+def alarm_html(lang: str = LANG) -> str:
     """Alarm-Mail: Sturm (orange, Segment 1) und Hitze (gelb, Segment 2)."""
     from output.renderers.alert.official_alerts import (
         build_official_alert_notices, render_official_alert_html,
@@ -69,10 +91,10 @@ def alarm_html() -> str:
         region_label="Hermagor", valid_from=datetime(2026, 7, 10, 8, 0, tzinfo=UTC),
         valid_to=datetime(2026, 7, 11, 1, 0, tzinfo=UTC),
     )
-    notices = build_official_alert_notices(None, [(sturm, ["1"]), (hitze, ["2"])], lang=LANG)
+    notices = build_official_alert_notices(None, [(sturm, ["1"]), (hitze, ["2"])], lang=lang)
     return render_official_alert_html(
         notices, source_label="GeoSphere Austria", stand_at="09:30",
-        tz=ZoneInfo("Europe/Vienna"), lang=LANG,
+        tz=ZoneInfo("Europe/Vienna"), lang=lang,
     )
 
 
@@ -118,7 +140,7 @@ def _telegram_segment():
     ), rows
 
 
-def telegram_html() -> str:
+def telegram_html(lang: str = LANG) -> str:
     """Telegram-Blasen (ohne Aktionen-Blase) als Chat-Ansicht."""
     from app.models import MetricConfig, UnifiedWeatherDisplayConfig
     from output.renderers.narrow import render_telegram_bubbles
@@ -134,7 +156,7 @@ def telegram_html() -> str:
     )
     bubbles = render_telegram_bubbles(
         segments=[seg], seg_tables=[rows], dc=dc, report_type="morning",
-        tz=ZoneInfo("UTC"), trip_name="Example trip GR20", lang=LANG,
+        tz=ZoneInfo("UTC"), trip_name=_TRIP_NAME[lang], lang=lang,
     )
     # Die Aktionen-Blase (Inline-Keyboard) zeigt das deutsche Bild auch nicht.
     # Die Texte sind bereits Telegram-HTML (parse_mode HTML).
@@ -209,8 +231,13 @@ def _mail_segment(seg_id: int, von_h: int, bis_h: int, km: tuple[float, float],
     )
 
 
-def briefing_mail_html() -> str:
+def briefing_mail_html(lang: str = LANG) -> str:
     """Abend-Briefing fuer Etappe 3 von 3 aus dem echten Versand-Renderer."""
+    return briefing_report(lang).email_html
+
+
+def briefing_report(lang: str = LANG):
+    """Ergebnis von ``TripReportFormatter.format_email`` (Mail, SMS, Premium-SMS)."""
     from freezegun import freeze_time
 
     from app.metric_catalog import build_default_display_config
@@ -227,14 +254,72 @@ def briefing_mail_html() -> str:
     vergleich = DayComparisonService().compare(heute, _segmente(gestern=True))
     with freeze_time(_MAIL_SENT_AT):
         report = TripReportFormatter().format_email(
-            heute, "Example trip GR20", "evening",
+            heute, _TRIP_NAME[lang], "evening",
             display_config=build_default_display_config(),
-            stage_name="Stage 3", stage_total=3,
+            stage_name=_ETAPPE[lang], stage_total=3,
             stage_stats={"distance_km": 7.7, "ascent_m": 1260, "descent_m": 0,
                          "max_elevation_m": 2100},
-            day_comparison=vergleich, tz=ZoneInfo("Europe/Paris"), lang=LANG,
+            day_comparison=vergleich, tz=ZoneInfo("Europe/Paris"), lang=lang,
         )
-    return report.email_html
+    return report
+
+
+def _escape(text: str) -> str:
+    from html import escape
+    return escape(text, quote=False)
+
+
+# Rahmentexte der Kurznachrichten-Bilder (Absender, Geraet); keine Nutzerdaten.
+_RAHMEN = {
+    "de": {"sms": "SMS · Gregor Zwanzig", "premium": "Garmin inReach · Nachricht von Gregor Zwanzig",
+           "zeichen": "{n} Zeichen"},
+    "en": {"sms": "SMS · Gregor Zwanzig", "premium": "Garmin inReach · Message from Gregor Zwanzig",
+           "zeichen": "{n} characters"},
+}
+
+
+def sms_html(lang: str = LANG) -> str:
+    """SMS-Zeile des Briefings (``report.sms_text``) als Nachrichtenblase."""
+    text = briefing_report(lang).sms_text
+    r = _RAHMEN[lang]
+    return (
+        "<html><head><meta charset='utf-8'><style>"
+        "body{margin:0;padding:18px;background:#eef0f3;font-family:-apple-system,'Segoe UI',"
+        "Roboto,sans-serif;color:#111;}"
+        ".kopf{font-size:13px;color:#3a3d42;margin:0 0 8px 4px;font-weight:600;}"
+        ".blase{background:#fff;border-radius:16px 16px 16px 4px;padding:12px 14px;"
+        "font-size:16px;line-height:1.4;white-space:pre-wrap;word-break:break-word;"
+        "box-shadow:0 1px 1px rgba(0,0,0,.08);}"
+        ".fuss{font-size:12px;color:#3a3d42;margin:6px 0 0 4px;}"
+        "</style></head><body>"
+        f"<p class='kopf'>{_escape(r['sms'])}</p>"
+        f"<div class='blase'>{_escape(text)}</div>"
+        f"<p class='fuss'>{_escape(r['zeichen'].format(n=len(text)))}</p>"
+        "</body></html>"
+    )
+
+
+def premium_sms_html(lang: str = LANG) -> str:
+    """Premium-SMS-Zeile des Briefings (``report.premium_sms_text``, <= 153 Zeichen)
+    in einer schlichten Geraeteansicht (Garmin-inReach-Nachrichtenliste)."""
+    text = briefing_report(lang).premium_sms_text
+    r = _RAHMEN[lang]
+    return (
+        "<html><head><meta charset='utf-8'><style>"
+        "body{margin:0;padding:18px;background:#2b2d30;font-family:'DejaVu Sans Mono',"
+        "ui-monospace,Menlo,Consolas,monospace;color:#f2f2f2;}"
+        ".geraet{background:#111214;border:2px solid #55585d;border-radius:14px;padding:14px;}"
+        ".kopf{font-size:12px;color:#d7d9dc;margin:0 0 10px;border-bottom:1px solid #44474c;"
+        "padding-bottom:8px;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;}"
+        ".text{font-size:15px;line-height:1.45;white-space:pre-wrap;word-break:break-word;}"
+        ".fuss{font-size:12px;color:#d7d9dc;margin:10px 0 0;"
+        "font-family:-apple-system,'Segoe UI',Roboto,sans-serif;}"
+        "</style></head><body><div class='geraet'>"
+        f"<p class='kopf'>{_escape(r['premium'])}</p>"
+        f"<div class='text'>{_escape(text)}</div>"
+        f"<p class='fuss'>{_escape(r['zeichen'].format(n=len(text)))}</p>"
+        "</div></body></html>"
+    )
 
 
 def mail_html(path: Path) -> str:
@@ -269,13 +354,87 @@ def screenshot(page, html: str, ziel: Path, width: int, *, height: int | None = 
     print(f"{ziel.relative_to(PROJECT_ROOT)}  {ziel.stat().st_size // 1024} KB")
 
 
+# Ausschnitte der gerenderten Briefing-Mail (innerster passender Block).
+_AUSSCHNITT = {
+    # Abschnitt Antwort-Befehle: Ueberschrift + Befehlstabelle (enthaelt STATUS).
+    "befehle-mail": "(d) => d.querySelector(':scope > span') && d.querySelector(':scope > table')"
+                    " && d.textContent.includes('STATUS')",
+    # Fusszeile mit Datenquelle und Wettermodell (dunkler Block, nennt das Modell).
+    "briefing-quelle": "(d) => d.textContent.includes('arome_france')"
+                       " && getComputedStyle(d).backgroundColor === 'rgb(29, 28, 26)'",
+}
+
+
+def _ausschnitt(page, name: str) -> dict:
+    """Seitenrahmen des innersten Blocks der Mail, auf den ``_AUSSCHNITT[name]`` passt."""
+    box = page.evaluate(
+        "(filter) => {"
+        "  const passt = eval(filter);"
+        "  const kandidaten = [...document.querySelectorAll('div')].filter(passt);"
+        "  if (!kandidaten.length) return null;"
+        "  const r = kandidaten[kandidaten.length - 1].getBoundingClientRect();"
+        "  return {x: r.x, y: r.y + window.scrollY, width: r.width, height: r.height};"
+        "}",
+        _AUSSCHNITT[name],
+    )
+    if not box:
+        raise SystemExit(f"Ausschnitt {name} in der Briefing-Mail nicht gefunden")
+    return box
+
+
+def funktionen_bilder(page) -> dict[str, dict[str, tuple[int, int]]]:
+    """Renderer-Bilder der Funktionsseiten je Sprache als WebP (Issue #3319)."""
+    from funktionen_screenshots import speichere_webp, ziel_datei
+
+    masse: dict[str, dict[str, tuple[int, int]]] = {}
+
+    def aufnehmen(name: str, lang: str, html: str, width: int, *, height: int | None = None,
+                  body_css: str = "", clip: dict | None = None) -> None:
+        # Ohne feste Hoehe: kleines Fenster, die Aufnahme waechst mit dem Inhalt.
+        page.set_viewport_size({"width": width, "height": height or 40})
+        page.set_content(html, wait_until="load")
+        if body_css:
+            page.add_style_tag(content=body_css)
+        if clip is None and height:
+            clip = {"x": 0, "y": 0, "width": width, "height": height}
+        png = page.screenshot(clip=clip, full_page=True) if clip else page.screenshot(full_page=True)
+        masse.setdefault(name, {})[lang] = speichere_webp(png, ziel_datei(name, lang))
+
+    for lang in FUNKTIONEN_SPRACHEN:
+        report = briefing_report(lang)
+        aufnehmen("briefing-mail", lang, report.email_html, MAIL_WIDTH, height=MAIL_HEIGHT)
+        aufnehmen("briefing-telegram", lang, telegram_html(lang), TELEGRAM_WIDTH)
+        aufnehmen("alarm-mail", lang, alarm_html(lang), ALARM_WIDTH, body_css="body{margin:24px;}")
+        aufnehmen("briefing-sms", lang, sms_html(lang), SMS_WIDTH)
+        aufnehmen("premium-sms", lang, premium_sms_html(lang), SMS_WIDTH)
+        # Ausschnitte derselben Mail: Antwort-Befehle und Fusszeile mit Wettermodell.
+        for name in _AUSSCHNITT:
+            page.set_viewport_size({"width": BEFEHLE_WIDTH, "height": 40})
+            page.set_content(report.email_html, wait_until="load")
+            aufnehmen(name, lang, report.email_html, BEFEHLE_WIDTH, clip=_ausschnitt(page, name))
+    return masse
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     parser.add_argument("--mail", type=Path, default=None,
                         help="statt des Renderers eine gespeicherte Mail (.eml/.html) -> briefing-mail.png")
+    parser.add_argument("--funktionen", action="store_true",
+                        help="Renderer-Bilder der Funktionsseiten (DE+EN, WebP) statt der Startseiten-Bilder")
     args = parser.parse_args(argv)
 
     from playwright.sync_api import sync_playwright
+
+    if args.funktionen:
+        from funktionen_screenshots import masse_eintragen
+
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch()
+            page = browser.new_page(device_scale_factor=1.5)
+            masse = funktionen_bilder(page)
+            browser.close()
+        masse_eintragen(masse)
+        return 0
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     with sync_playwright() as pw:

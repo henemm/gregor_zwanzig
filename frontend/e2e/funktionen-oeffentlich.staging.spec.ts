@@ -3,8 +3,11 @@
 // AC-2 (Link Startseite -> /funktionen), AC-4 (alle zehn Funktions-Pfade ohne Anmeldung
 // 200, kein /api-Aufruf), AC-6 (Kachel -> Unterseite, Sprachumschalter ohne Login),
 // AC-8 (Bilder laden), AC-11 (375 px ohne horizontale Scrollleiste auf allen elf Seiten,
-// Textkontrast WCAG-AA), AC-12 (Weiter-Kette von der ersten bis zur letzten Unterseite).
-// Spec: docs/specs/modules/oeffentliche_doku_3319.md (v1.1)
+// Textkontrast WCAG-AA), AC-12 (Weiter-Kette von der ersten bis zur letzten Unterseite),
+// AC-13 (Bildergalerie nur auf Unterseiten; Uebersicht: Kachelbild ist Link; Klick/Enter/Leertaste oeffnet, Pfeiltaste/Schaltflaeche/Wischen
+// blaettert nicht umlaufend, Esc/X/Klick daneben schliesst, Fokus zurueck, 375 px),
+// F001 (ein <main>, keine App-Seitenleiste auf den Funktionsseiten).
+// Spec: docs/specs/modules/oeffentliche_doku_3319.md (v1.2)
 //
 // Aufruf (nach Staging-Deploy):
 //   cd frontend/e2e && GZ_VALIDATOR_USER=... GZ_VALIDATOR_PASS=... \
@@ -136,6 +139,161 @@ test('AC-6: Sprachumschalter wechselt auf einer Unterseite ohne Login', async ({
 test('AC-5: unbekannte Unterseite ohne Login fuehrt zum Login', async ({ page }) => {
 	await page.goto('/funktionen/unbekannt');
 	await expect(page).toHaveURL(/\/login/);
+});
+
+// F001 (Adversary): die Layout-Verdrahtung selbst — auf den oeffentlichen Funktionsseiten
+// rendert das Wurzel-Layout KEIN App-Geruest (Seitenleiste, untere Navigation, zweites <main>).
+for (const pfad of ['/funktionen', '/funktionen/briefings', '/funktionen/level']) {
+	test(`F001: ${pfad} ohne Login: genau ein <main>, keine App-Seitenleiste, keine untere Navigation`, async ({ page }) => {
+		await page.goto(pfad);
+		await expect(page.locator('h1')).toBeVisible();
+		await expect(page.locator('main'), `${pfad}: <main> nicht genau einmal`).toHaveCount(1);
+		await expect(page.locator('[data-testid="desktop-sidebar"]'), `${pfad}: App-Seitenleiste`).toHaveCount(0);
+		await expect(page.locator('[data-testid="bottom-nav"]'), `${pfad}: untere App-Navigation`).toHaveCount(0);
+	});
+}
+
+// AC-13: Bildergalerie (Klick, Pfeiltaste, Esc, Fokus zurueck, 375 px), ohne Anmeldung.
+test.describe('AC-13: Bildergalerie', () => {
+	const galerie = (page: Page) => page.locator('[data-testid="galerie"]');
+	const zaehler = (page: Page) => page.locator('[data-testid="galerie-zaehler"]');
+	// Bedienung erst nach der Hydrierung (vorher ist die Schaltflaeche reines HTML):
+	// warten, bis keine Netzlast mehr laeuft (Skripte geladen).
+	const oeffneSeite = (page: Page, pfad: string) => page.goto(pfad, { waitUntil: 'networkidle' });
+
+	test('Unterseite: Klick oeffnet, Pfeil rechts blaettert, Rand nicht umlaufend, Esc schliesst, Fokus zurueck', async ({ page }) => {
+		await oeffneSeite(page, '/funktionen/kanaele');
+		const knoepfe = page.locator('main [data-testid="bild-oeffnen"]');
+		const anzahl = await knoepfe.count();
+		expect(anzahl, 'Messaufbau: kanaele hat mehrere Bilder').toBeGreaterThanOrEqual(3);
+		await expect(galerie(page)).toHaveCount(0);
+
+		const zweites = knoepfe.nth(1);
+		await zweites.scrollIntoViewIfNeeded();
+		await zweites.click();
+		await expect(galerie(page)).toBeVisible();
+		await expect(page.locator('[role="dialog"]')).toHaveCount(1);
+		await expect(zaehler(page)).toHaveText(`2 / ${anzahl}`);
+		// dieselbe Datei wie das angeklickte Seitenbild
+		const seitenSrc = await zweites.locator('img').getAttribute('src');
+		await expect(page.locator('[data-testid="galerie-bild"]')).toHaveAttribute('src', seitenSrc ?? '');
+		await expect(page.locator('[data-testid="galerie-beschriftung"]')).not.toBeEmpty();
+
+		await page.keyboard.press('ArrowRight');
+		await expect(zaehler(page)).toHaveText(`3 / ${anzahl}`);
+		for (let i = 3; i < anzahl; i++) await page.keyboard.press('ArrowRight');
+		await expect(zaehler(page)).toHaveText(`${anzahl} / ${anzahl}`);
+		await expect(page.locator('[data-testid="galerie-vor"]')).toBeDisabled();
+		await page.keyboard.press('ArrowRight');
+		await expect(zaehler(page), 'am Ende nicht umlaufend').toHaveText(`${anzahl} / ${anzahl}`);
+		await page.locator('[data-testid="galerie-zurueck"]').click();
+		await expect(zaehler(page)).toHaveText(`${anzahl - 1} / ${anzahl}`);
+
+		await page.keyboard.press('Escape');
+		await expect(galerie(page)).toHaveCount(0);
+		await expect(zweites, 'Fokus zurueck auf das angeklickte Bild').toBeFocused();
+	});
+
+	test('Tastatur: Enter oeffnet, X-Schaltflaeche schliesst; Leertaste oeffnet, Klick neben das Bild schliesst', async ({ page }) => {
+		await oeffneSeite(page, '/funktionen/trips');
+		const erstes = page.locator('main [data-testid="bild-oeffnen"]').first();
+		await erstes.focus();
+		await page.keyboard.press('Enter');
+		await expect(galerie(page)).toBeVisible();
+		await expect(zaehler(page)).toHaveText(/^1 \/ \d+$/);
+		await expect(page.locator('[data-testid="galerie-zurueck"]'), 'erstes Bild: kein Zurueck').toBeDisabled();
+		await page.locator('[data-testid="galerie-schliessen"]').click();
+		await expect(galerie(page)).toHaveCount(0);
+		await expect(erstes).toBeFocused();
+
+		await page.keyboard.press(' ');
+		await expect(galerie(page)).toBeVisible();
+		// Klick in die linke obere Ecke: leere Flaeche neben dem Bild
+		await page.mouse.click(4, 4);
+		await expect(galerie(page)).toHaveCount(0);
+		await expect(erstes).toBeFocused();
+	});
+
+	test('Desktop 1280 px: Klick seitlich neben das Bild (in der Buehne) schliesst, Fokus zurueck', async ({ page }) => {
+		await page.setViewportSize({ width: 1280, height: 800 });
+		await oeffneSeite(page, '/funktionen/trips');
+		const erstes = page.locator('main [data-testid="bild-oeffnen"]').first();
+		await erstes.scrollIntoViewIfNeeded();
+		await erstes.click();
+		await expect(galerie(page)).toBeVisible();
+		const bild = page.locator('[data-testid="galerie-bild"]');
+		await expect.poll(() => bild.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBeGreaterThan(0);
+		const kasten = (await bild.boundingBox())!;
+		const buehne = (await page.locator('[data-testid="galerie"] .buehne').boundingBox())!;
+		// Punkt links vom Bild, mittig in der Bildhoehe, innerhalb der Buehne
+		const x = (buehne.x + kasten.x) / 2;
+		const y = kasten.y + kasten.height / 2;
+		expect(kasten.x - buehne.x, 'Messaufbau: links vom Bild ist freie Buehnenflaeche').toBeGreaterThan(20);
+		expect(y).toBeGreaterThan(buehne.y);
+		expect(y).toBeLessThan(buehne.y + buehne.height);
+		const getroffen = await page.evaluate(([px, py]) => {
+			const el = document.elementFromPoint(px, py) as HTMLElement | null;
+			return el?.classList.contains('buehne') ?? false;
+		}, [x, y]);
+		expect(getroffen, 'Messaufbau: der Klickpunkt trifft die Buehne selbst').toBe(true);
+		await page.mouse.click(x, y);
+		await expect(galerie(page)).toHaveCount(0);
+		await expect(erstes).toBeFocused();
+	});
+
+	test('Uebersicht: keine Galerie — Klick auf das Kachelbild fuehrt zur Unterseite', async ({ page }) => {
+		await oeffneSeite(page, '/funktionen');
+		await expect(page.locator('main [data-testid="bild-oeffnen"]'), 'Galerie-Schaltflaeche auf der Uebersicht').toHaveCount(0);
+		const bild = page.locator('[data-testid="kachel"][href="/funktionen/briefings"] img');
+		await expect(bild).toHaveCount(1);
+		await bild.scrollIntoViewIfNeeded();
+		await bild.click();
+		await expect(page).toHaveURL(/\/funktionen\/briefings$/);
+		await expect(galerie(page)).toHaveCount(0);
+		await expect(page.locator('[role="dialog"]')).toHaveCount(0);
+	});
+
+	for (const lang of ['de', 'en']) {
+		test(`375 px (${lang}): offene Galerie ohne horizontale Scrollleiste, Bild hoechstens Fenstergroesse, Beschriftungen aus dem Katalog`, async ({ page, context }) => {
+			await context.addCookies([{ name: 'gz_lang', value: lang, url: BASE }]);
+			await oeffneSeite(page, '/funktionen/briefings');
+			await page.locator('main [data-testid="bild-oeffnen"]').first().click();
+			await expect(galerie(page)).toBeVisible();
+			const bild = page.locator('[data-testid="galerie-bild"]');
+			await expect.poll(() => bild.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBeGreaterThan(0);
+			await keineScrollleiste(page, 'offene Galerie');
+			const kasten = await bild.boundingBox();
+			const fenster = page.viewportSize()!;
+			expect(kasten!.x).toBeGreaterThanOrEqual(0);
+			expect(kasten!.x + kasten!.width).toBeLessThanOrEqual(fenster.width);
+			expect(kasten!.y + kasten!.height).toBeLessThanOrEqual(fenster.height);
+			const soll = lang === 'de'
+				? { schliessen: 'Galerie schließen', vor: 'Nächstes Bild', zurueck: 'Vorheriges Bild' }
+				: { schliessen: 'Close gallery', vor: 'Next image', zurueck: 'Previous image' };
+			await expect(page.locator('[data-testid="galerie-schliessen"]')).toHaveAttribute('aria-label', soll.schliessen);
+			await expect(page.locator('[data-testid="galerie-vor"]')).toHaveAttribute('aria-label', soll.vor);
+			await expect(page.locator('[data-testid="galerie-zurueck"]')).toHaveAttribute('aria-label', soll.zurueck);
+		});
+	}
+
+	test('Wischen auf dem Handy blaettert', async ({ browser }) => {
+		const ctx = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 375, height: 800 }, baseURL: BASE, ignoreHTTPSErrors: true, httpCredentials: { username: process.env.GZ_VALIDATOR_USER ?? '', password: process.env.GZ_VALIDATOR_PASS ?? '' } });
+		const page = await ctx.newPage();
+		await oeffneSeite(page, '/funktionen/kanaele');
+		await page.locator('main [data-testid="bild-oeffnen"]').first().tap();
+		await expect(zaehler(page)).toHaveText(/^1 \/ \d+$/);
+		const wisch = async (von: number, nach: number) =>
+			page.locator('[data-testid="galerie"]').evaluate((el, [a, b]) => {
+				const punkt = (x: number) => new Touch({ identifier: 1, target: el, clientX: x, clientY: 300 });
+				el.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, changedTouches: [punkt(a)], touches: [punkt(a)] }));
+				el.dispatchEvent(new TouchEvent('touchend', { bubbles: true, changedTouches: [punkt(b)], touches: [] }));
+			}, [von, nach]);
+		await wisch(300, 100);
+		await expect(zaehler(page)).toHaveText(/^2 \/ \d+$/);
+		await wisch(100, 300);
+		await expect(zaehler(page)).toHaveText(/^1 \/ \d+$/);
+		await ctx.close();
+	});
 });
 
 test('AC-2: Startseite zeigt Level-Tabelle, Link fuehrt zu /funktionen', async ({ page }) => {

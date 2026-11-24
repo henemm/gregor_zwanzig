@@ -99,7 +99,7 @@ Wer nicht eingeloggt ist, soll vor der Registrierung verstehen, was Gregor Zwanz
 - **AC-5:** Given die Startseite im Browser / When der Besucher auf „Registrieren" bzw. „Anmelden" klickt / Then gelangt er auf `/register` bzw. `/login`, und beide Links sind ohne Scrollen auf einem 375 px breiten Display erreichbar oder per Seitenende sichtbar.
   - Test: Playwright gegen Staging, Viewport 375 px, ausgeloggt: beide Links sichtbar, Klick führt auf die Zielseite.
 
-- **AC-6:** Given die Startseite / When ein Besucher den Text liest / Then wird E-Mail als Hauptkanal genannt, Telegram wird erwähnt, und SMS / Satelliten-Messenger bzw. Premium-SMS mit Rückkanal erscheinen ausschließlich mit dem Zusatz „in Arbeit bzw. auf Anfrage" — nie als sofort verfügbarer Kanal.
+- **AC-6 (Abgelöst durch #3319, Spec `oeffentliche_doku_3319.md` AC-1):** Die Startseite nennt jetzt alle vier Kanäle (E-Mail, Telegram, SMS, Premium-SMS über Garmin inReach) als verfügbar, ohne „in Arbeit/auf Anfrage/auf Wunsch“ (ADR-0095, ADR-0049); der Katalog-Regeltest ist entsprechend umgekehrt. Ursprünglicher Wortlaut zur Nachvollziehbarkeit: Given die Startseite / When ein Besucher den Text liest / Then wird E-Mail als Hauptkanal genannt, Telegram wird erwähnt, und SMS / Satelliten-Messenger bzw. Premium-SMS mit Rückkanal erscheinen ausschließlich mit dem Zusatz „in Arbeit bzw. auf Anfrage" — nie als sofort verfügbarer Kanal.
   - Test: Katalog-Test über alle Schlüssel `start.*` in `de.json`: jeder Wert mit Treffer auf `/sms|satellit/i` enthält zugleich „in Arbeit" und „auf Anfrage"; Screenshots/Alt-Texte zeigen keinen SMS-Kanal; ein Schlüssel nennt „E-Mail" im Hero-Bereich.
 
 - **AC-7:** Given die Startseite / When sie angezeigt wird / Then zeigt sie mindestens drei statische Screenshots (Briefing-Mail, Telegram-Nachricht, Alarm), jeweils mit nicht leerem Alt-Text auf Deutsch, die tatsächlich geladen werden (HTTP 200, nicht kaputt).
@@ -124,7 +124,7 @@ Wer nicht eingeloggt ist, soll vor der Registrierung verstehen, was Gregor Zwanz
 - Screenshots sind statisch und veralten bei Renderer-Änderungen; sie werden nicht automatisch neu erzeugt.
 - Nachtrag (#2777): Bilder je Sprache: de unter `/landing/`, en unter `/landing/en/` (eigene englische Bilder; Alarm und Telegram reproduzierbar über `scripts/landing_screenshots.py`, Spec `startseite_en_bilder_2777.md`).
 - Kein Link von `/login` und `/register` zurück zur Startseite (Out of Scope).
-- SMS / Satelliten-Messenger / Premium-SMS mit Rückkanal werden nur als „in Arbeit bzw. auf Anfrage" erwähnt, nicht beworben (PO 2026-10-07).
+- ~~SMS / Satelliten-Messenger / Premium-SMS mit Rückkanal werden nur als „in Arbeit bzw. auf Anfrage" erwähnt, nicht beworben (PO 2026-10-07).~~ Abgelöst durch #3319: alle vier Kanäle sind verfügbar und werden gleichrangig genannt.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -135,3 +135,4 @@ Kein neues ADR nötig. Die Entscheidung berührt „Auth" nur durch eine einzige
 - 2026-10-07: Initial spec created (Issue #2520)
 - 2026-10-07: PO-Review: AC-1 hyperlokale Vorhersage (Trip-Zeitraum/Ortsvergleich), AC-6 SMS/Satellit „in Arbeit bzw. auf Anfrage", AC-10 Atomic-Design-Bausteine
 - 2026-11-14: Nachtrag Bilder je Sprache, de `/landing/`, en `/landing/en/` (Issue #2777)
+- 2026-11-24: AC-6 abgelöst durch #3319 (vier Kanäle verfügbar; Level-Kurzübersicht und Link auf `/funktionen`, Spec `oeffentliche_doku_3319.md`)

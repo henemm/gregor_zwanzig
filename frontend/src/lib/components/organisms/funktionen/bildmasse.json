@@ -1,0 +1,162 @@
+{
+	"alarm-mail": {
+		"de": {
+			"width": 900,
+			"height": 891
+		},
+		"en": {
+			"width": 900,
+			"height": 870
+		}
+	},
+	"archiv": {
+		"de": {
+			"width": 1060,
+			"height": 440
+		},
+		"en": {
+			"width": 1060,
+			"height": 440
+		}
+	},
+	"befehle-mail": {
+		"de": {
+			"width": 1152,
+			"height": 542
+		},
+		"en": {
+			"width": 1152,
+			"height": 542
+		}
+	},
+	"briefing-mail": {
+		"de": {
+			"width": 1200,
+			"height": 1086
+		},
+		"en": {
+			"width": 1200,
+			"height": 1086
+		}
+	},
+	"briefing-quelle": {
+		"de": {
+			"width": 1152,
+			"height": 204
+		},
+		"en": {
+			"width": 1152,
+			"height": 204
+		}
+	},
+	"briefing-sms": {
+		"de": {
+			"width": 630,
+			"height": 222
+		},
+		"en": {
+			"width": 630,
+			"height": 222
+		}
+	},
+	"briefing-telegram": {
+		"de": {
+			"width": 708,
+			"height": 543
+		},
+		"en": {
+			"width": 708,
+			"height": 543
+		}
+	},
+	"cockpit": {
+		"de": {
+			"width": 1060,
+			"height": 900
+		},
+		"en": {
+			"width": 1060,
+			"height": 900
+		}
+	},
+	"konto-kanaele": {
+		"de": {
+			"width": 1012,
+			"height": 402
+		},
+		"en": {
+			"width": 1012,
+			"height": 402
+		}
+	},
+	"konto-level": {
+		"de": {
+			"width": 1012,
+			"height": 611
+		},
+		"en": {
+			"width": 1012,
+			"height": 611
+		}
+	},
+	"ortsvergleich": {
+		"de": {
+			"width": 1060,
+			"height": 900
+		},
+		"en": {
+			"width": 1060,
+			"height": 900
+		}
+	},
+	"premium-sms": {
+		"de": {
+			"width": 630,
+			"height": 254
+		},
+		"en": {
+			"width": 630,
+			"height": 254
+		}
+	},
+	"trip-anlegen": {
+		"de": {
+			"width": 1060,
+			"height": 760
+		},
+		"en": {
+			"width": 1060,
+			"height": 760
+		}
+	},
+	"trip-hub": {
+		"de": {
+			"width": 1060,
+			"height": 900
+		},
+		"en": {
+			"width": 1060,
+			"height": 900
+		}
+	},
+	"trip-wetter": {
+		"de": {
+			"width": 1060,
+			"height": 900
+		},
+		"en": {
+			"width": 1060,
+			"height": 900
+		}
+	},
+	"trip-zustellung": {
+		"de": {
+			"width": 1060,
+			"height": 900
+		},
+		"en": {
+			"width": 1060,
+			"height": 900
+		}
+	}
+}

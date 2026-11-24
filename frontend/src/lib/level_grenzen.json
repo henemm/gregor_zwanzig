@@ -1,0 +1,35 @@
+{
+	"free": {
+		"trips": 3,
+		"ortsvergleiche": 2,
+		"orte": 10,
+		"email": true,
+		"telegram": true,
+		"sms_pro_tag": 0,
+		"premium_sms_pro_tag": 0,
+		"premium_sms_antworten_pro_tag": 0,
+		"alarme_pro_tag": 2
+	},
+	"standard": {
+		"trips": 15,
+		"ortsvergleiche": 10,
+		"orte": 50,
+		"email": true,
+		"telegram": true,
+		"sms_pro_tag": 10,
+		"premium_sms_pro_tag": 0,
+		"premium_sms_antworten_pro_tag": 0,
+		"alarme_pro_tag": 4
+	},
+	"premium": {
+		"trips": 50,
+		"ortsvergleiche": 30,
+		"orte": 200,
+		"email": true,
+		"telegram": true,
+		"sms_pro_tag": 10,
+		"premium_sms_pro_tag": 15,
+		"premium_sms_antworten_pro_tag": 15,
+		"alarme_pro_tag": null
+	}
+}

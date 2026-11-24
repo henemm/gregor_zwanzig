@@ -9,7 +9,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { register } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -231,6 +231,79 @@ test('#3319 AC-8: Renderer-Bilder fuer alle vier Kanaele und Alarm auf den Unter
 	for (const muster of [/mail/, /telegram/, /(^|-)sms/, /premium-sms/, /alarm/]) {
 		assert.ok(namen.some((n) => muster.test(n)), `kein Bild zu ${muster}`);
 	}
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// #3319 F002 (Adversary) — bildmasse.json (width/height im Markup, inhalt.ts) muss den
+// ECHTEN Pixelmassen der Bilddateien entsprechen, sonst verzerrt/springt das Layout.
+// Die Masse werden aus dem WebP-Kopf gelesen (VP8, VP8L, VP8X), nicht aus der JSON-Datei.
+// ─────────────────────────────────────────────────────────────────────────────
+/** Pixelmasse aus dem WebP-Kopf (RIFF/WEBP, Unterformate VP8, VP8L, VP8X). */
+function webpMasse(b: Buffer): { width: number; height: number } {
+	assert.ok(istWebp(b), 'kein WebP');
+	const art = b.subarray(12, 16).toString('latin1');
+	if (art === 'VP8 ') {
+		assert.equal(b.readUIntBE(23, 3), 0x9d012a, 'VP8: Startcode fehlt');
+		return { width: b.readUInt16LE(26) & 0x3fff, height: b.readUInt16LE(28) & 0x3fff };
+	}
+	if (art === 'VP8L') {
+		assert.equal(b[20], 0x2f, 'VP8L: Signatur fehlt');
+		const bits = b.readUInt32LE(21);
+		return { width: (bits & 0x3fff) + 1, height: ((bits >> 14) & 0x3fff) + 1 };
+	}
+	if (art === 'VP8X') return { width: b.readUIntLE(24, 3) + 1, height: b.readUIntLE(27, 3) + 1 };
+	throw new Error(`unbekanntes WebP-Unterformat ${art}`);
+}
+
+type MasseJson = Record<string, Partial<Record<FLang, { width: number; height: number }>>>;
+const BILDMASSE_DATEI = join(frontend, 'src', 'lib', 'components', 'organisms', 'funktionen', 'bildmasse.json');
+const bildDatei = (name: string, lang: FLang) => join(frontend, 'static', 'funktionen', ...(lang === 'en' ? ['en'] : []), `${name}.webp`);
+
+/** Abweichungen bildmasse.json ↔ echte Dateien (leer = stimmt). */
+function masseAbweichungen(masse: MasseJson): string[] {
+	const fehler: string[] = [];
+	for (const [name, je] of Object.entries(masse)) {
+		for (const lang of ['de', 'en'] as const) {
+			const soll = je[lang];
+			if (!soll) {
+				fehler.push(`${name} (${lang}): kein Eintrag`);
+				continue;
+			}
+			const datei = bildDatei(name, lang);
+			if (!existsSync(datei)) {
+				fehler.push(`${name} (${lang}): Datei fehlt`);
+				continue;
+			}
+			const ist = webpMasse(readFileSync(datei));
+			if (ist.width !== soll.width || ist.height !== soll.height) {
+				fehler.push(`${name} (${lang}): bildmasse.json ${soll.width}x${soll.height}, Datei ${ist.width}x${ist.height}`);
+			}
+		}
+	}
+	return fehler;
+}
+
+test('#3319 F002: Messaufbau — WebP-Masse aus dem Kopf (cockpit.webp, bekannt 1060x900)', () => {
+	assert.deepEqual(webpMasse(readFileSync(bildDatei('cockpit', 'de'))), { width: 1060, height: 900 });
+});
+
+test('#3319 F002: bildmasse.json stimmt fuer jedes Bild und jede Sprache mit der echten Datei ueberein', () => {
+	const masse = JSON.parse(readFileSync(BILDMASSE_DATEI, 'utf-8')) as MasseJson;
+	assert.ok(Object.keys(masse).length >= 16, `zu wenige Eintraege: ${Object.keys(masse).length}`);
+	assert.deepEqual(masseAbweichungen(masse), []);
+	// jede Bilddatei hat einen Eintrag (keine Datei ohne Masse)
+	for (const lang of ['de', 'en'] as const) {
+		const ordner = join(frontend, 'static', 'funktionen', ...(lang === 'en' ? ['en'] : []));
+		for (const f of readdirSync(ordner).filter((n) => n.endsWith('.webp'))) {
+			assert.ok(masse[f.replace(/\.webp$/, '')]?.[lang], `${lang}/${f}: kein Eintrag in bildmasse.json`);
+		}
+	}
+});
+
+test('#3319 F002 Gegenprobe: verfaelschte Masse werden erkannt', () => {
+	const masse = JSON.parse(readFileSync(BILDMASSE_DATEI, 'utf-8')) as MasseJson;
+	const falsch: MasseJson = { ...masse, cockpit: { ...masse.cockpit, en: { width: 1060, height: 901 } } };
+	assert.deepEqual(masseAbweichungen(falsch), ['cockpit (en): bildmasse.json 1060x901, Datei 1060x900']);
 });
 
 function lum(hex: string): number {

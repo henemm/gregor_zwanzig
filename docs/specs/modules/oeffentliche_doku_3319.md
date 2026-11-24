@@ -4,7 +4,7 @@ type: feature
 created: 2026-11-24
 updated: 2026-11-24
 status: draft
-version: "1.1"
+version: "1.2"
 workflow: feat-3319-oeffentliche-doku
 tags: [startseite, funktionen, level, i18n, bilder, epic-3318]
 ---
@@ -150,6 +150,7 @@ Reihenfolge der Umsetzung: (1) Startseite + Level-Daten + Drift-Tests, (2) Route
   - Test: Playwright-Prüfung bei 375 px Breite auf allen elf Seiten: `scrollWidth` gleich Viewportbreite; Kontrastprüfung der Textfarben auf AA.
 
 - **AC-12:** Given ein Besucher ist auf einer Unterseite / When er sich orientieren will / Then sieht er Brotkrumen „Funktionen › <Thema>“ mit Link zur Übersicht, eine Themen-Navigation mit allen neun Unterseiten (aktuelle markiert), Links „Zurück“/„Weiter“ zur Nachbarseite in der Reihenfolge der Seitenliste (erste Seite ohne Zurück, letzte ohne Weiter), einen Aufruf zur Registrierung, und der Browser-Tab trägt einen eigenen Seitentitel mit eigener Meta-Beschreibung je Unterseite und Sprache.
+- **AC-13:** Given ein Besucher sieht auf einer Unterseite `/funktionen/<thema>` ein Bild / When er es anklickt oder per Tastatur (Enter/Leertaste) auswählt / Then öffnet sich eine Bildergalerie über der Seite mit dem Bild in voller Größe (höchstens Fenstergröße, ohne horizontale Scrollleiste bei 375 px), Beschriftung und Zähler „n / m“, „Vor“/„Zurück“ (Pfeiltasten, Wischen auf dem Handy) blättern nur durch die Bilder derselben Seite, Schließen geht per Schaltfläche, Esc und Klick neben das Bild, danach liegt der Tastaturfokus wieder auf dem angeklickten Bild; alle Bedienelemente haben Beschriftungen in DE/EN, und ohne Klick lädt kein zusätzliches Bild. Auf der Übersicht `/funktionen` bleiben die Kacheln samt Vorschaubild vollständig Links zur Unterseite (keine Galerie dort).
   - Test: Seitentest prüft für jeden Slug Brotkrumen-Link, neun Navigationslinks mit markierter aktueller Seite, Nachbarlinks gemäß Reihenfolge und eindeutige Titel/Beschreibungen je Sprache; Staging-Prüfung klickt Weiter von der ersten bis zur letzten Seite.
 
 ## Definition of Done
@@ -167,6 +168,7 @@ Reihenfolge der Umsetzung: (1) Startseite + Level-Daten + Drift-Tests, (2) Route
 - `frontend/src/hooks.server*.test.ts`: `/`, `/funktionen` und alle Slugs der Seitenliste öffentlich, `/funktionen/unbekannt`, `/funktionen/trips/x`, `/funktionenx`, `/hilfe`, `/account` geschützt (AC-4, AC-5).
 - `frontend/src/lib/i18n/__tests__/en_katalog_regeln.test.ts`: keine „in Arbeit/auf Anfrage“-Formulierung zu SMS/Satellit in `start.*`/`funktionen.*`; keine Konnektor/Admin/Empfehlungstexte (AC-1, AC-7).
 - `frontend/src/lib/i18n/__tests__/funktionen_seite.test.ts`: neun Unterseiten und Kacheln je Sprache, 14 Inventarpunkte genau einmal zugeordnet, Level-Tabelle auf `level`, Befehlsliste gegen Hilfe-Quelle, Kanalhinweis, Brotkrumen/Navigation/Weiter-Zurück, eindeutige Titel und Beschreibungen (AC-6, AC-10, AC-12).
+- Galerie (AC-13): Logik-Test (Reihenfolge je Seite, Vor/Zurück an den Rändern, Beschriftungen DE/EN aus dem Katalog) und Playwright-Prüfung ohne Anmeldung: Klick öffnet, Pfeiltaste blättert, Esc schließt, Fokus zurück, 375 px ohne horizontale Scrollleiste.
 - `frontend/src/lib/i18n/__tests__/textkatalog.test.ts`: Bilder existieren je Sprache, < 200 KB, Alt-Text, Maße, lazy (AC-8).
 - Personendaten-Wächter im Bild-Skript mit Gegenprobe plus Sichtprüfung (AC-9).
 - Staging-Prüfung mit Playwright ohne Anmeldung: Startseite, `/funktionen` und alle Unterseiten DE/EN, Weiter-Kette von der ersten bis zur letzten Seite, 375 px ohne horizontale Scrollleiste, Kontrast AA (AC-2, AC-4, AC-6, AC-11, AC-12).
@@ -187,3 +189,5 @@ Reihenfolge der Umsetzung: (1) Startseite + Level-Daten + Drift-Tests, (2) Route
 
 - 2026-11-24: Initial spec created (#3319 + #3320, Epic #3318)
 - 2026-11-24: PO-Vorgabe „an Best Practice orientieren, mit Unterseiten“: Einzelseite mit Sprungankern ersetzt durch Übersicht + neun Unterseiten mit Brotkrumen, Themen-Navigation, Weiter/Zurück, eigenen Titeln (AC-4 bis AC-6, AC-8, AC-10 bis AC-12).
+- 2026-11-24: PO-Entscheidung (Rückfrage „öffnen alle Bilder in einer Galerie?“, Antwort „Ja, Galerie gleich mitbauen“): Klick auf ein Bild öffnet eine Galerie mit Blättern innerhalb der Seite (AC-13, Spec 1.2).
+- 2026-11-24: AC-13 präzisiert (Tech-Lead-Entscheidung, gängiges Kachel-Muster): Galerie nur auf Unterseiten; auf der Übersicht führt die ganze Kachel inkl. Vorschaubild zur Unterseite, wo dieselben Bilder in der Galerie vergrößert werden können.

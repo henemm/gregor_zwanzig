@@ -431,14 +431,66 @@ describe('AC-6: volle Level-Tabelle auf der Unterseite level', () => {
 describe('AC-7: nur Funktionsbeschreibung, nichts Internes', () => {
 	const funktionenKeys = keys.filter((k) => k.startsWith('funktionen.'));
 	const VERBOTEN = /konnektor|connector|\bmcp\b|admin|design|claude/i;
-	const EMPFEHLUNG_DE = /solltest|sollte\b|empfehl|ratsam|am besten|musst du/i;
-	const EMPFEHLUNG_EN = /\bshould\b|recommend|advis|\bbest to\b|\byou must\b/i;
+	// F004 (Adversary): Ratschlag-Muster statt reiner Schluesselwortliste —
+	// (1) Modal-/Ratschlagwoerter (sollte, musst, empfehlen, ratsam, am besten, besser, lieber),
+	// (2) Handlungs-Imperative am Satzanfang (Nimm…, Geh…, Brich… ab, Kehr… um, Bleib…, Warte…,
+	//     Meide…, Pack…, Zieh…, Verschieb…, Starte…), (3) feste Wendungen (umkehren, brich … ab).
+	// EN entsprechend (should, ought to, recommend, advise, best to, you must, better, make sure,
+	// turn back, Imperative Take/Go/Turn/Stay/Wait/Avoid/Pack/Bring/Head/Postpone/Start/Leave).
+	const SATZANFANG = String.raw`(?:^|[.!?:;]\s+|\n)`;
+	const EMPFEHLUNG_DE = new RegExp(
+		String.raw`\bsollte(?:st|n|t)?\b|\bmusst\b|\bempfehl|\bratsam\b|\bam besten\b|\bbesser\b|\blieber\b|\bumkehren\b|\bbrich\b[^.!?]*\bab\b|` +
+			`${SATZANFANG}(?:nimm|geh|brich|kehr|bleib|warte|meide|vermeide|pack|zieh|verschieb|starte)\\b`,
+		'iu'
+	);
+	const EMPFEHLUNG_EN = new RegExp(
+		String.raw`\bshould\b|\bought to\b|recommend|\badvis|\bbest to\b|\byou must\b|\bbetter\b|\bmake sure\b|\bturn back\b|` +
+			`${SATZANFANG}(?:take|go|turn|stay|wait|avoid|pack|bring|head|postpone|start|leave)\\b`,
+		'iu'
+	);
 	test('Gegenprobe: die Regeln greifen', () => {
 		assert.match('Der Claude-Konnektor', VERBOTEN);
 		assert.match('Admin area', VERBOTEN);
 		assert.match('Du solltest bei Gewitter umkehren', EMPFEHLUNG_DE);
 		assert.match('We recommend turning back', EMPFEHLUNG_EN);
 		assert.doesNotMatch('Die Böen am Pass in km/h', EMPFEHLUNG_DE);
+	});
+	test('F004 Gegenprobe: Ratschlaege ohne Schluesselwort der alten Liste werden erkannt', () => {
+		for (const s of [
+			'Nimm besser eine Regenjacke mit.',
+			'Nimm eine Regenjacke mit.',
+			'Bei Gewitter: Brich die Etappe ab.',
+			'Die Böen nehmen zu. Geh früh los.',
+			'Kehr am Pass um, wenn es blitzt.',
+			'Am Nachmittag lieber im Tal bleiben.',
+			'Bleib bei Nebel auf dem Weg.'
+		]) {
+			assert.match(s, EMPFEHLUNG_DE, s);
+		}
+		for (const s of [
+			'Take a rain jacket.',
+			'Gusts increase. Turn back at the pass.',
+			'Better start early.',
+			'You had better wait.',
+			'Make sure you carry water.',
+			'Avoid the ridge after noon.'
+		]) {
+			assert.match(s, EMPFEHLUNG_EN, s);
+		}
+	});
+	test('F004 Gegenprobe: reine Funktionsbeschreibungen bleiben frei', () => {
+		for (const s of [
+			'Die Böen am Pass in km/h',
+			'Gregor meldet sich, wenn ein Gewitter aufzieht.',
+			'Mit dem Befehl STOP beendest du den Versand.',
+			'Abbruch per Befehl STOP',
+			'Lege einen Trip an und lade je Etappe eine GPX-Datei hoch.'
+		]) {
+			assert.doesNotMatch(s, EMPFEHLUNG_DE, s);
+		}
+		for (const s of ['Gusts at the pass in km/h', 'Gregor tells you when a thunderstorm builds up.', 'Create a trip and upload one GPX file per stage.']) {
+			assert.doesNotMatch(s, EMPFEHLUNG_EN, s);
+		}
 	});
 	test('kein funktionen.*-Text nennt Konnektor/MCP/Admin/Design oder empfiehlt etwas', () => {
 		assert.ok(funktionenKeys.length >= 28, `zu wenige funktionen.*-Texte: ${funktionenKeys.length}`);

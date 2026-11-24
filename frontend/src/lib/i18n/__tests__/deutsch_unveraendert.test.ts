@@ -21,6 +21,7 @@ import { F7_ANKER } from '../../components/alerts-tab/__tests__/f7KatalogAnker.t
 import { F10_ANKER } from '../../components/compare/__tests__/f10KatalogAnker.ts';
 import { F12_ANKER } from '../../components/__tests__/f12KatalogAnker.ts';
 import ZUSTELLUNG_DE from '../messages/de/zustellung.json' with { type: 'json' };
+import FUNKTIONEN_DE from '../messages/de/funktionen.json' with { type: 'json' };
 
 const GOLDEN = JSON.parse(
 	readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'de_katalog_vor_i18n.json'), 'utf-8')
@@ -707,7 +708,12 @@ const NEU_IN_FOLGEPAKETEN = [
 	'listen.spalte.vorlage',
 	// #2795 S3b Teilschritt 1b: neuer Bereich zustellung.json (Reiter Zustellung) — vollstaendig neu,
 	// kein Bestandsschluessel; die Pflichttexte prueft s3b2795_zustellung_katalog.test.ts.
-	...Object.keys(ZUSTELLUNG_DE)
+	...Object.keys(ZUSTELLUNG_DE),
+	// #3319: Level-Kurzform der Startseite (start.level.*) und neuer Bereich funktionen.json
+	// (funktionen.*, level.*) — vollstaendig neu; Inhalt prueft funktionen_seite.test.ts.
+	'start.level.eyebrow', 'start.level.title', 'start.level.text', 'start.level.wechsel',
+	'start.level.details', 'start.level.mehr',
+	...Object.keys(FUNKTIONEN_DE)
 ];
 
 test('AC-5: das Golden enthaelt die 112 Bestandsschluessel', () => {
@@ -732,7 +738,14 @@ const GEAENDERT: Record<string, string> = {
 	'info.alarme.route':
 		'Kannst du überspringen — Standard: Alarme per E-Mail und Telegram, Dringlichkeits-Schwelle „gering“, amtliche Warnungen an. Telegram wirkt erst nach der Verknüpfung.',
 	'info.alarme.vergleich':
-		'Kannst du überspringen — Standard: Alarme per E-Mail und Telegram, Dringlichkeits-Schwelle „gering“, amtliche Warnungen an. Telegram wirkt erst nach der Verknüpfung.'
+		'Kannst du überspringen — Standard: Alarme per E-Mail und Telegram, Dringlichkeits-Schwelle „gering“, amtliche Warnungen an. Telegram wirkt erst nach der Verknüpfung.',
+	// #3319 AC-1 (loest #2520 AC-6 ab): alle vier Kanaele sind verfuegbar (ADR-0095, ADR-0049).
+	'start.meta.description':
+		'Gregor Zwanzig liefert eine hyperlokale Wettervorhersage für deine Etappenpunkte und Orte – als Briefing per E-Mail, Telegram, SMS oder Premium-SMS (Garmin inReach), plus Alarme.',
+	'start.hero.lead':
+		'Gregor Zwanzig schickt dir das Wetter für deine Trips als kompaktes Briefing – per E-Mail, Telegram, SMS oder Premium-SMS über Garmin inReach, je nachdem, was unterwegs ankommt.',
+	'start.ankommt.kanaele':
+		'Vier Kanäle stehen zur Verfügung: E-Mail, Telegram, SMS und Premium-SMS über Garmin inReach (Satellit). Per E-Mail, Telegram und Premium-SMS kannst du Gregor auch Befehle schicken.'
 };
 const soll = (k: string): string => GEAENDERT[k] ?? GOLDEN[k];
 
