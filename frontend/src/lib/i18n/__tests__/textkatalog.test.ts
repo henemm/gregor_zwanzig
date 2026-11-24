@@ -2,6 +2,7 @@
 // AC-1 (Inhalt), AC-6 (Kanaele), AC-7 (Bilder), AC-8 (Typ + Katalogtexte), AC-10 (Kontrast, Bausteine).
 // Issue #2521 S1 (ab dem Block „info.*/tip.*“ unten): AC-15 (Katalog-Vollstaendigkeit, kein Fliesstext
 // ausserhalb t()), AC-17 (keine Handlungsempfehlung).
+// Issue #3319: AC-1 (vier Kanaele verfuegbar), AC-8 (Bilder der Funktions-Unterseiten).
 //
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
 //     --test src/lib/i18n/__tests__/textkatalog.test.ts
@@ -9,9 +10,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { register } from 'node:module';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
-import { tr, trFor } from '../index.ts';
+import { locale, tr, trFor } from '../index.ts';
 import { de } from '../messages/de/index.ts';
 import { ARIA_WORT, BEGRIFFE, INFO_TEXTE, TIP_TEXTE } from '../../components/shared/__tests__/infoboxTexte.ts';
 
@@ -122,6 +124,112 @@ test('#2777 AC-3: je Bild en-Pfad ≠ de-Pfad, beide Dateien existieren, < 200 K
 			assert.ok(alt && alt.trim().length > 10, `Alt-Text start.${n}.alt (${lang}) fehlt`);
 		}
 		assert.notEqual(trFor('en', `start.${n}.alt` as never), trFor('de', `start.${n}.alt` as never), `start.${n}.alt nicht uebersetzt`);
+	}
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Issue #3319 AC-8 — Bilder der Funktions-Unterseiten /funktionen/<slug>
+// (Spec oeffentliche_doku_3319.md v1.1). ECHT gerendert (svelte/server), je
+// Sprache: jede Unterseite ausser `level` hat >= 1 Bild; jedes Bild WebP unter
+// /funktionen/ (de) bzw. /funktionen/en/ (en), < 200 KB, Alt-Text, width/height,
+// loading="lazy"; DE/EN-Paar = gleicher Dateiname, eigene Datei, eigener Alt-Text.
+// Gegenprobe: en-Bild als Kopie der de-Datei, fehlende Datei, fehlendes
+// loading/width oder eine Unterseite ohne Bild ⇒ rot.
+// ─────────────────────────────────────────────────────────────────────────────
+const funktionenBase = pathToFileURL(frontend + '/').href;
+for (const h of [
+	join(frontend, 'test-app-environment-stub-hooks.mjs'),
+	join(frontend, 'test-svelte-ssr-hooks.mjs'),
+	join(frontend, 'src', 'lib', 'components', 'trip-new', '__tests__', 'ssrRunesHook.mjs')
+]) {
+	register(pathToFileURL(h).href, funktionenBase);
+}
+
+type FLang = 'de' | 'en';
+type Img = { src: string; alt: string; width: string; height: string; loading: string };
+const fEnt = (s: string) =>
+	s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+const fAttr = (tag: string, a: string) => fEnt(tag.match(new RegExp(`\\b${a}="([^"]*)"`))?.[1] ?? '');
+const bilderIn = (html: string): Img[] =>
+	[...html.matchAll(/<img\b[^>]*>/g)].map((m) => ({
+		src: fAttr(m[0], 'src'),
+		alt: fAttr(m[0], 'alt'),
+		width: fAttr(m[0], 'width'),
+		height: fAttr(m[0], 'height'),
+		loading: fAttr(m[0], 'loading')
+	}));
+const istWebp = (b: Buffer) => b.subarray(0, 4).toString('latin1') === 'RIFF' && b.subarray(8, 12).toString('latin1') === 'WEBP';
+
+async function funktionenSlugs(): Promise<string[]> {
+	const datei = join(frontend, 'src', 'lib', 'funktionen_seiten.ts');
+	assert.ok(existsSync(datei), 'frontend/src/lib/funktionen_seiten.ts fehlt');
+	const { FUNKTIONEN_SEITEN } = await import(pathToFileURL(datei).href);
+	return (FUNKTIONEN_SEITEN as ReadonlyArray<{ slug: string }>).map((s) => s.slug);
+}
+
+async function unterseitenBilder(lang: FLang, slug: string): Promise<Img[]> {
+	const datei = join(frontend, 'src', 'routes', 'funktionen', '[thema]', '+page.svelte');
+	assert.ok(existsSync(datei), 'frontend/src/routes/funktionen/[thema]/+page.svelte fehlt');
+	const { render } = await import('svelte/server');
+	locale.set(lang);
+	try {
+		const Seite = (await import(pathToFileURL(datei).href)).default;
+		return bilderIn(render(Seite, { props: { data: { oeffentlich: true, lang, slug } } }).body);
+	} finally {
+		locale.set('de');
+	}
+}
+
+test('#3319 AC-8 Gegenprobe: WebP-Erkennung lehnt PNG ab', () => {
+	assert.equal(istWebp(readFileSync(join(frontend, 'static', 'landing', 'alarm.png'))), false);
+});
+
+for (const lang of ['de', 'en'] as const) {
+	test(`#3319 AC-8 (${lang}): jede Unterseite ausser level hat >= 1 Bild; WebP < 200 KB, Alt, Masse, lazy`, async () => {
+		const slugs = await funktionenSlugs();
+		assert.equal(slugs.length, 9, 'Messaufbau: neun Unterseiten erwartet');
+		const praefix = lang === 'de' ? /^\/funktionen\/[^/]+\.webp$/ : /^\/funktionen\/en\/[^/]+\.webp$/;
+		for (const slug of slugs) {
+			const liste = await unterseitenBilder(lang, slug);
+			if (slug !== 'level') assert.ok(liste.length >= 1, `${lang}/${slug}: kein Bild`);
+			for (const b of liste) {
+				assert.match(b.src, praefix, `${lang}/${slug}: Bildpfad ${b.src}`);
+				const datei = join(frontend, 'static', b.src.replace(/^\//, ''));
+				assert.ok(existsSync(datei), `${lang}/${slug}: ${b.src} fehlt`);
+				const inhalt = readFileSync(datei);
+				assert.ok(inhalt.length < 200 * 1024, `${lang}/${slug}: ${b.src} >= 200 KB`);
+				assert.ok(istWebp(inhalt), `${lang}/${slug}: ${b.src} ist kein WebP`);
+				assert.ok(b.alt.trim().length > 10, `${lang}/${slug}: Alt-Text zu ${b.src} fehlt`);
+				assert.match(b.width, /^\d+$/, `${lang}/${slug}: width zu ${b.src}`);
+				assert.match(b.height, /^\d+$/, `${lang}/${slug}: height zu ${b.src}`);
+				assert.equal(b.loading, 'lazy', `${lang}/${slug}: loading zu ${b.src}`);
+			}
+		}
+	});
+}
+
+test('#3319 AC-8: DE/EN-Paar je Unterseite: gleiche Dateinamen, eigene Datei, eigener Alt-Text', async () => {
+	const name = (s: string) => s.split('/').pop()!;
+	for (const slug of await funktionenSlugs()) {
+		const deB = await unterseitenBilder('de', slug);
+		const enB = await unterseitenBilder('en', slug);
+		assert.deepEqual(enB.map((b) => name(b.src)), deB.map((b) => name(b.src)), `${slug}: Bildpaare`);
+		deB.forEach((b, i) => {
+			assert.notEqual(enB[i].alt, b.alt, `${slug}: Alt-Text ${name(b.src)} nicht uebersetzt`);
+			const a = readFileSync(join(frontend, 'static', b.src.slice(1)));
+			const e = readFileSync(join(frontend, 'static', enB[i].src.slice(1)));
+			assert.ok(!a.equals(e), `${slug}: ${name(b.src)} en-Datei ist eine Kopie der de-Datei`);
+		});
+	}
+});
+
+test('#3319 AC-8: Renderer-Bilder fuer alle vier Kanaele und Alarm auf den Unterseiten', async () => {
+	const namen: string[] = [];
+	for (const slug of await funktionenSlugs()) {
+		namen.push(...(await unterseitenBilder('de', slug)).map((b) => b.src.split('/').pop()!));
+	}
+	for (const muster of [/mail/, /telegram/, /(^|-)sms/, /premium-sms/, /alarm/]) {
+		assert.ok(namen.some((n) => muster.test(n)), `kein Bild zu ${muster}`);
 	}
 });
 

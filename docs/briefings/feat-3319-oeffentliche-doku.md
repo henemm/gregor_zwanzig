@@ -1,7 +1,7 @@
 ---
 spec_file: docs/specs/modules/oeffentliche_doku_3319.md
-spec_sha256: 723c4260d857e6ade7d785d3be38ce49ec29d6711c0b1f97546fa2b704a563b8
-spec_frozen_sha256: b11d7a6c75babcdeaa18e3f813b60bcf338b69011992d584614cce5c295299ac
+spec_sha256: bef79f020a6313e203d23c3d1cae82acc6bd4f61406b6df086bd364b3d9a62de
+spec_frozen_sha256: b34752a8fd4a1cb9d39878cc15994d10447680e9286879f4968fe3fed6de996d
 ---
 
 # PO-Briefing: feat-3319-oeffentliche-doku
@@ -12,19 +12,19 @@ spec_frozen_sha256: b11d7a6c75babcdeaa18e3f813b60bcf338b69011992d584614cce5c2952
 
 ## Was gebaut wird
 
-Startseite nennt alle vier Kanäle und erklärt Free, Standard, Premium; neue öffentliche Funktionsseite auf Deutsch und Englisch mit Bildern.
+Startseite nennt alle vier Kanäle und erklärt Free, Standard, Premium; dazu eine öffentliche Funktionsübersicht mit neun Unterseiten und Bildern, Deutsch und Englisch.
 
 ## Definition of Done
 
-Ohne Anmeldung zeigen Startseite und Funktionsseite in beiden Sprachen vier Kanäle, Level-Grenzen und Bilder ohne Personendaten, auch auf dem Handy lesbar.
+Ohne Anmeldung sind Startseite, Übersicht und alle neun Unterseiten in beiden Sprachen erreichbar, mit Level-Grenzen, Bildern ohne Personendaten, Navigation und Handy-Lesbarkeit.
 
 ## Wie geprüft wird
 
-Automatische Tests prüfen Texte, Zugriffsgrenzen, Level-Zahlen gegen den Code, Bildgrößen und Handy-Breite; Personendaten in Bildern prüft zusätzlich eine Sichtkontrolle.
+Automatische Tests prüfen Texte, Zugriffsgrenzen, Level-Zahlen gegen den Code, Bildgrößen, Navigation und Handy-Breite; ob Bilder Personendaten zeigen, prüft zusätzlich eine Sichtkontrolle.
 
 ## Kritische Anmerkungen
 
-- Es gibt drei Level statt nur Free und Premium; Preise und Bezahlweg fehlen bewusst, Wechsel nur per Antrag.
+- Drei Level statt nur Free und Premium; Preise und Bezahlweg fehlen bewusst, Wechsel nur per Antrag.
 - Claude-Konnektor, Admin und Design-Seiten werden öffentlich nicht erwähnt.
 
 ## Freigabe-Frage
