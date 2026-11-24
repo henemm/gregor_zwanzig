@@ -255,6 +255,9 @@ const NEU_IN_FOLGEPAKETEN = [
 	'konto.sprache.gespeichert',
 	'konto.sprache.fehler',
 	'konto.sprache.umschalter_label',
+	// #3337 Konto-Hinweis fuer Angemeldete auf den Funktionsseiten
+	'konto.sprache.hinweis_angemeldet',
+	'konto.sprache.hinweis_link',
 	// #2650 (F1) Auth-Routen: Bereich auth.json (79 Schluessel)
 	'auth.anmelden',
 	'auth.oder',

@@ -14,6 +14,9 @@ export const F4_ANKER: [schluessel: string, de: string, en: string][] = [
 	['konto.sprache.gespeichert', 'Sprache gespeichert', 'Language saved'],
 	['konto.sprache.fehler', 'Die Sprache konnte nicht gespeichert werden. Bitte versuche es noch einmal.', 'The language could not be saved. Please try again.'],
 	['konto.sprache.umschalter_label', 'Sprache wählen', 'Choose language'],
+	// #3337 Konto-Hinweis statt Umschalter fuer Angemeldete auf den Funktionsseiten
+	['konto.sprache.hinweis_angemeldet', 'Die Sprache stellst du in deinem Konto ein.', 'You set your language in your account.'],
+	['konto.sprache.hinweis_link', 'Zum Konto', 'Go to account'],
 	['konto.titel', 'Mein Konto', 'My account'],
 	['konto.aktion.speichern', 'Speichern', 'Save'],
 	['konto.aktion.loeschen', 'Löschen', 'Delete'],

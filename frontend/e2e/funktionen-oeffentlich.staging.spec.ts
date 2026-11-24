@@ -137,6 +137,23 @@ test('AC-6: Sprachumschalter wechselt auf einer Unterseite ohne Login', async ({
 	await expect(page.locator('[data-testid="level-tabelle"]')).toBeVisible();
 });
 
+// AC-4 (#3337): ohne Anmeldung (kein Cookie) bleibt der Umschalter, es erscheint KEIN Konto-Hinweis.
+for (const pfad of ['/funktionen', '/funktionen/trips']) {
+	test(`AC-4 (#3337): ${pfad} ohne Anmeldung: Umschalter statt Hinweis, Sprachwechsel`, async ({ page }) => {
+		await page.goto(pfad);
+		await expect(page.locator('[data-testid="sprach-umschalter"]')).toBeVisible();
+		await expect(page.locator('[data-testid="sprach-hinweis"]')).toHaveCount(0);
+		const vorher = await page.locator('html').getAttribute('lang');
+		await page
+			.locator('[data-testid="sprach-umschalter"] button, [data-testid="sprach-umschalter"] a')
+			.filter({ hasText: vorher === 'en' ? /DE/ : /EN/ })
+			.first()
+			.click();
+		await expect(page).toHaveURL(new RegExp(`${pfad.replace(/\//g, '\\/')}$`));
+		await expect(page.locator('html')).not.toHaveAttribute('lang', vorher ?? '');
+	});
+}
+
 test('AC-5: unbekannte Unterseite ohne Login fuehrt zum Login', async ({ page }) => {
 	await page.goto('/funktionen/unbekannt');
 	await expect(page).toHaveURL(/\/login/);
