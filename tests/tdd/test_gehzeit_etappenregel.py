@@ -105,6 +105,29 @@ def test_ac2_nicht_strikt_steigend_faellt_zurueck(zweiter_wert: float):
     )
 
 
+@pytest.mark.parametrize(
+    "zweiter_wert", [0.0, -0.005], ids=["gleich", "leicht-fallend"]
+)
+def test_ac2b_nicht_steigend_am_selben_ort_faellt_zurueck(zweiter_wert: float):
+    """AC-2b (#3270): Die Monotonie-Regel greift auch ohne Luftlinien-Pruefung.
+
+    G1 und G2 liegen am selben Ort (Luftlinie 0), ein Rueckgang von 5 m bleibt
+    in der 10-m-Zugabe -- nur die Monotonie-Regel kann die Etappe entwerten.
+    Sichtbar wird das an G3, dessen gemessene Strecke fuer sich plausibel ist.
+    """
+    gemessen = _luft(_LON_A, _LON_B) * 2.0
+    stage = _stage([
+        _wp("G1", _LON_A, km=5.0),
+        _wp("G2", _LON_A, km=5.0 + zweiter_wert),
+        _wp("G3", _LON_B, km=5.0 + zweiter_wert + gemessen),
+    ])
+
+    result = compute_stage_arrivals(stage, "")
+    assert _verstrichen(result, 2) == pytest.approx(
+        _luftlinien_minuten((_LON_A, _LON_B)), abs=1.0
+    ), "Ein nicht steigender Kilometerwert muss die ganze Etappe entwerten"
+
+
 def test_ac3_ein_wegpunkt_ohne_messwert_entwertet_die_etappe():
     """AC-3: Ein fehlender Wert macht die GANZE Etappe unvermessen.
 
