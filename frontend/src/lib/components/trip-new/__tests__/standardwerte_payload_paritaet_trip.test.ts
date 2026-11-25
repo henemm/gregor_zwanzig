@@ -3,18 +3,9 @@
 // unveraenderte Durchklicken aller Reiter.
 // Spec: docs/specs/modules/onboarding_standardwerte_hilfe.md
 //
-// VERGLEICHSMASSSTAB (nicht tautologisch): Was die ECHTEN Reiter beim Oeffnen in
-// den Editor-Zustand schreiben — die `onMount`- und `$effect`-Ruempfe von
-// `VersandTab.svelte` und `MailInhaltCard.svelte`, ausgewertet gegen ihr echtes
-// Instanz-Skript (svelteInstanzPruefstand.ts). Dieser Test ruft
-// `ladeReportZustand`/`baueReportConfigPayload`/`ladeMailZustand` NIE selbst auf;
-// die Referenz entsteht ausschliesslich aus dem Komponenten-Code. Aendert jemand
-// den Reiter-Effekt (Feld weg, anderer Default), wird der Vergleich rot.
-//
-// Reihenfolge wie im Browser (TripNewEditor bettet VersandTab vor MailInhaltCard
-// ein, beide an `bind:reportConfig`): beide Instanz-Skripte entstehen zuerst
-// (Startzustand aus dem Blob VOR jedem Effekt), dann laufen onMount + $effect des
-// VersandTab, danach onMount + $effect der MailInhaltCard auf dem LEBENDEN Blob.
+// VERGLEICHSMASSSTAB (#2987, Spec refactor_2987_standardwerte_eine_quelle.md): feste Werte (VERSAND, MAIL),
+// nie eine zweite Berechnung. Bis #2987 war es der Code von VersandTab/MailInhaltCard; beide sind nicht
+// mehr sichtbar und fallen mit #3020.
 //
 // Vertrag (Spec: „reiner Ergaenzer in tripNewLogic.ts"):
 //   ergaenzeStandardwerteReportConfig(rc: ReportConfig | undefined): ReportConfig
@@ -39,57 +30,39 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import * as logik from '../tripNewLogic.ts';
 import { baueReportConfigPayload, ladeReportZustand } from '../../shared/versand-tab/reportConfigPayload.ts';
-import { effekteVon, type Knoten } from '../../shared/__tests__/svelteInstanzPruefstand.ts';
+import type { Knoten } from '../../shared/__tests__/svelteInstanzPruefstand.ts';
 import {
 	TRIP_EDITOR,
 	editorUmgebung,
 	knopfEinbettungen,
 	knopfAttribut,
 	ruhe,
-	derivedNeu,
-	type EditorUmgebung
+	derivedNeu
 } from '../../shared/__tests__/standardwerteEditorPruefstand.ts';
-
-const SHARED = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'shared');
-const VERSAND_TAB = join(SHARED, 'VersandTab.svelte');
-const MAIL_KARTE = join(SHARED, 'MailInhaltCard.svelte');
 
 /** Was /trips/new vor dem ersten Versand-Besuch in report_config haelt: nur das
  *  Tagesfenster aus dem (dauerhaft gemounteten) Wetter-Metriken-Reiter. */
 const VOR_VERSAND = { day_window_start_hour: 4, day_window_end_hour: 19 };
 
 function klon<T>(v: T): T {
-	return JSON.parse(JSON.stringify(v));
+	return v === undefined ? v : JSON.parse(JSON.stringify(v));
 }
 
-function effekteMit(e: EditorUmgebung, bezeichner: string): Array<() => void> {
-	const f = effekteVon(e.ast, e.quelle, e.u, bezeichner);
-	assert.ok(f.length >= 1, `Messaufbau kaputt: kein $effect mit \`${bezeichner}\` in ${e.quelle.length} Zeichen Quelltext`);
-	return f;
-}
-
-/** report_config nach unveraendertem Oeffnen von Versand-Reiter + Mail-Inhalt-Karte. */
-async function durchgeklickt(start: Knoten): Promise<Knoten> {
-	const versand = await editorUmgebung(VERSAND_TAB, { reportConfig: klon(start), context: 'route' });
-	const mail = await editorUmgebung(MAIL_KARTE, { reportConfig: klon(start) });
-	for (const fn of versand.mounts) fn();
-	for (const fn of effekteMit(versand, 'baueReportConfigPayload')) fn();
-	// bind:reportConfig — derselbe lebende Blob erreicht die Mail-Karte.
-	mail.u.reportConfig = versand.u.reportConfig;
-	for (const fn of mail.mounts) fn();
-	for (const fn of effekteMit(mail, 'baueReportConfigPayload')) fn();
-	const ergebnis = mail.u.reportConfig as Knoten;
-	// Positivkontrolle: die Reiter haben wirklich geschrieben (sonst waere der
-	// Vergleich gegen einen leeren Blob vakuum-gruen).
-	for (const feld of ['enabled', 'morning_time', 'send_email', 'telegram_style', 'multi_day_trend_reports', 'email_format', 'show_outlook', 'daily_summary_metrics']) {
-		assert.ok(feld in ergebnis, `Messaufbau kaputt: Reiter-Referenz ohne Feld \`${feld}\``);
-	}
-	return klon(ergebnis);
-}
+/** Feste Standardwerte in der Reihenfolge des Anlege-Koerpers (Versand, dann Mail-Inhalt). */
+const VERSAND = {
+	telegram_style: 'rich', enabled: true, morning_enabled: true, evening_enabled: true,
+	morning_time: '07:00:00', evening_time: '18:00:00', multi_day_trend_reports: ['evening'],
+	send_email: true, send_telegram: false, send_sms: false, send_premium_sms: false
+};
+const MAIL = {
+	email_format: 'full', show_outlook: true, show_stage_stats: true, show_yesterday_comparison: true,
+	show_compact_summary: true, wind_exposition_min_elevation_m: null, show_quick_take_tags: true, show_stability: true,
+	show_highlights: true, daily_summary_metrics: ['precipitation', 'wind', 'visibility', 'thunder'], show_metrics_summary: false
+};
+/** Felder der Eingabe zuerst (Read-Modify-Write), dann Standard, dann die Abweichungen des Falls. */
+const erwartet = (blob: Knoten, abweichung: Knoten = {}): Knoten => ({ ...blob, ...VERSAND, ...MAIL, ...abweichung });
 
 type Ergaenzer = (rc: Knoten | undefined) => Knoten;
 function ergaenzer(): Ergaenzer {
@@ -102,17 +75,35 @@ function ergaenzer(): Ergaenzer {
 	return f as Ergaenzer;
 }
 
-describe('AC-6: Ergaenzer == unveraendertes Durchklicken (Versand-Reiter + Mail-Inhalt-Karte)', () => {
-	test('Messaufbau: Referenz aus den echten Reitern enthaelt Briefing-, Kanal- und Mail-Felder', async () => {
-		const ref = await durchgeklickt(VOR_VERSAND);
-		assert.equal(ref.day_window_start_hour, 4, 'Tagesfenster des Wetter-Reiters geht verloren');
-		assert.deepEqual(ref.multi_day_trend_reports, ['evening']);
-	});
-
-	test('Trip ohne Versand-Besuch: Ergaenzer liefert exakt die report_config des Durchklickens (Deep-Equal)', async () => {
-		const ref = await durchgeklickt(VOR_VERSAND);
-		assert.deepEqual(klon(ergaenzer()(klon(VOR_VERSAND))), ref);
-	});
+describe('AC-6: Ergaenzer gegen feste Koerper', () => {
+	const AUS = { enabled: false, morning_enabled: false, evening_enabled: false };
+	const BESTAND = {
+		trip_id: 'bestand-2987', change_threshold_temp: 3, enabled: true, morning_enabled: true, evening_enabled: false,
+		morning_time: '06:30:00', evening_time: '20:15:00', send_email: false, send_telegram: true, send_sms: true,
+		send_premium_sms: true, multi_day_trend_reports: ['morning', 'evening'], show_outlook: false, daily_summary_metrics: ['wind']
+	};
+	for (const [fall, blob, abweichung] of [
+		['undefined', undefined, {}],
+		['leer', {}, {}],
+		['nur Tagesfenster', VOR_VERSAND, {}],
+		['enabled:false', { enabled: false }, AUS],
+		['unbekannte Felder', { zukunft: { a: [1, null] }, change_threshold_wind: 20 }, {}],
+		['Kurzform', { telegram_style: 'kurzform' }, { telegram_style: 'kurzform' }],
+		['Zeiten null', { morning_time: null, evening_time: null }, {}],
+		['nur Abendzeit', { evening_time: '19:15' }, { evening_time: '19:15:00' }],
+		['AC-7: gesetzte und unbekannte Felder gewinnen', BESTAND, BESTAND],
+		['AC-3: Zeiten leer', { morning_time: '', evening_time: '' }, {}],
+		['AC-3: Zeiten ungueltig', { morning_time: 'abc', evening_time: '6:00' }, {}]
+	] as Array<[string, Knoten | undefined, Knoten]>) {
+		test(`#2987 AC-5 zeichengleich inkl. Schluesselreihenfolge, Eingabe unveraendert: ${fall}`, () => {
+			const ein = klon(blob);
+			const rc = ergaenzer()(ein);
+			assert.equal(JSON.stringify(rc), JSON.stringify(erwartet(blob ?? {}, abweichung)));
+			rc.daily_summary_metrics.push('x'); // Kopie: weder Eingabe noch Standardliste duerfen mitwachsen
+			assert.deepEqual(ein, blob);
+			assert.deepEqual(ergaenzer()({}).daily_summary_metrics, MAIL.daily_summary_metrics);
+		});
+	}
 
 	test('#3155 AC-7: Morgen- und Abend-Briefing an -> 3-Tages-Ausblick nur abends (multi_day_trend_reports ["evening"])', () => {
 		const rc = ergaenzer()(klon(VOR_VERSAND));
@@ -120,34 +111,27 @@ describe('AC-6: Ergaenzer == unveraendertes Durchklicken (Versand-Reiter + Mail-
 		assert.deepEqual(rc.multi_day_trend_reports, ['evening']);
 	});
 
-	test('#3155 AC-7: nur Morgen-Briefing an -> 3-Tages-Ausblick im Morgen-Briefing (["morning"]), Ergaenzer == Durchklicken', async () => {
+	test('#3155 AC-7: nur Morgen-Briefing an -> 3-Tages-Ausblick im Morgen-Briefing (["morning"])', () => {
 		const nurMorgen = { ...VOR_VERSAND, morning_enabled: true, evening_enabled: false };
-		const ref = await durchgeklickt(nurMorgen);
-		assert.deepEqual(ref.multi_day_trend_reports, ['morning'], 'Versand-Reiter belegt den Ausblick nicht nach der Regel vor');
 		const rc = ergaenzer()(klon(nurMorgen));
-		assert.deepEqual(rc.multi_day_trend_reports, ['morning']);
-		assert.deepEqual(klon(rc), ref);
+		assert.deepEqual(klon(rc), erwartet(nurMorgen, { evening_enabled: false, multi_day_trend_reports: ['morning'] }));
 	});
 
-	test('#3155 AC-7: nur Abend-Briefing an -> ["evening"]', async () => {
+	test('#3155 AC-7: nur Abend-Briefing an -> ["evening"]', () => {
 		const nurAbend = { ...VOR_VERSAND, morning_enabled: false, evening_enabled: true };
-		assert.deepEqual((await durchgeklickt(nurAbend)).multi_day_trend_reports, ['evening']);
 		assert.deepEqual(ergaenzer()(klon(nurAbend)).multi_day_trend_reports, ['evening']);
 	});
 
 	for (const vorhanden of [['morning', 'evening'], ['morning'], []]) {
-		test(`#3155 AC-7: vorhandener Wert gewinnt (${JSON.stringify(vorhanden)})`, async () => {
+		test(`#3155 AC-7: vorhandener Wert gewinnt (${JSON.stringify(vorhanden)})`, () => {
 			const gesetzt = { ...VOR_VERSAND, multi_day_trend_reports: vorhanden };
-			assert.deepEqual((await durchgeklickt(gesetzt)).multi_day_trend_reports, vorhanden, 'Versand-Reiter ueberschreibt die gespeicherte Einstellung');
 			assert.deepEqual(ergaenzer()(klon(gesetzt)).multi_day_trend_reports, vorhanden, 'Ergaenzer ueberschreibt die gespeicherte Einstellung');
 		});
 	}
 
-	test('#3155: keine Trend-Felder der entfallenen Karte im neuen report_config', async () => {
-		const ref = await durchgeklickt(VOR_VERSAND);
+	test('#3155: keine Trend-Felder der entfallenen Karte im neuen report_config', () => {
 		const rc = ergaenzer()(klon(VOR_VERSAND));
 		for (const feld of ['multi_day_trend_morning', 'multi_day_trend_evening']) {
-			assert.ok(!(feld in ref), `Versand-Reiter schreibt noch ${feld}`);
 			assert.ok(!(feld in rc), `Ergaenzer schreibt noch ${feld}`);
 		}
 	});
@@ -216,20 +200,7 @@ describe('AC-6: Ergaenzer == unveraendertes Durchklicken (Versand-Reiter + Mail-
 		});
 	}
 
-	test('Mail-Baustein ist enthalten (email_format, show_*, daily_summary_metrics wie die Mail-Karte)', async () => {
-		const ref = await durchgeklickt(VOR_VERSAND);
-		const rc = ergaenzer()(klon(VOR_VERSAND));
-		for (const k of Object.keys(ref).filter((k) => k === 'email_format' || k.startsWith('show_') || k === 'daily_summary_metrics' || k === 'wind_exposition_min_elevation_m')) {
-			assert.deepEqual(rc[k], ref[k], `Mail-Feld ${k}`);
-		}
-	});
-
-	test('ohne report_config (undefined) == Durchklicken ab leerem Blob', async () => {
-		const ref = await durchgeklickt({});
-		assert.deepEqual(klon(ergaenzer()(undefined)), ref);
-	});
-
-	test('ueberschreibt nichts Gesetztes: vorhandene Werte gewinnen, Ergebnis == Durchklicken mit denselben Werten', async () => {
+	test('ueberschreibt nichts Gesetztes: vorhandene Werte gewinnen', () => {
 		const gesetzt = {
 			...VOR_VERSAND,
 			morning_time: '06:30:00',
@@ -238,13 +209,12 @@ describe('AC-6: Ergaenzer == unveraendertes Durchklicken (Versand-Reiter + Mail-
 			show_outlook: false,
 			change_threshold_temp: 3
 		};
-		const ref = await durchgeklickt(gesetzt);
 		const rc = ergaenzer()(klon(gesetzt));
 		assert.equal(rc.email_format, 'compact');
 		assert.equal(rc.show_outlook, false);
 		assert.equal(rc.send_telegram, true);
 		assert.equal(rc.change_threshold_temp, 3, 'unbekanntes Bestandsfeld geht verloren');
-		assert.deepEqual(klon(rc), ref);
+		assert.deepEqual(klon(rc), erwartet(gesetzt, gesetzt));
 	});
 
 	test('rein: Eingabe wird nicht veraendert', () => {
@@ -257,7 +227,7 @@ describe('AC-6: Ergaenzer == unveraendertes Durchklicken (Versand-Reiter + Mail-
 // ── Wirkstelle: Klick im echten TripNewEditor ────────────────────────────────
 const GPX = { file: 'a.gpx', km: 10, asc: 500 };
 
-async function editorMitKlickSpion() {
+async function editorMitKlickSpion(reportConfig: Knoten = VOR_VERSAND) {
 	const posts: Array<{ url: string; body: Knoten }> = [];
 	const ziele: string[] = [];
 	const e = await editorUmgebung(TRIP_EDITOR, {
@@ -266,7 +236,7 @@ async function editorMitKlickSpion() {
 		startDate: '2026-07-01',
 		stages: [1, 2].map((id) => ({ id, name: `E${id}`, gpx: GPX, waypoints: [] })),
 		catalogLoaded: true,
-		reportConfig: klon(VOR_VERSAND),
+		reportConfig: klon(reportConfig),
 		goto: async (ziel: string) => {
 			ziele.push(ziel);
 		},
@@ -285,14 +255,14 @@ async function editorMitKlickSpion() {
 }
 
 describe('AC-6/AC-9/AC-11 an der Wirkstelle: Klick im echten Trip-Editor', () => {
-	test('Klick speichert ueber POST /api/trips — report_config == Durchklicken', async () => {
-		const ref = await durchgeklickt(VOR_VERSAND);
-		const { posts, klick } = await editorMitKlickSpion();
+	test('Klick speichert ueber POST /api/trips — report_config == feste Fixture, unbekannte Felder inklusive (#2987 AC-1)', async () => {
+		const blob = { ...VOR_VERSAND, change_threshold_temp: 3, zukunft: { a: [1, null] } };
+		const { posts, klick } = await editorMitKlickSpion(blob);
 		await klick();
 		await ruhe();
 		assert.equal(posts.length, 1, `erwartet genau einen POST, gesehen ${posts.length}`);
 		assert.equal(posts[0].url, '/api/trips');
-		assert.deepEqual(posts[0].body.report_config, ref);
+		assert.deepEqual(posts[0].body.report_config, erwartet(blob));
 		// #3155 AC-7: der neue Trip traegt die Ausblick-Vorbelegung (Morgen + Abend an -> abends).
 		assert.deepEqual(posts[0].body.report_config.multi_day_trend_reports, ['evening']);
 	});

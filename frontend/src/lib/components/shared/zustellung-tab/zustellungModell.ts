@@ -15,7 +15,7 @@ import type { ConnectionProfile } from '../versand-tab/channelConnectionStatus.t
 import { derivePremiumSmsAlarmGate } from '../alarme-tab/premiumSmsAlarmGate.ts';
 import { reconstructTripAlertChannels } from '../alarme-tab/tripChannelReconstruction.ts';
 import { CHANNEL_THRESHOLD_KEYS } from '../alarme-tab/alertChannelState.ts';
-import { reportSlotAktiv } from '../../../utils/reportSlotAktiv.ts';
+import { ABEND_STANDARD, MORGEN_STANDARD, hhmm, leseBriefingStartwerte } from '../briefingStartwerte.ts';
 import { formatDateRange } from '../../../utils/tripHero.ts';
 
 export type KanalId = 'email' | 'telegram' | 'sms' | 'premium_sms';
@@ -56,8 +56,6 @@ export interface ZustellungStand {
 }
 
 export const COOLDOWN_STANDARD = 120;
-const MORGEN_STANDARD = '07:00';
-const ABEND_STANDARD = '18:00';
 // Anzeigewerte der Stille-Stunden-Felder, solange nichts gespeichert ist (Schalter aus).
 const STILLE_VON_STANDARD = '22:00';
 const STILLE_BIS_STANDARD = '06:00';
@@ -229,8 +227,6 @@ export function kanalStatus(profil: ZustellungProfil | null | undefined): Record
 
 // ── Formularstand aus dem gespeicherten Abo ─────────────────────────────────
 
-const hhmm = (v: unknown, standard: string): string => (typeof v === 'string' && /^\d{2}:\d{2}/.test(v) ? v.slice(0, 5) : standard);
-
 /** Dringlichkeit eines Kanals; fehlend oder unbekannt = LOW (ADR-0046). */
 export function dringlichkeitVon(thresholds: Record<string, string | undefined> | null | undefined, kanal: KanalId): Dringlichkeit {
 	const w = thresholds?.[kanal];
@@ -257,20 +253,14 @@ function cooldownVon(v: unknown): number {
 
 /** Stand eines Trips (Briefing-Felder unter `report_config`). */
 export function standAusTrip(trip: Trip): ZustellungStand {
-	const rc = (trip.report_config ?? {}) as Record<string, unknown>;
+	const b = leseBriefingStartwerte(trip.report_config as Record<string, unknown> | null | undefined);
 	const ac = reconstructTripAlertChannels(trip);
 	return {
-		// Slot-Regel wie der Versand (reportSlotAktiv: `enabled === false` schaltet beide ab).
-		morgenAn: reportSlotAktiv(trip.report_config, 'morning'),
-		morgenZeit: hhmm(rc.morning_time, MORGEN_STANDARD),
-		abendAn: reportSlotAktiv(trip.report_config, 'evening'),
-		abendZeit: hhmm(rc.evening_time, ABEND_STANDARD),
-		briefing: {
-			email: rc.send_email !== false,
-			telegram: rc.send_telegram === true,
-			sms: rc.send_sms === true,
-			premium_sms: rc.send_premium_sms === true
-		},
+		morgenAn: b.morning_enabled,
+		morgenZeit: b.morning_time,
+		abendAn: b.evening_enabled,
+		abendZeit: b.evening_time,
+		briefing: { email: b.send_email, telegram: b.send_telegram, sms: b.send_sms, premium_sms: b.send_premium_sms },
 		alarme: { email: !!ac.email, telegram: !!ac.telegram, sms: !!ac.sms, premium_sms: !!ac.premium_sms },
 		dringlichkeit: dringlichkeiten(trip.alert_channel_thresholds as Record<string, string | undefined> | undefined),
 		...stille(trip.alert_quiet_from, trip.alert_quiet_to),
