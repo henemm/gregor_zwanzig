@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 
 import { umgebungFuer, type Knoten } from '../../__tests__/svelteInstanzPruefstand.ts';
 import { toCompareSelectionEntries } from '../../weather-metrics-tab/compareMetricSelection.ts';
-import { live, liveVergleichsKatalog, vergleichsKatalogFetch } from './wetterTabDaten.ts';
+import { aufloesungPost, aufgeloestVon, live, liveVergleichsKatalog, vergleichsKatalogFetch } from './wetterTabDaten.ts';
 import { altSchluesselAusKatalog, vorlagenAusTemplates } from '../ampelModell.ts';
 import { vergleichSpeicherPayload } from '../ampelSchreiben.ts';
 import { standAusAbo } from '../wetterZustand.ts';
@@ -41,7 +41,8 @@ const LIVE_API = {
 		if (pfad === '/api/templates') return d.templates;
 		if (pfad === '/api/metric-presets') return [];
 		throw new Error(`unerwartet: ${pfad}`);
-	}
+	},
+	post: aufloesungPost()
 };
 
 const ALTABO = {
@@ -111,7 +112,7 @@ describe('Nebenbefund: gleiche Metrik in Alt- und Neuformat ⇒ ein Eintrag beim
 				active_metrics: ['snow_depth_cm', { metric_id: 'snow_depth', aggregation: 'max', extra: 1 }, { metric_id: 'wind', aggregation: 'max' }]
 			}
 		};
-		const s = standAusAbo('vergleich', abo, vorlagen, alt);
+		const s = standAusAbo('vergleich', abo, aufgeloestVon(abo), alt);
 		assert.deepEqual(s.auswahl, ['snow_depth', 'wind'], 'Messaufbau: Leseseite dedupliziert');
 		const p = vergleichSpeicherPayload({
 			vorlage: vorlagen[s.vorlageId],

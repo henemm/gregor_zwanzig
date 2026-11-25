@@ -302,6 +302,8 @@ test.describe('AC-7: die Infobox ist zustandslos', () => {
 	test('bleibt beim Reiterwechsel und nach Neuladen sichtbar; schreibt weder Browser-Speicher noch Server', async ({ page }) => {
 		const veraendernde: string[] = [];
 		page.on('request', (r) => {
+			// #2988: POST /api/ampel/aufloesung liest nur (Reiter Wetter beim Öffnen).
+			if (r.method() === 'POST' && new URL(r.url()).pathname === '/api/ampel/aufloesung') return;
 			if (!['GET', 'HEAD', 'OPTIONS'].includes(r.method()) && r.url().includes('/api/')) {
 				veraendernde.push(`${r.method()} ${r.url()}`);
 			}

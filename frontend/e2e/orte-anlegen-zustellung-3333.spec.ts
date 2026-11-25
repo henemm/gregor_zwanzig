@@ -27,6 +27,8 @@ type Json = Record<string, any>; // eslint-disable-line @typescript-eslint/no-ex
 const einName = (tag: string) => `${E2E_TEST_PREFIX}OZ-${tag}-${Date.now()}`;
 const POST_PFAD = '/api/compare/presets';
 const VORSCHAU_PFAD = '/api/briefings/placements/vorschau';
+/** Auflösung der Ampel: nur Lesen, aber POST (#2988). */
+const AUFLOESUNG_PFAD = '/api/ampel/aufloesung';
 const ALT_PANEL = ['versand-abschnitt', 'versand-tab', 'compare-step5-channel-email', 'weather-metrics-vergleich-reihenfolge', 'infobox-versand-vergleich', 'infobox-wetter-metriken-vergleich'];
 
 test.afterEach(async ({ page }) => {
@@ -67,7 +69,7 @@ function mitschneiden(page: Page): Mitschnitt {
 }
 const anlegePosts = (m: Mitschnitt) => m.alle.filter((x) => x.methode === 'POST' && x.pfad === POST_PFAD);
 const schreibAufrufe = (m: Mitschnitt) =>
-	m.alle.filter((x) => ['PUT', 'PATCH', 'DELETE'].includes(x.methode) || (x.methode === 'POST' && x.pfad !== VORSCHAU_PFAD && x.pfad !== POST_PFAD));
+	m.alle.filter((x) => ['PUT', 'PATCH', 'DELETE'].includes(x.methode) || (x.methode === 'POST' && x.pfad !== VORSCHAU_PFAD && x.pfad !== AUFLOESUNG_PFAD && x.pfad !== POST_PFAD));
 
 // ── Anlege-Seite ─────────────────────────────────────────────────────────────
 const huelle = (mobil: boolean) => (mobil ? '.cm-mobile' : '.cm-desktop');

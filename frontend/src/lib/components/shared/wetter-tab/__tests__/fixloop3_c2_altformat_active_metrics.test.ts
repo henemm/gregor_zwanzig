@@ -26,7 +26,7 @@ import { createController } from '../../__tests__/versandVergleichPruefstand.ts'
 import { createGoMergeServer, vollerVergleich, type GoMergeServer } from '../../__tests__/goMergeServerPruefstand.ts';
 import { umgebungFuer, type Knoten } from '../../__tests__/svelteInstanzPruefstand.ts';
 import { toCompareSelectionEntries } from '../../weather-metrics-tab/compareMetricSelection.ts';
-import { live, REPO } from './wetterTabDaten.ts';
+import { aufloesungPost, aufgeloestVon, live, REPO } from './wetterTabDaten.ts';
 import * as M from '../ampelModell.ts';
 import { mitAlarmAb, standAusAbo, type AboSicht, type WetterStand } from '../wetterZustand.ts';
 import { SPEICHERER, vergleichNutzlast } from '../wetterTabSpeicherung.ts';
@@ -70,17 +70,14 @@ function abo(activeMetrics: unknown[]): Record<string, unknown> {
 describe('C2: Altformat active_metrics wird gelesen (auch gemischt, Reihenfolge bleibt)', () => {
 	test('[„snow_depth_cm"] ⇒ Auswahl Schneehoehe (eine Zeile statt 0)', () => {
 		assert.equal(katalogPaar('snow_depth_cm').metric_id, 'snow_depth');
-		const s = standAusAbo('vergleich', abo(['snow_depth_cm']) as AboSicht, vorlagen, altSchluessel());
+		const a = abo(['snow_depth_cm']) as AboSicht;
+		const s = standAusAbo('vergleich', a, aufgeloestVon(a), altSchluessel());
 		assert.deepEqual(s.auswahl, ['snow_depth']);
 	});
 
 	test('gemischt Alt/Neu ⇒ pro Element aufgeloest, Reihenfolge der Liste', () => {
-		const s = standAusAbo(
-			'vergleich',
-			abo(['snow_depth_cm', { metric_id: 'wind', aggregation: 'max' }, 'temp_max_c']) as AboSicht,
-			vorlagen,
-			altSchluessel()
-		);
+		const a = abo(['snow_depth_cm', { metric_id: 'wind', aggregation: 'max' }, 'temp_max_c']) as AboSicht;
+		const s = standAusAbo('vergleich', a, aufgeloestVon(a), altSchluessel());
 		assert.deepEqual(s.auswahl, ['snow_depth', 'wind', katalogPaar('temp_max_c').metric_id]);
 	});
 });
@@ -97,7 +94,7 @@ async function speichereNachAenderung(start: unknown[], aendern: (s: WetterStand
 	await api.get(`/api/compare/presets/${ID}`);
 	const seite = abo(start) as AboSicht;
 	const alt = altSchluessel();
-	let stand = standAusAbo('vergleich', seite, vorlagen, alt);
+	let stand = standAusAbo('vergleich', seite, aufgeloestVon(seite), alt);
 	const ctl = createController(ID);
 	const queue = createPutQueue();
 	const sp = SPEICHERER.vergleich({
@@ -162,7 +159,8 @@ describe('C2: WetterTab (vergleich) liest und schreibt das Altformat', () => {
 			if (pfad === '/api/templates') return d.templates;
 			if (pfad === '/api/metric-presets') return [];
 			throw new Error(`unerwartet: ${pfad}`);
-		}
+		},
+		post: aufloesungPost()
 	};
 
 	test('Laden: [„snow_depth_cm"] ⇒ Zeile Schneehoehe; Speicher-Rumpf traegt sie im Neuformat', async () => {

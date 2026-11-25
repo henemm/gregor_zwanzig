@@ -13,7 +13,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { live } from './wetterTabDaten.ts';
+import { aufgeloestVon, live } from './wetterTabDaten.ts';
 import { vorlagenAusTemplates } from '../ampelModell.ts';
 import { standAusAbo, type AboSicht } from '../wetterZustand.ts';
 import { tripNutzlast } from '../wetterTabSpeicherung.ts';
@@ -33,19 +33,21 @@ const ALTFORMAT = () => ['wind', { metric_id: 'gust', bucket: 'primary', order: 
 
 function nutzlastFuer(abo: AboSicht) {
 	const v = vorlagen();
-	const s = standAusAbo('route', abo, v);
+	const s = standAusAbo('route', abo, aufgeloestVon(abo));
 	return { s, n: tripNutzlast({ client: null as never, stand: () => s, vorlagen: () => v, abo: () => abo }) };
 }
 
 describe('E3: Trip-Altformat metrics[] wird wie in Python gelesen', () => {
 	test('Zeichenkette und Objekt ohne enabled gelten als gewaehlt, enabled:false nicht', () => {
-		const s = standAusAbo('route', trip(ALTFORMAT()), vorlagen());
+		const abo = trip(ALTFORMAT());
+		const s = standAusAbo('route', abo, aufgeloestVon(abo));
 		assert.deepEqual(s.auswahl, ['wind', 'gust']);
 	});
 
 	test('Eintrag ohne metric_id (gespreizte Zeichenkette) zaehlt nicht als Auswahl', () => {
 		const kaputt = { 0: 'w', 1: 'i', 2: 'n', 3: 'd', enabled: true };
-		const s = standAusAbo('route', trip([kaputt, { metric_id: 'gust', enabled: true }]), vorlagen());
+		const abo = trip([kaputt, { metric_id: 'gust', enabled: true }]);
+		const s = standAusAbo('route', abo, aufgeloestVon(abo));
 		assert.deepEqual(s.auswahl, ['gust']);
 	});
 });

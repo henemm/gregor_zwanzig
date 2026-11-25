@@ -8,7 +8,8 @@
 // Zusicherungen:
 //   (a) der PUT laeuft IN der Hub-Schreibschlange (wartet hinter einem laufenden Hub-Schreiber),
 //   (b) die Serverantwort wird an die Seite uebernommen,
-//   (c) bei 412 laedt der Reiter das Abo neu (GET), reicht es an `neuGeladen` und die Seite,
+//   (c) bei 412 laedt der Reiter das Abo neu (GET, danach Aufloesung #2988), reicht beides an
+//       `neuGeladen` und das Abo an die Seite,
 //       und wirft den Fehler weiter, damit der Controller „Nochmal speichern" (conflict) zeigt —
 //       die fremde Aenderung bleibt auf dem Server stehen,
 //   (d) der Rumpf traegt nur die Eigenfelder; `display_config` genau `ampel` + `active_metrics`.
@@ -23,7 +24,7 @@ import { clearEtagRegistry } from '../../../../etagRegistry.ts';
 import { createPutQueue } from '../../../compare/compareHubPersistenz.ts';
 import { createController } from '../../__tests__/versandVergleichPruefstand.ts';
 import { createGoMergeServer, vollerVergleich, type GoMergeServer } from '../../__tests__/goMergeServerPruefstand.ts';
-import { live } from './wetterTabDaten.ts';
+import { aufgeloestVon, aufloesungPost, live, type Aufgeloest, type Json } from './wetterTabDaten.ts';
 import { vorlagenAusTemplates } from '../ampelModell.ts';
 import { mitAlarmAb, standAusAbo, type AboSicht, type WetterStand } from '../wetterZustand.ts';
 import { SPEICHERER } from '../wetterTabSpeicherung.ts';
@@ -46,12 +47,23 @@ function abo(): Record<string, unknown> {
 }
 
 let server: GoMergeServer;
+let aufloesungen: Array<{ rumpf: { eintraege: Json[] }; vorher: string[] }> = [];
 const vorlagen = vorlagenAusTemplates(live().templates);
 
 beforeEach(async () => {
 	clearEtagRegistry();
 	server = createGoMergeServer({ [ID]: abo() });
 	server.install();
+	// Der Pruefserver kennt nur Vergleiche: POST /api/ampel/aufloesung beantwortet echtes Python (#2988).
+	aufloesungen = [];
+	const weiter = globalThis.fetch;
+	globalThis.fetch = (async (input: unknown, init?: RequestInit) => {
+		const pfad = new URL(String(input), 'http://gz.invalid').pathname;
+		if (init?.method !== 'POST' || pfad !== '/api/ampel/aufloesung') return weiter(input as RequestInfo, init);
+		const rumpf = JSON.parse(String(init.body));
+		aufloesungen.push({ rumpf, vorher: server.mitschnitt.map((e) => e.method) });
+		return new Response(JSON.stringify(await aufloesungPost()(pfad, rumpf)), { status: 200, headers: { 'Content-Type': 'application/json' } });
+	}) as typeof fetch;
 	await api.get(PFAD); // ETag bekannt, wie nach dem Laden der Seite
 });
 afterEach(() => server.restore());
@@ -62,11 +74,11 @@ const tick = () => new Promise((r) => setTimeout(r, 10));
 /** Reiter Wetter im Vergleichs-Hub: dieselben Optionen wie WetterTab.svelte. */
 function reiter() {
 	let seite = abo() as AboSicht;
-	let stand: WetterStand = standAusAbo('vergleich', seite, vorlagen);
+	let stand: WetterStand = standAusAbo('vergleich', seite, aufgeloestVon(seite));
 	const ctl = createController(ID);
 	const queue = createPutQueue();
 	const uebernommen: unknown[] = [];
-	const neuGeladen: AboSicht[] = [];
+	const neuGeladen: Array<{ abo: AboSicht; aufgeloest: Aufgeloest }> = [];
 	const sp = SPEICHERER.vergleich({
 		client: api,
 		stand: () => stand,
@@ -78,7 +90,7 @@ function reiter() {
 			uebernommen.push(a);
 			seite = a as AboSicht;
 		},
-		neuGeladen: (a) => neuGeladen.push(a)
+		neuGeladen: (abo, aufgeloest) => void neuGeladen.push({ abo, aufgeloest })
 	});
 	return {
 		ctl,
@@ -131,7 +143,15 @@ describe('F003/AC-38: Vergleichs-Speicherer des Reiters Wetter', () => {
 		const gets = server.mitschnitt.filter((e) => e.method === 'GET');
 		assert.equal(gets.length, 2, 'nach dem 412 laedt der Reiter das Abo nicht neu');
 		assert.equal(r.neuGeladen.length, 1, 'der Reiter bekommt das neu geladene Abo nicht');
-		assert.deepEqual((r.neuGeladen[0].display_config as Record<string, unknown>).ampel, fremd);
+		assert.deepEqual((r.neuGeladen[0].abo.display_config as Record<string, unknown>).ampel, fremd);
+		// #2988: die Aufloesung des neu geladenen Abos (nach dem GET, genau ein Aufruf) geht mit.
+		assert.equal(aufloesungen.length, 1, 'die Aufloesung wird nicht genau einmal abgefragt');
+		assert.deepEqual(aufloesungen[0].vorher, ['GET', 'PUT', 'GET'], 'die Aufloesung laeuft nicht nach dem Neuladen');
+		assert.equal(aufloesungen[0].rumpf.eintraege.length, 1);
+		assert.deepEqual(aufloesungen[0].rumpf.eintraege[0].ampel, fremd, 'aufgeloest wird nicht die fremde Ampel');
+		assert.deepEqual(r.neuGeladen[0].aufgeloest, aufgeloestVon(r.neuGeladen[0].abo));
+		assert.equal(r.neuGeladen[0].aufgeloest.vorlage_id, 'wandern');
+		assert.equal(r.neuGeladen[0].aufgeloest.ampel.metrics.wind.alarm_ab, 'red');
 		assert.deepEqual(r.uebernommen.at(-1), server.stand(ID), 'die Seite bekommt das neu geladene Abo nicht');
 		assert.equal(r.ctl.state, 'conflict', 'der 412 wird verschluckt — der Controller zeigt keinen Konflikt');
 		assert.deepEqual((server.stand(ID).display_config as Record<string, unknown>).ampel, fremd, 'fremde Aenderung still ueberschrieben');

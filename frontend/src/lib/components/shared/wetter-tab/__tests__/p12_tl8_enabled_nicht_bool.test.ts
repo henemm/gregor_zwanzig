@@ -10,13 +10,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { live } from './wetterTabDaten.ts';
+import { aufgeloestVon, live } from './wetterTabDaten.ts';
 import { pythonAusgabe } from './ausgabeOrakel.ts';
-import { eigenschaftenAusKatalog, vorlagenAusTemplates } from '../ampelModell.ts';
+import { eigenschaftenAusKatalog } from '../ampelModell.ts';
 import * as Z from '../wetterZustand.ts';
 
 const LIVE = live();
-const VORLAGEN = vorlagenAusTemplates(LIVE.templates);
 const EIG = eigenschaftenAusKatalog(LIVE.metrics);
 const menge = (a: string[]) => [...new Set(a)].sort();
 
@@ -44,7 +43,8 @@ const AUS = pythonAusgabe({ trip: TRIPS });
 
 for (const id of Object.keys(TRIPS)) {
 	test(`tl8_enabled_null_nicht_gewaehlt_wie_mail_${id}`, () => {
-		const s = Z.standAusAbo('route', { id, name: id, stages: [], ...structuredClone(TRIPS[id]) }, VORLAGEN, {}, { eig: EIG });
+		const abo = { id, name: id, stages: [], ...structuredClone(TRIPS[id]) };
+		const s = Z.standAusAbo('route', abo, aufgeloestVon(abo), {}, { eig: EIG });
 		assert.ok(AUS.trip[id].mail.length > 0, 'Messaufbau: Mail leer');
 		assert.deepEqual(menge(s.auswahl), menge(AUS.trip[id].mail));
 	});
