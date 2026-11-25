@@ -132,6 +132,9 @@
 									{#if z.ampel}<span class="et-ampel" data-slot="et-ampel" data-farbe={z.ampel.farbe} role="img" aria-label={z.ampel.name} title={z.ampel.name}></span>{/if}
 									{#if z.beispiel && !s.schmal}<span class="et-beispiel" data-slot="et-beispiel" data-art={z.symbol ? 'symbol' : undefined}>{z.beispiel}</span>{/if}
 									{#if z.marke}<em class="et-marke" data-slot="et-marke" data-ton={z.marke.ton}>{z.marke.text}</em>{/if}
+								{:else if z.zustand === 'locked' && z.beispiel && bedienbar && !s.schmal}
+									<!-- #3373: gesperrte Eltern-Zelle (SMS „Temperatur“) zeigt die Token ihrer Kinder ohne eigene Zeile. -->
+									<span class="et-beispiel" data-slot="et-beispiel" data-zustand="gesperrt">{z.beispiel}</span>
 								{/if}
 							{/if}
 						</span>
@@ -224,6 +227,10 @@
 		font-family: var(--g-font-mono);
 		font-size: var(--g-text-xs);
 		overflow-wrap: anywhere;
+	}
+	/* #3373: Beispielwert einer gesperrten Zelle in der Farbe des gesperrten Hakens (--g-ink-3, wie dessen Grund). */
+	.et-beispiel[data-zustand='gesperrt'] {
+		color: var(--g-ink-3);
 	}
 	/* #3283 B6: reines Symbol (Einfach-Form) größer und in voller Schriftfarbe (Kontrast WCAG AA). */
 	.et-beispiel[data-art='symbol'] {

@@ -20,7 +20,7 @@ from app.models import (
 )
 from utils.timezone import local_hour, to_utc, tz_for_coords
 
-VERSION = 1
+VERSION = 2
 #: Ort des Beispiels (Innsbruck); die Zone kommt aus den Koordinaten wie bei
 #: jedem Ort (kein festes Zonen-Literal, #1402).
 LAT, LON = 47.27, 11.39
@@ -101,6 +101,15 @@ def _segment(seg_id: int | str, km: tuple[float, float], stunden: tuple[int, int
 def trip_segmente() -> list[SegmentWeatherData]:
     """Eine Etappe: Segment 1 (08-12 Uhr) und Ziel (12-16 Uhr)."""
     return [_segment(1, (0.0, 7.5), (8, 12)), _segment("Ziel", (7.5, 14.0), (12, 16))]
+
+
+def nacht_zeitreihe() -> NormalizedTimeseries:
+    """Nacht am Ziel (#3373): Ankunft 16 Uhr bis 06 Uhr Ortszeit am Folgetag,
+    der Zeitraum, den der Versand als Nachtwetter abruft. Folgetag ohne
+    Versatz (dieselbe Wetterlage, die Nacht gehoert zur Etappe)."""
+    abend = [p for p in tagespunkte(TAG) if _ortsstunde(p) >= 16]
+    morgen = [p for p in tagespunkte(TAG + timedelta(days=1)) if _ortsstunde(p) <= 6]
+    return NormalizedTimeseries(meta=_meta(), data=abend + morgen)
 
 
 def ausblick_tage() -> list[tuple[str, list[ForecastDataPoint]]]:
