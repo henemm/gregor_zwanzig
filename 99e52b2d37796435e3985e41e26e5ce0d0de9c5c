@@ -1,7 +1,127 @@
 {
   "verified_commit": "99e52b2d37796435e3985e41e26e5ce0d0de9c5c",
-  "findings": [],
-  "verified_at": "2026-11-25T17:03:21.363326+00:00",
+  "findings": [
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/compare:AC-9:de:anlegen",
+      "evidence": "[de] POST /api/compare/presets x1, hub https://staging.gregor20.henemm.com/compare/cp-4ccfb56165c6d749, tabs: \u00dcbersicht | Orte 2 | Wetter | Zustellung | \u00dcbersicht |  | Unver\u00e4ndert: Stand, letzte Briefings, n\u00e4chster Versand. |  | STATUS | L\u00e4uft automatisch | N\u00c4CHSTER VERSAND | Do 26.11. 07:00 (CET) | BRIEFINGS | Morgen 07:00 | ZULETZT RAUS | Noch kein Versand | KAN\u00c4LE | Email | ORTE | Bearbeiten \u2192 ",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/compare:AC-9:de:wetter_tabelle",
+      "evidence": "[de] was-steht-wo-tabelle visible=True; stundenverlauf aria-checked=true; rows=0",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/compare:AC-9:de:wetter_speichern_request",
+      "evidence": "[de] 3 PUT/PATCH nach 3 Aenderungen",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/compare:AC-9:de:wetter_persistenz",
+      "evidence": "[de] stundenverlauf true->false; wind-red aria-checked=true; ausblick-morning true->false",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/compare:AC-9:de:zustellung",
+      "evidence": "[de] zustellung-tab visible=True; abend-schalter false->true nach Reload; kanaele=1",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/compare:AC-9:de:alarme",
+      "evidence": "[de] wetter-alarm-ab-alle + wetter-warnungen-schalter/radar-schalter vorhanden=True",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/compare:AC-9:de:kein_altschluessel",
+      "evidence": "[de] 5 Schreib-Requests geprueft, Treffer: []; URLs: ['POST /api/compare/presets', 'PUT /api/briefings/cp-4ccfb56165c6d749/placements?kind=vergleich', 'PUT /api/compare/presets/cp-4ccfb56165c6d749']",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/compare:AC-9:de:loeschen",
+      "evidence": "[de] V3298 de 723 nicht mehr in /compare",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/compare:AC-9:en:anlegen",
+      "evidence": "[en] POST /api/compare/presets x1, hub https://staging.gregor20.henemm.com/compare/cp-74da35d58041edaf, tabs: Overview | Locations 2 | Weather | Delivery | Overview |  | Unchanged: status, latest briefings, next delivery. |  | STATUS | Runs automatically | NEXT DELIVERY | Thu 26 Nov 07:00 (CET) | BRIEFINGS | Morning 07:00 | LAST SENT | No delivery yet | CHANNELS | Email | LOCATIONS | Edit \u2192 | 2 ca",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/compare:AC-9:en:wetter_tabelle",
+      "evidence": "[en] was-steht-wo-tabelle visible=True; stundenverlauf aria-checked=true; rows=0",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/compare:AC-9:en:wetter_speichern_request",
+      "evidence": "[en] 3 PUT/PATCH nach 3 Aenderungen",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/compare:AC-9:en:wetter_persistenz",
+      "evidence": "[en] stundenverlauf true->false; wind-red aria-checked=true; ausblick-morning true->false",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/compare:AC-9:en:zustellung",
+      "evidence": "[en] zustellung-tab visible=True; abend-schalter false->true nach Reload; kanaele=1",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/compare:AC-9:en:alarme",
+      "evidence": "[en] wetter-alarm-ab-alle + wetter-warnungen-schalter/radar-schalter vorhanden=True",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/compare:AC-9:en:kein_altschluessel",
+      "evidence": "[en] 9 Schreib-Requests geprueft, Treffer: []; URLs: ['POST /api/compare/presets', 'POST /api/locations', 'POST /api/locations/resolve', 'PUT /api/briefings/cp-74da35d58041edaf/placements?kind=vergleich', 'PUT /api/compare/presets/cp-74da35d58041edaf']",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/compare:AC-9:en:loeschen",
+      "evidence": "[en] V3298 en 862 nicht mehr in /compare",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/9846d1e0?tab=wetter:AC-9:de:trip",
+      "evidence": "Trip-Hub Reiter Wetter: was-steht-wo-tabelle sichtbar, Screenshot de-trip-wetter-tabelle.png",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    }
+  ],
+  "verified_at": "2026-11-25T17:04:08.400373+00:00",
   "environment": "staging",
   "staging_verdict": "VERIFIED: 1/1 ACs gr\u00fcn (AC-9, DE+EN)",
   "scope": "frontend-only",
@@ -25,7 +145,7 @@
         "de",
         "en"
       ],
-      "at": "2026-11-25T17:03:21.363326+00:00",
+      "at": "2026-11-25T17:04:08.400373+00:00",
       "frontend_pages_checked": [
         "/",
         "/trips",
