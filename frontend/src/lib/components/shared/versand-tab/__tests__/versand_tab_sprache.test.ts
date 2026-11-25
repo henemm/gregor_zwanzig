@@ -33,14 +33,19 @@ import {
 	formatNextBriefing,
 	baueReportConfigPayload,
 	ladeReportZustand,
-	kanaeleRendern,
-	naechstesBriefingRendern,
-	tabRendern,
-	htmlFaelle,
 	funktionsTabelle,
 	schreibeGolden
 } from './f6VersandSsr.ts';
 import { F6_ANKER } from './f6KatalogAnker.ts';
+
+// #3020 S1: der Alt-Reiter (VersandTab, VT*) steht in f6Altbausteine.ts. `null` nur, wenn er geloescht ist
+// (Probe-Loeschung, S4): dann scheitern genau seine Faelle, die Aussagen zu lebendem Verhalten laufen weiter.
+const A = await import('./f6Altbausteine.ts').catch(() => null);
+type Alt = NonNullable<typeof A>;
+const kanaeleRendern: Alt['kanaeleRendern'] = (...a) => A!.kanaeleRendern(...a);
+const naechstesBriefingRendern: Alt['naechstesBriefingRendern'] = (...a) => A!.naechstesBriefingRendern(...a);
+const tabRendern: Alt['tabRendern'] = (...a) => A!.tabRendern(...a);
+const ALT_FAELLE = [...Object.keys(PROFILE).flatMap((n) => [`${n}_route`, `${n}_vergleich`]), 'bausteine'];
 
 const base = pathToFileURL(FRONTEND + '/').href;
 register(pathToFileURL(path.join(FRONTEND, 'test-env-dynamic-private-stub-hooks.mjs')).href, base);
@@ -51,7 +56,7 @@ const { sendConfirmModel } = await import(pathToFileURL(path.join(FRONTEND, 'src
 before(() => {
 	// Die de-Golden sind der Ist-Stand VOR der Umstellung und werden nie neu geschrieben;
 	// nur die en-Ansicht (Review-Hilfe, nicht verglichen) wird aktualisiert.
-	if (process.env.GZ_GOLDEN_SCHREIBEN === 'en') schreibeGolden('en');
+	if (process.env.GZ_GOLDEN_SCHREIBEN === 'en') schreibeGolden('en', A!.altFaelle(), A!.altFunktionsTabelle);
 });
 afterEach(() => locale.set('de'));
 
@@ -86,25 +91,36 @@ function deutscheReste(text: string): string[] {
 }
 
 describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)', () => {
-	const FAELLE = htmlFaelle();
-	for (const fall of Object.keys(FAELLE)) {
+	for (const fall of ALT_FAELLE) {
 		test(`${fall}.de.html`, () => {
 			const golden = readFileSync(path.join(GOLDEN_DIR, `${fall}.de.html`), 'utf-8');
-			const { de } = deDannEn(() => FAELLE[fall]());
+			const { de } = deDannEn(() => A!.altFaelle()[fall]());
 			locale.set('de');
-			assert.equal(leerraum(FAELLE[fall]() + '\n'), leerraum(golden));
+			assert.equal(leerraum(A!.altFaelle()[fall]() + '\n'), leerraum(golden));
 			assert.equal(leerraum(de + '\n'), leerraum(golden));
 		});
 	}
+	test('Messaufbau: die Fall-Liste deckt alle Golden-Faelle des Alt-Reiters', () => assert.deepEqual(Object.keys(A!.altFaelle()), ALT_FAELLE));
+	/** Golden-Tabelle: Zeilen der lebenden Funktionen bzw. der Texte des Alt-Reiters (`vtBriefing*`). */
+	const goldenZeilen = (alt: boolean) =>
+		readFileSync(path.join(GOLDEN_DIR, 'funktionen.de.txt'), 'utf-8')
+			.split('\n')
+			.filter((z) => z.startsWith('vtBriefing') === alt)
+			.join('\n');
 	test('funktionen.de.txt: Funktionsergebnisse unveraendert (byte-gleich, ohne Normalisierung)', () => {
-		const golden = readFileSync(path.join(GOLDEN_DIR, 'funktionen.de.txt'), 'utf-8');
 		locale.set('en');
 		funktionsTabelle();
 		locale.set('de');
-		assert.equal(funktionsTabelle() + '\n', golden);
+		assert.equal(funktionsTabelle() + '\n', goldenZeilen(false));
+	});
+	test('funktionen.de.txt: Texte des Alt-Reiters unveraendert (faellt mit #3020 S4)', () => {
+		locale.set('en');
+		A!.altFunktionsTabelle();
+		locale.set('de');
+		assert.equal(A!.altFunktionsTabelle(), goldenZeilen(true));
 	});
 	test('Messaufbau: Golden enthaelt die deutschen Texte aller Bausteine', () => {
-		const alle = Object.keys(FAELLE).map((f) => readFileSync(path.join(GOLDEN_DIR, `${f}.de.html`), 'utf-8')).join('');
+		const alle = ALT_FAELLE.map((f) => readFileSync(path.join(GOLDEN_DIR, `${f}.de.html`), 'utf-8')).join('');
 		for (const s of ['Geplantes Briefing · Kanäle', 'Briefing-Zeitplan', 'Nächstes Briefing', 'Läuft mit der Trip', 'Bis auf Weiteres', 'Telegram im SMS-Kurzstil', 'Kein Kanal aktiv.', 'bald verfügbar', 'zuletzt gemeldet am 20.09.2026'])
 			assert.ok(alle.includes(s), s);
 	});
@@ -161,7 +177,7 @@ describe('AC-1: Versand-Reiter englisch in Trip und Ortsvergleich, Kanalnamen un
 		assert.deepEqual(deutscheReste(text), []);
 	});
 	test('Sonderzustaende: kein Kanal, fehlende Adresse, Platzhalter, Kurzstil inaktiv', () => {
-		const { en } = deDannEn(() => sichtbar(htmlFaelle().bausteine()));
+		const { en } = deDannEn(() => sichtbar(A!.bausteineRendern()));
 		for (const s of [
 			'No channel active. Turn on at least one briefing channel above to see schedule options here.',
 			'Email address missing — set it up in your account',
@@ -301,7 +317,7 @@ describe('AC-4: zwei Nutzer, zwei Sprachen, eigene Kanaele, gleiche report_confi
 	const cookies = (s: string) => ({ get: (n: string) => (n === 'gz_session' ? s : undefined) });
 
 	/** Echter Layout-Loader (Sprache) + Profil der Sitzung → Reiter, Sende-Dialog, Nutzlast. */
-	async function sichtFuer(sitzung: 'A' | 'B') {
+	async function sichtFuer(sitzung: 'A' | 'B', rendern: (p: Record<string, unknown>) => string = () => '') {
 		const { lang, profil } = await mitApi(async () => {
 			const layout = await layoutLoad({ locals: { userId: sitzung, lang: 'de' }, cookies: cookies(sitzung) } as never);
 			const profil = await (await fetch('http://core/api/auth/profile', { headers: { Cookie: `gz_session=${sitzung}` } })).json();
@@ -312,7 +328,7 @@ describe('AC-4: zwei Nutzer, zwei Sprachen, eigene Kanaele, gleiche report_confi
 		const zustand = { ...ladeReportZustand({ send_email: true, send_telegram: true, morning_time: '07:00:00' }), telegram_style: 'rich' };
 		return {
 			lang,
-			text: sichtbar(kanaeleRendern('route', profil) + tabRendern('route')),
+			text: sichtbar(rendern(profil)),
 			ziel: sendTargetLabel(profil, kanaele).text,
 			dialog: sendConfirmModel('trip', profil, kanaele).beschreibung,
 			nutzlast: baueReportConfigPayload({ live: { send_email: true }, zustand })
@@ -329,16 +345,25 @@ describe('AC-4: zwei Nutzer, zwei Sprachen, eigene Kanaele, gleiche report_confi
 		assert.equal(a.dialog, a.ziel);
 		assert.equal(b.ziel, 'Geht an E-Mail (bert@example.org).');
 		assert.equal(b.dialog, b.ziel);
+		assert.ok(!a.ziel.includes('bert'), 'A sieht Daten von B');
+		assert.ok(!b.ziel.includes('anna') && !b.ziel.includes('Telegram'), 'B sieht Daten/Kanaele von A');
+		assert.deepEqual(a.nutzlast, b.nutzlast);
+		assert.equal(JSON.stringify(a.nutzlast), JSON.stringify(b.nutzlast));
+	});
+
+	test('Alt-Reiter Versand (faellt mit #3020 S4): jeder sieht seine Kanaele in seiner Sprache, keine fremden', async () => {
+		const rendern = (p: Record<string, unknown>) => kanaeleRendern('route', p) + tabRendern('route');
+		const a = await sichtFuer('A', rendern);
+		const b = await sichtFuer('B', rendern);
 		hat(a.text, 'Planned briefing · channels');
 		hat(a.text, 'Telegram (111222333)');
 		hat(a.text, 'connected');
 		hat(b.text, 'Geplantes Briefing · Kanäle');
 		hat(b.text, 'E-Mail (bert@example.org)');
-		assert.ok(!a.text.includes('bert') && !a.ziel.includes('bert'), 'A sieht Daten von B');
-		assert.ok(!b.text.includes('anna') && !b.text.includes('111222333') && !b.ziel.includes('Telegram'), 'B sieht Daten/Kanaele von A');
+		assert.ok(!a.text.includes('bert'), 'A sieht Daten von B');
+		assert.ok(!b.text.includes('anna') && !b.text.includes('111222333'), 'B sieht Daten/Kanaele von A');
+		// sichtFuer('B') hat auf de geschaltet: die englische Sicht von A liegt bereits als Text vor.
 		assert.deepEqual(deutscheReste(a.text), []);
-		assert.deepEqual(a.nutzlast, b.nutzlast);
-		assert.equal(JSON.stringify(a.nutzlast), JSON.stringify(b.nutzlast));
 	});
 
 	test('Sende-Ziel-Saetze der Sperrfaelle in beiden Sprachen', () => {

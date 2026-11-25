@@ -29,7 +29,6 @@ import {
 	FRONTEND,
 	GOLDEN_DIR,
 	CAP_FAELLE,
-	COL_LABELS,
 	ROUTE_KORRIDORE,
 	ROUTE_EXTRA,
 	VERGLEICH_DEFS,
@@ -39,8 +38,7 @@ import {
 	lt,
 	ce,
 	CONTENT_MODULE_DESCRIPTIONS,
-	layoutTabRendern,
-	bausteineRendern,
+	gpxRendern,
 	htmlFaelle,
 	funktionsTabelle,
 	schreibeGolden
@@ -52,10 +50,13 @@ register(pathToFileURL(path.join(FRONTEND, 'test-env-dynamic-private-stub-hooks.
 register(pathToFileURL(path.join(FRONTEND, 'src/routes/admin/__tests__/server-load-resolve.hooks.mjs')).href, base);
 const layoutLoad = (await import(pathToFileURL(path.join(FRONTEND, 'src/routes/+layout.server.ts')).href)).load;
 
-before(() => {
+// #3020 S1: Alt-Bausteine nur in ihren eigenen Faellen laden (fallen mit S2 bis S4).
+const alt = () => import('./f8Altbausteine.ts');
+
+before(async () => {
 	// Die de-Golden sind der Ist-Stand VOR der Umstellung und werden nie neu geschrieben;
 	// nur die en-Ansicht (Review-Hilfe, nicht verglichen) wird aktualisiert.
-	if (process.env.GZ_GOLDEN_SCHREIBEN === 'en') schreibeGolden('en');
+	if (process.env.GZ_GOLDEN_SCHREIBEN === 'en') schreibeGolden('en', { ...htmlFaelle(), ...(await alt()).altFaelle() });
 });
 afterEach(() => locale.set('de'));
 
@@ -101,15 +102,21 @@ const API_METRIKNAMEN = ['layout.korridor_zeile.']
 
 describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)', () => {
 	const FAELLE = htmlFaelle();
-	for (const fall of Object.keys(FAELLE)) {
-		test(`${fall}.de.html`, () => {
-			const golden = readFileSync(path.join(GOLDEN_DIR, `${fall}.de.html`), 'utf-8');
-			const { de } = deDannEn(() => FAELLE[fall]());
-			locale.set('de');
-			assert.equal(leerraum(FAELLE[fall]() + '\n'), leerraum(golden));
-			assert.equal(leerraum(de + '\n'), leerraum(golden));
-		});
-	}
+	const pruefeGolden = (fall: string, rendern: () => string) => {
+		const golden = readFileSync(path.join(GOLDEN_DIR, `${fall}.de.html`), 'utf-8');
+		const { de } = deDannEn(rendern);
+		locale.set('de');
+		assert.equal(leerraum(rendern() + '\n'), leerraum(golden));
+		assert.equal(leerraum(de + '\n'), leerraum(golden));
+	};
+	for (const fall of Object.keys(FAELLE)) test(`${fall}.de.html`, () => pruefeGolden(fall, FAELLE[fall]));
+	for (const fall of ['layout_tab_route', 'layout_tab_vergleich', 'bausteine'])
+		test(`${fall}.de.html (Alt-Bausteine, faellt mit #3020 S2 bis S4)`, async () => pruefeGolden(fall, (await alt()).altFaelle()[fall]));
+	test('Messaufbau: Golden der Alt-Bausteine enthaelt ihre deutschen Texte (faellt mit #3020 S2 bis S4)', async () => {
+		const alle = Object.keys((await alt()).altFaelle()).map((f) => readFileSync(path.join(GOLDEN_DIR, `${f}.de.html`), 'utf-8')).join('');
+		for (const s of ['Kanal · Auswahl &amp; Kappung', 'Preset-Auswahl', 'Detail-Werte', 'E-Mail-Inhalt', 'Erscheint nur in der E-Mail.', /* #3047 R8 F3 */ '↓ ab Platz 8 nur in der Telegram-Kurzübersicht, nicht in der Stundentabelle'])
+			assert.ok(alle.includes(s), s);
+	});
 	test('funktionen.de.txt: Funktionsergebnisse unveraendert (byte-gleich, ohne Normalisierung)', () => {
 		const golden = readFileSync(path.join(GOLDEN_DIR, 'funktionen.de.txt'), 'utf-8');
 		locale.set('en');
@@ -119,14 +126,15 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 	});
 	test('Messaufbau: Golden enthaelt die deutschen Texte aller Bausteine', () => {
 		const alle = Object.keys(FAELLE).map((f) => readFileSync(path.join(GOLDEN_DIR, `${f}.de.html`), 'utf-8')).join('');
-		for (const s of ['Kanal · Auswahl &amp; Kappung', 'Preset-Auswahl', 'Detail-Werte', 'E-Mail-Inhalt', 'Erscheint nur in der E-Mail.', /* #3047 R8 F3 */ '↓ ab Platz 8 nur in der Telegram-Kurzübersicht, nicht in der Stundentabelle', 'Etappen-Vorschau', 'Als Trip speichern', 'Trip wurde erfolgreich gespeichert.'])
+		for (const s of ['Etappen-Vorschau','Als Trip speichern', 'Trip wurde erfolgreich gespeichert.'])
 			assert.ok(alle.includes(s), s);
 	});
 });
 
 describe('AC-1: Layout-Reiter englisch in Trip und Ortsvergleich, Kanalnamen und Kurzformen unveraendert', () => {
 	for (const context of ['route', 'vergleich'] as const) {
-		test(`${context}: erst de, dann ohne Neuladen en (E-Mail, Telegram, SMS)`, () => {
+		test(`${context}: erst de, dann ohne Neuladen en (E-Mail, Telegram, SMS)`, async () => {
+			const { layoutTabRendern } = await alt();
 			const rendern = () => (['email', 'telegram', 'sms'] as const).map((k) => layoutTabRendern(context, k, 9)).join('\n');
 			const { de, en } = deDannEn(() => sichtbar(rendern()));
 			for (const s of ['Kanal · Auswahl & Kappung', 'Reihenfolge', 'Spalten', 'Detail-Werte', 'Preset-Auswahl']) hat(de, s);
@@ -145,7 +153,8 @@ describe('AC-1: Layout-Reiter englisch in Trip und Ortsvergleich, Kanalnamen und
 			assert.deepEqual(deutscheReste(en, API_METRIKNAMEN), []);
 		});
 	}
-	test('aria-Beschriftungen des Ausgabe-Layouts englisch', () => {
+	test('aria-Beschriftungen des Ausgabe-Layouts englisch', async () => {
+		const { layoutTabRendern } = await alt();
 		const { de, en } = deDannEn(() => layoutTabRendern('route', 'sms'));
 		hat(de, 'aria-label="SMS-Metriken, Reihenfolge"');
 		hat(en, 'aria-label="SMS metrics, order"');
@@ -154,7 +163,8 @@ describe('AC-1: Layout-Reiter englisch in Trip und Ortsvergleich, Kanalnamen und
 		hat(email.de, 'aria-label="Spalten, Reihenfolge"');
 		hatNicht(email.en, 'aria-label="Spalten, Reihenfolge"');
 	});
-	test('Spaltenkoepfe (col_label) und Kurzformen bleiben byte-gleich zur Eingabe', () => {
+	test('Spaltenkoepfe (col_label) und Kurzformen bleiben byte-gleich zur Eingabe', async () => {
+		const { bausteineRendern, COL_LABELS } = await alt();
 		const { de, en } = deDannEn(() => bausteineRendern());
 		const kurz = (h: string) => [...h.matchAll(/class="badge-val[^"]*"[^>]*>([^<]*)</g)].map((m) => m[1]);
 		assert.ok(kurz(de).length > 0, 'Messaufbau: keine Kurzform gerendert');
@@ -164,7 +174,8 @@ describe('AC-1: Layout-Reiter englisch in Trip und Ortsvergleich, Kanalnamen und
 			hat(sichtbar(en), c);
 		}
 	});
-	test('Bausteine: Schnittlinie, Ausblick, Mail-Inhalt, Leer- und Ohne-Detail-Zustand englisch', () => {
+	test('Bausteine: Schnittlinie, Ausblick, Mail-Inhalt, Leer- und Ohne-Detail-Zustand englisch', async () => {
+		const { bausteineRendern } = await alt();
 		const { de, en } = deDannEn(() => bausteineRendern());
 		const text = sichtbar(en);
 		for (const s of [
@@ -268,7 +279,8 @@ describe('AC-3: Kappungs- und Abwahl-Hinweis je Sprache (gleiche Zahlen und Kana
 		assert.match('Telegram only shows the most important values', WERTUNG);
 		assert.doesNotMatch(ERWARTET.telegram_zu_breit[1], WERTUNG);
 	});
-	test('LTCapNote im Layout-Reiter zeigt denselben Satz wie die Funktion (Wirkort)', () => {
+	test('LTCapNote im Layout-Reiter zeigt denselben Satz wie die Funktion (Wirkort)', async () => {
+		const { layoutTabRendern } = await alt();
 		const limit = lt.ltLimitForChannel('telegram', 160);
 		const { en } = deDannEn(() => ({ html: layoutTabRendern('route', 'telegram', 9), fn: lt.ltCapNoteText({ channel: 'telegram', limit, colCount: 9, subject: 'Metriken', hasLabelColumn: false }) }));
 		assert.equal(en.fn, 'Telegram: 9 Metriken · too wide — max 7, further forward = safer');
@@ -305,7 +317,7 @@ describe('AC-4: zwei Nutzer, zwei Sprachen, gleiche Wertebereiche, gleiche Speic
 	};
 
 	/** Echter Layout-Loader (Sprache) + Daten der Sitzung → Reiter, geaenderte Grenze, Nutzlast. */
-	async function sichtFuer(sitzung: 'A' | 'B', tripId: string, presetId: string) {
+	async function sichtFuer(sitzung: 'A' | 'B', tripId: string, presetId: string, rendern: () => string = gpxRendern) {
 		const { lang, t, p, fremd } = await mitApi(async () => {
 			const layout = await layoutLoad({ locals: { userId: sitzung, lang: 'de' }, cookies: cookies(sitzung) } as never);
 			const fremdeId = sitzung === 'A' ? 'bert-gr20' : 'anna-gr20';
@@ -319,7 +331,7 @@ describe('AC-4: zwei Nutzer, zwei Sprachen, gleiche Wertebereiche, gleiche Speic
 		return {
 			lang,
 			fremd,
-			layout: sichtbar(layoutTabRendern('route', 'email')),
+			seite: sichtbar(rendern()),
 			// #2794 S3a Teil-PR 4a: die Korridor-Ansicht (CorridorEditor) ist entfernt; die
 			// Zeilennamen der Logik folgen weiter der Sprache, die Nutzlast bleibt sprachfrei.
 			zeilenNamen: zeilen.map((z: { label: string }) => z.label),
@@ -327,6 +339,13 @@ describe('AC-4: zwei Nutzer, zwei Sprachen, gleiche Wertebereiche, gleiche Speic
 			vNutzlast: ce.buildCompareCorridorSavePayload(vZeilen, [], { idealRanges: p.display_config.ideal_ranges, activeMetricKeys: p.display_config.active_metrics, metricAlertLevels: {} }, vergleich.unknownCorridors)
 		};
 	}
+
+	test('Layout-Reiter (Alt-Baustein, faellt mit #3020 S2/S3) in der Sprache des Nutzers: A englisch, B deutsch', async () => {
+		const { layoutTabRendern } = await alt();
+		const rendern = () => layoutTabRendern('route', 'email');
+		hat((await sichtFuer('A', 'anna-gr20', 'anna-v', rendern)).seite, 'Channel · selection & cutoff');
+		hat((await sichtFuer('B', 'bert-gr20', 'bert-v', rendern)).seite, 'Kanal · Auswahl & Kappung');
+	});
 
 	test('A englisch, B deutsch; jeder nur eigene Daten; Nutzlast identisch und ohne Anzeige-Texte', async () => {
 		locale.set('de');
@@ -336,8 +355,8 @@ describe('AC-4: zwei Nutzer, zwei Sprachen, gleiche Wertebereiche, gleiche Speic
 		assert.equal(b.lang, 'de');
 		assert.equal(a.fremd, null, 'A liest den Trip von B');
 		assert.equal(b.fremd, null, 'B liest den Trip von A');
-		hat(a.layout, 'Channel · selection & cutoff');
-		hat(b.layout, 'Kanal · Auswahl & Kappung');
+		hat(a.seite, 'Upload a GPX file to create a stage and a trip from it.');
+		hat(b.seite, 'Lade eine GPX-Datei hoch, um daraus eine Etappe und einen Trip zu erstellen.');
 		assert.ok(a.zeilenNamen.includes('Wind gusts'), `A (en): ${a.zeilenNamen.join(', ')}`);
 		assert.ok(b.zeilenNamen.includes('Böen'), `B (de): ${b.zeilenNamen.join(', ')}`);
 		assert.deepEqual(a.nutzlast, b.nutzlast);

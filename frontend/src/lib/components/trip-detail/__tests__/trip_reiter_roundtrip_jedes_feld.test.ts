@@ -123,115 +123,149 @@ describe('Alarme (AC-11, AC-17)', () => {
 // Wertebereiche Desktop/Mobile (AC-12, AC-17): #2794 S3a Teil-PR 4a (AC-31) mit dem
 // CorridorEditor entfernt — die Grenzen schreibt der Reiter Wetter.
 
-describe('Wetter-Metriken (AC-13, AC-17)', () => {
-	async function mitReiter(): Promise<{ a: P.Aufbau; w: Awaited<ReturnType<typeof P.wetterMetrikenReiter>> }> {
+// #3020 S1: lebende Reiter (Wetter, Karte „Was steht wo“, Zustellung) statt WeatherMetricsTab/BriefingScheduleTab.
+// Zuordnung der Alt-Felder: preset_name -> ampel.template; channel_layouts/outlook_metrics/outlook_metric_formats/
+// multi_day_trend_* -> Tabelle `placements` (Karte, ADR-0124); E-Mail-Inhalt -> Schalter der Karte. Ohne lebende
+// Bedienung sind telegram_kurzform, wind_exposition_min_elevation_m, show_metrics_summary, show_outlook: sie muessen
+// jede lebende Speicherung ueberleben (Fall „Altfelder“ unten).
+/** Altfelder ohne lebende Bedienung (Merge, nie Replace; ADR-0101). */
+const ALTFELDER_DISPLAY = ['channel_layouts', 'preset_name', 'telegram_kurzform', 'outlook_metrics', 'outlook_metric_formats', 'channel_layouts_per_report', 'sms_metrics', 'multi_day_trend_reports'];
+const ALTFELDER_REPORT = ['multi_day_trend_morning', 'multi_day_trend_evening', 'multi_day_trend_reports', 'wind_exposition_min_elevation_m', 'show_metrics_summary', 'show_outlook'];
+
+describe('Wetter (AC-13, AC-17)', () => {
+	async function mitReiter(): Promise<{ a: P.Aufbau; w: Awaited<ReturnType<typeof P.wetterReiter>> }> {
 		const a = P.neuerAufbau();
-		return { a, w: await P.wetterMetrikenReiter(a) };
+		return { a, w: await P.wetterReiter(a) };
 	}
+	const aktiv = () => (dc().metrics as Array<{ metric_id: string; enabled: boolean }>).filter((m) => m.enabled).map((m) => m.metric_id);
 
-	test('Kanal-Layout/Telegram-Kurzform', async () => {
+	test('Vorlage uebernehmen (ampel.template, Auswahl der Vorlage)', async () => {
 		const { a, w } = await mitReiter();
-		w.inst.u.telegramKurzform = true;
-		w.metrikenSpeichern();
+		w.vorlage('skitour');
 		await P.fertig(a.ctl);
-		assert.equal(dc().telegram_kurzform, true);
+		assert.equal((dc().ampel as { template: string }).template, 'skitour');
+		assert.deepEqual(aktiv().sort(), ['gust', 'wind']);
 	});
 
-	test('Voreinstellung (preset_name)', async () => {
+	test('Metrik-Auswahl: „+“ haengt an, „−“ nimmt weg, uebrige Eintragsfelder bleiben', async () => {
 		const { a, w } = await mitReiter();
-		w.inst.u.selectedTemplate = 'skitour';
-		w.metrikenSpeichern();
+		w.hinzufuegen('gust');
+		w.abwaehlen('wind');
 		await P.fertig(a.ctl);
-		assert.equal(dc().preset_name, 'skitour');
-	});
-
-	test('Metrik-Auswahl: zwei Metriken aktiv', async () => {
-		const { a, w } = await mitReiter();
-		w.inst.u.buckets = { primary: ['temperature', 'wind'], secondary: [], off: [] };
-		w.metrikenSpeichern();
-		await P.fertig(a.ctl);
-		const aktiv = (dc().metrics as Array<{ metric_id: string; enabled: boolean }>).filter((m) => m.enabled).map((m) => m.metric_id);
-		assert.deepEqual(aktiv, ['temperature', 'wind']);
+		assert.ok(aktiv().includes('temperature') && aktiv().includes('gust'), aktiv().join());
+		assert.ok(!aktiv().includes('wind'), aktiv().join());
+		const temperatur = (dc().metrics as Array<Record<string, unknown>>).find((m) => m.metric_id === 'temperature');
+		assert.deepEqual(temperatur?.aggregations, ['min', 'max'], 'Read-Modify-Write je Eintrag');
 	});
 
 	test('Loeschfall: ALLE Metriken abgewaehlt — keine aktive Metrik auf dem Server', async () => {
 		const { a, w } = await mitReiter();
-		w.inst.u.buckets = { primary: [], secondary: [], off: ['temperature', 'wind'] };
-		w.metrikenSpeichern();
+		for (const id of [...(w.inst.u.stand.auswahl as string[])]) w.abwaehlen(id);
 		await P.fertig(a.ctl);
-		const aktiv = (dc().metrics as Array<{ enabled: boolean }>).filter((m) => m.enabled);
-		assert.equal(aktiv.length, 0, 'die Leerauswahl muss ankommen (der Server-Merge loescht nie von selbst)');
+		assert.deepEqual(aktiv(), [], 'die Leerauswahl muss ankommen (der Server-Merge loescht nie von selbst)');
 	});
 
-	test('Kanal-Layout Telegram: eigener Eintrag, Bestand der anderen Kanaele bleibt', async () => {
+	test('Amtliche Warnungen AUS: official_alerts_enabled=false, sources bleiben; Radar AUS', async () => {
 		const { a, w } = await mitReiter();
-		const cb = w.inst.u.channelBuckets as Record<string, unknown>;
-		w.inst.u.channelBuckets = { ...cb, telegram: { buckets: { primary: ['wind'], secondary: [], off: [] }, friendlyMap: {} } };
-		w.metrikenSpeichern();
-		await P.fertig(a.ctl);
-		const cl = dc().channel_layouts as Record<string, Array<{ metric_id: string }>>;
-		assert.deepEqual(cl.telegram.map((m) => m.metric_id), ['wind']);
-		assert.ok(cl.email?.some((m) => m.metric_id === 'temperature'), 'der Bestand des E-Mail-Layouts muss erhalten bleiben');
-	});
-
-	test('Ausblick: Auswahl und Loeschfall (leer)', async () => {
-		const { a, w } = await mitReiter();
-		(w.inst.u.onOutlookMetricKeys as (k: string[]) => void)(['temp_max_c', 'wind_max_kmh']);
-		await P.fertig(a.ctl);
-		assert.deepEqual(dc().outlook_metrics, ['temp_max_c', 'wind_max_kmh']);
-		(w.inst.u.onOutlookMetricKeys as (k: string[]) => void)([]);
-		await P.fertig(a.ctl);
-		assert.deepEqual(dc().outlook_metrics, [], 'die Leerung des Ausblicks muss als [] ankommen');
-	});
-
-	test('Ausblick-Formate: Auswahl und Leerung', async () => {
-		const { a, w } = await mitReiter();
-		(w.inst.u.onOutlookMetricFormats as (f: Record<string, boolean>) => void)({ temp_max_c: false });
-		await P.fertig(a.ctl);
-		assert.deepEqual(dc().outlook_metric_formats, { temp_max_c: false });
-		(w.inst.u.onOutlookMetricFormats as (f: Record<string, boolean>) => void)({});
-		await P.fertig(a.ctl);
-		assert.deepEqual(dc().outlook_metric_formats, {}, 'die Leerung der Formate muss als {} ankommen');
-	});
-
-	test('Amtliche Warnungen im Bericht AUS (official_alerts_enabled=false)', async () => {
-		const { a, w } = await mitReiter();
-		(w.inst.u.onToggleOfficialAlerts as (e: unknown) => void)({ target: { checked: false } });
+		w.aendern({ warnungenAn: false, radarAn: false });
 		await P.fertig(a.ctl);
 		assert.equal(stand().official_alerts_enabled, false, 'false muss ankommen (Server-Merge loescht nie)');
+		assert.deepEqual(stand().official_warnings, { enabled: false, sources: ['meteoalarm'] });
+		assert.equal(stand().radar_alert_enabled, false);
 	});
 
-	test('E-Mail-Inhalt (alle sieben Schluessel, je ein Wert ungleich dem Seed) und Tagesfenster', async () => {
+	test('Tagesfenster (je ein Wert ungleich dem Seed)', async () => {
 		const { a, w } = await mitReiter();
-		const neu = {
-			show_compact_summary: false,
-			wind_exposition_min_elevation_m: 2000,
-			show_stage_stats: false,
-			show_metrics_summary: false,
-			show_outlook: false,
-			email_format: 'compact',
-			show_yesterday_comparison: true,
-			day_window_start_hour: 6,
-			day_window_end_hour: 20
-		};
-		const seedRc = SEED.report_config as Record<string, unknown>;
-		for (const [k, v] of Object.entries(neu)) {
-			assert.notDeepEqual(v, seedRc[k], `Messaufbau: der neue Wert fuer ${k} muss vom Seed abweichen, sonst beweist der Test nichts`);
-		}
-		w.reportConfigSpeichern(neu);
+		w.aendern({ tagesfenster: { start: 6, end: 20 } });
 		await P.fertig(a.ctl);
-		for (const [k, v] of Object.entries(neu)) {
-			assert.deepEqual(rc()[k], v, `report_config.${k} (Eigenfeld des Wetter-Metriken-Reiters) muss auf dem Server ankommen — vergessener Eigen-Schluessel?`);
-		}
+		assert.deepEqual([rc().day_window_start_hour, rc().day_window_end_hour], [6, 20]);
 		pythonEigenesUnveraendert();
 	});
 });
 
-describe('Versand (AC-14, AC-17)', () => {
+describe('Karte „Was steht wo“ (AC-13, AC-17)', () => {
+	for (const [feld, wert] of Object.entries(P.KARTE_REPORT)) {
+		test(`Schalter ${feld}: kommt an, sonst bleibt der ganze Trip unveraendert`, async () => {
+			const vorher = stand();
+			const seedRc = vorher.report_config as Record<string, unknown>;
+			assert.notDeepEqual(wert, seedRc[feld], 'Messaufbau: der neue Wert muss vom Seed abweichen');
+			const a = P.neuerAufbau();
+			(await P.karteWasStehtWo(a)).schalten(feld, wert);
+			await P.fertig(a.ctl);
+			assert.deepEqual(stand(), { ...vorher, report_config: { ...seedRc, [feld]: wert } });
+		});
+	}
+	test('Schalter show_night_block (display_config): kommt an, sonst bleibt der ganze Trip unveraendert', async () => {
+		const vorher = stand();
+		const a = P.neuerAufbau();
+		(await P.karteWasStehtWo(a)).schalten('show_night_block', false);
+		await P.fertig(a.ctl);
+		assert.deepEqual(stand(), { ...vorher, display_config: { ...(vorher.display_config as object), show_night_block: false } });
+	});
+
+	/** Zuletzt gesendeter Stand der Tabelle (der Ersatz-Server fuehrt `placements` nicht selbst). */
+	const tabelle = () => {
+		const p = server.calls.filter((c) => c.method === 'PUT' && c.path === `/api/briefings/${P.TRIP_ID}/placements?kind=route`).at(-1);
+		assert.ok(p, 'kein PUT der Tabelle');
+		return p!.anfrage as { rows: Array<{ metric_id: string; places?: Record<string, unknown>; formats?: Record<string, unknown> }>; outlook_reports: string[] };
+	};
+	const zeile = (id: string) => tabelle().rows.find((r) => r.metric_id === id)!;
+
+	test('Telegram-Haken entfernt: nur dort abgewaehlt, die anderen Stellen und Zeilen bleiben', async () => {
+		const a = P.neuerAufbau();
+		(await P.karteWasStehtWo(a)).haken('temperature', 'telegram', false);
+		await P.fertig(a.ctl);
+		assert.deepEqual(zeile('temperature').places, { telegram: false });
+		assert.equal(zeile('wind').places, undefined);
+	});
+	test('Ausblick: Auswahl und Loeschfall (leer)', async () => {
+		const a = P.neuerAufbau();
+		const k = await P.karteWasStehtWo(a);
+		k.ausblick('morning', true);
+		await P.fertig(a.ctl);
+		assert.deepEqual(tabelle().outlook_reports, ['morning', 'evening']);
+		k.ausblick('morning', false);
+		k.ausblick('evening', false);
+		await P.fertig(a.ctl);
+		assert.deepEqual(tabelle().outlook_reports, [], 'die Leerung des Ausblicks muss als [] ankommen');
+	});
+	test('Ausblick je Metrik: Haken und Format der Stelle outlook', async () => {
+		const a = P.neuerAufbau();
+		const k = await P.karteWasStehtWo(a);
+		k.haken('wind', 'outlook', false);
+		k.format('temperature', 'outlook', 'raw');
+		await P.fertig(a.ctl);
+		assert.deepEqual(zeile('wind').places, { outlook: false });
+		assert.deepEqual(zeile('temperature').formats, { outlook: 'raw' });
+	});
+});
+
+describe('#3020 AC-2: Altfelder und ein zweiter Trip ueberleben jede lebende Speicherung', () => {
+	test('Wetter, Karte und Zustellung nacheinander: Altfelder byte-gleich, zweiter Trip unberuehrt', async () => {
+		server.seed('t-zweiter-nutzer', P.vollerTrip('t-zweiter-nutzer'));
+		const zweiter = server.stand('t-zweiter-nutzer');
+		const a = P.neuerAufbau();
+		(await P.wetterReiter(a)).abwaehlen('wind');
+		await P.fertig(a.ctl);
+		(await P.karteWasStehtWo(a)).schalten('email_format', 'compact');
+		await P.fertig(a.ctl);
+		(await P.zustellungReiter(a)).aendern({ morgenZeit: '08:00' });
+		await P.fertig(a.ctl);
+		assert.equal(rc().morning_time, '08:00:00', 'Messaufbau: es wurde gespeichert');
+		const seedDc = SEED.display_config as Record<string, unknown>;
+		const seedRc = SEED.report_config as Record<string, unknown>;
+		for (const k of ALTFELDER_DISPLAY) assert.deepEqual(dc()[k], seedDc[k], `display_config.${k}`);
+		for (const k of ALTFELDER_REPORT) assert.deepEqual(rc()[k], seedRc[k], `report_config.${k}`);
+		assert.deepEqual(server.stand('t-zweiter-nutzer'), zweiter, 'fremder Trip veraendert');
+		for (const c of server.calls) assert.ok(!c.path.includes('t-zweiter-nutzer'), `fremder Trip angesprochen: ${c.path}`);
+	});
+});
+
+describe('Zustellung (AC-14, AC-17)', () => {
 	test('Zeiten, Slots und Hauptschalter', async () => {
 		const a = P.neuerAufbau();
-		const v = await P.versandReiter(a);
-		v.aendern({ morning_time: '06:00:00', evening_time: '19:00:00', morning_enabled: false, evening_enabled: false, enabled: false });
+		const v = await P.zustellungReiter(a);
+		v.aendern({ morgenZeit: '06:00', abendZeit: '19:00', morgenAn: false, abendAn: false });
 		await P.fertig(a.ctl);
 		assert.equal(rc().morning_time, '06:00:00');
 		assert.equal(rc().evening_time, '19:00:00');
@@ -243,8 +277,8 @@ describe('Versand (AC-14, AC-17)', () => {
 
 	test('Kanaele: alle vier, auch das Abschalten (false)', async () => {
 		const a = P.neuerAufbau();
-		const v = await P.versandReiter(a);
-		v.aendern({ send_email: false, send_telegram: false, send_sms: true, send_premium_sms: true });
+		const v = await P.zustellungReiter(a);
+		v.aendern({ briefing: { email: false, telegram: false, sms: true, premium_sms: true } });
 		await P.fertig(a.ctl);
 		assert.equal(rc().send_email, false);
 		assert.equal(rc().send_telegram, false);
@@ -252,26 +286,12 @@ describe('Versand (AC-14, AC-17)', () => {
 		assert.equal(rc().send_premium_sms, true);
 	});
 
-	test('Telegram-Stil und Mehrtages-Trend-Schalter', async () => {
-		const a = P.neuerAufbau();
-		const v = await P.versandReiter(a);
-		v.aendern({
-			telegram_style: 'kurzform',
-			multi_day_trend_morning: true,
-			multi_day_trend_evening: false,
-			multi_day_trend_reports: ['morning']
-		});
-		await P.fertig(a.ctl);
-		assert.equal(rc().telegram_style, 'kurzform');
-		assert.equal(rc().multi_day_trend_morning, true);
-		assert.equal(rc().multi_day_trend_evening, false);
-		assert.deepEqual(rc().multi_day_trend_reports, ['morning']);
-	});
+	// Telegram-Stil: Schalter der Karte (oben); Mehrtages-Trend: `outlook_reports` der Tabelle (oben).
 
-	test('der Versand-Reiter beruehrt weder Tagesfenster noch E-Mail-Inhalt auf dem Server', async () => {
+	test('der Reiter Zustellung beruehrt weder Tagesfenster noch E-Mail-Inhalt auf dem Server', async () => {
 		const a = P.neuerAufbau();
-		const v = await P.versandReiter(a);
-		v.aendern({ morning_time: '08:00:00' });
+		const v = await P.zustellungReiter(a);
+		v.aendern({ morgenZeit: '08:00' });
 		await P.fertig(a.ctl);
 		const seedRc = SEED.report_config as Record<string, unknown>;
 		for (const k of P.REPORT_WETTER_METRIKEN) assert.deepEqual(rc()[k], seedRc[k], `${k} gehoert dem Wetter-Metriken-Reiter`);

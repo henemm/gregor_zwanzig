@@ -12,8 +12,7 @@
 // ueber `setSaving()` verlassen (Anzeige verschwindet).
 //
 // Wo die Zusicherung wirkt: gelesen wird der SERVER-STAND im Ersatz-Server
-// (Go-Merge) NACH dem Zusammenspiel zweier echter Reiter (Alarme, Wetter-
-// Metriken/Wertebereiche) ueber EINEN gemeinsamen Controller — nicht die Form
+// (Go-Merge) NACH dem Zusammenspiel zweier echter Reiter (Alarme, Wetter) ueber EINEN gemeinsamen Controller — nicht die Form
 // einer Nutzlast. Die Reiter laufen mit ihren echten Instanz-Skripten.
 //
 // Ausfuehren:
@@ -60,15 +59,15 @@ async function konfliktInReiterA(a: P.Aufbau): Promise<void> {
 }
 
 describe('W1 / AC-1: Fremdaenderung ueberlebt ein Speichern aus Reiter B nach dem Konflikt in Reiter A', () => {
-	test('B = Wetter-Metriken: Server-`metrics` bleibt die Fremdaenderung, B-PUT traegt If-Match und bekommt 412', async () => {
+	test('B = Wetter: Server-`metrics` bleibt die Fremdaenderung, B-PUT traegt If-Match und bekommt 412', async () => {
 		const a = P.neuerAufbau();
 		await konfliktInReiterA(a);
 		const ifMatchA = puts()[0].ifMatch;
 		assert.ok(ifMatchA, 'Vorbedingung: der PUT von A trug If-Match');
 
-		// Reiterwechsel: A ist ausgehaengt, B (Wetter-Metriken) speichert ueber denselben Controller.
-		const wm = await P.wetterMetrikenReiter(a);
-		wm.metrikenSpeichern();
+		// Reiterwechsel: A ist ausgehaengt, B (Wetter) speichert ueber denselben Controller.
+		const wm = await P.wetterReiter(a);
+		wm.abwaehlen('wind');
 		await P.fertig(a.ctl);
 
 		assert.deepEqual(
@@ -103,8 +102,8 @@ describe('W1 / AC-1: Fremdaenderung ueberlebt ein Speichern aus Reiter B nach de
 	test('Server-Stand nach dem Konflikt: weder A noch B haben etwas geschrieben', async () => {
 		const a = P.neuerAufbau();
 		await konfliktInReiterA(a);
-		const wm = await P.wetterMetrikenReiter(a);
-		wm.metrikenSpeichern();
+		const wm = await P.wetterReiter(a);
+		wm.abwaehlen('wind');
 		await P.fertig(a.ctl);
 
 		const dc = server.stand(P.TRIP_ID).display_config as Record<string, unknown>;
@@ -118,17 +117,17 @@ describe('W1 / AC-1: Fremdaenderung ueberlebt ein Speichern aus Reiter B nach de
 });
 
 describe('Gegenprobe: ohne Konflikt schreibt Reiter B normal (der Test ist nicht vakuum-gruen)', () => {
-	test('frischer Stand: Wetter-Metriken-Reiter speichert, der Server-Stand aendert sich', async () => {
+	test('frischer Stand: Reiter Wetter speichert, der Server-Stand aendert sich', async () => {
 		// frischen Stand holen: Registry kennt den aktuellen ETag
 		await api.get(P.TRIP_PFAD);
 		const a = P.neuerAufbau(P.vollerTrip());
-		const wm = await P.wetterMetrikenReiter(a);
-		wm.inst.u.telegramKurzform = true;
-		wm.metrikenSpeichern();
+		const wm = await P.wetterReiter(a);
+		wm.abwaehlen('wind');
 		await P.fertig(a.ctl);
 
 		assert.equal(puts().at(-1)!.status, 200, 'ohne Konflikt muss der PUT durchgehen');
-		assert.equal((server.stand(P.TRIP_ID).display_config as Record<string, unknown>).telegram_kurzform, true);
+		const metriken = metrikenAufServer() as Array<{ metric_id: string; enabled: boolean }>;
+		assert.equal(metriken.find((m) => m.metric_id === 'wind')?.enabled, false);
 		assert.equal(a.ctl.state, 'idle');
 	});
 });

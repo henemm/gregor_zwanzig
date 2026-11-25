@@ -11,6 +11,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SCHEIBEN, ANZAHL, BLEIBT, type Scheibe } from './rework_3020_umfang.ts';
+import { ROTE_LISTE, ROTE_LISTE_ANZAHL } from './rework_3020_rote_liste.ts';
 
 const STAND = Number(process.env.GZ_3020_STAND ?? 1);
 
@@ -101,8 +102,23 @@ describe('AC-4: Testtabelle deckt jede Testdatei mit totem Baustein ab', () => {
 		for (const [, datei, , entscheid, grund, beleg] of z) {
 			assert.match(entscheid, /^(löschen|umstellen|Ersatzbeleg)$/, `${datei}: Entscheid`);
 			assert.ok(grund.length >= 20, `${datei}: Begründung fehlt`);
-			if (entscheid !== 'löschen') assert.ok(beleg.length > 0, `${datei}: Ersatzbeleg-Pfad fehlt`);
+			if (entscheid === 'löschen') assert.match(grund, /^Ohne lebende Aussage: .{20,}/, `${datei}: „löschen“ ohne benannten Grund`);
+			else assert.match(beleg, /`[^`]+`/, `${datei}: Ersatzbeleg-Pfad fehlt`);
 		}
+	});
+	test('tabelle_fuehrt_genau_die_rote_liste_der_probe_loeschung', () => {
+		assert.equal(new Set(ROTE_LISTE).size, ROTE_LISTE_ANZAHL);
+		const inTabelle = zeilen().map((m) => m[1]);
+		assert.deepEqual(ROTE_LISTE.filter((f) => !inTabelle.includes(f)), [], 'AC-4: rote Testdatei ohne Zeile');
+		assert.deepEqual(inTabelle.filter((f) => !ROTE_LISTE.includes(f)), [], 'AC-4: Zeile ohne rote Testdatei');
+	});
+	test('jeder_ersatzbeleg_existiert_oder_ist_neu_in_einer_spaeteren_scheibe', () => {
+		const fehler = zeilen().flatMap(([, datei, , , , beleg]) =>
+			[...beleg.matchAll(/(?:neu in S([2-4]): )?`([^`]+)`/g)]
+				.filter(([, neuIn, pfad]) => (neuIn ? Number(neuIn) <= STAND : !existsSync(join(/^(tests|frontend)\//.test(pfad) ? REPO : SRC, pfad))))
+				.map(([text]) => `${datei} -> ${text}`)
+		);
+		assert.deepEqual(fehler, [], `AC-4: Ersatzbeleg fehlt (oder „neu in Sx“ ist nach Sx nicht eingelöst):\n${fehler.join('\n')}`);
 	});
 	test('jede_testdatei_mit_totem_import_steht_in_der_tabelle', () => {
 		const bekannt = new Set(zeilen().map((m) => m[1]));

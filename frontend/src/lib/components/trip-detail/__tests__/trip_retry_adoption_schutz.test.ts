@@ -39,7 +39,7 @@ afterEach(() => server.restore());
 const stand = () => server.stand(P.TRIP_ID);
 
 describe('F203: Eingabe waehrend der Wiederholung ⇒ kein Neuaufbau ueber die Eingabe', () => {
-	test("Nutzer tippt im Versand-Reiter, waehrend 'Nochmal speichern' laeuft ⇒ kein 'wiederholt', beide Eingaben landen auf dem Server", async () => {
+	test("Nutzer tippt im Reiter Zustellung, waehrend 'Nochmal speichern' laeuft ⇒ kein 'wiederholt', beide Eingaben landen auf dem Server", async () => {
 		server.foreignWrite(P.TRIP_ID, { name: 'Fremder Name' });
 		const a = P.neuerAufbau();
 		const seite = await P.tripSeite(a, server);
@@ -47,12 +47,12 @@ describe('F203: Eingabe waehrend der Wiederholung ⇒ kein Neuaufbau ueber die E
 		alarme.empfindlichkeitAendern('wind', 'sensibel');
 		await P.fertig(a.ctl);
 		assert.equal(a.ctl.state, 'conflict', 'Vorbedingung: 412');
-		const versand = await P.versandReiter(P.neuerAufbau(seite.trip(), a.ctl));
+		const versand = await P.zustellungReiter(P.neuerAufbau(seite.trip(), a.ctl));
 
 		langsamePuts = true;
 		const retry = a.ctl.retryConflict();
 		await new Promise((r) => setTimeout(r, 20)); // der Wiederholungs-PUT ist unterwegs
-		versand.aendern({ morning_time: '08:00:00' }); // Nutzer tippt: ausstehender Speichervorgang
+		versand.aendern({ morgenZeit: '08:00' }); // Nutzer tippt: ausstehender Speichervorgang
 		await retry;
 		langsamePuts = false;
 

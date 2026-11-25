@@ -13,9 +13,13 @@
 
 import { test, describe, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { routeRendern, locale, trFor } from '../weather-metrics-tab/__tests__/f5Pruefstand.ts';
-import { kanaeleRendern, tabRendern, PROFILE } from '../versand-tab/__tests__/f6VersandSsr.ts';
+import { locale, trFor } from '../weather-metrics-tab/__tests__/f5Pruefstand.ts';
+import { PROFILE } from '../versand-tab/__tests__/f6VersandSsr.ts';
 import { mailInhaltBausteine } from '../mailInhaltKonstanten.ts';
+
+// #3020 S1: die Alt-Reiter (fallen mit S3/S4) laden nur ihre eigenen Faelle.
+const altWetter = () => import('../weather-metrics-tab/__tests__/f5Altbausteine.ts');
+const altVersand = () => import('../versand-tab/__tests__/f6Altbausteine.ts');
 
 afterEach(() => locale.set('de'));
 
@@ -57,7 +61,8 @@ describe('AC-6: Haken „Ausblick" der Karte „E-Mail-Inhalt" heisst „Großwe
 
 describe('AC-11/Nr. 15: Reiter Wetter (Trip) nennt den Block „3-Tages-Ausblick"', () => {
 	for (const lang of ['de', 'en'] as const) {
-		test(`${lang}: Ausblick-Abschnitt und Schwellen-Hinweis tragen den einen Namen, keine alten Namen`, () => {
+		test(`${lang}: Ausblick-Abschnitt und Schwellen-Hinweis tragen den einen Namen, keine alten Namen`, async () => {
+			const { routeRendern } = await altWetter();
 			const html = inSprache(lang, () => routeRendern({ pendingPreset: 'wandern', showSavePresetDialog: true }));
 			const text = sichtbar(html) + ' ' + attribute(html).join(' ');
 			assert.ok(text.includes(NAME[lang]), `${lang}: „${NAME[lang]}" fehlt im Reiter Wetter`);
@@ -79,7 +84,8 @@ describe('AC-11/Nr. 15: Reiter Wetter (Trip) nennt den Block „3-Tages-Ausblick
 
 describe('AC-7/Entscheidung 4: Versand-Reiter (Trip-Anlage) ohne Karte „Mehrtages-Trend"', () => {
 	for (const lang of ['de', 'en'] as const) {
-		test(`${lang}: weder Titel, Unterzeile noch die Haken report-*-trend`, () => {
+		test(`${lang}: weder Titel, Unterzeile noch die Haken report-*-trend`, async () => {
+			const { kanaeleRendern, tabRendern } = await altVersand();
 			const html = inSprache(lang, () => kanaeleRendern('route', PROFILE.alles_gekoppelt) + tabRendern('route'));
 			// Messaufbau: der Reiter ist wirklich gerendert (Zeitplan-Karte da).
 			assert.ok(html.includes(lang === 'de' ? 'Briefing-Zeitplan' : 'Briefing schedule'), 'Messaufbau: Versand-Reiter nicht gerendert');

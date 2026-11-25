@@ -19,8 +19,10 @@ const FRONTEND = path.resolve(HERE, '../../../../../..');
 register(pathToFileURL(path.join(FRONTEND, 'test-svelte-ssr-hooks.mjs')).href, pathToFileURL(FRONTEND + '/').href);
 const { render } = await import('svelte/server');
 const K = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/utils/vorlageSpeichernKarte.ts')).href);
-const PresetBar = (await import(pathToFileURL(path.resolve(HERE, '../WeatherV2PresetBar.svelte')).href)).default;
-const { routeRendern } = await import(pathToFileURL(path.resolve(HERE, 'f5Pruefstand.ts')).href);
+// #3020 S1: Alt-Bausteine (fallen mit S3). Fehlen sie, scheitern nur ihre Faelle.
+const alt = async (datei: string) => await import(pathToFileURL(path.resolve(HERE, datei)).href).catch(() => ({}));
+const PresetBar = (await alt('../WeatherV2PresetBar.svelte')).default;
+const { routeRendern } = await alt('f5Altbausteine.ts');
 
 /** Attrappe eines fokussierbaren Elements: zählt die focus()-Aufrufe. */
 function knopf() {

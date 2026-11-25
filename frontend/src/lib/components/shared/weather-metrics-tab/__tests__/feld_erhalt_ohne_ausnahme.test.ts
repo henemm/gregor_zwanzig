@@ -49,8 +49,13 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-import { baueSpeichernPayload, ladeInEditorState, type GoldenTrip, type MinimalCatalog } from './_editor_kette.ts';
+import type { GoldenTrip, MinimalCatalog } from './_editor_kette.ts';
 import { buildWeatherConfigMetrics, type MetricCatalog } from '../../../trip-detail/metricsEditor.ts';
+import { tripNutzlast } from '../../wetter-tab/wetterTabSpeicherung.ts';
+import { ohneMetrik, standAusAbo, type AboSicht } from '../../wetter-tab/wetterZustand.ts';
+
+// #3020 S1: die Alt-Editor-Kette (channelMetricLayouts) faellt mit S3; nur ihr Fall laedt sie.
+const kette = () => import('./_editor_kette.ts');
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE_DIR = path.resolve(__dirname, '../../../../../../../tests/fixtures/einstellung_auslieferung');
@@ -68,12 +73,28 @@ const catalog: MinimalCatalog = JSON.parse(
 const TRAEGER_FELDER = ['morning_enabled', 'evening_enabled', 'format_mode'] as const;
 
 describe('AC-7: Feld-Erhalt ohne Ausnahme (K8-Fix)', () => {
-	test('display_config.metrics: morning_enabled/evening_enabled/format_mode ueberleben Speichern-ohne-Aenderung', () => {
+	// #3020 S1: lebender Speicherweg des Reiters Wetter (wetterTabSpeicherung.ts), ohne Aenderung und
+	// mit „−“ an einer ANDEREN Metrik. Die Alt-Kette traegt denselben Anspruch bis S3 (letzter Fall).
+	const VORLAGEN = { allgemein: { template: 'allgemein', metrics: {} } };
+	function lebendeNutzlast(golden: GoldenTrip, abwahl?: string): Array<Record<string, unknown>> {
+		const abo = { id: 'golden-c', ...golden } as unknown as AboSicht;
+		const geladen = standAusAbo('route', abo, VORLAGEN);
+		const stand = abwahl ? ohneMetrik(geladen, abwahl) : geladen;
+		const n = tripNutzlast({ client: null as never, stand: () => stand, vorlagen: () => VORLAGEN, abo: () => abo });
+		return n.weatherConfig.metrics as Array<Record<string, unknown>>;
+	}
+	const ALTE_KETTE = async (golden: GoldenTrip) => {
+		const k = await kette();
+		return k.baueSpeichernPayload(golden, k.ladeInEditorState(golden, catalog), catalog).metrics;
+	};
+	for (const [weg, baue] of [
+		['Reiter Wetter, ohne Aenderung', async (g: GoldenTrip) => lebendeNutzlast(g)],
+		['Reiter Wetter, andere Metrik abgewaehlt', async (g: GoldenTrip) => lebendeNutzlast(g, 'wind')],
+		['Alt-Editor (faellt mit #3020 S3), ohne Aenderung', ALTE_KETTE]
+	] as const) test(`display_config.metrics: morning_enabled/evening_enabled/format_mode ueberleben das Speichern (${weg})`, async () => {
 		const golden = ladeGoldenC();
 		const bestand = golden.display_config.metrics;
-		const state = ladeInEditorState(golden, catalog);
-		const payload = baueSpeichernPayload(golden, state, catalog);
-		const byId = new Map(payload.metrics.map((m) => [m.metric_id as string, m]));
+		const byId = new Map((await baue(golden)).map((m) => [m.metric_id as string, m]));
 
 		// Vakuum-Schutz: Golden C muss tatsaechlich mindestens ein Beispiel je
 		// Feld tragen, sonst prueft dieser Test nichts.
@@ -104,7 +125,8 @@ describe('AC-7: Feld-Erhalt ohne Ausnahme (K8-Fix)', () => {
 		}
 	});
 
-	test('channel_layouts.email: thunder.format_mode ueberlebt Speichern-ohne-Aenderung', () => {
+	test('channel_layouts.email: thunder.format_mode ueberlebt Speichern-ohne-Aenderung', async () => {
+		const { ladeInEditorState, baueSpeichernPayload } = await kette();
 		const golden = ladeGoldenC();
 		const state = ladeInEditorState(golden, catalog);
 		const payload = baueSpeichernPayload(golden, state, catalog);

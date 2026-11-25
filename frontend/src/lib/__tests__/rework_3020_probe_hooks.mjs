@@ -19,7 +19,10 @@ function pfad(p) {
 const tot = (p) => TOT.has(pfad(p));
 const fehlt = (p) => Object.assign(new Error(`PROBE-LOESCHUNG #3020: ${pfad(p)}`), { code: 'ENOENT' });
 
-const { existsSync, readFileSync, statSync } = fs;
+const { existsSync, readFileSync, readdirSync, statSync } = fs;
+// Gelöschte Dateien stehen auch in keinem Verzeichnis (sonst scheitern Dateisammler erst beim Lesen).
+fs.readdirSync = (p, ...rest) =>
+	readdirSync(p, ...rest).filter((e) => !tot(typeof e === 'string' ? absolut(pfad(p), e) : absolut(e.parentPath ?? pfad(p), e.name)));
 fs.existsSync = (p) => !tot(p) && existsSync(p);
 fs.readFileSync = (p, ...rest) => {
 	if (tot(p)) throw fehlt(p);
@@ -31,9 +34,23 @@ fs.statSync = (p, ...rest) => {
 };
 syncBuiltinESMExports();
 
+/** Barrel ohne die Re-Export-Zeilen auf tote Dateien (Spec Nr. 4, wie probeloeschung.py): nur `index.ts`,
+ *  nur Zeilen `export … from '<tote Datei>'`. Ein Import an jeder anderen Stelle scheitert weiter. */
+function ohneToteReexports(quelle, url) {
+	return quelle
+		.split('\n')
+		.filter((z) => {
+			const m = z.match(/^export\s.*\bfrom\s*['"](\.[^'"]+)['"]/);
+			return !m || !tot(new URL(m[1], url));
+		})
+		.join('\n');
+}
+
 export async function load(url, context, nextLoad) {
 	if (url.startsWith('file:') && tot(url)) throw fehlt(url);
-	return nextLoad(url, context);
+	const r = await nextLoad(url, context);
+	if (!url.startsWith('file:') || !url.endsWith('/index.ts') || r.source == null) return r;
+	return { ...r, source: ohneToteReexports(Buffer.from(r.source).toString('utf-8'), url) };
 }
 
 if (isMainThread && !globalThis.__gz3020Registriert) {

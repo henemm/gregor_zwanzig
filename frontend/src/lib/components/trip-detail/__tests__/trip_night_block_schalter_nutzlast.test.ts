@@ -19,7 +19,7 @@ import assert from 'node:assert/strict';
 import { api } from '../../../api.ts';
 import { clearEtagRegistry } from '../../../etagRegistry.ts';
 import { createFakeTripServer, type FakeTripServer } from '../../../__tests__/fakeTripServer.ts';
-import * as P from './tripMehrreiterPruefstand.ts';
+import * as P from './tripMehrreiterAltbausteine.ts';
 
 let server: FakeTripServer;
 

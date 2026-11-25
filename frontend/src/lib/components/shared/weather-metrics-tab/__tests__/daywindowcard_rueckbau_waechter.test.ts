@@ -66,7 +66,7 @@ describe('AC-2: WeatherMetricsTab zeigt in keinem Kontext einen Tagesfenster-Abs
 	// Pruefstand erst hier laden: er registriert die SSR-Hooks und rendert den echten Tab.
 	for (const ctx of ['route', 'vergleich'] as const) {
 		test(`ssr_markup_ohne_tagesfenster_und_ohne_dwc__${ctx}`, async () => {
-			const p = await import(pathToFileURL(join(HERE, 'f5Pruefstand.ts')).href);
+			const p = await import(pathToFileURL(join(HERE, 'f5Altbausteine.ts')).href);
 			const html: string = ctx === 'route' ? p.routeRendern({}, 'rueckbau-2931') : p.vergleichRendern({});
 			// Gegenprobe: der Tab wurde wirklich gerendert (sonst waere "nichts drin" trivial).
 			assert.ok(html.length > 1000, `AC-2: ${ctx}-Render ist verdaechtig kurz (${html.length} Zeichen)`);

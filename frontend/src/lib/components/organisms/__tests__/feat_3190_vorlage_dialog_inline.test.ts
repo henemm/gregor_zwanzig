@@ -258,8 +258,10 @@ describe('#3190 AC-1: Auslöser schaltet um und zeigt auf die Karte', () => {
 // ---------------------------------------------------------------------------------------------------------------
 // AC-10: Alt-Editor WeatherMetricsTab — Karte unter der Profil-Karte, nicht am Seitenende
 // ---------------------------------------------------------------------------------------------------------------
-const { routeRendern } = await import(pathToFileURL(path.resolve(HERE, '../../shared/weather-metrics-tab/__tests__/f5Pruefstand.ts')).href);
-const { weatherMetricsTabSections } = await import(pathToFileURL(path.resolve(HERE, '../../shared/weather-metrics-tab/weatherMetricsTabSections.ts')).href);
+// #3020 S1: Alt-Bausteine (fallen mit S3). Fehlen sie, scheitern nur ihre Faelle.
+const alt = async (datei: string) => await import(pathToFileURL(path.resolve(HERE, '../../shared/weather-metrics-tab', datei)).href).catch(() => ({}));
+const { routeRendern } = await alt('__tests__/f5Altbausteine.ts');
+const { weatherMetricsTabSections } = await alt('weatherMetricsTabSections.ts');
 describe('#3190 AC-10: WeatherMetricsTab (Alt-Editor)', () => {
 	test('sections: Profil-Karte (grundauswahl) nur in „alles“/„wetter“, nicht in „zustellung“', () => {
 		assert.ok(weatherMetricsTabSections('route', 'alles').includes('grundauswahl'));

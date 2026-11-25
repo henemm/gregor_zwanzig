@@ -70,15 +70,16 @@ async function konfliktInAUndWechsel(a: P.Aufbau): Promise<void> {
 	void alarme;
 }
 
-describe('AC-3: Fremdaenderung, A (Alarme) und B (Versand) stehen nach „Nochmal speichern" gemeinsam auf dem Server', () => {
+// #3020 S1: B ist der lebende Reiter Zustellung (frueher BriefingScheduleTab).
+describe('AC-3: Fremdaenderung, A (Alarme) und B (Zustellung) stehen nach „Nochmal speichern" gemeinsam auf dem Server', () => {
 	test('A erzeugt Konflikt, Wechsel, B speichert (412), Retry sendet beide Saetze erneut', async () => {
 		server.foreignWrite(P.TRIP_ID, { display_config: { metrics: FREMDE_METRIKEN } });
 		const a = P.neuerAufbau();
 		await konfliktInAUndWechsel(a);
 
 		// B (Versand) speichert bei offenem Konflikt: 412, Anzeige bleibt
-		const b = await P.versandReiter(a);
-		b.aendern({ morning_time: '08:00:00' });
+		const b = await P.zustellungReiter(a);
+		b.aendern({ morgenZeit: '08:00' });
 		await P.fertig(a.ctl);
 		const bPut = puts().at(-1)!;
 		assert.equal(bPut.status, 412, 'Vorbedingung: der Versand-PUT bei offenem Konflikt wird abgelehnt (Server traegt die Sperre)');
@@ -149,8 +150,8 @@ describe('Retry bei erneutem Konflikt: nichts geht verloren', () => {
 		server.foreignWrite(P.TRIP_ID, { name: 'Fremd 1' });
 		const a = P.neuerAufbau();
 		await konfliktInAUndWechsel(a);
-		const b = await P.versandReiter(a);
-		b.aendern({ morning_time: '08:00:00' });
+		const b = await P.zustellungReiter(a);
+		b.aendern({ morgenZeit: '08:00' });
 		await P.fertig(a.ctl);
 
 		// zweiter Fremdschreiber, waehrend der Retry-GET unterwegs ist: der Server hat den

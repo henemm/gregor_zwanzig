@@ -12,7 +12,8 @@
 
 import { test, describe, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { locale, routeRendern, vergleichRendern, VERGLEICH_KATALOG } from './f5Pruefstand.ts';
+import { locale, VERGLEICH_KATALOG } from './f5Pruefstand.ts';
+import { routeRendern, vergleichRendern } from './f5Altbausteine.ts';
 
 const sichtbar = (h: string) => h.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ');
 const keys = (n: number) => VERGLEICH_KATALOG().slice(0, n).map((e: { metric: string }) => e.metric);

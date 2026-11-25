@@ -3,7 +3,7 @@
 // Server ⊕ ausstehende Nutzlasten). Kein Stempelwechsel, kein Neuaufbau offener Reiter.
 //
 // Gemessen ueber die ECHTE Trip-Seite und die ECHTEN Reiter-Skripte (alle sieben
-// Schreibwege: Alarme, Versand, Wertebereiche, Wetter-Metriken (Katalog + nur Inhalt),
+// Schreibwege: Alarme, Zustellung, Wetter (Grundauswahl + nur Tagesfenster),
 // Kopf, Tempo, Etappen); Pruefling ist der abgelehnte PUT-Rumpf — der Seitenstand
 // muss genau diese Felder tragen.
 //
@@ -62,27 +62,41 @@ describe('jeder Schreiber: 412 ⇒ `trip` der Seite traegt die abgelehnte Nutzla
 	// #2794 S3a Teil-PR 4a (AC-31): der Schreiber „Wertebereiche" (CorridorEditor) ist mit der
 	// Oberflaeche entfernt; die Grenzen schreibt der Reiter Wetter (eigene Tests in wetter-tab/).
 
-	test('Wetter-Metriken (Katalog): display_config-Teil UND report_config-Teil', async () => {
+	// #3020 S1: lebende Reiter Wetter und Zustellung statt WeatherMetricsTab/BriefingScheduleTab. Die Schalter der
+	// Karte „Was steht wo“ sind NICHT dabei: sie verwerfen die Eingabe bei 412 sichtbar (#3122 Fix-Loop F1,
+	// was_steht_wo_speicherung.test.ts) und halten keine ausstehende Nutzlast, die fortzuschreiben waere.
+	test('Wetter (Grundauswahl + Tagesfenster): display_config-Teil UND report_config-Teil', async () => {
 		const { a, seite, neu } = await seiteMit();
-		const wm = await P.wetterMetrikenReiter(neu());
-		wm.inst.u.telegramKurzform = true;
-		wm.inst.u.reportConfig = { ...(wm.inst.u.reportConfig as Rec), show_stage_stats: false };
-		wm.metrikenSpeichern();
+		const w = await P.wetterReiter(neu());
+		w.abwaehlen('wind');
+		w.aendern({ tagesfenster: { start: 6, end: 18 } });
 		await P.fertig(a.ctl);
 		assert.equal(abgelehnt().length, 1, 'Vorbedingung: der erste PUT (/weather-config) wird abgelehnt');
 		const t = seite.trip();
-		assert.equal((t.display_config as Rec).telegram_kurzform, true, 'Wetter-Fragment (/weather-config) im Seitenstand');
-		assert.equal((t.report_config as Rec).show_stage_stats, false, 'Trip-Rumpf (report_config) im Seitenstand');
+		const wind = ((t.display_config as Rec).metrics as Rec[]).find((m) => m.metric_id === 'wind');
+		assert.equal(wind?.enabled, false, 'Wetter-Fragment (/weather-config) im Seitenstand');
+		assert.equal((t.report_config as Rec).day_window_start_hour, 6, 'Trip-Rumpf (report_config) im Seitenstand');
 		assert.equal((t.display_config as Rec).trip_id, P.TRIP_ID, 'uebrige display_config-Schluessel bleiben (einstufiger Merge)');
+		traegt(t, { display_config: abgelehnt()[0].anfrage });
 	});
 
-	test('Wetter-Metriken (nur Inhalt/Tagesfenster)', async () => {
+	test('Wetter (nur Tagesfenster)', async () => {
 		const { a, seite, neu } = await seiteMit();
-		const wm = await P.wetterMetrikenReiter(neu());
-		wm.reportConfigSpeichern({ day_window_start_hour: 6 });
+		const w = await P.wetterReiter(neu());
+		w.aendern({ tagesfenster: { start: 6, end: 18 } });
 		await P.fertig(a.ctl);
 		assert.equal(abgelehnt().length, 1);
 		assert.equal((seite.trip().report_config as Rec).day_window_start_hour, 6);
+		traegt(seite.trip(), { display_config: abgelehnt()[0].anfrage });
+	});
+
+	test('Zustellung (Briefing-Zeit und Kanal)', async () => {
+		const { a, seite, neu } = await seiteMit();
+		const z = await P.zustellungReiter(neu());
+		z.aendern({ morgenZeit: '08:00', briefing: { email: true, telegram: true, sms: true, premium_sms: false } });
+		await P.fertig(a.ctl);
+		assert.equal(abgelehnt().length, 1);
+		assert.equal((seite.trip().report_config as Rec).morning_time, '08:00:00');
 		traegt(seite.trip(), abgelehnt()[0].anfrage as Rec);
 	});
 

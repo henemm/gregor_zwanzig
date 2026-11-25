@@ -18,8 +18,9 @@ import assert from 'node:assert/strict';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
-// f5Pruefstand registriert die SSR-Hooks und rendert den ganzen Reiter (WeatherMetricsTab).
-import { locale, routeRendern, vergleichRendern, VERGLEICH_KATALOG } from './f5Pruefstand.ts';
+// f5Pruefstand registriert die SSR-Hooks, f5Altbausteine rendert den ganzen Alt-Reiter (WeatherMetricsTab).
+import { locale, VERGLEICH_KATALOG } from './f5Pruefstand.ts';
+import { routeRendern, vergleichRendern } from './f5Altbausteine.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const { render } = await import('svelte/server');

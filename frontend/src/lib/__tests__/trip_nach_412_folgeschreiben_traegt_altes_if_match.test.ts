@@ -113,21 +113,27 @@ describe('AC-18 / §4.1: nach 412 bleibt der alte ETag, die Ressource ist als Ko
 });
 
 describe('AC-18: jeder weitere Schreiber traegt das alte If-Match (Reiter B, Kopf, Aktivitaet)', () => {
-	test('Reiter B (Wetter-Metriken): beide PUTs bzw. der erste tragen das alte If-Match, der Server schreibt nichts', async () => {
-		const { alterEtag } = await konfliktHerstellen();
-		const vorher = JSON.stringify(server.stand(P.TRIP_ID));
-		const a = P.neuerAufbau();
-		const w = await P.wetterMetrikenReiter(a);
-		w.metrikenSpeichern();
-		await P.fertig(a.ctl);
-		const neue = puts().slice(1);
-		assert.ok(neue.length >= 1, 'Messaufbau: Reiter B hat geschrieben');
-		for (const p of neue) {
-			assert.equal(p.ifMatch, alterEtag, `${p.path}: altes If-Match erwartet`);
-			assert.equal(p.status, 412);
-		}
-		assert.equal(JSON.stringify(server.stand(P.TRIP_ID)), vorher);
-	});
+	// #3020 S1: Reiter B = lebende Reiter (Wetter, Karte „Was steht wo“, Zustellung) statt WeatherMetricsTab.
+	const REITER_B: [string, (a: P.Aufbau) => Promise<void>][] = [
+		['Wetter', async (a) => (await P.wetterReiter(a)).abwaehlen('wind')],
+		['Karte „Was steht wo“, Schalter', async (a) => (await P.karteWasStehtWo(a)).schalten('show_stage_stats', false)],
+		['Zustellung', async (a) => (await P.zustellungReiter(a)).aendern({ morgenZeit: '08:00' })]
+	];
+	for (const [name, schreiben] of REITER_B)
+		test(`Reiter B (${name}): beide PUTs bzw. der erste tragen das alte If-Match, der Server schreibt nichts`, async () => {
+			const { alterEtag } = await konfliktHerstellen();
+			const vorher = JSON.stringify(server.stand(P.TRIP_ID));
+			const a = P.neuerAufbau();
+			await schreiben(a);
+			await P.fertig(a.ctl);
+			const neue = puts().slice(1);
+			assert.ok(neue.length >= 1, 'Messaufbau: Reiter B hat geschrieben');
+			for (const p of neue) {
+				assert.equal(p.ifMatch, alterEtag, `${p.path}: altes If-Match erwartet`);
+				assert.equal(p.status, 412);
+			}
+			assert.equal(JSON.stringify(server.stand(P.TRIP_ID)), vorher);
+		});
 
 	test('Kopf (Umbenennen): altes If-Match, 412, Name auf dem Server unveraendert, lokaler trip wird nicht ersetzt', async () => {
 		const { alterEtag } = await konfliktHerstellen();

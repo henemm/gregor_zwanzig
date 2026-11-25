@@ -25,27 +25,29 @@ import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 import {
 	FRONTEND,
-	WMT,
 	SHARED,
 	GOLDEN_DIR,
 	SMS_SYMBOLE,
 	REGISTER_NAMEN,
-	BUCKETS_GOLDEN,
 	VERGLEICH_KATALOG,
 	locale,
 	trFor,
 	loader,
 	katalogMitRegister,
 	resolveTripMetricsOverviewState,
-	routeRendern,
-	vergleichRendern,
-	bausteineRendern,
-	htmlFaelle,
 	funktionsTabelle,
-	schreibeGolden,
-	tripFuer
+	schreibeGolden
 } from './f5Pruefstand.ts';
 import { F5_ANKER } from './f5KatalogAnker.ts';
+
+// #3020 S1: der Alt-Reiter (WeatherMetricsTab) steht in f5Altbausteine.ts. `null` nur, wenn er geloescht ist
+// (Probe-Loeschung, S3): dann scheitern genau seine Faelle, die Aussagen zu lebendem Verhalten laufen weiter.
+const A = await import('./f5Altbausteine.ts').catch(() => null);
+type Alt = NonNullable<typeof A>;
+const routeRendern: Alt['routeRendern'] = (...a) => A!.routeRendern(...a);
+const vergleichRendern: Alt['vergleichRendern'] = (...a) => A!.vergleichRendern(...a);
+const bausteineRendern: Alt['bausteineRendern'] = () => A!.bausteineRendern();
+const ALT_FAELLE = ['route_voll', 'route_telegram', 'route_sms_schwellen_fehler', 'zustaende', 'vergleich_voll', 'bausteine'];
 
 const base = pathToFileURL(FRONTEND + '/').href;
 register(pathToFileURL(path.join(FRONTEND, 'test-env-dynamic-private-stub-hooks.mjs')).href, base);
@@ -53,14 +55,12 @@ register(pathToFileURL(path.join(FRONTEND, 'src/routes/admin/__tests__/server-lo
 const layoutLoad = (await import(pathToFileURL(path.join(FRONTEND, 'src/routes/+layout.server.ts')).href)).load;
 const { api } = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/api.ts')).href);
 const { baueWetterMetrikenSpeicherung } = await import(pathToFileURL(path.join(SHARED, 'tripSpeicherung.ts')).href);
-const { buildGlobalMetricsForSave } = await import(pathToFileURL(path.join(WMT, 'weatherMetricsSavePayload.ts')).href);
-const { toggleGlobalMetric } = await import(pathToFileURL(path.join(WMT, 'channelMetricLayouts.ts')).href);
 
 before(() => {
 	// Die de-Golden sind der Ist-Stand VOR der Umstellung und werden nie neu geschrieben;
 	// nur die en-Golden werden (nach Review des Diffs) neu geschrieben — verglichen wird
 	// danach beides (#3024).
-	if (process.env.GZ_GOLDEN_SCHREIBEN === 'en') schreibeGolden('en');
+	if (process.env.GZ_GOLDEN_SCHREIBEN === 'en') schreibeGolden('en', A!.altFaelle());
 });
 afterEach(() => locale.set('de'));
 
@@ -130,16 +130,16 @@ function deutscheReste(text: string): string[] {
 }
 
 describe('AC-5: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)', () => {
-	const FAELLE = htmlFaelle();
-	for (const fall of Object.keys(FAELLE)) {
+	for (const fall of ALT_FAELLE) {
 		test(`${fall}.de.html`, () => {
 			const golden = readFileSync(path.join(GOLDEN_DIR, `${fall}.de.html`), 'utf-8');
-			const { de } = deDannEn(() => FAELLE[fall]());
+			const { de } = deDannEn(() => A!.altFaelle()[fall]());
 			locale.set('de');
-			assert.equal(leerraum(FAELLE[fall]() + '\n'), leerraum(golden));
+			assert.equal(leerraum(A!.altFaelle()[fall]() + '\n'), leerraum(golden));
 			assert.equal(leerraum(de + '\n'), leerraum(golden));
 		});
 	}
+	test('Messaufbau: die Fall-Liste deckt alle Golden-Faelle des Alt-Reiters', () => assert.deepEqual(Object.keys(A!.altFaelle()), ALT_FAELLE));
 	test('funktionen.de.txt: Funktionsergebnisse unveraendert (byte-gleich, ohne Normalisierung)', () => {
 		const golden = readFileSync(path.join(GOLDEN_DIR, 'funktionen.de.txt'), 'utf-8');
 		locale.set('en');
@@ -148,7 +148,7 @@ describe('AC-5: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 		assert.equal(funktionsTabelle() + '\n', golden);
 	});
 	test('Messaufbau: Golden enthaelt die deutschen Texte aller Bausteine', () => {
-		const alle = Object.keys(FAELLE).map((f) => sichtbar(readFileSync(path.join(GOLDEN_DIR, `${f}.de.html`), 'utf-8'))).join(' ');
+		const alle = ALT_FAELLE.map((f) => sichtbar(readFileSync(path.join(GOLDEN_DIR, `${f}.de.html`), 'utf-8'))).join(' ');
 		for (const s of [
 			'01 — Profil', '02 — Grundauswahl', '04 — Schwellwerte', 'Böen (km/h)', 'Sensibel', 'Leicht Mittel Hoch', 'Lädt…', 'Schwellen nicht ladbar',
 			'Aus in diesem Kanal', 'Preset anwenden', 'Überschreiben',
@@ -165,11 +165,10 @@ describe('AC-5: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 // der englischen Ausgabe (oder an der Golden) faellt auf. Absichtliche Aenderung:
 // Diff pruefen, dann mit GZ_GOLDEN_SCHREIBEN=en neu schreiben (Kopf von f5Pruefstand.ts).
 describe('Englisch byte-gleich zur en-Golden (Golden golden-de, Sprache en)', () => {
-	const FAELLE = htmlFaelle();
-	for (const fall of Object.keys(FAELLE)) {
+	for (const fall of ALT_FAELLE) {
 		test(`${fall}.en.html`, () => {
 			const golden = readFileSync(path.join(GOLDEN_DIR, `${fall}.en.html`), 'utf-8');
-			const { en } = deDannEn(() => FAELLE[fall]());
+			const { en } = deDannEn(() => A!.altFaelle()[fall]());
 			assert.equal(leerraum(en + '\n'), leerraum(golden));
 		});
 	}
@@ -179,7 +178,7 @@ describe('Englisch byte-gleich zur en-Golden (Golden golden-de, Sprache en)', ()
 		assert.equal(en + '\n', golden);
 	});
 	test('Messaufbau: en-Golden enthaelt die englischen Texte aller Bausteine', () => {
-		const alle = Object.keys(FAELLE).map((f) => sichtbar(readFileSync(path.join(GOLDEN_DIR, `${f}.en.html`), 'utf-8'))).join(' ');
+		const alle = ALT_FAELLE.map((f) => sichtbar(readFileSync(path.join(GOLDEN_DIR, `${f}.en.html`), 'utf-8'))).join(' ');
 		for (const s of ['01 — Profile', '04 — Thresholds', 'Loading metrics…', 'Retry', 'Unsaved changes', 'Save as your own template', 'Overwrite'])
 			assert.ok(alle.includes(s), s);
 	});
@@ -340,7 +339,7 @@ describe('AC-3: zwei Nutzer, zwei Sprachen, eigene Auswahl, gleiche gespeicherte
 		A: { '/api/auth/profile': { id: 'anna', mail_to: 'anna@example.org', language: 'en' } },
 		B: { '/api/auth/profile': { id: 'bert', mail_to: 'bert@example.org', language: 'de' } }
 	};
-	const BUCKETS: Record<string, typeof BUCKETS_GOLDEN> = {
+	const BUCKETS: Record<string, Alt['BUCKETS_GOLDEN']> = {
 		A: { primary: ['temperature', 'gust', 'precipitation', 'humidity'], secondary: [], off: ['wind', 'snow_depth'] },
 		B: { primary: ['temperature', 'gust', 'precipitation', 'humidity'], secondary: [], off: ['wind', 'snow_depth'] }
 	};
@@ -369,6 +368,7 @@ describe('AC-3: zwei Nutzer, zwei Sprachen, eigene Auswahl, gleiche gespeicherte
 
 	/** Echter Layout-Loader (Sprache) → Reiter in dieser Sprache → Umschalten → echter Speicherweg. */
 	async function sitzungFuer(sitzung: 'A' | 'B') {
+		const { tripFuer, toggleGlobalMetric, buildGlobalMetricsForSave } = A!;
 		const lang = await mitApi(sitzung, async () => {
 			const layout = await layoutLoad({ locals: { userId: sitzung, lang: 'de' }, cookies: cookies(sitzung) } as never);
 			return layout.lang as 'de' | 'en';
@@ -437,6 +437,9 @@ describe('Anker: jeder F5-Katalogwert ist als festes de/en-Literal verankert', (
 		assert.equal(n('en', 2), '· 2 metrics');
 		assert.equal(n('de', 1), '· 1 Metriken');
 		assert.equal(n('de', 9), '· 9 Metriken');
+	});
+
+	test('Plural im Alt-Reiter: Zaehler der Reihenfolge (faellt mit #3020 S3)', () => {
 		locale.set('en');
 		hat(sichtbar(routeRendern({ catalog: katalogMitRegister(), buckets: { primary: ['temperature'], secondary: [], off: [] } })), 'Order · 1 metric ');
 	});

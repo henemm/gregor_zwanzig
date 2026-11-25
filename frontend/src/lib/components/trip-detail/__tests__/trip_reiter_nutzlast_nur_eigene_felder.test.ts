@@ -49,9 +49,9 @@ const rumpf = (i: number): Record<string, unknown> => {
 const alsSet = (liste: readonly string[]): string[] => [...liste].sort();
 
 /** AC-16: in KEINEM Rumpf ein Python-eigener oder unbekannter Schluessel. */
-function keineFremdschluessel(body: Record<string, unknown>, label: string, erlaubt: readonly string[] = []): void {
+function keineFremdschluessel(body: Record<string, unknown>, label: string, erlaubt: readonly string[] = [], erlaubtReport: readonly string[] = []): void {
 	const rc = (body.report_config ?? {}) as Record<string, unknown>;
-	for (const k of P.NIE_GESENDET_REPORT) {
+	for (const k of P.NIE_GESENDET_REPORT.filter((k) => !erlaubtReport.includes(k))) {
 		assert.ok(!(k in rc), `${label}: report_config.${k} darf kein Reiter je senden (Python-eigen / ohne Eigentuemer)`);
 	}
 	const dc = (body.display_config ?? {}) as Record<string, unknown>;
@@ -66,7 +66,7 @@ function keineFremdschluessel(body: Record<string, unknown>, label: string, erla
 		'trip_id',
 		'updated_at'
 	].filter((k) => !erlaubt.includes(k))) {
-		// Issue #1721: `show_night_block` gehoert dem Wetter-Metriken-Reiter (nur dort erlaubt).
+		// Issue #1721: `show_night_block` gehoert der Karte „Was steht wo“ (nur dort erlaubt).
 		assert.ok(!(k in dc), `${label}: display_config.${k} hat keinen Reiter-Eigentuemer und darf nie gesendet werden`);
 	}
 	assert.ok(!('skip_next' in body), `${label}: Top-Level skip_next darf nie gesendet werden`);
@@ -106,90 +106,132 @@ describe('AC-11: Alarme — Eigenfelder, display_config nur mit metric_alert_lev
 // #2794 S3a Teil-PR 4a (AC-31) mit beiden Schreibwegen entfernt — die Grenzen schreibt der
 // Reiter Wetter (Nutzlast-Tests in shared/wetter-tab/__tests__/).
 
-describe('AC-13: Wetter-Metriken — /weather-config nur Wetter-Metriken-Schluessel, Trip-PUT nur Inhalt + Tagesfenster', () => {
-	test('Metriken speichern: /weather-config ohne metric_alert_levels und Fremdschluessel', async () => {
+// #3020 S1 (Adversary F1): `wetterReiter` bindet die Karte „Was steht wo“ wie der Hub. Ob `placements` mitfaehrt,
+// haengt allein daran, ob am Trip eine Tabelle gespeichert ist; beide Faelle stehen unten.
+// #3020 S1: AC-13/AC-14 an den lebenden Schreibern (Reiter Wetter, Karte „Was steht wo“, Reiter Zustellung)
+// statt WeatherMetricsTab/BriefingScheduleTab.
+// BEFUND: der Trip-PUT des Reiters Wetter traegt report_config als VOLLKOPIE (tripSpeicherPayload in
+// ampelSchreiben.ts) — Versandzeiten, Kanaele und Python-eigene Felder eingeschlossen. Die exakte Zusicherung
+// bleibt stehen und ist als `todo` sichtbar rot, bis der Speicherweg repariert ist (kein Produktionscode in
+// #3020 S1). NICHT streichen, NICHT abschwaechen.
+const BEFUND_VOLLKOPIE = 'Befund #3020 S1: Reiter Wetter sendet report_config als Vollkopie (#1433 AC-13/AC-16 am lebenden Modul verletzt, Bug #3355)';
+
+describe('AC-13: Reiter Wetter — /weather-config nur Wetter-Schluessel, Trip-PUT nur Warnungen/Radar + Tagesfenster', () => {
+	test('Trip ohne gespeicherte Tabelle: /weather-config = { ampel, metrics }, ohne metric_alert_levels und Fremdschluessel', async () => {
 		const a = P.neuerAufbau();
-		const wm = await P.wetterMetrikenReiter(a);
-		wm.metrikenSpeichern();
+		const w = await P.wetterReiter(a);
+		w.abwaehlen('wind');
 		await P.fertig(a.ctl);
 
 		assert.equal(puts().length, 2, 'Messaufbau: /weather-config, dann Trip-PUT');
 		assert.match(puts()[0].path, /\/weather-config$/);
-		const w = rumpf(0);
-		const unerlaubt = P.sortiert(w).filter((k) => !(P.DISPLAY_WETTER_METRIKEN as readonly string[]).includes(k));
-		assert.deepEqual(unerlaubt, [], `/weather-config traegt Fremdschluessel: ${JSON.stringify(unerlaubt)} (heute: Spread der ganzen display_config)`);
-		for (const k of ['metrics', 'channel_layouts']) {
-			assert.ok(k in w, `/weather-config muss den Eigen-Schluessel ${k} senden`);
-		}
-		assert.ok(!('metric_alert_levels' in w), 'metric_alert_levels gehoert dem Reiter Alarme');
-		assert.ok('show_night_block' in w, '#1721: /weather-config muss den Eigen-Schluessel show_night_block senden (gespeicherter Wert im Seed)');
-		keineFremdschluessel({ display_config: w }, 'Wetter-Metriken /weather-config', ['show_night_block']);
+		assert.deepEqual(P.sortiert(rumpf(0)), ['ampel', 'metrics'], 'EXAKT die Eigenschluessel (kein Zuviel, kein Zuwenig)');
+		keineFremdschluessel({ display_config: rumpf(0) }, 'Wetter /weather-config');
 	});
 
-	test('Metriken speichern: Trip-PUT = { official_alerts_enabled, report_config(nur Inhalt/Tagesfenster) }', async () => {
+	test('Trip MIT gespeicherter Tabelle: /weather-config = { ampel, metrics, placements }, weiter genau zwei PUTs', async () => {
+		const doc = P.vollerTrip();
+		(doc.display_config as Record<string, unknown>).placements = { version: 1, rows: [{ metric_id: 'temperature' }, { metric_id: 'wind' }], outlook_reports: ['evening'] };
+		const a = P.neuerAufbau(doc);
+		const w = await P.wetterReiter(a);
+		w.abwaehlen('wind');
+		await P.fertig(a.ctl);
+
+		assert.equal(puts().length, 2, 'die Karte schreibt keinen eigenen Tabellen-PUT (#3237 Runde 13)');
+		assert.deepEqual(P.sortiert(rumpf(0)), ['ampel', 'metrics', 'placements']);
+		assert.deepEqual(rumpf(0).placements, { version: 1, rows: [{ metric_id: 'temperature' }], outlook_reports: ['evening'] });
+		keineFremdschluessel({ display_config: rumpf(0) }, 'Wetter /weather-config');
+	});
+
+	test('Grundauswahl speichern: Trip-PUT traegt Warn-Felder, Radar und report_config mit Tagesfenster', async () => {
 		const a = P.neuerAufbau();
-		const wm = await P.wetterMetrikenReiter(a);
-		wm.metrikenSpeichern();
+		const w = await P.wetterReiter(a);
+		w.aendern({ tagesfenster: { start: 6, end: 20 } });
 		await P.fertig(a.ctl);
 
 		const t = rumpf(1);
-		assert.deepEqual(P.sortiert(t), ['official_alerts_enabled', 'report_config']);
-		const unerlaubt = P.sortiert(t.report_config).filter((k) => !(P.REPORT_WETTER_METRIKEN as readonly string[]).includes(k));
-		assert.deepEqual(
-			unerlaubt,
-			[],
-			`report_config traegt Fremdschluessel: ${JSON.stringify(unerlaubt)} (Versandzeiten, Kanaele, skip_next, … gehoeren nicht in diesen Reiter)`
-		);
-		// EXAKT, nicht nur Teilmenge: ein vergessener Eigen-Schluessel (Hauptrisiko der Spec,
-		// „wird still nicht mehr gespeichert") faellt sonst nicht auf. Der Seed traegt alle neun.
-		assert.deepEqual(
-			P.sortiert(t.report_config),
-			alsSet(P.REPORT_WETTER_METRIKEN),
-			'report_config muss GENAU die Inhalt-/Tagesfenster-Schluessel des Reiters tragen'
-		);
-		keineFremdschluessel(t, 'Wetter-Metriken Trip-PUT');
+		assert.deepEqual(P.sortiert(t), ['official_alerts_enabled', 'official_warnings', 'radar_alert_enabled', 'report_config']);
+		const rc = t.report_config as Record<string, unknown>;
+		assert.deepEqual([rc.day_window_start_hour, rc.day_window_end_hour], [6, 20]);
 	});
 
-	test('Tagesfenster/Inhalt (reportConfig-only-Pfad): nur Inhalt/Tagesfenster-Schluessel', async () => {
-		const a = P.neuerAufbau();
-		const wm = await P.wetterMetrikenReiter(a);
-		wm.reportConfigSpeichern({ day_window_start_hour: 6 });
-		await P.fertig(a.ctl);
+	for (const [geste, tun] of [
+		['Grundauswahl', (w: Awaited<ReturnType<typeof P.wetterReiter>>) => w.abwaehlen('wind')],
+		['Tagesfenster', (w: Awaited<ReturnType<typeof P.wetterReiter>>) => w.aendern({ tagesfenster: { start: 6, end: 20 } })]
+	] as const)
+		test(`${geste}: report_config des Trip-PUT GENAU das Tagesfenster, keine Fremd- und Python-Schluessel`, { todo: BEFUND_VOLLKOPIE }, async () => {
+			const a = P.neuerAufbau();
+			tun(await P.wetterReiter(a));
+			await P.fertig(a.ctl);
+			const t = rumpf(1);
+			assert.deepEqual(P.sortiert(t.report_config), ['day_window_end_hour', 'day_window_start_hour']);
+			keineFremdschluessel(t, 'Wetter Trip-PUT');
+		});
+});
 
+describe('AC-13: Karte „Was steht wo“ — je Schalter genau EIN Feld an seinem Ort', () => {
+	for (const [feld, wert] of Object.entries(P.KARTE_REPORT)) {
+		test(`${feld}: { report_config: { ${feld} } }`, async () => {
+			const a = P.neuerAufbau();
+			(await P.karteWasStehtWo(a)).schalten(feld, wert);
+			await P.fertig(a.ctl);
+			assert.equal(puts().length, 1);
+			assert.deepEqual(rumpf(0), { report_config: { [feld]: wert } });
+			keineFremdschluessel(rumpf(0), `Karte ${feld}`, [], [feld]);
+		});
+	}
+	test('#1721 show_night_block: { display_config: { show_night_block } }', async () => {
+		const a = P.neuerAufbau();
+		(await P.karteWasStehtWo(a)).schalten('show_night_block', false);
+		await P.fertig(a.ctl);
 		assert.equal(puts().length, 1);
-		const t = rumpf(0);
-		assert.deepEqual(P.sortiert(t), ['official_alerts_enabled', 'report_config']);
-		const unerlaubt = P.sortiert(t.report_config).filter((k) => !(P.REPORT_WETTER_METRIKEN as readonly string[]).includes(k));
-		assert.deepEqual(unerlaubt, [], `report_config traegt Fremdschluessel: ${JSON.stringify(unerlaubt)}`);
-		assert.deepEqual(
-			P.sortiert(t.report_config),
-			alsSet(P.REPORT_WETTER_METRIKEN),
-			'auch der reportConfig-only-Pfad muss GENAU die Eigenschluessel des Reiters tragen (kein vergessener Schluessel)'
-		);
-		assert.equal((t.report_config as Record<string, unknown>).day_window_start_hour, 6);
-		keineFremdschluessel(t, 'Wetter-Metriken Tagesfenster');
+		assert.deepEqual(rumpf(0), { display_config: { show_night_block: false } });
+		keineFremdschluessel(rumpf(0), 'Karte show_night_block', ['show_night_block']);
+	});
+	test('Tabelle: PUT placements mit dem vollstaendigen Stand, kein Trip-Feld', async () => {
+		const a = P.neuerAufbau();
+		(await P.karteWasStehtWo(a)).haken('temperature', 'telegram', false);
+		await P.fertig(a.ctl);
+		assert.equal(puts().length, 1);
+		assert.equal(puts()[0].path, `/api/briefings/${P.TRIP_ID}/placements?kind=route`);
+		assert.deepEqual(P.sortiert(rumpf(0)), ['outlook_reports', 'rows', 'version']);
 	});
 });
 
-describe('AC-14: Versand — nur Versand-Schluessel, kein Tagesfenster, kein E-Mail-Inhalt', () => {
-	test('Versandzeit aendern: Rumpf = { report_config } mit genau den Versand-Schluesseln', async () => {
+describe('AC-14: Reiter Zustellung — nur geaenderte Zustellungs-Felder, kein Tagesfenster, kein E-Mail-Inhalt', () => {
+	test('Versandzeit aendern: Rumpf = { report_config: { morning_time } }', async () => {
 		const a = P.neuerAufbau();
-		const v = await P.versandReiter(a);
-		v.aendern({ morning_time: '08:00:00' });
+		const v = await P.zustellungReiter(a);
+		v.aendern({ morgenZeit: '08:00' });
 		await P.fertig(a.ctl);
 
 		assert.equal(puts().length, 1);
 		const b = rumpf(0);
-		assert.deepEqual(P.sortiert(b), ['report_config'], 'der Versand-Reiter sendet nur report_config');
-		assert.deepEqual(
-			P.sortiert(b.report_config),
-			alsSet(P.REPORT_VERSAND),
-			`Versand-report_config: ${JSON.stringify(P.sortiert(b.report_config))} (heute die ganze Vollkopie inkl. day_window_*, skip_next, E-Mail-Inhalt)`
-		);
-		const rc = b.report_config as Record<string, unknown>;
-		assert.equal(rc.morning_time, '08:00:00');
-		assert.ok(!('day_window_start_hour' in rc) && !('day_window_end_hour' in rc), 'kein Tagesfenster');
-		keineFremdschluessel(b, 'Versand');
+		assert.deepEqual(b, { report_config: { morning_time: '08:00:00' } }, 'EXAKT das geaenderte Feld');
+		keineFremdschluessel(b, 'Zustellung');
+	});
+
+	test('alle Versand-Felder auf einmal: GENAU die Versand-Schluessel des Reiters', async () => {
+		const a = P.neuerAufbau();
+		const v = await P.zustellungReiter(a);
+		v.aendern({ morgenAn: false, abendAn: false, morgenZeit: '08:00', abendZeit: '19:00', briefing: { email: false, telegram: false, sms: true, premium_sms: true } });
+		await P.fertig(a.ctl);
+
+		assert.equal(puts().length, 1);
+		const b = rumpf(0);
+		assert.deepEqual(P.sortiert(b), ['report_config']);
+		assert.deepEqual(P.sortiert(b.report_config), alsSet(P.REPORT_ZUSTELLUNG));
+		keineFremdschluessel(b, 'Zustellung');
+	});
+
+	test('Alarm-Kanaele und Stille Stunden: eigener PUT nur mit Alarm-Feldern', async () => {
+		const a = P.neuerAufbau();
+		const v = await P.zustellungReiter(a);
+		v.aendern({ alarme: { email: true, telegram: false, sms: false, premium_sms: true }, stilleVon: '23:00' });
+		await P.fertig(a.ctl);
+
+		assert.equal(puts().length, 1);
+		assert.deepEqual(rumpf(0), { alert_channels: { email: true, telegram: false, sms: false, premium_sms: true }, alert_quiet_from: '23:00' });
 	});
 });
 

@@ -64,6 +64,32 @@ describe('Selbsttest: die Probe verbirgt genau die toten Dateien', () => {
 		const r = await skript(`await import(${url(lebend)}); (await import('node:fs')).readFileSync(new URL(${url(lebend)}))`);
 		assert.equal(r.code, 0, r.aus.slice(-600));
 	});
+	test('tote_datei_unsichtbar__readdirSync', async () => {
+		const r = await skript(
+			`const { readdirSync } = await import('node:fs'); const d = new URL('.', ${url(tot)});` +
+				`console.log('ERGEBNIS' + JSON.stringify([readdirSync(d), readdirSync(d, { withFileTypes: true }).map((e) => e.name)]))`
+		);
+		for (const namen of JSON.parse(r.aus.match(/ERGEBNIS(.*)/)?.[1] ?? '[[],[]]') as string[][]) {
+			assert.ok(namen.includes('reportConfigPayload.ts'), 'lebende Datei fehlt in der Liste');
+			assert.ok(!namen.includes('vtBriefingChannelsText.ts'), 'tote Datei steht noch in der Liste');
+		}
+	});
+	// Barrels (Spec Nr. 4): wie probeloeschung.py fallen NUR Re-Export-Zeilen auf tote Dateien in index.ts.
+	test('barrel_verliert_nur_reexports_toter_dateien', async () => {
+		const quelle = [
+			"export { default as Tot } from './OutboxCard.svelte';",
+			"export { default as Lebt } from './ListTable.svelte';",
+			"import Direkt from './OutboxCard.svelte';"
+		].join('\n');
+		const geladen = (datei: string) => `(await h.load(${url(join(KOMP, datei))}, {}, async () => ({ source: ${JSON.stringify(quelle)} }))).source`;
+		const r = await skript(
+			`const h = await import(${url(join(HERE, 'rework_3020_probe_hooks.mjs'))});` +
+				`console.log('ERGEBNIS' + JSON.stringify([${geladen('organisms/index.ts')}, ${geladen('organisms/ListTable.svelte')}]))`
+		);
+		const [barrel, andere] = JSON.parse(r.aus.match(/ERGEBNIS(.*)/)?.[1] ?? '[]');
+		assert.deepEqual(barrel?.split('\n'), quelle.split('\n').slice(1), 'nur der tote Re-Export faellt');
+		assert.equal(andere, quelle, 'ausserhalb von index.ts bleibt jede Zeile stehen');
+	});
 });
 
 describe('AC-11: lebende Helfer-Nutzer sind in der Probe-Löschung grün', { concurrency: 4 }, () => {

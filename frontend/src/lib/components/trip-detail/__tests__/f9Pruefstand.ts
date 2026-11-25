@@ -1,6 +1,6 @@
 // Issue #2658 (i18n F9, Epic #2644) — gemeinsamer SSR-Pruefstand fuer die
 // Trip-Flaechen: Trip-Hub (Kopf, Status, Uebersicht, Etappen, Wegpunkte,
-// Ausgabe-Layout-Bausteine, Vorschau-Rahmen, Seite /trips/[id]), Anlegen
+// Vorschau-Rahmen, Seite /trips/[id]; Ausgabe-Layout-Bausteine: f9Altbausteine.ts, #3020 S1), Anlegen
 // (/trips/new) und Etappen-Editor sowie die geteilten Bausteine
 // SubscriptionHeader/BriefingHistory. Echte Svelte-Komponenten, gerendert mit
 // svelte/server. Zustaende, die die Komponenten erst in `$effect`/Klick-Handlern
@@ -37,9 +37,9 @@ hook('src/lib/components/shared/layout-tab/__tests__/f8VarianteHook.mjs');
 
 const { render } = await import('svelte/server');
 const imp = async (datei: string) => await import(pathToFileURL(datei).href);
-const komp = async (datei: string) => (await imp(datei)).default;
+export const komp = async (datei: string) => (await imp(datei)).default;
 /** Komponente mit umgelenkten `$state`-Startwerten (s. f8VarianteHook.mjs). */
-const variante = async (datei: string, ersetzungen: [string, string][]) =>
+export const variante = async (datei: string, ersetzungen: [string, string][]) =>
 	(await import(`${pathToFileURL(datei).href}?f8variante=${Buffer.from(JSON.stringify(ersetzungen)).toString('base64url')}`)).default;
 
 export const { locale, tr, trFor, trnFor } = await imp(path.join(FRONTEND, 'src/lib/i18n/index.ts'));
@@ -49,7 +49,7 @@ export const neuLogik = await imp(path.join(KOMP, 'trip-new/tripNewLogic.ts'));
 const { deriveTripStatus } = await imp(path.join(FRONTEND, 'src/lib/utils/tripStatus.ts'));
 
 const g = globalThis as unknown as Record<string, unknown>;
-const nix = () => {};
+export const nix = () => {};
 const ohneKommentare = (html: string) => html.replace(/<!--[\s\S]*?-->/g, '');
 /** Feste Uhr fuer jeden Render (Seite/Reiter lesen `new Date()` selbst): Golden bleibt tagesunabhaengig. */
 const ECHT_DATE = Date;
@@ -71,8 +71,8 @@ function mitUhr<T>(f: () => T): T {
 		globalThis.Date = ECHT_DATE;
 	}
 }
-const html = (k: unknown, props: Record<string, unknown> = {}) => mitUhr(() => ohneKommentare(render(k as never, { props } as never).body));
-const td = (n: string) => path.join(TD, n);
+export const html = (k: unknown, props: Record<string, unknown> = {}) => mitUhr(() => ohneKommentare(render(k as never, { props } as never).body));
+export const td =(n: string) => path.join(TD, n);
 const ed = (n: string) => path.join(KOMP, 'edit', n);
 const wp = (n: string) => path.join(TD, 'waypoints', n);
 
@@ -121,16 +121,7 @@ const K = {
 	StageDetailRow: await komp(td('StageDetailRow.svelte')),
 	TripStageRow: await komp(td('TripStageRow.svelte')),
 	FullProfile: await komp(td('FullProfile.svelte')),
-	BucketSection: await komp(td('BucketSection.svelte')),
-	BucketSectionOff: await komp(td('BucketSectionOff.svelte')),
-	BucketSectionOffOffen: await variante(td('BucketSectionOff.svelte'), [['let open = $state(false);', 'let open = $state(true);']]),
-	ActiveMetricRow: await komp(td('ActiveMetricRow.svelte')),
-	ChannelLimitMarkers: await komp(td('ChannelLimitMarkers.svelte')),
-	PresetRow: await komp(td('PresetRow.svelte')),
-	TablePreview: await komp(td('TablePreview.svelte')),
-	WeatherV2Kanaele: await komp(td('WeatherV2Kanaele.svelte')),
 	TripTabs: await komp(td('TripTabs.svelte')),
-	BriefingScheduleStatus: await variante(td('BriefingScheduleTab.svelte'), [["let statusMsg = $state('');", "let statusMsg = $state('Gespeichert.');"]]),
 	WaypointsPanelFehler: await variante(td('WaypointsPanel.svelte'), [['let saveError = $state<string | null>(null);', "let saveError = $state<string | null>('Speichern fehlgeschlagen');"]]),
 	EtappenStripHover: await variante(wp('EtappenStrip.svelte'), [['let hoverGap = $state<number | null>(null);', 'let hoverGap = $state<number | null>(0);']]),
 	StageCard: await komp(wp('StageCard.svelte')),
@@ -215,31 +206,6 @@ export function etappenRendern(): string {
 		html(K.TripStageRow, { stage: { ...ETAPPEN[0], distance_km: 12.4, ascent_m: 1350, descent_m: 60, elevation_m: 1570, summary: 'Steil' }, index: 0, active: true, risk: 'green' }),
 		html(K.FullProfile, { trip: tripLaufend(), selectedStageId: 'e2', onSelectStage: nix, now: JETZT }),
 		html(K.FullProfile, { trip: tripLaufend({ stages: [] }), selectedStageId: null, onSelectStage: nix, now: JETZT })
-	].join('\n');
-}
-
-const metricById = Object.fromEntries(Object.values(KATALOG).flat().map((m) => [m.id, m]));
-const ACHT = ['temperature', 'wind', 'gust', 'cloud_total', 'temperature', 'wind', 'gust', 'cloud_total', 'wind'].map((id, i) => (i < 4 ? id : `${id}`));
-
-export function layoutRendern(): string {
-	const viele = Array.from({ length: 9 }, (_, i) => `m${i}`);
-	const vieleById = Object.fromEntries(viele.map((id, i) => [id, { ...metricById[ACHT[i]], id }]));
-	const base = { metricById: vieleById, shortById: {}, friendlyMap: {}, indicatorCapable: (id: string) => id === 'm1', onMode: nix, onMove: nix, onDndReorder: nix };
-	return [
-		// Ueberschriften reicht der Aufrufer (OutputLayoutEditor, F8) aus seinem Katalog herein.
-		html(K.BucketSection, { ...base, eyebrow: tr('layout.ausgabe.spalten_eyebrow'), title: tr('layout.ausgabe.spalten'), hint: 'h', bucket: 'primary', items: viele, showLimitMarkers: true }),
-		html(K.BucketSection, { ...base, eyebrow: tr('layout.ausgabe.detail_eyebrow'), title: tr('layout.ausgabe.detail_werte'), hint: 'h', bucket: 'secondary', items: [] }),
-		html(K.BucketSection, { ...base, eyebrow: tr('layout.ausgabe.detail_eyebrow'), title: tr('layout.ausgabe.detail_werte'), hint: 'h', bucket: 'secondary', items: ['m0', 'm1'] }),
-		html(K.BucketSectionOffOffen, { items: ['temperature', 'gust', 'cloud_total'], metricById, shortById: { gust: 'G' }, categoryLabels: { temperature: 'Temperatur', wind: 'Wind', atmosphere: 'Atmosphäre' }, categoryOrder: ['temperature', 'wind', 'atmosphere'], onAdd: nix }),
-		html(K.BucketSectionOffOffen, { items: ['gust'], metricById, shortById: {}, categoryLabels: {}, categoryOrder: [], onAdd: nix, hideDetailButton: true }),
-		html(K.BucketSectionOff, { items: ['gust'], metricById, shortById: {}, categoryLabels: {}, categoryOrder: [], onAdd: nix }),
-		html(K.ChannelLimitMarkers, { count: 9 }),
-		html(K.PresetRow, { id: 'wandern', label: 'Wandern', metricCount: 6, isActive: true, onSelect: nix }),
-		html(K.PresetRow, { id: 'eins', label: 'Eins', metricCount: 1, isActive: false, onSelect: nix }),
-		html(K.TablePreview, { catalog: KATALOG, enabledMap: { temperature: true, gust: true }, friendlyMap: { gust: true }, horizonsMap: { gust: { today: true, tomorrow: false, day_after: false }, temperature: { today: true, tomorrow: false, day_after: false } }, categoryOrder: ['temperature', 'wind'], indicatorCapable: (id: string) => id === 'gust' }),
-		html(K.WeatherV2Kanaele, { channels: { email: true, telegram: true, sms: true }, primaryCount: 10, telegramKurzform: true, onChange: nix, onKurzformChange: nix, availability: { email: true, telegram: true, sms: false } }),
-		...(['morning', 'evening', 'alert'] as const).map((kind) => html(K.ReportLine, { kind, time: '07:00', channels: ['email', 'telegram'], active: true, alert: kind === 'alert' })),
-		html(K.BriefingScheduleStatus, { trip: tripLaufend() })
 	].join('\n');
 }
 
@@ -347,7 +313,6 @@ const FLAG = {
 	]),
 	wegpunkte: await variante(td('WaypointsPanel.svelte'), [['let saveError = $state<string | null>(null);', "let saveError = $state<string | null>('');"]]),
 	panel: await panelVariante([['let saveError = $state<string | null>(null);', "let saveError = $state<string | null>('');"]]),
-	zeitplan: await variante(td('BriefingScheduleTab.svelte'), [['let statusKey = $state<MessageKey | null>(null);', "let statusKey = $state<MessageKey | null>('trip.fehler_speichern');"]]),
 	historie: await variante(path.join(KOMP, 'shared', 'BriefingHistory.svelte'), [['let eigenError = $state(false);', 'let eigenError = $state(true);']]),
 	seite: await seitenVariante([
 		['let errorKey = $state<MessageKey | null>(null);', "let errorKey = $state<MessageKey | null>('aktionen.fehler.allgemein');"],
@@ -359,7 +324,6 @@ export function fehlerFlagsRendern(): string {
 		html(FLAG.header, { kind: 'trip', name: 'GR20 Nord 2026', region: 'Korsika', profile: 'trekking', profileOptions: [], testidPrefix: 'trip', onSaveField: async () => {} }),
 		html(FLAG.wegpunkte, { trip: tripLaufend() }),
 		html(FLAG.panel, { stages: structuredClone(ETAPPEN), tripId: 'gd-gr20', showSave: true }),
-		html(FLAG.zeitplan, { trip: tripLaufend() }),
 		html(FLAG.historie, { id: '', kind: 'route' }),
 		html(FLAG.seite, { data: { trip: tripLaufend(), metricsCatalog: KATALOG, profile: null } })
 	].join('\n');
@@ -381,7 +345,6 @@ export function htmlFaelle(): Record<string, () => string> {
 		kopf_status: kopfRendern,
 		uebersicht: uebersichtRendern,
 		etappen: etappenRendern,
-		layout_bausteine: layoutRendern,
 		wegpunkte: wegpunkteRendern,
 		edit_felder: editFelderRendern,
 		historie: historieRendern,
@@ -410,11 +373,11 @@ export function funktionsTabelle(): string {
 	return z.join('\n');
 }
 
-export function schreibeGolden(lang: 'de' | 'en'): void {
+export function schreibeGolden(lang: 'de' | 'en', faelle = htmlFaelle()): void {
 	mkdirSync(GOLDEN_DIR, { recursive: true });
 	locale.set(lang);
 	try {
-		for (const [fall, f] of Object.entries(htmlFaelle())) writeFileSync(path.join(GOLDEN_DIR, `${fall}.${lang}.html`), f() + '\n');
+		for (const [fall, f] of Object.entries(faelle)) writeFileSync(path.join(GOLDEN_DIR, `${fall}.${lang}.html`), f() + '\n');
 		writeFileSync(path.join(GOLDEN_DIR, `funktionen.${lang}.txt`), funktionsTabelle() + '\n');
 	} finally {
 		locale.set('de');

@@ -14,7 +14,8 @@
 
 import { test, describe, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { locale, routeRendern } from './f5Pruefstand.ts';
+import { locale } from './f5Pruefstand.ts';
+import { routeRendern } from './f5Altbausteine.ts';
 import { buildGlobalMetricsForSave } from '../weatherMetricsSavePayload.ts';
 
 const HINWEIS = {

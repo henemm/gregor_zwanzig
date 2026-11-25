@@ -36,7 +36,7 @@ import { clearEtagRegistry } from '../../../etagRegistry.ts';
 import type { SaveStatus } from '../../../stores/saveStatusStore.svelte.ts';
 import type { ComparePreset } from '../../../types.ts';
 import { createFakeTripServer, type FakeTripServer } from '../../../__tests__/fakeTripServer.ts';
-import * as P from '../../trip-detail/__tests__/tripMehrreiterPruefstand.ts';
+import * as P from '../../trip-detail/__tests__/tripMehrreiterAltbausteine.ts';
 import { createGoMergeServer, vollerVergleich, type GoMergeServer } from './goMergeServerPruefstand.ts';
 import { createController, versandBedienung } from './versandVergleichPruefstand.ts';
 import { createPutQueue } from '../../compare/compareHubPersistenz.ts';
