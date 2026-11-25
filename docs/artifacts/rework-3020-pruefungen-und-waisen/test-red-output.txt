@@ -1,0 +1,175 @@
+### Python: uv run pytest -o addopts='' tests/tdd/test_einstellung_gleich_mail_waechter_3020.py
+FFFFFFF                                                                  [100%]
+=================================== FAILURES ===================================
+E   AssertionError: []
+    assert 0 == 1
+     +  where 0 = len([])
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_einstellung_gleich_mail_waechter_3020.py:92: AssertionError: []
+E   AssertionError: assert True is False
+     +  where True = <function _vitest_titel_gefunden at 0x7bb8113d7560>('anzeige_a_nie_gleich', [PosixPath('/tmp/pytest-of-hem/pytest-3850/test_ac2_vorlage_mit_festem_an0/frontend/src/lib/z/__tests__/nur_platzhalter.test.ts')])
+     +    where <function _vitest_titel_gefunden at 0x7bb8113d7560> = w._vitest_titel_gefunden
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_einstellung_gleich_mail_waechter_3020.py:106: AssertionError: assert True is False
+E   AssertionError: ["fallliste_editor.json: Fall 'ed-datei-fehlt' nennt Test 'gibt_es_nicht.test.ts::editor behaelt reihenfolge', nicht gefunden in frontend/src/**/__tests__/*.test.ts"]
+    assert ['ed-datei-fehlt'] == ['ed-datei-fe...-titel-fehlt']
+      
+      Right contains one more item: 'ed-titel-fehlt'
+      Use -v to get more diff
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_einstellung_gleich_mail_waechter_3020.py:131: AssertionError: ["fallliste_editor.json: Fall 'ed-datei-fehlt' nennt Test 'gibt_es_nicht.test.ts::editor behaelt reihenfolge', nicht gefunden in frontend/src/**/__tests__/*.test.ts"]
+E   AssertionError: Waechter meldet diese Faelle trotz fehlendem Test gruen: ['D-trip_tabellen-nie_eingestellt-frontend', 'D-trip_tabellen-altbestand_ohne_metrics-frontend', 'D-trip_tabellen-gespeichert_folge-frontend', 'D-trip_tabellen-gespeichert_folge_array_ungleich_order-frontend', 'D-trip_tabellen-gespeichert_ausserhalb_grundauswahl-frontend', 'D-trip_ausblick-nie_eingestellt-frontend', 'D-trip_ausblick-gespeichert_folge-frontend', 'D-trip_ausblick-gespeichert_ausserhalb_grundauswahl-frontend', 'D-orte_vergleichstabelle-nie_eingestellt-frontend', 'D-orte_vergleichstabelle-gespeichert_folge-frontend', 'D-orte_vergleichstabelle-gespeichert_kanal_liste-frontend', 'D-trip_vorlage-reihenfolge-frontend', 'D-trip_ausblick-bewusst_leer_alle_aus-frontend', 'D-trip_tabellen-gespeichert_totalschnitt-frontend', 'D-trip_tabellen-totalschnitt_aus_wirkt-frontend', 'D-trip_ausblick-gespeichert_totalschnitt-frontend', 'D-orte_vergleichstabelle-gespeichert_kanal_totalschnitt-frontend', 'D-orte_vergleichstabelle-totalschnitt_aus_wirkt-frontend', 'D-orte_vergleichstabelle-grundauswahl_bewusst_leer-frontend', 'D-trip_tabellen-hinweis_grundauswahl_leer-frontend', 'D-orte_vergleichstabelle-hinweis_grundauswahl_leer-frontend', 'D-trip_tabellen-nur_ein_bericht_semantik-frontend', 'D-trip_tabellen-nur_ein_bericht_kennzeichnung-frontend', 'D-trip_tabellen-nur_ein_bericht_editorstand-frontend', 'D-trip_tabellen-bericht_flags_bewahrt-frontend', 'D-trip_ausblick-grundauswahl_ohne_ausblick-frontend']
+    assert ['D-trip_tabe...rontend', ...] == []
+      
+      Left contains 26 more items, first extra item: 'D-trip_tabellen-nie_eingestellt-frontend'
+      Use -v to get more diff
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_einstellung_gleich_mail_waechter_3020.py:146: AssertionError: Waechter meldet diese Faelle trotz fehlendem Test gruen: ['D-trip_tabellen-nie_eingestellt-frontend', 'D-trip_tabellen-altbestand_ohne_metrics-frontend', 'D-trip_tabellen-gespeichert_folge-frontend', 'D-trip_tabellen-gespeichert_folge_array_ungleich_order-frontend', 'D-trip_tabellen-gespeichert_ausserhalb_grundauswahl-frontend', 'D-trip_ausblick-nie_eingestellt-frontend', 'D-trip_ausblick-gespeichert_folge-frontend', 'D-trip_ausblick-gespeichert_ausserhalb_grundauswahl-frontend', 'D-orte_vergleichstabelle-nie_eingestellt-frontend', 'D-orte_vergleichstabelle-gespeichert_folge-frontend', 'D-orte_vergleichstabelle-gespeichert_kanal_liste-frontend', 'D-trip_vorlage-reihenfolge-frontend', 'D-trip_ausblick-bewusst_leer_alle_aus-frontend', 'D-trip_tabellen-gespeichert_totalschnitt-frontend', 'D-trip_tabellen-totalschnitt_aus_wirkt-frontend', 'D-trip_ausblick-gespeichert_totalschnitt-frontend', 'D-orte_vergleichstabelle-gespeichert_kanal_totalschnitt-frontend', 'D-orte_vergleichstabelle-totalschnitt_aus_wirkt-frontend', 'D-orte_vergleichstabelle-grundauswahl_bewusst_leer-frontend', 'D-trip_tabellen-hinweis_grundauswahl_leer-frontend', 'D-orte_vergleichstabelle-hinweis_grundauswahl_leer-frontend', 'D-trip_tabellen-nur_ein_bericht_semantik-frontend', 'D-trip_tabellen-nur_ein_bericht_kennzeichnung-frontend', 'D-trip_tabellen-nur_ein_bericht_editorstand-frontend', 'D-trip_tabellen-bericht_flags_bewahrt-frontend', 'D-trip_ausblick-grundauswahl_ohne_ausblick-frontend']
+E   AssertionError: D-trip_tabellen-nie_eingestellt-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_trip_tabellen_standard'
+      D-trip_tabellen-altbestand_ohne_metrics-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_trip_tabellen_altbestand'
+      D-trip_tabellen-gespeichert_folge-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_trip_tabellen_gespeichert'
+      D-trip_tabellen-gespeichert_folge_array_ungleich_order-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_trip_tabellen_gespeichert'
+      D-trip_tabellen-gespeichert_ausserhalb_grundauswahl-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_trip_tabellen_gespeichert'
+      D-trip_ausblick-nie_eingestellt-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_trip_ausblick_standard'
+      D-trip_ausblick-gespeichert_folge-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_trip_ausblick_gespeichert'
+      D-trip_ausblick-gespeichert_ausserhalb_grundauswahl-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_trip_ausblick_gespeichert'
+      D-orte_vergleichstabelle-nie_eingestellt-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_orte_vergleichstabelle_standard'
+      D-orte_vergleichstabelle-gespeichert_folge-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_orte_vergleichstabelle_gespeichert'
+      D-orte_vergleichstabelle-gespeichert_kanal_liste-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_orte_vergleichstabelle_gespeichert'
+      D-trip_vorlage-reihenfolge-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_trip_vorlage_reihenfolge'
+      D-trip_ausblick-bewusst_leer_alle_aus-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_trip_ausblick_bewusst_leer_alle_aus'
+      D-trip_tabellen-gespeichert_totalschnitt-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_trip_tabellen_gespeichert'
+      D-trip_tabellen-totalschnitt_aus_wirkt-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_trip_kanal_totalschnitt_aus_wirkt'
+      D-trip_ausblick-gespeichert_totalschnitt-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_trip_ausblick_gespeichert'
+      D-orte_vergleichstabelle-gespeichert_kanal_totalschnitt-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_orte_vergleichstabelle_gespeichert'
+      D-orte_vergleichstabelle-totalschnitt_aus_wirkt-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_orte_kanal_totalschnitt_aus_wirkt'
+      D-orte_vergleichstabelle-grundauswahl_bewusst_leer-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_orte_vergleichstabelle_grundauswahl_bewusst_leer'
+      D-trip_tabellen-hinweis_grundauswahl_leer-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_hinweis_grundauswahl_leer_trip'
+      D-orte_vergleichstabelle-hinweis_grundauswahl_leer-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_hinweis_grundauswahl_leer_orte'
+      D-trip_tabellen-nur_ein_bericht_semantik-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'n3_semantik_wie_mail'
+      D-trip_tabellen-nur_ein_bericht_kennzeichnung-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'n3_editor_kennzeichnet_je_zeile'
+      D-trip_tabellen-nur_ein_bericht_editorstand-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'n3_kennzeichnung_folgt_dem_editorstand'
+      D-trip_tabellen-bericht_flags_bewahrt-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'n3_speichern_bewahrt_bericht_flags'
+      D-trip_ausblick-grundauswahl_ohne_ausblick-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_trip_ausblick_grundauswahl_ohne_ausblick'
+    assert ["D-trip_tabe...andard'", ...] == []
+      
+      Left contains 26 more items, first extra item: "D-trip_tabellen-nie_eingestellt-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_trip_tabellen_standard'"
+      Use -v to get more diff
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_einstellung_gleich_mail_waechter_3020.py:168: AssertionError: D-trip_tabellen-nie_eingestellt-frontend: Status 'gruen' ohne Dateiangabe im Verweis 'frontend_seite_trip_tabellen_standard'
+E   AssertionError: Nur-ein-Bericht-Faelle ohne ausnahme/#3065: [('D-trip_tabellen-nur_ein_bericht_semantik-frontend', 'gruen', '#3065 (Phase 2: Bericht-Flags im Editor)'), ('D-trip_tabellen-nur_ein_bericht_kennzeichnung-frontend', 'gruen', '#3065 (Phase 2: Bericht-Flags im Editor)'), ('D-trip_tabellen-nur_ein_bericht_editorstand-frontend', 'gruen', '#3065 (Phase 2: Bericht-Flags im Editor)'), ('D-trip_tabellen-bericht_flags_bewahrt-frontend', 'gruen', '#3065 (Phase 2: Bericht-Flags im Editor)')]
+    assert [('D-trip_tab... im Editor)')] == []
+      
+      Left contains 4 more items, first extra item: ('D-trip_tabellen-nur_ein_bericht_semantik-frontend', 'gruen', '#3065 (Phase 2: Bericht-Flags im Editor)')
+      Use -v to get more diff
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_einstellung_gleich_mail_waechter_3020.py:177: AssertionError: Nur-ein-Bericht-Faelle ohne ausnahme/#3065: [('D-trip_tabellen-nur_ein_bericht_semantik-frontend', 'gruen', '#3065 (Phase 2: Bericht-Flags im Editor)'), ('D-trip_tabellen-nur_ein_bericht_kennzeichnung-frontend', 'gruen', '#3065 (Phase 2: Bericht-Flags im Editor)'), ('D-trip_tabellen-nur_ein_bericht_editorstand-frontend', 'gruen', '#3065 (Phase 2: Bericht-Flags im Editor)'), ('D-trip_tabellen-bericht_flags_bewahrt-frontend', 'gruen', '#3065 (Phase 2: Bericht-Flags im Editor)')]
+E   AssertionError: kein Katalogfall verweist auf den Kartentest „nur Tageswert“ (Telegram-Schnittlinie)
+    assert []
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_einstellung_gleich_mail_waechter_3020.py:188: AssertionError: kein Katalogfall verweist auf den Kartentest „nur Tageswert“ (Telegram-Schnittlinie)
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+tests/conftest.py:130
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/tdd/test_einstellung_gleich_mail_waechter_3020.py::test_ac1_erfundener_titel_ohne_datei_wird_trotz_platzhalter_vorlage_rot
+FAILED tests/tdd/test_einstellung_gleich_mail_waechter_3020.py::test_ac2_vorlage_mit_festem_anteil_trifft_reine_platzhalter_vorlage_nie
+FAILED tests/tdd/test_einstellung_gleich_mail_waechter_3020.py::test_ac16_nur_faelle_mit_fehlendem_ziel_werden_rot
+FAILED tests/tdd/test_einstellung_gleich_mail_waechter_3020.py::test_ac3_alte_verweise_der_26_faelle_erkennt_der_waechter_als_fehlend
+FAILED tests/tdd/test_einstellung_gleich_mail_waechter_3020.py::test_ac3_katalog_verweist_jeden_der_26_faelle_ehrlich
+FAILED tests/tdd/test_einstellung_gleich_mail_waechter_3020.py::test_ac3_nur_ein_bericht_faelle_sind_ausnahme_mit_3065
+FAILED tests/tdd/test_einstellung_gleich_mail_waechter_3020.py::test_ac4_katalogfall_telegram_nur_tageswert_verweist_gruen_auf_kartentest
+7 failed, 2 warnings in 9.61s
+
+### Go: go test ./internal/store/ -run Rework3020 -v
+=== RUN   TestRework3020_WarnungswerteUndAusblickJeNutzerGetrennt
+--- PASS: TestRework3020_WarnungswerteUndAusblickJeNutzerGetrennt (0.00s)
+=== RUN   TestRework3020_SpeichernOhneAenderungErhaeltMetrikFlags_ZweiNutzer
+--- PASS: TestRework3020_SpeichernOhneAenderungErhaeltMetrikFlags_ZweiNutzer (0.00s)
+=== RUN   TestRework3020_TeilUpdateAusblickUndWarnungswerteErhaeltUebrigeFelder_ZweiNutzer
+--- PASS: TestRework3020_TeilUpdateAusblickUndWarnungswerteErhaeltUebrigeFelder_ZweiNutzer (0.00s)
+=== RUN   TestRework3020_AltTripOhneNightBlockBleibtOhneFeld_ZweiNutzer
+--- PASS: TestRework3020_AltTripOhneNightBlockBleibtOhneFeld_ZweiNutzer (0.00s)
+=== RUN   TestRework3020_SkipNextBleibtBeimSpeichernOhneFeld_ZweiNutzer
+--- PASS: TestRework3020_SkipNextBleibtBeimSpeichernOhneFeld_ZweiNutzer (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/store	0.015s
+
+### Frontend: node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test <7 Dateien>
+▶ Rework #3020 AC-11: kein Nachtblock-Schalter beim noch nicht gespeicherten neuen Trip
+  ✔ Gegenprobe bestehender Trip: der Nachtblock-Schalter ist da (2897.458032ms)
+  ✖ Anlegen (createMode): die Karte zeigt keinen Nachtblock-Schalter (20.950711ms)
+✖ Rework #3020 AC-11: kein Nachtblock-Schalter beim noch nicht gespeicherten neuen Trip (2919.692573ms)
+▶ Rework #3020 AC-15: Haken „Großwetterlage“ folgt show_stability, nie show_outlook
+  ✔ Karte: show_stability=true, show_outlook=false -> Haken true (2.433792ms)
+  ✔ Karte: show_stability=false, show_outlook=true -> Haken false (1.209841ms)
+  ✔ Kartenmodell: Haken umschalten schreibt report_config.show_stability, nie show_outlook (0.805921ms)
+  ✔ mailInhaltKonstanten: der Baustein „Großwetterlage“ ist show_stability; show_outlook ist kein Baustein (0.242431ms)
+✔ Rework #3020 AC-15: Haken „Großwetterlage“ folgt show_stability, nie show_outlook (4.949535ms)
+▶ Rework #3020 AC-6: Trip-Speichernutzlast ohne skip_next
+  ✔ Zustellung-Reiter: Nutzlast aus geladenem Trip mit skip_next traegt skip_next nie, Server behaelt es (38.161475ms)
+  ✔ Karte „Was steht wo“: Schalter-Nutzlast traegt skip_next nie, Server behaelt es (8.091578ms)
+✔ Rework #3020 AC-6: Trip-Speichernutzlast ohne skip_next (47.236535ms)
+▶ Rework #3020 AC-17: Trip speichert Ausblick und Warnungswerte
+  ✔ Ausblick einschalten (Morgen dazu): Karte sendet placements.outlook_reports = ["morning","evening"], kein Altfeld (36.547084ms)
+  ✔ Ausblick ausschalten (alle aus): Karte sendet placements.outlook_reports = [], kein Altfeld (11.640211ms)
+  ✔ Warnungsstufe aendern: display_config traegt nur metric_alert_levels mit genau diesen Werten; Rest bleibt beim Server (2.092862ms)
+✔ Rework #3020 AC-17: Trip speichert Ausblick und Warnungswerte (51.300149ms)
+▶ Rework #3020 AC-8: Alt-Trip ohne show_night_block zeigt den Schalter „an“
+  ✔ fehlendes Feld -> an; gespeichertes false -> aus (Gegenprobe) (0.65481ms)
+✔ Rework #3020 AC-8: Alt-Trip ohne show_night_block zeigt den Schalter „an“ (1.321482ms)
+▶ Rework #3020 AC-9/AC-10: Nachtblock wird nur gesendet, wenn der Nutzer ihn wirklich aendert
+  ✔ AC-9: Speichern eines anderen Schalters sendet show_night_block nicht, der Alt-Trip bleibt ohne Feld (25.637264ms)
+  ✔ AC-10a: geaendert und vor dem Speichern zurueckgenommen -> kein Feld; der naechste Vorgang sendet es nicht (1.569781ms)
+  ✔ AC-10b: gescheitertes Speichern verwirft die Aenderung -> Sende-Merker zurueck, naechster Vorgang ohne Feld (2.609462ms)
+✔ Rework #3020 AC-9/AC-10: Nachtblock wird nur gesendet, wenn der Nutzer ihn wirklich aendert (30.037438ms)
+▶ Rework #3020 AC-14 (route): Reiter-Standard beim neuen Trip = Anlege-POST
+  ✔ unberuehrter Reiter: angezeigter Stand gleich dem ausgelieferten (4.874805ms)
+✔ Rework #3020 AC-14 (route): Reiter-Standard beim neuen Trip = Anlege-POST (5.619285ms)
+▶ Rework #3020 AC-14 (vergleich): Reiter-Standard beim neuen Ortsvergleich = Anlege-POST
+  ✔ unberuehrter Reiter: angezeigter Stand gleich dem ausgelieferten (0.60822ms)
+✔ Rework #3020 AC-14 (vergleich): Reiter-Standard beim neuen Ortsvergleich = Anlege-POST (0.734299ms)
+▶ Rework #3020 AC-13 (route): Premium-SMS folgt dem Handler
+  ✔ Handler vorhanden: Zeile sichtbar, Briefing-Kaestchen und Alarm schaltbar (370.993128ms)
+  ✔ kein Handler (nie_gemeldet): Zeile sichtbar, Kaestchen gesperrt, Alarm gesperrt (11.345512ms)
+  ✔ kein Handler (tarif_ohne): Zeile sichtbar, Kaestchen gesperrt, Alarm gesperrt (4.823784ms)
+  ✔ Schalten wirkt: Briefing- und Alarm-Premium-SMS landen in der Nutzlast des Kontexts (0.64868ms)
+✔ Rework #3020 AC-13 (route): Premium-SMS folgt dem Handler (389.097445ms)
+▶ Rework #3020 AC-13 (vergleich): Premium-SMS folgt dem Handler
+  ✔ Handler vorhanden: Zeile sichtbar, Briefing-Kaestchen und Alarm schaltbar (2.170213ms)
+  ✔ kein Handler (nie_gemeldet): Zeile sichtbar, Kaestchen gesperrt, Alarm gesperrt (0.94531ms)
+  ✔ kein Handler (tarif_ohne): Zeile sichtbar, Kaestchen gesperrt, Alarm gesperrt (2.519133ms)
+  ✔ Schalten wirkt: Briefing- und Alarm-Premium-SMS landen in der Nutzlast des Kontexts (0.255301ms)
+✔ Rework #3020 AC-13 (vergleich): Premium-SMS folgt dem Handler (6.228596ms)
+▶ Rework #3020 AC-7: Zustellung-Reiter (Trip) -- If-Match, keepalive, Antwort-Stempel
+  ✔ regulaeres Speichern: If-Match mit dem bekannten Stempel, kein keepalive; der Antwort-Stempel traegt den naechsten PUT (25.168413ms)
+  ✔ Flush beim Entladen: PUT noch im selben Tick, mit keepalive:true (1.688831ms)
+✔ Rework #3020 AC-7: Zustellung-Reiter (Trip) -- If-Match, keepalive, Antwort-Stempel (27.716616ms)
+ℹ tests 27
+ℹ suites 11
+ℹ pass 26
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3615.967335
+
+✖ failing tests:
+
+test at src/lib/components/organisms/__tests__/rework_3020_karte_schalter.test.ts:79:2
+✖ Anlegen (createMode): die Karte zeigt keinen Nachtblock-Schalter (20.950711ms)
+  AssertionError [ERR_ASSERTION]: im Anlegen darf es den Nachtblock-Schalter nicht geben
+  
+  1 !== 0
+  
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+### Zusammenfassung
+Python R1b: 7 rot (AC-1, AC-2, AC-16, AC-3 x3, AC-4).
+Go R1: 5 gruen (AC-5, AC-9, AC-12, AC-17 x2) - Absicherung lebenden Verhaltens, Mutationsnachweis in mutationsnachweis-red.md.
+Frontend R1: 26 gruen, 1 rot (AC-11 ohne Mutation rot = Befund, siehe mutationsnachweis-red.md).
+Gesamt: 8 rot.

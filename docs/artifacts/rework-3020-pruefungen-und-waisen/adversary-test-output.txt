@@ -1,0 +1,5 @@
+32 passed, 2 warnings in 12.79s
+# tests 33
+# pass 33
+# fail 0
+ok  	github.com/henemm/gregor-api/internal/store	2.528s
