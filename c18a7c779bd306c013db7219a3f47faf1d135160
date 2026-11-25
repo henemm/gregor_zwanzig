@@ -1,0 +1,66 @@
+{
+  "verified_commit": "c18a7c779bd306c013db7219a3f47faf1d135160",
+  "findings": [
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/api/ampel/aufloesung:AC-4",
+      "evidence": "Live auf c18a7c779: alle 7 Systemvorlagen gleich GET /api/templates, vorlage_id stimmt; 138 von 138 Referenzfaellen aus ampel_aufloesung_2988.json gleich",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/api/ampel/aufloesung:AC-5",
+      "evidence": "Live: 131 Abo-Faelle der Referenz (ungueltige Ampel, unbekannte Vorlage, profil, preset_name, Rangfolge) ohne Abweichung, alle HTTP 200",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/api/ampel/aufloesung:AC-6",
+      "evidence": "Live: 7 Altbestandsfaelle der Referenz ohne Abweichung",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/api/ampel/aufloesung:AC-7",
+      "evidence": "Live: anonym 401 (auch bei kaputtem Rumpf); Nutzer en und Pruefkonto (beide eigene Kennung) sowie Helferkonto gleiche Antwort; 138 Faelle bytegleich zwischen Helferkonto und en, auch mit ?user_id=default; 8 Formfehler 400 je DE und EN; 33 Eintraege 400, 32 Eintraege 200; 262144 Byte 200, 262145 Byte 413; kein ETag; data/users 45 Eintraege, 0 geaendert. Weitergereichte user_id nur im Go-Kerntest geprueft",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-8",
+      "status": "SKIPPED",
+      "url": "n/a:AC-8",
+      "evidence": "reiner Vertragswaechter test_api_contract_drift im CI-Gate, keine Live-Oberflaeche",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-19",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com:AC-19",
+      "evidence": "Live E-Mail: Trip-Briefing und Orts-Vergleich je DE und EN zugestellt, Validator Exit 0 (staging_mail_pruefen --typ beide, ohne und mit --lang en). Telegram, SMS und Premium-SMS nur ueber Renderer-Kerntests im CI-Gate",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-25T18:11:04.573742+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: S2 Endpunkt live 138/138, 401/400/413, Mail DE+EN Validator Exit 0",
+  "scope": "backend",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: S2 Endpunkt live 138/138, 401/400/413, Mail DE+EN Validator Exit 0",
+      "scope": "backend",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-25T18:11:04.573742+00:00"
+    }
+  }
+}
