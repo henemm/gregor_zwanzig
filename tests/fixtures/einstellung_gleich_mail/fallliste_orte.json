@@ -1,4 +1,5 @@
 {
+  "_hinweis": "#3297/#3020: Fall O-VT-H-NEU-IN-LISTEN entfaellt -- WeatherMetricsTab.svelte und sein Test neue_metrik_in_allen_listen_orte.test.ts sind mit dem Alt-Editor geloescht; der Ortsvergleich schreibt seit #3276 keine channel_active_metrics/outlook_metrics/hourly_metrics mehr.",
   "dimensionen": {
     "auswahl_muster": [
       "teilmenge",
@@ -1970,19 +1971,6 @@
       "befund": "WV6",
       "status": "gruen",
       "verweis": "src/output/renderers/comparison.py:310-313 (Klartext-Warnzeilen nach der Metrik-Schleife statt zuerst; Konzept einstellungen_neu.md §5 Punkt 8 WV6)"
-    },
-    {
-      "id": "O-VT-H-NEU-IN-LISTEN",
-      "liste": "orte_vergleichstabelle",
-      "kontext": "orte",
-      "format": "html",
-      "pruefung": "grundauswahl",
-      "test": "neue_metrik_in_allen_listen_orte.test.ts::Einwahl haengt die Metrik an jede gespeicherte Kanal-Liste hinten an, Folge bleibt",
-      "ac": "AC-10",
-      "befund": "T3",
-      "status": "gruen",
-      "seite": "frontend",
-      "verweis": "#3047 T3 Orte (WeatherMetricsTab.svelte::toggleCompareMetric uebertrug bei channel_active_metrics nur Abwahlen; behoben ueber compareChannelMetricLayouts.ts::compareToggleFolgen, auch outlook_metrics/hourly_metrics)"
     },
     {
       "id": "O-p7--global_nachtraeglich-orte_vergleichstabelle--html",
