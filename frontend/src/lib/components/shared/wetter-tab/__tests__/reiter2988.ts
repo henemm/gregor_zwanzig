@@ -4,7 +4,7 @@
 
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { WETTER_TAB, live, vergleichsKatalogFetch, type Json } from './wetterTabDaten.ts';
+import { WETTER_TAB, aufloesungPost, live, vergleichsKatalogFetch, type Json } from './wetterTabDaten.ts';
 import { attributAusdruck, findeKomponenten, ohneTypen, umgebungFuer, werte, type Knoten } from '../../__tests__/svelteInstanzPruefstand.ts';
 import type { Kontext } from '../ampelModell.ts';
 
@@ -14,9 +14,23 @@ const DATEN: Record<string, unknown> = { '/api/metrics': LIVE.metrics, '/api/tem
 
 const eingeschaltet = (metrics: Json): string[] => Object.entries(metrics ?? {}).filter(([, e]) => (e as Json).enabled).map(([id]) => id);
 
+export type Optionen2988 = {
+	/** Antwort von GET /api/metric-presets. */
+	presets?: Json;
+	/** Ersatz für den Client-`post` (Standard: Auflösung mit echtem Python, jeder andere POST wirft). */
+	post?: (pfad: string, rumpf?: unknown) => Promise<unknown>;
+	/** Vollständiges Abo statt des aus `ampel` gebauten. */
+	abo?: Json;
+	createMode?: boolean;
+	onAnlegeStand?: (nutzlast: Json) => void;
+	/** Das Laden darf scheitern: der Prüfstand bricht nicht ab (`u.phase` prüft der Test). */
+	erwarteFehler?: boolean;
+};
+
 /** Reiter mit einem Abo „nach Vorlage“ (`ampel.template`) plus den Abweichungen in `ampel` laden. */
-export async function reiter2988(context: Kontext, ampel: Json) {
+export async function reiter2988(context: Kontext, ampel: Json, opt: Optionen2988 = {}) {
 	const aufrufe: string[] = [];
+	const post = opt.post ?? aufloesungPost();
 	let geplant = 0;
 	const verboten = (methode: string) => async (pfad: string) => {
 		aufrufe.push(`${methode} ${pfad}`);
@@ -25,14 +39,19 @@ export async function reiter2988(context: Kontext, ampel: Json) {
 	const api = {
 		get: async (pfad: string) => {
 			aufrufe.push(`GET ${pfad}`);
+			if (pfad === '/api/metric-presets' && opt.presets !== undefined) return structuredClone(opt.presets);
 			if (!(pfad in DATEN)) throw new Error(`unerwartet: GET ${pfad}`);
 			return structuredClone(DATEN[pfad]);
 		},
-		post: verboten('POST'),
+		post: async (pfad: string, rumpf?: unknown) => {
+			aufrufe.push(`POST ${pfad}`);
+			return post(pfad, rumpf);
+		},
 		put: verboten('PUT')
 	};
-	const vorlage = LIVE.templates.find((t: Json) => t.id === ampel.template)!.ampel;
-	const ids = [...new Set([...eingeschaltet(vorlage.metrics), ...eingeschaltet(ampel.metrics)])];
+	const vorlage = LIVE.templates.find((t: Json) => t.id === ampel?.template)?.ampel;
+	assert.ok(vorlage || opt.abo, `Messaufbau: unbekannte Vorlage ${ampel?.template}`);
+	const ids = [...new Set([...eingeschaltet(vorlage?.metrics), ...eingeschaltet(ampel?.metrics)])];
 	const abo: Record<Kontext, Json> = {
 		route: {
 			id: 't',
@@ -50,9 +69,9 @@ export async function reiter2988(context: Kontext, ampel: Json) {
 	};
 	const { u, ast, quelle } = await umgebungFuer(TAB, {
 		context,
-		trip: context === 'route' ? abo.route : undefined,
-		preset: context === 'vergleich' ? abo.vergleich : undefined,
-		createMode: false,
+		trip: context === 'route' ? (opt.abo ?? abo.route) : undefined,
+		preset: context === 'vergleich' ? (opt.abo ?? abo.vergleich) : undefined,
+		createMode: opt.createMode ?? false,
 		saveController: {
 			schedule: () => {
 				geplant++;
@@ -61,16 +80,20 @@ export async function reiter2988(context: Kontext, ampel: Json) {
 		enqueueHubWrite: undefined,
 		onTripUpdate: undefined,
 		onCompareUpdate: undefined,
-		onAnlegeStand: undefined,
+		onAnlegeStand: opt.onAnlegeStand,
 		api
 	});
-	const zurueck = vergleichsKatalogFetch();
-	try {
-		await u.laden();
-	} finally {
-		zurueck();
-	}
-	assert.equal(u.phase, 'bereit', 'Messaufbau: Reiter hat nicht geladen');
+	/** Laden bzw. „Erneut laden“ des Reiters. */
+	const laden = async (): Promise<void> => {
+		const zurueck = vergleichsKatalogFetch();
+		try {
+			await u.laden();
+		} finally {
+			zurueck();
+		}
+	};
+	await laden();
+	if (!opt.erwarteFehler) assert.equal(u.phase, 'bereit', 'Messaufbau: Reiter hat nicht geladen');
 	const herleitung = (name: string): string => {
 		for (const stmt of ast.instance.content.body as Knoten[]) {
 			if (stmt.type !== 'VariableDeclaration') continue;
@@ -100,6 +123,7 @@ export async function reiter2988(context: Kontext, ampel: Json) {
 	return {
 		u,
 		aufrufe,
+		laden,
 		geplant: () => geplant,
 		zahl: (): number => prop('abweichungen'),
 		aboAmpel: (): Json => prop('aboAmpel'),

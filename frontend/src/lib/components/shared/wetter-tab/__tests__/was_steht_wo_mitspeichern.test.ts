@@ -7,7 +7,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { live } from './wetterTabDaten.ts';
+import { aufgeloestVon, live } from './wetterTabDaten.ts';
 import { vorlagenAusTemplates } from '../ampelModell.ts';
 import { standAusAbo, type AboSicht } from '../wetterZustand.ts';
 import { tripNutzlast, vergleichNutzlast } from '../wetterTabSpeicherung.ts';
@@ -19,7 +19,7 @@ const STAND = { version: 1, rows: [{ metric_id: 'gust', places: { sms: false } }
 
 const opt = (kind: 'route' | 'vergleich', abo: AboSicht, placements?: () => unknown) => {
 	const vv = v();
-	const stand = standAusAbo(kind, abo, vv);
+	const stand = standAusAbo(kind, abo, aufgeloestVon(abo));
 	return { client: null as never, stand: () => stand, vorlagen: () => vv, abo: () => abo, placements };
 };
 

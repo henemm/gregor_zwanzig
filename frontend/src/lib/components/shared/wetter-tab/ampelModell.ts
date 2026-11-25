@@ -565,9 +565,9 @@ export function eigeneVorlageAmpel(
 	return a;
 }
 
-/** Vorlagenwechsel/Zuruecksetzen: aufgeloeste Vorlagen-Ampel und Auswahl aus ihrem `enabled`. */
+/** Vorlagenwechsel/Zuruecksetzen: Kopie der fertigen Vorlagen-Ampel und Auswahl aus ihrem `enabled`. */
 export function zuruecksetzen(vorlageId: string, vorlagen: VorlagenAmpeln): { ampel: Ampel; auswahl: string[] } {
-	const ampel = verschmelzen(vorlagen[vorlageId] ?? vorlagen[STANDARD_VORLAGE], null);
+	const ampel = klon(vorlagen[vorlageId] ?? vorlagen[STANDARD_VORLAGE]);
 	return { ampel, auswahl: aktiveMetriken(ampel) };
 }
 

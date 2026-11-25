@@ -6,7 +6,7 @@
 //     PUT /api/trips/{id} mit `official_alerts_enabled`, `official_warnings`, `report_config`.
 //   Orts-Briefing (`vergleich`): EIN Eintrag in der Hub-Schreibschlange (If-Match), nur die
 //     Eigenfelder (display_config `ampel` + `active_metrics`, Warn-Felder, Radar, Tagesfenster);
-//     der Server mergt display_config auf Ebene 1. Bei 412 laedt der Reiter das Abo neu (die
+//     der Server mergt display_config auf Ebene 1. Bei 412 laedt der Reiter Abo und Aufloesung neu (die
 //     fremde Aenderung bleibt sichtbar und wird nicht still ueberschrieben) und meldet den Konflikt
 //     an den Controller („Nochmal speichern" sendet danach den neu geladenen Stand).
 //   Anlegen (`createMode`): kein Netz — der Stand geht als Nutzlast an die Anlege-Seite.
@@ -14,8 +14,10 @@
 // Die Rumpf-Funktionen lesen Stand und Abo erst beim Senden (keine eingefrorene Kopie).
 // Kein Browser-/SvelteKit-Import, lauffaehig unter node --experimental-strip-types.
 
+import { getKnownEtag, setKnownEtag } from '../../../etagRegistry.ts';
 import type { SaveFn, SaveStatus } from '../../../stores/saveStatusStore.svelte.ts';
 import { baueWetterMetrikenSpeicherung, mitKonfliktSchluessel } from '../tripSpeicherung.ts';
+import { eintragAusAbo, loeseAmpelnAuf, type Aufgeloest, type AufloesungClient } from './ampelAufloesung.ts';
 import { tripSpeicherPayload, vergleichSpeicherPayload } from './ampelSchreiben.ts';
 import type { AltSchluessel, VorlagenAmpeln } from './ampelModell.ts';
 import type { WarnFelder } from './amtlicheWarnungen.ts';
@@ -24,7 +26,7 @@ import { vorlageImKontext, type AboSicht, type WetterStand } from './wetterZusta
 /** Besitzer des Speicher-Platzes im Controller (nie die Reiterkennung `wetter`, s. Owner-Waechter). */
 export const WETTER_OWNER = 'wetter-ampel';
 
-export interface SchreibClient {
+export interface SchreibClient extends AufloesungClient {
 	get<T>(path: string): Promise<T>;
 	put<T>(path: string, body: unknown, init?: RequestInit): Promise<T>;
 }
@@ -41,8 +43,8 @@ export type SpeicherOptionen = {
 	/** Server-Antwort an die Seite (Trip bzw. Vergleich); `gesendet` = das placements-Objekt, das dieser
 	 *  Speichervorgang wirklich gesendet hat (#3237 Runde 14), sonst `undefined`. */
 	uebernehmen?: (antwort: unknown, gesendet?: unknown) => void;
-	/** Vergleich: nach 412 neu geladenes Abo, der Reiter hydriert daraus neu. */
-	neuGeladen?: (abo: AboSicht) => void;
+	/** Vergleich: nach 412 neu geladenes Abo samt Aufloesung, der Reiter hydriert daraus neu (synchron). */
+	neuGeladen?: (abo: AboSicht, aufgeloest: Aufgeloest) => void;
 	/** Anlegen: Nutzlast an die Anlege-Seite statt PUT. */
 	anlegen?: (nutzlast: unknown) => void;
 	/** Vergleich: Auswertung je neu hinzugefuegter Metrik (Katalog der Vergleichs-Metriken). */
@@ -128,24 +130,48 @@ function tripSpeicherer(o: SpeicherOptionen): Speicherer {
 	};
 }
 
+/** Gemeldete Speichervorgaenge je Vergleichs-Kennung (Modulzustand wie die ETag-Registry: gilt ueber einen
+ *  Reiterwechsel hinweg). Nur eine Meldung laeuft spaeter als Speichern nach. */
+const meldungen = new Map<string, number>();
+const meldungenVon = (id: string): number => meldungen.get(id) ?? 0;
+
+/** Nach 412: Abo und Aufloesung holen, erst dann Seite und Reiter in einem Zug ersetzen; scheitert eines,
+ *  bleibt der alte Stand. Dann gilt auch wieder der Stempel von vor dem GET (Muster `retryConflict`):
+ *  mit dem frischen ginge die naechste Eingabe durch und ueberschriebe die fremde Aenderung still.
+ *  Ebenso, wenn seit `bezug` ein weiteres Speichern gemeldet wurde (F005): es laeuft nach, trifft wieder auf
+ *  412 und laedt neu (auch nach Zuruecknehmen). Eine Eingabe ohne Meldung (F008: gleicher Wert, gleiche
+ *  Vorlage) laeuft nicht nach, dann wird geladen: massgeblich sind Meldungen, nicht das Stand-Objekt. */
+async function nachKonfliktLaden(o: SpeicherOptionen, pfad: string, id: string, bezug: number): Promise<void> {
+	const stempelVorGet = getKnownEtag(id);
+	const frisch = await o.client.get<AboSicht>(pfad).catch(() => null);
+	if (!frisch) return;
+	const [aufgeloest] = await loeseAmpelnAuf(o.client, [eintragAusAbo(frisch)]).catch((): Aufgeloest[] => []);
+	if (!aufgeloest || meldungenVon(id) !== bezug) {
+		if (stempelVorGet !== undefined) setKnownEtag(id, stempelVorGet);
+		return;
+	}
+	o.uebernehmen?.(frisch);
+	o.neuGeladen?.(frisch, aufgeloest);
+}
+
 /** Ein Vergleichs-PUT in der Hub-Schlange; bei 412 neu laden, dann den Konflikt melden. */
 function vergleichSaveFn(o: SpeicherOptionen): SaveFn {
+	// Bezug beim ersten Lauf ist die eigene Meldung: jede spaetere hat einen eigenen, noch wartenden Vorgang
+	// (auch wenn dieser PUT ihre Eingabe schon traegt). „Nochmal speichern" misst ab dem Senden.
+	let gemeldet: number | undefined = meldungenVon(String(o.abo().id));
 	const fn: SaveFn = async (init) => {
-		const pfad = `/api/compare/presets/${String(o.abo().id)}`;
+		const id = String(o.abo().id);
+		const pfad = `/api/compare/presets/${id}`;
 		const reihe = o.enqueueHubWrite ?? (<T>(f: () => Promise<T>) => f());
 		await reihe(async () => {
+			const bezug = gemeldet ?? meldungenVon(id);
+			gemeldet = undefined;
 			try {
 				const nutzlast = vergleichNutzlast(o);
 				const gesendet = (nutzlast.display_config as { placements?: unknown }).placements;
 				o.uebernehmen?.(await o.client.put<unknown>(pfad, nutzlast, init), gesendet);
 			} catch (e) {
-				if ((e as { status?: number })?.status === 412) {
-					const frisch = await o.client.get<AboSicht>(pfad).catch(() => null);
-					if (frisch) {
-						o.uebernehmen?.(frisch);
-						o.neuGeladen?.(frisch);
-					}
-				}
+				if ((e as { status?: number })?.status === 412) await nachKonfliktLaden(o, pfad, id, bezug);
 				throw e;
 			}
 		});
@@ -156,6 +182,8 @@ function vergleichSaveFn(o: SpeicherOptionen): SaveFn {
 function vergleichSpeicherer(o: SpeicherOptionen): Speicherer {
 	return {
 		melden() {
+			const id = String(o.abo().id);
+			meldungen.set(id, meldungenVon(id) + 1);
 			o.saveController?.schedule(vergleichSaveFn(o), 700, 'wetter-ampel');
 		}
 	};

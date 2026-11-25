@@ -21,7 +21,7 @@ import { clearEtagRegistry } from '../../../../etagRegistry.ts';
 import { createPutQueue } from '../../../compare/compareHubPersistenz.ts';
 import { createController } from '../../__tests__/versandVergleichPruefstand.ts';
 import { createGoMergeServer, vollerVergleich, type GoMergeServer } from '../../__tests__/goMergeServerPruefstand.ts';
-import { live } from './wetterTabDaten.ts';
+import { aufgeloestVon, live } from './wetterTabDaten.ts';
 import { alarmAbFuerAlle, eigenschaftenAusKatalog, vorlagenAusTemplates } from '../ampelModell.ts';
 import { eigeneVorlagePayload, tripSpeicherPayload, vergleichSpeicherPayload } from '../ampelSchreiben.ts';
 import { amtlicheWarnungenFelder } from '../amtlicheWarnungen.ts';
@@ -60,7 +60,7 @@ const TRIP_ABO: AboSicht = {
 
 describe('C1: Modell-Funktionen klonen Svelte-$state-Proxys (Stand und Abo aus dem Browser)', () => {
 	test('wetterZustand: mitAlarmAb / mitEntwurf / mitEigenerVorlage mit Proxy-Stand', () => {
-		const plain = standAusAbo('route', TRIP_ABO, vorlagen);
+		const plain = standAusAbo('route', TRIP_ABO, aufgeloestVon(TRIP_ABO));
 		const stand = alsState(plain);
 		istProxy(stand);
 		assert.deepEqual(mitAlarmAb(stand, 'gust', 'red'), mitAlarmAb(plain, 'gust', 'red'), '„Alarm ab" an einer Zeile');
@@ -73,7 +73,7 @@ describe('C1: Modell-Funktionen klonen Svelte-$state-Proxys (Stand und Abo aus d
 	});
 
 	test('ampelModell: alarmAbFuerAlle und vorlagenAusTemplates mit Proxy-Eingabe', () => {
-		const plain = standAusAbo('route', TRIP_ABO, vorlagen);
+		const plain = standAusAbo('route', TRIP_ABO, aufgeloestVon(TRIP_ABO));
 		const ampel = alsState(plain.ampel);
 		istProxy(ampel);
 		assert.deepEqual(alarmAbFuerAlle(ampel, plain.auswahl, 'orange', eig), alarmAbFuerAlle(plain.ampel, plain.auswahl, 'orange', eig));
@@ -91,7 +91,7 @@ describe('C1: Modell-Funktionen klonen Svelte-$state-Proxys (Stand und Abo aus d
 	});
 
 	test('ampelSchreiben: Trip-, Vergleichs- und Vorlagen-Payload mit Proxy-Eingaben', () => {
-		const plain = standAusAbo('route', TRIP_ABO, vorlagen);
+		const plain = standAusAbo('route', TRIP_ABO, aufgeloestVon(TRIP_ABO));
 		const dc = TRIP_ABO.display_config as Record<string, unknown>;
 		const eingabe = (x: <T>(v: T) => T) => ({
 			vorlage: vorlagen[plain.vorlageId],
@@ -125,7 +125,7 @@ describe('C1: Modell-Funktionen klonen Svelte-$state-Proxys (Stand und Abo aus d
 	});
 
 	test('Trip-Speicherer: tripNutzlast mit Proxy-Stand und Proxy-Abo (wie WetterTab.svelte)', () => {
-		const plain = standAusAbo('route', TRIP_ABO, vorlagen);
+		const plain = standAusAbo('route', TRIP_ABO, aufgeloestVon(TRIP_ABO));
 		const o = (s: WetterStand, abo: AboSicht) => ({ client: api, stand: () => s, vorlagen: () => vorlagen, abo: () => abo });
 		assert.deepEqual(
 			tripNutzlast(o(alsState(mitAlarmAb(plain, 'gust', 'red')), alsState(TRIP_ABO))),
@@ -165,7 +165,7 @@ describe('C1: Vergleichs-Speicherer setzt mit Svelte-Proxys den PUT ab', () => {
 	test('„Alarm ab" an Boeen ⇒ genau ein PUT 200, Ampel auf dem Server', async () => {
 		const seite = alsState(vergleichAbo()) as AboSicht;
 		istProxy(seite);
-		let stand: WetterStand = alsState(standAusAbo('vergleich', seite, vorlagen));
+		let stand: WetterStand = alsState(standAusAbo('vergleich', seite, aufgeloestVon(seite)));
 		istProxy(stand);
 		const ctl = createController(ID);
 		const queue = createPutQueue();

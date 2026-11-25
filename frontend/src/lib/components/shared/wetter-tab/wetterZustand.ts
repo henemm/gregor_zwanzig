@@ -7,8 +7,8 @@
 // Kein Browser-/SvelteKit-Import, lauffaehig unter node --experimental-strip-types.
 
 import type { Ampel, AmpelMetrik, AmpelSeite } from '../../../types.ts';
-import { vorlageIdFuer } from '../../alerts-tab/alarmAbAnzeige.ts';
 import { amtlicheWarnungenAn, type WarnFelder } from './amtlicheWarnungen.ts';
+import type { Aufgeloest } from './ampelAufloesung.ts';
 import { abweichungsMenge } from './ampelSchreiben.ts';
 import { klon } from './klon.ts';
 import {
@@ -19,7 +19,6 @@ import {
 	auswahlLesen,
 	ohneZeile,
 	vergleichsKatalogIds,
-	verschmelzen,
 	zuruecksetzen,
 	STANDARD_VORLAGE,
 	type AlarmAb,
@@ -87,19 +86,17 @@ function nurAusgebbar(context: Kontext, auswahl: string[], alt: AltSchluessel): 
 
 /** Erst-Hydration aus dem gespeicherten Abo. Ohne eigene Auswahl gilt der Mail-Standard
  *  (#3047 E1, `quellen.eig` fuer den Trip-Register-Standard); `quellen.alsVorlage`: die Vorlage
- *  (Anlege-Kette). Vorlagen-ID wie Python `_aufloesen` (template → preset_name → profil). */
+ *  (Anlege-Kette). Ampel und Vorlagen-ID kommen fertig vom Server (#2988, `aufgeloest`). */
 export function standAusAbo(
 	context: Kontext,
 	abo: AboSicht | null | undefined,
-	vorlagen: VorlagenAmpeln,
+	aufgeloest: Aufgeloest,
 	alt: AltSchluessel = {},
 	quellen: AuswahlQuellen = {}
 ): WetterStand {
 	const dc = (abo?.display_config ?? {}) as Record<string, unknown>;
-	const aboAmpel = (dc.ampel ?? null) as Ampel | null;
-	const vorlageId = vorlageIdFuer(aboAmpel, dc.preset_name as string | undefined, abo?.profil as string | undefined, vorlagen);
-	const ampel = verschmelzen(vorlagen[vorlageId] ?? vorlagen[STANDARD_VORLAGE], aboAmpel);
-	ampel.template = vorlageId;
+	const vorlageId = aufgeloest.vorlage_id;
+	const ampel: Ampel = { ...klon(aufgeloest.ampel), template: vorlageId };
 	const auswahl = auswahlLesen(context, dc as Parameters<typeof auswahlLesen>[1], ampel, alt, quellen);
 	return {
 		vorlageId,

@@ -23,7 +23,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { live } from '../components/shared/wetter-tab/__tests__/wetterTabDaten.ts';
+import { aufloesungPost, aufgeloestVon, live } from '../components/shared/wetter-tab/__tests__/wetterTabDaten.ts';
 import { vorlagenAusTemplates } from '../components/shared/wetter-tab/ampelModell.ts';
 import { standAusAbo, type AboSicht } from '../components/shared/wetter-tab/wetterZustand.ts';
 import { tripNutzlast, vergleichNutzlast } from '../components/shared/wetter-tab/wetterTabSpeicherung.ts';
@@ -80,7 +80,7 @@ async function karteImReiter(context: 'route' | 'vergleich', abo: AboSicht): Pro
 		trip: context === 'route' ? abo : undefined,
 		preset: context === 'vergleich' ? abo : undefined
 	});
-	u.stand = standAusAbo(context, abo, vorlagen());
+	u.stand = standAusAbo(context, abo, aufgeloestVon(abo));
 	const { ast, quelle } = svelteAst(WETTER_TAB);
 	const karten = findeKomponenten(ast, 'WarnungenRadarKarte');
 	assert.equal(karten.length, 1, 'Messaufbau: genau eine WarnungenRadarKarte im WetterTab erwartet');
@@ -131,15 +131,14 @@ describe('AC-6: Trip-Reiter Wetter zeigt die Radar-Zeile mit „deine Etappe"', 
 
 describe('AC-4: Lesen — Trip None = an, Vergleich None = aus', () => {
 	test('Trip: fehlendes Feld ⇒ an; true ⇒ an; false ⇒ aus', () => {
-		const v = vorlagen();
-		assert.equal(standAusAbo('route', TRIP, v).radarAn, true, 'Bestandstrip ohne Feld liest als aus (stilles Verstummen)');
-		assert.equal(standAusAbo('route', { ...TRIP, radar_alert_enabled: true }, v).radarAn, true);
-		assert.equal(standAusAbo('route', { ...TRIP, radar_alert_enabled: false }, v).radarAn, false);
+		assert.equal(standAusAbo('route', TRIP, aufgeloestVon(TRIP)).radarAn, true, 'Bestandstrip ohne Feld liest als aus (stilles Verstummen)');
+		assert.equal(standAusAbo('route', { ...TRIP, radar_alert_enabled: true }, aufgeloestVon(TRIP)).radarAn, true);
+		assert.equal(standAusAbo('route', { ...TRIP, radar_alert_enabled: false }, aufgeloestVon(TRIP)).radarAn, false);
 	});
 
 	test('Vergleich: fehlendes Feld bleibt aus (Gegenprobe), auch im gesendeten Rumpf', () => {
 		const v = vorlagen();
-		const stand = standAusAbo('vergleich', VERGLEICH, v);
+		const stand = standAusAbo('vergleich', VERGLEICH, aufgeloestVon(VERGLEICH));
 		assert.equal(stand.radarAn, false);
 		const n = vergleichNutzlast({ client: null as never, stand: () => stand, vorlagen: () => v, abo: () => VERGLEICH });
 		assert.equal(n.radar_alert_enabled, false);
@@ -150,7 +149,7 @@ describe('AC-6: Schreiben — Trip-PUT-Rumpf trägt radar_alert_enabled', () => 
 	test('tripNutzlast: Stand an ⇒ true, Stand aus ⇒ false (im Trip-Rumpf, nicht im Wetter-Fragment)', () => {
 		const v = vorlagen();
 		for (const an of [true, false]) {
-			const stand = { ...standAusAbo('route', TRIP, v), radarAn: an };
+			const stand = { ...standAusAbo('route', TRIP, aufgeloestVon(TRIP)), radarAn: an };
 			const n = tripNutzlast({ client: null as never, stand: () => stand, vorlagen: () => v, abo: () => TRIP });
 			assert.equal(
 				(n.tripFelder as Record<string, unknown>).radar_alert_enabled,
@@ -165,7 +164,8 @@ describe('AC-6: Schreiben — Trip-PUT-Rumpf trägt radar_alert_enabled', () => 
 		const berichte: unknown[] = [];
 		const daten = live();
 		const api = {
-			get: async (p: string) => (p === '/api/metrics' ? daten.metrics : p === '/api/templates' ? daten.templates : [])
+			get: async (p: string) => (p === '/api/metrics' ? daten.metrics : p === '/api/templates' ? daten.templates : []),
+			post: aufloesungPost()
 		};
 		const { u } = await umgebungFuer(WETTER_TAB, {
 			context: 'route',

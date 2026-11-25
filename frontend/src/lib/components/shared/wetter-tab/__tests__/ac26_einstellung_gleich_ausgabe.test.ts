@@ -25,7 +25,7 @@ import { register } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 
-import { FRONTEND, WETTER_TAB, live, vergleichsKatalogFetch } from './wetterTabDaten.ts';
+import { aufloesungPost, aufgeloestVon, FRONTEND, WETTER_TAB, live, vergleichsKatalogFetch } from './wetterTabDaten.ts';
 import { ebene1, pythonAusgabe, type Konfigs } from './ausgabeOrakel.ts';
 import { aktiveMetriken, altSchluesselAusKatalog, ausgebbarTeilen, eigenschaftenAusKatalog, vorlagenAusTemplates } from '../ampelModell.ts';
 import { loadCompareSelectionEntries } from '../compareMetricCatalogLoader.ts';
@@ -123,7 +123,7 @@ const ort = (id: string, roh: Abo): Abo => ({ id, name: id, location_ids: [], ..
 // Frontend-Lader fuer den Ausblick gibt es nicht mehr; die uebrigen Spalten laufen ueber die echten
 // Frontend-Lader (standAusAbo, ladeMailZustand).
 function tripSicht(abo: Abo, schluessel: string) {
-	const w = Z.standAusAbo('route', abo, VORLAGEN, {}, { eig: EIG });
+	const w = Z.standAusAbo('route', abo, aufgeloestVon(abo), {}, { eig: EIG });
 	const m = ladeMailZustand(abo.report_config ?? {});
 	return {
 		auswahl: menge(w.auswahl),
@@ -135,7 +135,7 @@ function tripSicht(abo: Abo, schluessel: string) {
 }
 
 function orteSicht(abo: Abo) {
-	const w = Z.standAusAbo('vergleich', abo, VORLAGEN, ALT, { eig: EIG });
+	const w = Z.standAusAbo('vergleich', abo, aufgeloestVon(abo), ALT, { eig: EIG });
 	const t = ausgebbarTeilen('vergleich', w.auswahl, KATALOG_IDS);
 	return { auswahl: menge(t.zeilen), gesperrt: t.gesperrt, tagesfenster: [w.tagesfenster.start, w.tagesfenster.end] };
 }
@@ -143,7 +143,7 @@ function orteSicht(abo: Abo) {
 // ── Unbeteiligte Gesten mit dem echten Speicherer, danach Ebene-1-Merge wie Go ─────────────
 /** Reiter Wetter: „Alarm ab fuer alle: Rot" (aendert nur die Ampel). */
 function tripNachWetterGeste(abo: Abo): Abo {
-	const s = Z.mitAlarmAbFuerAlle(Z.standAusAbo('route', abo, VORLAGEN, {}, { eig: EIG }), 'red', EIG);
+	const s = Z.mitAlarmAbFuerAlle(Z.standAusAbo('route', abo, aufgeloestVon(abo), {}, { eig: EIG }), 'red', EIG);
 	const n = tripNutzlast({ client: null as never, stand: () => s, vorlagen: () => VORLAGEN, abo: () => abo });
 	return {
 		...abo,
@@ -162,7 +162,7 @@ function tripNachKurzstil(abo: Abo): Abo {
 }
 
 function orteNachWetterGeste(abo: Abo): Abo {
-	const s = Z.mitAlarmAbFuerAlle(Z.standAusAbo('vergleich', abo, VORLAGEN, ALT, { eig: EIG }), 'red', EIG);
+	const s = Z.mitAlarmAbFuerAlle(Z.standAusAbo('vergleich', abo, aufgeloestVon(abo), ALT, { eig: EIG }), 'red', EIG);
 	const n = vergleichNutzlast({
 		client: null as never,
 		stand: () => s,
@@ -275,7 +275,8 @@ describe('AC-26 Orte: Einstellungsseite zeigt, was die Ausgabe tut', () => {
 
 describe('AC-26 Anlege-Kette: Vorlage gilt, im Vergleich nur ausgebbare Groessen (E1, E6)', () => {
 	test('trip_anlegen_zeigt_vorlage', () => {
-		const s = Z.standAusAbo('route', { display_config: { ampel: { template: 'alpen-trekking' } } }, VORLAGEN, {}, { eig: EIG, alsVorlage: true });
+		const abo = { display_config: { ampel: { template: 'alpen-trekking' } } };
+		const s = Z.standAusAbo('route', abo, aufgeloestVon(abo), {}, { eig: EIG, alsVorlage: true });
 		// p5c (Tech-Lead-Entscheidung, Ausgabe unveraendert): die Vorlage samt der Kinder, die Python aus
 		// ihren Eltern ableitet (Mail-Nachweis: p5c_ableitung_hub_orte_ausgabe.test.ts).
 		const vorlage = aktiveMetriken(VORLAGEN['alpen-trekking']);
@@ -283,13 +284,15 @@ describe('AC-26 Anlege-Kette: Vorlage gilt, im Vergleich nur ausgebbare Groessen
 		assert.deepEqual(menge(s.auswahl), menge([...vorlage, ...kinder]));
 	});
 	test('vergleich_anlegen_vorlage_ohne_nicht_ausgebbare', () => {
-		const s = Z.standAusAbo('vergleich', { display_config: { ampel: { template: 'alpen-trekking' } } }, VORLAGEN, ALT, { eig: EIG, alsVorlage: true });
+		const abo = { display_config: { ampel: { template: 'alpen-trekking' } } };
+		const s = Z.standAusAbo('vergleich', abo, aufgeloestVon(abo), ALT, { eig: EIG, alsVorlage: true });
 		const vorlage = aktiveMetriken(VORLAGEN['alpen-trekking']);
 		assert.ok(vorlage.includes('temperature_night'), 'Messaufbau: Vorlage ohne Nacht-Tiefst');
 		assert.deepEqual(menge(s.auswahl), menge(vorlage.filter((id) => KATALOG_IDS.has(id))));
 	});
 	test('vergleich_vorlage_uebernehmen_ohne_nicht_ausgebbare', () => {
-		const s0 = Z.standAusAbo('vergleich', ort('x', ORTE.a_folge), VORLAGEN, ALT, { eig: EIG });
+		const abo = ort('x', ORTE.a_folge);
+		const s0 = Z.standAusAbo('vergleich', abo, aufgeloestVon(abo), ALT, { eig: EIG });
 		const s = Z.mitVorlage(s0, 'alpen-trekking', VORLAGEN, 'vergleich', ALT);
 		assert.ok(!s.auswahl.includes('temperature_night'));
 		assert.ok(s.auswahl.length > 0);
@@ -309,7 +312,7 @@ describe('B-TM2: wieder hinzugefuegte Metrik steht in der Mail hinten (feat_2794
 			report_config: {}
 		};
 		const speichern = (abo: Abo, schritt: (s: Z.WetterStand) => Z.WetterStand): Abo => {
-			const s = schritt(Z.standAusAbo('route', abo, VORLAGEN, {}, { eig: EIG }));
+			const s = schritt(Z.standAusAbo('route', abo, aufgeloestVon(abo), {}, { eig: EIG }));
 			const n = tripNutzlast({ client: null as never, stand: () => s, vorlagen: () => VORLAGEN, abo: () => abo });
 			return { ...abo, display_config: ebene1(abo.display_config, n.weatherConfig as Record<string, unknown>) };
 		};
@@ -390,7 +393,8 @@ describe('AC-26 Verdrahtung: der Reiter (WetterTabInhalt) laedt mit den Quellen 
 			if (pfad === '/api/templates') return LIVE.templates;
 			if (pfad === '/api/metric-presets') return [];
 			throw new Error(`unerwartet: ${pfad}`);
-		}
+		},
+		post: aufloesungPost()
 	};
 	async function montiert(context: 'route' | 'vergleich', abo: Abo) {
 		const { u } = await umgebungFuer(tab, {

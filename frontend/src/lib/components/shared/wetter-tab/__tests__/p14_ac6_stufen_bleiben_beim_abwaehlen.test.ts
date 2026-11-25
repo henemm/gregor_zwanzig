@@ -26,7 +26,7 @@ import { clearEtagRegistry } from '../../../../etagRegistry.ts';
 import { createPutQueue } from '../../../compare/compareHubPersistenz.ts';
 import { createController } from '../../__tests__/versandVergleichPruefstand.ts';
 import { createGoMergeServer, vollerVergleich, type GoMergeServer } from '../../__tests__/goMergeServerPruefstand.ts';
-import { live } from './wetterTabDaten.ts';
+import { aufgeloestVon, live } from './wetterTabDaten.ts';
 import { eigenschaftenAusKatalog, vorlagenAusTemplates } from '../ampelModell.ts';
 import { mitMetrik, ohneMetrik, standAusAbo, type AboSicht, type WetterStand } from '../wetterZustand.ts';
 import { SPEICHERER } from '../wetterTabSpeicherung.ts';
@@ -90,6 +90,9 @@ function tripServer(start: AboSicht) {
 			if (path.endsWith('/weather-config')) doc = { ...doc, display_config: { ...(doc.display_config as Rec), ...b } };
 			else doc = { ...doc, ...b, report_config: { ...(doc.report_config as Rec), ...((b.report_config as Rec) ?? {}) } };
 			return klon(doc) as T;
+		},
+		async post<T>(path: string): Promise<T> {
+			throw new Error(`unerwartet: POST ${path}`);
 		}
 	};
 	return { client, puts, doc: () => klon(doc) as AboSicht };
@@ -97,7 +100,7 @@ function tripServer(start: AboSicht) {
 
 async function tripSpeichern(server: ReturnType<typeof tripServer>, aendern: (s: WetterStand) => WetterStand): Promise<void> {
 	const seite = server.doc();
-	let stand = standAusAbo('route', seite, vorlagen, {}, { eig: EIG });
+	let stand = standAusAbo('route', seite, aufgeloestVon(seite), {}, { eig: EIG });
 	const ctl = createController(TRIP_ID);
 	const sp = SPEICHERER.route({ client: server.client, stand: () => stand, vorlagen: () => vorlagen, abo: () => seite, saveController: ctl });
 	stand = aendern(stand);
@@ -111,7 +114,7 @@ async function tripSpeichern(server: ReturnType<typeof tripServer>, aendern: (s:
 describe('p14 / #1544 AC-6 Trip (Reiter Wetter, echter Speicherer)', () => {
 	test('Boeen abwaehlen + speichern: Ampel-Zeile und Altstufen bleiben gespeichert', async () => {
 		const server = tripServer(tripAbo());
-		const vorher = standAusAbo('route', server.doc(), vorlagen, {}, { eig: EIG });
+		const vorher = standAusAbo('route', server.doc(), aufgeloestVon(server.doc()), {}, { eig: EIG });
 		pruefeZeileWieVorher(vorher, 'Messaufbau');
 
 		await tripSpeichern(server, (s) => ohneMetrik(s, 'gust'));
@@ -135,11 +138,11 @@ describe('p14 / #1544 AC-6 Trip (Reiter Wetter, echter Speicherer)', () => {
 		const server = tripServer(tripAbo());
 		await tripSpeichern(server, (s) => ohneMetrik(s, 'gust'));
 
-		const wieder = mitMetrik(standAusAbo('route', server.doc(), vorlagen, {}, { eig: EIG }), 'gust');
+		const wieder = mitMetrik(standAusAbo('route', server.doc(), aufgeloestVon(server.doc()), {}, { eig: EIG }), 'gust');
 		pruefeZeileWieVorher(wieder, 'nach Neu-Oeffnen');
 
 		await tripSpeichern(server, (s) => mitMetrik(s, 'gust'));
-		pruefeZeileWieVorher(standAusAbo('route', server.doc(), vorlagen, {}, { eig: EIG }), 'nach erneutem Speichern');
+		pruefeZeileWieVorher(standAusAbo('route', server.doc(), aufgeloestVon(server.doc()), {}, { eig: EIG }), 'nach erneutem Speichern');
 		assert.deepEqual((server.doc().display_config as Rec).metric_alert_levels, STUFEN, 'Altstufen nach Wieder-Aufnahme verloren');
 	});
 });
@@ -167,7 +170,7 @@ async function vergleichSpeichern(aendern: (s: WetterStand) => WetterStand): Pro
 	clearEtagRegistry();
 	await api.get(`/api/compare/presets/${CP_ID}`);
 	const seite = server!.stand(CP_ID) as AboSicht;
-	let stand = standAusAbo('vergleich', seite, vorlagen);
+	let stand = standAusAbo('vergleich', seite, aufgeloestVon(seite));
 	const ctl = createController(CP_ID);
 	const queue = createPutQueue();
 	const sp = SPEICHERER.vergleich({
@@ -192,7 +195,7 @@ describe('p14 / #1544 AC-6 Orts-Vergleich (Reiter Wetter, echter Speicherer, Go-
 	test('Boeen abwaehlen, speichern, wieder aufnehmen: Stufe und Altstufen bleiben', async () => {
 		server = createGoMergeServer({ [CP_ID]: vergleichAbo() });
 		server.install();
-		pruefeZeileWieVorher(standAusAbo('vergleich', server.stand(CP_ID) as AboSicht, vorlagen), 'Messaufbau');
+		pruefeZeileWieVorher(standAusAbo('vergleich', server.stand(CP_ID) as AboSicht, aufgeloestVon(server.stand(CP_ID))), 'Messaufbau');
 
 		await vergleichSpeichern((s) => ohneMetrik(s, 'gust'));
 		const dc = server.stand(CP_ID).display_config as Rec;
@@ -202,11 +205,11 @@ describe('p14 / #1544 AC-6 Orts-Vergleich (Reiter Wetter, echter Speicherer, Go-
 		);
 		assert.deepEqual(dc.metric_alert_levels, STUFEN, 'Altstufen nach dem Abwaehlen verloren (AC-6)');
 
-		const wieder = mitMetrik(standAusAbo('vergleich', server.stand(CP_ID) as AboSicht, vorlagen), 'gust', 'vergleich');
+		const wieder = mitMetrik(standAusAbo('vergleich', server.stand(CP_ID) as AboSicht, aufgeloestVon(server.stand(CP_ID))), 'gust', 'vergleich');
 		pruefeZeileWieVorher(wieder, 'nach Neu-Oeffnen');
 
 		await vergleichSpeichern((s) => mitMetrik(s, 'gust', 'vergleich'));
-		pruefeZeileWieVorher(standAusAbo('vergleich', server.stand(CP_ID) as AboSicht, vorlagen), 'nach erneutem Speichern');
+		pruefeZeileWieVorher(standAusAbo('vergleich', server.stand(CP_ID) as AboSicht, aufgeloestVon(server.stand(CP_ID))), 'nach erneutem Speichern');
 		assert.deepEqual((server.stand(CP_ID).display_config as Rec).metric_alert_levels, STUFEN);
 	});
 });

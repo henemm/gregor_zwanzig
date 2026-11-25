@@ -165,6 +165,25 @@ def test_ac5_jede_ungueltige_ampel_faellt_auf_die_vorlage(client, ampel):
     assert zweiter == {"vorlage_id": "skitouren", "ampel": REF["vorlagen"]["skitouren"]}
 
 
+@pytest.mark.parametrize("ampel", [
+    {"metrics": {"gust": {"alarm_ab": "RED"}}},
+    {"metrics": {"gust": {"alarm_ab": "Never"}}},
+    {"metrics": {"thunder": {"alarm_ab": "RED"}}},
+    {"thunder": {"mittel": "RED"}},
+    {"thunder": {"mittel": "Yellow"}},
+    {"thunder": {"hoch": "RED"}},
+    {"thunder": {"hoch": "Orange"}},
+], ids=repr)
+def test_ac5_grossschreibung_einer_stufe_ist_ungueltig(client, ampel):
+    """F007 (S2-Gegenpruefung): „RED“ ist keine Stufe. Die Ampel gilt als ungueltig,
+    samt ihrer Vorlage und ihren gueltigen Zeilen; die Vorlage des Abos greift."""
+    voll = {"template": "skitouren", **ampel}
+    voll["metrics"] = {"wind": {"alarm_ab": "red"}, **ampel.get("metrics", {})}
+    assert validate_ampel(voll)
+    e = _eins(client, {"ampel": voll, "preset_name": "wandern"})
+    assert e == {"vorlage_id": "wandern", "ampel": REF["vorlagen"]["wandern"]}
+
+
 def test_ac5_unendliche_grenze_ist_ungueltig(client):
     """``1e999`` ist gueltiges JSON, aber keine Grenze (Frontend vor dem Umbau:
     ungueltig): Vorlage greift, kein Serverfehler."""

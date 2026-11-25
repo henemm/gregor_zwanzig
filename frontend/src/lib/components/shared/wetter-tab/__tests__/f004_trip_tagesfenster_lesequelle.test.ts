@@ -12,7 +12,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { live } from './wetterTabDaten.ts';
+import { aufgeloestVon, live } from './wetterTabDaten.ts';
 import { vorlagenAusTemplates } from '../ampelModell.ts';
 import { standAusAbo, tagesfensterLesen, type AboSicht } from '../wetterZustand.ts';
 import { tripNutzlast, vergleichNutzlast } from '../wetterTabSpeicherung.ts';
@@ -49,7 +49,7 @@ describe('F004/AC-21: Tagesfenster-Lesequelle je Kontext', () => {
 
 	test('Trip: Oeffnen zeigt das gespeicherte Fenster, Speichern schreibt es unveraendert zurueck', () => {
 		const v = vorlagen();
-		const stand = standAusAbo('route', TRIP, v);
+		const stand = standAusAbo('route', TRIP, aufgeloestVon(TRIP));
 		assert.deepEqual(stand.tagesfenster, { start: 7, end: 18 }, 'Reiter zeigt nicht das gespeicherte Trip-Fenster');
 		const n = tripNutzlast({ client: null as never, stand: () => stand, vorlagen: () => v, abo: () => TRIP });
 		assert.equal(n.tripFelder.report_config.day_window_start_hour, 7, 'Speichern ueberschreibt das Trip-Fenster (Start)');
@@ -60,7 +60,7 @@ describe('F004/AC-21: Tagesfenster-Lesequelle je Kontext', () => {
 
 	test('Orts-Briefing: Oeffnen und Speichern behalten das top-level-Fenster', () => {
 		const v = vorlagen();
-		const stand = standAusAbo('vergleich', VERGLEICH, v);
+		const stand = standAusAbo('vergleich', VERGLEICH, aufgeloestVon(VERGLEICH));
 		assert.deepEqual(stand.tagesfenster, { start: 6, end: 17 });
 		const n = vergleichNutzlast({ client: null as never, stand: () => stand, vorlagen: () => v, abo: () => VERGLEICH });
 		assert.equal(n.day_window_start_hour, 6);

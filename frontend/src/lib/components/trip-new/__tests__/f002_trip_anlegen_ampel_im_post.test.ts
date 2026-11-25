@@ -20,7 +20,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { umgebungFuer, findeKomponenten, attributAusdruck, ohneTypen, werte, type Knoten } from '../../shared/__tests__/svelteInstanzPruefstand.ts';
-import { live } from '../../shared/wetter-tab/__tests__/wetterTabDaten.ts';
+import { aufloesungPost, live } from '../../shared/wetter-tab/__tests__/wetterTabDaten.ts';
 import * as Z from '../../shared/wetter-tab/wetterZustand.ts';
 import type { Ampel } from '../../../types.ts';
 
@@ -35,7 +35,8 @@ const LIVE_API = {
 		if (pfad === '/api/templates') return d.templates;
 		if (pfad === '/api/metric-presets') return [];
 		throw new Error(`unerwartet: ${pfad}`);
-	}
+	},
+	post: aufloesungPost()
 };
 
 async function editor() {
