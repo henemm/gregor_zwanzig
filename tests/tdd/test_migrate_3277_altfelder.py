@@ -302,6 +302,23 @@ def test_ac9_compare_presets_ohne_tabellenpruefung_bereinigt(root):
     assert nachher[1] == vorher[1]
 
 
+def test_ac4_ac9_sicherung_enthaelt_presets_und_briefings_byte_genau(root):
+    original = {f"alice/{p.relative_to(root / 'alice')}": p.read_bytes()
+                for p in [*sorted((root / "alice" / "briefings").glob("*.json")),
+                          root / "alice" / "compare_presets.json"]}
+    _lauf(root, "--ausfuehren")
+    assert (root / "alice" / "compare_presets.json").read_bytes() != original["alice/compare_presets.json"], \
+        "Presets-Datei muss bereinigt worden sein (sonst prueft der Test die Sicherung nicht)"
+    archive = [a for a in _sicherungen(root) if "-alice-" in a.name]
+    assert len(archive) == 1, f"genau eine Sicherung fuer alice erwartet: {archive}"
+    with tarfile.open(archive[0]) as tar:
+        im_archiv = {n: tar.extractfile(n).read() for n in tar.getnames() if tar.getmember(n).isfile()}
+    assert "alice/compare_presets.json" in im_archiv, f"Presets fehlen in der Sicherung: {sorted(im_archiv)}"
+    assert im_archiv["alice/compare_presets.json"] == original["alice/compare_presets.json"]
+    for name, inhalt in original.items():
+        assert im_archiv.get(name) == inhalt, f"{name} nicht byte-gleich in der Sicherung"
+
+
 # --- AC-10: Schreibkonflikt --------------------------------------------------
 
 def _modul():
