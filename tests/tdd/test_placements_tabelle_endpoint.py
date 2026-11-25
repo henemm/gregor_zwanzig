@@ -146,13 +146,42 @@ def _zeile(antwort, metric_id) -> dict:
 # Versandweg-Orakel (aus demselben Beispiel-Datensatz)
 # ---------------------------------------------------------------------------
 
-def _trip_versand_sms(user: str, kennung: str, report_type: str = "evening") -> str:
-    """SMS ueber den Renderer des Versands mit dem festen Beispiel-Datensatz."""
+def _beispiel_nacht():
+    """Nachtreihe des Beispiel-Datensatzes, unabhaengig vom Produktionscode
+    gebildet (#3373): Ankunft 16 Uhr bis 06 Uhr Ortszeit am Folgetag, wie
+    ``fetch_night_weather`` sie im Versand abdeckt (``Ziel``-Segment endet 16
+    Uhr)."""
+    from datetime import timedelta
+
+    from app.models import NormalizedTimeseries
+    from services import placements_beispiel as pb
+    from utils.timezone import local_hour
+
+    abend = [p for p in pb.tagespunkte(pb.TAG) if local_hour(p.ts, pb.ZONE) >= 16]
+    morgen = [p for p in pb.tagespunkte(pb.TAG + timedelta(days=1))
+              if local_hour(p.ts, pb.ZONE) <= 6]
+    return NormalizedTimeseries(meta=pb._meta(), data=abend + morgen)
+
+
+def _trip_versand_bericht(user: str, kennung: str, report_type: str = "evening", lang: str = "de"):
+    """Bericht ueber den Versandaufbau mit dem festen Beispiel-Datensatz
+    (#3373): Etappenkopf, Nachtwetter und Folgetag-Gewitter entstehen ueber
+    ``trip_briefing_aufbau.trip_anreicherung_bauen`` -- denselben Baustein
+    wie im Versand (``numbered_stage_label`` der Etappe am Zieltag,
+    Gewitter-Ableitung des Schedulers aus den Trend-Zeilen). Zieltag ist die
+    erste Etappe nach Datum. Trend-Zeilen tragen fuer die Ableitung ihr
+    Kalenderdatum (wie ``_build_stage_trend``); so entsteht kein Wetterabruf."""
+    from datetime import datetime, timedelta, timezone
+
     from app.ampel import resolve_ampel
     from app.loader import get_data_root, load_trip
+    from app.models import OutlookState, TrendResult
     from output.renderers.email.outlook import build_outlook_row
     from output.renderers.trip_report import TripReportFormatter
     from services import placements_beispiel as pb
+    from services import trip_briefing_aufbau as aufbau
+    from services.report_config_resolver import resolve_report_render_options
+    from services.trip_report_scheduler import TripReportSchedulerService
     from services.weather_metrics import summarize_points
 
     trip = load_trip(kennung, data_dir=get_data_root(), user_id=user)
@@ -160,11 +189,29 @@ def _trip_versand_sms(user: str, kennung: str, report_type: str = "evening") -> 
     trend = [build_outlook_row(summarize_points(p), p, wd, pb.ZONE, trip_display_config=dc,
                                report_type=report_type, context="route", ampel=resolve_ampel(trip))
              for wd, p in pb.ausblick_tage()]
+    mit_datum = [{**zeile, "date": pb.TAG + timedelta(days=i + 1)} for i, zeile in enumerate(trend)]
+    erste = min(trip.stages, key=lambda s: s.date) if trip.stages else None
+    anreicherung = aufbau.trip_anreicherung_bauen(
+        TripReportSchedulerService(user_id=user), trip, erste.date if erste else pb.TAG,
+        pb.trip_segmente(), report_type=report_type,
+        now_utc=datetime(pb.TAG.year, pb.TAG.month, pb.TAG.day, 4, 0, tzinfo=timezone.utc),
+        trip_tz=pb.ZONE,
+        render_options=resolve_report_render_options(trip.report_config, dc, report_type),
+        night_weather=_beispiel_nacht(),
+        trend_result=TrendResult(rows=mit_datum, state=OutlookState.FOUND),
+    )
     return TripReportFormatter().format_email(
         pb.trip_segmente(), trip.name, report_type, display_config=dc, multi_day_trend=trend,
         report_config=trip.report_config, trip=trip, tz=pb.ZONE,
-        stage_name=trip.stages[0].name, lang="de",
-    ).sms_text
+        stage_name=anreicherung.stage_name or trip.name,
+        night_weather=anreicherung.night_weather,
+        thunder_forecast=anreicherung.thunder_forecast, lang=lang,
+    )
+
+
+def _trip_versand_sms(user: str, kennung: str, report_type: str = "evening") -> str:
+    """SMS ueber den Versandaufbau mit dem festen Beispiel-Datensatz."""
+    return _trip_versand_bericht(user, kennung, report_type).sms_text
 
 
 def _orte_versand_sms(user: str, kennung: str) -> str:
@@ -688,12 +735,14 @@ def _markiert(antwort) -> set[str]:
 
 
 @pytest.mark.parametrize("etappe,kopf", [
-    ("Tag 1: SU7", "Tag 1: SU7 "), ("W: G5 R1", "W: G5 R1 "),  # #3174: Kopf ohne ``:``
+    # #3373: der Versand nummeriert die Etappe (``numbered_stage_label``), der
+    # Kopf ist ``E1`` -- auch bei Namen mit ``:`` oder kuerzelartigem Text.
+    ("Tag 1: SU7", "E1 "), ("W: G5 R1", "E1 "),
 ])
 def test_f001_etappenname_mit_trennzeichen_verfaelscht_nichts(client, etappe, kopf):
-    """Der Kopf der Trip-SMS ist der Etappenname; steht darin ``: `` oder ein
-    Text, der wie ein Kuerzel aussieht, bleiben Beispielwerte und Marken
-    die der wirklichen Token."""
+    """Der Kopf der Trip-SMS ist die nummerierte Etappe; steht im Namen
+    ``: `` oder ein Text, der wie ein Kuerzel aussieht, bleiben Beispielwerte
+    und Marken die der wirklichen Token."""
     _trip(NUTZER_A, "t-f001", placements={"version": 1, "rows": []}, etappe=etappe)
     antwort = _ok(client, "t-f001", "route")
     versand = _trip_versand_sms(NUTZER_A, "t-f001")

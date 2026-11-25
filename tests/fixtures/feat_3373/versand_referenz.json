@@ -1,0 +1,1077 @@
+{
+ "orte_karte": {
+  "blocks": {
+   "email_format": "full",
+   "hourly": true,
+   "outlook": {
+    "evening": false,
+    "morning": true
+   },
+   "telegram_style": "rich"
+  },
+  "columns": [
+   {
+    "block_off": false,
+    "rests": null,
+    "stelle": "email",
+    "subtitle": "uebersicht"
+   },
+   {
+    "block_off": false,
+    "rests": null,
+    "stelle": "telegram",
+    "subtitle": "nachricht"
+   },
+   {
+    "block_off": false,
+    "rests": null,
+    "stelle": "sms",
+    "subtitle": "und_premium_sms"
+   },
+   {
+    "block_off": false,
+    "rests": null,
+    "stelle": "hourly",
+    "subtitle": "nur_email"
+   },
+   {
+    "block_off": false,
+    "rests": null,
+    "stelle": "outlook",
+    "subtitle": "email_und_telegram"
+   }
+  ],
+  "fixed_rows": [
+   {
+    "id": "amtliche_warnungen",
+    "position": {
+     "email": "first",
+     "sms": "last",
+     "telegram": "first"
+    }
+   }
+  ],
+  "kind": "vergleich",
+  "lang": "de",
+  "legend": {
+   "fixed": [
+    {
+     "key": "zeit_ab_gelb",
+     "token": "@14"
+    },
+    {
+     "key": "amtliche_warnung",
+     "token": "!TS:H@14"
+    },
+    {
+     "key": "stufe_gelb",
+     "token": "L"
+    },
+    {
+     "key": "stufe_orange",
+     "token": "M"
+    },
+    {
+     "key": "stufe_rot",
+     "token": "H"
+    },
+    {
+     "key": "warnung_wind",
+     "token": "WG"
+    },
+    {
+     "key": "warnung_starkregen",
+     "token": "RA"
+    },
+    {
+     "key": "lawinenstufe",
+     "token": "AV4"
+    },
+    {
+     "key": "warnquelle_nicht_erreichbar",
+     "token": "X?"
+    },
+    {
+     "key": "ort_nummer",
+     "meaning": "Ort 1 in der Reihenfolge des Abos",
+     "token": "O1"
+    }
+   ],
+   "metrics": [
+    {
+     "kuerzel": "D",
+     "meaning": "Tagestiefstwert/Tageshöchstwert",
+     "metric_id": "temperature"
+    },
+    {
+     "kuerzel": "W",
+     "meaning": "Wind km/h",
+     "metric_id": "wind"
+    },
+    {
+     "kuerzel": "G",
+     "meaning": "Böen",
+     "metric_id": "gust"
+    },
+    {
+     "kuerzel": "R",
+     "meaning": "Regen mm",
+     "metric_id": "precipitation"
+    },
+    {
+     "kuerzel": "PR",
+     "meaning": "Regenwahrscheinlichkeit %",
+     "metric_id": "rain_probability"
+    },
+    {
+     "kuerzel": "SU",
+     "meaning": "Sonnenstunden",
+     "metric_id": "sunshine"
+    },
+    {
+     "kuerzel": "CT",
+     "meaning": "Bewölkung gesamt",
+     "metric_id": "cloud_total"
+    },
+    {
+     "kuerzel": "HU",
+     "meaning": "Luftfeuchte",
+     "metric_id": "humidity"
+    },
+    {
+     "kuerzel": "VS",
+     "meaning": "Sicht",
+     "metric_id": "visibility"
+    },
+    {
+     "kuerzel": "UV",
+     "meaning": "UV-Index",
+     "metric_id": "uv_index"
+    },
+    {
+     "kuerzel": "DP",
+     "meaning": "Taupunkt",
+     "metric_id": "dewpoint"
+    },
+    {
+     "kuerzel": "HP",
+     "meaning": "Luftdruck",
+     "metric_id": "pressure"
+    },
+    {
+     "kuerzel": "FZ",
+     "meaning": "Nullgradgrenze m",
+     "metric_id": "freezing_level"
+    },
+    {
+     "kuerzel": "CL",
+     "meaning": "Bewölkung tief",
+     "metric_id": "cloud_low"
+    },
+    {
+     "kuerzel": "CM",
+     "meaning": "Bewölkung mittel",
+     "metric_id": "cloud_mid"
+    },
+    {
+     "kuerzel": "CH",
+     "meaning": "Bewölkung hoch",
+     "metric_id": "cloud_high"
+    },
+    {
+     "kuerzel": "SL",
+     "meaning": "Schneefallgrenze m",
+     "metric_id": "snowfall_limit"
+    }
+   ]
+  },
+  "location_count": 3,
+  "outlook_reports": [
+   "morning"
+  ],
+  "placements": {
+   "rows": [],
+   "version": 1
+  },
+  "rows": [
+   {
+    "cells": {
+     "email": {
+      "ampel": null,
+      "example": "19°C / 15°C",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "hourly": {
+      "ampel": null,
+      "example": "15°",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "outlook": {
+      "ampel": null,
+      "example": "10/24",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "sms": {
+      "ampel": null,
+      "example": "D15/19",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "telegram": {
+      "ampel": null,
+      "example": "Temp max 19°C · Temp min 15°C",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     }
+    },
+    "metric_id": "temperature",
+    "name": "Temperatur",
+    "parent": null,
+    "position": 0
+   },
+   {
+    "cells": {
+     "email": {
+      "ampel": null,
+      "example": "43 km/h",
+      "format": "raw",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "hourly": {
+      "ampel": null,
+      "example": "28",
+      "format": "raw",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "outlook": {
+      "ampel": null,
+      "example": "60 km/h",
+      "format": "raw",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "sms": {
+      "ampel": null,
+      "example": "W30@10(43@16)",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "telegram": {
+      "ampel": null,
+      "example": "Wind 43 km/h",
+      "format": "raw",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     }
+    },
+    "metric_id": "wind",
+    "name": "Wind",
+    "parent": null,
+    "position": 1
+   },
+   {
+    "cells": {
+     "email": {
+      "ampel": null,
+      "example": "62 km/h",
+      "format": "raw",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "hourly": {
+      "ampel": null,
+      "example": "41",
+      "format": "raw",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "outlook": {
+      "ampel": null,
+      "example": "84 km/h",
+      "format": "raw",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "sms": {
+      "ampel": null,
+      "example": "G41@9(62@16)",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "telegram": {
+      "ampel": null,
+      "example": "Böen 62 km/h",
+      "format": "raw",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     }
+    },
+    "metric_id": "gust",
+    "name": "Böen",
+    "parent": null,
+    "position": 2
+   },
+   {
+    "cells": {
+     "email": {
+      "ampel": null,
+      "example": "3.4 mm",
+      "format": "raw",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "hourly": {
+      "ampel": null,
+      "example": "·",
+      "format": "raw",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "outlook": {
+      "ampel": null,
+      "example": "3.4 mm",
+      "format": "raw",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "sms": {
+      "ampel": null,
+      "example": "R1.0@15(1.3@16)",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "telegram": {
+      "ampel": null,
+      "example": "Regen 3.4 mm",
+      "format": "raw",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     }
+    },
+    "metric_id": "precipitation",
+    "name": "Niederschlag",
+    "parent": null,
+    "position": 3
+   },
+   {
+    "cells": {
+     "email": {
+      "ampel": null,
+      "example": "70%",
+      "format": "raw",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "hourly": {
+      "ampel": null,
+      "example": "15%",
+      "format": "raw",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "outlook": {
+      "ampel": null,
+      "example": "70 %",
+      "format": "raw",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "sms": {
+      "ampel": null,
+      "example": null,
+      "format": null,
+      "mark": "passt_nicht_mehr",
+      "reason": null,
+      "state": "on"
+     },
+     "telegram": {
+      "ampel": null,
+      "example": "Regenwahrscheinlichkeit 70%",
+      "format": "raw",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     }
+    },
+    "metric_id": "rain_probability",
+    "name": "Regenwahrscheinlichkeit",
+    "parent": null,
+    "position": 4
+   },
+   {
+    "cells": {
+     "email": {
+      "ampel": null,
+      "example": "freundlich",
+      "format": "simplified",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "hourly": {
+      "ampel": null,
+      "example": null,
+      "format": null,
+      "mark": null,
+      "reason": "kein_stundenwert",
+      "state": "locked"
+     },
+     "outlook": {
+      "ampel": null,
+      "example": "sonnig",
+      "format": "simplified",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "sms": {
+      "ampel": null,
+      "example": null,
+      "format": null,
+      "mark": "passt_nicht_mehr",
+      "reason": null,
+      "state": "on"
+     },
+     "telegram": {
+      "ampel": null,
+      "example": "Sonne freundlich",
+      "format": "simplified",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     }
+    },
+    "metric_id": "sunshine",
+    "name": "Sonnenstunden",
+    "parent": null,
+    "position": 5
+   },
+   {
+    "cells": {
+     "email": {
+      "ampel": null,
+      "example": "⛅",
+      "format": "simplified",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "hourly": {
+      "ampel": null,
+      "example": "⛅",
+      "format": "simplified",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "outlook": {
+      "ampel": null,
+      "example": "⛅",
+      "format": "simplified",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "sms": {
+      "ampel": null,
+      "example": null,
+      "format": null,
+      "mark": "passt_nicht_mehr",
+      "reason": null,
+      "state": "on"
+     },
+     "telegram": {
+      "ampel": null,
+      "example": "Wolken ⛅",
+      "format": "simplified",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     }
+    },
+    "metric_id": "cloud_total",
+    "name": "Bewölkung",
+    "parent": null,
+    "position": 6
+   },
+   {
+    "cells": {
+     "email": {
+      "ampel": null,
+      "example": "68%",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "hourly": {
+      "ampel": null,
+      "example": "64",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "outlook": {
+      "ampel": null,
+      "example": "66 %",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "sms": {
+      "ampel": null,
+      "example": null,
+      "format": null,
+      "mark": "passt_nicht_mehr",
+      "reason": null,
+      "state": "on"
+     },
+     "telegram": {
+      "ampel": null,
+      "example": "Luftfeuchte Ø 68%",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     }
+    },
+    "metric_id": "humidity",
+    "name": "Luftfeuchte",
+    "parent": null,
+    "position": 7
+   },
+   {
+    "cells": {
+     "email": {
+      "ampel": null,
+      "example": "14.4 km",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "hourly": {
+      "ampel": null,
+      "example": "18.6",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "outlook": {
+      "ampel": null,
+      "example": "10200 m",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "sms": {
+      "ampel": null,
+      "example": null,
+      "format": null,
+      "mark": "passt_nicht_mehr",
+      "reason": null,
+      "state": "on"
+     },
+     "telegram": {
+      "ampel": null,
+      "example": "Sicht min 14.4 km",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     }
+    },
+    "metric_id": "visibility",
+    "name": "Sichtweite",
+    "parent": null,
+    "position": 8
+   },
+   {
+    "cells": {
+     "email": {
+      "ampel": null,
+      "example": "7",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "hourly": {
+      "ampel": null,
+      "example": "3",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "outlook": {
+      "ampel": null,
+      "example": "7",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "sms": {
+      "ampel": null,
+      "example": null,
+      "format": null,
+      "mark": "passt_nicht_mehr",
+      "reason": null,
+      "state": "on"
+     },
+     "telegram": {
+      "ampel": null,
+      "example": "UV max 7",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     }
+    },
+    "metric_id": "uv_index",
+    "name": "UV-Index",
+    "parent": null,
+    "position": 9
+   },
+   {
+    "cells": {
+     "email": {
+      "ampel": null,
+      "example": "8°C",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "hourly": {
+      "ampel": null,
+      "example": "8",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "outlook": {
+      "ampel": null,
+      "example": "8 °C",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "sms": {
+      "ampel": null,
+      "example": null,
+      "format": null,
+      "mark": "passt_nicht_mehr",
+      "reason": null,
+      "state": "on"
+     },
+     "telegram": {
+      "ampel": null,
+      "example": "Taupunkt Ø 8°C",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     }
+    },
+    "metric_id": "dewpoint",
+    "name": "Taupunkt",
+    "parent": null,
+    "position": 10
+   },
+   {
+    "cells": {
+     "email": {
+      "ampel": null,
+      "example": "1014 hPa",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "hourly": {
+      "ampel": null,
+      "example": "1014",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "outlook": {
+      "ampel": null,
+      "example": "1014 hPa",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "sms": {
+      "ampel": null,
+      "example": null,
+      "format": null,
+      "mark": "passt_nicht_mehr",
+      "reason": null,
+      "state": "on"
+     },
+     "telegram": {
+      "ampel": null,
+      "example": "Luftdruck Ø 1014 hPa",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     }
+    },
+    "metric_id": "pressure",
+    "name": "Luftdruck",
+    "parent": null,
+    "position": 11
+   },
+   {
+    "cells": {
+     "email": {
+      "ampel": null,
+      "example": "3300 m",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "hourly": {
+      "ampel": null,
+      "example": "3300",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "outlook": {
+      "ampel": null,
+      "example": "3310 m",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "sms": {
+      "ampel": null,
+      "example": null,
+      "format": null,
+      "mark": "passt_nicht_mehr",
+      "reason": null,
+      "state": "on"
+     },
+     "telegram": {
+      "ampel": null,
+      "example": "Nullgradgrenze 3300 m",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     }
+    },
+    "metric_id": "freezing_level",
+    "name": "Nullgradgrenze",
+    "parent": null,
+    "position": 12
+   },
+   {
+    "cells": {
+     "email": {
+      "ampel": null,
+      "example": "⛅",
+      "format": "simplified",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "hourly": {
+      "ampel": null,
+      "example": "⛅",
+      "format": "simplified",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "outlook": {
+      "ampel": null,
+      "example": "⛅",
+      "format": "simplified",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "sms": {
+      "ampel": null,
+      "example": null,
+      "format": null,
+      "mark": "passt_nicht_mehr",
+      "reason": null,
+      "state": "on"
+     },
+     "telegram": {
+      "ampel": null,
+      "example": "Wolken tief ⛅",
+      "format": "simplified",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     }
+    },
+    "metric_id": "cloud_low",
+    "name": "Tiefe Wolken",
+    "parent": null,
+    "position": 13
+   },
+   {
+    "cells": {
+     "email": {
+      "ampel": null,
+      "example": "⛅",
+      "format": "simplified",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "hourly": {
+      "ampel": null,
+      "example": "🌤️",
+      "format": "simplified",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "outlook": {
+      "ampel": null,
+      "example": "⛅",
+      "format": "simplified",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "sms": {
+      "ampel": null,
+      "example": null,
+      "format": null,
+      "mark": "passt_nicht_mehr",
+      "reason": null,
+      "state": "on"
+     },
+     "telegram": {
+      "ampel": null,
+      "example": "Wolken mittel ⛅",
+      "format": "simplified",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     }
+    },
+    "metric_id": "cloud_mid",
+    "name": "Mittelhohe Wolken",
+    "parent": null,
+    "position": 14
+   },
+   {
+    "cells": {
+     "email": {
+      "ampel": null,
+      "example": "🌤️",
+      "format": "simplified",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "hourly": {
+      "ampel": null,
+      "example": "🌤️",
+      "format": "simplified",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "outlook": {
+      "ampel": null,
+      "example": "🌤️",
+      "format": "simplified",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "sms": {
+      "ampel": null,
+      "example": null,
+      "format": null,
+      "mark": "passt_nicht_mehr",
+      "reason": null,
+      "state": "on"
+     },
+     "telegram": {
+      "ampel": null,
+      "example": "Wolken hoch 🌤️",
+      "format": "simplified",
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     }
+    },
+    "metric_id": "cloud_high",
+    "name": "Hohe Wolken",
+    "parent": null,
+    "position": 15
+   },
+   {
+    "cells": {
+     "email": {
+      "ampel": null,
+      "example": "2900 m",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "hourly": {
+      "ampel": null,
+      "example": "2900",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "outlook": {
+      "ampel": null,
+      "example": "2910 m",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     },
+     "sms": {
+      "ampel": null,
+      "example": null,
+      "format": null,
+      "mark": "passt_nicht_mehr",
+      "reason": null,
+      "state": "on"
+     },
+     "telegram": {
+      "ampel": null,
+      "example": "Schneefallgrenze 2900 m",
+      "format": null,
+      "mark": null,
+      "reason": null,
+      "state": "on"
+     }
+    },
+    "metric_id": "snowfall_limit",
+    "name": "Schneefallgrenze",
+    "parent": null,
+    "position": 16
+   }
+  ],
+  "sms_example": {
+   "length": 158,
+   "max_length": 160,
+   "text": "O1 D15/19 W30@10(43@16) G41@9(62@16) R1.0@15(1.3@16) O2 D16/20 W31@10(44@16) G42@9(63@16) R1.0@15(1.3@16) O3 D17/21 W32@10(45@16) G43@9(64@16) R1.0@15(1.3@16)"
+  },
+  "stored": true
+ },
+ "versand": {
+  "t-3373-ref-temp-sms/evening": {
+   "email_html_sha256": "7359489f07632f385ce2b34d1c3f57eeaef4fbb3f836d4d18727ee38b14bfc43",
+   "email_plain": "◯ WETTER-BRIEFING\nReferenz - Abend-Briefing\nEtappe 1\n14.07.2026\n2.7 km | ↑300m | ↓0m | max. 900m\n\nEtappe 1: 10–18°C, gef. 7–16°C, ⛅, mäßiger Regen 13:00–17:00, starker Wind 50 km/h, Böen bis 71 km/h ab 19:00, ⚡ möglich 14:00–18:00\n\n━━ Metriken-Überblick ━━\n  14–18°C · Max 15:00\n  gef. 11.8–16.0°C · Max 15:00\n  Wind >30 km/h ab 10:00 · max 49 (19:00)\n  Böen >30 km/h ab 06:00 · max 71 (19:00)\n  Gewitter mittel ab 14:00 · stärkste 15:00\n  Regen ab 15:00 · 3.4 mm\n  Regen-W. >30% ab 13:00 · max 70% (13:00)\n  52–80% bewölkt · Max 15:00\n  Sicht min 15.0 km (15:00)\n  0°-Linie 3.300 m · Max 08:00\n  UV max 7.0 (13:00)\n  Sonne 5.0h\n\n━━ Segment 1: km 0.0–7.5 | 08:00–12:00 | ↑1200m → 1850m ━━\n  Zeit   Temp   Feels   Wind   Gust   Thdr   Rain   Rain%   Cloud   Visib   0°Line   UV    Sun \n  -----  -----  ------  -----  -----  -----  -----  ------  ------  ------  -------  ----  ----\n  08     14.3   11.8    26     38     kein   0.0    15      ⛅       19      3300     2.0   🌤️  \n  09     14.9   12.4    28     41     kein   0.0    15      ⛅       19      3300     3.0   🌤️  \n  10     15.5   13.0    30     44     kein   0.0    15      ⛅       18      3300     4.0   🌤️  \n  11     16.1   13.6    32     47     kein   0.0    15      ⛅       17      3300     5.0   🌤️  \n  12     16.7   14.2    34     50     kein   0.0    15      ⛅       17      3300     6.0   🌤️  \n\n━━ 🏁 Wetter am Ziel: 12:00–15:00 | 1200m ━━\n  Zeit   Temp   Feels   Wind   Gust   Thdr     Rain   Rain%   Cloud   Visib   0°Line   UV    Sun \n  -----  -----  ------  -----  -----  -------  -----  ------  ------  ------  -------  ----  ----\n  12     16.7   14.2    34     50     kein     0.0    15      ⛅       17      3300     6.0   🌤️  \n  13     17.3   14.8    37     53     kein     0.4    70      🌥️      16      3300     7.0   🌧️  \n  14     17.9   15.4    39     56     leicht   0.7    70      🌥️      16      3300     6.0   🌧️  \n  15     18.5   16.0    41     59     mittel   1.0    70      🌥️      15      3300     5.0   ⛈️  \n\n━━ Nacht am Ziel (1850m) ━━\nAnkunft 15:00 → Morgen 06:00\n  Zeit   Temp   Feels   Wind   Gust   Thdr     Rain   Rain%   Cloud   Visib   0°Line   UV    Sun \n  -----  -----  ------  -----  -----  -------  -----  ------  ------  ------  -------  ----  ----\n  16     19.1   16.6    45     65     mittel   1.3    70      🌥️      14      3300     4.0   ⛈️  \n  18     20.3   17.8    50     71     kein     0.0    15      ☁️      13      3300     2.0   🌤️  \n  20     21.5   19.0    54     77     kein     0.0    15      ☁️      11      3300     0.0   ☁️  \n  22     22.7   20.2    59     83     kein     0.0    15      ☁️      10      3300     0.0   ☁️  \n  00     9.5    7.0     10     17     kein     0.0    15      🌤️      23      3300     0.0   🌙   \n  02     10.7   8.2     15     23     kein     0.0    15      🌤️      22      3300     0.0   🌙   \n  04     11.9   9.4     19     29     kein     0.0    15      ⛅       21      3300     0.0   🌙   \n  06     13.1   10.6    21     32     kein     0.0    15      ⛅       20      3300     0.0   🌤️  \n  * Temperatur/Nullgradgrenze: Minimum im 2h-Block\n\n\n3-Tages-Ausblick\nMi                             Temp 12/25  Feels 9/23  Wind 61 km/h  Gust 85 km/h  Thdr ⚡leicht@14 (mittel @15)  Rain 3.4 mm  Rain% 70 %  Cloud ⛅  Visib 10200 m  0°Line 3320 m  UV 7  Sun sonnig  ACC –\nDo                             Temp 14/27  Feels 11/25  Wind 63 km/h  Gust 87 km/h  Thdr ⚡leicht@14 (mittel @15)  Rain 3.4 mm  Rain% 70 %  Cloud ⛅  Visib 10200 m  0°Line 3340 m  UV 7  Sun sonnig  ACC –\nFr                             Temp 16/29  Feels 13/27  Wind 65 km/h  Gust 89 km/h  Thdr ⚡leicht@14 (mittel @15)  Rain 3.4 mm  Rain% 70 %  Cloud ⛅  Visib 10200 m  0°Line 3360 m  UV 7  Sun sonnig  ACC –\n\n\n── Antwort-Kommandos ──\n  HEUTE                – Wetter der heutigen Etappe\n  MORGEN               – Wetter der morgigen Etappe\n  JETZT                – Nowcast Regen/Gewitter nächste ~2h (auch NOW)\n  GEWITTER             – Gewittergefahr heutige Etappe\n  STRECKE [km]         – Regen-Ereignisflächen entlang der Reststrecke\n  RUHETAG [N]          – Etappen um N Tage verschieben (Standard: 1)\n  STATUS               – Heute und kommende Etappen\n  PAUSE [2d / 12h]     – Briefings für Dauer unterbrechen\n  SKIP                 – Nächstes Briefing überspringen\n  STOP                 – Briefings dauerhaft deaktivieren (auch ABBRUCH)\n  WEITER               – Briefings reaktivieren\n  HILFE                – Diese Hilfe anzeigen (auch HELP)\n  KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)\n  STARTDATUM JJJJ-MM-TT – Startdatum des Trips setzen, alle Etappen verschieben\n  REPORT [morning / evening] – Briefing jetzt senden (Standard: morning)\n\nEinheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · Rain%, Cloud % · Visib km · Sun h · 0°Line m\nSpalten: Temp = Temperatur · Feels = Gefühlte Temperatur · Gust = Böen · Rain = Niederschlag · Rain% = Regenwahrscheinlichkeit · Thdr = Gewitter · Cloud = Bewölkung · Visib = Sichtweite · Sun = Sonnenstunden · UV = UV-Index · 0°Line = Nullgradgrenze\n------------------------------------------------------------\nGenerated: 2026-07-14 04:00 UTC\nData: openmeteo (beispiel)\nEtappen-Briefing · Vollversion · openmeteo",
+   "email_subject": "[Referenz] Etappe 1 — Abend",
+   "sms": "E1 N10 D14/18 TF- FN7 FD12/16 W30@10(50@19) G32@6(71@19) TH:L@14(M@15) TH+:M@15 R1.0@15(1.3@16) PR70%@13 CT:OVC@19 VS- FZ3300@4 UV3@9(7@13) SU10",
+   "telegram": [
+    "Referenz\nAbend 14.07.2026",
+    "Kurzübersicht\nT 9.5-18.5\nTF 7.0-16.0\nW 17-50@19\nG 26-71@19\nTH mittel\nR 0.0-1.3@16\nPR 15-70@13\nCT ⛅-☁️@19\nVS 13-22\nFZ 3300\nUV 0.0-7.0@13\nSU 🌙-🌤️@06\n\n⚡ mittel · Sicht gut · 0°C-Grenze 3300 m\n\n… +5 weitere Wettergrößen nur als Tageswert\n(Telegram-Limit)",
+    "Segment 1 · 0.0–7.5 km · ↑820 m ↓170 m\n<pre>\nZt T    TF   W  G  TH   R   PR\n08 14.3 11.8 26 38 kein 0.0 15\n09 14.9 12.4 28 41 kein 0.0 15\n10 15.5 13.0 30 44 kein 0.0 15\n11 16.1 13.6 32 47 kein 0.0 15\n12 16.7 14.2 34 50 kein 0.0 15\n</pre>",
+    "Ziel · 7.5–14.0 km · ↑820 m ↓170 m\n<pre>\nZt T    TF   W  G  TH     R   PR\n12 16.7 14.2 34 50 kein   0.0 15\n13 17.3 14.8 37 53 kein   0.4 70\n14 17.9 15.4 39 56 leicht 0.7 70\n15 18.5 16.0 41 59 mittel 1.0 70\n</pre>",
+    "3-Tages-Ausblick\nMi 15.07.  Temp: 12/25  Feels: 9/23  Wind: 61 km/h\nGust: 85 km/h  Thdr: ⚡leicht@14(mittel@15)  Rain: 3.4 mm\nRain%: 70 %  Cloud: ⛅  Visib: 10200 m  0°Line: 3320 m\nUV: 7  Sun: sonnig\nDo 16.07.  Temp: 14/27  Feels: 11/25  Wind: 63 km/h\nGust: 87 km/h  Thdr: ⚡leicht@14(mittel@15)  Rain: 3.4 mm\nRain%: 70 %  Cloud: ⛅  Visib: 10200 m  0°Line: 3340 m\nUV: 7  Sun: sonnig\nFr 17.07.  Temp: 16/29  Feels: 13/27  Wind: 65 km/h\nGust: 89 km/h  Thdr: ⚡leicht@14(mittel@15)  Rain: 3.4 mm\nRain%: 70 %  Cloud: ⛅  Visib: 10200 m  0°Line: 3360 m\nUV: 7  Sun: sonnig",
+    "Aktionen"
+   ]
+  },
+  "t-3373-ref-temp-sms/morning": {
+   "email_html_sha256": "23240481d45769640e77d21a0b96a9281b638bf18ac18220d7427b43e478567a",
+   "email_plain": "◯ WETTER-BRIEFING\nReferenz - Morgen-Briefing\nEtappe 1\n14.07.2026\n2.7 km | ↑300m | ↓0m | max. 900m\n\nEtappe 1: 14–18°C, gef. 12–16°C, ⛅, mäßiger Regen 13:00–17:00, starker Wind 50 km/h, Böen bis 71 km/h ab 19:00, ⚡ möglich 14:00–18:00\n\n━━ Metriken-Überblick ━━\n  14–18°C · Max 15:00\n  gef. 11.8–16.0°C · Max 15:00\n  Wind >30 km/h ab 10:00 · max 49 (19:00)\n  Böen >30 km/h ab 06:00 · max 71 (19:00)\n  Gewitter mittel ab 14:00 · stärkste 15:00\n  Regen ab 15:00 · 3.4 mm\n  Regen-W. >30% ab 13:00 · max 70% (13:00)\n  52–80% bewölkt · Max 15:00\n  Sicht min 15.0 km (15:00)\n  0°-Linie 3.300 m · Max 08:00\n  UV max 7.0 (13:00)\n  Sonne 5.0h\n\n━━ Segment 1: km 0.0–7.5 | 08:00–12:00 | ↑1200m → 1850m ━━\n  Zeit   Temp   Feels   Wind   Gust   Thdr   Rain   Rain%   Cloud   Visib   0°Line   UV    Sun \n  -----  -----  ------  -----  -----  -----  -----  ------  ------  ------  -------  ----  ----\n  08     14.3   11.8    26     38     kein   0.0    15      ⛅       19      3300     2.0   🌤️  \n  09     14.9   12.4    28     41     kein   0.0    15      ⛅       19      3300     3.0   🌤️  \n  10     15.5   13.0    30     44     kein   0.0    15      ⛅       18      3300     4.0   🌤️  \n  11     16.1   13.6    32     47     kein   0.0    15      ⛅       17      3300     5.0   🌤️  \n  12     16.7   14.2    34     50     kein   0.0    15      ⛅       17      3300     6.0   🌤️  \n\n━━ 🏁 Wetter am Ziel: 12:00–15:00 | 1200m ━━\n  Zeit   Temp   Feels   Wind   Gust   Thdr     Rain   Rain%   Cloud   Visib   0°Line   UV    Sun \n  -----  -----  ------  -----  -----  -------  -----  ------  ------  ------  -------  ----  ----\n  12     16.7   14.2    34     50     kein     0.0    15      ⛅       17      3300     6.0   🌤️  \n  13     17.3   14.8    37     53     kein     0.4    70      🌥️      16      3300     7.0   🌧️  \n  14     17.9   15.4    39     56     leicht   0.7    70      🌥️      16      3300     6.0   🌧️  \n  15     18.5   16.0    41     59     mittel   1.0    70      🌥️      15      3300     5.0   ⛈️  \n\n━━ Nacht am Ziel (1850m) ━━\nAnkunft 15:00 → Morgen 06:00\n  Zeit   Temp   Feels   Wind   Gust   Thdr     Rain   Rain%   Cloud   Visib   0°Line   UV    Sun \n  -----  -----  ------  -----  -----  -------  -----  ------  ------  ------  -------  ----  ----\n  16     19.1   16.6    45     65     mittel   1.3    70      🌥️      14      3300     4.0   ⛈️  \n  18     20.3   17.8    50     71     kein     0.0    15      ☁️      13      3300     2.0   🌤️  \n  20     21.5   19.0    54     77     kein     0.0    15      ☁️      11      3300     0.0   ☁️  \n  22     22.7   20.2    59     83     kein     0.0    15      ☁️      10      3300     0.0   ☁️  \n  00     9.5    7.0     10     17     kein     0.0    15      🌤️      23      3300     0.0   🌙   \n  02     10.7   8.2     15     23     kein     0.0    15      🌤️      22      3300     0.0   🌙   \n  04     11.9   9.4     19     29     kein     0.0    15      ⛅       21      3300     0.0   🌙   \n  06     13.1   10.6    21     32     kein     0.0    15      ⛅       20      3300     0.0   🌤️  \n  * Temperatur/Nullgradgrenze: Minimum im 2h-Block\n\n━━ Gewitter-Vorschau ━━\n  15.07.2026: ⚡ Gewitter möglich ab 15:00\n  16.07.2026: ⚡ Gewitter möglich ab 15:00\n\n\n── Antwort-Kommandos ──\n  HEUTE                – Wetter der heutigen Etappe\n  MORGEN               – Wetter der morgigen Etappe\n  JETZT                – Nowcast Regen/Gewitter nächste ~2h (auch NOW)\n  GEWITTER             – Gewittergefahr heutige Etappe\n  STRECKE [km]         – Regen-Ereignisflächen entlang der Reststrecke\n  RUHETAG [N]          – Etappen um N Tage verschieben (Standard: 1)\n  STATUS               – Heute und kommende Etappen\n  PAUSE [2d / 12h]     – Briefings für Dauer unterbrechen\n  SKIP                 – Nächstes Briefing überspringen\n  STOP                 – Briefings dauerhaft deaktivieren (auch ABBRUCH)\n  WEITER               – Briefings reaktivieren\n  HILFE                – Diese Hilfe anzeigen (auch HELP)\n  KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)\n  STARTDATUM JJJJ-MM-TT – Startdatum des Trips setzen, alle Etappen verschieben\n  REPORT [morning / evening] – Briefing jetzt senden (Standard: morning)\n\nEinheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · Rain%, Cloud % · Visib km · Sun h · 0°Line m\nSpalten: Temp = Temperatur · Feels = Gefühlte Temperatur · Gust = Böen · Rain = Niederschlag · Rain% = Regenwahrscheinlichkeit · Thdr = Gewitter · Cloud = Bewölkung · Visib = Sichtweite · Sun = Sonnenstunden · UV = UV-Index · 0°Line = Nullgradgrenze\n------------------------------------------------------------\nGenerated: 2026-07-14 04:00 UTC\nData: openmeteo (beispiel)\nEtappen-Briefing · Vollversion · openmeteo",
+   "email_subject": "[Referenz] Etappe 1 — Morgen",
+   "sms": "E1 D14/18 TF- FD12/16 W30@10(50@19) G32@6(71@19) TH:L@14(M@15) TH+:M@15 R1.0@15(1.3@16) PR70%@13 CT:OVC@19 VS- FZ3300@4 UV3@9(7@13) SU10",
+   "telegram": [
+    "Referenz\nMorgen 14.07.2026",
+    "Kurzübersicht\nT 14.3-18.5\nTF 11.8-16.0\nW 17-50@19\nG 26-71@19\nTH mittel\nR 0.0-1.3@16\nPR 15-70@13\nCT ⛅-☁️@19\nVS 13-22\nFZ 3300\nUV 0.0-7.0@13\nSU 🌙-🌤️@06\n\n⚡ mittel · Sicht gut · 0°C-Grenze 3300 m\n\n… +5 weitere Wettergrößen nur als Tageswert\n(Telegram-Limit)",
+    "Segment 1 · 0.0–7.5 km · ↑820 m ↓170 m\n<pre>\nZt T    TF   W  G  TH   R   PR\n08 14.3 11.8 26 38 kein 0.0 15\n09 14.9 12.4 28 41 kein 0.0 15\n10 15.5 13.0 30 44 kein 0.0 15\n11 16.1 13.6 32 47 kein 0.0 15\n12 16.7 14.2 34 50 kein 0.0 15\n</pre>",
+    "Ziel · 7.5–14.0 km · ↑820 m ↓170 m\n<pre>\nZt T    TF   W  G  TH     R   PR\n12 16.7 14.2 34 50 kein   0.0 15\n13 17.3 14.8 37 53 kein   0.4 70\n14 17.9 15.4 39 56 leicht 0.7 70\n15 18.5 16.0 41 59 mittel 1.0 70\n</pre>",
+    "Aktionen"
+   ]
+  },
+  "t-3373-ref/evening": {
+   "email_html_sha256": "90100d5f55119052f4628408c3ea0cd7ab9d7c1380bd0f1b7993c5a8817ecf0e",
+   "email_plain": "◯ WETTER-BRIEFING\nReferenz - Abend-Briefing\nEtappe 1\n14.07.2026\n2.7 km | ↑300m | ↓0m | max. 900m\n\nEtappe 1: 10–18°C, gef. 7–16°C, ⛅, mäßiger Regen 13:00–17:00, starker Wind 50 km/h, Böen bis 71 km/h ab 19:00, ⚡ möglich 14:00–18:00\n\n━━ Metriken-Überblick ━━\n  14–18°C · Max 15:00\n  gef. 11.8–16.0°C · Max 15:00\n  Wind >30 km/h ab 10:00 · max 49 (19:00)\n  Böen >30 km/h ab 06:00 · max 71 (19:00)\n  Gewitter mittel ab 14:00 · stärkste 15:00\n  Regen ab 15:00 · 3.4 mm\n  Regen-W. >30% ab 13:00 · max 70% (13:00)\n  52–80% bewölkt · Max 15:00\n  Sicht min 15.0 km (15:00)\n  0°-Linie 3.300 m · Max 08:00\n  UV max 7.0 (13:00)\n  Sonne 5.0h\n\n━━ Segment 1: km 0.0–7.5 | 08:00–12:00 | ↑1200m → 1850m ━━\n  Zeit   Temp   Feels   Wind    Gust         Thdr   Rain      Rain%              Cloud   Visib   0°Line   UV    Sun \n  -----  -----  ------  ------  -----------  -----  --------  -----------------  ------  ------  -------  ----  ----\n  08     14.3   11.8    stark   stark        kein   trocken   unwahrscheinlich   ⛅       19      3300     2.0   🌤️  \n  09     14.9   12.4    stark   sehr stark   kein   trocken   unwahrscheinlich   ⛅       19      3300     3.0   🌤️  \n  10     15.5   13.0    stark   sehr stark   kein   trocken   unwahrscheinlich   ⛅       18      3300     4.0   🌤️  \n  11     16.1   13.6    stark   sehr stark   kein   trocken   unwahrscheinlich   ⛅       17      3300     5.0   🌤️  \n  12     16.7   14.2    stark   sehr stark   kein   trocken   unwahrscheinlich   ⛅       17      3300     6.0   🌤️  \n\n━━ 🏁 Wetter am Ziel: 12:00–15:00 | 1200m ━━\n  Zeit   Temp   Feels   Wind         Gust         Thdr     Rain      Rain%              Cloud   Visib   0°Line   UV    Sun \n  -----  -----  ------  -----------  -----------  -------  --------  -----------------  ------  ------  -------  ----  ----\n  12     16.7   14.2    stark        sehr stark   kein     trocken   unwahrscheinlich   ⛅       17      3300     6.0   🌤️  \n  13     17.3   14.8    stark        sehr stark   kein     leicht    wahrscheinlich     🌥️      16      3300     7.0   🌧️  \n  14     17.9   15.4    stark        sehr stark   leicht   leicht    wahrscheinlich     🌥️      16      3300     6.0   🌧️  \n  15     18.5   16.0    sehr stark   sehr stark   mittel   leicht    wahrscheinlich     🌥️      15      3300     5.0   ⛈️  \n\n━━ Nacht am Ziel (1850m) ━━\nAnkunft 15:00 → Morgen 06:00\n  Zeit   Temp   Feels   Wind         Gust         Thdr     Rain      Rain%              Cloud   Visib   0°Line   UV    Sun \n  -----  -----  ------  -----------  -----------  -------  --------  -----------------  ------  ------  -------  ----  ----\n  16     19.1   16.6    sehr stark   sehr stark   mittel   leicht    wahrscheinlich     🌥️      14      3300     4.0   ⛈️  \n  18     20.3   17.8    sehr stark   sehr stark   kein     trocken   unwahrscheinlich   ☁️      13      3300     2.0   🌤️  \n  20     21.5   19.0    sehr stark   sehr stark   kein     trocken   unwahrscheinlich   ☁️      11      3300     0.0   ☁️  \n  22     22.7   20.2    sehr stark   sehr stark   kein     trocken   unwahrscheinlich   ☁️      10      3300     0.0   ☁️  \n  00     9.5    7.0     mäßig        mäßig        kein     trocken   unwahrscheinlich   🌤️      23      3300     0.0   🌙   \n  02     10.7   8.2     mäßig        mäßig        kein     trocken   unwahrscheinlich   🌤️      22      3300     0.0   🌙   \n  04     11.9   9.4     mäßig        stark        kein     trocken   unwahrscheinlich   ⛅       21      3300     0.0   🌙   \n  06     13.1   10.6    mäßig        stark        kein     trocken   unwahrscheinlich   ⛅       20      3300     0.0   🌤️  \n  * Temperatur/Nullgradgrenze: Minimum im 2h-Block\n\n\n3-Tages-Ausblick\nMi                             Temp 12/25  Feels 9/23  Wind 61 km/h  Gust 85 km/h  Thdr ⚡leicht@14 (mittel @15)  Rain 3.4 mm  Rain% 70 %  Cloud 64 %  Visib 10200 m  0°Line 3320 m  UV 7  Sun 11.0 h  ACC –\nDo                             Temp 14/27  Feels 11/25  Wind 63 km/h  Gust 87 km/h  Thdr ⚡leicht@14 (mittel @15)  Rain 3.4 mm  Rain% 70 %  Cloud 64 %  Visib 10200 m  0°Line 3340 m  UV 7  Sun 11.0 h  ACC –\nFr                             Temp 16/29  Feels 13/27  Wind 65 km/h  Gust 89 km/h  Thdr ⚡leicht@14 (mittel @15)  Rain 3.4 mm  Rain% 70 %  Cloud 64 %  Visib 10200 m  0°Line 3360 m  UV 7  Sun 11.0 h  ACC –\n\n\n── Antwort-Kommandos ──\n  HEUTE                – Wetter der heutigen Etappe\n  MORGEN               – Wetter der morgigen Etappe\n  JETZT                – Nowcast Regen/Gewitter nächste ~2h (auch NOW)\n  GEWITTER             – Gewittergefahr heutige Etappe\n  STRECKE [km]         – Regen-Ereignisflächen entlang der Reststrecke\n  RUHETAG [N]          – Etappen um N Tage verschieben (Standard: 1)\n  STATUS               – Heute und kommende Etappen\n  PAUSE [2d / 12h]     – Briefings für Dauer unterbrechen\n  SKIP                 – Nächstes Briefing überspringen\n  STOP                 – Briefings dauerhaft deaktivieren (auch ABBRUCH)\n  WEITER               – Briefings reaktivieren\n  HILFE                – Diese Hilfe anzeigen (auch HELP)\n  KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)\n  STARTDATUM JJJJ-MM-TT – Startdatum des Trips setzen, alle Etappen verschieben\n  REPORT [morning / evening] – Briefing jetzt senden (Standard: morning)\n\nEinheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · Rain%, Cloud % · Visib km · Sun h · 0°Line m\nSpalten: Temp = Temperatur · Feels = Gefühlte Temperatur · Gust = Böen · Rain = Niederschlag · Rain% = Regenwahrscheinlichkeit · Thdr = Gewitter · Cloud = Bewölkung · Visib = Sichtweite · Sun = Sonnenstunden · UV = UV-Index · 0°Line = Nullgradgrenze\n------------------------------------------------------------\nGenerated: 2026-07-14 04:00 UTC\nData: openmeteo (beispiel)\nEtappen-Briefing · Vollversion · openmeteo",
+   "email_subject": "[Referenz] Etappe 1 — Abend",
+   "sms": "E1 N10 D14/18 TF- FN7 FD12/16 W30@10(50@19) G32@6(71@19) TH:L@14(M@15) TH+:M@15 R1.0@15(1.3@16) PR70%@13 CT:OVC@19 VS- FZ3300@4 UV3@9(7@13) SU10",
+   "telegram": [
+    "Referenz\nAbend 14.07.2026",
+    "Kurzübersicht\nT 9.5-18.5\nTF 7.0-16.0\nW 17-50@19\nG 26-71@19\nTH mittel\nR 0.0-1.3@16\nPR 15-70@13\nCT ⛅-☁️@19\nVS 13-22\nFZ 3300\nUV 0.0-7.0@13\nSU 🌙-🌤️@06\n\n⚡ mittel · Sicht gut · 0°C-Grenze 3300 m\n\n… +5 weitere Wettergrößen nur als Tageswert\n(Telegram-Limit)",
+    "Segment 1 · 0.0–7.5 km · ↑820 m ↓170 m\n<pre>\nZt T    TF   W  G  TH   R   PR\n08 14.3 11.8 26 38 kein 0.0 15\n09 14.9 12.4 28 41 kein 0.0 15\n10 15.5 13.0 30 44 kein 0.0 15\n11 16.1 13.6 32 47 kein 0.0 15\n12 16.7 14.2 34 50 kein 0.0 15\n</pre>",
+    "Ziel · 7.5–14.0 km · ↑820 m ↓170 m\n<pre>\nZt T    TF   W  G  TH     R   PR\n12 16.7 14.2 34 50 kein   0.0 15\n13 17.3 14.8 37 53 kein   0.4 70\n14 17.9 15.4 39 56 leicht 0.7 70\n15 18.5 16.0 41 59 mittel 1.0 70\n</pre>",
+    "3-Tages-Ausblick\nMi 15.07.  Temp: 12/25  Feels: 9/23  Wind: 61 km/h\nGust: 85 km/h  Thdr: ⚡leicht@14(mittel@15)  Rain: 3.4 mm\nRain%: 70 %  Cloud: 64 %  Visib: 10200 m  0°Line: 3320 m\nUV: 7  Sun: 11.0 h\nDo 16.07.  Temp: 14/27  Feels: 11/25  Wind: 63 km/h\nGust: 87 km/h  Thdr: ⚡leicht@14(mittel@15)  Rain: 3.4 mm\nRain%: 70 %  Cloud: 64 %  Visib: 10200 m  0°Line: 3340 m\nUV: 7  Sun: 11.0 h\nFr 17.07.  Temp: 16/29  Feels: 13/27  Wind: 65 km/h\nGust: 89 km/h  Thdr: ⚡leicht@14(mittel@15)  Rain: 3.4 mm\nRain%: 70 %  Cloud: 64 %  Visib: 10200 m  0°Line: 3360 m\nUV: 7  Sun: 11.0 h",
+    "Aktionen"
+   ]
+  },
+  "t-3373-ref/morning": {
+   "email_html_sha256": "ae1348d8bf6221962d46f6b878ac2f77f1a235de452253c8537afc280ec46c53",
+   "email_plain": "◯ WETTER-BRIEFING\nReferenz - Morgen-Briefing\nEtappe 1\n14.07.2026\n2.7 km | ↑300m | ↓0m | max. 900m\n\nEtappe 1: 14–18°C, gef. 12–16°C, ⛅, mäßiger Regen 13:00–17:00, starker Wind 50 km/h, Böen bis 71 km/h ab 19:00, ⚡ möglich 14:00–18:00\n\n━━ Metriken-Überblick ━━\n  14–18°C · Max 15:00\n  gef. 11.8–16.0°C · Max 15:00\n  Wind >30 km/h ab 10:00 · max 49 (19:00)\n  Böen >30 km/h ab 06:00 · max 71 (19:00)\n  Gewitter mittel ab 14:00 · stärkste 15:00\n  Regen ab 15:00 · 3.4 mm\n  Regen-W. >30% ab 13:00 · max 70% (13:00)\n  52–80% bewölkt · Max 15:00\n  Sicht min 15.0 km (15:00)\n  0°-Linie 3.300 m · Max 08:00\n  UV max 7.0 (13:00)\n  Sonne 5.0h\n\n━━ Segment 1: km 0.0–7.5 | 08:00–12:00 | ↑1200m → 1850m ━━\n  Zeit   Temp   Feels   Wind    Gust         Thdr   Rain      Rain%              Cloud   Visib   0°Line   UV    Sun \n  -----  -----  ------  ------  -----------  -----  --------  -----------------  ------  ------  -------  ----  ----\n  08     14.3   11.8    stark   stark        kein   trocken   unwahrscheinlich   ⛅       19      3300     2.0   🌤️  \n  09     14.9   12.4    stark   sehr stark   kein   trocken   unwahrscheinlich   ⛅       19      3300     3.0   🌤️  \n  10     15.5   13.0    stark   sehr stark   kein   trocken   unwahrscheinlich   ⛅       18      3300     4.0   🌤️  \n  11     16.1   13.6    stark   sehr stark   kein   trocken   unwahrscheinlich   ⛅       17      3300     5.0   🌤️  \n  12     16.7   14.2    stark   sehr stark   kein   trocken   unwahrscheinlich   ⛅       17      3300     6.0   🌤️  \n\n━━ 🏁 Wetter am Ziel: 12:00–15:00 | 1200m ━━\n  Zeit   Temp   Feels   Wind         Gust         Thdr     Rain      Rain%              Cloud   Visib   0°Line   UV    Sun \n  -----  -----  ------  -----------  -----------  -------  --------  -----------------  ------  ------  -------  ----  ----\n  12     16.7   14.2    stark        sehr stark   kein     trocken   unwahrscheinlich   ⛅       17      3300     6.0   🌤️  \n  13     17.3   14.8    stark        sehr stark   kein     leicht    wahrscheinlich     🌥️      16      3300     7.0   🌧️  \n  14     17.9   15.4    stark        sehr stark   leicht   leicht    wahrscheinlich     🌥️      16      3300     6.0   🌧️  \n  15     18.5   16.0    sehr stark   sehr stark   mittel   leicht    wahrscheinlich     🌥️      15      3300     5.0   ⛈️  \n\n━━ Nacht am Ziel (1850m) ━━\nAnkunft 15:00 → Morgen 06:00\n  Zeit   Temp   Feels   Wind         Gust         Thdr     Rain      Rain%              Cloud   Visib   0°Line   UV    Sun \n  -----  -----  ------  -----------  -----------  -------  --------  -----------------  ------  ------  -------  ----  ----\n  16     19.1   16.6    sehr stark   sehr stark   mittel   leicht    wahrscheinlich     🌥️      14      3300     4.0   ⛈️  \n  18     20.3   17.8    sehr stark   sehr stark   kein     trocken   unwahrscheinlich   ☁️      13      3300     2.0   🌤️  \n  20     21.5   19.0    sehr stark   sehr stark   kein     trocken   unwahrscheinlich   ☁️      11      3300     0.0   ☁️  \n  22     22.7   20.2    sehr stark   sehr stark   kein     trocken   unwahrscheinlich   ☁️      10      3300     0.0   ☁️  \n  00     9.5    7.0     mäßig        mäßig        kein     trocken   unwahrscheinlich   🌤️      23      3300     0.0   🌙   \n  02     10.7   8.2     mäßig        mäßig        kein     trocken   unwahrscheinlich   🌤️      22      3300     0.0   🌙   \n  04     11.9   9.4     mäßig        stark        kein     trocken   unwahrscheinlich   ⛅       21      3300     0.0   🌙   \n  06     13.1   10.6    mäßig        stark        kein     trocken   unwahrscheinlich   ⛅       20      3300     0.0   🌤️  \n  * Temperatur/Nullgradgrenze: Minimum im 2h-Block\n\n━━ Gewitter-Vorschau ━━\n  15.07.2026: ⚡ Gewitter möglich ab 15:00\n  16.07.2026: ⚡ Gewitter möglich ab 15:00\n\n\n── Antwort-Kommandos ──\n  HEUTE                – Wetter der heutigen Etappe\n  MORGEN               – Wetter der morgigen Etappe\n  JETZT                – Nowcast Regen/Gewitter nächste ~2h (auch NOW)\n  GEWITTER             – Gewittergefahr heutige Etappe\n  STRECKE [km]         – Regen-Ereignisflächen entlang der Reststrecke\n  RUHETAG [N]          – Etappen um N Tage verschieben (Standard: 1)\n  STATUS               – Heute und kommende Etappen\n  PAUSE [2d / 12h]     – Briefings für Dauer unterbrechen\n  SKIP                 – Nächstes Briefing überspringen\n  STOP                 – Briefings dauerhaft deaktivieren (auch ABBRUCH)\n  WEITER               – Briefings reaktivieren\n  HILFE                – Diese Hilfe anzeigen (auch HELP)\n  KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)\n  STARTDATUM JJJJ-MM-TT – Startdatum des Trips setzen, alle Etappen verschieben\n  REPORT [morning / evening] – Briefing jetzt senden (Standard: morning)\n\nEinheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · Rain%, Cloud % · Visib km · Sun h · 0°Line m\nSpalten: Temp = Temperatur · Feels = Gefühlte Temperatur · Gust = Böen · Rain = Niederschlag · Rain% = Regenwahrscheinlichkeit · Thdr = Gewitter · Cloud = Bewölkung · Visib = Sichtweite · Sun = Sonnenstunden · UV = UV-Index · 0°Line = Nullgradgrenze\n------------------------------------------------------------\nGenerated: 2026-07-14 04:00 UTC\nData: openmeteo (beispiel)\nEtappen-Briefing · Vollversion · openmeteo",
+   "email_subject": "[Referenz] Etappe 1 — Morgen",
+   "sms": "E1 D14/18 TF- FD12/16 W30@10(50@19) G32@6(71@19) TH:L@14(M@15) TH+:M@15 R1.0@15(1.3@16) PR70%@13 CT:OVC@19 VS- FZ3300@4 UV3@9(7@13) SU10",
+   "telegram": [
+    "Referenz\nMorgen 14.07.2026",
+    "Kurzübersicht\nT 14.3-18.5\nTF 11.8-16.0\nW 17-50@19\nG 26-71@19\nTH mittel\nR 0.0-1.3@16\nPR 15-70@13\nCT ⛅-☁️@19\nVS 13-22\nFZ 3300\nUV 0.0-7.0@13\nSU 🌙-🌤️@06\n\n⚡ mittel · Sicht gut · 0°C-Grenze 3300 m\n\n… +5 weitere Wettergrößen nur als Tageswert\n(Telegram-Limit)",
+    "Segment 1 · 0.0–7.5 km · ↑820 m ↓170 m\n<pre>\nZt T    TF   W  G  TH   R   PR\n08 14.3 11.8 26 38 kein 0.0 15\n09 14.9 12.4 28 41 kein 0.0 15\n10 15.5 13.0 30 44 kein 0.0 15\n11 16.1 13.6 32 47 kein 0.0 15\n12 16.7 14.2 34 50 kein 0.0 15\n</pre>",
+    "Ziel · 7.5–14.0 km · ↑820 m ↓170 m\n<pre>\nZt T    TF   W  G  TH     R   PR\n12 16.7 14.2 34 50 kein   0.0 15\n13 17.3 14.8 37 53 kein   0.4 70\n14 17.9 15.4 39 56 leicht 0.7 70\n15 18.5 16.0 41 59 mittel 1.0 70\n</pre>",
+    "Aktionen"
+   ]
+  }
+ }
+}
