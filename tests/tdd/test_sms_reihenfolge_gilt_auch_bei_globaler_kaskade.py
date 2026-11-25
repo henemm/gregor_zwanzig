@@ -60,7 +60,7 @@ def test_position_wirkt_bei_globaler_kaskade_wie_bei_per_channel():
     # entfernt; ohne Tabelle gilt die Tabelle aus der Grundauswahl in deren
     # Folge). Sonst waere die Zusicherung unten wirkungslos (Vakuum-Schutz).
     for dc in (dc_a, dc_b):
-        assert dc.placements is None and not dc.per_channel_layouts, (
+        assert dc.placements is None, (
             "Testaufbau: ohne eigene SMS-Auswahl (keine Tabelle, kein Kanal-"
             "Layout), sonst prueft dieser Test AC-1 aus fix_1677, nicht AC-13 "
             "aus fix_2422_s2a."

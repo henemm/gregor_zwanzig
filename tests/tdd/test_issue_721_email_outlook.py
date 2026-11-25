@@ -3,7 +3,7 @@ TDD tests for Issue #721 (Slice 1 von #709) — E-Mail-Ausblick verschmelzen.
 
 Großwetterlage + nächste Etappen + Vorhersage-Sicherheit zu EINEM Ausblick-Block.
 
-RED phase: Tests schlagen fehl, bis show_outlook + Confidence-Rendering +
+RED phase: Tests schlagen fehl, bis Ausblick-Schalter + Confidence-Rendering +
 Stabilitäts-Verschmelzung implementiert sind.
 
 SPEC: docs/specs/modules/issue_721_email_outlook.md AC-1..AC-5
@@ -54,10 +54,10 @@ def _common_kwargs():
     return _ck()
 
 
-def _render(trend, *, stability_result=None, show_outlook=True, show_stability=True):
-    """Ruft render_html mit dem NEUEN show_outlook-Parameter auf.
+def _render(trend, *, stability_result=None, ausblick=True, show_stability=True):
+    """Ruft render_html auf (#3277: ``ausblick=False`` = kein Mehrtages-Trend).
 
-    In der RED-Phase existiert show_outlook noch nicht → TypeError.
+    Ausblick an/aus steht seit #3237 allein in der Tabelle.
     Nach GREEN prüfen die Assertions echtes Render-Verhalten.
     """
     kw = _common_kwargs()
@@ -67,11 +67,10 @@ def _render(trend, *, stability_result=None, show_outlook=True, show_stability=T
         trip_name="Test-Trip", report_type="evening",
         dc=kw["display_config"], night_rows=[], thunder_forecast=None,
         highlights=[], changes=None, stage_name=kw["stage_name"],
-        stage_stats=None, multi_day_trend=trend, compact_summary=None,
+        stage_stats=None, multi_day_trend=trend if ausblick else None, compact_summary=None,
         daylight=None, tz=ZoneInfo("Europe/Berlin"),
         friendly_keys=kw["friendly_keys"], profile=None,
         stability_result=stability_result,
-        show_outlook=show_outlook,
         show_stability=show_stability,
     )
 
@@ -81,8 +80,8 @@ def _stability(label="STABIL", confidence_pct=82):
     return StabilityResult(label=label, confidence_pct=confidence_pct)
 
 
-def _render_plain(trend, *, stability_result=None, show_outlook=True, show_stability=True):
-    """Ruft render_plain mit show_outlook auf — symmetrisch zu _render (HTML)."""
+def _render_plain(trend, *, stability_result=None, ausblick=True, show_stability=True):
+    """Ruft render_plain auf — symmetrisch zu _render (HTML)."""
     kw = _common_kwargs()
     from src.output.renderers.email.plain import render_plain
     return render_plain(
@@ -90,11 +89,10 @@ def _render_plain(trend, *, stability_result=None, show_outlook=True, show_stabi
         trip_name="Test-Trip", report_type="evening",
         dc=kw["display_config"], night_rows=[], thunder_forecast=None,
         highlights=[], changes=None, stage_name=kw["stage_name"],
-        stage_stats=None, multi_day_trend=trend, compact_summary=None,
+        stage_stats=None, multi_day_trend=trend if ausblick else None, compact_summary=None,
         daylight=None, tz=ZoneInfo("Europe/Berlin"),
         friendly_keys=kw["friendly_keys"], profile=None,
         stability_result=stability_result,
-        show_outlook=show_outlook,
         show_stability=show_stability,
     )
 
@@ -186,25 +184,29 @@ class TestAC3TimesOnlyWhereHourly:
 
 
 # ---------------------------------------------------------------------------
-# AC-4: show_outlook=False blendet den GANZEN Ausblick aus
+# AC-4: ohne Ausblick-Bericht entfaellt die Etappen-Tabelle
+# #3277: der Parameter ``show_outlook`` ist entfallen (seit #3237 immer an);
+# "Ausblick aus" heisst: die Tabelle nennt das Briefing nicht in
+# ``outlook_reports``, der Renderer bekommt keinen Mehrtages-Trend. Die
+# Grosswetterlage folgt seither allein ``show_stability`` (Zusicherung des
+# entfernten Parameters entfaellt).
 # ---------------------------------------------------------------------------
 
 class TestAC4OutlookToggleOff:
     def test_outlook_false_hides_stability_and_table(self):
-        """Given show_outlook=False / When gerendert / Then weder Label noch Tabelle."""
+        """Given kein Ausblick-Bericht / When gerendert / Then keine Etappen-Tabelle."""
         trend = [_trend_stage(weekday="Di", name="E1", confidence_pct=82)]
         html = _render(trend, stability_result=_stability("STABIL", 82),
-                       show_outlook=False)
-        assert "3-Tages-Ausblick" not in html, "Etappen-Tabelle trotz show_outlook=False sichtbar"
-        assert "STABIL" not in html, "Großwetterlage trotz show_outlook=False sichtbar"
+                       ausblick=False)
+        assert "3-Tages-Ausblick" not in html, "Etappen-Tabelle ohne Ausblick-Bericht sichtbar"
 
     def test_outlook_true_shows_block(self):
-        """Gegenprobe: show_outlook=True zeigt den Block."""
+        """Gegenprobe: mit Ausblick-Bericht erscheint der Block."""
         trend = [_trend_stage(weekday="Di", name="E1", confidence_pct=82)]
         html = _render(trend, stability_result=_stability("STABIL", 82),
-                       show_outlook=True)
+                       ausblick=True)
         # #911: Ausblick-Tabelle (OutlookTable) enthält "Ausblick" (Eyebrow) + "ACC" (Spalte)
-        assert "ACC" in html, "Ausblick-Block mit ACC-Spalte fehlt bei show_outlook=True"
+        assert "ACC" in html, "Ausblick-Block mit ACC-Spalte fehlt mit Ausblick-Bericht"
 
 
 # ---------------------------------------------------------------------------
@@ -233,15 +235,12 @@ class TestAC5LegacyFieldsPreserved:
             },
         }
 
-    def test_show_outlook_field_exists_with_default_true(self):
-        """Given frische TripReportConfig / Then Feld show_outlook existiert, Default True."""
-        from app.models import TripReportConfig
-        rc = TripReportConfig(trip_id="x")
-        assert rc.show_outlook is True
+    # #3277: ``test_show_outlook_field_exists_with_default_true`` entfaellt mit
+    # dem Feld ``TripReportConfig.show_outlook``.
 
     def test_roundtrip_preserves_legacy_fields(self):
         """Given gespeicherter Trip mit Altfeldern / When load → to_dict /
-        Then Altfelder byte-identisch erhalten UND show_outlook im Dump."""
+        Then Altfelder byte-identisch erhalten, show_outlook (#3277) nicht im Dump."""
         from app.loader import load_trip_from_dict, _trip_to_dict
         trip = load_trip_from_dict(self._trip_dict_with_legacy())
         dumped = _trip_to_dict(trip)
@@ -252,8 +251,8 @@ class TestAC5LegacyFieldsPreserved:
         assert rc["show_highlights"] is False
         assert "show_daylight" not in rc  # Issue #1224: kein Modellfeld mehr
         assert rc["daily_summary_metrics"] == ["temperature"]
-        # Neues Feld additiv vorhanden
-        assert "show_outlook" in rc
+        # #3277: Altfeld entfernt, wird nicht mehr geschrieben
+        assert "show_outlook" not in rc
 
 
 # ---------------------------------------------------------------------------
@@ -338,13 +337,13 @@ class TestAC2ConfidencePipelineWiring:
 
 class TestF001ShowStabilityRespectedInTrendPath:
     def test_show_stability_false_hides_label_with_trend(self):
-        """Given show_outlook=True, show_stability=False, nicht-leerer Trend /
+        """Given show_stability=False, nicht-leerer Trend /
         When gerendert / Then Stabilitäts-Label fehlt, Etappen-Tabelle ist da."""
         trend = [_trend_stage(weekday="Di", name="E1", confidence_pct=80)]
         html = _render(
             trend,
             stability_result=_stability("WECHSELHAFT", 65),
-            show_outlook=True,
+
             show_stability=False,
         )
         assert "WECHSELHAFT" not in html, (
@@ -362,47 +361,41 @@ class TestF001ShowStabilityRespectedInTrendPath:
         html = _render(
             trend,
             stability_result=_stability("WECHSELHAFT", 65),
-            show_outlook=True,
+
             show_stability=True,
         )
         assert "WECHSELHAFT" in html, "Stabilitäts-Label soll bei show_stability=True erscheinen"
 
 
 # ---------------------------------------------------------------------------
-# AC-4 (Plain): show_outlook=False unterdrückt Ausblick auch im Plain-Body
+# AC-4 (Plain): ohne Ausblick-Bericht kein Etappen-Trend auch im Plain-Body
+# (#3277: wie oben, die Grosswetterlage folgt allein ``show_stability``)
 # ---------------------------------------------------------------------------
 
 class TestAC4OutlookToggleOffPlain:
     def test_plain_outlook_false_hides_stability_and_trend(self):
-        """Given show_outlook=False / When plain gerendert /
-        Then weder Großwetterlage-Stichwort noch Etappen-Trend-Block."""
+        """Given kein Ausblick-Bericht / When plain gerendert /
+        Then kein Etappen-Trend-Block."""
         trend = [_trend_stage(weekday="Di", name="E1", confidence_pct=82)]
         plain = _render_plain(
             trend,
             stability_result=_stability("STABIL", 82),
-            show_outlook=False,
+            ausblick=False,
         )
         assert "3-Tages-Ausblick" not in plain, (
-            "Etappen-Trend-Block trotz show_outlook=False im Plain-Body sichtbar"
-        )
-        assert "Wetterlage" not in plain, (
-            "Großwetterlage-Text trotz show_outlook=False im Plain-Body sichtbar"
-        )
-        assert "STABIL" not in plain, (
-            "Stabilitäts-Label trotz show_outlook=False im Plain-Body sichtbar"
+            "Etappen-Trend-Block ohne Ausblick-Bericht im Plain-Body sichtbar"
         )
 
     def test_plain_outlook_true_shows_stability_and_trend(self):
-        """Gegenprobe: show_outlook=True zeigt beide Blöcke im Plain-Body."""
+        """Gegenprobe: mit Ausblick-Bericht zeigt der Plain-Body beide Bloecke."""
         trend = [_trend_stage(weekday="Di", name="E1", confidence_pct=82)]
         plain = _render_plain(
             trend,
             stability_result=_stability("STABIL", 82),
-            show_outlook=True,
         )
         assert "3-Tages-Ausblick" in plain, (
-            "Etappen-Trend-Block fehlt bei show_outlook=True im Plain-Body"
+            "Etappen-Trend-Block fehlt mit Ausblick-Bericht im Plain-Body"
         )
         assert "STABIL" in plain, (
-            "Stabilitäts-Label fehlt bei show_outlook=True im Plain-Body"
+            "Stabilitäts-Label fehlt mit Ausblick-Bericht im Plain-Body"
         )

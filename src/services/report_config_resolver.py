@@ -44,7 +44,7 @@ RENDER_EFFECTIVE_FIELDS: tuple[str, ...] = (
     "day_window_end_hour",
 )
 
-# Die uebrigen (seit #3237: 21) TripReportConfig-Felder — begruendet nach Kategorie
+# Die uebrigen (seit #3277: 19) TripReportConfig-Felder — begruendet nach Kategorie
 # (Spec-Tabelle "RENDER_NEUTRAL — 20 Felder, kategorisiert und begruendet";
 # seit #1224 nur noch 19, show_daylight entfernt).
 RENDER_NEUTRAL: dict[str, str] = {
@@ -80,11 +80,8 @@ RENDER_NEUTRAL: dict[str, str] = {
     "show_highlights": "Seit #790 in render_email() **_ignored absorbiert, strukturell wirkungslos.",
     "daily_summary_metrics": "Seit #790 in render_email() **_ignored absorbiert, strukturell wirkungslos.",
     "show_metrics_summary": "Seit #790 in render_email() **_ignored absorbiert, strukturell wirkungslos.",
-    # Issue #3237: Altfelder des Ausblicks. Ob und in welchen Briefings der
-    # Ausblick erscheint, steht allein in der Tabelle "Was steht wo"
-    # (``placements.outlook_reports``/Haken Ausblick); Feld entfaellt in #3277.
-    "show_outlook": "Altfeld seit #3237: der Ausblick folgt allein der Tabelle 'Was steht wo'.",  # i18n-log
-    "multi_day_trend_reports": "Altfeld seit #3237: 'Ausblick erscheint im' steht in placements.outlook_reports.",  # i18n-log
+    # Issue #3277: die Ausblick-Altfelder sind aus TripReportConfig entfernt;
+    # der Ausblick steht allein in ``placements.outlook_reports``.
     # Issue #1306: unklassifiziertes Feld aus der Rot-Triage (#1211b).
     "telegram_style": (
         "Steuert den Telegram-Kurzstil-Kanal (#1260: 'rich'|'kurzform'), "  # i18n-log
@@ -108,7 +105,6 @@ class ReportRenderOptions:
     """
 
     email_format: str
-    show_outlook: bool
     show_stage_stats: bool
     show_stability: bool
     show_compact_summary: bool
@@ -139,7 +135,7 @@ def resolve_report_render_options(
     ausblick = bool(resolve_trip_view(report_config, dc, report_type).outlook)
     rc = report_config  # None: alle Toggles an, "full" (getattr-Vorgabe)
     return ReportRenderOptions(
-        email_format=getattr(rc, "email_format", "full"), show_outlook=True,
+        email_format=getattr(rc, "email_format", "full"),
         show_multi_day_trend=ausblick, display_config=dc,
         **{f: getattr(rc, f, True) for f in (
             "show_stage_stats", "show_stability", "show_compact_summary",
@@ -268,7 +264,7 @@ def resolve_compare_render_options(
     Entscheidung fuer Stundenverlauf und Ausblick kommen allein aus dem
     View-Model des Kanal-Listen-Resolvers. Er bekommt dafuer die Abo-Angaben
     (Briefing-Typ ``report_type`` des Versand-Slots, eingeschaltete Briefings,
-    ``hourly_enabled``, ``outlook_enabled``); ``report_type=None`` (Vorschau)
+    ``hourly_enabled``); ``report_type=None`` (Vorschau)
     heisst "irgendein Typ". Abos ohne ``placements`` lesen die Tabelle aus
     ihrer Grundauswahl (#3237).
     - `corridors`: Issue #1231, Slice 7 — TOP-LEVEL Preset-Feld `corridors`,
@@ -285,7 +281,6 @@ def resolve_compare_render_options(
     view = resolve_channel_lists(
         display_config, "compare", report_type, **abo,
         hourly_enabled=bool(hourly_schalter),
-        outlook_enabled=bool(preset.get("outlook_enabled", True)),
     )
     hourly = _compare_hourly(view.hourly, view.hourly, hourly_schalter)
     # Issue #3039/#3057: Kanal-Zeilen samt Format je Metrik-Kanal.
@@ -301,6 +296,7 @@ def resolve_compare_render_options(
     return CompareRenderOptions(
         **hourly,
         corridors=_compare_corridors(preset) or None,
+        outlook_enabled=view.outlook != (),
         **_compare_outlook(view.outlook),
         enabled_metrics_by_channel={ch: orte_renderer_ids(getattr(view, ch)) for ch in kanaele},
         unresolved_by_channel={ch: unaufloesbar for ch in kanaele},
@@ -373,8 +369,9 @@ def _compare_hourly(block: tuple, spalten: tuple, schalter: object) -> dict:
 def _compare_outlook(zeilen: Optional[tuple]) -> dict:
     """3-Tages-Ausblick aus dem View-Model: ``()`` = Block entfaellt, ``None``
     = Renderer-Vorgabe; Auswahl, Folge und Roh/Einfach aus den Zeilen."""
+    # Der Block-Schalter (``zeilen != ()``) geht als Schluesselwort-Argument
+    # direkt an CompareRenderOptions (Aufrufer), kein Speicher-Schluessel.
     return {
-        "outlook_enabled": zeilen != (),
         "outlook_metrics": None if zeilen is None else [z.metric_id for z in zeilen],
         "outlook_metric_formats": {
             z.metric_id: True for z in zeilen or () if z.format == "simplified"} or None,

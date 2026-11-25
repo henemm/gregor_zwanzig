@@ -333,14 +333,9 @@ def test_ac4_ausblick_faehigkeit_folgt_quelle(metric_id):
     assert (metric_id in OUTLOOK_FRIENDLY_CAPABLE) is soll
 
 
-def test_ac4_stundenverlauf_formate_nur_wo_quelle_zwei_formen_nennt():
-    """Orte-Stundenverlauf: gespeichertes Einfach fuer Sonnenstunden und
-    Windrichtung wird verworfen (dort nur eine Form); Wind bleibt."""
-    from output.renderers.compare_outlook_metric_ids import resolve_hourly_metric_formats
-
-    aus = resolve_hourly_metric_formats(
-        {"sunshine": True, "wind_direction": True, "wind": True, "rain_probability": False})
-    assert aus == {"wind": True, "rain_probability": False}, aus
+# #3277: ``test_ac4_stundenverlauf_formate_nur_wo_quelle_zwei_formen_nennt``
+# entfaellt mit der geloeschten Funktion ``resolve_hourly_metric_formats``
+# (Lesen des Altfelds, ohne Produktionsaufrufer).
 
 
 def _kanalzeilen(kanal: str, kennung: str) -> set[bool]:

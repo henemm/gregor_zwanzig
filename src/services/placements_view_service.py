@@ -72,7 +72,6 @@ class _Abo:
     enabled_reports: tuple
     report_config: object = None
     hourly_enabled: Optional[bool] = None
-    outlook_enabled: Optional[bool] = None
     warnungen: bool = True
     bloecke: dict = field(default_factory=dict)
     ort_anzahl: Optional[int] = None
@@ -208,8 +207,7 @@ def erstanlage_placements(kind: str, entity_id: str, user_id: str) -> dict:
     else:
         abo, _muster = _orte_abo(entity_id, user_id, "de")
     return {"placements": placements_aus_grundauswahl(
-        abo.display_config, abo.surface, enabled_reports=abo.enabled_reports,
-        outlook_enabled=abo.outlook_enabled)}
+        abo.display_config, abo.surface, enabled_reports=abo.enabled_reports)}
 
 
 # ---------------------------------------------------------------------------
@@ -223,7 +221,7 @@ def _tabelle_aufloesen(abo: _Abo, report_type: str):
     dc = abo.display_config
     vm = resolve_channel_lists(
         dc, abo.surface, report_type, enabled_reports=abo.enabled_reports,
-        hourly_enabled=abo.hourly_enabled, outlook_enabled=abo.outlook_enabled,
+        hourly_enabled=abo.hourly_enabled,
     )
     roh = dc.get("placements") if isinstance(dc, dict) else getattr(dc, "placements", None)
     if read_placements(roh) is not None:
@@ -233,8 +231,7 @@ def _tabelle_aufloesen(abo: _Abo, report_type: str):
         # nicht verloren; unlesbare Eintraege wirken weiter nicht (Nr. 1).
         return vm, copy.deepcopy(roh), True
     return vm, placements_aus_grundauswahl(
-        dc, abo.surface, enabled_reports=abo.enabled_reports,
-        outlook_enabled=abo.outlook_enabled), False
+        dc, abo.surface, enabled_reports=abo.enabled_reports), False
 
 
 def _tabellen_grundauswahl(abo: _Abo) -> tuple[list[str], dict]:
@@ -573,8 +570,7 @@ def _trip_nur_tageswert(dc, vm, report_type: str) -> set[str]:
     from output.renderers.channel_layout import VISIBILITY_GATE_IDS, render_for_channel
     from output.renderers.email.helpers import should_merge_wind_dir, telegram_metric_configs
 
-    tg = dataclasses.replace(dc, metrics=telegram_metric_configs(vm.telegram, dc),
-                             per_channel_layouts=None, per_report_layouts=None)
+    tg = dataclasses.replace(dc, metrics=telegram_metric_configs(vm.telegram, dc))
     spalten = set(render_for_channel("telegram", tg, report_type).table_columns)
     ausgenommen = set(VISIBILITY_GATE_IDS)
     if should_merge_wind_dir(tg):
@@ -714,7 +710,6 @@ def _orte_abo_aus(preset: dict, user_id: str, lang: str):
         enabled_reports=tuple(rt for rt, an in (("morning", slots.morning_enabled),
                                                 ("evening", slots.evening_enabled)) if an),
         hourly_enabled=preset.get("hourly_enabled", True) is not False,
-        outlook_enabled=preset.get("outlook_enabled"),
         warnungen=amtliche_warnungen_an_preset(preset), ort_anzahl=len(orte),
         bloecke={"hourly": preset.get("hourly_enabled", True) is not False,
                  "telegram_style": dc.get("telegram_style", "rich") or "rich",

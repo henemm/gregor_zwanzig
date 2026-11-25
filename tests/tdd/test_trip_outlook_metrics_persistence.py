@@ -64,30 +64,27 @@ def _trip(trip_id: str, dc):
     return trip
 
 
-def _display_config(trip_id: str, **kwargs):
-    """Grundauswahl + kanal-eigenes Layout, wie ein echter Nutzer sie hat."""
+def _display_config(trip_id: str, **wunsch):
+    """Grundauswahl + kanal-eigenes Layout, wie ein echter Nutzer sie hat.
+    #3277: Kanal-Layout und Vorschau-Auswahl stehen in der Tabelle "Was steht
+    wo" (``tabelle_aus_wunsch.mit_wunsch``); die Altfelder sind entfallen."""
     from app.metric_catalog import build_default_display_config
     from app.models import MetricConfig
+    from tests.helpers.tabelle_aus_wunsch import mit_wunsch
 
     dc = build_default_display_config()
     dc.trip_id = trip_id
     for mc in dc.metrics:
         mc.enabled = mc.metric_id in {"precipitation", "gust", "temperature"}
-    dc.per_channel_layouts = {
+    return mit_wunsch(dc, per_channel_layouts={
         "telegram": [MetricConfig(metric_id="precipitation", enabled=True)],
-    }
-    if not kwargs:
-        return dc
-    import dataclasses
+    }, **wunsch)
 
-    try:
-        return dataclasses.replace(dc, **kwargs)
-    except TypeError as exc:
-        raise AssertionError(
-            "UnifiedWeatherDisplayConfig kennt das Feld 'outlook_metrics' "
-            "noch nicht (#1720 Scheibe 1, Spec Source: src/app/models.py:"
-            f"774-807).\nUrsprungsfehler: {exc}"
-        ) from exc
+
+def _stelle(dc, stelle: str) -> list[str]:
+    """Metriken mit Haken an ``stelle`` in der Tabelle, in Zeilenfolge."""
+    return [r["metric_id"] for r in (dc.placements or {}).get("rows", [])
+            if (r.get("places") or {}).get(stelle)]
 
 
 def _speichern_und_laden(trip, tmp_path, user_id):
@@ -124,43 +121,30 @@ def test_ac12_nur_die_vorschau_zu_aendern_laesst_grundauswahl_und_kanal_layout_s
     grundauswahl_vorher = sorted(
         mc.metric_id for mc in erst_geladen.display_config.metrics if mc.enabled
     )
-    layout_vorher = {
-        ch: [mc.metric_id for mc in metrics]
-        for ch, metrics in (erst_geladen.display_config.per_channel_layouts or {}).items()
-    }
-    assert grundauswahl_vorher and layout_vorher, (
+    layout_vorher = _stelle(erst_geladen.display_config, "telegram")
+    assert grundauswahl_vorher and layout_vorher == ["precipitation"], (
         "Vorbedingung: Grundauswahl und Kanal-Layout muessen den ersten "
         "Roundtrip ueberleben, sonst prueft der Test nichts."
     )
 
-    # Nur die Vorschau-Auswahl aendern -- alles andere bleibt wie geladen.
-    import dataclasses
-
-    try:
-        erst_geladen.display_config = dataclasses.replace(
-            erst_geladen.display_config, outlook_metrics=VORSCHAU,
-        )
-    except TypeError as exc:
-        raise AssertionError(
-            "UnifiedWeatherDisplayConfig kennt 'outlook_metrics' noch nicht "
-            f"(#1720 Scheibe 1).\nUrsprungsfehler: {exc}"
-        ) from exc
+    # Nur die Vorschau-Auswahl (Stelle "outlook" der Tabelle) aendern --
+    # alles andere bleibt wie geladen (#3277: Tabelle statt Altfeld).
+    tabelle = erst_geladen.display_config.placements
+    for zeile in tabelle["rows"]:
+        zeile.setdefault("places", {})["outlook"] = zeile["metric_id"] in VORSCHAU
 
     zweit_geladen = _speichern_und_laden(erst_geladen, tmp_path, user_id)
     dc = zweit_geladen.display_config
 
-    assert getattr(dc, "outlook_metrics", None) == VORSCHAU, (
+    assert sorted(_stelle(dc, "outlook")) == sorted(VORSCHAU), (
         "Die geaenderte Vorschau-Auswahl hat den Roundtrip nicht ueberlebt: "
-        f"{getattr(dc, 'outlook_metrics', None)!r} (AC-12)"
+        f"{_stelle(dc, 'outlook')!r} (AC-12)"
     )
     assert sorted(mc.metric_id for mc in dc.metrics if mc.enabled) == grundauswahl_vorher, (
         "Die Grundauswahl hat sich geaendert, obwohl nur die Vorschau-Auswahl "
         "angefasst wurde -- Blind-Replace statt Read-Modify-Write (AC-12)."
     )
-    assert {
-        ch: [mc.metric_id for mc in metrics]
-        for ch, metrics in (dc.per_channel_layouts or {}).items()
-    } == layout_vorher, (
+    assert _stelle(dc, "telegram") == layout_vorher, (
         "Das kanal-eigene Layout ist beim Speichern der Vorschau-Auswahl "
         "verloren gegangen (AC-12)."
     )
@@ -204,17 +188,17 @@ def test_bewusst_geleerte_auswahl_ueberlebt_den_roundtrip_als_leere_liste(tmp_pa
     trip_id = f"trip-{uuid.uuid4().hex[:8]}"
     trip = _trip(trip_id, _display_config(trip_id, outlook_metrics=[]))
 
+    # #3277: die Auswahl steht in der Tabelle (Stelle "outlook"), nicht im Altfeld.
+    assert _stelle(trip.display_config, "outlook") == [], "Vorbedingung: leer"
     geladen = _speichern_und_laden(trip, tmp_path, user_id)
 
-    assert getattr(geladen.display_config, "outlook_metrics", "FEHLT") == [], (
+    assert _stelle(geladen.display_config, "outlook") == [], (
         "Die bewusst geleerte Auswahl kam als "
-        f"{getattr(geladen.display_config, 'outlook_metrics', 'FEHLT')!r} "
-        "zurueck. Leer heisst leer -- nicht 'nie gesetzt'."
+        f"{_stelle(geladen.display_config, 'outlook')!r} zurueck. Leer heisst leer."
     )
     roh = _rohes_display_config(tmp_path, user_id, trip_id)
-    assert roh.get("outlook_metrics") == [], (
-        f"In der Datei steht {roh.get('outlook_metrics')!r} statt []."
-    )
+    assert roh["placements"] == trip.display_config.placements
+    assert "outlook_metrics" not in roh
 
 
 def test_gefuellte_auswahl_ueberlebt_den_roundtrip_in_reihenfolge(tmp_path):
@@ -230,10 +214,15 @@ def test_gefuellte_auswahl_ueberlebt_den_roundtrip_in_reihenfolge(tmp_path):
     auswahl = ["thunder", "temperature", "precipitation"]
     trip = _trip(trip_id, _display_config(trip_id, outlook_metrics=auswahl))
 
+    # #3277: Reihenfolge = Zeilenfolge der Tabelle (Metriken ohne Zeile in der
+    # Grundauswahl, hier ``thunder``, fallen heraus).
+    vorher = _stelle(trip.display_config, "outlook")
+    assert vorher == [m for m in auswahl if m != "thunder"], vorher
     geladen = _speichern_und_laden(trip, tmp_path, user_id)
 
-    assert getattr(geladen.display_config, "outlook_metrics", None) == auswahl, (
+    assert _stelle(geladen.display_config, "outlook") == vorher, (
         "Die gespeicherte Reihenfolge der Vorschau-Auswahl ging verloren: "
-        f"{getattr(geladen.display_config, 'outlook_metrics', None)!r}"
+        f"{_stelle(geladen.display_config, 'outlook')!r}"
     )
-    assert _rohes_display_config(tmp_path, user_id, trip_id)["outlook_metrics"] == auswahl
+    assert _rohes_display_config(tmp_path, user_id, trip_id)["placements"] == (
+        trip.display_config.placements)

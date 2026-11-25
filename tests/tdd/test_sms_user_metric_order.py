@@ -73,28 +73,15 @@ from tests.tdd import _min_temp_felt_fixtures as F
 # ---------------------------------------------------------------------------
 
 
-def _sms_layout_dc(
-    order: list[str], *, per_report_evening: list[str] | None = None,
-) -> UnifiedWeatherDisplayConfig:
-    """UnifiedWeatherDisplayConfig mit globaler Metrikliste (Katalog-Default-
-    Reihenfolge) UND ``per_channel_layouts['sms']`` in der Nutzer-Reihenfolge
-    ``order``. ``per_report_evening`` setzt zusaetzlich die hoechste
-    Kaskadenebene (#434) nur fuer 'evening' (AC-3)."""
+def _sms_layout_dc(order: list[str]) -> UnifiedWeatherDisplayConfig:
+    """UnifiedWeatherDisplayConfig mit globaler Metrikliste in der Nutzer-
+    Reihenfolge ``order``. #3277: die Kanal-Ebene (``per_channel_layouts``,
+    gleiche Folge wie ``metrics``) ist als Modellfeld entfallen und wirkte
+    seit #3237 nicht mehr; ohne Tabelle gilt die Grundauswahl-Tabelle in
+    derselben Folge. Der unbenutzte Parameter ``per_report_evening`` (#434)
+    ist mit dem Feld ``per_report_layouts`` entfallen."""
     global_metrics = [MetricConfig(metric_id=m, enabled=True) for m in order]
-    sms_layout = [
-        MetricConfig(metric_id=m, enabled=True, bucket="primary", order=i)
-        for i, m in enumerate(order)
-    ]
-    kwargs: dict = dict(
-        trip_id="i1677", metrics=global_metrics,
-        per_channel_layouts={"sms": sms_layout},
-    )
-    if per_report_evening is not None:
-        kwargs["per_report_layouts"] = {"evening": {"sms": [
-            MetricConfig(metric_id=m, enabled=True, bucket="primary", order=i)
-            for i, m in enumerate(per_report_evening)
-        ]}}
-    return UnifiedWeatherDisplayConfig(**kwargs)
+    return UnifiedWeatherDisplayConfig(trip_id="i1677", metrics=global_metrics)
 
 
 def _render_sms(dc: UnifiedWeatherDisplayConfig, report_type: str = "evening") -> str:
@@ -528,14 +515,8 @@ def test_fixloop_f001_threshold_and_position_combine():
         MetricConfig(metric_id="wind", enabled=True),
         MetricConfig(metric_id="precipitation", enabled=True),
     ]
-    sms_layout = [
-        MetricConfig(metric_id=m, enabled=True, bucket="primary", order=i)
-        for i, m in enumerate(["gust", "wind", "precipitation"])
-    ]
-    dc = UnifiedWeatherDisplayConfig(
-        trip_id="i1677fixloopf001", metrics=global_metrics,
-        per_channel_layouts={"sms": sms_layout},
-    )
+    # #3277: SMS-Folge = Folge der Grundauswahl (Kanal-Ebene entfallen).
+    dc = UnifiedWeatherDisplayConfig(trip_id="i1677fixloopf001", metrics=global_metrics)
     sms = _render_sms(dc)
     i_g, i_w, i_r = _token_index(sms, "G"), _token_index(sms, "W"), _token_index(sms, "R")
     assert i_g < i_w < i_r, (

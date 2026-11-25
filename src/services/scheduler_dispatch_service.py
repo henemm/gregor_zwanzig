@@ -16,6 +16,7 @@ from app.loader import (
     VALID_ENTITY_ID_RE,
     InvalidUserIdError,
     LoaderError,
+    altfelder_entfernen,
     compare_preset_to_dict,
     get_data_root,
     is_valid_user_id,
@@ -567,6 +568,9 @@ def _rmw_compare_preset(path: Path, label: str, mutate) -> str:
         neu = mutate(entry)
         if neu is not None:
             neu["kind"] = "vergleich"
+            # Issue #3277: Python-Speichern verwirft die zehn Altfelder,
+            # alle anderen Schluessel bleiben (ADR-0101).
+            altfelder_entfernen(neu)
         return neu
 
     try:

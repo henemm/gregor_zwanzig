@@ -24,13 +24,16 @@ ALT = {"active_metrics": [{"metric_id": "temperature", "aggregation": "max"},
 # ---------------------------------------------------------------------------
 
 def test_altbestand_outlook_enabled_false_heisst_block_entfaellt():
-    """Orte ohne ``placements``: ``outlook_enabled=False`` -> ``outlook == ()``
-    (Block entfaellt), ohne Angabe bleibt die Liste wie bisher."""
-    assert resolve_channel_lists(ALT, "compare", outlook_enabled=False).outlook == ()
+    """#3277: der Abo-Schalter ``outlook_enabled`` ist entfallen (ADR-0124
+    Nr. 6); "Ausblick aus" heisst Tabelle ohne Briefing in
+    ``outlook_reports`` -> ``outlook == ()`` (Block entfaellt). Ohne Tabelle
+    bleibt die Liste der Grundauswahl wie bisher."""
+    from tests.helpers.tabelle_aus_wunsch import tabelle
+
+    aus = {**ALT, "placements": tabelle(ALT, "compare", outlook_reports=[])}
+    assert resolve_channel_lists(aus, "compare").outlook == ()
     bisher = resolve_channel_lists(ALT, "compare")
     assert [z.metric_id for z in bisher.outlook] == ["temperature", "gust"]
-    an = resolve_channel_lists(ALT, "compare", outlook_enabled=True)
-    assert an.outlook == bisher.outlook
 
 
 def test_altbestand_hourly_enabled_false_heisst_block_entfaellt():
@@ -44,11 +47,9 @@ def test_altbestand_ausblick_in_jedem_slot():
     -- ohne Tabelle gilt die Tabelle aus der Grundauswahl samt Vorbelegung
     des Ausblicks; ist nur das Morgen-Briefing an, steht der Ausblick im
     Morgen-Briefing und nicht im Abend-Briefing (frueher: in jedem Slot)."""
-    morgen = resolve_channel_lists(ALT, "compare", "morning", enabled_reports=["morning"],
-                                   outlook_enabled=True)
+    morgen = resolve_channel_lists(ALT, "compare", "morning", enabled_reports=["morning"])
     assert [z.metric_id for z in morgen.outlook] == ["temperature", "gust"]
-    abend = resolve_channel_lists(ALT, "compare", "evening", enabled_reports=["morning"],
-                                  outlook_enabled=True)
+    abend = resolve_channel_lists(ALT, "compare", "evening", enabled_reports=["morning"])
     assert abend.outlook == ()
 
 
@@ -85,11 +86,16 @@ def test_render_optionen_nur_morgen_eingeschaltet_vorbelegung_morgen():
 
 
 def test_render_optionen_altbestand_outlook_enabled_false():
+    """#3277: ein gespeichertes Altfeld ``outlook_enabled: false`` wirkt nicht
+    mehr (Prod: alle Werte ``true``); es gilt die Grundauswahl-Tabelle."""
     from services.report_config_resolver import resolve_compare_render_options
 
-    opts = resolve_compare_render_options({"id": "p", "display_config": ALT,
-                                           "outlook_enabled": False})
-    assert opts.outlook_enabled is False
+    alt = resolve_compare_render_options({"id": "p", "display_config": ALT,
+                                          "outlook_enabled": False})
+    sauber = resolve_compare_render_options({"id": "p", "display_config": ALT})
+    assert sauber.outlook_enabled is True
+    assert (alt.outlook_enabled, alt.outlook_metrics) == (
+        sauber.outlook_enabled, sauber.outlook_metrics)
 
 
 def test_hinweiszaehler_aus_der_grundauswahl_auch_mit_tabelle():

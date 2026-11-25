@@ -481,14 +481,14 @@ def name_im_text(text: str, name: str, html: bool) -> bool:
 
 
 def ausblick_briefings(dc: object, surface: str, *, report_config: object = None,
-                       enabled_reports=None, outlook_enabled=None) -> dict[str, bool]:
+                       enabled_reports=None) -> dict[str, bool]:
     """Je Briefing (morning/evening): steht der 3-Tages-Ausblick darin? Die EINE
     Regel des Produkts: mit Tabelle ``resolve_outlook_reports`` +
     ``outlook_applies`` (Briefing in ``outlook_reports`` und mindestens eine
     Metrik an der Stelle "outlook"); ohne ``rows`` dieselbe Regel auf der
     Grundauswahl-Tabelle (``placements_aus_grundauswahl``: Vorbelegung,
-    Orte-Anlage-Marke, ``outlook_enabled``), #3237. ``report_config`` wirkt
-    nicht mehr (``show_outlook``/``multi_day_trend_reports`` sind Altfelder)."""
+    Orte-Anlage-Marke), #3237. ``report_config`` wirkt nicht mehr; die
+    Ausblick-Altfelder sind seit #3277 entfernt."""
     from services.channel_list_resolver import grundauswahl
     from services.placements import (
         outlook_applies, placements_aus_grundauswahl, read_placements, resolve_outlook_reports,
@@ -496,7 +496,7 @@ def ausblick_briefings(dc: object, surface: str, *, report_config: object = None
     )
 
     stored = read_placements(_roh_placements(dc)) or read_placements(placements_aus_grundauswahl(
-        dc, surface, enabled_reports=enabled_reports, outlook_enabled=outlook_enabled))
+        dc, surface, enabled_reports=enabled_reports))
     reports = resolve_outlook_reports(stored.outlook_reports, enabled_reports)
     an = {}
     for report in _REPORTS:
@@ -643,8 +643,7 @@ def orte_ausblick_briefings(preset: dict) -> dict[str, bool]:
     slots = resolve_preset_slots(preset)
     an = tuple(r for r, ein in (("morning", slots.morning_enabled),
                                 ("evening", slots.evening_enabled)) if ein)
-    return ausblick_briefings(preset.get("display_config") or {}, "compare", enabled_reports=an,
-                              outlook_enabled=preset.get("outlook_enabled"))
+    return ausblick_briefings(preset.get("display_config") or {}, "compare", enabled_reports=an)
 
 
 def _trip_aus_tabelle(dc: dict, grund: list[dict]) -> tuple[list[dict], list[str]]:

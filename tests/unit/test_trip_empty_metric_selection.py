@@ -434,34 +434,9 @@ class TestVortagszeileAC4AC5:
         assert "Vergleich zum Vortag" in line
 
 
-# ===========================================================================
-# AC-7: Loader — kanal-spezifische Leerauswahl je Kanal wird übernommen.
-# ===========================================================================
-
-
-class TestLoaderKanalspezifischeLeerauswahlAC7:
-
-    def test_all_channel_lists_empty_kept_as_dict_not_none(self):
-        """AC-7: alle drei Kanal-Listen bewusst leer → per_channel_layouts
-        ist ein Dict mit leeren Listen je Kanal, NICHT None (globaler
-        Rueckfall). Widerspricht bewusst der ALTEN Erwartung in
-        test_issue_429_channel_layouts.py::
-        test_ac1_all_empty_channel_layouts_treated_as_none — diese muss in
-        der Implementierungsphase mitgezogen werden (siehe Bericht)."""
-        from app.loader import _parse_display_config
-
-        data = {
-            "trip_id": "fall-b-per-channel",
-            "metrics": [{"metric_id": "temperature", "enabled": True}],
-            "channel_layouts": {"email": [], "telegram": [], "sms": []},
-            "updated_at": "2026-07-31T10:00:00",
-        }
-        dc = _parse_display_config(data)
-        assert dc.per_channel_layouts is not None, (
-            "AC-7: eine bewusst geleerte Kanal-Konfiguration darf nicht auf "
-            "den globalen Fallback (None) zurueckfallen."
-        )
-        assert dc.per_channel_layouts == {"email": [], "telegram": [], "sms": []}
+# AC-7 (Loader uebernimmt leere Kanal-Listen als Dict) entfaellt mit dem
+# Lesen des Altfelds ``channel_layouts`` (#3277, ADR-0124 Nr. 8). Eine bewusst
+# leere Kanal-Auswahl steht seither in der Tabelle "Was steht wo".
 
 
 # ===========================================================================

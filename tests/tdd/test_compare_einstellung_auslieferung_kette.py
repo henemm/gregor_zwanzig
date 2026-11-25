@@ -115,13 +115,16 @@ def _lauf(mit, vorlage: dict, tier: str = "premium", *, optins: bool = True,
     # die Altfelder bleiben als Beschreibung fuer das Orakel stehen und wirken nicht.
     p = orte_wunsch_als_tabelle(p)
     pfad = preset_ablegen(uid, p)
+    # #3277: der Versand speichert den Status ueber Python und verwirft dabei
+    # die Altfelder; das Orakel liest den abgelegten Stand VOR dem Versand.
+    roh = json.loads(pfad.read_text(encoding="utf-8"))
     if vorher:
         vorher(uid)
     mit.leeren()
     ergebnis = briefing_senden(uid, p["id"], settings_fuer(uid, telegram=telegram, sms=sms))
     snap = copy.deepcopy(mit)
     mit.leeren()
-    return Lauf(uid, json.loads(pfad.read_text(encoding="utf-8")), snap, ergebnis)
+    return Lauf(uid, roh, snap, ergebnis)
 
 
 def _text(snap: Kanalmitschrift, kanal: str) -> str:

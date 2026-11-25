@@ -28,9 +28,10 @@ func TestOrteReiterReihenfolgeUndEntfernenReadModifyWriteZweiNutzer(t *testing.T
   "schedule": "daily", "profil": "ALLGEMEIN", "forecast_hours": 48,
   "morning_enabled": true, "morning_time": "07:00:00", "evening_enabled": false,
   "created_at": "2026-09-01T00:00:00Z", "corridors": [], "empfaenger": [],
-  "hourly_enabled": true, "outlook_enabled": false, "send_telegram": true,
+  "hourly_enabled": true, "send_telegram": true,
   "official_warnings": {"enabled": true, "sources": ["geosphere", "meteoalarm"]},
-  "display_config": {"active_metrics": [{"metric_id": "wind", "aggregation": "max"}, {"metric_id": "temperature", "aggregation": "max"}]}
+  "display_config": {"active_metrics": [{"metric_id": "wind", "aggregation": "max"}, {"metric_id": "temperature", "aggregation": "max"}],
+    "placements": {"version": 1, "rows": [], "outlook_reports": []}}
 }`
 	for _, weg := range []string{"compare", "briefing"} {
 		weg := weg

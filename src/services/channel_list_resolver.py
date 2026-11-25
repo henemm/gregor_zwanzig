@@ -62,11 +62,10 @@ def resolve_channel_lists(
     display_config, surface: str, report_type: Optional[str] = None, *,
     enabled_reports: Optional[Sequence[str]] = None,
     hourly_enabled: Optional[bool] = None,
-    outlook_enabled: Optional[bool] = None,
 ) -> MailViewModel:
     """Reine Funktion: ``display_config`` (Dict oder Modell) -> ``MailViewModel``.
     Ohne Tabelle gilt ``placements_aus_grundauswahl`` (#3237); Altfelder wirken
-    nicht. ``enabled_reports``/``hourly_enabled``/``outlook_enabled``: Abo."""
+    nicht. ``enabled_reports``/``hourly_enabled``: Abo."""
     from services.placements import placements_aus_grundauswahl, read_placements
 
     if surface not in ("trip", "compare"):
@@ -76,8 +75,7 @@ def resolve_channel_lists(
     stored = read_placements(roh)
     if stored is None:
         stored = read_placements(placements_aus_grundauswahl(
-            display_config, surface, enabled_reports=enabled_reports,
-            outlook_enabled=outlook_enabled))
+            display_config, surface, enabled_reports=enabled_reports))
     return placements_view(display_config, surface, report_type, stored,
                            enabled_reports=enabled_reports, hourly_enabled=hourly_enabled)
 

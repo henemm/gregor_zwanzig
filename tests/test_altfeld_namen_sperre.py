@@ -65,8 +65,15 @@ _ABLAUF = date(2027, 2, 23)
 _RESOLVER_GRUND = ("Renderer-interner Schluessel: _compare_hourly/_compare_outlook bauen "
                    "CompareRenderOptions(**dict) aus dem View-Model, kein Speicher-Zugriff")
 
+_VORBILD_GRUND = ("Vorbild-Skript fuer Datenlauf #3351, liest Bestandsdaten (verbrauchte "
+                  "Einmal-Migration #2792, schreibt kein Altfeld)")
+
 #: (Datei relativ zur Wurzel, Name) -> (Begruendung, Ablaufdatum).
 ERLAUBT: dict[tuple[str, str], tuple[str, date]] = {
+    ("scripts/migrate_2792_profil_ampel.py", "channel_layouts"): (_VORBILD_GRUND, _ABLAUF),
+    ("scripts/migrate_2792_profil_ampel.py", "channel_layouts_per_report"):
+        (_VORBILD_GRUND, _ABLAUF),
+    ("scripts/migrate_2792_profil_ampel.py", "channel_active_metrics"): (_VORBILD_GRUND, _ABLAUF),
     ("api/routers/validator.py", "hourly_metrics"): (_VALIDATOR_GRUND, _ABLAUF),
     ("api/routers/validator.py", "hourly_metric_formats"): (_VALIDATOR_GRUND, _ABLAUF),
     ("src/services/validator_render_service.py", "hourly_metrics"): (_VALIDATOR_GRUND, _ABLAUF),
@@ -132,6 +139,11 @@ def verstoesse(quelltext: str, datei: str, erlaubt=None, heute: date | None = No
     """Treffer in Python-Quelltext, die keine gueltige Ausnahme decken."""
     erlaubt = ERLAUBT if erlaubt is None else erlaubt
     return _gefiltert(_namen(ast.parse(quelltext)), datei, erlaubt, heute or date.today())
+
+
+def datei_verstoesse(datei: str) -> list[str]:
+    """``verstoesse`` fuer eine Backend-Datei (Pfad relativ zur Wurzel)."""
+    return verstoesse((WURZEL / datei).read_text(encoding="utf-8"), datei)
 
 
 _GO_KOMMENTAR = re.compile(r"//[^\n]*")

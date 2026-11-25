@@ -18,6 +18,7 @@ steht von Hand im Test (Tabelle -> erwartete Spalten), nie aus einer
 from __future__ import annotations
 
 import copy
+import dataclasses
 import re
 from typing import Optional
 
@@ -490,7 +491,7 @@ def test_ac8_zeitplaner_baut_ausblick_nach_tabelle():
     morgens = resolve_report_render_options(t.report_config, t.display_config, "morning")
     abends = resolve_report_render_options(t.report_config, t.display_config, "evening")
     assert morgens.show_multi_day_trend is True and abends.show_multi_day_trend is False
-    assert morgens.show_outlook is True
+    assert "show_outlook" not in {f.name for f in dataclasses.fields(morgens)}  # #3277
 
 
 def test_ac9_vorbelegung_nur_morgen_briefing_eingeschaltet(monkeypatch):

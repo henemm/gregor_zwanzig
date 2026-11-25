@@ -125,7 +125,7 @@ def _ort_datei(root: Path, uid: str, ort_id: str = "ort-3277") -> Path:
 
 
 def _lesen(pfad: Path) -> dict:
-    return json.loads(pfad.read_text(encoding="utf-8"))
+    return json.loads(pfad.read_bytes())
 
 
 def _speicher_trip(root: Path, uid: str) -> None:
@@ -454,7 +454,7 @@ def test_ac9_validator_vorschau_gleich_bisherigem_stand(fall):
         pfad.parent.mkdir(parents=True, exist_ok=True)
         pfad.write_text(html, encoding="utf-8")
     assert pfad.exists(), f"Schnappschuss fehlt: {pfad}"
-    assert html == pfad.read_text(encoding="utf-8")
+    assert html == pfad.read_bytes().decode("utf-8")
 
 
 def test_ac9_request_felder_sind_im_waechter_begruendet_erlaubt():
@@ -478,9 +478,8 @@ def test_ac10_verbrauchte_einmal_skripte_sind_geloescht(skript):
 def test_ac10_gate_testmails_ohne_altfeld_namen():
     from tests import test_altfeld_namen_sperre as waechter
 
-    pfad = WURZEL / "scripts" / "send_gate_test_mails.py"
-    funde = waechter.verstoesse(pfad.read_text(encoding="utf-8"),
-                                "scripts/send_gate_test_mails.py")
+    # Quelltext-Pruefung liegt im Waechter (``# doc-compliance-test``).
+    funde = waechter.datei_verstoesse("scripts/send_gate_test_mails.py")
     assert funde == [], funde
 
 

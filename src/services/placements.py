@@ -272,13 +272,14 @@ def anlage_outlook_reports(display_config: object) -> Optional[tuple[str, ...]]:
 
 def placements_aus_grundauswahl(
     display_config: object, surface: str, *,
-    enabled_reports: Optional[Sequence[str]] = None, outlook_enabled: Optional[bool] = None,
+    enabled_reports: Optional[Sequence[str]] = None,
 ) -> dict:
     """Volle Tabelle aus der Grundauswahl (#3237, ADR-0124): je Metrik der
     Tabellen-Grundauswahl eine Zeile in deren Folge, jede Stelle ausdruecklich
     belegt. Haken und Form je Stelle = was HEUTE ohne Einstellung erscheint
     (Spec #3122 Nr. 4, ``_heute_ohne_einstellung``); ``outlook_reports`` nach
-    der Vorbelegung Nr. 6 (Marke gilt, ``outlook_enabled is False`` = ``[]``).
+    der Vorbelegung Nr. 6 (Marke gilt; das Altfeld des Abo-Schalters wirkt
+    seit #3277 nicht mehr).
     EINE Quelle fuer Anlage, Karte und Abos ohne ``rows``; liest keine
     Altfelder, veraendert die Eingabe nicht."""
     from services.channel_list_resolver import tabellen_grundauswahl
@@ -288,8 +289,7 @@ def placements_aus_grundauswahl(
     rows = [StoredRow(mid, tuple((s, mid in places.get(s, (mid,))) for s in stellen_fuer(surface)),
                       tuple((s, f) for s, f in formen.get(mid, {}).items()))
             for mid in dict.fromkeys(ids)]
-    reports = () if outlook_enabled is False else resolve_outlook_reports(
-        anlage_outlook_reports(display_config), enabled_reports)
+    reports = resolve_outlook_reports(anlage_outlook_reports(display_config), enabled_reports)
     return placements_dict(rows, reports)
 
 

@@ -158,8 +158,7 @@ def _trip(*, outlook_metrics, enabled_ids=None, leere_grundauswahl=False,
                 display_config=dc, official_warnings=None)
     trip.report_config = TripReportConfig(
         trip_id=trip_id, send_email=True, send_telegram=False, send_sms=False,
-        show_outlook=True, multi_day_trend_reports=list(trend_reports),
-    )
+    )  # #3277: "Ausblick erscheint im" steht allein in der Tabelle (oben)
     trip.official_alerts_enabled = False       # kein Netz fuer amtliche Warnungen
     trip.official_alert_triggers_enabled = False
     trip.alert_cooldown_minutes = 0

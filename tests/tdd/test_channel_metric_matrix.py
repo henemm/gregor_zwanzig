@@ -407,9 +407,11 @@ def _sms_order_dc(order: list[str]) -> UnifiedWeatherDisplayConfig:
         MetricConfig(metric_id=m, enabled=True, bucket="primary", order=i)
         for i, m in enumerate(order)
     ]
-    return UnifiedWeatherDisplayConfig(
-        trip_id="x1677", metrics=metrics, per_channel_layouts={"sms": sms_layout},
-    )
+    # #3277: das Modellfeld der Kanal-Ebene ist entfallen (wirkte seit #3237
+    # nicht mehr). Die SMS-Folge ist die der Grundauswahl (``sms_layout``
+    # gleicht ``metrics``); ohne Tabelle gilt die Grundauswahl-Tabelle.
+    assert [m.metric_id for m in sms_layout] == [m.metric_id for m in metrics]
+    return UnifiedWeatherDisplayConfig(trip_id="x1677", metrics=metrics)
 
 
 @pytest.mark.parametrize("metric_id", _ALL_METRIC_IDS)
@@ -978,7 +980,13 @@ def test_kaskade_ac9_fixture_carries_full_catalog_width():
         f"Metriken) plus dokumentierte Legacy-Ausnahme(n) "
         f"{sorted(_CASCADE_FIXTURE_NON_SELECTABLE_LEGACY_IDS)} = {expected_count}: {len(dc.metrics)}"
     )
-    assert len(dc.per_channel_layouts["sms"]) == expected_count, len(dc.per_channel_layouts["sms"])
+    # #3277: die Kanal-Ebene liest das Modell nicht mehr; die Fixture-Breite
+    # wird am Rohstand geprueft.
+    # Die SMS-Liste laeuft dafuer selbst durch den echten Loader (mit den beim
+    # Laden abgeleiteten Kind-Groessen, wie frueher die Kanal-Ebene).
+    sms_roh = _load_cascade_fixture_raw()["channel_layouts"]["sms"]
+    sms_geladen = _parse_display_config({"metrics": sms_roh}).metrics
+    assert len(sms_geladen) == expected_count, len(sms_geladen)
 
 
 # --- AC-10: keine der Zielmetriken kommt aus der Null-Token-Ausnahmeliste ---
@@ -1019,8 +1027,8 @@ def test_kaskade_ac11_premium_sms_has_no_own_cascade_level():
     (offene Frage der Spec), schlaegt dieser Test an und erzwingt einen echten
     eigenen Renderpfad-Test.
     """
-    dc = _load_cascade_dc()
-    assert "premium_sms" not in (dc.per_channel_layouts or {}), (
+    raw = _load_cascade_fixture_raw()
+    assert "premium_sms" not in (raw.get("channel_layouts") or {}), (
         "AC-11: es existiert bereits eine eigene Kaskaden-Ebene fuer premium_sms -- "
         "AC-11 (kein eigener Render-Test) ist damit ueberholt"
     )
@@ -1043,16 +1051,8 @@ def test_kaskade_ac11_premium_sms_has_no_own_cascade_level():
 # ---------------------------------------------------------------------------
 
 
-def _cascade_email_only_layout_dc() -> UnifiedWeatherDisplayConfig:
-    """Variante der Basis-Fixture MIT eigener 'email'-Kanal-Ebene (nur die
-    erste _AC12_PAIR-Metrik), aber bewusst OHNE eigene 'sms'-Ebene --
-    cascade_source_for_channel('sms', ...) faellt strukturell auf 'global'
-    zurueck."""
-    dc = _load_cascade_dc()
-    email_only_id, _ = _AC12_PAIR
-    email_entry = next(mc for mc in dc.metrics if mc.metric_id == email_only_id)
-    assert email_entry.enabled is True, "Vorbedingung: Ziel ist global aktiv"
-    return dataclasses.replace(dc, per_channel_layouts={"email": [email_entry]})
+# #3277: der unbenutzte Baustein ``_cascade_email_only_layout_dc`` (setzte das
+# entfernte Modellfeld der Kanal-Ebene) ist entfallen.
 
 
 # --- AC-12: Reihenfolge wird mitgeprueft, nicht nur die Menge ---
@@ -1174,7 +1174,7 @@ def test_kaskade_s2_ac9_evening_disabled_globally_excludes_from_evening_sms():
 # --- S2 AC-10 Test A: Editor-Sequenz -- SMS-Snapshot, dann NUR Grundauswahl abwaehlen ---
 
 
-def _cascade_editor_sequence_variant(target: str) -> UnifiedWeatherDisplayConfig:
+def _cascade_editor_sequence_raw(target: str) -> dict:
     """K1-Reproduktionsfolge (Kontext-Dokument): SMS-Tab oeffnen -> Kanal-
     Ebene wird zur exakten Kopie der Grundauswahl (WeatherMetricsTab.svelte:638,
     startChannelOverride) -> zurueck zur Grundauswahl -> NUR der globale
@@ -1185,16 +1185,18 @@ def _cascade_editor_sequence_variant(target: str) -> UnifiedWeatherDisplayConfig
         {**e, "enabled": False} if e["metric_id"] == target else e
         for e in raw["metrics"]
     ]
-    return _parse_display_config(raw)
+    return raw
 
 
 def test_kaskade_s2_ac10_editor_sequence_global_deselect_after_channel_snapshot():
     target = _AC4_5_TARGET  # global AN in der Basis-Fixture, wird hier NACH dem Snapshot AUS gesetzt
     symbol = SMS_SYMBOL_BY_METRIC[target]
-    dc = _cascade_editor_sequence_variant(target)
+    raw = _cascade_editor_sequence_raw(target)
+    dc = _parse_display_config(raw)
 
-    sms_copy_entry = next(mc for mc in dc.per_channel_layouts["sms"] if mc.metric_id == target)
-    assert sms_copy_entry.enabled is True, "Vorbedingung: die SMS-Kopie blieb unveraendert aktiv"
+    # #3277: die SMS-Kopie steht nur noch im Rohstand (das Modell liest sie nicht).
+    sms_copy_entry = next(e for e in raw["channel_layouts"]["sms"] if e["metric_id"] == target)
+    assert sms_copy_entry.get("enabled", True) is True,"Vorbedingung: die SMS-Kopie blieb unveraendert aktiv"
     global_entry = next(mc for mc in dc.metrics if mc.metric_id == target)
     assert global_entry.enabled is False, "Vorbedingung: NUR die Grundauswahl wurde abgewaehlt"
 
@@ -2738,7 +2740,7 @@ def test_ac_s2_8_ausblick_zelle_zeigt_den_gerechneten_wert():
 
 def _s4_compact_render_options(dc: UnifiedWeatherDisplayConfig) -> ReportRenderOptions:
     return ReportRenderOptions(
-        email_format="compact", show_outlook=True, show_stage_stats=True,
+        email_format="compact", show_stage_stats=True,
         show_stability=True, show_compact_summary=True,
         show_multi_day_trend=False, show_yesterday_comparison=True,
         display_config=dc,

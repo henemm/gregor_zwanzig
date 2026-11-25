@@ -91,7 +91,7 @@ def _night_weather() -> NormalizedTimeseries:
     return NormalizedTimeseries(meta=_night_meta(), data=data)
 
 
-def _render_html(trend, thunder_forecast, *, show_outlook=True, report_type="evening"):
+def _render_html(trend, thunder_forecast, *, ausblick=True, report_type="evening"):
     """render_html()-Direktaufruf mit gemeinsamen Test-Segmenten (analog
     tests/tdd/test_issue_721_email_outlook.py::_render)."""
     from src.output.renderers.email.html import render_html
@@ -103,16 +103,15 @@ def _render_html(trend, thunder_forecast, *, show_outlook=True, report_type="eve
         trip_name="Test-Trip", report_type=report_type,
         dc=kw["display_config"], night_rows=[], thunder_forecast=thunder_forecast,
         highlights=[], changes=None, stage_name=kw["stage_name"],
-        stage_stats=None, multi_day_trend=trend, compact_summary=None,
+        stage_stats=None, multi_day_trend=trend if ausblick else None, compact_summary=None,
         daylight=None, tz=ZoneInfo("Europe/Berlin"),
         friendly_keys=kw["friendly_keys"], profile=None,
         stability_result=None,
-        show_outlook=show_outlook,
         show_stability=True,
     )
 
 
-def _render_plain(trend, thunder_forecast, *, show_outlook=True, report_type="evening"):
+def _render_plain(trend, thunder_forecast, *, ausblick=True, report_type="evening"):
     """render_plain()-Direktaufruf, symmetrisch zu _render_html()."""
     from src.output.renderers.email.plain import render_plain
     from tests.unit.test_renderers_email import _common_kwargs
@@ -123,11 +122,10 @@ def _render_plain(trend, thunder_forecast, *, show_outlook=True, report_type="ev
         trip_name="Test-Trip", report_type=report_type,
         dc=kw["display_config"], night_rows=[], thunder_forecast=thunder_forecast,
         highlights=[], changes=None, stage_name=kw["stage_name"],
-        stage_stats=None, multi_day_trend=trend, compact_summary=None,
+        stage_stats=None, multi_day_trend=trend if ausblick else None, compact_summary=None,
         daylight=None, tz=ZoneInfo("Europe/Berlin"),
         friendly_keys=kw["friendly_keys"], profile=None,
         stability_result=None,
-        show_outlook=show_outlook,
         show_stability=True,
     )
 
@@ -137,7 +135,7 @@ def _render_plain(trend, thunder_forecast, *, show_outlook=True, report_type="ev
 # ---------------------------------------------------------------------------
 
 class TestAC1ThunderSuppressedWhenOutlookActive:
-    """AC-1: show_outlook=True + gefuellter multi_day_trend + thunder_forecast
+    """AC-1: Ausblick an (#3277: Tabelle) + gefuellter multi_day_trend + thunder_forecast
     -> 'Gewitter-Vorschau' erscheint NICHT (Dopplung mit Ausblick).
 
     RED: html.py:1085 / plain.py:235 rendern aktuell unconditional bei
@@ -148,7 +146,7 @@ class TestAC1ThunderSuppressedWhenOutlookActive:
         from tests.tdd.test_issue_721_email_outlook import _trend_stage
 
         trend = [_trend_stage(weekday="Di", name="E1", confidence_pct=80)]
-        html = _render_html(trend, _thunder_forecast(), show_outlook=True)
+        html = _render_html(trend, _thunder_forecast())
         assert "Gewitter-Vorschau" not in html, (
             "HTML zeigt 'Gewitter-Vorschau' trotz aktivem Mehrtages-Ausblick "
             "(Dopplung seit #1275, E1 muss unterdruecken)"
@@ -158,7 +156,7 @@ class TestAC1ThunderSuppressedWhenOutlookActive:
         from tests.tdd.test_issue_721_email_outlook import _trend_stage
 
         trend = [_trend_stage(weekday="Di", name="E1", confidence_pct=80)]
-        plain = _render_plain(trend, _thunder_forecast(), show_outlook=True)
+        plain = _render_plain(trend, _thunder_forecast())
         assert "Gewitter-Vorschau" not in plain, (
             "Plain-Text zeigt 'Gewitter-Vorschau' trotz aktivem Mehrtages-"
             "Ausblick (Dopplung seit #1275, E1 muss unterdruecken)"
@@ -172,18 +170,18 @@ class TestAC1ThunderSuppressedWhenOutlookActive:
 
 class TestAC2ThunderShownWhenOutlookInactive:
     """AC-2: Kein aktiver Ausblick (leerer multi_day_trend ODER
-    show_outlook=False) -> Gewitter-Vorschau bleibt sichtbar.
+    Ausblick aus, #3277: kein Trend) -> Gewitter-Vorschau bleibt sichtbar.
     Regressionsschutz: dieser Test ist VOR und NACH dem Fix gruen."""
 
     def test_html_shows_thunder_forecast_when_trend_empty(self):
-        html = _render_html(None, _thunder_forecast(), show_outlook=True)
+        html = _render_html(None, _thunder_forecast())
         assert "Gewitter-Vorschau" in html, (
             "Gewitter-Vorschau fehlt trotz leerem multi_day_trend "
             "(Morgen-Default ohne Ausblick) — Regression"
         )
 
     def test_plain_shows_thunder_forecast_when_trend_empty(self):
-        plain = _render_plain(None, _thunder_forecast(), show_outlook=True)
+        plain = _render_plain(None, _thunder_forecast())
         assert "Gewitter-Vorschau" in plain, (
             "Gewitter-Vorschau fehlt trotz leerem multi_day_trend "
             "(Morgen-Default ohne Ausblick) — Regression"
@@ -193,9 +191,9 @@ class TestAC2ThunderShownWhenOutlookInactive:
         from tests.tdd.test_issue_721_email_outlook import _trend_stage
 
         trend = [_trend_stage(weekday="Di", name="E1", confidence_pct=80)]
-        html = _render_html(trend, _thunder_forecast(), show_outlook=False)
+        html = _render_html(trend, _thunder_forecast(), ausblick=False)
         assert "Gewitter-Vorschau" in html, (
-            "Gewitter-Vorschau fehlt trotz show_outlook=False (Ausblick "
+            "Gewitter-Vorschau fehlt trotz abgeschaltetem Ausblick (Ausblick "
             "selbst ausgeblendet, Dopplung kann nicht entstehen) — Regression"
         )
 
@@ -300,9 +298,9 @@ class TestAC5SmsThunderTokenUnaffected:
 # ---------------------------------------------------------------------------
 
 class TestAC6EveningReportNightAndThunderUnchangedOutsideDopplung:
-    """AC-6: Abendbriefing mit Standard-Config (show_outlook Default aktiv)
+    """AC-6: Abendbriefing mit Standard-Config (Ausblick laut Tabelle aktiv)
     -> Nacht-Block vorhanden, Gewitter-Vorschau unterdrueckt (E1 greift auch
-    abends, PO-gewollt). Gegenprobe show_outlook=False -> Nacht-Block bleibt,
+    abends, PO-gewollt). Gegenprobe Ausblick aus -> Nacht-Block bleibt,
     Gewitter-Vorschau erscheint wie vor #1313 (Regressionsschutz)."""
 
     def test_evening_default_hides_thunder_but_keeps_night_block(self):
@@ -347,7 +345,7 @@ class TestAC6EveningReportNightAndThunderUnchangedOutsideDopplung:
         bleibt unveraendert vorhanden. VOR und NACH dem Fix gruen.
 
         #3237: "Ausblick aus" steht in der Tabelle "Was steht wo"
-        (``outlook_reports: []``); das Altfeld ``show_outlook`` wirkt nicht
+        (``outlook_reports: []``); das Altfeld ``show_outlook`` ist entfallen (#3277), wirkte nicht
         mehr."""
         from app.metric_catalog import build_default_display_config
         from src.output.renderers.trip_report import TripReportFormatter
@@ -357,7 +355,7 @@ class TestAC6EveningReportNightAndThunderUnchangedOutsideDopplung:
 
         seg = _make_segment_weather()
         trend = [_trend_stage(weekday="Di", name="E1", confidence_pct=80)]
-        rc = TripReportConfig(trip_id="gr20", show_outlook=False)
+        rc = TripReportConfig(trip_id="gr20")
         dc = build_default_display_config()
         dc.placements = tabelle(dc, "trip", outlook_reports=[])
         report = TripReportFormatter().format_email(
