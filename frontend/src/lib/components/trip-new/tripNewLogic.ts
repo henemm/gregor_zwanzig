@@ -21,6 +21,7 @@ import { anlegeKette } from '../shared/subscriptionTabs.ts';
 import { fmtDate } from '../../i18n/format.ts';
 import type { Lang } from '../../i18n/index.ts';
 import { baueReportConfigPayload, ladeReportZustand } from '../shared/versand-tab/reportConfigPayload.ts';
+import { mergeReportConfig } from '../shared/versand-tab/mergeReportConfig.ts';
 import { ladeMailZustand } from '../shared/mailInhaltZustand.ts';
 import { felderNutzlast, type KarteAnlegeStand } from '../shared/wetter-tab/wasStehtWoSpeicherung.ts';
 export type { KarteAnlegeStand };
@@ -413,21 +414,9 @@ export function ergaenzeStandardwerteReportConfig(rc: ReportConfig | undefined):
 	const basis = { ...((rc ?? {}) as Record<string, unknown>) };
 	const nachVersand = ergaenzeVersandStandard(rc) as Record<string, unknown>;
 	const mail = ladeMailZustand(nachVersand);
-	return baueReportConfigPayload({
+	return mergeReportConfig({
 		snapshot: basis,
 		live: nachVersand,
-		eigene: { ...mail, daily_summary_metrics: [...mail.daily_summary_metrics] },
-		showSchedule: false,
-		showChannels: false,
-		zustand: {
-			morning_enabled: false,
-			evening_enabled: false,
-			morning_time: '07:00',
-			evening_time: '18:00',
-			send_email: true,
-			send_telegram: false,
-			send_sms: false,
-			send_premium_sms: false
-		}
+		own: { ...mail, daily_summary_metrics: [...mail.daily_summary_metrics] }
 	}) as ReportConfig;
 }

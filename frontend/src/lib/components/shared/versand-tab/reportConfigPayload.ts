@@ -17,7 +17,7 @@
 // Pure Funktionen, kein Netz-/DOM-Zugriff — node:testbar.
 
 import { toHHMMSS } from '../../../utils/time.ts';
-import { reportSlotAktiv } from '../../../utils/reportSlotAktiv.ts';
+import { leseBriefingStartwerte } from '../briefingStartwerte.ts';
 import { mergeReportConfig } from './mergeReportConfig.ts';
 
 export interface ReportZustand {
@@ -66,22 +66,13 @@ function ausblickReports(eingabe: ReportConfigPayloadEingabe): string[] {
 }
 
 /**
- * Startzustand aus dem geladenen Blob (onMount-/Erzeugungs-Logik). Slots via
- * `reportSlotAktiv` (AC-24); Zeiten 07:00/18:00 als Default; E-Mail Default an,
- * die anderen drei Kanaele Default aus; telegram_style Default 'rich'.
+ * Startzustand aus dem geladenen Blob (onMount-/Erzeugungs-Logik). Slots, Zeiten
+ * und Kanaele via `leseBriefingStartwerte` (#2987); telegram_style Default 'rich'.
  */
 export function ladeReportZustand(rc: Record<string, unknown> | null | undefined): ReportZustand {
-	const c: Record<string, unknown> = rc ?? {};
 	return {
-		morning_enabled: reportSlotAktiv(rc, 'morning'),
-		evening_enabled: reportSlotAktiv(rc, 'evening'),
-		morning_time: typeof c.morning_time === 'string' ? c.morning_time.slice(0, 5) : '07:00',
-		evening_time: typeof c.evening_time === 'string' ? c.evening_time.slice(0, 5) : '18:00',
-		send_email: c.send_email !== false,
-		send_telegram: c.send_telegram === true,
-		send_sms: c.send_sms === true,
-		send_premium_sms: c.send_premium_sms === true,
-		telegram_style: c.telegram_style === 'kurzform' ? 'kurzform' : 'rich'
+		...leseBriefingStartwerte(rc),
+		telegram_style: rc?.telegram_style === 'kurzform' ? 'kurzform' : 'rich'
 	};
 }
 
