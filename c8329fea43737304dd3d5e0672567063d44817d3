@@ -1,0 +1,124 @@
+{
+  "verified_commit": "c8329fea43737304dd3d5e0672567063d44817d3",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/new:AC-1",
+      "evidence": "Playwright AW-1 gruen auf c8329fea4: einziger POST /api/trips ohne sechs Altschluessel",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/new:AC-2",
+      "evidence": "AW-2 gruen: Mit Standardwerten POST ohne Altschluessel",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips:AC-3",
+      "evidence": "AW-3 gruen: Reiter-PUTs Wetter und Zustellung ohne Altschluessel, morning_time erhalten, Abend-Schalter nach Neuladen aus",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-4",
+      "status": "SKIPPED",
+      "url": "-:AC-4",
+      "evidence": "out-of-scope: Nutzlast-Funktion, node --test in CI",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/:AC-5",
+      "evidence": "AW-4 im Spec-Lauf HTTP 429 (Ratenlimit 5/IP/h, nicht Paket). Ersatz live: Testnutzer en, Trip mit placements.rows, Startseite EN: Chip Layout per channel mit svg (erledigt); Screenshot docs/artifacts/feat-3297-trip-pfad-ohne-altfelder/ac-5-en-home.png; Trip geloescht 204",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-6",
+      "status": "SKIPPED",
+      "url": "-:AC-6",
+      "evidence": "out-of-scope: svelte-check in CI",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-7",
+      "status": "SKIPPED",
+      "url": "-:AC-7",
+      "evidence": "out-of-scope: Loeschnachweis im Quelltext, CI",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-8",
+      "status": "SKIPPED",
+      "url": "-:AC-8",
+      "evidence": "out-of-scope: Quelltext-Scan, CI",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips:AC-9",
+      "evidence": "Hub DE (Tabs Uebersicht, Etappen, Wetter, Zustellung; hub-de.png) und Home EN (home-en.png) laden fehlerfrei, keine pageerrors; AW-1 und AW-3 oeffnen Wetter und Zustellung mit denselben Flaechen",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-10",
+      "status": "SKIPPED",
+      "url": "-:AC-10",
+      "evidence": "out-of-scope fuer Staging (Kern-Schicht in CI). Bekannt rot, nicht diesem Paket: editor-gleich-gespeichert AC-10 (Fixture saet channel_layouts, Issue 3359), hier nicht ausgefuehrt",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "TG-LIVE",
+      "status": "PASS",
+      "url": "staging:Telegram",
+      "evidence": "-m live: test_issue_686 8 passed, ac3 im ersten Lauf failed (Latenz), isoliert wiederholt passed; test_telegram_live_zweisprachig 1 passed",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "LANG",
+      "status": "PASS",
+      "url": "staging:de+en",
+      "evidence": "DE (Konto default, nur lesend) und EN (Nutzer en) Login, Startseite und Hub geprueft",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-25T13:17:02.682974+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: 5/5 UI-ACs gruen (5 out-of-scope)",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: 5/5 UI-ACs gruen (5 out-of-scope)",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-25T13:17:02.682974+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
