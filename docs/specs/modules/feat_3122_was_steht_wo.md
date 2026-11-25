@@ -94,7 +94,7 @@ Abhängigkeiten: B1 → B2 → B3 → B6 → B7. B4 und B5 laufen nach B1 parall
 - `formats.<stelle>` ∈ `raw | simplified`, nur für `email`, `telegram`, `hourly`, `outlook`. Fehlt der Wert, gilt der Katalog-Standard der Metrik, für Trip und Orte gleich.
 - `outlook_reports` ⊆ `["morning", "evening"]`: in welchem Briefing der 3-Tages-Ausblick steht. Fehlt der Schlüssel, gilt die Vorbelegung aus Nr. 6.
 - Go speichert `placements` ungeprüft (ADR-0077) und immer als vollständigen Stand. Der Resolver liest robust: unbekannte Metriken, Stellen und Formate haben keine Wirkung.
-- Unverändert an ihrem heutigen Ort bleiben `hourly_enabled` (Orte), `show_stage_stats`, `show_yesterday_comparison`, `show_night_block`, `email_format` (Trip) und `telegram_style`.
+- Unverändert an ihrem heutigen Ort bleiben `hourly_enabled` (Orte), `show_stage_stats`, `show_yesterday_comparison`, `show_night_block`, `email_format` (Trip: `report_config`; Orte seit #3059: `display_config`) und `telegram_style`.
 
 **2. Zeilen-Kennung (#3101).** `metric_id` ist überall die Katalog-ID (`temperature`), auch bei Orten. Der Resolver weitet sie für die Orte-Ausgaben auf die Auswertungen der Grundauswahl auf (Temperatur: Höchstwert, dann Tiefstwert). Abgeleitete Größen ohne eigene Metrik-Zeile im Reiter Wetter folgen ihrer Eltern-Zeile: gleiche Haken, Platz direkt hinter ihr.
 
@@ -279,7 +279,7 @@ Die Tabelle „Übersicht“ steht auch bei genau einem Ort in der Mail (Soll-Bi
 - **AC-29:** Given die Schalter unter „Ganze Blöcke ein- und ausschalten“ / When der Nutzer bei Orten den Stundenverlauf, beim Trip Etappen-Kennzahlen, Vortag-Vergleich und Nacht-Stundentabelle und bei beiden den 3-Tages-Ausblick für Morgen und Abend schaltet / Then steht jeder Schalter nach dem Neuladen wie gesetzt, und der Block fehlt bzw. erscheint im zugestellten Briefing entsprechend.
   - Test: Browser-Test plus Staging-Validator mit `--konfig`.
 
-- **AC-30:** Given der Hub eines Trips und eines Orte-Abos nach Auslieferung der Karte / When Reiter Wetter und Reiter Zustellung durchgesehen werden / Then gibt es E-Mail-Format (nur Trip), Telegram-Kurzstil und den Hinweis zur Premium-SMS genau einmal, nämlich unter der Tabelle, der Kurzstil ist ohne verbundenes Telegram gesperrt, und Roh/Einfach und Kurzstil waren zu keinem Auslieferungsstand unerreichbar.
+- **AC-30:** Given der Hub eines Trips und eines Orte-Abos nach Auslieferung der Karte / When Reiter Wetter und Reiter Zustellung durchgesehen werden / Then gibt es E-Mail-Format (seit #3059 auch Orte, ADR-0124 Nachtrag 2026-11-24), Telegram-Kurzstil und den Hinweis zur Premium-SMS genau einmal, nämlich unter der Tabelle, der Kurzstil ist ohne verbundenes Telegram gesperrt, und Roh/Einfach und Kurzstil waren zu keinem Auslieferungsstand unerreichbar.
   - Test: Browser-Test über beide Reiter; derselbe Test läuft vor und nach dem Umschalten grün.
 
 - **AC-31:** Given die Karte mit Haken in der SMS-Spalte / When der Nutzer „Kürzel erklärt“ aufklappt / Then stehen dort die Kürzel genau der Metriken mit SMS-Haken, die Zeitangabe, die Kurzform amtlicher Warnungen mit ihren Stufen und „X?“, das Feld ist beim Öffnen der Seite geschlossen, und der Satz über eine Legende am Ende jedes Briefings steht nirgends.
@@ -326,7 +326,7 @@ Die Tabelle „Übersicht“ steht auch bei genau einem Ort in der Mail (Soll-Bi
 
 - Eigene Auswahl der Premium-SMS: S9, #2801.
 - Tabelle schon beim Anlegen: #3041.
-- E-Mail-Format „Kompakt“ und gemeinsame Zusatzblöcke für Orte: #3059.
+- E-Mail-Format „Kompakt“ für Orte: gebaut mit #3059 (`feat_3059_orte_kompakt_mail.md`, ADR-0124 Nachtrag 2026-11-24); Vortag-Vergleich für Orte: #3342.
 - Reiter Orte, Anlegen mit einem Ort, Menü, Listen, Untergrenze des Validators: #2798.
 - Übergangsblock auflösen und `WeatherMetricsTab` entfernen: #3036, #3020 (Voraussetzung: B3 live).
 - Alarme: nichts zu bauen (ADR-0124 Nr. 11), nur der Prüfkatalog-Fall aus AC-19.

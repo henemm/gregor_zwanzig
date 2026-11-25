@@ -1,5 +1,6 @@
 {
  "blocks": {
+  "email_format": "full",
   "hourly": true,
   "outlook": {
    "evening": false,

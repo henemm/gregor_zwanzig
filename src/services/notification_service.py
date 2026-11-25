@@ -87,6 +87,16 @@ def _sink_accepts_plain_body(sink: object) -> bool:
     )
 
 
+def _sink_accepts_keyword(sink: object, name: str) -> bool:
+    """Issue #3059: nimmt der Test-``mail_sink`` das Keyword ``name`` an
+    (expliziter Parameter oder ``**kwargs``)? Unlesbare Signatur -> ``False``."""
+    try:
+        params = inspect.signature(sink).parameters.values()
+    except (ValueError, TypeError):
+        return False
+    return any(p.name == name or p.kind is inspect.Parameter.VAR_KEYWORD for p in params)
+
+
 @dataclass
 class TripReportRequest:
     """DTO vom Scheduler an den NotificationService.
@@ -1639,13 +1649,32 @@ class NotificationService:
         blocked_reason_codes: dict[str, str] = {}
         failed_channels: list[str] = []  # Issue #2275
 
+        # Issue #3059: leeres HTML = Kompakt-Mail der Orte (Signal wie beim
+        # Trip, `_send_email`): ein einzelner Textteil, `X-GZ-Format: compact`.
+        kompakt = not html_body
         if "email" in effective_channels:
             if mail_sink is not None:
+                # Issue #3059: Kompakt reicht das Format an Sinks, die es
+                # annehmen; ohne Klartext-Parameter traegt `body` den Text.
+                extra = {"mail_format": "compact"} if kompakt and _sink_accepts_keyword(
+                    mail_sink, "mail_format") else {}
                 # Issue #1356 (C3-75): Klartext nur an Sinks, die ihn annehmen.
                 if _sink_accepts_plain_body(mail_sink):
-                    mail_sink(subject=subject, body=html_body, plain_body=text_body)
+                    mail_sink(subject=subject, body=html_body, plain_body=text_body, **extra)
                 else:
-                    mail_sink(subject=subject, body=html_body)
+                    mail_sink(subject=subject, body=text_body if kompakt else html_body, **extra)
+            elif kompakt:
+                from output.channels.email import EmailOutput as _EmailOutput
+
+                _EmailOutput(self._settings).send(
+                    subject,
+                    text_body,
+                    html=False,
+                    to=recipients,
+                    mail_type="compare",
+                    mail_format="compact",
+                    lang=self._lang,
+                )
             else:
                 # Laufzeit-Aufloesung (kein Modul-Level-Alias): der
                 # Compare-Versandpfad wird ueber `output.channels.email`

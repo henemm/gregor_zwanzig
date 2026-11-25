@@ -529,6 +529,17 @@ Eine **Trip-Briefing-Mail** (anderer Versandpfad, n Stundentabellen pro Etappe,
 kein Übersichtstabellen-Vertrag) kann diesen Validator **strukturell nie**
 bestehen → Dauer-Exit-1.
 
+**Kompakt-Zweig (seit #3059):** trägt die Mail `X-GZ-Format: compact`, entfallen
+die HTML-Prüfungen; geprüft wird (Fehler mit Präfix `COMPACT:`): genau ein Teil
+`text/plain`, reines ASCII (7bit oder quoted-printable), unter 2048 Byte, keine
+Stundentabelle (zwei oder mehr Zeilen mit `HH:MM` am Anfang); mit `--konfig` je
+Ort der Konfiguration genau eine Ortszeile (beginnt mit dem ASCII-gefalteten
+Namen) in der Folge von `location_ids`, ein Kürzungs-Hinweis `+N …` erlaubt das
+Fehlen der letzten N Orte. Mit `--konfig` wird außerdem das Format gegen
+`display_config.email_format` des Presets geprüft (fehlend = `full`, Ist ohne
+Kopf = `full`): Abweichung → `SOLL: Format '<ist>' statt '<soll>'`, Exit 1 —
+in beiden Richtungen. Kein neues CLI-Flag.
+
 ```bash
 uv run python3 .claude/hooks/email_spec_validator.py
 ```

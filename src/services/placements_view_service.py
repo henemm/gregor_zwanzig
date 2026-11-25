@@ -704,6 +704,7 @@ def _orte_abo_aus(preset: dict, user_id: str, lang: str):
     ``user_id``."""
     from services.amtliche_warnungen_schalter import amtliche_warnungen_an_preset
     from services.compare_slot_scheduler import resolve_preset_slots
+    from services.report_config_resolver import compare_email_format
 
     slots = resolve_preset_slots(preset)
     dc = preset.get("display_config") or {}
@@ -716,7 +717,9 @@ def _orte_abo_aus(preset: dict, user_id: str, lang: str):
         outlook_enabled=preset.get("outlook_enabled"),
         warnungen=amtliche_warnungen_an_preset(preset), ort_anzahl=len(orte),
         bloecke={"hourly": preset.get("hourly_enabled", True) is not False,
-                 "telegram_style": dc.get("telegram_style", "rich") or "rich"},
+                 "telegram_style": dc.get("telegram_style", "rich") or "rich",
+                 # Issue #3059: E-Mail-Format auch fuer Orte (display_config).
+                 "email_format": compare_email_format(dc)},
     )
     return abo, lambda vm, rt: _orte_muster(preset, orte, vm, lang)
 
@@ -740,7 +743,12 @@ def _orte_muster(preset: dict, orte: list, vm, lang: str) -> _Muster:
 
     kontext = {"preset": preset, "result": pb.orte_ergebnis(orte),
                "profile": profile_for_template(template_id_for(preset)),
-               "opts": resolve_compare_render_options(preset), "name": preset.get("name", ""),
+               # Issue #3059: die Beispielwerte der E-Mail-Spalte stammen aus
+               # der Vergleichstabelle der ausfuehrlichen Mail -- auch bei
+               # Kompakt (dieselben Werte, eine Zeile je Ort).
+               "opts": dataclasses.replace(resolve_compare_render_options(preset),
+                                           email_format="full"),
+               "name": preset.get("name", ""),
                "target_date": pb.TAG}
     email_html, _text_mail = aufbau.compare_email_rendern(kontext, lang=lang)
     sms, telegram = aufbau.compare_kanaltexte_rendern(kontext, lang=lang)

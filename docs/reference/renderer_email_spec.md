@@ -271,6 +271,7 @@ X-GZ-Lang:      de | en
 | `trip-briefing` | `full` | `trip_report_scheduler.py` (Briefing-Versand) → `src/services/trip_briefing_aufbau.py` (Aufbau der Mail, seit #3128) | `.claude/hooks/briefing_mail_validator.py` (AC-1/4) |
 | `trip-briefing` | `compact` | `trip_report_scheduler.py` (compact-Renderer seit #722) → `src/services/trip_briefing_aufbau.py` (Aufbau der Mail, seit #3128) | `.claude/hooks/briefing_mail_validator.py` (AC-2/6) |
 | `compare` | `full` | `src/services/scheduler_dispatch_service.py` → `src/services/compare_briefing_aufbau.py` (Aufbau der Mail, seit #2983) → `notification_service.py` (Scheduler-Lauf + „Senden“-Button) | `.claude/hooks/email_spec_validator.py` (AC-3) |
+| `compare` | `compact` | wie `compare/full`; `compare_email_rendern` zweigt bei `display_config.email_format == "compact"` auf `src/output/renderers/email/compact_compare.py` (`render_compare_compact`, seit #3059) ab und liefert leeres HTML → `send_compare_report` sendet einen Textteil (`html=False`, `X-GZ-Format: compact`) | `.claude/hooks/email_spec_validator.py` (Kompakt-Zweig, #3059) |
 
 ### Validierungslogik
 
@@ -280,6 +281,9 @@ X-GZ-Lang:      de | en
   - `compare`-getaggte Mails: sauberes No-Op (Exit 0, falscher Validator)
 
 - **`email_spec_validator.py`** prüft Orts-Vergleich-Mails (Vergleichstabelle, Winner-Box, min-locations). Für andere Mail-Typen nicht zuständig.
+  - `compare/compact` (#3059): single text/plain, 7bit/quoted-printable, isascii, < 2 KB, keine Stundentabelle; mit `--konfig` je Ort genau eine Ortszeile (beginnt mit dem ASCII-gefalteten Namen) in der Ortsfolge, Kürzungs-Hinweis `+N …` erlaubt das Fehlen der letzten N Orte; Format gegen `display_config.email_format` (`SOLL: Format '<ist>' statt '<soll>'`).
+
+**Orte-Kompakt-Mail (seit #3059):** Kopf „Orte – Datum“ (EN „Locations“), je Ort eine Zeile `Name: [!] K Wert …` (Kürzel = `compact_label` des Katalogs, Warnmarker `!`/`!!`/`!!!` nach amtlicher Warnstufe), darunter eingerückt eine Zeile „3-Tages-Ausblick: Tag … | Tag …“ nur bei eingeschaltetem Ausblick, kein Stundenverlauf; Fuß „Orte · Kompakt · Quelle“. Grenze 2 KB inklusive Hinweis „+N Orte nicht gezeigt“ (EN „+N locations not shown“), gekürzt vom Listenende. Vorschau und Testversand zeigen denselben Text (`compare_email_rendern` ist der gemeinsame Punkt). Unbekannte Metrik-Kennungen werden in der Kompakt-Mail ausgelassen und per Log-Warnung (`logger.warning`, #3059) gemeldet, nicht still verworfen.
 
 **Orte-Mail: Bereichsname und Ein-Ort-Texte (seit #3122 B5, ADR-0124 Nr. 10 und Nachtrag Nr. 13):** Der Bereich heißt „Orte“ (EN „Locations“), auch bei einem Ort; „Vergleich“, „Orts-Vergleich“, „Ortsvergleich“ und „Orts-Briefing“ stehen in keiner Ausgabe mehr. Interne Bezeichner (`compare`, `vergleich`, `X-GZ-Mail-Type: compare`) bleiben.
 

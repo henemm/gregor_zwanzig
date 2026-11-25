@@ -44,6 +44,8 @@
   "vergleich.ort.abruf_kontingent_erschoepft": "Dein Kontingent für Wetterabfragen ist für heute aufgebraucht; für diesen Ort liegen keine zwischengespeicherten Daten vor. Ab Mitternacht (UTC) geht es wieder.",
   "vergleich.telegram.keine_werte": "keine Werte",
   "vergleich.telegram.uebersprungen": "… +{n} weitere Orte (Telegram-Limit) — vollständig per E-Mail",
+  "vergleich.kompakt.nicht_gezeigt.one": "+{count} Ort nicht gezeigt",
+  "vergleich.kompakt.nicht_gezeigt.other": "+{count} Orte nicht gezeigt",
   "vergleich.niederschlagsart.rain": "Regen",
   "vergleich.niederschlagsart.snow": "Schnee",
   "vergleich.niederschlagsart.mixed": "Mischniederschlag",

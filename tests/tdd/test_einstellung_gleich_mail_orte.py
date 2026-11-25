@@ -67,7 +67,10 @@ from tests.helpers.einstellung_gleich_mail_orte import (
     klartext_stundenverlauf,
     klartext_vergleichstabelle,
     klartext_vergleichswerte,
+    kompakt_ausblick,
+    kompakt_vergleichswerte,
     kopf_von,
+    kuerzel_von,
     preset_dict,
     sende_orte_mail,
     soll_ausblick,
@@ -118,6 +121,9 @@ def _standard_stunden() -> tuple[str, ...]:
 def pruefe_vergleichstabelle(mail, fmt: str) -> None:
     soll = soll_vergleichstabelle(mail.roh)
     orte = _orte(mail.roh)
+    if fmt == "kompakt":
+        _pruefe_kompakt_vergleich(mail, soll, orte)
+        return
     if fmt == "html":
         ist_orte, ist = html_vergleichstabelle(mail.html)
         assert ist_orte == orte, f"HTML Orte-Spalten {ist_orte}, eingestellt {orte}"
@@ -128,6 +134,32 @@ def pruefe_vergleichstabelle(mail, fmt: str) -> None:
         for ort in orte:
             assert zeilen[ort] == soll, f"Klartext {ort}: Zeilen {zeilen[ort]}, eingestellt {soll}"
     pruefe_vergleichsformen(mail, fmt)
+
+
+def _kompakt_text(mail) -> str:
+    """#3059: Kompakt-Mail = nur Klartext, kein HTML-Teil."""
+    assert mail.html == "", "Kompaktformat muss eine reine Text-Mail ohne HTML-Teil sein"
+    assert mail.plain.isascii(), "Kompakt-Mail muss reines ASCII sein"
+    return mail.plain
+
+
+def _pruefe_kompakt_vergleich(mail, soll, orte: list[str]) -> None:
+    """#3059 (AC-15): je Ort eine Zeile mit den Kuerzeln der E-Mail-Auswahl
+    in eingestellter Folge; Form je Zeile wie eingestellt (Roh/Einfach)."""
+    werte = kompakt_vergleichswerte(_kompakt_text(mail))
+    assert list(werte) == orte, f"kompakt: Ortszeilen {list(werte)}, eingestellt {orte}"
+    if soll is None:
+        assert all(werte[o] for o in orte), f"kompakt: Ortszeile ohne Werte {werte}"
+        return
+    kuerzel = [kuerzel_von(m) for m in soll]
+    formen = soll_vergleichsformen(mail.roh)
+    for ort in orte:
+        assert [k for k, _v in werte[ort]] == kuerzel, (
+            f"kompakt {ort}: Kuerzel {[k for k, _v in werte[ort]]}, eingestellt {kuerzel} (Nutzer {mail.uid})")
+        for (_k, wert), mid in zip(werte[ort], soll):
+            # ASCII-Faltung: "11°C" steht in der Kompakt-Mail als "11C".
+            assert zellform(re.sub(r"(\d)C$", r"\1°C", wert)) == formen[mid], (
+                f"kompakt {ort}: Zeile {mid} steht auf {formen[mid]}, Wert {wert!r}")
 
 
 def pruefe_vergleichsformen(mail, fmt: str) -> None:
@@ -146,6 +178,13 @@ def pruefe_vergleichsformen(mail, fmt: str) -> None:
 
 
 def pruefe_stundenverlauf(mail, fmt: str, lang: str = "de") -> None:
+    if fmt == "kompakt":
+        # #3059 / #722: die Kompakt-Mail zeigt nie einen Stundenverlauf,
+        # gleich wie er eingestellt ist (Fallliste: Status ``ausnahme``).
+        text = _kompakt_text(mail)
+        assert not re.search(r"^\s*\d\d:\d\d\s", text, re.MULTILINE), f"kompakt mit Stundenzeilen:\n{text}"
+        assert katalogtext("vergleich.stunden.klartext_titel", lang) not in text.splitlines()
+        return
     soll = soll_stundenverlauf(mail.roh, _standard_stunden())
     ist = (html_stundenverlauf(mail.html, lang) if fmt == "html"
            else klartext_stundenverlauf(mail.plain, lang))
@@ -159,8 +198,11 @@ def pruefe_stundenverlauf(mail, fmt: str, lang: str = "de") -> None:
 
 def pruefe_ausblick(mail, fmt: str, *, darstellung: bool = True, lang: str = "de") -> None:
     soll = soll_ausblick(mail.roh)
-    ist = (html_ausblick(mail.html, lang) if fmt == "html"
-           else klartext_ausblick(mail.plain, lang))
+    if fmt == "kompakt":  # #3059: Ausblick-Zeile je Ort unter der Ortszeile
+        ist = kompakt_ausblick(_kompakt_text(mail), lang)
+    else:
+        ist = (html_ausblick(mail.html, lang) if fmt == "html"
+               else klartext_ausblick(mail.plain, lang))
     if soll is None:
         assert ist == {}, f"{fmt}: Ausblick muss entfallen, gefunden {list(ist)}"
         titel = katalogtext("vergleich.ausblick.titel", lang)
@@ -263,6 +305,8 @@ def preset_aus_werten(liste: str, werte: dict) -> dict:
         dc[feld] = [] if muster == "bewusst_leer" else list(folge)
     if liste == "orte_ausblick":
         dc["outlook_metric_formats"] = _formate(folge, werte["darstellung"])
+    if werte["format"] == "kompakt":  # #3059: Format liegt in display_config
+        dc["email_format"] = "compact"
     return p
 
 

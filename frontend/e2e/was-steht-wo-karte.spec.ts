@@ -176,7 +176,8 @@ const ALT_TEXTE = ['Kurzstil', 'Mehrtages-Trend', 'E-Mail-Inhalt', 'E-Mail: Form
 /** Bedienelemente der Karte unter der Tabelle: wie oft im Reiter Wetter, je Kontext. */
 const KARTE_EINMAL: Record<HubKind, Record<string, number>> = {
 	route: { 'was-steht-wo-kurzstil': 1, 'was-steht-wo-email-format': 1, 'was-steht-wo-ausblick-morning': 1, 'was-steht-wo-ausblick-evening': 1, 'was-steht-wo-show_stage_stats': 1, 'was-steht-wo-show_yesterday_comparison': 1, 'was-steht-wo-show_night_block': 1, 'was-steht-wo-stundenverlauf': 0 },
-	vergleich: { 'was-steht-wo-kurzstil': 1, 'was-steht-wo-email-format': 0, 'was-steht-wo-ausblick-morning': 1, 'was-steht-wo-ausblick-evening': 1, 'was-steht-wo-show_stage_stats': 0, 'was-steht-wo-show_yesterday_comparison': 0, 'was-steht-wo-show_night_block': 0, 'was-steht-wo-stundenverlauf': 1 }
+	// #3059 (AC-13): der E-Mail-Format-Schalter steht auch bei Orten genau einmal in der Karte.
+	vergleich: { 'was-steht-wo-kurzstil': 1, 'was-steht-wo-email-format': 1, 'was-steht-wo-ausblick-morning': 1, 'was-steht-wo-ausblick-evening': 1, 'was-steht-wo-show_stage_stats': 0, 'was-steht-wo-show_yesterday_comparison': 0, 'was-steht-wo-show_night_block': 0, 'was-steht-wo-stundenverlauf': 1 }
 };
 const PREMIUM_HINWEIS = 'Bekommt vorerst denselben Text wie die SMS. Eine eigene Auswahl kommt später.';
 
@@ -856,7 +857,8 @@ test.describe('Karte „Was steht wo“', () => {
 				for (const id of ALT_TESTIDS) await expect(reiter.getByTestId(id), `Reiter Wetter: ${id}`).toHaveCount(0);
 				await expect(reiter.getByText(PREMIUM_HINWEIS, { exact: true })).toHaveCount(1);
 				await expect(reiter.getByText('Telegram: Kurzstil', { exact: true })).toHaveCount(1);
-				await expect(reiter.getByText('E-Mail: Format', { exact: true })).toHaveCount(abo.kind === 'route' ? 1 : 0);
+				// #3059 (AC-13): „E-Mail: Format“ in beiden Kontexten genau einmal (Trip und Orte).
+				await expect(reiter.getByText('E-Mail: Format', { exact: true })).toHaveCount(1);
 				// AC-30: Roh/Einfach erreichbar; Kurzstil ohne verbundenes Telegram gesperrt.
 				await expect(karte.locator('[data-slot="roh-einfach"]').first()).toBeVisible();
 				await expect(karte.getByTestId('was-steht-wo-kurzstil')).toHaveAttribute('aria-disabled', 'true');

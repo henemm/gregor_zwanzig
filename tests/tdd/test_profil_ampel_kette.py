@@ -825,6 +825,10 @@ EINSTIEGE = {
     ("renderers/email/plain.py", "render_plain"): 1,
     ("renderers/email/compact.py", "render_compact"): 1,
     ("renderers/email/compare_html.py", "render_compare_html"): 1,
+    # Issue #3059: Kompakt-Mail der Orte -- Geschwister von render_compare_html,
+    # loest die Ampel einmal aus dem Pflicht-Preset auf (nie None) und reicht
+    # sie keyword-only an den Ausblick (_ausblickzeile) durch.
+    ("renderers/email/compact_compare.py", "render_compare_compact"): 1,
     ("renderers/comparison.py", "render_comparison_text"): 1,
     # Issue #3047 B-K7: Orte-Telegram traegt den 3-Tages-Ausblick (Ampel des Presets).
     ("renderers/comparison.py", "render_compare_telegram"): 1,
