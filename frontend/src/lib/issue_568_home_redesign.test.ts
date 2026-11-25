@@ -84,6 +84,35 @@ test('#568 setupStepTrip: vollständiger Trip → alle 5 Schritte done', () => {
 	assert.ok(steps.every((s) => s.done), 'Vollständiger Trip: alle Schritte done');
 });
 
+// #3297 (AC-5): Quelle des Schritts „Layout je Kanal“ ist allein `display_config.placements.rows`
+// (nicht leer). Vorlagenname und Altfelder (`channel_layouts`) zaehlen nicht mehr (ADR-0124 Nr. 5).
+const LAYOUT_KONSTELLATIONEN: { fall: string; dc: Record<string, unknown>; done: boolean }[] = [
+	{ fall: 'nicht leere placements.rows (Bestandstrip)', dc: { placements: { rows: [{ metric_id: 'wind_max_kmh', places: { email: ['tabelle'] } }] } }, done: true },
+	{ fall: 'nur channel_layouts (Altfeld)', dc: { channel_layouts: { email: ['wind_max_kmh'] }, channel_layouts_per_report: { morning: {} } }, done: false },
+	{ fall: 'nur preset_name (Vorlagenname)', dc: { preset_name: 'Sommer-Trekking' }, done: false },
+	{ fall: 'leere placements.rows', dc: { placements: { rows: [], outlook_reports: ['evening'] } }, done: false }
+];
+for (const k of LAYOUT_KONSTELLATIONEN) {
+	test(`#3297 AC-5 setupStepTrip „Layout je Kanal“: ${k.fall} → ${k.done ? 'erledigt' : 'offen'}`, () => {
+		const steps = setupStepTrip(trip({ display_config: k.dc as Trip['display_config'] }));
+		assert.strictEqual(steps[3].done, k.done, `Layout-Schritt bei „${k.fall}“`);
+	});
+}
+
+// #3297 (AC-5): vollständiger Trip im heutigen Format (Tabelle statt Vorlagenname). Der Bestandstest
+// „#568 vollständiger Trip“ oben nutzt noch `preset_name` und ist in GREEN auf `placements` umzustellen.
+test('#3297 AC-5 setupStepTrip: vollständiger Trip mit Tabelle → alle 5 Schritte done', () => {
+	const t = trip({
+		stages: [{ id: 's1', name: 'D1', date: '2026-07-01', waypoints: [] }],
+		display_config: {
+			metrics: [{ metric_id: 'wind_speed', enabled: true, use_friendly_format: false }],
+			placements: { rows: [{ metric_id: 'wind_max_kmh', places: { email: ['tabelle'] } }], outlook_reports: ['evening'] }
+		} as Trip['display_config'],
+		report_config: { morning_enabled: true, evening_enabled: false }
+	});
+	assert.ok(setupStepTrip(t).every((s) => s.done), 'Vollständiger Trip mit Tabelle: alle Schritte done');
+});
+
 test('#568 setupStepCompare: leerer Vergleich → alle 5 Schritte offen (außer Step 1)', () => {
 	const steps = setupStepCompare(comparePreset());
 	// Step 1 (Vergleich) ist immer done
