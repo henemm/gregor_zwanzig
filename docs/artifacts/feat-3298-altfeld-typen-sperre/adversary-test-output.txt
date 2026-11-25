@@ -26087,3 +26087,417 @@ ok 1076 - AC-10: die Entlade-Option (keepalive) erreicht den Wertebereiche-PUT
 # skipped 0
 # todo 0
 # duration_ms 133732.644178
+=== Nachtragsrunde: gezielter Lauf ===
+      ---
+      duration_ms: 3.563315
+      type: 'test'
+      ...
+    # Subtest: Wächter: versand — nach Erfolg ist die Basis gleich dem Server-Stand
+    ok 2 - Wächter: versand — nach Erfolg ist die Basis gleich dem Server-Stand
+      ---
+      duration_ms: 2.988096
+      type: 'test'
+      ...
+    # Subtest: Wächter: wertebereiche — nach Erfolg ist die Basis gleich dem Server-Stand
+    ok 3 - Wächter: wertebereiche — nach Erfolg ist die Basis gleich dem Server-Stand
+      ---
+      duration_ms: 1.179063
+      type: 'test'
+      ...
+    # Subtest: Wächter: wetterMetriken — nach Erfolg ist die Basis gleich dem Server-Stand
+    ok 4 - Wächter: wetterMetriken — nach Erfolg ist die Basis gleich dem Server-Stand
+      ---
+      duration_ms: 1.522223
+      type: 'test'
+      ...
+    1..4
+ok 70 - Test 7 / AC-10 (Wächter): die gemergte Server-Antwort wird Basis
+  ---
+  duration_ms: 9.410775
+  type: 'suite'
+  ...
+# Subtest: \#3298: Reiter Wetter/Zustellung oeffnet die Hydrations-Sperre auch nach dem Preset-Sync
+    # Subtest: wetter: layoutHydrated und Gate stehen nach dem Mount-Durchlauf auf true
+    ok 1 - wetter: layoutHydrated und Gate stehen nach dem Mount-Durchlauf auf true
+      ---
+      duration_ms: 416.742969
+      type: 'test'
+      ...
+    # Subtest: zustellung: layoutHydrated und Gate stehen nach dem Mount-Durchlauf auf true
+    ok 2 - zustellung: layoutHydrated und Gate stehen nach dem Mount-Durchlauf auf true
+      ---
+      duration_ms: 159.5278
+      type: 'test'
+      ...
+    1..2
+ok 71 - \#3298: Reiter Wetter/Zustellung oeffnet die Hydrations-Sperre auch nach dem Preset-Sync
+  ---
+  duration_ms: 577.25116
+  type: 'suite'
+  ...
+# Subtest: S3a \#2794 Fix: eine Cooldown-/Stille-Stunden-Geste im Vergleich = genau EIN Speichervorgang über den Alarme-Owner
+    # Subtest: Cooldown-Änderung: genau ein PUT, er trägt den Cooldown, der Server hat ihn
+    ok 1 - Cooldown-Änderung: genau ein PUT, er trägt den Cooldown, der Server hat ihn
+      ---
+      duration_ms: 24.95582
+      type: 'test'
+      ...
+    # Subtest: Stille Stunden: genau ein PUT, beide Zeiten im Payload
+    ok 2 - Stille Stunden: genau ein PUT, beide Zeiten im Payload
+      ---
+      duration_ms: 1.420022
+      type: 'test'
+      ...
+    # Subtest: der Versand-Speicherer allein meldet bei einer Alarm-Zustellungsänderung NICHTS an
+    ok 3 - der Versand-Speicherer allein meldet bei einer Alarm-Zustellungsänderung NICHTS an
+      ---
+      duration_ms: 0.880761
+      type: 'test'
+      ...
+    # Subtest: Versand-Änderung speichert weiterhin über den Versand-Speicherer (Kontrolle)
+    ok 4 - Versand-Änderung speichert weiterhin über den Versand-Speicherer (Kontrolle)
+      ---
+      duration_ms: 1.551692
+      type: 'test'
+      ...
+    1..4
+ok 72 - S3a \#2794 Fix: eine Cooldown-/Stille-Stunden-Geste im Vergleich = genau EIN Speichervorgang über den Alarme-Owner
+  ---
+  duration_ms: 29.665189
+  type: 'suite'
+  ...
+# Subtest: F012: ZustellungTab im Vergleich mountet erst nach Metrik-, Versand- UND Alarm-Hydration
+    # Subtest: s3a2794_f012_zustellung_vergleich_wartet_auf_alarme_hydration
+    ok 1 - s3a2794_f012_zustellung_vergleich_wartet_auf_alarme_hydration
+      ---
+      duration_ms: 113.252734
+      type: 'test'
+      ...
+    # Subtest: s3a2794_f012_zustellung_vergleich_wartet_auf_versand_hydration
+    ok 2 - s3a2794_f012_zustellung_vergleich_wartet_auf_versand_hydration
+      ---
+      duration_ms: 58.598036
+      type: 'test'
+      ...
+    # Subtest: s3a2794_f012_zustellung_vergleich_mountet_genau_wenn_alle_drei_hydriert
+    ok 3 - s3a2794_f012_zustellung_vergleich_mountet_genau_wenn_alle_drei_hydriert
+      ---
+      duration_ms: 242.380624
+      type: 'test'
+      ...
+    1..3
+ok 73 - F012: ZustellungTab im Vergleich mountet erst nach Metrik-, Versand- UND Alarm-Hydration
+  ---
+  duration_ms: 415.231686
+  type: 'suite'
+  ...
+# Subtest: AC-8: SELBST_SPEICHERNDE_VERGLEICH_REITER mit den neuen Kennungen
+    # Subtest: enthaelt genau wetter, zustellung (\#2794)
+    ok 1 - enthaelt genau wetter, zustellung (\#2794)
+      ---
+      duration_ms: 0.974761
+      type: 'test'
+      ...
+    # Subtest: keine Alt-Kennung mehr in der Liste (idealwerte, wertebereiche, alarme, wetter-metriken)
+    ok 2 - keine Alt-Kennung mehr in der Liste (idealwerte, wertebereiche, alarme, wetter-metriken)
+      ---
+      duration_ms: 0.279251
+      type: 'test'
+      ...
+    1..2
+ok 74 - AC-8: SELBST_SPEICHERNDE_VERGLEICH_REITER mit den neuen Kennungen
+  ---
+  duration_ms: 2.045952
+  type: 'suite'
+  ...
+# Subtest: AC-8: Flush-Verhalten des generischen Guards
+    # Subtest: Wechsel aus wetter mit hasPending → Speicherung laeuft VOR dem Wechsel
+    ok 1 - Wechsel aus wetter mit hasPending → Speicherung laeuft VOR dem Wechsel
+      ---
+      duration_ms: 0.612591
+      type: 'test'
+      ...
+    # Subtest: Wechsel aus zustellung mit hasPending → Speicherung laeuft VOR dem Wechsel
+    ok 2 - Wechsel aus zustellung mit hasPending → Speicherung laeuft VOR dem Wechsel
+      ---
+      duration_ms: 0.1257
+      type: 'test'
+      ...
+    # Subtest: Wechsel aus den Alt-Kennungen idealwerte/wertebereiche flusht NICHT (Alt-Kennung ist kein Reiter mehr)
+    ok 3 - Wechsel aus den Alt-Kennungen idealwerte/wertebereiche flusht NICHT (Alt-Kennung ist kein Reiter mehr)
+      ---
+      duration_ms: 0.281461
+      type: 'test'
+      ...
+    # Subtest: Wechsel aus der Uebersicht flusht nicht
+    ok 4 - Wechsel aus der Uebersicht flusht nicht
+      ---
+      duration_ms: 0.151801
+      type: 'test'
+      ...
+    1..4
+ok 75 - AC-8: Flush-Verhalten des generischen Guards
+  ---
+  duration_ms: 1.418661
+  type: 'suite'
+  ...
+# Subtest: Positivfall: Ortsvergleich-Hub
+    # Subtest: vergleich + Wizard-Zustand + preset + saveController → Versand-Speicherung aktiv
+    ok 1 - vergleich + Wizard-Zustand + preset + saveController → Versand-Speicherung aktiv
+      ---
+      duration_ms: 0.677372
+      type: 'test'
+      ...
+    1..1
+ok 76 - Positivfall: Ortsvergleich-Hub
+  ---
+  duration_ms: 1.627382
+  type: 'suite'
+  ...
+# Subtest: AC-9: Anlege-Seite (/compare/new) — neuer Zweig bleibt inaktiv
+    # Subtest: vergleich OHNE preset und OHNE saveController (Mount der Anlege-Seite) → inaktiv
+    ok 1 - vergleich OHNE preset und OHNE saveController (Mount der Anlege-Seite) → inaktiv
+      ---
+      duration_ms: 0.21754
+      type: 'test'
+      ...
+    # Subtest: vergleich mit saveController, aber ohne preset → inaktiv (keine Basis für einen PUT)
+    ok 2 - vergleich mit saveController, aber ohne preset → inaktiv (keine Basis für einen PUT)
+      ---
+      duration_ms: 0.11825
+      type: 'test'
+      ...
+    # Subtest: vergleich mit preset, aber ohne Wizard-Zustand → inaktiv
+    ok 3 - vergleich mit preset, aber ohne Wizard-Zustand → inaktiv
+      ---
+      duration_ms: 0.19704
+      type: 'test'
+      ...
+    1..3
+ok 77 - AC-9: Anlege-Seite (/compare/new) — neuer Zweig bleibt inaktiv
+  ---
+  duration_ms: 0.727312
+  type: 'suite'
+  ...
+# Subtest: AC-12: Trip-Seite (route) — Vergleichs-Speicherung wird nie ausgelöst
+    # Subtest: route-Kontext mit sonst VOLLSTÄNDIGEN Props → inaktiv (die Kontext-Prüfung allein entscheidet)
+    ok 1 - route-Kontext mit sonst VOLLSTÄNDIGEN Props → inaktiv (die Kontext-Prüfung allein entscheidet)
+      ---
+      duration_ms: 0.18461
+      type: 'test'
+      ...
+    # Subtest: route-Kontext wie in BriefingScheduleTab gemountet (ohne wiz/preset) → inaktiv
+    ok 2 - route-Kontext wie in BriefingScheduleTab gemountet (ohne wiz/preset) → inaktiv
+      ---
+      duration_ms: 0.14129
+      type: 'test'
+      ...
+    1..2
+ok 78 - AC-12: Trip-Seite (route) — Vergleichs-Speicherung wird nie ausgelöst
+  ---
+  duration_ms: 0.558411
+  type: 'suite'
+  ...
+# Subtest: AC-7: Pausieren direkt nach einer Versand-Änderung verliert sie nicht
+    # Subtest: Uhrzeit ändern, sofort pausieren → Versand-PUT zuerst, Pausier-PUT trägt die Änderung
+    ok 1 - Uhrzeit ändern, sofort pausieren → Versand-PUT zuerst, Pausier-PUT trägt die Änderung
+      ---
+      duration_ms: 25.577872
+      type: 'test'
+      ...
+    # Subtest: „Bis auf Weiteres", sofort pausieren → auch die Laufzeit-Änderung überlebt
+    ok 2 - „Bis auf Weiteres", sofort pausieren → auch die Laufzeit-Änderung überlebt
+      ---
+      duration_ms: 1.266041
+      type: 'test'
+      ...
+    1..2
+ok 79 - AC-7: Pausieren direkt nach einer Versand-Änderung verliert sie nicht
+  ---
+  duration_ms: 27.691125
+  type: 'suite'
+  ...
+# Subtest: AC-6: Speicherkonflikt beim Versand-Speichern → „Nochmal speichern" → gespeichert
+    # Subtest: 412 → conflict (nicht error), Werte bleiben stehen; retryConflict sendet erneut → idle
+    ok 1 - 412 → conflict (nicht error), Werte bleiben stehen; retryConflict sendet erneut → idle
+      ---
+      duration_ms: 23.335678
+      type: 'test'
+      ...
+    # Subtest: Gegenprobe: ein Nicht-412-Fehler rollt die Versand-Änderung zurück und endet in error
+    ok 2 - Gegenprobe: ein Nicht-412-Fehler rollt die Versand-Änderung zurück und endet in error
+      ---
+      duration_ms: 0.512511
+      type: 'test'
+      ...
+    1..2
+ok 80 - AC-6: Speicherkonflikt beim Versand-Speichern → „Nochmal speichern" → gespeichert
+  ---
+  duration_ms: 24.61633
+  type: 'suite'
+  ...
+# Subtest: Issue \#2375: „Nochmal speichern" nach 412 — nur Eigenfelder, fremde Änderung überlebt
+    # Subtest: Wiederholungs-PUT trägt exakt die Eigenfelder des Reiters (kein Fremdfeld)
+    ok 1 - Wiederholungs-PUT trägt exakt die Eigenfelder des Reiters (kein Fremdfeld)
+      ---
+      duration_ms: 3.583226
+      type: 'test'
+      ...
+    # Subtest: Fremdfeld überlebt den Retry: danach stehen der Name von A UND die Änderung von B auf dem Server
+    ok 2 - Fremdfeld überlebt den Retry: danach stehen der Name von A UND die Änderung von B auf dem Server
+      ---
+      duration_ms: 2.066083
+      type: 'test'
+      ...
+    1..2
+ok 81 - Issue \#2375: „Nochmal speichern" nach 412 — nur Eigenfelder, fremde Änderung überlebt
+  ---
+  duration_ms: 5.82948
+  type: 'suite'
+  ...
+# Subtest: AC-8: versandPropsAus fuehrt sendPremiumSms + onSendPremiumSmsChange
+    # Subtest: das Buendel traegt sendPremiumSms als Wert (Default false ohne Bestand)
+    ok 1 - das Buendel traegt sendPremiumSms als Wert (Default false ohne Bestand)
+      ---
+      duration_ms: 0.63933
+      type: 'test'
+      ...
+    # Subtest: das Buendel traegt sendPremiumSms unveraendert aus dem Wizard-Zustand
+    ok 2 - das Buendel traegt sendPremiumSms unveraendert aus dem Wizard-Zustand
+      ---
+      duration_ms: 0.153162
+      type: 'test'
+      ...
+    # Subtest: onSendPremiumSmsChange schreibt auf wiz.sendPremiumSms zurueck
+    ok 3 - onSendPremiumSmsChange schreibt auf wiz.sendPremiumSms zurueck
+      ---
+      duration_ms: 0.14665
+      type: 'test'
+      ...
+    1..3
+ok 82 - AC-8: versandPropsAus fuehrt sendPremiumSms + onSendPremiumSmsChange
+  ---
+  duration_ms: 1.726023
+  type: 'suite'
+  ...
+# Subtest: AC-8/AC-14 (Persistenz): sendPremiumSms laeuft durch den ganzen Versand-Speicherweg
+    # Subtest: hydrateVersandFieldsFromPreset liest preset.send_premium_sms
+    ok 1 - hydrateVersandFieldsFromPreset liest preset.send_premium_sms
+      ---
+      duration_ms: 0.27232
+      type: 'test'
+      ...
+    # Subtest: versandSnapshotAus fuehrt sendPremiumSms
+    ok 2 - versandSnapshotAus fuehrt sendPremiumSms
+      ---
+      duration_ms: 0.124111
+      type: 'test'
+      ...
+    # Subtest: rollbackVersandSnapshot setzt sendPremiumSms auf den vorherigen Wert zurueck
+    ok 3 - rollbackVersandSnapshot setzt sendPremiumSms auf den vorherigen Wert zurueck
+      ---
+      duration_ms: 0.13441
+      type: 'test'
+      ...
+    # Subtest: baueVersandNutzlast sendet send_premium_sms aus current.sendPremiumSms
+    ok 4 - baueVersandNutzlast sendet send_premium_sms aus current.sendPremiumSms
+      ---
+      duration_ms: 0.416261
+      type: 'test'
+      ...
+    # Subtest: AC-14 (Persistenz-Teil): baueVersandNutzlast sendet NIEMALS alert_channels (Payload-Trennung)
+    ok 5 - AC-14 (Persistenz-Teil): baueVersandNutzlast sendet NIEMALS alert_channels (Payload-Trennung)
+      ---
+      duration_ms: 0.30812
+      type: 'test'
+      ...
+    1..5
+ok 83 - AC-8/AC-14 (Persistenz): sendPremiumSms laeuft durch den ganzen Versand-Speicherweg
+  ---
+  duration_ms: 1.586452
+  type: 'suite'
+  ...
+# Subtest: AC-4 (\#1743/\#2794): Reiterwechsel weg von „zustellung" sendet die ausstehende Versand-Änderung vorher
+    # Subtest: \#1743 AC-26 / \#2794: „zustellung" steht in der Liste, „versand"/„vorschau"/„wetter-metriken" nicht mehr
+    ok 1 - \#1743 AC-26 / \#2794: „zustellung" steht in der Liste, „versand"/„vorschau"/„wetter-metriken" nicht mehr
+      ---
+      duration_ms: 1.086702
+      type: 'test'
+      ...
+    # Subtest: Versand-Änderung im Entprell-Fenster, Wechsel zu „wetter", danach sofortige Radar-Änderung → BEIDE gespeichert
+    ok 2 - Versand-Änderung im Entprell-Fenster, Wechsel zu „wetter", danach sofortige Radar-Änderung → BEIDE gespeichert
+      ---
+      duration_ms: 23.527439
+      type: 'test'
+      ...
+    # Subtest: Gegenprobe: „Wechsel" auf denselben Reiter → nichts wird vorzeitig gesendet
+    ok 3 - Gegenprobe: „Wechsel" auf denselben Reiter → nichts wird vorzeitig gesendet
+      ---
+      duration_ms: 0.517121
+      type: 'test'
+      ...
+    1..3
+ok 84 - AC-4 (\#1743/\#2794): Reiterwechsel weg von „zustellung" sendet die ausstehende Versand-Änderung vorher
+  ---
+  duration_ms: 26.162853
+  type: 'suite'
+  ...
+# Subtest: AC-1: eine Versand-Änderung speichert über den Controller — genau ein PUT, Endzustand gespeichert
+    # Subtest: Telegram-Schalter umlegen → schedule, Flush → EIN PUT mit dem neuen Wert, state idle, savedAt gesetzt
+    ok 1 - Telegram-Schalter umlegen → schedule, Flush → EIN PUT mit dem neuen Wert, state idle, savedAt gesetzt
+      ---
+      duration_ms: 20.114733
+      type: 'test'
+      ...
+    # Subtest: Morgen-Uhrzeit ändern → PUT trägt HH:MM:SS, die übrigen Versandfelder unverändert
+    ok 2 - Morgen-Uhrzeit ändern → PUT trägt HH:MM:SS, die übrigen Versandfelder unverändert
+      ---
+      duration_ms: 0.872842
+      type: 'test'
+      ...
+    # Subtest: zwei Änderungen im selben Entprell-Fenster → EIN PUT mit beiden Werten
+    ok 3 - zwei Änderungen im selben Entprell-Fenster → EIN PUT mit beiden Werten
+      ---
+      duration_ms: 0.993982
+      type: 'test'
+      ...
+    # Subtest: Rücknahme auf den Ausgangswert vor dem Flush → gar kein PUT, kein „Gespeichert"-Stempel
+    ok 4 - Rücknahme auf den Ausgangswert vor dem Flush → gar kein PUT, kein „Gespeichert"-Stempel
+      ---
+      duration_ms: 1.973192
+      type: 'test'
+      ...
+    # Subtest: ohne Änderung meldet der reaktive Effect ins Leere → kein PUT, Controller bleibt unberührt
+    ok 5 - ohne Änderung meldet der reaktive Effect ins Leere → kein PUT, Controller bleibt unberührt
+      ---
+      duration_ms: 0.267951
+      type: 'test'
+      ...
+    1..5
+ok 85 - AC-1: eine Versand-Änderung speichert über den Controller — genau ein PUT, Endzustand gespeichert
+  ---
+  duration_ms: 25.13235
+  type: 'suite'
+  ...
+1..85
+# tests 223
+# suites 72
+# pass 223
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11499.079908
+
+=== Nachtragsrunde: Gesamtlauf npm test (Summenzeilen) ===
+1..4140
+# tests 11298
+# suites 2110
+# pass 11295
+# fail 0
+# cancelled 0
+# skipped 2
+# todo 1
+# duration_ms 421900.643713
+npm run build: Exit 0
+svelte-check: 32 ERRORS 72 WARNINGS (Baseline 34/132) OK

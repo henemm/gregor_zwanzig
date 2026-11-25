@@ -513,7 +513,6 @@
 	let wetterMetrikenHydrated = $state(false);
 	let wetterMetrikenHydrating = false;
 	let layoutHydrated = $state(false);
-	let layoutHydrating = false;
 	const wetterMetrikenLayoutHydrationBereit = $derived(
 		wetterMetrikenHydrationAbgeschlossen({ wetterMetrikenHydrated, layoutHydrated })
 	);
@@ -565,17 +564,14 @@
 	// zwischengespeichert (compareMetricCatalogLoader) — kein zweiter Abruf.
 	// Issue #3298: nur noch `hourlyEnabled` (Ausblick folgt `placements.outlook_reports`);
 	// ohne Ausblick-Auswahl braucht diese Hydration den Katalog nicht mehr.
-	async function hydrateLayoutTab(): Promise<void> {
+	// #3298 Fix: die Hydration laeuft jetzt SYNCHRON im Effekt, ohne `layoutHydrating`-Sperre. Mit
+	// der alten Sperre (aufgehoben erst im Microtask) setzte der Preset-Sync-Effekt weiter unten
+	// `layoutHydrated` im selben Durchlauf wieder auf false, der Re-Run traf die noch stehende
+	// Sperre, und der Reiter blieb fuer immer in der Hydrations-Sperre (Tabelle nie gerendert).
+	$effect(() => {
+		if ((activeTab !== 'wetter' && activeTab !== 'zustellung') || layoutHydrated) return;
 		wizardState.hourlyEnabled = hydrateLayoutFieldsFromPreset(currentPreset).hourlyEnabled;
 		layoutHydrated = true;
-	}
-
-	$effect(() => {
-		if ((activeTab !== 'wetter' && activeTab !== 'zustellung') || layoutHydrated || layoutHydrating) return;
-		layoutHydrating = true;
-		void hydrateLayoutTab().finally(() => {
-			layoutHydrating = false;
-		});
 	});
 
 	// Issue #1360 (Scheibe S1a von Epic #1372): CHANNEL_COLS/channels/

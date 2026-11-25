@@ -62,6 +62,10 @@ Finding:
 **Implementierer:** keine Antwort erforderlich (LOW, nicht blockierend).
 
 
+### Runde 3 (Nachtrag: Hydrations-Fix CompareTabs)
+**Adversary (Runde 3):** (a) Layout-Effekt (CompareTabs.svelte:571-575) liest nur activeTab/layoutHydrated, schreibt wizardState.hourlyEnabled und layoutHydrated=true; der Preset-Sync-Effekt (:677) liest nur `preset`, schreibt currentPreset und setzt Flags zurueck. Keine Schleife (nach Hydration kehrt der Effekt vor dem Lesen von currentPreset zurueck). Lokale Edits gehen nur bei echtem Prop-Wechsel `preset` verloren, wie bei den uebrigen Reitern. Kein Altfeld, nur hourlyEnabled. (b) Mutation A: alter Code (async + layoutHydrating) wieder eingesetzt, Kern-Test 2/2 rot. Mutation B: `layoutHydrated = true` entfernt, 2/2 rot. Beide per Sicherungskopie exakt zurueckgesetzt (cmp identisch, Stage-Statistik vorher/nachher 2 Dateien +104/-10, keine unstaged Aenderungen). (c) Kern-Test plus 33+ Vergleichstests: 223 pass / 0 fail; npm test gesamt: 11295 pass / 0 fail / 2 skipped / 1 todo; Build Exit 0; svelte-check 32 Fehler / 72 Warnungen (Baseline 34/132). Ausgabe in adversary-test-output.txt. (d) Playwright-E2E nicht von mir gelaufen (optional); CI-E2E bleibt die Instanz. Restrisiko LOW: Test ist ein Instanz-Pruefstand der Effekt-Rumpfe, kein Browserlauf.
+**Implementierer:** keine Antwort erforderlich.
+
 ## Confirmations
 Confirmation:
   AC: AC-1
@@ -166,6 +170,72 @@ Confirmation:
   Status: CONFIRMED
 
 
+Confirmation:
+  AC: AC-1 (Runde 3)
+  Code reference: frontend/src/lib/components/compare/CompareTabs.svelte:571
+  Evidence: Layout-Hydration synchron, nur durch layoutHydrated geschuetzt; Mutation A (alter Code) und B (kein Setzen) machen Kern-Test rot
+  Status: CONFIRMED
+
+Confirmation:
+  AC: AC-1 (Runde 3)
+  Code reference: frontend/src/lib/components/shared/__tests__/compare_wetter_reiter_hydration_nach_preset_sync_3298.test.ts:62
+  Evidence: Kern-Test faehrt Mount-Reihenfolge Weichen, Preset-Sync, Weichen erneut; 2 pass, bei beiden Mutationen 2 fail
+  Status: CONFIRMED
+
+Confirmation:
+  AC: AC-1 (Runde 3)
+  Code reference: frontend/src/lib/components/compare-new/compareNewVorlage.ts:54
+  Evidence: durch Fix unveraendert; Gesamtlauf 11295 pass
+  Status: CONFIRMED
+
+Confirmation:
+  AC: AC-1 (Runde 3)
+  Code reference: frontend/src/lib/components/compare/compareEditorSave.ts:183
+  Evidence: durch Fix unveraendert; Gesamtlauf gruen
+  Status: CONFIRMED
+
+Confirmation:
+  AC: AC-1 (Runde 3)
+  Code reference: frontend/src/lib/components/shared/alarmeVergleichSpeicherung.ts:129
+  Evidence: durch Fix unveraendert; Gesamtlauf gruen
+  Status: CONFIRMED
+
+Confirmation:
+  AC: AC-1 (Runde 3)
+  Code reference: frontend/src/lib/components/shared/pickEigenfelder.ts:73
+  Evidence: durch Fix unveraendert; Gesamtlauf gruen
+  Status: CONFIRMED
+
+Confirmation:
+  AC: AC-1 (Runde 3)
+  Code reference: frontend/src/lib/components/shared/versandVergleichSpeicherung.ts:177
+  Evidence: durch Fix unveraendert; Gesamtlauf gruen
+  Status: CONFIRMED
+
+Confirmation:
+  AC: AC-1 (Runde 3)
+  Code reference: frontend/src/lib/components/shared/weather-metrics-tab/compareChannelMetricLayouts.ts:33
+  Evidence: durch Fix unveraendert; Gesamtlauf gruen
+  Status: CONFIRMED
+
+Confirmation:
+  AC: AC-1 (Runde 3)
+  Code reference: frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:94
+  Evidence: durch Fix unveraendert; Gesamtlauf gruen
+  Status: CONFIRMED
+
+Confirmation:
+  AC: AC-1 (Runde 3)
+  Code reference: frontend/src/lib/components/shared/wetter-tab/wertebereicheVergleichSpeicherung.ts:83
+  Evidence: durch Fix unveraendert; Gesamtlauf gruen
+  Status: CONFIRMED
+
+Confirmation:
+  AC: AC-1 (Runde 3)
+  Code reference: frontend/src/lib/types.ts:315
+  Evidence: DisplayConfig ohne Altfelder; svelte-check 32 <= 34
+  Status: CONFIRMED
+
 ## Herkunft der Vorbedingungen
 
 <!-- vom Prüfer auszufüllen, siehe `precondition_origins.py` -->
@@ -173,15 +243,16 @@ Confirmation:
 ## Verdict
 
 VERDICT: VERIFIED
-Tests: 3394 passed, 0 failed. Mutationen: M1 (literal) M2 M3 M4 M5 M6 (POST) gefangen; M1 dynamisch und M6 im Voll-Rumpf nicht gefangen (F001-F003, LOW).
+Tests: Gesamtlauf 11295 passed, 0 failed (Runde 3); Kern-Test 2/2; Mutation A und B gefangen. Frueher: M1 M2 M3 M4 M5 M6 gefangen; F001-F003 LOW.
 
 ## Geprüfte Dateien
 
 - sha256:f7df2a31d47ed6f0b41119f290347b59146bd99acf50bc941d1a88b7276132d5  docs/artifacts/feat-3298-altfeld-typen-sperre/geloeschte-tests.md
 - sha256:c006fb0ff5a776c98517c78ee46c594b579003ed40e9c94669e613cd910f8d21  frontend/src/lib/altfeld_namen_sperre.test.ts
 - sha256:230803d2113c880047736e00dd9c71e6cea51a233b9bd97cae0bf07133c316a3  frontend/src/lib/components/compare-new/compareNewVorlage.ts
-- sha256:27ec8aed14870fb2908cb19c961d8a8b2a15629bc3819d2909964e5373731a62  frontend/src/lib/components/compare/CompareTabs.svelte
+- sha256:412278a50da8d84d8afa9fb8766123b7cc17892db9720f7cbc1742c4e229de8d  frontend/src/lib/components/compare/CompareTabs.svelte
 - sha256:a38b30f61e5e86047c17c1c2e72a78d4134e1b6ae7ebae969ce7a6053711b75c  frontend/src/lib/components/compare/compareEditorSave.ts
+- sha256:0b6c2713233e70c2f51ba02a3b1e95f748d5281446392f4f3b253d6b1e3149e9  frontend/src/lib/components/shared/__tests__/compare_wetter_reiter_hydration_nach_preset_sync_3298.test.ts
 - sha256:3bbd31452c896a821b9d65e5f830320ce4a72c7684209e117657edb83c5355e8  frontend/src/lib/components/shared/alarmeVergleichSpeicherung.ts
 - sha256:847fed6709f1e5fc870f52e1c42873620e002f7919da699ae428a73eb4553078  frontend/src/lib/components/shared/pickEigenfelder.ts
 - sha256:bb7945e22faeb2080d8cfd254103f2d1824ea16ea09554ee3ba88d23e4e64394  frontend/src/lib/components/shared/versandVergleichSpeicherung.ts
@@ -193,12 +264,13 @@ Tests: 3394 passed, 0 failed. Mutationen: M1 (literal) M2 M3 M4 M5 M6 (POST) gef
 
 ## Prüfbasis
 
-- base: f8cde6bd2154462c43e099663440606c24813a87
+- base: 80cf9f72687c23386df4cac2d62fbf8a3c2aecad
 - blob:e4ab96feac8da2f5f5486725a4f16a3d7cdbc2b0  docs/artifacts/feat-3298-altfeld-typen-sperre/geloeschte-tests.md
 - blob:5dbe7ea9b89366cdd02205ddb567c77c657a04b3  frontend/src/lib/altfeld_namen_sperre.test.ts
 - blob:6e1daea09504f8b6de91faa353ad8ffcf1f1320e  frontend/src/lib/components/compare-new/compareNewVorlage.ts
-- blob:bd3633e0bcd8778f13d733a1d69631894da8f88d  frontend/src/lib/components/compare/CompareTabs.svelte
+- blob:cdf2e3f5fb5fba58b129f01bb20e40c21f267968  frontend/src/lib/components/compare/CompareTabs.svelte
 - blob:823b38eacfeac844bbcd84ce42321e2472e3848f  frontend/src/lib/components/compare/compareEditorSave.ts
+- blob:57d13e9fdb13004bd01ba2bfd435099148124349  frontend/src/lib/components/shared/__tests__/compare_wetter_reiter_hydration_nach_preset_sync_3298.test.ts
 - blob:842f0334a59bf76654fe5a2be8b3d8f19f9035b4  frontend/src/lib/components/shared/alarmeVergleichSpeicherung.ts
 - blob:65e7e36b5ce414ff318ab47513d656eafbd9b087  frontend/src/lib/components/shared/pickEigenfelder.ts
 - blob:0c4eee2a425a22c21afef6a7ac0836a098eb8660  frontend/src/lib/components/shared/versandVergleichSpeicherung.ts
