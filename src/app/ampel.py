@@ -13,6 +13,7 @@ Rueckfallkette: Abo-Ampel je Metrik -> Vorlage ``ampel.template`` bzw. Trip
 from __future__ import annotations
 
 import copy
+import json
 import logging
 from collections.abc import Callable, Mapping, Sequence
 from numbers import Real
@@ -39,6 +40,11 @@ def _feld(obj: Any, name: str) -> Any:
     if isinstance(obj, Mapping):
         return obj.get(name)
     return getattr(obj, name, None)
+
+
+def _in(wert: Any, menge: Any) -> bool:
+    """Mengenzugehoerigkeit, auch fuer nicht hashbare Werte (#2988; nie enthalten)."""
+    return isinstance(wert, str) and wert in menge
 
 
 def _seite(werte: Any, keys: tuple, wo: str, fehler: list[str]) -> list:
@@ -95,7 +101,7 @@ def _pruefe_metrik(mid: str, e: Any, fehler: list[str], vergleich: bool = False)
     oben = _seite(e.get("upper"), _UPPER, f"{mid}.upper", fehler)
     if unten and oben and unten[-1] > oben[0]:
         fehler.append(f"{mid}: untere Grenze ueber der oberen")
-    if e.get("alarm_ab") is not None and e.get("alarm_ab") not in ALARM_AB:
+    if e.get("alarm_ab") is not None and not _in(e.get("alarm_ab"), ALARM_AB):
         fehler.append(f"{mid}.alarm_ab: unbekannt")
     elif mid == "thunder" and e.get("alarm_ab") not in (None, *ALARM_AB_GEWITTER):
         fehler.append("thunder.alarm_ab: nie gelb")
@@ -111,11 +117,11 @@ def _pruefe_gewitter(th: Any, fehler: list[str]) -> None:
         fehler.append("thunder: kein Objekt")
         return
     mittel, hoch = th.get("mittel"), th.get("hoch")
-    if mittel is not None and mittel not in _RANG:
+    if mittel is not None and not _in(mittel, _RANG):
         fehler.append("thunder.mittel: unbekannt")
-    if hoch is not None and hoch not in _THUNDER_HOCH:
+    if hoch is not None and not _in(hoch, _THUNDER_HOCH):
         fehler.append("thunder.hoch: nie gelb")
-    if mittel in _RANG and hoch in _RANG and _RANG[hoch] < _RANG[mittel]:
+    if _in(mittel, _RANG) and _in(hoch, _RANG) and _RANG[hoch] < _RANG[mittel]:
         fehler.append("thunder.hoch: schwaecher als mittel")
 
 
@@ -143,7 +149,7 @@ def validate_ampel(ampel: Any, kontext: str = "route") -> list[str]:
 def _bekannte_vorlage(tid: str, quelle: str) -> str:
     if tid in AMPEL_TEMPLATES:
         return tid
-    logger.warning("Profil-Ampel: unbekannte Vorlage %r aus %s, nutze allgemein", tid, quelle)  # i18n-log
+    logger.warning("Profil-Ampel: unbekannte Vorlage %.500r aus %s, nutze allgemein", tid, quelle)  # i18n-log
     return DEFAULT_TEMPLATE
 
 
@@ -155,7 +161,7 @@ def template_for_profil(profil: Optional[str]) -> str:
     tid = _PROFIL_ZU_VORLAGE.get(key, key)
     if tid in AMPEL_TEMPLATES:
         return tid
-    logger.warning("Profil-Ampel: unbekanntes Profil %r, nutze allgemein", profil)  # i18n-log
+    logger.warning("Profil-Ampel: unbekanntes Profil %.500r, nutze allgemein", profil)  # i18n-log
     return DEFAULT_TEMPLATE
 
 
@@ -165,7 +171,7 @@ def _abo_ampel(dc: Any) -> Optional[Mapping]:
         return None
     fehler = validate_ampel(ampel)
     if fehler:
-        logger.warning("Profil-Ampel ungueltig, Vorlage greift: %s", "; ".join(fehler))  # i18n-log
+        logger.warning("Profil-Ampel ungueltig, Vorlage greift: %.500r", "; ".join(fehler))  # i18n-log
         return None
     return ampel
 
@@ -222,6 +228,44 @@ def _verschmelzen(tid: str, abo: Optional[Mapping]) -> dict:
 def resolve_ampel(subscription: Any) -> dict:
     """Vollstaendige Ampel eines Abos (Vorlage + Abo-Abweichungen)."""
     return _verschmelzen(*_aufloesen(subscription))
+
+
+def _ausgebbar(wert: Any) -> bool:
+    """Laesst sich ein gelesener JSON-Wert kopieren und wieder als JSON (UTF-8)
+    ausgeben? Nein bei inf, einzelnen Surrogaten und zu tiefer Schachtelung."""
+    try:
+        json.dumps(copy.deepcopy(wert), allow_nan=False, ensure_ascii=False).encode("utf-8")
+    except (ValueError, RecursionError):
+        return False
+    return True
+
+
+def _altbestand_abo(metrics: list) -> dict:
+    """Eigene Vorlage ohne Ampel (AC-39 der Reiter-Spec): nur die gelisteten und
+    aktiven Metriken an; unlesbare Zeilen zaehlen nicht."""
+    zeilen = {mid: {"enabled": False} for mid in AMPEL_TEMPLATES[DEFAULT_TEMPLATE]["metrics"]}
+    for m in metrics:
+        mid = m.get("metric_id") if isinstance(m, Mapping) and m.get("enabled") is True else None
+        if isinstance(mid, str) and mid and _ausgebbar(mid):
+            zeilen[mid] = {"enabled": True}
+    return {"metrics": zeilen}
+
+
+def resolve_entwurf(eintrag: Mapping) -> dict:
+    """Vorlagen-ID und vollstaendige Ampel eines Entwurfs (Issue #2988 S2): Abo-
+    Sicht wie ``resolve_ampel``; ohne ``ampel``, aber mit ``metrics``-Liste,
+    Altbestand einer eigenen Vorlage. Gelesen werden nur diese vier Felder; eine
+    nicht ausgebbare Ampel gilt als ungueltig, nie ein Fehler je Eintrag."""
+    ampel, metrics = eintrag.get("ampel"), eintrag.get("metrics")
+    if ampel is None and isinstance(metrics, list):
+        tid, abo = DEFAULT_TEMPLATE, _altbestand_abo(metrics)
+    else:
+        if not _ausgebbar(ampel):
+            logger.warning("Profil-Ampel nicht als JSON ausgebbar, Vorlage greift")  # i18n-log
+            ampel = None
+        tid, abo = _aufloesen({"ampel": ampel, "preset_name": eintrag.get("preset_name"),
+                               "profil": eintrag.get("profil")})
+    return {"vorlage_id": tid, "ampel": _verschmelzen(tid, abo)}
 
 
 def _schwellen(e: Mapping) -> dict:
