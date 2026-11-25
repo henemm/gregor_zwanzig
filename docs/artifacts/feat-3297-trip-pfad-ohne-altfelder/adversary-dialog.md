@@ -33,6 +33,11 @@ Mutationen: 8 durchgespielt, alle von Tests gefangen: M1 reportConfigPayload.ts:
 **Adversary:** Runde 2, Code-Referenzen je geaenderter Datei und AC. AC-1/AC-2: tripNewLogic.ts:400 (ergaenzeVersandStandard ohne Ausblick-Vorbelegung), reportConfigPayload.ts:89 (Payload ohne Trend-Liste). AC-3: ampelSchreiben.ts:158 (report_config nur Tagesfenster, Go-Merge), wetterTabSpeicherung.ts:1, wasStehtWoSpeicherung.ts:1, alarmeDeliveryPayload.ts:41. AC-4: kanalStilSpeicherung.ts:21. AC-5: cockpitHelpers568.ts:60-61. AC-6: types.ts:345 (placements), types.ts:266 (ReportConfig ohne show_outlook). AC-7: trip-detail/index.ts:1, organisms/index.ts:1, mailInhaltKonstanten.ts:1, mailInhaltZustand.ts:1 (Barrel/Helfer bereinigt; Build gruen, Loesch-Nachweis rot bei Re-Import ZustellungTab.svelte:1). AC-8: pickEigenfelder.ts:73. AC-9: ZustellungTab.svelte:1, VorlageKarte.svelte:1, CompareTabs.svelte:1, CompareNewEditor.svelte:1, app.css:1, rightColumn.ts:42, vorlageSpeichernKarte.ts:3, weatherSummary.ts:10 (Kommentar-/Style-Aufraeumung, Build gruen; Live-Bedienung nicht im Playwright geprueft — Staging/e2e-Aufgabe). AC-10: 64 Testdateien geloescht, Zuordnung stichprobenartig bestaetigt; Kern-Tests gruen. required-files: alle 17 Dateien abgedeckt. Zweite Pflichtfrage: AC-5-Tests unterscheiden channel_layouts/leere rows/echte rows (M3, M3b rot); AC-1 ueber Golden D und AC-8-Waechter belegt.
 **Implementierer:** (nicht beteiligt)
 
+### Runde 3
+**Adversary:** Nachtrag zu den drei CI-Fix-Commits 71c27e117..HEAD (nur Test-/Ratschen-/Hook-Listen). Tests: pendant_gate_bekannte_paare, einstellung_gleich_mail_fallliste, ein_katalog_eine_verarbeitung_ratsche: 62 passed / 0 failed (docs/artifacts/feat-3297-trip-pfad-ohne-altfelder/adversary-test-output.txt, verbose). (a) Nichts schwaecht lebenden Code. Code reference: .claude/hooks/pendant_gate.py:82 — nur das Paar compareChannelMetricLayouts/channelMetricLayouts gestrichen; channelMetricLayouts.ts ist geloescht (Pendant fehlt), compareChannelMetricLayouts.ts lebt weiter, bleibt aber in EINGEFROREN (tests/tdd/test_pendant_gate_bekannte_paare.py:44, Menge darf nur schrumpfen) und im Waechter-Test tests/tdd/test_pendant_gate.py:1129. Ratsche nur gesenkt: tests/unit/ein_katalog_ausnahmen.json hoechststand 434->433 und nur der Eintrag WeatherMetricsTab.svelte (Datei existiert nicht mehr) entfernt; HOECHSTSTAND tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py:39 = 433. Falllisten: Stichprobe der 17 gestrichenen Faelle (tests/fixtures/einstellung_gleich_mail/fallliste_editor.json) verweist auf telegram_kanalgrenze_je_kontext, telegram_schnittlinie_wahr, lade_kanal_layouts_aus_trip (Testdateien nicht mehr vorhanden, WeatherMetricsTab.svelte/channelMetricLayouts.ts geloescht) und p12 TL3 (Test dort laut Kommentar p12_zustellung_gleich_ausgabe.test.ts:113 entfernt); O-VT-H-NEU-IN-LISTEN und trip-ac10--neu_in_bearbeitetem_layout--html zeigen auf geloeschte Tests und sind per _hinweis begruendet. Beobachtung: tests/tdd/test_einstellung_gleich_mail_fallliste.py:498 — die Muster-Assertion `praefixe` ist durch eine Probe an den noch verwiesenen Dateien (`vorlagen`) ersetzt; die Teilmengenpruefung bleibt scharf, die fehlend-Pruefung ist unveraendert; keine Abschwaechung lebender Pruefung.
+(b) Mutationen (String-Ersetzung, Sicherung im Scratchpad, danach per Gleichheitspruefung identisch): M9 Paar compareChannelMetricLayouts/channelMetricLayouts wieder in BEKANNTE_PAARE -> test_jede_datei_der_ausnahmeliste_existiert_im_repo ROT. M10 HOECHSTSTAND 433->434 im Test -> test_neue_datei_mit_erhoehtem_hoechststand_bleibt_rot ROT. M11 hoechststand 434 in der JSON -> 5 Tests ROT (u. a. test_bestand_entspricht_der_ausnahmeliste). `git status --short` ohne Aenderung an getrackten Dateien ausser dem angeforderten adversary-test-output.txt.
+**Implementierer:** (nicht beteiligt)
+
 ## Confirmations
 
 Confirmation:
@@ -174,7 +179,58 @@ Confirmation:
 ## Verdict
 
 VERDICT: VERIFIED
-Tests: 50 passed, 0 failed (RED-Dateien); Mutationen 8/8 gefangen; Findings nur LOW (F001, F002).
+Tests: 50 passed, 0 failed (RED-Dateien) + 62 passed, 0 failed (Nachtrag Runde 3); Mutationen 11/11 gefangen; Findings nur LOW (F001, F002).
+
+## Geprüfte Dateien
+
+- sha256:f80a851e608d860977698d65383520749a40e56d19ef095940589ec8e41145ab  frontend/src/app.css
+- sha256:42fc38e5f0fe6e31a538d6a67057ffe7f21099fec9ddc159f700e9776a9e62dc  frontend/src/lib/components/compare-new/CompareNewEditor.svelte
+- sha256:82c2882890862eab88fa2ee84030bbfca7652af9cbd2244c951ea931574f70fb  frontend/src/lib/components/compare/CompareTabs.svelte
+- sha256:9be71f00d3f456b8651783ca8dfd7ba1e62d52307e899b2fcea0a001f7de0ca3  frontend/src/lib/components/edit/weatherSummary.ts
+- sha256:089d58e90bbe3f8329d85ba033a103909282dd5049d084cf7e366a524c20d057  frontend/src/lib/components/organisms/index.ts
+- sha256:acf9fc2368c7370ace59bbbfef4ac0aa9bf6a12815bf6d615af80a8fd5dc3323  frontend/src/lib/components/organisms/wetter-tab/VorlageKarte.svelte
+- sha256:af5cc40b839cef0074ad25cfb6d57e37ace051fb1ca8ca4f35e8026489b82004  frontend/src/lib/components/shared/alarme-tab/alarmeDeliveryPayload.ts
+- sha256:c25bffadcfa65799e0b55260d4798b7a924e114affedb294e21fccde102cb3d9  frontend/src/lib/components/shared/mailInhaltKonstanten.ts
+- sha256:009f498757a1aed7484d3c202f54d68b9fad335e232d72b78c0317224604f614  frontend/src/lib/components/shared/mailInhaltZustand.ts
+- sha256:834e225e5483b277c82e0b27e804bdba143b50cd2989f3f2072c33549d6e57b9  frontend/src/lib/components/shared/pickEigenfelder.ts
+- sha256:8740b067c7472fd27c30a4f9f06e8770a5c421042f28243fedec590693c997c0  frontend/src/lib/components/shared/versand-tab/reportConfigPayload.ts
+- sha256:75dc1427ceb0b8be6457722530e08627df6e642db9b0bf05e918cb3f1c807a22  frontend/src/lib/components/shared/wetter-tab/ampelSchreiben.ts
+- sha256:9c101e7d3689ece3b1bc17f76d8063cc9c733ed42a19410be0e58428412f4d86  frontend/src/lib/components/shared/wetter-tab/wasStehtWoSpeicherung.ts
+- sha256:ae8b786d2a62e5f573cb5fc6a0b3ea72434573ff97da7ef7a33fd5f216ccabc0  frontend/src/lib/components/shared/wetter-tab/wetterTabSpeicherung.ts
+- sha256:3a44864aca8ca1e721561422bc6efb21017f66190baaf567ca9a1fae633b1ffb  frontend/src/lib/components/shared/zustellung-tab/ZustellungTab.svelte
+- sha256:9c86210d181ae12e8702c3e1e0e9148ab44bd84af9da435ee248fc34d64ed2c7  frontend/src/lib/components/shared/zustellung-tab/kanalStilSpeicherung.ts
+- sha256:dff6c43cd657e0440765916d89f4f519525ccec2a4ea1388bbafa4168e7f99f6  frontend/src/lib/components/trip-detail/index.ts
+- sha256:f054e91fc2dfd6ed5872a3ebbfe38718af54ae35b011149f6ae0052adc1853b8  frontend/src/lib/components/trip-new/tripNewLogic.ts
+- sha256:3f8882032a8db16039d4718c56c32722168284ba9ce1300c7df36afd99f72906  frontend/src/lib/types.ts
+- sha256:a16f9c708f5e50905a34bd58520e0844c38aa92bd02d00bde891f8ffdf9ac469  frontend/src/lib/utils/cockpitHelpers568.ts
+- sha256:1ab7476ba4958f8f573185693d31298559b9ad85441bf531d855047541b14f8b  frontend/src/lib/utils/rightColumn.ts
+- sha256:8a06f7d2c16f4b45eb9fc222ab40f54cb75c399052e7af6b7b70f3a485df44fd  frontend/src/lib/utils/vorlageSpeichernKarte.ts
+
+## Prüfbasis
+
+- base: 539d169636a6b3d1722e0202f391d0879f741080
+- blob:357c4a6ecfd224b856f16407d067812655258775  frontend/src/app.css
+- blob:9829f42f0a9d50c8090709d62f2b22b008ca6403  frontend/src/lib/components/compare-new/CompareNewEditor.svelte
+- blob:b78d9920966e98c1721d1336d49f41ca0010a6fb  frontend/src/lib/components/compare/CompareTabs.svelte
+- blob:2d88aa726f6266a4fc8c449884d2df81464e14a1  frontend/src/lib/components/edit/weatherSummary.ts
+- blob:1d88906a93601d3bc76ee3f7de1ab2a7f0393fe0  frontend/src/lib/components/organisms/index.ts
+- blob:1ae4285a943b1690b5a639635a3db1f6c16f92b0  frontend/src/lib/components/organisms/wetter-tab/VorlageKarte.svelte
+- blob:1aaae83eecf132ad9fb4fd36c84cf932f5381d40  frontend/src/lib/components/shared/alarme-tab/alarmeDeliveryPayload.ts
+- blob:e4c1fec8d721cc0c15edcd13b1c33dc02d5c6739  frontend/src/lib/components/shared/mailInhaltKonstanten.ts
+- blob:43851d69d74ce46a8e5857ee2e8e3375f7c86e4f  frontend/src/lib/components/shared/mailInhaltZustand.ts
+- blob:785f34ea95b22f0a41a9c09164372075a4be7995  frontend/src/lib/components/shared/pickEigenfelder.ts
+- blob:2adaa8f77bc9c60ffa371eb2648374863dbb7ad4  frontend/src/lib/components/shared/versand-tab/reportConfigPayload.ts
+- blob:f70e4745880da167d5ab84dd558225d083aa8ba9  frontend/src/lib/components/shared/wetter-tab/ampelSchreiben.ts
+- blob:7d464da5c48fe67ec61d87fdae15f5e0293b01ec  frontend/src/lib/components/shared/wetter-tab/wasStehtWoSpeicherung.ts
+- blob:1e359066fa62c3428cd5e04c5854f1a7cfc15062  frontend/src/lib/components/shared/wetter-tab/wetterTabSpeicherung.ts
+- blob:d9ecb1bb35f8ab5492ac06607f1ab5b6765c8b2f  frontend/src/lib/components/shared/zustellung-tab/ZustellungTab.svelte
+- blob:9f2637094a568dd9f414d6df667b35ca907ac995  frontend/src/lib/components/shared/zustellung-tab/kanalStilSpeicherung.ts
+- blob:0e781bd673bb39f59222f764ed9634a11ac70eb7  frontend/src/lib/components/trip-detail/index.ts
+- blob:237d75fa2717bb119b32063892c2884aee459ed2  frontend/src/lib/components/trip-new/tripNewLogic.ts
+- blob:624b79c173f5f89d6341a11a8dd9e257057a8fa2  frontend/src/lib/types.ts
+- blob:e1158f3ed4b9477676c53bea18f862f6213de66b  frontend/src/lib/utils/cockpitHelpers568.ts
+- blob:ba2770ecea7a73693a522e48474fbbbf456c6a60  frontend/src/lib/utils/rightColumn.ts
+- blob:dbb8c32811bfc855b9de2cc6073ac2393cba90ad  frontend/src/lib/utils/vorlageSpeichernKarte.ts
 
 ## Geprüfte Dateien
 
