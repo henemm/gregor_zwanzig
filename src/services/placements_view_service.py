@@ -258,7 +258,8 @@ def _antwort(kind, abo: _Abo, vm, placements, gespeichert, muster: _Muster, lang
     zeilen = [{
         "metric_id": r.metric_id, "name": get_metric(r.metric_id).label(lang),
         "position": r.position, "parent": eltern.get(r.metric_id),
-        "cells": {stelle: _zelle(r.metric_id, stelle, c, muster) for stelle, c in r.cells},
+        "cells": {stelle: _zelle(r.metric_id, stelle, _karten_zelle(abo.surface, r.metric_id, stelle, c),
+                                 muster) for stelle, c in r.cells},
     } for r in vm.rows]
     max_laenge = _sms_max_laenge(abo.surface)
     return {
@@ -298,9 +299,24 @@ def _sms_max_laenge(surface: str) -> int:
     return inspect.signature(SMSTripFormatter.format_sms).parameters["max_length"].default
 
 
+def _karten_zelle(surface: str, metric_id: str, stelle: str, cell):
+    """#3373: Die SMS-Zelle einer Trip-Eltern-Zeile ohne eigenes SMS-Symbol
+    (Temperatur) zeigt die Karte gesperrt (``kein_kuerzel``). Reine
+    Darstellung: die Versand-Aufloesung (``vm``) bleibt unveraendert."""
+    from app.metric_catalog import karten_sperre
+    from services.placements import PlacementCell
+
+    grund = karten_sperre(metric_id, stelle, surface)
+    if grund and cell.state != "locked":
+        return PlacementCell("locked", None, grund)
+    return cell
+
+
 def _zelle(metric_id: str, stelle: str, cell, muster: _Muster) -> dict:
     text, ampel = (None, None)
-    if cell.state == "on":
+    # #3373: die gesperrte SMS-Zelle einer Eltern-Zeile (Temperatur) zeigt
+    # die Token ihrer Kinder ohne eigene Zeile (Tagesbereich ``D…``).
+    if cell.state == "on" or (cell.state == "locked" and stelle == "sms"):
         text, ampel = muster.beispiele.get(stelle, {}).get(metric_id, (None, None))
     mark = None
     if cell.state == "on" and stelle == "sms" and metric_id in muster.sms_fehlt:
@@ -448,10 +464,13 @@ def _trip_muster(trip, dc, vm, report_type: str, lang: str) -> _Muster:
                                outlook_rows=outlook_rows, report_type=report_type,
                                context="route", ampel=ampel, lang=lang)
              for wd, p in pb.ausblick_tage()]
-    stage_name = (trip.stages[0].name if trip.stages else "") or trip.name
+    stage_name = _trip_etappenkopf(trip)
+    nacht = pb.nacht_zeitreihe()
     bericht = TripReportFormatter().format_email(
         pb.trip_segmente(), trip.name, report_type, display_config=dc, multi_day_trend=trend,
-        report_config=trip.report_config, trip=trip, tz=pb.ZONE, stage_name=stage_name, lang=lang,
+        report_config=trip.report_config, trip=trip, tz=pb.ZONE, stage_name=stage_name,
+        night_weather=nacht, thunder_forecast=_trip_gewitter(trip, trend, nacht, lang),
+        lang=lang,
     )
     ids = [r.metric_id for r in vm.rows]
     sms_werte = _trip_sms_werte(_trip_sms_rumpf(bericht.sms_text, stage_name), ids)
@@ -470,6 +489,31 @@ def _trip_muster(trip, dc, vm, report_type: str, lang: str) -> _Muster:
         sms_fehlt=_trip_sms_fehlt(vm, sms_werte),
         tageswert=_trip_nur_tageswert(dc, vm, report_type),
     )
+
+
+def _trip_etappenkopf(trip) -> str:
+    """Etappenbezeichnung wie im Versand (#3373): erste Etappe nach Datum,
+    nummeriert ueber ``numbered_stage_label`` (SMS-Kopf ``E1``); ohne
+    Etappen der Trip-Name."""
+    if not trip.stages:
+        return trip.name
+    return trip.numbered_stage_label(min(trip.stages, key=lambda s: s.date))
+
+
+def _trip_gewitter(trip, trend: list, nacht, lang: str) -> Optional[dict]:
+    """Folgetag-Gewitter des Beispiels ueber die Ableitung des Versands
+    (``gewitter_aus_trend``) aus den Beispiel-Trendzeilen; die Zeilen tragen
+    ihr Kalenderdatum wie in ``_build_stage_trend`` (#3373). Kein Abruf, kein
+    Nutzerbezug: Sprache der Karte."""
+    from datetime import timedelta
+
+    from services import placements_beispiel as pb
+    from services.trip_report_scheduler import TripReportSchedulerService
+
+    mit_datum = [{**z, "date": pb.TAG + timedelta(days=i + 1)} for i, z in enumerate(trend)]
+    vorschau, _fehlt = TripReportSchedulerService.nur_ableitung(lang).gewitter_aus_trend(
+        trip, pb.TAG, tz=pb.ZONE, multi_day_trend=mit_datum, night_weather=nacht)
+    return vorschau or None
 
 
 def _sms_fenster_kinder() -> set[str]:
@@ -525,7 +569,9 @@ def _trip_sms_rumpf(sms: str, etappe: str) -> str:
 def _trip_sms_werte(rumpf: str, ids: list[str]) -> dict[str, str]:
     """Katalog-ID -> Token der SMS (laengstes passendes Symbol); ``rumpf`` ist
     der Token-Teil ohne Kopf. Eine Eltern-Metrik ohne eigenes Symbol
-    (Temperatur) traegt die Token ihrer abgeleiteten Groessen; der Warnblock
+    (Temperatur) traegt nur die Token ihrer abgeleiteten Groessen, die keine
+    eigene Beispiel-Zelle haben (Fenster-Kinder, #3373: ``N`` steht nur an
+    der Zeile Nachttiefst); der Warnblock
     (``!``) gehoert zu keiner Metrik. Ein Tagestiefstwert, der mit dem
     Hoechstwert zu EINEM Bereichs-Token verschmolzen ist (``D14/18``,
     ``FD12/16``; Trenner ``/`` kommt im Format sonst nicht vor), zeigt dieses
@@ -540,7 +586,8 @@ def _trip_sms_werte(rumpf: str, ids: list[str]) -> dict[str, str]:
         if not token or token.startswith("!") or not treffer:
             continue
         mid = symbole[max(treffer, key=len)]
-        for ziel in (mid, eltern.get(mid)):
+        elter = eltern.get(mid) if mid in _sms_fenster_kinder() else None
+        for ziel in (mid, elter):
             if ziel in ids:
                 werte.setdefault(ziel, []).append(token)
     for tief in (m for m in ids if m.endswith("_day_low") and m not in werte):

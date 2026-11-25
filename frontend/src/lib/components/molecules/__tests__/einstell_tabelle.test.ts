@@ -233,6 +233,32 @@ describe('Metrik-Zeilen: Griff, Name, je Stelle eine Zelle', () => {
 	});
 });
 
+describe('#3373: gesperrte Zelle mit Beispielwert (SMS-Zeile „Temperatur“)', () => {
+	const gesperrt = (extra: Record<string, unknown> = {}) => ({ zustand: 'locked', grund: 'kein Kürzel', ...extra });
+	const mit = (sms: Record<string, unknown>) => [{ id: 'temperature', name: 'Temperatur', zellen: { email: an(), telegram: an(), sms, outlook: an() } }];
+	test('zeigt den Beispielwert neben dem gesperrten Haken, ohne Kontrollkästchen, Knopf und Marke', async () => {
+		const h = html(await lade(), props({ stellen: TRIP_STELLEN, metriken: mit(gesperrt({ beispiel: 'D14/18' })) }));
+		const z = zelle(h, 'temperature', 'sms');
+		assert.equal(attr(z.auf, 'data-zustand'), 'locked');
+		const b = eins(z.innen, 'data-slot="et-beispiel"');
+		assert.equal(text(b.innen), 'D14/18');
+		assert.equal(attr(b.auf, 'data-zustand'), 'gesperrt');
+		assert.ok(text(z.innen).includes('kein Kürzel'), 'Grund bleibt sichtbar');
+		assert.doesNotMatch(z.innen, /<input\b|<button\b|data-slot="et-marke"/);
+	});
+	test('gesperrte Zelle ohne Beispielwert bleibt unverändert; nicht bedienbare Spalte zeigt keinen', async () => {
+		const ohne = zelle(html(await lade(), props({ stellen: TRIP_STELLEN, metriken: mit(gesperrt()) })), 'temperature', 'sms');
+		assert.doesNotMatch(ohne.innen, /data-slot="et-beispiel"/);
+		const stellen = TRIP_STELLEN.map((s) => (s.id === 'sms' ? { ...s, bedienbar: false } : s));
+		const ruht = zelle(html(await lade(), props({ stellen, metriken: mit(gesperrt({ beispiel: 'D14/18' })) })), 'temperature', 'sms');
+		assert.doesNotMatch(ruht.innen, /data-slot="et-beispiel"/);
+	});
+	test('Farbe des gesperrten Beispielwerts nur über das Token --g-ink-3 (wie der Grund des gesperrten Hakens)', () => {
+		const quelle = readFileSync(DATEI, 'utf-8');
+		assert.match(quelle, /\.et-beispiel\[data-zustand='gesperrt'\]\s*\{\s*color:\s*var\(--g-ink-3\);/); // doc-compliance-test
+	});
+});
+
 describe('Nicht bedienbare Spalte (Block aus, Telegram-Kurzstil)', () => {
 	test('alle Haken der Spalte gesperrt für Eingaben, kein Knopf, kein Beispielwert, keine Marke; andere Spalten unberührt', async () => {
 		const stellen = ORTE_STELLEN.map((s) => (s.id === 'telegram' ? { ...s, bedienbar: false, unterzeile: 'Kurzstil: wie SMS' } : s));
