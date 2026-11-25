@@ -31,6 +31,7 @@ import {
 	registriereBestaetigtenZweitnutzer
 } from './helpers';
 import { wegwerfPasswort } from './stagingZugang';
+import { tabelle, type Json } from './was-steht-wo.helpers';
 
 const DESKTOP = { width: 1280, height: 900 };
 const MOBILE = { width: 375, height: 812 };
@@ -106,6 +107,22 @@ async function tripDurchgeklickt(page: Page, name: string, datum: string): Promi
 	return id;
 }
 
+/** Wirkung der Tabelle „Was steht wo“ ohne Beispielwerte: Zeilen mit Zustand und Form je Stelle,
+ *  gespeicherte Tabelle, Ausblick-Berichte, Spalten und Bloecke. */
+function tabelleWirkung(t: Json): unknown {
+	return {
+		stored: t.stored,
+		placements: t.placements,
+		outlook_reports: t.outlook_reports,
+		columns: t.columns,
+		blocks: t.blocks,
+		rows: (t.rows as Json[]).map((r) => ({
+			metric_id: r.metric_id,
+			cells: Object.fromEntries(Object.entries(r.cells as Record<string, Json>).map(([s, c]) => [s, { state: c.state, format: c.format }]))
+		}))
+	};
+}
+
 async function lies(request: APIRequestContext, pfad: string): Promise<Record<string, unknown>> {
 	const r = await request.get(pfad);
 	expect(r.ok(), `GET ${pfad} -> ${r.status()}`).toBeTruthy();
@@ -121,10 +138,14 @@ test.describe('Teil A: Trip /trips/new', () => {
 		const ta = await lies(page.request, `/api/trips/${a}`);
 		const tb = await lies(page.request, `/api/trips/${b}`);
 		expect(normalisiert(ta)).toEqual(normalisiert(tb));
-		const rc = ta.report_config as Record<string, unknown>;
 		// #3155 (Spec feat_3155 AC-7): Vorbelegung des 3-Tages-Ausblicks nach der einen Regel --
-		// Morgen- und Abend-Briefing an -> nur abends.
-		expect(rc.multi_day_trend_reports, '3-Tages-Ausblick nur im Abend-Briefing').toEqual(['evening']);
+		// Morgen- und Abend-Briefing an -> nur abends. #3359 (Spec fix_3359 AC-2): geprueft wird der
+		// WIRKSAME Wert aus der Tabellen-Ansicht des Servers (`outlook_reports`), nicht ein gespeichertes
+		// Feld -- die Vorbelegung loest Python auf, solange keine Tabelle gespeichert ist.
+		const tabA = await tabelle(page.request, 'route', a);
+		const tabB = await tabelle(page.request, 'route', b);
+		expect(tabA.outlook_reports, '3-Tages-Ausblick nur im Abend-Briefing').toEqual(['evening']);
+		expect(tabelleWirkung(tabA), 'Tabelle Standardwerte-Trip == Tabelle durchgeklickter Trip').toEqual(tabelleWirkung(tabB));
 	});
 
 	test('AC-9 + AC-11: Detailseite mit Standardwerten, genau EIN Trip nach Wegnavigieren, Nutzer B sieht ihn nicht', async ({ page, browser }) => {

@@ -80,6 +80,7 @@
 
 import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
 import { login } from './helpers.js';
+import { gespeichertAn, haken, oeffneKarte, tabelle, tabelleGespeichert } from './was-steht-wo.helpers';
 
 const TRIP_PREFIX = 'e2e-2454-kurzform';
 const tripId = (suffix: string) => `${TRIP_PREFIX}-${suffix}`;
@@ -89,8 +90,11 @@ const WIND_CHILL_KINDER = ['wind_chill_day_low', 'wind_chill_day_high', 'wind_ch
 /** Golden Elter+Kind-fehlt-Fixture: `wind_chill` aktiv (primary), KEINE der
  *  drei Kind-Größen explizit vorhanden -- exakt das eingefrorene KHW-403-
  *  Ausgangsmuster (ohne die Kind-Einträge, die die Migration sonst entfernt),
- *  global UND im SMS-Kanal-Layout. `wind` dient als Ankermetrik für die
- *  "unrelated gesture"-gestützte Save-Auslösung in Szenario 1. */
+ *  global UND in der SMS. #3359: die SMS-Auswahl steht seit #3277 allein in der
+ *  Tabelle „Was steht wo“ (`placements.rows`, `wind_chill` mit `places.sms = true`,
+ *  bewusst abweichend von der Grundauswahl: kein Ausblick, Ausblick nur abends).
+ *  `wind` dient als Ankermetrik für die "unrelated gesture"-gestützte
+ *  Save-Auslösung in Szenario 1. */
 async function createTrip(request: APIRequestContext, id: string): Promise<void> {
 	const res = await request.post('/api/trips', {
 		data: {
@@ -109,8 +113,14 @@ async function createTrip(request: APIRequestContext, id: string): Promise<void>
 					{ metric_id: 'wind_chill', enabled: true, bucket: 'primary', order: 0 },
 					{ metric_id: 'wind', enabled: true, bucket: 'primary', order: 1 }
 				],
-				channel_layouts: {
-					sms: [{ metric_id: 'wind_chill', enabled: true, order: 0 }]
+				placements: {
+					version: 1,
+					rows: [
+						{ metric_id: 'wind_chill', places: { email: true, telegram: true, sms: true, outlook: false } },
+						// ohne `places` = überall an: genau die Form, in der „+“ die Zeile zurückschreibt (WS-11 T4)
+						{ metric_id: 'wind' }
+					],
+					outlook_reports: ['evening']
 				}
 			}
 		}
@@ -173,11 +183,13 @@ test.describe('Bug #2454 Fix-Loop 2: WeatherMetricsTab-Wirkort (Findings F001/F0
 	// #2794 Teil 3 (Spec feat_2794_s3a_teil3_wetter.md §4, §6 e, AC-19, AC-37): die GLOBALE Metrik-
 	// Auswahl steht jetzt im WetterTab (Reiter Wetter); er schreibt `display_config.metrics[]` als
 	// bestehende Liste mit neuem `enabled` (fehlende Einträge hängt er nur für gewählte Metriken an)
-	// und fasst `channel_layouts` nicht an. Die Kind-Größen von „Gefühlte Temperatur" sind im Katalog
-	// eigene Zeilen. Die Kernaussage von Bug #2454 bleibt dieselbe und wird am neuen Träger geprüft:
-	// der Editor darf fehlende Kind-Größen NIE als `enabled:false` festschreiben (Einfrieren, das die
-	// Elter→Kind-Ableitung des Loaders `_DERIVED_METRIC_RULES` dauerhaft blockiert), weder global noch
-	// im SMS-Kanal-Layout — und `wind_chill` selbst bleibt bzw. wird aktiv gespeichert.
+	// und die SMS-Auswahl (seit #3277 allein die Tabelle „Was steht wo“, `placements`) nicht abweichend.
+	// Die Kind-Größen von „Gefühlte Temperatur" sind im Katalog eigene Zeilen. Die Kernaussage von
+	// Bug #2454 bleibt dieselbe und wird am neuen Träger geprüft: der Editor darf fehlende Kind-Größen
+	// NIE abgewählt festschreiben (Einfrieren, das die Elter→Kind-Ableitung des Loaders
+	// `_DERIVED_METRIC_RULES` dauerhaft blockiert), weder global (`enabled:false`) noch in der
+	// SMS-Spalte der Tabelle (`places.sms = false`) — und `wind_chill` selbst bleibt bzw. wird aktiv
+	// gespeichert.
 	const metrikenIm = (body: { metrics?: Array<{ metric_id: string; enabled: boolean }> } | undefined) => body?.metrics ?? [];
 	function keinEingefrorenesKind(liste: Array<{ metric_id: string; enabled: boolean }> = [], wo: string): void {
 		for (const kind of WIND_CHILL_KINDER) {
@@ -196,7 +208,7 @@ test.describe('Bug #2454 Fix-Loop 2: WeatherMetricsTab-Wirkort (Findings F001/F0
 
 	// Szenario 1 (Lade-Pfad): wind_chill ist beim Laden bereits aktiv, Kinder fehlen explizit.
 	// Eine UNBETEILIGTE Geste (Wind „−" und wieder „+") löst Speichervorgänge aus — keiner davon
-	// darf die fehlenden Kinder einfrieren, das SMS-Kanal-Layout bleibt unberührt.
+	// darf die fehlenden Kinder einfrieren, die SMS-Spalte der Tabelle bleibt wie gespeichert.
 	test('Szenario 1 (Laden): fehlende wind_chill-Kinder werden bei einem unbeteiligten Save weder global noch im SMS-Kanal eingefroren', async ({
 		page,
 		request
@@ -206,6 +218,7 @@ test.describe('Bug #2454 Fix-Loop 2: WeatherMetricsTab-Wirkort (Findings F001/F0
 		await createTrip(request, id);
 		try {
 			const vorher = await fetchTrip(request, id);
+			expect(gespeichertAn(vorher.display_config?.placements, 'wind_chill', 'sms'), 'Messaufbau: wind_chill in der SMS-Spalte der Tabelle').toBe(true);
 			const reiter = await oeffneWetterTab(page, id);
 			await expect(reiter.getByTestId('wetter-zeile-wind_chill'), 'Vorbedingung: wind_chill ist im Briefing').toBeVisible();
 
@@ -221,10 +234,34 @@ test.describe('Bug #2454 Fix-Loop 2: WeatherMetricsTab-Wirkort (Findings F001/F0
 			const trip = await fetchTrip(request, id);
 			keinEingefrorenesKind(trip.display_config?.metrics, 'global auf dem Server');
 			expect(activeIds(trip.display_config?.metrics).has('wind_chill')).toBe(true);
-			const smsLayout = trip.display_config?.channel_layouts?.sms as Array<{ metric_id: string; enabled: boolean }> | undefined;
-			expect(smsLayout, 'channel_layouts.sms fehlt nach dem Save').toBeTruthy();
-			keinEingefrorenesKind(smsLayout, 'in channel_layouts.sms');
-			expect(smsLayout, 'der Reiter Wetter fasst das SMS-Kanal-Layout nicht an (Spec §6 e)').toEqual(vorher.display_config?.channel_layouts?.sms);
+			// #3359: SMS-Teil über die Tabelle „Was steht wo“ (Entscheidung im Spec-Changelog fix_3359).
+			const zeilen = trip.display_config?.placements?.rows as Array<{ metric_id: string; places?: Record<string, boolean> }> | undefined;
+			expect(zeilen, 'placements.rows fehlt nach dem Save').toBeTruthy();
+			for (const kind of WIND_CHILL_KINDER) {
+				const zeile = zeilen!.find((r) => r.metric_id === kind);
+				expect(zeile?.places?.sms === false, `${kind} ist in der SMS-Spalte der Tabelle abgewählt eingefroren (Bug #2454)`).toBe(false);
+			}
+			expect(gespeichertAn(trip.display_config?.placements, 'wind_chill', 'sms'), 'wind_chill bleibt in der SMS angehakt').toBe(true);
+			const mitHaken = await tabelle(request, 'route', id);
+			const sms = (mitHaken.rows as Array<{ metric_id: string; cells: Record<string, { state: string }> }>).find((r) => r.metric_id === 'wind_chill');
+			expect(sms?.cells?.sms?.state, 'Server-Tabelle: wind_chill steht in der SMS').toBe('on');
+			expect(trip.display_config?.placements, 'die Tabelle ist nach den unbeteiligten Speichervorgängen gleich dem Stand vorher').toEqual(vorher.display_config?.placements);
+
+			// AC-7 (Spec fix_3359): die Kurz-SMS enthält den Wert der gefühlten Temperatur, ohne Haken fehlt er.
+			// Geprüft am SMS-Beispiel der Server-Tabelle: es rendert die echte Trip-SMS über feste Beispieldaten
+			// (services/placements_beispiel, keine Vorhersage, deterministisch). Kürzel der gefühlten Temperatur
+			// selbst: TF (sms_format.md). Die Kind-Größen (FN/FL/FD) sind in der Tabelle eigene Zeilen mit eigenem
+			// Haken und bleiben nach Abwahl nur der Elter-Zeile bewusst stehen; geprüft wird deshalb das TF-Token.
+			const GEFUEHLT = /(^| )TF\S*/;
+			expect(mitHaken.sms_example?.text, 'AC-7: Kurz-SMS mit Haken enthält die gefühlte Temperatur').toMatch(GEFUEHLT);
+			const karte = await oeffneKarte(page, 'route', id);
+			const abgewaehlt = tabelleGespeichert(page, id);
+			await haken(karte, 'wind_chill', 'sms').click();
+			await abgewaehlt;
+			const ohneHaken = await tabelle(request, 'route', id);
+			expect(gespeichertAn(ohneHaken.placements, 'wind_chill', 'sms'), 'Messaufbau: wind_chill in der SMS abgewählt').toBe(false);
+			expect(ohneHaken.sms_example?.text, 'AC-7: Kurz-SMS ohne Haken enthält keine gefühlte Temperatur').not.toMatch(GEFUEHLT);
+			expect(ohneHaken.sms_example?.text, 'AC-7: Kurz-SMS ohne Haken ist sonst noch da (Wind)').toMatch(/(^| )W\d/);
 		} finally {
 			await deleteTrip(request, id);
 		}
@@ -267,7 +304,7 @@ test.describe('Bug #2454 Fix-Loop 2: WeatherMetricsTab-Wirkort (Findings F001/F0
 	// Szenario 4 (SMS-Kanal-Entfernen) sind gestrichen. Ihr Wirkort — die Kanal-Listen der Metrik-Oberflaeche
 	// im Uebergangsblock des Reiters Zustellung (onRestoreMetric/onRemove in WeatherMetricsTab) — ist entfernt;
 	// im Hub bestimmt die Karte „Was steht wo“ je Stelle, was in der SMS steht (Tabelle `placements`, kein
-	// `channel_layouts`-Schreiber mehr). Die Mitnahme-Logik selbst bleibt unit-getestet
-	// (kindmetriken_ableitung_und_mitnahme.test.ts); Szenario 1 sichert weiter, dass `channel_layouts.sms`
-	// beim Speichern unberuehrt bleibt.
+	// Schreiber der alten Kanal-Listen mehr). Die Mitnahme-Logik selbst bleibt unit-getestet
+	// (kindmetriken_ableitung_und_mitnahme.test.ts); Szenario 1 sichert weiter (#3359), dass die SMS-Spalte
+	// der Tabelle beim Speichern unberuehrt bleibt und keine Kind-Größe darin abgewählt eingefroren wird.
 });

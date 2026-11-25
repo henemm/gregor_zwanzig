@@ -205,7 +205,6 @@ const KS_REITER: Record<HubKind, ReiterFall[]> = {
 					evening_enabled: false,
 					morning_time: '06:00:00',
 					evening_time: '18:00:00',
-					show_outlook: false,
 					email_format: 'compact'
 				}
 			},

@@ -94,8 +94,7 @@ function zustellungsFelder(kind: HubKind): Json {
 				send_telegram: false,
 				send_sms: false,
 				send_premium_sms: false,
-				telegram_style: 'rich',
-				show_outlook: true
+				telegram_style: 'rich'
 			},
 			display_config: { ampel: { template: 'wandern' }, telegram_kurzform: false },
 			...alarm
