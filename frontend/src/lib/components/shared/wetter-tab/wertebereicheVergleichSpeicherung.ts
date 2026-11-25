@@ -74,7 +74,6 @@ export function baueWertebereichNutzlast(
 		corridors: current.corridors,
 		// #3276: keine Altschluessel (hourly_/outlook_*) mehr durchreichen.
 		hourlyEnabled: preset.hourly_enabled,
-		outlookEnabled: preset.outlook_enabled,
 		dayWindowStartHour: preset.day_window_start_hour ?? undefined,
 		dayWindowEndHour: preset.day_window_end_hour ?? undefined
 	});

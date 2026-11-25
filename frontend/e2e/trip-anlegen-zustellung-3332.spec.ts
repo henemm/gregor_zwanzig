@@ -25,6 +25,8 @@ import { DESKTOP, MOBIL, ZT, angezeigteZeit, cooldownFeld, oeffneZustellung, sch
 type Json = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 const einName = (tag: string) => `${E2E_TEST_PREFIX}TZ-${tag}-${Date.now()}`;
 const VORSCHAU_PFAD = '/api/briefings/placements/vorschau';
+/** Auflösung der Ampel: nur Lesen, aber POST (#2988). */
+const AUFLOESUNG_PFAD = '/api/ampel/aufloesung';
 
 test.afterEach(async ({ page }) => {
 	await cleanupTracked(page.request);
@@ -67,7 +69,7 @@ const schreibAufrufe = (m: Mitschnitt) =>
 	m.alle.filter(
 		(x) =>
 			['PUT', 'PATCH', 'DELETE'].includes(x.methode) ||
-			(x.methode === 'POST' && x.pfad !== VORSCHAU_PFAD && x.pfad !== '/api/trips' && !x.pfad.startsWith('/api/gpx/') && !x.pfad.startsWith('/api/locations/resolve'))
+			(x.methode === 'POST' && x.pfad !== VORSCHAU_PFAD && x.pfad !== AUFLOESUNG_PFAD && x.pfad !== '/api/trips' && !x.pfad.startsWith('/api/gpx/') && !x.pfad.startsWith('/api/locations/resolve'))
 	);
 
 // ── Anlege-Seite ─────────────────────────────────────────────────────────────

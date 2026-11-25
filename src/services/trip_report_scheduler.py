@@ -763,6 +763,16 @@ class TripReportSchedulerService:
         self.notice_failed = 0
         self.last_notice_failed = 0
 
+    @classmethod
+    def nur_ableitung(cls, lang: Lang) -> "TripReportSchedulerService":
+        """Instanz nur fuer die netzfreie Gewitter-Ableitung
+        (``gewitter_aus_trend``) ohne Nutzerbezug: keine Settings, kein
+        Versanddienst, Sprache vom Aufrufer (#3373, Karte "Was steht wo").
+        Versand-Methoden scheitern laut (``_settings`` fehlt)."""
+        obj = cls.__new__(cls)
+        obj._lang = lang
+        return obj
+
     def send_due_reports(self, now_utc: datetime) -> Tuple[int, int]:
         """
         Send reports for trips whose configured time matches their LOCAL hour.
@@ -3170,38 +3180,15 @@ class TripReportSchedulerService:
         """
         from app.day_window import resolve_configured_window
 
-        def _local(dt):
-            # #1402: nie .astimezone(tz) auf einem naiven ts -- local_dt geht
-            # ueber den zentralen Naiv-Guard (Hausnorm "naiv = UTC", #1345).
-            return local_dt(dt, tz) if tz else dt
-
         _rc = getattr(trip, "report_config", None)
         win_start, win_end = resolve_configured_window(
             getattr(_rc, "day_window_start_hour", None),
             getattr(_rc, "day_window_end_hour", None),
         )
-        forecast: dict = {}
-        trend_by_date = {
-            row["date"]: row
-            for row in (multi_day_trend or [])
-            if row.get("date") is not None
-        }
-        missing_dates: set = set()
-        for offset, key in [(1, "+1"), (2, "+2")]:
-            fc_date = target_date + timedelta(days=offset)
-            row = trend_by_date.get(fc_date)
-            if row is not None:
-                forecast[key] = self._thunder_entry_from_trend_row(
-                    row, fc_date, window_start=win_start, window_end=win_end,
-                    # "+2" liegt jenseits der Nacht-Reihe (endet 06:00 morgen)
-                    # -- dort gibt es keine Gegenquelle (Spec, Punkt 4).
-                    night_hourly=(
-                        _night_thunder_hours(night_weather, fc_date, _local)
-                        if offset == 1 else None
-                    ),
-                )
-            else:
-                missing_dates.add(fc_date)
+        forecast, missing_dates = self.gewitter_aus_trend(
+            trip, target_date, tz=tz, multi_day_trend=multi_day_trend,
+            night_weather=night_weather,
+        )
 
         if missing_dates:
             fetched = self._collect_future_stage_weather(
@@ -3240,6 +3227,56 @@ class TripReportSchedulerService:
             forecast["_gap_offsets"] = gaps
 
         return forecast if forecast else None
+
+    def gewitter_aus_trend(
+        self,
+        trip,
+        target_date: date,
+        *,
+        tz: Optional[ZoneInfo],
+        multi_day_trend=None,
+        night_weather=None,
+    ) -> Tuple[dict, set]:
+        """Netzfreier Teil der Gewitter-Vorschau (#1275, herausgeloest #3373):
+        Eintraege ``+1``/``+2`` aus den Trend-Zeilen (Abgleich ueber
+        ``row["date"] == target_date + offset``) und die Daten ohne Zeile.
+        Der Versand (``_build_thunder_forecast_from_trend_or_fetch``) und das
+        Beispiel der Karte "Was steht wo" leiten darueber ab."""
+        from app.day_window import resolve_configured_window
+
+        def _local(dt):
+            # #1402: nie .astimezone(tz) auf einem naiven ts -- local_dt geht
+            # ueber den zentralen Naiv-Guard (Hausnorm "naiv = UTC", #1345).
+            return local_dt(dt, tz) if tz else dt
+
+        _rc = getattr(trip, "report_config", None)
+        win_start, win_end = resolve_configured_window(
+            getattr(_rc, "day_window_start_hour", None),
+            getattr(_rc, "day_window_end_hour", None),
+        )
+        forecast: dict = {}
+        trend_by_date = {
+            row["date"]: row
+            for row in (multi_day_trend or [])
+            if row.get("date") is not None
+        }
+        missing_dates: set = set()
+        for offset, key in [(1, "+1"), (2, "+2")]:
+            fc_date = target_date + timedelta(days=offset)
+            row = trend_by_date.get(fc_date)
+            if row is not None:
+                forecast[key] = self._thunder_entry_from_trend_row(
+                    row, fc_date, window_start=win_start, window_end=win_end,
+                    # "+2" liegt jenseits der Nacht-Reihe (endet 06:00 morgen)
+                    # -- dort gibt es keine Gegenquelle (Spec, Punkt 4).
+                    night_hourly=(
+                        _night_thunder_hours(night_weather, fc_date, _local)
+                        if offset == 1 else None
+                    ),
+                )
+            else:
+                missing_dates.add(fc_date)
+        return forecast, missing_dates
 
     def _thunder_entry_from_trend_row(
         self,

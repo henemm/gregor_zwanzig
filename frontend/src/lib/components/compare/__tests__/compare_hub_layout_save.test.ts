@@ -62,68 +62,33 @@ function makePresetWithFullDisplayConfig(): ComparePreset {
 	} as ComparePreset;
 }
 
+// Issue #3298: der Layout-Snapshot traegt nur noch `hourlyEnabled`. Die Faelle zu
+// `hourlyMetricKeys` (Listen-Aenderung, Umsortierung, Leerauswahl, C2 AC-5) sind mit dem Feld
+// entfallen; dass kein Altschluessel gesendet wird, prueft feat3298_vergleich_ohne_altfelder.test.ts.
 describe('C2 AC-2: flushPendingLayoutSave — geänderter Snapshot → PUT-Payload', () => {
-	test('#3276: geänderte hourlyMetricKeys loesen keinen PUT mehr aus (Altschluessel)', () => {
-		const preset = makePresetWithFullDisplayConfig();
-		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
-		const current: LayoutSnapshot = { hourlyMetricKeys: ['temp_c', 'wind_kmh'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
-
-		assert.equal(flushPendingLayoutSave(preset, current, before), null);
-	});
-
 	test('geänderter hourlyEnabled-Schalter landet als hourly_enabled im Body', () => {
 		// GIVEN: ein Preset mit hourly_enabled=true, letzter Snapshot ebenfalls true
 		// WHEN: der Nutzer den Stundenverlauf-Schalter ausschaltet
 		// THEN: der PUT-Payload setzt hourly_enabled auf false
-		// RED heute: Import schlaegt fehl.
 		const preset = makePresetWithFullDisplayConfig();
-		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
-		const current: LayoutSnapshot = { hourlyMetricKeys: ['temp_c'], hourlyEnabled: false, outlookMetricKeys: null, outlookEnabled: false };
+		const before: LayoutSnapshot = { hourlyEnabled: true };
+		const current: LayoutSnapshot = { hourlyEnabled: false };
 
 		const payload = flushPendingLayoutSave(preset, current, before);
 
 		assert.ok(payload, 'flushPendingLayoutSave darf bei geaendertem Snapshot nicht null liefern');
 		assert.equal(payload!.body.hourly_enabled, false);
+		assert.equal(payload!.body.display_config, undefined, 'kein display_config im Layout-PUT');
 	});
 
-	// Issue #1361: eine reine Umsortierung loeste einen PUT mit der neuen Reihenfolge aus.
-	// #3276: die Reihenfolge des Stundenverlaufs stellt der Nutzer in „Was steht wo" ein;
-	// `hourly_metrics` wird nicht mehr geschrieben, eine Umsortierung loest keinen PUT aus.
-	test('#3276: umsortierter Snapshot → kein PUT (Reihenfolge nur noch in „Was steht wo")', () => {
+	test('identischer Snapshot → null (No-Op-Guard bleibt bestehen)', () => {
 		const preset = makePresetWithFullDisplayConfig();
-		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c', 'wind_kmh'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
-		const current: LayoutSnapshot = { hourlyMetricKeys: ['wind_kmh', 'temp_c'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
-
-		assert.equal(flushPendingLayoutSave(preset, current, before), null);
-	});
-
-	test('wirklich identischer Snapshot (gleiche Reihenfolge, gleiche Werte) → null (No-Op-Guard bleibt bestehen)', () => {
-		// GIVEN: current und before sind bitgleich (auch in der Reihenfolge)
-		// WHEN: flushPendingLayoutSave aufgerufen wird
-		// THEN: weiterhin null — die #1299-Regel bleibt fuer ECHTE Identitaet
-		// richtig, nur "umsortiert" zaehlt seit #1361 nicht mehr als identisch.
-		const preset = makePresetWithFullDisplayConfig();
-		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c', 'wind_kmh'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
-		const current: LayoutSnapshot = { hourlyMetricKeys: ['temp_c', 'wind_kmh'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
+		const before: LayoutSnapshot = { hourlyEnabled: true };
+		const current: LayoutSnapshot = { hourlyEnabled: true };
 
 		const payload = flushPendingLayoutSave(preset, current, before);
 
-		assert.equal(payload, null, 'bitgleicher Snapshot (auch Reihenfolge gleich) muss weiterhin No-Op sein');
-	});
-});
-
-// C2 AC-5 (leere hourlyMetricKeys als [] persistieren, Bug #1299/C2) entfaellt mit #3276:
-// `hourly_metrics` wird weder als Liste noch als [] geschrieben (Spec #3276: nie leer senden).
-describe('C2 AC-5 / #3276: leere hourlyMetricKeys werden NICHT als [] gesendet', () => {
-	test('current.hourlyMetricKeys = [] (mit Schalter-Aenderung) → kein display_config im PUT', () => {
-		const preset = makePresetWithFullDisplayConfig();
-		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
-		const current: LayoutSnapshot = { hourlyMetricKeys: [], hourlyEnabled: false, outlookMetricKeys: null, outlookEnabled: false };
-
-		const payload = flushPendingLayoutSave(preset, current, before);
-
-		assert.ok(payload, 'die Schalter-Aenderung muss gespeichert werden');
-		assert.equal(payload!.body.display_config, undefined, 'display_config (hourly_metrics: []) im PUT');
+		assert.equal(payload, null, 'unveraenderter Snapshot muss No-Op sein');
 	});
 });
 
@@ -137,8 +102,8 @@ describe('C2 AC-3 (PFLICHT Datenerhalt): top_n/metric_alert_levels/forecast_hour
 		// HubEdit-Luecke (hourlyMetricKeys/hourlyEnabled kommen bislang gar nicht bei
 		// buildHubPutPayload an) tatsaechlich geschlossen wurde, sobald er gruen wird.
 		const preset = makePresetWithFullDisplayConfig();
-		const before: LayoutSnapshot = { hourlyMetricKeys: ['temp_c'], hourlyEnabled: true, outlookMetricKeys: null, outlookEnabled: false };
-		const current: LayoutSnapshot = { hourlyMetricKeys: ['wind_kmh'], hourlyEnabled: false, outlookMetricKeys: null, outlookEnabled: false };
+		const before: LayoutSnapshot = { hourlyEnabled: true };
+		const current: LayoutSnapshot = { hourlyEnabled: false };
 
 		const payload = flushPendingLayoutSave(preset, current, before);
 

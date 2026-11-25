@@ -959,6 +959,25 @@ Sicherung als `tar.gz` je Nutzer; Sperre und atomares Schreiben wie `migrate_279
 
 ---
 
+## Altfelder entfernen (#3351)
+
+Entfernt die zehn seit #3277 wirkungslosen Altfelder (`ALTFELDER` in `src/app/loader.py`) aus allen Abos (`<root>/<uid>/briefings/*.json`, Trip und Vergleich) auf oberster Ebene, in `display_config` und `report_config`, sowie je Eintrag aus der toten Altdatei `compare_presets.json` (wird nicht gelöscht). Alles andere bleibt unverändert (Read-Modify-Write mit Merge, ADR-0101). **Fail-closed:** ein Abo mit Altfeldern, aber ohne `display_config.placements.rows` oder `.outlook_reports` (oder unlesbar), ist BLOCKIERT; ohne `--blockierte-auslassen` endet der Lauf mit Exit 2 vor jeder Sicherung und jedem Schreiben. Lauf als Dienstnutzer, Reihenfolge **erst Staging, dann Prod**, je Umgebung Probelauf, Ausführen, Nachzählung:
+
+```bash
+# Staging (blockiertes Test-Abo bleibt bewusst unverändert)
+sudo -n -u claude-gregor uv run python3 scripts/migrate_3277_altfelder.py --root /var/lib/gregor-staging/users --blockierte-auslassen               # Probelauf
+sudo -n -u claude-gregor uv run python3 scripts/migrate_3277_altfelder.py --root /var/lib/gregor-staging/users --ausfuehren --blockierte-auslassen  # Sicherung + Schreiben
+sudo -n -u claude-gregor uv run python3 scripts/migrate_3277_altfelder.py --root /var/lib/gregor-staging/users --nachzaehlen                       # 0 außer ausgelassenen
+# Prod (fail-closed, ohne Auslassen)
+sudo -n -u claude-gregor uv run python3 scripts/migrate_3277_altfelder.py --root /var/lib/gregor/users                # Probelauf
+sudo -n -u claude-gregor uv run python3 scripts/migrate_3277_altfelder.py --root /var/lib/gregor/users --ausfuehren   # Sicherung + Schreiben
+sudo -n -u claude-gregor uv run python3 scripts/migrate_3277_altfelder.py --root /var/lib/gregor/users --nachzaehlen  # muss Exit 0 sein
+```
+
+Sicherung je Nutzer unter `.backups/migrate-3277-<uid>-<timestamp>.tar.gz` (Standard `--backup-dir`: `<root>/../.backups`; Briefings + `compare_presets.json`), immer vor dem ersten Schreiben; scheitert sie, wird nichts geschrieben. Sperre und atomares Schreiben wie `migrate_2792_profil_ampel.py`; wiederholbar (zweiter Lauf: „Nichts zu tun“). Exit 0 fertig, 1 offene Dateien (seit der Planung geändert, Lauf wiederholen) bzw. bei `--nachzaehlen` Altfeld übrig (blockierte Abos werden getrennt ausgewiesen), 2 blockiert. Neu geschriebene Dateien tragen Python-Format (semantisch gleich). **Berichte nennen Abo-IDs und gehören nicht in Issues oder PRs**; dort nur aggregierte Zahlen. Die Nachzählung wird nach einigen Tagen Betrieb wiederholt (Abnahme #3009). Spec: `docs/specs/modules/feat_3351_altfelder_datenlauf.md`.
+
+---
+
 ## Trip-Tempo: Fortbewegung und Grundtempo nachtragen (#3196)
 
 Ergänzt je Trip unter `<root>/<uid>/briefings/*.json` (nur Trips, nicht Ortsvergleiche) das Feld `tempo` aus dem Altfeld `activity` (`fahrrad_15/20/25` → Rad 15/20/25 km/h, alles andere → zu Fuß 4 km/h; nie MTB oder Ski). Die Arrival-Zeiten (`arrival_calculated`) werden mit der neuen DAV-Gehzeit neu berechnet, damit die bewerteten Stunden je Wegpunkt dazu passen. `activity` und alle anderen Felder bleiben unverändert. Wiederholbar (zweiter Lauf schreibt nichts). Ausführung **nach** dem Prod-Deploy, je Umgebung erst Probelauf, dann `--execute`:

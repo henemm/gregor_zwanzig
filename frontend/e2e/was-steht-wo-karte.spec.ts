@@ -23,7 +23,8 @@
 //   Rückbau des Übergangsblocks (#3154, Spec Teil B Nr. 14, AC-30):
 //   WS-13 Trip/Orte: die umgezogenen Einstellungen fehlen im Reiter Zustellung und stehen genau einmal in der Karte.
 //   WS-14 Trip/Orte: Speichern im Reiter Zustellung (bei Orten auch die Pausieren-Karte im Übergangsblock) und
-//         in der Karte lässt gespeicherte Altfelder stehen; das Abo eines zweiten Nutzers bleibt unberührt.
+//         in der Karte lässt gespeicherte fremde Einstellungen stehen (#3359: echte Felder statt Altfelder);
+//         das Abo eines zweiten Nutzers bleibt unberührt.
 //   WS-16 Trip/Orte: „Vorschau laden“ des Beispiel-Alarms im Übergangsblock lädt die Alarm-Vorschau DIESES Abos
 //         (eigene Kennung, eigene Regel bzw. eigene Orte), ein zweiter Nutzer sieht nichts Fremdes (Adversary F004).
 //   WS-15 Trip: E-Mail-Format „Kompakt“ sperrt Etappen-Kennzahlen, Vortag-Vergleich und Nacht-Stundentabelle (sie
@@ -58,7 +59,7 @@ const LAUF = Math.random().toString(36).slice(2, 5).padEnd(3, '0');
 let seedZaehler = 0;
 
 /** Abo mit Grundauswahl einer Vorlage (Trip: Alpen-Trekking, Orte: Allgemein mit vielen Metriken).
- *  `oben`/`dc`: zusätzliche Felder auf oberster Ebene bzw. in `display_config` (Altfelder, #3154). */
+ *  `oben`/`dc`: zusätzliche Felder auf oberster Ebene bzw. in `display_config` (fremde Einstellungen, #3359). */
 async function seed(request: APIRequestContext, fall: Fall, opts: { ohne?: string[]; placements?: Json; oben?: Json; dc?: Json } = {}): Promise<Abo> {
 	const vorlageId = fall.kind === 'route' ? 'alpen-trekking' : 'allgemein';
 	const auswahl = aktiveDerVorlage((await vorlagen(request))[vorlageId]).filter((m) => !(opts.ohne ?? []).includes(m));
@@ -181,32 +182,38 @@ const KARTE_EINMAL: Record<HubKind, Record<string, number>> = {
 };
 const PREMIUM_HINWEIS = 'Bekommt vorerst denselben Text wie die SMS. Eine eigene Auswahl kommt später.';
 
-/** Altfelder je Kontext, die der Rückbau nie überschreiben darf (Read-Modify-Write mit Merge). */
-const ALTFELDER: Record<HubKind, { oben: Json; dc: Json }> = {
+/** Fremde Einstellungen je Kontext außerhalb von „Was steht wo“, die kein Speichern in Zustellung oder Karte
+ *  überschreiben darf (Read-Modify-Write mit Merge). #3359: echte, gelesene Felder statt der seit #3277
+ *  wirkungslosen Altfelder (Trip: Tageszusammenfassung, Mindesthöhe der Windexposition; Orte: Alarm-Pause
+ *  und Stille Stunden, Wertebereiche, Marke „Ausblick aus“). */
+const FREMDE_FELDER: Record<HubKind, { oben: Json; dc: Json }> = {
 	route: {
 		oben: {
 			report_config: {
 				enabled: true, morning_enabled: true, evening_enabled: true, morning_time: '07:00:00', evening_time: '18:00:00', send_email: true,
 				show_compact_summary: false, show_quick_take_tags: false, show_metrics_summary: false, show_stability: false, show_highlights: false,
-				daily_summary_metrics: ['thunder'], wind_exposition_min_elevation_m: 1800, show_outlook: false,
-				multi_day_trend_morning: true, multi_day_trend_evening: false, multi_day_trend_reports: ['morning']
+				daily_summary_metrics: ['thunder'], wind_exposition_min_elevation_m: 1800
 			}
 		},
-		dc: { channel_layouts: { sms: [{ metric_id: 'wind', enabled: true }, { metric_id: 'precipitation', enabled: true }] } }
+		dc: {}
 	},
 	vergleich: {
-		// #3277: `outlook_enabled` gibt es nicht mehr (Go verwirft es); „Ausblick aus“ steht allein in der
-		// Marke `placements.outlook_reports` (ADR-0124 Nr. 6).
-		oben: { morning_enabled: true, morning_time: '07:00:00', hourly_enabled: true },
-		dc: { hourly_metrics: ['temperature', 'wind'], hourly_metric_formats: { wind: true }, outlook_metric_formats: { temperature: true }, placements: { outlook_reports: [] } }
+		// „Ausblick aus“ steht allein in der Marke `placements.outlook_reports` (ADR-0124 Nr. 6, #3277).
+		oben: { morning_enabled: true, morning_time: '07:00:00', hourly_enabled: true, alert_cooldown_minutes: 45, alert_quiet_from: '22:30', alert_quiet_to: '06:30' },
+		dc: { ideal_ranges: { temperature: { min: -5, max: 25 } }, placements: { outlook_reports: [] } }
 	}
 };
 /** Vergleichbarer Ausschnitt eines gespeicherten Abos (ohne die Felder, die der Test selbst schaltet). */
-function altStand(kind: HubKind, s: Json): Json {
+function fremdStand(kind: HubKind, s: Json): Json {
 	const { morning_enabled: _m, show_stage_stats: _e, ...rc } = (s.report_config ?? {}) as Json;
 	return kind === 'route'
 		? { report_config: rc, display_config: s.display_config }
-		: { display_config: s.display_config };
+		: {
+				alert_cooldown_minutes: s.alert_cooldown_minutes,
+				alert_quiet_from: s.alert_quiet_from,
+				alert_quiet_to: s.alert_quiet_to,
+				display_config: s.display_config
+			};
 }
 
 test.describe('Karte „Was steht wo“', () => {
@@ -869,15 +876,19 @@ test.describe('Karte „Was steht wo“', () => {
 			}
 		});
 
-		test(`WS-14 (${fall.name}): Speichern in Zustellung und Karte lässt Altfelder stehen; zweiter Nutzer unberührt`, async ({ browser, page }) => {
+		test(`WS-14 (${fall.name}): Speichern in Zustellung und Karte lässt fremde Einstellungen stehen; zweiter Nutzer unberührt`, async ({ browser, page }) => {
 			await page.setViewportSize(DESKTOP);
-			const abo = await seed(page.request, fall, ALTFELDER[fall.kind]);
+			const abo = await seed(page.request, fall, FREMDE_FELDER[fall.kind]);
 			const zweit = await zweitNutzer(browser, page, { sprache: 'de', ip: `10.31.23.${fall.kind === 'route' ? 1 : 2}` });
-			const fremd = await seed(zweit.seite.request, fall, ALTFELDER[fall.kind]);
+			const fremd = await seed(zweit.seite.request, fall, FREMDE_FELDER[fall.kind]);
 			try {
-				const vorher = altStand(abo.kind, await stand(page.request, abo.kind, abo.id));
-				const fremdVorher = altStand(fremd.kind, await stand(zweit.seite.request, fremd.kind, fremd.id));
-				expect(vorher, 'Messaufbau: Altfelder gespeichert').toMatchObject(abo.kind === 'route' ? { report_config: { multi_day_trend_reports: ['morning'] } } : { display_config: { placements: { outlook_reports: [] } } });
+				const vorher = fremdStand(abo.kind, await stand(page.request, abo.kind, abo.id));
+				const fremdVorher = fremdStand(fremd.kind, await stand(zweit.seite.request, fremd.kind, fremd.id));
+				expect(vorher, 'Messaufbau: fremde Einstellungen gespeichert').toMatchObject(
+					abo.kind === 'route'
+						? { report_config: { daily_summary_metrics: ['thunder'], wind_exposition_min_elevation_m: 1800 } }
+						: { alert_cooldown_minutes: 45, alert_quiet_from: '22:30', alert_quiet_to: '06:30', display_config: { ideal_ranges: { temperature: { min: -5, max: 25 } }, placements: { outlook_reports: [] } } }
+				);
 				// #3155/#3277: Orte-Anlage mit der Marke „aus“ (leere Liste, ADR-0124 Nr. 6) behält sie.
 				// #3237 (AC-2): dazu die volle Tabelle aus der Grundauswahl.
 				if (abo.kind === 'vergleich') {
@@ -900,7 +911,7 @@ test.describe('Karte „Was steht wo“', () => {
 					expect((await p).status()).toBe(200);
 					expect((await stand(page.request, abo.kind, abo.id)).schedule, 'Pausieren im Abschnitt Aktivierung speichert').toBe('manual');
 				}
-				expect(altStand(abo.kind, await stand(page.request, abo.kind, abo.id)), 'nach Speichern im Reiter Zustellung').toEqual(vorher);
+				expect(fremdStand(abo.kind, await stand(page.request, abo.kind, abo.id)), 'nach Speichern im Reiter Zustellung').toEqual(vorher);
 
 				// Karte: ein Schalter unter der Tabelle.
 				const karte = await oeffneKarte(page, abo);
@@ -909,8 +920,8 @@ test.describe('Karte „Was steht wo“', () => {
 				expect((await p).status()).toBe(200);
 				const nachher = await stand(page.request, abo.kind, abo.id);
 				expect(abo.kind === 'route' ? nachher.report_config.show_stage_stats : nachher.hourly_enabled).toBe(false);
-				expect(altStand(abo.kind, nachher), 'nach Speichern in der Karte').toEqual(vorher);
-				expect(altStand(fremd.kind, await stand(zweit.seite.request, fremd.kind, fremd.id)), 'Abo des zweiten Nutzers').toEqual(fremdVorher);
+				expect(fremdStand(abo.kind, nachher), 'nach Speichern in der Karte').toEqual(vorher);
+				expect(fremdStand(fremd.kind, await stand(zweit.seite.request, fremd.kind, fremd.id)), 'Abo des zweiten Nutzers').toEqual(fremdVorher);
 			} finally {
 				await fremd.aufraeumen();
 				await zweit.aufraeumen();

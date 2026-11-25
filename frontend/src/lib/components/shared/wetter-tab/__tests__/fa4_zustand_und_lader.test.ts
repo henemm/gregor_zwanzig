@@ -11,7 +11,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { live } from './wetterTabDaten.ts';
+import { aufgeloestVon, aufloesungPost, live } from './wetterTabDaten.ts';
 import { aktiveMetriken, vorlagenAusTemplates } from '../ampelModell.ts';
 import { mitMetrik, mitVorlage, ohneMetrik, standAusAbo, tagesfensterLesen } from '../wetterZustand.ts';
 import { ladeWetterDaten } from '../wetterTabLaden.ts';
@@ -22,7 +22,8 @@ const vorlagen = () => vorlagenAusTemplates(live().templates);
 describe('F-A4 (D6): Vorlagenwechsel und Zuruecksetzen ersetzen die Auswahl', () => {
 	test('Wechsel allgemein → wassersport: Auswahl = aktive Metriken von Wassersport', () => {
 		const v = vorlagen();
-		const s = standAusAbo('vergleich', { display_config: { ampel: { template: 'allgemein' } } }, v);
+		const abo = { display_config: { ampel: { template: 'allgemein' } } };
+		const s = standAusAbo('vergleich', abo, aufgeloestVon(abo));
 		assert.notDeepEqual(sortiert(aktiveMetriken(v.allgemein)), sortiert(aktiveMetriken(v.wassersport)), 'Messaufbau');
 		// p5c: Kontext ausdruecklich wie standAusAbo (Standard 'route' leitet Trip-Kinder ab).
 		const n = mitVorlage(s, 'wassersport', v, 'vergleich');
@@ -32,7 +33,8 @@ describe('F-A4 (D6): Vorlagenwechsel und Zuruecksetzen ersetzen die Auswahl', ()
 
 	test('Zuruecksetzen nach „−"/„+": Auswahl wieder wie die Vorlage', () => {
 		const v = vorlagen();
-		const s0 = standAusAbo('vergleich', { display_config: { ampel: { template: 'wandern' } } }, v);
+		const abo = { display_config: { ampel: { template: 'wandern' } } };
+		const s0 = standAusAbo('vergleich', abo, aufgeloestVon(abo));
 		const weg = s0.auswahl[0];
 		const geaendert = mitMetrik(ohneMetrik(s0, weg), 'dewpoint');
 		assert.notDeepEqual(sortiert(geaendert.auswahl), sortiert(s0.auswahl), 'Messaufbau');
@@ -62,21 +64,22 @@ describe('F-A4 (D1/D2): eigene Vorlagen nur der passenden Art (ladeWetterDaten)'
 			if (pfad === '/api/templates') return d.templates as T;
 			if (pfad === '/api/metric-presets') return presets as T;
 			throw new Error(`unerwartet: ${pfad}`);
-		}
+		},
+		post: aufloesungPost()
 	};
 
 	test('Trip: eigene Vorlagen der Art route plus Bestand ohne Art', async () => {
-		const d = await ladeWetterDaten(client, 'route');
+		const d = await ladeWetterDaten(client, 'route', {});
 		assert.deepEqual(d.eigene.map((e) => e.id).sort(), ['p-alt', 'p-route']);
 	});
 
 	test('Orts-Briefing: nur eigene Vorlagen der Art vergleich', async () => {
-		const d = await ladeWetterDaten(client, 'vergleich');
+		const d = await ladeWetterDaten(client, 'vergleich', {});
 		assert.deepEqual(d.eigene.map((e) => e.id), ['p-orte']);
 	});
 
 	test('AC-10: sieben Systemvorlagen, Kurzbeschreibung mit Metrikzahl aus den Vorlagen-Daten', async () => {
-		const d = await ladeWetterDaten(client, 'route');
+		const d = await ladeWetterDaten(client, 'route', {});
 		assert.equal(d.liste.length, 7);
 		for (const e of d.liste) assert.equal(e.anzahl, aktiveMetriken(d.vorlagen[e.id]).length, `${e.id}: Metrikzahl`);
 	});

@@ -181,18 +181,18 @@ describe('AC-6 [#1848 A2] — Persistenz-Roundtrip bleibt zeichengleich, unabhae
 
 // ─── AC-13 (Bedienflaeche): Ausblick-Schalter erreicht die Persistenz ────────
 
-describe('AC-13 — Ausblick-Schalter im Speicher-Payload', () => {
-	test('outlookEnabled=false landet als Top-Level outlook_enabled im PUT-Body', () => {
+// Issue #3298 (ADR-0124 Nr. 6): `placements.outlook_reports` ersetzt den Ausblick-Schalter. Der
+// Editor setzt `outlook_enabled` nie mehr; ein Bestandswert reist nur per Spread mit.
+describe('AC-13 / #3298 — Ausblick-Schalter im Speicher-Payload', () => {
+	test('ein Editor-Wert outlookEnabled wird nie als outlook_enabled gesendet', () => {
 		const { body } = buildComparePresetSavePayload(
 			makePreset(),
-			baseEdits({ outlookEnabled: false })
+			baseEdits({ outlookEnabled: false } as never)
 		);
 
-		assert.equal(
-			(body as unknown as Record<string, unknown>).outlook_enabled,
-			false,
-			'Der ausgeschaltete 3-Tages-Ausblick erreicht die Go-API nicht — ' +
-				'outlook_enabled fehlt im PUT-Body (heute gibt es dafuer gar keine Bedienflaeche)'
+		assert.ok(
+			!('outlook_enabled' in (body as unknown as Record<string, unknown>)),
+			'#3298: outlook_enabled darf nie aus dem Editor kommen'
 		);
 	});
 

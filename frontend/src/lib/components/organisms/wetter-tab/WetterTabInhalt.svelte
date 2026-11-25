@@ -28,9 +28,10 @@
 	import type { RadarZiel } from './warnungenRadarZeilen.ts';
 	import AnpassenKarte from './AnpassenKarte.svelte';
 	import WasStehtWoKarte from './WasStehtWoKarte.svelte';
-	import { alarmZaehler, altSchluesselAusKatalog, ausgebbarTeilen, briefingAngebot, gewitterFehler, grenzenFehler, verschmelzen, zeilenGruppen } from '../../shared/wetter-tab/ampelModell.ts';
+	import { alarmZaehler, altSchluesselAusKatalog, ausgebbarTeilen, briefingAngebot, gewitterFehler, grenzenFehler, zeilenGruppen } from '../../shared/wetter-tab/ampelModell.ts';
 	import type { AlarmAb, AltSchluessel, Farbe, Kontext } from '../../shared/wetter-tab/ampelModell.ts';
 	import { eigeneVorlageAus, ladeWetterDaten, ortAnzahlVon, vorlageHerkunft, type WetterDaten } from '../../shared/wetter-tab/wetterTabLaden.ts';
+	import { eintragAusAbo, loeseAmpelnAuf, type Aufgeloest } from '../../shared/wetter-tab/ampelAufloesung.ts';
 	import { SPEICHERER, anlegeSpeicherer, type SpeicherOptionen } from '../../shared/wetter-tab/wetterTabSpeicherung.ts';
 	import * as Z from '../../shared/wetter-tab/wetterZustand.ts';
 	import type { KarteAnlegeStand } from '../../shared/wetter-tab/wasStehtWoSpeicherung.ts';
@@ -114,14 +115,21 @@
 
 	async function laden(): Promise<void> {
 		phase = 'laedt';
+		const eintrag = () => JSON.stringify(eintragAusAbo(abo()));
 		try {
-			const [d, katalog] = await Promise.all([ladeWetterDaten(api, context), VERGLEICHS_KATALOG[context]()]);
+			let gefragt = eintrag();
+			const [d, katalog] = await Promise.all([ladeWetterDaten(api, context, abo()), VERGLEICHS_KATALOG[context]()]);
+			// Aendert sich das Abo waehrend des Ladens (noch laufendes Speichern), gilt die Antwort nicht mehr.
+			while (gefragt !== eintrag()) {
+				gefragt = eintrag();
+				[d.aufgeloest] = await loeseAmpelnAuf(api, [eintragAusAbo(abo())]);
+			}
 			aggregation = (id) => katalog.find((e) => e.metric_id === id)?.aggregation ?? 'max';
 			altSchluessel = altSchluesselAusKatalog(katalog);
 			katalogIds = new Set(katalog.flatMap((e) => (e.metric_id ? [e.metric_id] : [])));
 			daten = d;
 			if (!stand) {
-				stand = Z.standAusAbo(context, abo(), d.vorlagen, altSchluessel, { eig: d.eig, alsVorlage: createMode });
+				stand = Z.standAusAbo(context, abo(), d.aufgeloest, altSchluessel, { eig: d.eig, alsVorlage: createMode });
 				gemeldet = signatur(stand);
 				if (createMode) melden();
 			}
@@ -148,9 +156,9 @@
 		// Melden, damit der Entwurf die neue Auswahl trägt. Der Kartenstand fließt nie in den Entwurf zurück.
 		if (createMode && JSON.stringify(neu.auswahl) !== metrikVorher) karte?.vorschauNachMetrik();
 	}
-	function neuGeladen(frisch: Z.AboSicht): void {
+	function neuGeladen(frisch: Z.AboSicht, aufgeloest: Aufgeloest): void {
 		if (!daten) return;
-		stand = Z.standAusAbo(context, frisch, daten.vorlagen, altSchluessel, { eig: daten.eig });
+		stand = Z.standAusAbo(context, frisch, aufgeloest, altSchluessel, { eig: daten.eig });
 		gemeldet = signatur(stand);
 		offen = null;
 		entwurf = null;
@@ -210,8 +218,9 @@
 		if (e) vorlageSetzen(Z.mitEigenerVorlage(stand!, e.ampel, daten!.vorlagen, context, altSchluessel));
 	}
 	function vorlageGespeichert(p: MetricPreset): void {
-		if (!daten) return;
-		const neu = eigeneVorlageAus(p, daten.vorlagen);
+		// #2988: Ampel aus der Antwort; fehlt sie, kommt die Vorlage beim naechsten Laden in die Liste.
+		if (!daten || !p.ampel) return;
+		const neu = eigeneVorlageAus(p, p.ampel);
 		if ((p.kind ?? context) === context) daten = { ...daten, eigene: [neu, ...daten.eigene] };
 	}
 
@@ -235,7 +244,7 @@
 			: []
 	);
 	// #3193: dieselbe Basis wie Zaehler und Speicherweg (die Kinder leitet `mitEigenerVorlage` beim Anwenden wieder ab).
-	const aboAmpel = $derived(stand && daten ? verschmelzen(Z.vorlageImKontext(stand, vorlagen, context, altSchluessel).vorlage, Z.mengeVon(stand, vorlagen, context, altSchluessel)) : {});
+	const aboAmpel = $derived(stand && daten ? Z.aboAmpelVon(stand, vorlagen, context, altSchluessel) : {});
 	const vorlageLabel = $derived(daten?.liste.find((v) => v.id === stand?.vorlageId)?.label ?? stand?.vorlageId ?? '');
 
 	/** Weicht die Zeile in Grenzen (bzw. Gewitterfarben) von der Vorlage ab? */

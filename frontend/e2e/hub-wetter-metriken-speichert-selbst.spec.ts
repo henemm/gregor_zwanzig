@@ -124,15 +124,12 @@ const MS_SEL: Record<
 			send_sms: false,
 			alert_cooldown_minutes: 45,
 			hourly_enabled: true,
-			outlook_enabled: true,
 			day_window_start_hour: 4,
 			day_window_end_hour: 19,
 			corridors: [{ metric: 'snow_depth_cm', range: [30, 200], notify: false, mark: true }],
 			display_config: {
 				ideal_ranges: { snow_depth_cm: { min: 30, max: 200 } },
 				active_metrics: [{ metric_id: METRIK, aggregation: 'max' }],
-				hourly_metrics: ['snow_depth_cm'],
-				outlook_metrics: ['snow_depth_cm'],
 				telegram_style: 'kurzform'
 			}
 		},

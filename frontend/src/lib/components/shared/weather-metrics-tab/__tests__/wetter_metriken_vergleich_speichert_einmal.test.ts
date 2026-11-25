@@ -120,7 +120,7 @@ describe('AC-1: eine Wetter-Metriken-Änderung speichert im Takt des Controllers
 	test('nach erfolgreichem Speichern wandert die Baseline: erneute Meldung ohne Änderung → kein zweiter PUT', async () => {
 		const { ctl, speicherung, bedienung } = aufbau();
 
-		bedienung.outlookEnabledToggle();
+		bedienung.hourlyEnabledToggle(); // #3298: einziger eigener Schalter
 		speicherung.aenderungMelden();
 		await ctl.flush();
 		assert.equal(puts().length, 1);
@@ -133,9 +133,8 @@ describe('AC-1: eine Wetter-Metriken-Änderung speichert im Takt des Controllers
 	});
 
 	// #3276: eine reine Listen-Aenderung (Altschluessel) gilt nicht als Aenderung — kein PUT.
-	test('#3276: Stundenverlauf-Liste/Kanal-Auswahl geaendert → kein PUT (Altschluessel)', async () => {
-		const { ws, ctl, speicherung, bedienung } = aufbau();
-		bedienung.hourlyDragEnd(['snow_depth_cm']);
+	test('#3276: Kanal-Auswahl geaendert → kein PUT (Altschluessel)', async () => {
+		const { ws, ctl, speicherung } = aufbau();
 		ws.channelActiveMetricKeys = { email: ['gust_max_kmh'], telegram: null, sms: null };
 		speicherung.aenderungMelden();
 		assert.equal(ctl.hasPending, false);

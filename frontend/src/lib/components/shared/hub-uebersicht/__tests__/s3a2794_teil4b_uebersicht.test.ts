@@ -10,7 +10,7 @@
 //   U4: export function tripAlarmAbText(trip: Trip, vorlagen: VorlagenAmpeln | null,
 //                                       eig: Record<string, MetrikEigenschaften> | null): string
 //         Zähler des Reiters Wetter auf DERSELBEN aufgelösten Ampel:
-//         alarmZaehler(standAusAbo('route', trip, vorlagen).ampel, .auswahl, eig) —
+//         alarmZaehler(standAusAbo('route', trip, aufgeloest).ampel, .auswahl, eig) —
 //         „{ausloesend} von {alarmfaehig} Metriken lösen einen Alarm aus" (EN „… of … metrics trigger an alert"),
 //         vorlagen oder eig === null (Ladefehler) ⇒ „—", nie eine geratene Zahl.
 //
@@ -33,7 +33,7 @@ import { register } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { live } from '../../wetter-tab/__tests__/wetterTabDaten.ts';
+import { aufgeloestVon, live } from '../../wetter-tab/__tests__/wetterTabDaten.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const FRONTEND = resolve(HIER, '..', '..', '..', '..', '..', '..');
@@ -111,7 +111,7 @@ describe('AC-32 U4: Alarm-Zeile der Trip-Übersicht = „Alarm ab"-Zähler des R
 		test(`${name}: Zahlen wie der Reiter Wetter (alarmZaehler auf standAusAbo)`, async () => {
 			const m = await modell();
 			const { vorlagen, eig } = await umgebung();
-			const stand = (await wetterZustand()).standAusAbo('route', t, vorlagen);
+			const stand = (await wetterZustand()).standAusAbo('route', t, aufgeloestVon(t));
 			const z = (await ampelModell()).alarmZaehler(stand.ampel, stand.auswahl, eig);
 			const text: string = m.tripAlarmAbText(t, vorlagen, eig);
 			if (z.art === 'zaehler') {

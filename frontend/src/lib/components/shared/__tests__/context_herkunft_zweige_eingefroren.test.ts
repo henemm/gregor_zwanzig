@@ -231,7 +231,8 @@ const EINGEFROREN: readonly string[] = [
 	// sie gilt AB JETZT der neue positionsbasierte Vertrag auf `:235`.
 	// #3276: -7 (Durchreicher hourly_/outlook_* an buildComparePresetSavePayload entfernt
 	// oberhalb), Weiche unveraendert, nachgemessen.
-	'versandVergleichSpeicherung.ts:237',
+	// #3298: -1 (Durchreicher outlookEnabled oberhalb entfernt), Weiche unveraendert, nachgemessen.
+	'versandVergleichSpeicherung.ts:236',
 	// Bug #2454 Fix-Loop 1 (Rebase auf origin/main 2026-09-30, ueberlagert
 	// #2422 S2a): initFromTrip()-Bucket-Zerlegung als computeInitialBuckets()
 	// nach metricsEditor.ts ausgelagert, die Markup-Weiche zusaetzlich durch
@@ -283,7 +284,8 @@ const EINGEFROREN: readonly string[] = [
 	'alarme-tab/alarmeTabSections.ts:27',
 	'alarme-tab/alarmeTabSections.ts:38',
 	// #3276: -5 (Durchreicher hourly_/outlook_* und Import entfernt), Weiche unveraendert.
-	'wetter-tab/wertebereicheVergleichSpeicherung.ts:204',
+	// #3298: -1 (Durchreicher outlookEnabled entfernt), Weiche unveraendert.
+	'wetter-tab/wertebereicheVergleichSpeicherung.ts:203',
 	// #2931 (Rueckbau DayWindowCard): beide um 5 Zeilen nach oben verschoben (Kommentarblock
 	// zum entfallenen Abschnitt 'tagesfenster' geloescht); Bedingungen unveraendert, nachgemessen.
 	// #3276: die Vergleichs-Weiche (:68, `COMPARE_ONLY_SECTIONS` = 'stundenverlauf') ist
@@ -296,7 +298,8 @@ const EINGEFROREN: readonly string[] = [
 	// #3097: +15 (Feld `hourlyMetricFormats` in Snapshots/Nutzlast oberhalb), Text unveraendert.
 	// #3276: -53 (Altschluessel aus Nutzlast, Vergleich, Kanal-Diff und Rollback oberhalb entfernt), Text unveraendert.
 	// #3276 Fix-Loop F005: -79 (flushPendingWeatherMetricsSave + WeatherMetricsSnapshot oberhalb entfernt), Text unveraendert.
-	'weather-metrics-tab/weatherMetricsCompareSave.ts:439',
+	// #3298: -75 (Lese-Naht Kanal-Auswahl, Layout-Altfelder und Ausblick-Schalter oberhalb entfernt), Text unveraendert.
+	'weather-metrics-tab/weatherMetricsCompareSave.ts:364',
 	// Issue #1743: der geteilte Baustein „Wetter-Metriken + Versand" waehlt den
 	// Versand-Inhalt nach Herkunft — Trip-Hub ueber BriefingScheduleTab (route ohne
 	// createMode), Vergleich und Trip-Anlegen ueber den EINEN VersandTab. Diese Weiche

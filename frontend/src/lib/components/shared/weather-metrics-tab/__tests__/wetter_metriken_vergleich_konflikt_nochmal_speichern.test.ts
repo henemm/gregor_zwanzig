@@ -91,37 +91,17 @@ describe('AC-7: Speicherkonflikt beim Wetter-Metriken-Speichern → „Nochmal s
 		};
 		const { ws, ctl, speicherung, bedienung } = aufbau(kaputt);
 
-		const vorher = ws.outlookEnabled;
-		bedienung.outlookEnabledToggle(); // #3276: Zustellungs-Geste ist ein Schalter
+		const vorher = ws.hourlyEnabled;
+		bedienung.hourlyEnabledToggle(); // #3276/#3298: Zustellungs-Geste ist der Stundenverlauf-Schalter
 		speicherung.aenderungMelden();
 		await ctl.flush();
 
 		assert.equal(ctl.state, 'error', 'ein 500 ist kein Konflikt');
-		assert.equal(ws.outlookEnabled, vorher, 'bei einem Nicht-412-Fehler muss die Änderung zurückgerollt werden');
+		assert.equal(ws.hourlyEnabled, vorher, 'bei einem Nicht-412-Fehler muss die Änderung zurückgerollt werden');
 	});
 
-	// Issue #3276: vorher „Konflikt beim Stundenverlauf (Liste)". Die Liste ist Altschluessel; derselbe
-	// Fehlerpfad wird am Ausblick-Schalter geprueft, und die Liste bleibt dabei auf dem Server Bestand.
-	test('Konflikt beim Ausblick-Schalter verhält sich identisch — Stundenverlauf-Liste bleibt Bestand', async () => {
-		await api.get(PRESET_PFAD);
-		await server.handler(PRESET_PFAD, { method: 'PUT', body: JSON.stringify({ name: 'fremd2' }) });
-		const { ws, ctl, speicherung, bedienung } = aufbau();
-
-		bedienung.hourlyDragEnd(['temp_max_c', 'gust_max_kmh']);
-		bedienung.outlookEnabledToggle();
-		speicherung.aenderungMelden();
-		await ctl.flush();
-
-		assert.equal(ctl.state, 'conflict');
-		assert.equal(ws.outlookEnabled, false, 'kein Rollback bei 412');
-
-		await ctl.retryConflict();
-		assert.equal(ctl.state, 'idle');
-		const gespeichert = server.storedBody(PRESET_ID) as Record<string, unknown>;
-		assert.equal(gespeichert.outlook_enabled, false);
-		// storedBody = zuletzt gesendeter Rumpf (fakeTripServer): die Liste reist nicht mit.
-		assert.ok(!('hourly_metrics' in dc(gespeichert)), 'hourly_metrics im Wiederholungs-PUT');
-	});
+	// Issue #3298: der Fall „Konflikt beim Ausblick-Schalter" ist entfallen (Schalter
+	// `outlookEnabled` entfernt); der Konfliktpfad ist oben am Stundenverlauf-Schalter belegt.
 });
 
 // ── Issue #2375 (Test 6): „Nochmal speichern" sendet NUR die Eigenfelder ────

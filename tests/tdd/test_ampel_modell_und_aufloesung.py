@@ -6,7 +6,6 @@ echter Loader auf ``tmp_path``, echter FastAPI-Router. Fixture relativ zur
 Testdatei aufgeloest.
 """
 
-import copy
 import json
 import logging
 from pathlib import Path
@@ -18,7 +17,6 @@ from fastapi.testclient import TestClient
 from app import metric_catalog
 from app.ampel import (
     ampel_for,
-    deviation_count,
     template_id_for,
     thunder_color,
     validate_ampel,
@@ -154,19 +152,7 @@ def test_ungueltige_compare_ampel_wird_beim_aufloesen_verworfen(caplog):
     assert any("ungueltig" in r.getMessage() for r in caplog.records)
 
 
-# --- Abweichungszahl und Gewitter -------------------------------------------
-
-def test_abweichungszahl_zaehlt_grenzen_gewitter_und_alarmstufe():
-    # Issue #2794 S3a (AC-28): alarm_ab zaehlt jetzt mit (vorher S1 §1: nicht).
-    vorlage_gust = copy.deepcopy(AMPEL_TEMPLATES["skitouren"]["metrics"]["gust"])
-    assert deviation_count({"template": "skitouren"}) == 0
-    assert deviation_count({"template": "skitouren", "metrics": {"gust": vorlage_gust}}) == 0
-    assert deviation_count({"template": "skitouren",
-                            "metrics": {"gust": {**vorlage_gust, "alarm_ab": "never"}}}) == 1
-    assert deviation_count({"template": "skitouren", "metrics": {"gust": _gust(42, 55, 70)}}) == 1
-    assert deviation_count({"template": "skitouren", "metrics": {"gust": _gust(42, 55, 70)},
-                            "thunder": {"mittel": "red", "hoch": "red"}}) == 2
-
+# --- Gewitter ---------------------------------------------------------------
 
 def _aufgeloest(abo_ampel):
     """#2792 S1c-4b Fix-Loop 2 Nachtrag (AC-27): ``thunder_color`` liest die

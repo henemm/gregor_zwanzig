@@ -146,36 +146,20 @@ describe('#2049 F004 — Umschalten darf keine anderen display_config-Felder ver
 	});
 });
 
-describe('#2049 F005 / #3276 — eine reine Umschaltung loest keinen PUT mehr aus (Altschluessel)', () => {
-	const basis: LayoutSnapshot = {
-		hourlyMetricKeys: ['temp_c'],
-		hourlyEnabled: true,
-		outlookMetricKeys: ['gust', 'sunshine'],
-		outlookMetricFormats: null,
-		outlookEnabled: true
-	};
+// Issue #3298: der Layout-Snapshot traegt nur noch den Stundenverlauf-Schalter; die Faelle
+// „reine Formats-Umschaltung" und „Ausblick-Schalter" sind mit den Feldern entfallen.
+describe('#2049 F005 / #3276 / #3298 — Layout-Speicherweg sendet nur den Stundenverlauf-Schalter', () => {
+	const basis: LayoutSnapshot = { hourlyEnabled: true };
 
-	test('NUR outlookMetricFormats geaendert -> kein PUT (null)', () => {
-		const current: LayoutSnapshot = { ...basis, outlookMetricFormats: { gust: true } };
-		assert.equal(flushPendingLayoutSave(makePreset(), current, basis), null);
-	});
-
-	test('Zuruecknehmen auf Roh loest ebenfalls keinen PUT aus', () => {
-		const vorher: LayoutSnapshot = { ...basis, outlookMetricFormats: { gust: true } };
-		const jetzt: LayoutSnapshot = { ...basis, outlookMetricFormats: { gust: false } };
-		assert.equal(flushPendingLayoutSave(makePreset(), jetzt, vorher), null);
-	});
-
-	test('der Ausblick-Schalter (eigenes Feld) wird weiter gesendet, ohne display_config', () => {
-		const jetzt: LayoutSnapshot = { ...basis, outlookEnabled: false };
-		const payload = flushPendingLayoutSave(makePreset(), jetzt, basis);
-		assert.ok(payload, 'outlook_enabled wird nicht mehr gespeichert');
-		assert.equal((payload.body as unknown as Record<string, unknown>).outlook_enabled, false);
-		assert.equal(payload.body.display_config, undefined);
+	test('Stundenverlauf-Schalter geaendert -> PUT nur mit hourly_enabled, ohne display_config', () => {
+		const payload = flushPendingLayoutSave(makePreset(), { hourlyEnabled: false }, basis);
+		assert.ok(payload, 'hourly_enabled wird nicht mehr gespeichert');
+		assert.deepEqual(Object.keys(payload.body).sort(), ['hourly_enabled']);
+		assert.equal((payload.body as unknown as Record<string, unknown>).hourly_enabled, false);
 	});
 
 	test('unveraenderter Snapshot bleibt null (kein PUT ohne Aenderung)', () => {
-		const gleich: LayoutSnapshot = { ...basis, outlookMetricFormats: { gust: true } };
+		const gleich: LayoutSnapshot = { ...basis };
 		assert.equal(
 			flushPendingLayoutSave(makePreset(), gleich, { ...gleich }),
 			null,

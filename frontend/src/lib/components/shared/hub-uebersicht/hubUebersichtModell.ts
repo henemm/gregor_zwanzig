@@ -26,10 +26,15 @@ import {
 import { get } from 'svelte/store';
 import { locale, tr, trn, type MessageKey } from '../../../i18n/index.ts';
 import { aboVorlagenName } from '../wetter-tab/vorlageName.ts';
+import { vorlageIdFuer } from '../../alerts-tab/alarmAbAnzeige.ts';
+import type { Aufgeloest } from '../wetter-tab/ampelAufloesung.ts';
 import {
 	alarmZaehler,
 	ausgebbarTeilen,
+	STANDARD_VORLAGE,
 	vergleichsKatalogIds,
+	verschmelzen,
+	type Ampel,
 	type AltSchluessel,
 	type MetrikEigenschaften,
 	type VorlagenAmpeln
@@ -136,6 +141,13 @@ export function tripAlertKanaele(trip: Trip): Kanal[] {
 	return (['email', 'telegram', 'sms', 'premium_sms'] as const).filter((k) => ac[k] === true);
 }
 
+/** Übergang bis #2988 S4: die Übersichten lösen noch lokal auf (S4 löscht diese Funktion). */
+function lokalAufgeloest(abo: AboSicht, vorlagen: VorlagenAmpeln): Aufgeloest {
+	const dc = (abo.display_config ?? {}) as { ampel?: Ampel | null; preset_name?: string };
+	const vorlage_id = vorlageIdFuer(dc.ampel, dc.preset_name, abo.profil as string | undefined, vorlagen);
+	return { vorlage_id, ampel: verschmelzen(vorlagen[vorlage_id] ?? vorlagen[STANDARD_VORLAGE], dc.ampel) };
+}
+
 /** „Alarm ab"-Zähler des Reiters Wetter auf der aufgelösten Ampel des Trips (Issue #2794 U4):
  *  dieselbe Funktion `alarmZaehler` auf `standAusAbo`, kein zweites Rechenmodell.
  *  `null` = Vorlagen oder Metrik-Katalog nicht geladen. */
@@ -146,7 +158,8 @@ function tripAlarmZaehler(
 ): ReturnType<typeof alarmZaehler> | null {
 	if (!vorlagen || !eig || Object.keys(vorlagen).length === 0) return null;
 	// #3047 p5c: mit `eig` wie der Reiter — „nie eingestellt" = Register-Standard der Mail, nicht die Vorlage.
-	const stand = standAusAbo('route', trip as unknown as AboSicht, vorlagen, {}, { eig });
+	const abo = trip as unknown as AboSicht;
+	const stand = standAusAbo('route', abo, lokalAufgeloest(abo, vorlagen), {}, { eig });
 	return alarmZaehler(stand.ampel, stand.auswahl, eig);
 }
 
@@ -301,10 +314,11 @@ function orteKarte(aufgeloesteOrte: Array<{ rank: number; loc?: { name: string }
  *  die Mail; gezaehlt werden nur ausgebbare Groessen (Zeilen der Vergleichstabelle).
  *  Vorlagen oder Katalog nicht geladen (fehlt/null/leer) ⇒ „—" statt einer erfundenen Zahl. Liest nur. */
 function wertebereicheKarte(preset: ComparePreset, vorlagen: VorlagenAmpeln | null | undefined, alt: AltSchluessel | null | undefined): Karte {
+	const abo = preset as unknown as AboSicht;
 	const katalog = new Set(vergleichsKatalogIds(alt ?? {}));
 	const geladen = !!vorlagen && Object.keys(vorlagen).length > 0 && katalog.size > 0;
 	const anzahl = geladen
-		? ausgebbarTeilen('vergleich', standAusAbo('vergleich', preset as unknown as AboSicht, vorlagen, alt ?? {}).auswahl, katalog).zeilen.length
+		? ausgebbarTeilen('vergleich', standAusAbo('vergleich', abo, lokalAufgeloest(abo, vorlagen), alt ?? {}).auswahl, katalog).zeilen.length
 		: null;
 	return {
 		eyebrow: tr('aktionen.reiter.wetter'),

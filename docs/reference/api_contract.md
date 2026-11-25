@@ -205,6 +205,7 @@ Fehlerantworten der Go-API, die über `handler.WriteError`/`WriteErrorWith` lauf
 | `/api/admin/users/{id}/disabled` | PUT — nur Admin, Konto sperren/entsperren (#2155 S3) |
 | `/api/admin/users/{id}/tier` | PUT — nur Admin, Tier setzen (#2155 S3) |
 | `/api/alert-metric-channel-keys` | GET — Session-Pflicht, nutzerunabhängig (Issue #1895 S3a). Proxy auf Python `GET /alert-metric-channel-keys`. Antwort `{"keys": {<AlertMetric>: [<schlüssel>, …]}, "accepted": [<schlüssel>, …]}`: `keys` bildet je Alarm-Zeile auf die sortierte Liste der `alert_metric_channels`-Speicherschlüssel ab, die der Leser für diese Zeile liest (z. B. `wind_gust → ["gust"]`, `wind_change → ["gust", "wind"]`, `snow_line → ["freezing_level"]`; `humidity` fehlt); `accepted` ist die sortierte Vereinigung aller Listen plus den Legacy-Schlüssel `snowfall_limit` (nur von der Migration geschrieben, nie Ziel in `keys`). Einzige Quelle: `weather_change_detection.alert_metric_channel_keys()`; `/api/metrics` bleibt unverändert. Details Abschnitt „alert_metric_channels" |
+| `/api/ampel/aufloesung` | POST — Rumpf `{"eintraege": [...]}` (höchstens 32, 256 KiB), Antwort `{"ergebnisse": [{"vorlage_id", "ampel"}]}`; 400 `bad_request`, 401 `unauthorized`, 413 `payload_too_large`; zustandslos, ohne `ETag`; §11 „Ampel auflösen“ (#2988 S2) |
 | `/api/archive/stats` | GET |
 | `/api/auth/account/delete` | POST — Kontoloeschung mit Re-Auth (#2160, ADR-0081; ersetzt den entfallenen DELETE auf `/api/auth/account`) |
 | `/api/auth/account/delete-code` | POST — Lösch-Code an die wirksame Adresse (#2160) |
@@ -1440,6 +1441,28 @@ ampel = { template: "<vorlagen-id>",
 - **Speichern:** die Ampel wird als **ganzer Unterbaum** ersetzt (Client sendet die vollstaendige Ampel); alle anderen `display_config`-Felder bleiben per Read-Modify-Write erhalten. Python schreibt die Ampel beim Speichern mit.
 - **`GET /api/templates`** liefert je Vorlage zusaetzlich `ampel` (vollstaendig, `template` = Vorlagen-ID); `id`/`label`/`metrics` unveraendert. Quelle `src/app/ampel_templates.py` (Zahlen aus `docs/context/einstellungen_neu.md` §4.4).
 - **Eigene Vorlage** (`MetricPreset.ampel`, §15.5): Anwenden im Trip-Editor sendet deren Ampel als `display_config.ampel`; eine eingebaute Vorlage sendet `{template: "<id>"}`; Zustellung und Etappen bleiben unberuehrt.
+
+### Ampel auflösen: `POST /api/ampel/aufloesung` (Issue #2988 S2)
+
+Vorlage plus Abweichungen ergibt die vollständige Ampel; gerechnet wird allein im Python-Kern (`app.ampel.resolve_entwurf`). Spec: `docs/specs/modules/rework_2988_ampel_ableitung.md`.
+
+```
+Rumpf:   { eintraege: [ { ampel?: {...}|null, preset_name?: string|null,
+                          profil?: string|null, metrics?: [{metric_id, enabled}]|null } ] }
+200:     { ergebnisse: [ { vorlage_id: "<id>", ampel: {... vollständig, template = vorlage_id} } ] }
+```
+
+- **Länge und Reihenfolge** von `ergebnisse` gleich `eintraege`; unbekannte Felder (auch `display_config`) wirken nicht.
+- **Abo-Sicht:** Rang `ampel.template` > `preset_name` > `profil` (`summer_trekking` → `alpen-trekking`), unbekannte Vorlage → `allgemein`. Eine ungültige Ampel (`validate_ampel`, oder nicht als JSON ausgebbar, z. B. `1e999`, einzelne Surrogate, zu tiefe Schachtelung) wird ignoriert, samt ihrem `template`; kein Eintrag erzeugt einen Fehler.
+- **Altbestand einer eigenen Vorlage** (`ampel` fehlt oder `null` UND `metrics` ist eine Liste): `allgemein`, an sind nur Zeilen mit `enabled: true`; unlesbare Zeilen werden übergangen, auch solche mit leerer `metric_id`. `ampel: {}` ist Abo-Sicht.
+- **Zustandslos:** kein Abo, keine Vorlage und keine Einstellung wird gelesen oder geschrieben, kein `ETag`; das Ergebnis hängt nicht vom Nutzer ab. Go (`AmpelAufloesungHandler`) prüft Anmeldung, Größe und Form ohne Kern-Aufruf und reicht den Rumpf unverändert weiter, Query genau `user_id` aus der Anmeldung (bestimmt nur die Sprache der Fehlertexte).
+
+| Status | Code | Wann |
+|---|---|---|
+| 400 | `bad_request` | kein gültiges UTF-8, kein JSON-Objekt, `eintraege` keine Liste oder mehr als 32, Eintrag kein Objekt, `preset_name`/`profil` weder Text noch null, `metrics` weder Liste noch null; keine Teilantwort. Der Kern prüft dasselbe, zusätzlich zu tiefe Schachtelung und nicht lesbare Zahlen |
+| 401 | `unauthorized` | keine gültige Anmeldung, vor allem anderen |
+| 413 | `payload_too_large` | Rumpf über 256 KiB |
+| 502 | `upstream_unreachable` | Kern nicht erreichbar oder Antwort nicht binnen 120 s |
 
 ### Tabelle „Was steht wo“ `display_config.placements` (Issue #3122, ADR-0124, seit B1a)
 
@@ -5403,6 +5426,7 @@ Ablage: `GZ_DATA_DIR/mcp/clients.json` (DCR-Clients) und `GZ_DATA_DIR/mcp/tokens
 
 ## Changelog
 
+- 2026-11-25: Issue #2988 S2 (Spec `docs/specs/modules/rework_2988_ampel_ableitung.md`) — neu `POST /api/ampel/aufloesung`: der Python-Kern löst bis zu 32 Entwürfe (Vorlage + Abweichungen, Altbestand eigener Vorlagen) zur vollständigen Ampel auf; zustandslos, noch ohne Aufrufer. §11 „Ampel auflösen“.
 - 2026-11-25: Issue #3277 (Epic #3122 B6b-3, Spec `docs/specs/modules/feat_3277_altfelder_entfernen.md`) — Die zehn Altfelder `channel_layouts`, `channel_layouts_per_report`, `channel_active_metrics`, `outlook_metrics`, `outlook_metric_formats`, `hourly_metrics`, `hourly_metric_formats`, `show_outlook`, `multi_day_trend_reports`, `outlook_enabled` sind aus Python-Modell (`UnifiedWeatherDisplayConfig`, `TripReportConfig`), Loader, Serialisierung, E-Mail-Renderern (Parameter `show_outlook`) und dem Go-Struct `ComparePreset` (Feld `OutlookEnabled`) entfernt. Gelesen werden sie nicht mehr; jedes Speichern über Python (`save_trip`, `update_trip`, `save_location`, Status-/Pause-Schreiber der Ortsvergleiche) entfernt sie aus oberster Ebene, `display_config` und `report_config` (zentrale Liste `ALTFELDER` in `src/app/loader.py`), alle übrigen Schlüssel bleiben per Merge erhalten (ADR-0101). Ausblick an/aus und „Ausblick erscheint im“ stehen allein in `display_config.placements.outlook_reports`. Go-Schreibwege lassen einen von Clients gesendeten Schlüssel `outlook_enabled` beim Dekodieren fallen; Bestand bleibt bis zum Datenlauf #3351. Request-Felder `hourly_metrics`/`hourly_metric_formats` der Validator-Vorschau bleiben (Request-Parameter ohne Store-Bezug). Für Nutzer ändert sich in keinem Kanal etwas.
 - 2026-11-24: Issue #3036 — `GET /api/briefings/{id}/placements?kind=route`: `blocks` (Trip) führt zusätzlich `show_compact_summary` (Kurz-Zusammenfassung) und `show_stability` (Großwetterlage). Beide Schalter stehen unter „Ganze Blöcke ein- und ausschalten“ in der Tabelle „Was steht wo“ und sind bei Kompakt-Format gesperrt; gespeichert werden sie als `report_config.show_compact_summary` bzw. `report_config.show_stability`.
 - 2026-11-23: Issue #3304 (Teil A von #3041, Spec `docs/specs/modules/feat_3304_was_steht_wo_vorschau.md`) — neu `POST /api/briefings/placements/vorschau?kind=route|vergleich`: Tabelle „Was steht wo“ für einen noch nicht angelegten Trip bzw. Orts-Vergleich, gleiche Antwort wie `GET /api/briefings/{id}/placements`, immer `stored: false`, kein `ETag`, schreibt nichts. Abschnitt „Tabelle … Lese- und Schreib-Endpoint“.

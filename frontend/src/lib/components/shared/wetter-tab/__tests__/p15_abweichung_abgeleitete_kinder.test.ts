@@ -15,7 +15,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { WETTER_TAB, live, vergleichsKatalogFetch } from './wetterTabDaten.ts';
+import { aufloesungPost, WETTER_TAB, live, vergleichsKatalogFetch } from './wetterTabDaten.ts';
 import { attributAusdruck, findeKomponenten, ohneTypen, umgebungFuer, werte, type Knoten } from '../../__tests__/svelteInstanzPruefstand.ts';
 import { aktiveMetriken, vorlagenAusTemplates } from '../ampelModell.ts';
 
@@ -29,7 +29,8 @@ const api = {
 		if (pfad === '/api/templates') return LIVE.templates;
 		if (pfad === '/api/metric-presets') return [];
 		throw new Error(`unerwartet: ${pfad}`);
-	}
+	},
+	post: aufloesungPost()
 };
 
 type Reiter = { u: Knoten; zahl: () => number; zuruecksetzen: () => void };

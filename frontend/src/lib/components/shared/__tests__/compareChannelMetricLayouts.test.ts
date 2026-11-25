@@ -46,63 +46,14 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import type { ChannelId } from '$lib/components/shared/layout-tab/ltChannels';
-import type {
-	CompareSelectionEntry,
-	StoredActiveMetric
-} from '../weather-metrics-tab/compareMetricSelection.ts';
-
 // Issue #3276 (Spec-AC-38): `mergeAllCompareChannelActiveMetricsForSave` ist mit dem Schreiben von
 // `channel_active_metrics` entfallen (Altschluessel). Die beiden Bloecke AC-S8-10/AC-S8-11, die nur
 // diese Schreib-Naht prueften, sind entfernt; dass der Ortsvergleich den Schluessel weder beim
 // Anlegen noch beim Speichern sendet, prueft compare/feat3276_vergleich_ohne_altfelder.test.ts.
-const { compareChannelActiveMetricsFromStored, startCompareChannelOverride } = await import(
-	'../weather-metrics-tab/compareChannelMetricLayouts.ts'
-);
+const { startCompareChannelOverride } = await import('../weather-metrics-tab/compareChannelMetricLayouts.ts');
 
-// Echte Katalogzeilen (Beleg: src/output/renderers/compare_metric_catalog.py).
-const catalog: CompareSelectionEntry[] = [
-	{ metric: 'temp_max_c', label: 'Temperatur', metric_id: 'temperature', aggregation: 'max' },
-	{ metric: 'wind_max_kmh', label: 'Wind', metric_id: 'wind', aggregation: 'max' },
-	{ metric: 'precip_sum_mm', label: 'Niederschlag', metric_id: 'precipitation', aggregation: 'sum' }
-];
-
-const stored = (metric_id: string, aggregation: string): StoredActiveMetric => ({
-	metric_id,
-	aggregation
-});
-
-describe('Hydration: gespeicherter Stand -> Kanal-Overrides', () => {
-	test('fehlender Kanal-Key bleibt null (folgt der Grundauswahl), vorhandener wird aufgeloest', () => {
-		const hydrated = compareChannelActiveMetricsFromStored(
-			{ sms: [stored('wind', 'max'), stored('temperature', 'max')] },
-			catalog
-		);
-
-		assert.deepEqual(hydrated.sms, ['wind_max_kmh', 'temp_max_c'], 'sms-Override nicht aufgeloest');
-		assert.equal(hydrated.email, null, 'ein nie editierter Kanal muss null bleiben, nicht []');
-		assert.equal(hydrated.telegram, null);
-	});
-
-	test('gespeichertes [] bleibt [] (bewusste Leerauswahl), nicht null', () => {
-		const hydrated = compareChannelActiveMetricsFromStored({ sms: [] }, catalog);
-
-		assert.deepEqual(
-			hydrated.sms,
-			[],
-			'AC-S8-11 FAIL: nach dem Neuladen faellt die geleerte SMS-Auswahl auf die globale ' +
-				'Liste zurueck — [] und "nie editiert" sind zwei verschiedene Zustaende'
-		);
-	});
-
-	test('kein gespeichertes Feld (Altbestand) -> alle drei Kanaele null', () => {
-		assert.deepEqual(compareChannelActiveMetricsFromStored(undefined, catalog), {
-			email: null,
-			telegram: null,
-			sms: null
-		});
-	});
-});
+// Issue #3298: der Block „Hydration: gespeicherter Stand -> Kanal-Overrides" ist mit der
+// Lese-Naht `compareChannelActiveMetricsFromStored` entfallen (Altschluessel, ADR-0124).
 
 describe('Copy-on-write: der erste Kanal-Edit startet als Kopie der Grundauswahl', () => {
 	test('startet inhaltlich mit der globalen Reihenfolge und teilt ihr Array nicht', () => {

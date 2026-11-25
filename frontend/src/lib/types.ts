@@ -281,8 +281,6 @@ export interface ReportConfig {
 	change_threshold_precip_mm?: number;
 	show_compact_summary?: boolean;
 	wind_exposition_min_elevation_m?: number | null;
-	multi_day_trend_morning?: boolean;
-	multi_day_trend_evening?: boolean;
 	// Issue #619 — E-Mail-Elemente abschaltbar (Backend seit #621 live)
 	show_stage_stats?: boolean;
 	show_quick_take_tags?: boolean;
@@ -314,32 +312,15 @@ export interface ChannelLayouts {
 	sms?: WeatherConfigMetric[];
 }
 
-// Issue #434 — per-report-Overrides (Abend ≠ Morgen, snake_case auf der Wire).
-export interface ChannelLayoutsPerReport {
-	morning?: ChannelLayouts;
-	evening?: ChannelLayouts;
-}
-
 export interface DisplayConfig {
 	preset_name?: string;
 	metrics?: WeatherConfigMetric[];
-	channel_layouts?: ChannelLayouts; // Issue #429
-	channel_layouts_per_report?: ChannelLayoutsPerReport; // Issue #434
 	telegram_kurzform?: boolean; // Issue #614: SMS-Kurzform als Tages-Max-Anhang
 	show_night_block?: boolean; // Issue #1721: Nacht-Stundentabelle der Trip-Mail; fehlt = an (loader.py)
 	alert_preset?: string; // Issue #846: "deaktiviert" | "entspannt" | "standard" | "sensibel"
 	metric_alert_levels?: Record<string, SensLevel>; // Issue #864: metric → SensLevel
 	telegram_style?: 'rich' | 'kurzform'; // Issue #1260: Compare-amtliche Warnung im SMS-Kurzstil (opt-in)
-	// Issue #1720 S1 / #1848 A2: Spaltenauswahl der 3-Tages-Vorschau als reine
-	// Kennungen (`["temperature", "gust"]`); welche Auswertungen eine Kennung
-	// zeigt, leitet der Katalog serverseitig ab. Die Paar-Altform (#1373)
-	// bleibt lesbar, wird aber nicht mehr geschrieben.
-	// Feld fehlt = die sieben festen Spalten; `[]` = der Block entfaellt ganz.
-	outlook_metrics?: string[];
-	// Issue #2049: Roh/Einfach je Vorschau-Groesse (`true` = Einfach). PARALLELES
-	// Feld, damit `outlook_metrics` eine reine Kennungsliste bleibt. Fehlende
-	// Kennung = Roh; das Feld ganz fehlend = nie eingestellt.
-	outlook_metric_formats?: Record<string, boolean>;
+	// Issue #3298: Kanal-Layouts und Ausblick-Spalten/-Formate (Altfelder, ADR-0124) entfallen.
 	// Issue #3297 (ADR-0124 Nr. 5/6): Tabelle „Was steht wo“ — einzige Quelle für Platzierung und
 	// 3-Tages-Ausblick je Briefing (`outlook_reports`). Volles Format: wetter-tab/wasStehtWoStand.ts.
 	placements?: {
@@ -746,13 +727,11 @@ export interface ComparePreset {
 	// schedule==='manual' (KL-3). Schreibende Quelle bleibt in dieser Scheibe
 	// `schedule`; Lesen (deriveStatusFromPreset) bevorzugt paused_at.
 	paused_at?: string;
-	// ideal_ranges, channel_layouts, region, active_metrics (#680);
-	// hourly_metric_formats (#3097): Roh/Einfach je Stundenverlauf-Groesse, `{kennung: bool}`, fehlt = Roh
+	// ideal_ranges, region, active_metrics (#680), placements (#3297, ADR-0124)
 	display_config?: Record<string, unknown>;
 	official_alerts_enabled?: boolean;  // Issue #1040 — amtliche Warnungen ein/aus
 	radar_alert_enabled?: boolean;  // Issue #1041 — Radar-Alarm ein/aus (Default AUS)
 	hourly_enabled?: boolean;  // Issue #1107 — Stundenverlauf-Sektion ein/aus
-	outlook_enabled?: boolean;  // Issue #1361/#1368 — 3-Tages-Ausblick ein/aus
 	// Issue #1170 — Alarm-Konfiguration (Epic #1095 Scheibe 3/3), Trip-identische Keys.
 	// metric_alert_levels lebt bewusst in display_config, nicht hier.
 	alert_cooldown_minutes?: number;

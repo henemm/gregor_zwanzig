@@ -157,6 +157,13 @@ describe('#2966 AC-7: Schreib-Tripwire', () => {
 		assert.equal(befund([]), null);
 		assert.equal(befund([{ method: 'GET', url: '/api/metrics' }, { method: 'HEAD', url: '/api/x' }, { method: 'OPTIONS', url: '/api/y' }]), null);
 	});
+	test('POST /api/ampel/aufloesung liest nur (#2988) ⇒ kein Befund, PUT dorthin und jeder andere POST bleiben Befund', () => {
+		const url = 'https://staging.gregor20.henemm.com/api/ampel/aufloesung';
+		assert.equal(befund([{ method: 'POST', url }, { method: 'POST', url: '/api/ampel/aufloesung' }]), null);
+		assert.ok(befund([{ method: 'PUT', url }]));
+		assert.ok(befund([{ method: 'POST', url: `${url}/x` }]));
+		assert.match(befund([{ method: 'POST', url }, { method: 'POST', url: '/api/trips' }])!, /1 schreibende/);
+	});
 	for (const method of ['PUT', 'POST', 'PATCH', 'DELETE', 'post']) {
 		test(`${method} während der Bedienung ⇒ Befund nennt Methode und Pfad`, () => {
 			const b = befund([{ method: 'GET', url: '/api/metrics' }, { method, url: '/api/metric-presets' }]);

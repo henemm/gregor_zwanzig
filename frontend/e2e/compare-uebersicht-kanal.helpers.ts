@@ -23,7 +23,7 @@
 //   set -a; source /home/hem/gregor_zwanzig_staging/.env; set +a
 //   npx playwright test --config=e2e/playwright.compare-uebersicht-kanal.staging.config.ts
 
-import { expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 export type KanalId = 'email' | 'telegram' | 'sms';
 
@@ -86,27 +86,4 @@ export async function ausSchaltenOhneSpeichern(f: KanalFlaeche, metrik: string):
 		.locator(`[data-testid="wm2-reihenfolge-row"][data-metric-id="${metrik}"]`)
 		.getByRole('button', { name: 'Aus', exact: true }).click();
 	await expect.poll(() => ausMetriken(f), { timeout: 10_000 }).toContain(metrik);
-}
-
-let katalogPaare: Map<string, string> | null = null;
-
-/** GESPEICHERTER Stand eines Kanals als Auswahl-Schluessel. `null` = Schluessel
- *  FEHLT (nie editiert), `[]` = bewusste Leerauswahl (AC-S8-11) — genau diese
- *  Unterscheidung ist die Zusicherung und an der Anzeige nicht ablesbar.
- *  Uebersetzt {metric_id, aggregation} (#1373) ueber den Katalog zurueck. */
-export async function gespeicherteKanalAuswahl(
-	request: APIRequestContext, presetId: string, kanal: KanalId
-): Promise<string[] | null> {
-	if (!katalogPaare) {
-		const kres = await request.get('/api/compare/metrics');
-		expect(kres.ok(), `GET /api/compare/metrics HTTP ${kres.status()}`).toBeTruthy();
-		const kat = (await kres.json()) as { metrics: { key: string; metric_id?: string; aggregation?: string }[] };
-		katalogPaare = new Map(kat.metrics.map((m) => [`${m.metric_id}|${m.aggregation}`, m.key]));
-	}
-	const res = await request.get(`/api/compare/presets/${presetId}`);
-	expect(res.ok(), `GET Preset HTTP ${res.status()}`).toBeTruthy();
-	const preset = (await res.json()) as { display_config?: Record<string, unknown> };
-	const roh = (preset.display_config?.channel_active_metrics as Record<string, unknown>)?.[kanal];
-	if (!Array.isArray(roh)) return null;
-	return roh.map((e) => (typeof e === 'string' ? e : katalogPaare!.get(`${e.metric_id}|${e.aggregation}`) ?? JSON.stringify(e)));
 }

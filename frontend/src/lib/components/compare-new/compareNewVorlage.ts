@@ -24,7 +24,6 @@ import {
 import { hydrateVersandFieldsFromPreset } from '../shared/versandVergleichSpeicherung.ts';
 import { tr } from '../../i18n/index.ts';
 import {
-	hydrateChannelActiveMetricsFromPreset,
 	hydrateDayWindowFromPreset,
 	hydrateLayoutFieldsFromPreset
 } from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
@@ -52,7 +51,7 @@ export function feldsatzAusVorlage(
 		...hub,
 		// Versand inkl. endDate (fehlend ⇒ null, AC-9).
 		...hydrateVersandFieldsFromPreset(preset),
-		channelActiveMetricKeys: hydrateChannelActiveMetricsFromPreset(preset),
+		// Issue #3298: Kanal-Overrides und Layout-Altfelder der Vorlage werden nicht gelesen.
 		...hydrateDayWindowFromPreset(preset),
 		...hydrateLayoutFieldsFromPreset(preset),
 		// Issue #2659 (i18n F10): Vorschlagsname in der Sprache des Nutzers (danach Nutzerdaten).

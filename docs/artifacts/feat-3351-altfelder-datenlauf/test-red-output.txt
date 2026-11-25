@@ -1,0 +1,430 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.6.0 -- /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit
+configfile: pyproject.toml
+plugins: xdist-3.8.0, timeout-2.4.0, anyio-4.14.2, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collecting ... collected 15 items
+
+tests/tdd/test_migrate_3277_altfelder.py::test_ac1_probelauf_berichtet_aggregiert_und_schreibt_nichts FAILED [  6%]
+tests/tdd/test_migrate_3277_altfelder.py::test_ac2_ausfuehren_entfernt_alle_altfelder_auf_drei_ebenen FAILED [ 13%]
+tests/tdd/test_migrate_3277_altfelder.py::test_ac3_alle_anderen_felder_bleiben_und_leerer_container_bleibt FAILED [ 20%]
+tests/tdd/test_migrate_3277_altfelder.py::test_ac4_sicherung_je_nutzer_getrennt_mit_originalinhalt FAILED [ 26%]
+tests/tdd/test_migrate_3277_altfelder.py::test_ac4_sicherungsfehler_schreibt_keine_datei FAILED [ 33%]
+tests/tdd/test_migrate_3277_altfelder.py::test_ac5_blockiertes_abo_bricht_vor_jedem_schreiben_mit_exit_2_ab[ohne_rows] FAILED [ 40%]
+tests/tdd/test_migrate_3277_altfelder.py::test_ac5_blockiertes_abo_bricht_vor_jedem_schreiben_mit_exit_2_ab[ohne_outlook_reports] FAILED [ 46%]
+tests/tdd/test_migrate_3277_altfelder.py::test_ac5_blockiertes_abo_bricht_vor_jedem_schreiben_mit_exit_2_ab[ohne_placements] FAILED [ 53%]
+tests/tdd/test_migrate_3277_altfelder.py::test_ac6_blockierte_auslassen_laesst_blockiertes_byte_gleich FAILED [ 60%]
+tests/tdd/test_migrate_3277_altfelder.py::test_ac7_zweiter_lauf_aendert_nichts FAILED [ 66%]
+tests/tdd/test_migrate_3277_altfelder.py::test_ac8_nachzaehlen_exit_1_bei_rest_0_nach_bereinigung_rein_lesend FAILED [ 73%]
+tests/tdd/test_migrate_3277_altfelder.py::test_ac8_nachzaehlen_weist_ausgelassenes_blockiertes_abo_aus FAILED [ 80%]
+tests/tdd/test_migrate_3277_altfelder.py::test_ac9_compare_presets_ohne_tabellenpruefung_bereinigt FAILED [ 86%]
+tests/tdd/test_migrate_3277_altfelder.py::test_ac10_seit_planung_geaenderte_datei_bleibt_und_wiederholung_bereinigt FAILED [ 93%]
+tests/tdd/test_migrate_3277_altfelder.py::test_ac11_jedes_der_zehn_felder_wird_je_ebene_entfernt FAILED [100%]
+
+=================================== FAILURES ===================================
+_________ test_ac1_probelauf_berichtet_aggregiert_und_schreibt_nichts __________
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac1_probelauf_berichtet_a0/users')
+
+    def test_ac1_probelauf_berichtet_aggregiert_und_schreibt_nichts(root):
+        vorher = _summen(root)
+>       out = _lauf(root)
+              ^^^^^^^^^^^
+
+tests/tdd/test_migrate_3277_altfelder.py:168: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac1_probelauf_berichtet_a0/users')
+code = 0, args = ()
+
+    def _lauf(root: Path, *args: str, code: int = 0) -> str:
+        res = subprocess.run([sys.executable, str(SCRIPT), "--root", str(root), *args],
+                             capture_output=True, text=True, timeout=60)
+>       assert res.returncode == code, f"Exit {res.returncode}\n{res.stdout}\n{res.stderr}"
+E       AssertionError: Exit 2
+E         
+E         /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory
+E         
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python', '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py', '--root', '/tmp/pytest-of-hem/pytest-3753/test_ac1_probelauf_berichtet_a0/users'], returncode=2, stdout='', stderr="/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory\n").returncode
+
+tests/tdd/test_migrate_3277_altfelder.py:124: AssertionError
+_________ test_ac2_ausfuehren_entfernt_alle_altfelder_auf_drei_ebenen __________
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac2_ausfuehren_entfernt_a0/users')
+
+    def test_ac2_ausfuehren_entfernt_alle_altfelder_auf_drei_ebenen(root):
+        trip_b = root / "bob" / "briefings" / "trip-b.json"
+        trip_b.chmod(0o640)
+>       _lauf(root, "--ausfuehren")
+
+tests/tdd/test_migrate_3277_altfelder.py:184: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac2_ausfuehren_entfernt_a0/users')
+code = 0, args = ('--ausfuehren',)
+
+    def _lauf(root: Path, *args: str, code: int = 0) -> str:
+        res = subprocess.run([sys.executable, str(SCRIPT), "--root", str(root), *args],
+                             capture_output=True, text=True, timeout=60)
+>       assert res.returncode == code, f"Exit {res.returncode}\n{res.stdout}\n{res.stderr}"
+E       AssertionError: Exit 2
+E         
+E         /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory
+E         
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python', '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py', '--root', '/tmp/pytest-of-hem/pytest-3753/test_ac2_ausfuehren_entfernt_a0/users', '--ausfuehren'], returncode=2, stdout='', stderr="/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory\n").returncode
+
+tests/tdd/test_migrate_3277_altfelder.py:124: AssertionError
+_______ test_ac3_alle_anderen_felder_bleiben_und_leerer_container_bleibt _______
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac3_alle_anderen_felder_b0/users')
+
+    def test_ac3_alle_anderen_felder_bleiben_und_leerer_container_bleibt(root):
+        vorher = {p: _lies(p) for p in _briefings(root)}
+        sauber = root / "bob" / "briefings" / "trip-sauber.json"
+        sauber_bytes = sauber.read_bytes()
+>       _lauf(root, "--ausfuehren")
+
+tests/tdd/test_migrate_3277_altfelder.py:199: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac3_alle_anderen_felder_b0/users')
+code = 0, args = ('--ausfuehren',)
+
+    def _lauf(root: Path, *args: str, code: int = 0) -> str:
+        res = subprocess.run([sys.executable, str(SCRIPT), "--root", str(root), *args],
+                             capture_output=True, text=True, timeout=60)
+>       assert res.returncode == code, f"Exit {res.returncode}\n{res.stdout}\n{res.stderr}"
+E       AssertionError: Exit 2
+E         
+E         /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory
+E         
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python', '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py', '--root', '/tmp/pytest-of-hem/pytest-3753/test_ac3_alle_anderen_felder_b0/users', '--ausfuehren'], returncode=2, stdout='', stderr="/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory\n").returncode
+
+tests/tdd/test_migrate_3277_altfelder.py:124: AssertionError
+___________ test_ac4_sicherung_je_nutzer_getrennt_mit_originalinhalt ___________
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac4_sicherung_je_nutzer_g0/users')
+
+    def test_ac4_sicherung_je_nutzer_getrennt_mit_originalinhalt(root):
+        original = {uid: (root / uid / "briefings" / f"trip-{uid[0]}.json").read_bytes()
+                    for uid in ("alice", "bob")}
+>       _lauf(root, "--ausfuehren")
+
+tests/tdd/test_migrate_3277_altfelder.py:214: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac4_sicherung_je_nutzer_g0/users')
+code = 0, args = ('--ausfuehren',)
+
+    def _lauf(root: Path, *args: str, code: int = 0) -> str:
+        res = subprocess.run([sys.executable, str(SCRIPT), "--root", str(root), *args],
+                             capture_output=True, text=True, timeout=60)
+>       assert res.returncode == code, f"Exit {res.returncode}\n{res.stdout}\n{res.stderr}"
+E       AssertionError: Exit 2
+E         
+E         /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory
+E         
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python', '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py', '--root', '/tmp/pytest-of-hem/pytest-3753/test_ac4_sicherung_je_nutzer_g0/users', '--ausfuehren'], returncode=2, stdout='', stderr="/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory\n").returncode
+
+tests/tdd/test_migrate_3277_altfelder.py:124: AssertionError
+________________ test_ac4_sicherungsfehler_schreibt_keine_datei ________________
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac4_sicherungsfehler_schr0/users')
+
+    def test_ac4_sicherungsfehler_schreibt_keine_datei(root):
+        for ort in (root.parent / ".backups", root / ".backups"):
+            ort.write_text("kein Ordner", encoding="utf-8")  # mkdir/tar scheitern
+        vorher = _summen(root)
+>       _lauf(root, "--ausfuehren", code=1)
+
+tests/tdd/test_migrate_3277_altfelder.py:233: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac4_sicherungsfehler_schr0/users')
+code = 1, args = ('--ausfuehren',)
+
+    def _lauf(root: Path, *args: str, code: int = 0) -> str:
+        res = subprocess.run([sys.executable, str(SCRIPT), "--root", str(root), *args],
+                             capture_output=True, text=True, timeout=60)
+>       assert res.returncode == code, f"Exit {res.returncode}\n{res.stdout}\n{res.stderr}"
+E       AssertionError: Exit 2
+E         
+E         /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory
+E         
+E       assert 2 == 1
+E        +  where 2 = CompletedProcess(args=['/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python', '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py', '--root', '/tmp/pytest-of-hem/pytest-3753/test_ac4_sicherungsfehler_schr0/users', '--ausfuehren'], returncode=2, stdout='', stderr="/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory\n").returncode
+
+tests/tdd/test_migrate_3277_altfelder.py:124: AssertionError
+_ test_ac5_blockiertes_abo_bricht_vor_jedem_schreiben_mit_exit_2_ab[ohne_rows] _
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac5_blockiertes_abo_brich0/users')
+fall = 'ohne_rows'
+
+    @pytest.mark.parametrize("fall", ["ohne_rows", "ohne_outlook_reports", "ohne_placements"])
+    def test_ac5_blockiertes_abo_bricht_vor_jedem_schreiben_mit_exit_2_ab(root, fall):
+        _blockiert(root, fall)
+        vorher = _summen(root)
+        out = _lauf(root, "--ausfuehren", code=2)
+>       assert "BLOCKIERT" in out and "trip-blockiert" in out, out
+E       AssertionError: /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory
+E         
+E       assert ('BLOCKIERT' in "/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory\n")
+
+tests/tdd/test_migrate_3277_altfelder.py:245: AssertionError
+_ test_ac5_blockiertes_abo_bricht_vor_jedem_schreiben_mit_exit_2_ab[ohne_outlook_reports] _
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac5_blockiertes_abo_brich1/users')
+fall = 'ohne_outlook_reports'
+
+    @pytest.mark.parametrize("fall", ["ohne_rows", "ohne_outlook_reports", "ohne_placements"])
+    def test_ac5_blockiertes_abo_bricht_vor_jedem_schreiben_mit_exit_2_ab(root, fall):
+        _blockiert(root, fall)
+        vorher = _summen(root)
+        out = _lauf(root, "--ausfuehren", code=2)
+>       assert "BLOCKIERT" in out and "trip-blockiert" in out, out
+E       AssertionError: /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory
+E         
+E       assert ('BLOCKIERT' in "/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory\n")
+
+tests/tdd/test_migrate_3277_altfelder.py:245: AssertionError
+_ test_ac5_blockiertes_abo_bricht_vor_jedem_schreiben_mit_exit_2_ab[ohne_placements] _
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac5_blockiertes_abo_brich2/users')
+fall = 'ohne_placements'
+
+    @pytest.mark.parametrize("fall", ["ohne_rows", "ohne_outlook_reports", "ohne_placements"])
+    def test_ac5_blockiertes_abo_bricht_vor_jedem_schreiben_mit_exit_2_ab(root, fall):
+        _blockiert(root, fall)
+        vorher = _summen(root)
+        out = _lauf(root, "--ausfuehren", code=2)
+>       assert "BLOCKIERT" in out and "trip-blockiert" in out, out
+E       AssertionError: /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory
+E         
+E       assert ('BLOCKIERT' in "/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory\n")
+
+tests/tdd/test_migrate_3277_altfelder.py:245: AssertionError
+_________ test_ac6_blockierte_auslassen_laesst_blockiertes_byte_gleich _________
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac6_blockierte_auslassen_0/users')
+
+    def test_ac6_blockierte_auslassen_laesst_blockiertes_byte_gleich(root):
+        blockiert = _blockiert(root, "ohne_rows")
+        bytes_vorher = blockiert.read_bytes()
+>       out = _lauf(root, "--ausfuehren", "--blockierte-auslassen")
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_migrate_3277_altfelder.py:253: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac6_blockierte_auslassen_0/users')
+code = 0, args = ('--ausfuehren', '--blockierte-auslassen')
+
+    def _lauf(root: Path, *args: str, code: int = 0) -> str:
+        res = subprocess.run([sys.executable, str(SCRIPT), "--root", str(root), *args],
+                             capture_output=True, text=True, timeout=60)
+>       assert res.returncode == code, f"Exit {res.returncode}\n{res.stdout}\n{res.stderr}"
+E       AssertionError: Exit 2
+E         
+E         /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory
+E         
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python', '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py', '--root', '/tmp/pytest-of-hem/pytest-3753/test_ac6_blockierte_auslassen_0/users', '--ausfuehren', '--blockierte-auslassen'], returncode=2, stdout='', stderr="/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory\n").returncode
+
+tests/tdd/test_migrate_3277_altfelder.py:124: AssertionError
+_____________________ test_ac7_zweiter_lauf_aendert_nichts _____________________
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac7_zweiter_lauf_aendert_0/users')
+
+    def test_ac7_zweiter_lauf_aendert_nichts(root):
+>       _lauf(root, "--ausfuehren")
+
+tests/tdd/test_migrate_3277_altfelder.py:264: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac7_zweiter_lauf_aendert_0/users')
+code = 0, args = ('--ausfuehren',)
+
+    def _lauf(root: Path, *args: str, code: int = 0) -> str:
+        res = subprocess.run([sys.executable, str(SCRIPT), "--root", str(root), *args],
+                             capture_output=True, text=True, timeout=60)
+>       assert res.returncode == code, f"Exit {res.returncode}\n{res.stdout}\n{res.stderr}"
+E       AssertionError: Exit 2
+E         
+E         /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory
+E         
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python', '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py', '--root', '/tmp/pytest-of-hem/pytest-3753/test_ac7_zweiter_lauf_aendert_0/users', '--ausfuehren'], returncode=2, stdout='', stderr="/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory\n").returncode
+
+tests/tdd/test_migrate_3277_altfelder.py:124: AssertionError
+_____ test_ac8_nachzaehlen_exit_1_bei_rest_0_nach_bereinigung_rein_lesend ______
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac8_nachzaehlen_exit_1_be0/users')
+
+    def test_ac8_nachzaehlen_exit_1_bei_rest_0_nach_bereinigung_rein_lesend(root):
+        vorher = _summen(root)
+>       _lauf(root, "--nachzaehlen", code=1)
+
+tests/tdd/test_migrate_3277_altfelder.py:276: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac8_nachzaehlen_exit_1_be0/users')
+code = 1, args = ('--nachzaehlen',)
+
+    def _lauf(root: Path, *args: str, code: int = 0) -> str:
+        res = subprocess.run([sys.executable, str(SCRIPT), "--root", str(root), *args],
+                             capture_output=True, text=True, timeout=60)
+>       assert res.returncode == code, f"Exit {res.returncode}\n{res.stdout}\n{res.stderr}"
+E       AssertionError: Exit 2
+E         
+E         /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory
+E         
+E       assert 2 == 1
+E        +  where 2 = CompletedProcess(args=['/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python', '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py', '--root', '/tmp/pytest-of-hem/pytest-3753/test_ac8_nachzaehlen_exit_1_be0/users', '--nachzaehlen'], returncode=2, stdout='', stderr="/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory\n").returncode
+
+tests/tdd/test_migrate_3277_altfelder.py:124: AssertionError
+_________ test_ac8_nachzaehlen_weist_ausgelassenes_blockiertes_abo_aus _________
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac8_nachzaehlen_weist_aus0/users')
+
+    def test_ac8_nachzaehlen_weist_ausgelassenes_blockiertes_abo_aus(root):
+        _blockiert(root, "ohne_placements")
+>       _lauf(root, "--ausfuehren", "--blockierte-auslassen")
+
+tests/tdd/test_migrate_3277_altfelder.py:286: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac8_nachzaehlen_weist_aus0/users')
+code = 0, args = ('--ausfuehren', '--blockierte-auslassen')
+
+    def _lauf(root: Path, *args: str, code: int = 0) -> str:
+        res = subprocess.run([sys.executable, str(SCRIPT), "--root", str(root), *args],
+                             capture_output=True, text=True, timeout=60)
+>       assert res.returncode == code, f"Exit {res.returncode}\n{res.stdout}\n{res.stderr}"
+E       AssertionError: Exit 2
+E         
+E         /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory
+E         
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python', '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py', '--root', '/tmp/pytest-of-hem/pytest-3753/test_ac8_nachzaehlen_weist_aus0/users', '--ausfuehren', '--blockierte-auslassen'], returncode=2, stdout='', stderr="/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory\n").returncode
+
+tests/tdd/test_migrate_3277_altfelder.py:124: AssertionError
+___________ test_ac9_compare_presets_ohne_tabellenpruefung_bereinigt ___________
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac9_compare_presets_ohne_0/users')
+
+    def test_ac9_compare_presets_ohne_tabellenpruefung_bereinigt(root):
+        pfad = root / "alice" / "compare_presets.json"
+        vorher = _lies(pfad)
+>       _lauf(root, "--ausfuehren")
+
+tests/tdd/test_migrate_3277_altfelder.py:298: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac9_compare_presets_ohne_0/users')
+code = 0, args = ('--ausfuehren',)
+
+    def _lauf(root: Path, *args: str, code: int = 0) -> str:
+        res = subprocess.run([sys.executable, str(SCRIPT), "--root", str(root), *args],
+                             capture_output=True, text=True, timeout=60)
+>       assert res.returncode == code, f"Exit {res.returncode}\n{res.stdout}\n{res.stderr}"
+E       AssertionError: Exit 2
+E         
+E         /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory
+E         
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python', '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py', '--root', '/tmp/pytest-of-hem/pytest-3753/test_ac9_compare_presets_ohne_0/users', '--ausfuehren'], returncode=2, stdout='', stderr="/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory\n").returncode
+
+tests/tdd/test_migrate_3277_altfelder.py:124: AssertionError
+__ test_ac10_seit_planung_geaenderte_datei_bleibt_und_wiederholung_bereinigt ___
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac10_seit_planung_geaende0/users')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x755a7216dbe0>
+
+    def test_ac10_seit_planung_geaenderte_datei_bleibt_und_wiederholung_bereinigt(root, monkeypatch):
+>       mig = _modul()
+              ^^^^^^^^
+
+tests/tdd/test_migrate_3277_altfelder.py:315: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_migrate_3277_altfelder.py:310: in _modul
+    spec.loader.exec_module(modul)
+<frozen importlib._bootstrap_external>:991: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:1128: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x755a7216d610>
+path = '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py'
+
+<frozen importlib._bootstrap_external>:1186: FileNotFoundError
+____________ test_ac11_jedes_der_zehn_felder_wird_je_ebene_entfernt ____________
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac11_jedes_der_zehn_felde0/users')
+
+    def test_ac11_jedes_der_zehn_felder_wird_je_ebene_entfernt(root):
+        assert len(ALTFELDER) == 10
+        pfad = root / "alice" / "briefings" / "trip-a.json"
+        erwartet = [n for n in ALTFELDER] + [f"{e}.{n}" for e in EBENEN for n in ALTFELDER]
+        assert sorted(_altfunde(_lies(pfad))) == sorted(erwartet), "Testdaten tragen nicht alle Felder"
+>       _lauf(root, "--ausfuehren")
+
+tests/tdd/test_migrate_3277_altfelder.py:340: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/tmp/pytest-of-hem/pytest-3753/test_ac11_jedes_der_zehn_felde0/users')
+code = 0, args = ('--ausfuehren',)
+
+    def _lauf(root: Path, *args: str, code: int = 0) -> str:
+        res = subprocess.run([sys.executable, str(SCRIPT), "--root", str(root), *args],
+                             capture_output=True, text=True, timeout=60)
+>       assert res.returncode == code, f"Exit {res.returncode}\n{res.stdout}\n{res.stderr}"
+E       AssertionError: Exit 2
+E         
+E         /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory
+E         
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python', '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py', '--root', '/tmp/pytest-of-hem/pytest-3753/test_ac11_jedes_der_zehn_felde0/users', '--ausfuehren'], returncode=2, stdout='', stderr="/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python: can't open file '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/scripts/migrate_3277_altfelder.py': [Errno 2] No such file or directory\n").returncode
+
+tests/tdd/test_migrate_3277_altfelder.py:124: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/tdd/test_migrate_3277_altfelder.py::test_ac1_probelauf_berichtet_aggregiert_und_schreibt_nichts
+FAILED tests/tdd/test_migrate_3277_altfelder.py::test_ac2_ausfuehren_entfernt_alle_altfelder_auf_drei_ebenen
+FAILED tests/tdd/test_migrate_3277_altfelder.py::test_ac3_alle_anderen_felder_bleiben_und_leerer_container_bleibt
+FAILED tests/tdd/test_migrate_3277_altfelder.py::test_ac4_sicherung_je_nutzer_getrennt_mit_originalinhalt
+FAILED tests/tdd/test_migrate_3277_altfelder.py::test_ac4_sicherungsfehler_schreibt_keine_datei
+FAILED tests/tdd/test_migrate_3277_altfelder.py::test_ac5_blockiertes_abo_bricht_vor_jedem_schreiben_mit_exit_2_ab[ohne_rows]
+FAILED tests/tdd/test_migrate_3277_altfelder.py::test_ac5_blockiertes_abo_bricht_vor_jedem_schreiben_mit_exit_2_ab[ohne_outlook_reports]
+FAILED tests/tdd/test_migrate_3277_altfelder.py::test_ac5_blockiertes_abo_bricht_vor_jedem_schreiben_mit_exit_2_ab[ohne_placements]
+FAILED tests/tdd/test_migrate_3277_altfelder.py::test_ac6_blockierte_auslassen_laesst_blockiertes_byte_gleich
+FAILED tests/tdd/test_migrate_3277_altfelder.py::test_ac7_zweiter_lauf_aendert_nichts
+FAILED tests/tdd/test_migrate_3277_altfelder.py::test_ac8_nachzaehlen_exit_1_bei_rest_0_nach_bereinigung_rein_lesend
+FAILED tests/tdd/test_migrate_3277_altfelder.py::test_ac8_nachzaehlen_weist_ausgelassenes_blockiertes_abo_aus
+FAILED tests/tdd/test_migrate_3277_altfelder.py::test_ac9_compare_presets_ohne_tabellenpruefung_bereinigt
+FAILED tests/tdd/test_migrate_3277_altfelder.py::test_ac10_seit_planung_geaenderte_datei_bleibt_und_wiederholung_bereinigt
+FAILED tests/tdd/test_migrate_3277_altfelder.py::test_ac11_jedes_der_zehn_felder_wird_je_ebene_entfernt
+======================== 15 failed, 2 warnings in 1.39s ========================

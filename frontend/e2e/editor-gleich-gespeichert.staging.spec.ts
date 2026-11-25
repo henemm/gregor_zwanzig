@@ -48,11 +48,16 @@
 // #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 13/14, ADR-0124): die Kanal-Reiter der
 // Metrik-Oberflaeche im Reiter Zustellung sind entfernt. Im Hub zeigt und schreibt die Karte „Was steht wo“
 // im Reiter Wetter, was in welchem Kanal steht — mit EINER Reihenfolge fuer alle Stellen und einem Haken je
-// Stelle; gespeichert wird `display_config.placements`, `channel_layouts` bleibt als Altfeld unberuehrt.
-// Die Zusicherungen sind auf die heutige Wirkung umformuliert:
-//   AC-10: je Stelle (E-Mail/Telegram/SMS) sind GENAU die Metriken der eingefrorenen Erwartung angehakt
-//          (Menge; die Reihenfolge je Kanal gibt es nicht mehr, die eine Reihenfolge prueft WS-2).
-//   AC-11: Speichern eines Schalters der Karte laesst `channel_layouts` und `metrics` bitgleich stehen.
+// Stelle; gespeichert wird `display_config.placements`.
+// #3359 (Spec fix_3359_e2e_pruefungen_ohne_altfelder.md AC-1/AC-3): seit #3277 wirken die Altfelder von
+// Golden C (u. a. das E-Mail-Layout) nicht mehr; ohne gespeicherte Tabelle gilt die Tabelle aus der
+// Grundauswahl. Die Zusicherungen pruefen deshalb die Wahrheit „Was steht wo“:
+//   AC-10: je Stelle (E-Mail/Telegram/SMS/Ausblick) zeigt die Karte GENAU die Haken, die der Server in seiner
+//          Tabelle (`GET /api/briefings/{id}/placements`, Zellen mit Zustand „on“) ausweist, und jede Ausgabe
+//          der eingefrorenen Erwartung `erwartung_golden_c.json` ist darin angehakt (Teilmenge, wie Python
+//          tests/tdd/test_placements_tabelle_jede_metrik.py::test_golden_jede_erwartete_ausgabe_hat_eine_angehakte_zelle).
+//          Restluecke: zeigen Karte UND Server gemeinsam zu viele Haken, faengt das nur die Python-Golden-Schicht.
+//   AC-11: Speichern eines Schalters der Karte laesst `metrics` und `placements` bitgleich stehen.
 //   AC-17: erstmalige SMS-Bearbeitung (cloud_total ab, gust/precipitation tauschen) steht so in `placements`
 //          und in der Antwort des Endpoints (SMS-Spalte, Reihenfolge), die uebrigen Stellen unveraendert.
 //
@@ -85,9 +90,10 @@ const TRIP_ID = `e2e-2422-s2a-golden-c-${Date.now()}`;
  * sonst behandelt Staging die Tour als archiviert (Stage-Daten liegen im
  * Fixture auf Jan-Maerz 2026). `report_config.enabled=false`: kein echter
  * Versand waehrend des Tests (s.o.). */
-function goldenCAlsTripBody(id: string): Record<string, unknown> {
+function goldenCAlsTripBody(id: string, placements?: Record<string, unknown>): Record<string, unknown> {
 	const golden = ladeFixture<{
 		stages: Array<{ date: string; [k: string]: unknown }>;
+		display_config: Record<string, unknown>;
 		report_config?: Record<string, unknown>;
 		[k: string]: unknown;
 	}>('golden_c.json');
@@ -102,18 +108,34 @@ function goldenCAlsTripBody(id: string): Record<string, unknown> {
 		id,
 		name: `E2E #2422 S2a ${id}`,
 		stages,
+		...(placements ? { display_config: { ...golden.display_config, placements } } : {}),
 		report_config: { ...(golden.report_config ?? {}), enabled: false },
 	};
 }
 
-async function createGoldenCTrip(request: APIRequestContext, id: string) {
+async function createGoldenCTrip(request: APIRequestContext, id: string, placements?: Record<string, unknown>) {
 	await request.delete(`/api/trips/${id}`).catch(() => {});
-	const res = await request.post('/api/trips', { data: goldenCAlsTripBody(id) });
+	const res = await request.post('/api/trips', { data: goldenCAlsTripBody(id, placements) });
 	expect([200, 201], `Seed HTTP ${res.status()}`).toContain(res.status());
 }
 
+/** #3359 (AC-3): eigene Tabelle, die bewusst von der Tabelle aus der Grundauswahl abweicht (sonst waere
+ *  „vorher = nachher“ eine Tautologie): Reihenfolge anders, einzelne Stellen ab, ein Format gesetzt,
+ *  Ausblick nur morgens. Nur gueltige, waehlbare Metriken; verglichen wird GET-vorher gegen GET-nachher. */
+const EIGENE_TABELLE = {
+	version: 1,
+	rows: [
+		{ metric_id: 'thunder', places: { email: true, telegram: true, sms: true, outlook: false } },
+		{ metric_id: 'wind', places: { email: true, telegram: false, sms: true, outlook: true }, formats: { email: 'raw' } },
+		{ metric_id: 'gust', places: { email: false, telegram: true, sms: true, outlook: true } },
+		{ metric_id: 'cloud_low', places: { email: false, telegram: true, sms: false, outlook: false } }
+	],
+	outlook_reports: ['morning']
+};
 
-const STELLEN = ['email', 'telegram', 'sms'] as const;
+
+const STELLEN = ['email', 'telegram', 'sms', 'outlook'] as const;
+type ServerZeile = { metric_id: string; cells: Record<string, { state: string }> };
 
 test.describe('Issue #2422 S2a: Karten-Anzeige = gespeicherter Stand (Golden C, Kaskadenquelle global)', () => {
 	test.beforeEach(async ({ page }) => {
@@ -124,31 +146,50 @@ test.describe('Issue #2422 S2a: Karten-Anzeige = gespeicherter Stand (Golden C, 
 		await request.delete(`/api/trips/${TRIP_ID}`).catch(() => {});
 	});
 
-	test('AC-10: je Stelle (email/telegram/sms) sind genau die Metriken der eingefrorenen Erwartung angehakt', async ({ page, request }) => {
+	test('AC-10: je Stelle zeigt die Karte genau die Haken der Server-Tabelle, jede Ausgabe der Golden-C-Erwartung ist angehakt', async ({ page, request }) => {
 		await createGoldenCTrip(request, TRIP_ID);
 		const erwartung = ladeFixture<{ channels: Record<string, Array<{ metric_id: string }>> }>('erwartung_golden_c.json');
 		const karte = await oeffneKarte(page, 'route', TRIP_ID);
+		const server = (await tabelle(request, 'route', TRIP_ID)).rows as ServerZeile[];
 		const zeilen = await folge(karte);
+		expect(zeilen, 'AC-10: Karte zeigt die Zeilen der Server-Tabelle').toEqual(server.map((r) => r.metric_id));
+		const karteAn: Record<string, string[]> = {};
 		for (const stelle of STELLEN) {
 			const angehakt: string[] = [];
 			for (const m of zeilen) {
 				const h = haken(karte, m, stelle);
 				if ((await h.count()) && (await h.isChecked())) angehakt.push(m);
 			}
-			expect([...angehakt].sort(), `AC-10: Stelle ${stelle}`).toEqual(erwartung.channels[stelle].map((m) => m.metric_id).sort());
+			karteAn[stelle] = angehakt;
+			const serverAn = server.filter((r) => r.cells?.[stelle]?.state === 'on').map((r) => r.metric_id);
+			expect([...angehakt].sort(), `AC-10: Karte = Server-Tabelle an Stelle ${stelle}`).toEqual([...serverAn].sort());
 		}
+		for (const [stelle, liste] of Object.entries(erwartung.channels)) {
+			const fehlt = liste.map((e) => e.metric_id).filter((m) => !(karteAn[stelle] ?? []).includes(m));
+			expect(fehlt, `AC-10: Golden-C-Erwartung an Stelle ${stelle} nicht angehakt`).toEqual([]);
+		}
+		// Festgenagelter Einzelwert: cloud_low (Golden C nur morgens, evening_enabled=false) steht ohne
+		// gespeicherte Tabelle auch in der E-Mail-Spalte (Tabelle aus der Grundauswahl, #3277).
+		expect(karteAn.email, 'AC-10: cloud_low in der E-Mail angehakt').toContain('cloud_low');
 	});
 
-	test('AC-11: Speichern in der Karte laesst channel_layouts und metrics bitgleich stehen (B9-Nachweis bei global)', async ({ page, request }) => {
-		await createGoldenCTrip(request, TRIP_ID);
+	test('AC-11: Speichern in der Karte laesst metrics und placements bitgleich stehen (B9-Nachweis bei global)', async ({ page, request }) => {
+		await createGoldenCTrip(request, TRIP_ID, EIGENE_TABELLE);
 		const vorher = (await stand(request, 'route', TRIP_ID)).display_config;
+		expect(
+			((vorher.placements?.rows ?? []) as Array<{ metric_id: string }>).map((r) => r.metric_id),
+			'Messaufbau: die eigene Tabelle ist gespeichert'
+		).toEqual(EIGENE_TABELLE.rows.map((r) => r.metric_id));
+		const zustaende = (a: { rows: ServerZeile[] }) => a.rows.map((r) => [r.metric_id, Object.fromEntries(STELLEN.map((s) => [s, r.cells?.[s]?.state]))]);
+		const tabelleVorher = zustaende(await tabelle(request, 'route', TRIP_ID));
 		const karte = await oeffneKarte(page, 'route', TRIP_ID);
 		const gespeichert = schalterGespeichert(page, 'route', TRIP_ID);
 		await karte.getByTestId('was-steht-wo-show_yesterday_comparison').click();
 		await gespeichert;
 		const nachher = (await stand(request, 'route', TRIP_ID)).display_config;
-		expect(nachher.channel_layouts, 'AC-11: channel_layouts veraendert').toEqual(vorher.channel_layouts);
 		expect(nachher.metrics, 'AC-11: metrics (inkl. morning_enabled/evening_enabled) veraendert').toEqual(vorher.metrics);
+		expect(nachher.placements, 'AC-11: placements veraendert (Schalter darf die Tabelle nicht schreiben)').toEqual(vorher.placements);
+		expect(zustaende(await tabelle(request, 'route', TRIP_ID)), 'AC-11: Server-Tabelle gibt nach dem Speichern anderes aus').toEqual(tabelleVorher);
 	});
 
 	test('AC-17: erstmalige SMS-Bearbeitung (Metrik abwaehlen + zwei benachbarte tauschen) kommt an wie eingestellt', async ({ page, request }) => {
