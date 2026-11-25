@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import copy
 import json
+import logging
 import os
 from pathlib import Path
 
@@ -21,7 +22,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.ampel import resolve_ampel
+from app.ampel import resolve_ampel, validate_ampel
 
 PFAD = "/api/ampel/aufloesung"
 NUTZER_A, NUTZER_B = "p2988-a", "p2988-b"
@@ -195,6 +196,14 @@ def test_ac6_unlesbare_listenzeilen_werden_uebergangen(client):
     assert an == ["wind"]
 
 
+def test_ac6_leere_metric_id_wird_uebergangen(client):
+    """Eine Zeile ohne Namen ist unlesbar: keine Ampelzeile mit leerem Schluessel."""
+    e = _eins(client, {"metrics": [{"metric_id": "", "enabled": True},
+                                   {"metric_id": "wind", "enabled": True}]})
+    assert set(e["ampel"]["metrics"]) == set(REF["vorlagen"]["allgemein"]["metrics"])
+    assert [m for m, z in e["ampel"]["metrics"].items() if z["enabled"]] == ["wind"]
+
+
 def test_ac6_leere_ampel_ist_abo_sicht(client):
     """Altbestand nur, wenn ``ampel`` fehlt oder null ist (nicht bei ``{}``)."""
     e = _eins(client, {"ampel": {}, "metrics": [{"metric_id": "gust", "enabled": True}]})
@@ -279,6 +288,178 @@ def test_endpunkt_ist_in_der_anwendung_registriert():
                for r in app.routes)
 
 
+# --- Waechter: Inhalte, die sich nicht lesen, kopieren oder ausgeben lassen ---
+
+
+def _post_bytes(client, inhalt: bytes):
+    return client.post(PFAD, params={"user_id": NUTZER_A}, content=inhalt,
+                       headers={"Content-Type": "application/json"})
+
+
+def _roh_ergebnisse(client, *eintraege: str) -> list:
+    antwort = _post_roh(client, '{"eintraege": [' + ", ".join(eintraege) + "]}")
+    assert antwort.status_code == 200, antwort.text
+    ergebnisse = antwort.json()["ergebnisse"]
+    assert len(ergebnisse) == len(eintraege)
+    return ergebnisse
+
+
+def _vorlage(tid: str) -> dict:
+    return {"vorlage_id": tid, "ampel": REF["vorlagen"][tid]}
+
+
+_NICHT_AUSGEBBAR = {
+    "1e999 neben den Grenzen": r'"metrics": {"gust": {"upper": {"red": 80, "x": 1e999}}}',
+    "-1e999 neben den Grenzen": r'"metrics": {"gust": {"lower": {"x": -1e999}}}',
+    "1e999 in der Metrik": r'"metrics": {"gust": {"enabled": true, "x": 1e999}}',
+    "1e999 in modus": r'"metrics": {"wind_direction": {"modus": 1e999}}',
+    "1e999 in thunder": r'"thunder": {"x": 1e999}',
+    "1e999 als thunder.mittel": r'"thunder": {"mittel": 1e999}',
+    "Surrogat im Metrik-Schluessel": r'"metrics": {"gu\ud800": {"enabled": true}}',
+    "Surrogat im Textwert der Metrik": r'"metrics": {"gust": {"x": "\ud800"}}',
+    "Surrogat im Textwert von thunder": r'"thunder": {"x": "a\udfffb"}',
+}
+
+
+@pytest.mark.parametrize("inhalt", _NICHT_AUSGEBBAR.values(), ids=_NICHT_AUSGEBBAR.keys())
+def test_ac5_nicht_ausgebbare_ampel_faellt_auf_die_vorlage(client, inhalt):
+    """Gueltiges JSON, das sich nicht wieder als JSON ausgeben laesst: 200, die
+    ganze Ampel (samt ``template``) zaehlt nicht, der Nachbar ist normal."""
+    erster, zweiter = _roh_ergebnisse(
+        client, '{"preset_name": "wandern", "ampel": {"template": "skitouren", ' + inhalt + "}}",
+        '{"ampel": {"template": "skitouren"}}')
+    assert erster == _vorlage("wandern")
+    assert zweiter == _vorlage("skitouren")
+
+
+def test_ac5_surrogat_in_der_vorlagenkennung(client):
+    erster, zweiter = _roh_ergebnisse(
+        client, r'{"preset_name": "wandern", "ampel": {"template": "\ud800"}}',
+        '{"ampel": {"template": "skitouren"}}')
+    assert erster == _vorlage("wandern")
+    assert zweiter == _vorlage("skitouren")
+
+
+@pytest.mark.parametrize("feld", ["preset_name", "profil"])
+def test_ac5_surrogat_in_preset_name_und_profil_ist_allgemein(client, feld):
+    assert _roh_ergebnisse(client, '{"%s": "wand\\ud800"}' % feld) == [_vorlage("allgemein")]
+
+
+def test_ac6_surrogat_im_altbestand_wird_uebergangen(client):
+    wind = '{"metric_id": "wind", "enabled": true}'
+    mit, ohne = _roh_ergebnisse(
+        client, r'{"metrics": [{"metric_id": "gu\ud800", "enabled": true}, ' + wind + "]}",
+        '{"metrics": [' + wind + "]}")
+    assert mit == ohne
+    assert [m for m, z in mit["ampel"]["metrics"].items() if z["enabled"]] == ["wind"]
+
+
+def _tief(n: int) -> str:
+    return ('{"eintraege": [{"preset_name": "wandern", "ampel": {"template": "skitouren", "thunder": {"x": '
+            + "[" * n + "]" * n + '}}}, {"ampel": {"template": "skitouren"}}]}')
+
+
+@pytest.mark.parametrize("tiefe", [500, 2000])
+def test_ac5_tief_verschachtelte_ampel_ist_kein_serverfehler(client, tiefe):
+    """Ob der Leser diese Tiefe noch annimmt, haengt an der Laufzeit; nimmt er
+    sie an, greift die Vorlage, sonst ist es ein Formfehler."""
+    antwort = _post_roh(client, _tief(tiefe))
+    assert antwort.status_code in (200, 400), antwort.text
+    if antwort.status_code == 400:
+        assert antwort.json()["code"] == "bad_request"
+        return
+    assert antwort.json()["ergebnisse"] == [_vorlage("wandern"), _vorlage("skitouren")]
+
+
+_UNLESBAR = {
+    "100000 tief": _tief(100_000).encode(),
+    "5000 Ziffern": b'{"eintraege": [{"ampel": {"x": ' + b"9" * 5000 + b"}}]}",
+    "NaN": b'{"eintraege": [{"ampel": {"x": NaN}}]}',
+    "Infinity": b'{"eintraege": [{"ampel": {"x": Infinity}}]}',
+    "-Infinity": b'{"eintraege": [{"ampel": {"x": -Infinity}}]}',
+    "kaputtes UTF-8": b'{"eintraege": [{"preset_name": "\xff"}]}',
+    "Surrogat als UTF-8-Bytes": b'{"eintraege": [{"preset_name": "\xed\xa0\x80"}]}',
+    "UTF-16": '{"eintraege": []}'.encode("utf-16"),
+}
+
+
+@pytest.mark.parametrize("inhalt", _UNLESBAR.values(), ids=_UNLESBAR.keys())
+def test_ac7_unlesbarer_rumpf_ist_400(client, inhalt):
+    antwort = _post_bytes(client, inhalt)
+    assert antwort.status_code == 400, antwort.text[:300]
+    assert antwort.json()["code"] == "bad_request"
+    assert "ergebnisse" not in antwort.json()
+
+
+@pytest.mark.parametrize("eintrag, vorlage", [
+    ({"preset_name": "wandern"}, "wandern"),
+    ({"ampel": {"template": "wandern"}}, "wandern"),
+    ({"profil": "wandern"}, "wandern"),
+    ({}, "allgemein"),
+], ids=repr)
+def test_display_config_im_eintrag_wirkt_nicht(client, eintrag, vorlage):
+    """Nur die vier Felder des Entwurfs zaehlen, nie ein eingebettetes Abo."""
+    fremd = {"preset_name": "skitouren", "ampel": {
+        "template": "skitouren", "metrics": {"gust": {"upper": {"red": 7}}}}}
+    assert _eins(client, {**eintrag, "display_config": fremd}) == _vorlage(vorlage)
+
+
+def test_ac7_leere_user_id_wird_abgewiesen(client):
+    antwort = _post(client, {"eintraege": []}, user="")
+    assert antwort.status_code in (400, 422), antwort.text
+    assert "ergebnisse" not in antwort.json()
+
+
+@pytest.mark.parametrize("ampel, fehler", [
+    ({"metrics": {"gust": {"alarm_ab": []}}}, ["gust.alarm_ab: unbekannt"]),
+    ({"metrics": {"gust": {"alarm_ab": {}}}}, ["gust.alarm_ab: unbekannt"]),
+    ({"metrics": {"thunder": {"alarm_ab": ["red"]}}}, ["thunder.alarm_ab: unbekannt"]),
+    ({"thunder": {"mittel": []}}, ["thunder.mittel: unbekannt"]),
+    ({"thunder": {"mittel": "red", "hoch": {}}}, ["thunder.hoch: nie gelb"]),
+    ({"thunder": {"mittel": [], "hoch": []}}, ["thunder.mittel: unbekannt", "thunder.hoch: nie gelb"]),
+], ids=repr)
+def test_validate_ampel_nicht_hashbare_werte(ampel, fehler):
+    assert validate_ampel(ampel) == fehler
+
+
+@pytest.mark.parametrize("umbruch", ["\n", "\r", " ", "\x1b"], ids=ascii)
+def test_warnzeile_zu_ungueltiger_ampel_einzeilig_und_begrenzt(client, caplog, umbruch):
+    """Client-Schluessel stehen nie roh und nie unbegrenzt im Protokoll."""
+    kurz = "gu" + umbruch + "WARNING gefaelscht"
+    for schluessel in (kurz, kurz + "x" * 100_000):
+        caplog.clear()
+        with caplog.at_level(logging.WARNING, logger="app.ampel"):
+            ergebnis = _eins(client, {"ampel": {"metrics": {schluessel: None}}, "preset_name": "wandern"})
+        assert ergebnis == _vorlage("wandern")
+        zeilen = [r.getMessage() for r in caplog.records if r.name == "app.ampel"]
+        assert len(zeilen) == 1 and "ungueltig" in zeilen[0] and "gefaelscht" in zeilen[0]
+        assert umbruch not in zeilen[0]
+        assert len(zeilen[0]) <= 600
+
+
+@pytest.mark.parametrize("wert", ["1e999", r'"\ud800"'])
+def test_warnzeile_zu_nicht_ausgebbarer_ampel(client, caplog, wert):
+    """Genau eine Zeile je betroffenem Eintrag, ohne Inhalt des Clients."""
+    with caplog.at_level(logging.WARNING, logger="app.ampel"):
+        _roh_ergebnisse(client, '{"preset_name": "wandern", "ampel": {"template": "skitouren", '
+                        '"metrics": {"gust": {"geheim": %s}}}}' % wert, '{"preset_name": "wandern"}')
+    zeilen = [r.getMessage() for r in caplog.records if r.name == "app.ampel"]
+    assert zeilen == ["Profil-Ampel nicht als JSON ausgebbar, Vorlage greift"]
+
+
+@pytest.mark.parametrize("feld", ["ampel.template", "preset_name", "profil"])
+@pytest.mark.parametrize("schwanz", ["", "x" * 100_000], ids=["kurz", "lang"])
+def test_warnzeile_zu_unbekannter_vorlage_einzeilig_und_begrenzt(client, caplog, feld, schwanz):
+    wert = "fremd\nWARNING gefaelscht" + schwanz
+    eintrag = {"ampel": {"template": wert}} if feld == "ampel.template" else {feld: wert}
+    with caplog.at_level(logging.WARNING, logger="app.ampel"):
+        assert _eins(client, eintrag) == _vorlage("allgemein")
+    zeilen = [r.getMessage() for r in caplog.records if r.name == "app.ampel"]
+    assert len(zeilen) == 1 and "nutze allgemein" in zeilen[0]
+    assert r"fremd\nWARNING gefaelscht" in zeilen[0] and "\n" not in zeilen[0]
+    assert len(zeilen[0]) <= 600
+
+
 # --- AC-19: Aufloesung der Renderer unveraendert (Waechter, von Anfang an gruen) ---
 
 
@@ -289,3 +470,30 @@ def test_ac19_resolve_ampel_unveraendert(fall):
     eintrag = copy.deepcopy(fall["eintrag"])
     assert resolve_ampel(eintrag) == _soll(fall)
     assert eintrag == fall["eintrag"]
+
+
+# Orakel sind die Vorlagenfarben: wandern orange/red, wassersport red/red.
+_GEWITTER_NULL = [
+    ("wandern", {"mittel": None, "hoch": "orange"}, {"mittel": "orange", "hoch": "orange"}),
+    ("wandern", {"mittel": "red", "hoch": None}, {"mittel": "red", "hoch": "red"}),
+    ("wandern", {"mittel": None, "hoch": None}, {"mittel": "orange", "hoch": "red"}),
+    ("wassersport", {"mittel": None, "hoch": "orange"}, {"mittel": "red", "hoch": "orange"}),
+    ("wassersport", {"mittel": "yellow", "hoch": None}, {"mittel": "yellow", "hoch": "red"}),
+    ("wassersport", {"mittel": None, "hoch": None}, {"mittel": "red", "hoch": "red"}),
+]
+
+
+@pytest.mark.parametrize("vorlage, thunder, soll", _GEWITTER_NULL)
+def test_ac19_gewitter_null_ist_vorlagenfarbe(vorlage, thunder, soll):
+    """AC-19: null je Gewitter-Schluessel ist keine Abweichung, sondern Vorlage."""
+    erwartet = {**REF["vorlagen"][vorlage], "thunder": soll}
+    for abo in ({"ampel": {"template": vorlage, "thunder": thunder}},
+                {"ampel": {"thunder": thunder}, "preset_name": vorlage}):
+        assert resolve_ampel(abo) == erwartet
+        assert resolve_ampel({"display_config": abo}) == erwartet
+
+
+@pytest.mark.parametrize("vorlage, thunder, soll", _GEWITTER_NULL)
+def test_ac4_gewitter_null_ist_vorlagenfarbe_am_endpunkt(client, vorlage, thunder, soll):
+    e = _eins(client, {"ampel": {"template": vorlage, "thunder": thunder}})
+    assert e == {"vorlage_id": vorlage, "ampel": {**REF["vorlagen"][vorlage], "thunder": soll}}

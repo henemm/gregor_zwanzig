@@ -390,6 +390,8 @@ func New(deps Deps) chi.Router {
 	// Issue #3304: Vorschau fuer einen noch nicht angelegten Entwurf (statischer
 	// Pfad, chi bevorzugt ihn vor {id}; nichts wird gespeichert).
 	r.Post("/api/briefings/placements/vorschau", handler.BriefingPlacementsPreviewHandler(deps.Config.PythonCoreURL))
+	// Issue #2988 S2: Ampel fuer Entwuerfe aufloesen (zustandslos, Rechnung im Kern).
+	r.Post("/api/ampel/aufloesung", handler.AmpelAufloesungHandler(deps.Config.PythonCoreURL))
 	r.Post("/api/briefings/{id}/alert-preview", bremsen.Vorschau(handler.BriefingAlertPreviewHandler(deps.Config.PythonCoreURL)))
 	// Issue #2280: kind-neutraler Handversand (Alt-Routen oben sind Delegates).
 	r.Post("/api/briefings/{id}/send", bremsen.Versand(handler.BriefingSendHandler(deps.Config.PythonCoreURL)))

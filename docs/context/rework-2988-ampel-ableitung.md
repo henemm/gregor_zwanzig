@@ -198,3 +198,8 @@ Dieser Durchlauf liefert **nur S2** (AC-4 bis AC-8, AC-19). S1 ist eingespielt u
 - **Von Anfang an grün (Wächter):** `test_ac19_resolve_ampel_unveraendert` (131 Fälle). Schärfe in /50 per Mutation nachweisen.
 - **Vertrag:** Go `AmpelAufloesungHandler(pythonURL string)` in `internal/handler/ampel_aufloesung.go`, prüft Form selbst (kein Kern-Aufruf bei 400/413), reicht den Rumpf byte-gleich weiter, Query genau `user_id`. Python `api/routers/ampel_aufloesung.py` mit `router`; Kern-400 trägt `code: bad_request` und `detail` in Nutzersprache (Text nur über den Katalog).
 - **Fallen für /50:** (1) FastAPI-Standard bei kaputtem JSON ist 422, verlangt ist 400. (2) `validate_ampel` prüft Mengenzugehörigkeit ohne Typprüfung (`alarm_ab: []`, `thunder.mittel: []` sind nicht hashbar); gelesen, nicht ausgeführt. Der Endpunkt darf daran nicht scheitern. (3) `1e999` wird in Python `inf` und sprengt die JSON-Antwort; gilt als ungültige Ampel. (4) Altbestand: nur `enabled is True`, unlesbare Zeilen übergehen. (5) `{}` als `ampel` ist Abo-Sicht, nicht Altbestand.
+
+## Offen aus der Gegenprüfung S2 (2026-11-25, beide LOW, nicht blockierend)
+
+- **F006:** Der Vertrag (`api_contract.md`, Zeile `/api/ampel/aufloesung`) und sein Wächter schreiben „256 KB", umgesetzt und getestet sind 256 KiB. Bei der nächsten Berührung in S3/S4 angleichen.
+- **F007:** Kein Test prüft Großschreibung bei `alarm_ab`, `thunder.mittel`, `thunder.hoch` („RED" ist ungültig). In S3 einen Testfall ergänzen.

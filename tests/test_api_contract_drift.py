@@ -142,5 +142,39 @@ def test_inventory_lists_ampel_aufloesung():
     Fehlerfaellen im Inventar."""
     zeile = _inventory_rows(_contract_text()).get("/api/ampel/aufloesung")
     assert zeile, "AC-8: Inventarzeile `/api/ampel/aufloesung` fehlt"
-    for teil in ("POST", "eintraege", "ergebnisse", "vorlage_id", "400", "401", "413"):
+    for teil in ("POST", "eintraege", "ergebnisse", "vorlage_id", "höchstens 32,", " 256 KB",
+                 "400 `bad_request`", "401 `unauthorized`", "413 `payload_too_large`"):
         assert teil in zeile, f"AC-8: {teil} fehlt in der Inventarzeile"
+    assert re.fullmatch(r"\| `[^|]+` \| [^|]+ \|", zeile), "AC-8: Inventarzeile hat nicht zwei Zellen"
+
+
+def test_abschnitt_ampel_aufloesen_vollstaendig():
+    """AC-8 (Issue #2988 S2): der Abschnitt traegt Rumpf, Antwort, Altbestand,
+    alle Fehlerfaelle und die Grenzen."""
+    treffer = re.search(r"^### Ampel auflösen: `POST /api/ampel/aufloesung`.*?(?=^###? )",
+                        _contract_text(), re.M | re.S)
+    assert treffer, "AC-8: Abschnitt „Ampel auflösen“ fehlt"
+    abschnitt = treffer.group(0)
+
+    form = re.search(r"^Rumpf:(.*?)^200:(.*?)^```", abschnitt, re.M | re.S)
+    assert form, "AC-8: Rumpf und Antwort fehlen"
+    rumpf, antwort = (set(re.findall(r"\w+", teil)) for teil in form.groups())
+    assert {"eintraege", "ampel", "preset_name", "profil", "metrics", "metric_id", "enabled"} <= rumpf
+    assert {"ergebnisse", "vorlage_id", "ampel", "template"} <= antwort
+
+    alt = re.search(r"^- \*\*Altbestand.*$", abschnitt, re.M)
+    assert alt, "AC-8: Altbestand fehlt"
+    for teil in ("`ampel` fehlt oder `null` UND `metrics` ist eine Liste", "`allgemein`", "`enabled: true`",
+                 "unlesbare Zeilen werden übergangen", "leerer `metric_id`", "`ampel: {}` ist Abo-Sicht"):
+        assert teil in alt.group(0), f"AC-8: Altbestand ohne „{teil}“"
+
+    fehler = {(status, code): wann for status, code, wann in
+              re.findall(r"^\| (\d{3}) \| `(\w+)` \| (.+) \|$", abschnitt, re.M)}
+    assert set(fehler) == {("400", "bad_request"), ("401", "unauthorized"),
+                           ("413", "payload_too_large"), ("502", "upstream_unreachable")}
+    for teil in ("UTF-8", "kein JSON-Objekt", "`eintraege`", "mehr als 32,", "Eintrag kein Objekt",
+                 "`preset_name`/`profil`", "`metrics`", "keine Teilantwort"):
+        assert teil in fehler["400", "bad_request"], f"AC-8: 400 ohne „{teil}“"
+    assert "Anmeldung" in fehler["401", "unauthorized"]
+    assert "über 256 KB" in fehler["413", "payload_too_large"]
+    assert "120 s" in fehler["502", "upstream_unreachable"]

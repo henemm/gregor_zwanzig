@@ -184,3 +184,76 @@ func TestAmpelAufloesung2988KernFehlerUndZeitlimit(t *testing.T) {
 		t.Errorf("haengender Kern: Status %d, erwartet 502", w.Code)
 	}
 }
+
+// AC-7: Schluesselnamen gelten exakt wie im Kern (kein Gross-/Klein-Abgleich).
+func TestAmpelAufloesung2988SchluesselGeltenExakt(t *testing.T) {
+	kern := neuerVorschauKern3304(t)
+	r := aufloesungRouter2988(kern.srv.URL)
+	for body, want := range map[string]int{
+		`{"Eintraege": []}`:                   http.StatusBadRequest,
+		`{"eintraege": [{"Preset_Name": 7}]}`: http.StatusOK,
+		`{"eintraege": [{"PROFIL": {}}]}`:     http.StatusOK,
+		`{"eintraege": [{"Metrics": "x"}]}`:   http.StatusOK,
+	} {
+		if w := doReq(r, http.MethodPost, aufloesungPfad2988, body, "", "nutzer-a"); w.Code != want {
+			t.Errorf("%s: Status %d, erwartet %d (%.200s)", body, w.Code, want, w.Body.String())
+		}
+	}
+	if kern.zahl() != 3 {
+		t.Errorf("Kern %d-mal erreicht, erwartet 3", kern.zahl())
+	}
+}
+
+// AC-7: genau 256 KiB gehen unveraendert durch, ein Byte mehr ist 413.
+func TestAmpelAufloesung2988GroesseGenauAnDerGrenze(t *testing.T) {
+	kern := neuerVorschauKern3304(t)
+	r := aufloesungRouter2988(kern.srv.URL)
+	rumpf := func(n int) string {
+		kopf, fuss := `{"eintraege": [], "pad": "`, `"}`
+		return kopf + strings.Repeat("x", n-len(kopf)-len(fuss)) + fuss
+	}
+	genau := rumpf(256 * 1024)
+	if w := doReq(r, http.MethodPost, aufloesungPfad2988, genau, "", "nutzer-a"); w.Code != http.StatusOK {
+		t.Fatalf("256 KiB: Status %d (%.200s)", w.Code, w.Body.String())
+	}
+	if kern.zahl() != 1 || string(kern.anfragen[0].koerper) != genau {
+		t.Fatalf("256 KiB: Rumpf nicht unveraendert am Kern")
+	}
+	w := doReq(r, http.MethodPost, aufloesungPfad2988, rumpf(256*1024+1), "", "nutzer-a")
+	if w.Code != http.StatusRequestEntityTooLarge || fehlerCode3304(t, w) != "payload_too_large" {
+		t.Errorf("256 KiB + 1: Status %d (%.200s)", w.Code, w.Body.String())
+	}
+	if kern.zahl() != 1 {
+		t.Errorf("256 KiB + 1 hat den Kern erreicht")
+	}
+}
+
+// AC-7: ungueltiges UTF-8 ist ein Formfehler ohne Kern-Aufruf (encoding/json
+// ersetzt Fehlbytes still); gueltige Umlaute gehen unveraendert durch.
+func TestAmpelAufloesung2988UngueltigesUTF8OhneKernAufruf(t *testing.T) {
+	kern := neuerVorschauKern3304(t)
+	r := aufloesungRouter2988(kern.srv.URL)
+	for name, body := range map[string]string{
+		"preset_name":       "{\"eintraege\": [{\"preset_name\": \"\xff\"}]}",
+		"Inhalt von ampel":  "{\"eintraege\": [{\"ampel\": {\"x\": \"\xc3\"}}]}",
+		"Schluessel":        "{\"eintraege\": [], \"\xfe\": 1}",
+		"Surrogat in Bytes": "{\"eintraege\": [{\"profil\": \"\xed\xa0\x80\"}]}",
+	} {
+		w := doReq(r, http.MethodPost, aufloesungPfad2988, body, "", "nutzer-a")
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("%s: Status %d, erwartet 400 (%.200s)", name, w.Code, w.Body.String())
+			continue
+		}
+		if code := fehlerCode3304(t, w); code != "bad_request" {
+			t.Errorf("%s: Code %q, erwartet bad_request", name, code)
+		}
+	}
+	if kern.zahl() != 0 {
+		t.Fatalf("ungueltiges UTF-8 hat den Kern %d-mal erreicht", kern.zahl())
+	}
+	gueltig := `{"eintraege": [{"preset_name": "Höhe ⛰"}]}`
+	w := doReq(r, http.MethodPost, aufloesungPfad2988, gueltig, "", "nutzer-a")
+	if w.Code != http.StatusOK || kern.zahl() != 1 || string(kern.anfragen[0].koerper) != gueltig {
+		t.Errorf("gueltiges UTF-8: Status %d, Kern %d-mal erreicht", w.Code, kern.zahl())
+	}
+}
