@@ -79,3 +79,93 @@ Die Metadaten in `ampel_deviation_cases.json` nennen eine nicht vorhandene Testd
 2. Wie wird AC-28 („sofort") mit einem Serverergebnis erfüllt, und was zeigt der Reiter bis zur Antwort oder ohne Netz? Produktfrage nur, falls sich das sichtbare Verhalten ändert.
 3. Gehören `vorlageIdFuer` und die Go-Validierung in dieses Issue (nicht im Wortlaut)?
 4. Werden die unbenutzten Stellen (`zaehleAbweichungen`, `deviation_count`, `ampel_for`) entfernt oder zur einzigen Quelle ausgebaut?
+
+## Analysis
+
+### Type
+
+Feature (Rework, kein sichtbar geändertes Verhalten). Keine Produktfrage an den PO, weil AC-28 („sofort") und der Fehlerfall AC-9 unverändert gelten.
+
+Belegart: alle Aussagen sind am Code gelesen, nichts davon ist ausgeführt. Frontend-Pakete sind in diesem Arbeitsordner nicht installiert; der Zufallstest der unabhängigen Bewertung scheiterte am `$lib`-Alias. Die Gleichheiten unter „Nachweispflicht" sind deshalb in /40 als Test zu belegen.
+
+### Variantenvergleich (LoC und Dateizahlen geschätzt)
+
+| | A: alles je Eingabe vom Server | B: Auflösung in Python, Editier-Delta im Frontend |
+|---|---|---|
+| Produktdateien | rund 16 | rund 13 |
+| Produkt-LoC | +600 / −450 | +330 / −200 |
+| AC-28 „sofort" | verletzt (Entprellung + Netz) | erfüllt |
+| Automatisches Speichern, Anlegen | hängen am Netz | bleiben lokal |
+| Neuer Fehlerfall | bei jeder Eingabe | nur beim Laden (AC-9 „Erneut laden" besteht) |
+| Lieferungen à 250 LoC | 4–5 | 4 |
+
+**Empfehlung: B.** Jede Rechnung existiert danach einmal: die **Auflösung** (Vorlage + Abweichungen → Ampel, Vorlagen-ID, Gültigkeit) nur in Python, das **Editier-Delta** (Minimalmenge, hat in Python kein Gegenstück) nur im Frontend.
+
+### Technical Approach
+
+1. **Endpunkt (Python, Go reicht durch):** zustandsloser, angemeldeter POST, nimmt eine Liste von Einträgen: Abo-Sicht `{ampel, preset_name, profil}` oder eigene Vorlage `{ampel}` bzw. Altbestand `{metrics}`. Antwort je Eintrag `{vorlage_id, ampel}` aus `_aufloesen`/`_verschmelzen`. Liest nur `AMPEL_TEMPLATES` und den Rumpf, kein Store. Vorbild `BriefingPlacementsPreviewHandler` (`internal/handler/placements.go`): 401 ohne Anmeldung, 256 KiB, Objektprüfung; `ProxyHandler` reicht nicht (nur GET). `user_id` setzt `forwardPreview`. Test mit zwei Nutzern und ohne Anmeldung. Eintrag in `docs/reference/api_contract.md` (erzwungen durch `tests/test_api_contract_drift.py`).
+2. **Altbestand eigene Vorlagen** (`eigeneVorlageAmpel`, Zweig ohne `ampel`, AC-39) wandert nach Python; dort fehlt er heute.
+3. **Zähler:** `abweichungenVon` = Zahl der Einträge in `mengeVon(...).metrics` + 1 bei `thunder`. Die Prüfung „Vorlage fehlt → 0" bleibt. `zaehleAbweichungenGegen`, `zaehleAbweichungen`, Python `deviation_count` entfallen (kein Produktaufrufer).
+4. **`mitEnabled`** setzt `enabled` direkt; **`aboAmpel`** (`WetterTabInhalt.svelte:238`) wird aus `aufgeloest` + Auswahl gebaut. Fehlende Auswahl-Zeilen mit `ohneZeile()` ergänzen, null-Grenzen wie heute zu leer normalisieren, `template` aus der Basis. Bewusste Abweichung: `modus`/`sektoren` bleiben in der eigenen Vorlage erhalten (heute verloren).
+5. **`zuruecksetzen`:** Kopie der fertigen Vorlage aus `/api/templates`, keine Ableitung.
+6. **Laden:** `LeseClient` bekommt `post`; `ladeWetterDaten` lädt Vorlagen/Katalog/eigene Vorlagen und fragt danach die Auflösung in EINEM Aufruf (Abo + eigene Vorlagen) ab. `standAusAbo` bekommt die aufgelöste Ampel hereingereicht und bleibt synchron.
+7. **412 (`vergleichSaveFn`):** Auflösung VOR `neuGeladen` abwarten (im Speicherer, nach dem `get`), `neuGeladen` bleibt synchron und atomar. Scheitert die Auflösung, gilt derselbe Weg wie beim gescheiterten `get` (kein Neuladen, Konflikt gemeldet).
+8. **`vorlageGespeichert`:** Antwort des POST trägt schon die vollständige Ampel; direkt übernehmen. In der Spec festhalten, dass das nur für frisch gespeicherte Vorlagen gilt.
+9. **Übersichten** (`hubUebersichtModell.ts`), im Issue nicht genannt, rufen `standAusAbo` synchron:
+   - `wertebereicheKarte` (Orte) nutzt nur `auswahl`. Bei geladenem Katalog greift dort nie die Ampel (Liste oder Mail-Standard), also direkt `auswahlLesen`, kein Serveraufruf.
+   - `tripAlarmZaehler` (Trip, zwei Verwendungen) braucht die aufgelöste Ampel: `HubOverview` lädt sie beim Öffnen und bei Trip-Änderung; bis dahin „—" wie heute bei nicht geladenen Vorlagen.
+
+Danach entfallen im Frontend: `verschmelzen`, `ampelFehler`, `metrikFehler`, `windrichtungUngueltig`, `WIND_MODI`/`WIND_SEKTOREN`, `zaehleAbweichungen(Gegen)`, `zeileWeichtAb`, `richtungWeichtAb`, `vorlageIdVon`, `eigeneVorlageAmpel`. Bleiben: `grenzenFehler`/`gewitterFehler` (Meldungen während der Eingabe), `gleicheSeite`, `abweichungsMenge`, `aktiveMetriken`, `auswahlLesen`. Die Ratsche `ein_katalog_ausnahmen.json` für `ampelModell.ts` schrumpft.
+
+### Affected Files (with changes)
+
+| File | Change Type | Description |
+|------|-------------|-------------|
+| `src/app/ampel.py` | MODIFY | Auflösung für Entwurfseinträge inkl. Altbestand eigener Vorlagen; `deviation_count` entfällt |
+| `api/routers/ampel.py`, `api/main.py` | CREATE / MODIFY | POST-Endpunkt, Registrierung |
+| `internal/handler/ampel_aufloesung.go`, `internal/router/router.go` | CREATE / MODIFY | Durchreichen mit Anmeldung und Größengrenze |
+| `docs/reference/api_contract.md` | MODIFY | Endpunkt |
+| `WT/ampelModell.ts`, `WT/wetterZustand.ts`, `WT/wetterTabLaden.ts`, `WT/wetterTabSpeicherung.ts` | MODIFY | Spiegel entfernen, Serverergebnis lesen, 412 |
+| `organisms/wetter-tab/WetterTabInhalt.svelte` | MODIFY | Laden, `aboAmpel`, Vorlage gespeichert |
+| `shared/hub-uebersicht/hubUebersichtModell.ts`, `trip-detail/HubOverview.svelte` (evtl. `HubUebersicht.svelte`) | MODIFY | aufgelöste Ampel hereinreichen |
+| `tests/unit/ein_katalog_ausnahmen.json` | MODIFY | schrumpft |
+| Tests | MODIFY / CREATE | 31 Frontend-Testdateien betroffen (23 nutzen `standAusAbo`); Hilfe in `__tests__/wetterTabDaten.ts`, das schon Python per `uv run` aufruft. Neu: Endpunkt (Python, Go) |
+
+### Scope Assessment
+
+- Files: rund 13 Produktdateien, rund 35 Testdateien
+- Estimated LoC: +330/-200 Produkt
+- Risk Level: MEDIUM (Reiter Wetter in Trip, Orte, Anlegen; Speicherweg bleibt unverändert)
+
+**Schnitt, jede Lieferung für sich auslieferbar:**
+1. **S1 (ohne Netz):** Zähler aus der Menge, `aboAmpel`/`mitEnabled` ohne `verschmelzen`, `deviation_count` weg. Rund 80 LoC.
+2. **S2:** Endpunkt Python + Go + Vertrag, mit Regressionsfixture. Rund 200 LoC.
+3. **S3:** Reiter Wetter liest das Ergebnis (Laden, eigene Vorlagen, 412).
+4. **S4:** Übersichten lesen das Ergebnis, Spiegel und überflüssige Tests löschen, Ratsche senken.
+
+### Dependencies und Reihenfolge
+
+- **#3357 (offen):** berührt nur `VorlageKarte.svelte` und einen Vorlagen-Test. Kein Warten.
+- **#3230 (offen):** keine Voraussetzung. Dort steht der Nebenbefund an, dass `zeilenAbweichung` `modus`/`sektoren` nicht in die Menge schreibt; gehört zu #3230, hier nicht beheben. Nach S1 zählt der Zähler diese Felder mit, sobald die Menge sie trägt.
+- **Nicht in diesem Issue:** Go-Validierung (`ampel.go`, notwendige Schreibgrenze, Fixture-Wächter bleibt), `vorlageIdFuer` in `AlarmeTab`, `vorlageName`, `compareNewVorlage` (Namensanzeige bzw. Alarm-Anzeige), `DERIVED_METRIC_RULES`, `ampel_for`, Umzug von `auswahlLesen`. Vorlagen-ID des Reiters selbst kommt nach S3 vom Server; für die übrigen Nutzer von `vorlageIdFuer` in S4 Folge-Issue anlegen.
+
+### Nachweispflicht (in /40 rot bzw. als Wächter)
+
+- Zähler aus der Menge = heutiger Zähler, über die Fixtures und erzeugte Fälle (beide Kontexte).
+- Eigene Vorlage aus dem neuen `aboAmpel`: gleiche Wirkung wie heute (Payload-Vergleich, Ausnahme `modus`/`sektoren`).
+- Endpunkt gleich `resolve_ampel` für alle 7 Vorlagen, ungültige Ampel, unbekannte Vorlage, `profil`, `preset_name`, Altbestand; zwei Nutzer, ohne Anmeldung 401.
+- Zähler im Reiter ändert sich nach einer Eingabe ohne Netzaufruf.
+- Laden mit gescheiterter Auflösung zeigt AC-9, speichert nichts; 412 verliert keine Eingabe still.
+- `ampel_deviation_cases.json` und `ampel_auswahl_paritaet.json` werden zu Regressionsfixtures; der falsche Testname in den Metadaten wird korrigiert.
+- AC-28 und AC-37 in `feat_2794_s3a_teil3_wetter.md` und `feat_2794_s3a_reiter_wetter.md` als teilweise abgelöst markieren (nur der Teil „Python-Referenz und Frontend-Spiegel gleich").
+
+### Beantwortete offene Fragen
+
+1. Es zieht um: Auflösung, Vorlagen-ID des Reiters, Gültigkeit, Altbestand eigener Vorlagen. Zähler und Menge bleiben im Frontend.
+2. AC-28 bleibt lokal erfüllt; keine Produktfrage.
+3. Nein (siehe „Nicht in diesem Issue").
+4. `zaehleAbweichungen` und `deviation_count` entfallen, `ampel_for` bleibt.
+
+### Open Questions
+
+Keine.
