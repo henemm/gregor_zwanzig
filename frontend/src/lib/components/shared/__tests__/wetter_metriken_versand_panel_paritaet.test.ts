@@ -221,7 +221,8 @@ const ZUSTELLUNG_HUELLE = join(SHARED, 'zustellung-tab/ZustellungTab.svelte');
 // (Anlegen = Bearbeiten), je Geraet einmal (Desktop + Mobil); #3333 (D2, AC-1/AC-13): ebenso /compare/new.
 const UEBER_HUELLE = new Set(['Trip-Hub', 'Ortsvergleich-Hub', '/trips/new', '/compare/new']);
 const HUELLEN_ANZAHL: Record<string, number> = { 'Trip-Hub': 1, 'Ortsvergleich-Hub': 1, '/trips/new': 2, '/compare/new': 2 };
-const UEBERGANG = join(COMPONENTS, 'organisms/zustellung-tab/UebergangBlock.svelte');
+// #3036: Uebergangsblock aufgeloest — der Abschnitt am Ende ist der Beispiel-Alarm.
+const BEISPIEL = join(COMPONENTS, 'organisms/zustellung-tab/BeispielAlarm.svelte');
 
 function pruefeHuelle(flaeche: string, datei: string, ctx: string): void {
 	const a = ast(datei);
@@ -235,10 +236,10 @@ function pruefeHuelle(flaeche: string, datei: string, ctx: string): void {
 	// „Was steht wo“ im Reiter Wetter. In den Hubs steht der Baustein damit nirgends mehr.
 	const h = ast(ZUSTELLUNG_HUELLE);
 	const hq = readFileSync(ZUSTELLUNG_HUELLE, 'utf-8');
-	const um = mounts(h.fragment, 'UebergangBlock');
-	assert.equal(um.length, 1, 'ZustellungTab bettet den Uebergangsblock nicht genau einmal ein');
-	assert.equal(contextWert(um[0], hq), 'context', 'ZustellungTab reicht den context nicht an den Uebergangsblock');
-	for (const d of [datei, ZUSTELLUNG_HUELLE, UEBERGANG]) {
+	const um = mounts(h.fragment, 'BeispielAlarm');
+	assert.equal(um.length, 1, 'ZustellungTab bettet den Beispiel-Alarm nicht genau einmal ein');
+	assert.equal(contextWert(um[0], hq), 'context', 'ZustellungTab reicht den context nicht an den Beispiel-Alarm');
+	for (const d of [datei, ZUSTELLUNG_HUELLE, BEISPIEL]) {
 		const x = ast(d);
 		assert.equal(mounts(x.fragment, 'WetterMetrikenVersandPanel').length, 0, `${flaeche}: ${d} bettet den Baustein noch ein (#3154)`);
 		assert.equal(importQuelle(x, 'WetterMetrikenVersandPanel'), null, `${flaeche}: ${d} importiert den Baustein noch (#3154)`);

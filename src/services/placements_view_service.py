@@ -424,6 +424,9 @@ def _trip_abo_aus(trip, lang: str):
         bloecke={
             "show_stage_stats": getattr(rc, "show_stage_stats", True),
             "show_yesterday_comparison": getattr(rc, "show_yesterday_comparison", True),
+            # #3036: Kurz-Zusammenfassung und Großwetterlage (fehlend = an)
+            "show_compact_summary": getattr(rc, "show_compact_summary", True),
+            "show_stability": getattr(rc, "show_stability", True),
             "show_night_block": dc.show_night_block,
             "email_format": getattr(rc, "email_format", "full"),
             "telegram_style": getattr(rc, "telegram_style", "rich"),

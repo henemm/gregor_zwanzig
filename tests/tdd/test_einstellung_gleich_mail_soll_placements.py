@@ -451,6 +451,24 @@ def test_ac11_validator_start_orte_liste_mit_min_locations_exit2_statt_traceback
     assert "FEHLER" in aus and "<Kennung>" in aus, aus
 
 
+@pytest.mark.parametrize("oberste_ebene", [[1, 2], "preset", 7])
+def test_validator_start_konfig_ohne_objekt_exit2_statt_traceback(tmp_path, oberste_ebene):
+    """#3246: oberste Ebene der ``--konfig``-Datei ist kein Objekt (Liste,
+    Text, Zahl) -> ``FEHLER: --konfig`` mit der erwarteten Huelle und Exit 2
+    wie die Geschwister-Fehler, nie ein Traceback."""
+    from tests.helpers.mail_lang_fixture import validator_lauf
+
+    konfig = tmp_path / "konfig_kein_objekt.json"
+    konfig.write_text(json.dumps(oberste_ebene), encoding="utf-8")
+    eml = b"Subject: x\r\nContent-Type: text/plain; charset=utf-8\r\n\r\nx\r\n"
+    lauf, _log = validator_lauf(tmp_path, "email_spec_validator", eml,
+                                "--konfig", str(konfig))
+    aus = lauf.stdout + lauf.stderr
+    assert "Traceback" not in aus, aus
+    assert lauf.returncode == 2, aus
+    assert "FEHLER: --konfig" in aus and '"preset"' in aus and "<Kennung>" in aus, aus
+
+
 # --------------------------------------------------------------------------- #
 # AC-12: Abnahme-Fall #3156 -- echte Mail, echter Validator, keine SOLL-Verletzung
 # --------------------------------------------------------------------------- #
@@ -487,7 +505,7 @@ def test_ac12_abnahme_3156_echte_mail_ohne_soll_verletzung(monkeypatch, tmp_path
     eml = _trip_eml(monkeypatch, daten)
     # #3237: Ampelpunkt + Wortstufe tragen keine Zahl -> Rohwerte als Pruefdaten.
     code, aus = _lauf(tmp_path, "briefing_mail_validator", eml, "--konfig",
-                      _konfig(tmp_path, "abnahme_3156", daten), *_ampel_rohwerte())
+                      _konfig(tmp_path, "abnahme_3156", daten), *_ampel_rohwerte(), prozess=True)
     assert "soll Zahl (Roh) zeigen" not in aus, aus
     assert "SOLL: Darstellung" not in aus, aus
     assert code == 0, aus

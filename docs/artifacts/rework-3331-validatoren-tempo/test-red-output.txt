@@ -1,0 +1,400 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.15, pytest-9.2.0, pluggy-1.6.0
+rootdir: /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo
+configfile: pyproject.toml
+plugins: socket-0.8.0, xdist-3.8.0, timeout-2.4.0, anyio-4.14.2
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 27 items
+
+tests/test_validator_server.py FFFFFFEEEFFEFFEEEEEFFFFFE                 [ 92%]
+tests/tdd/test_einstellung_gleich_mail_validatoren.py FF                 [100%]
+
+==================================== ERRORS ====================================
+____ ERROR at setup of test_ac3_kind_bekommt_genau_die_umgebung_des_aufrufs ____
+tests/test_validator_server.py:47: in klient
+    k = _vs().Klient()
+        ^^^^^
+tests/test_validator_server.py:42: in _vs
+    return importlib.import_module("tests.helpers.validator_server")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1324: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'tests.helpers.validator_server'
+___________ ERROR at setup of test_ac4_frist_beendet_kind_und_enkel ____________
+tests/test_validator_server.py:47: in klient
+    k = _vs().Klient()
+        ^^^^^
+tests/test_validator_server.py:42: in _vs
+    return importlib.import_module("tests.helpers.validator_server")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1324: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'tests.helpers.validator_server'
+____ ERROR at setup of test_ac5_abbruch_im_warten_vertauscht_keine_antwort _____
+tests/test_validator_server.py:47: in klient
+    k = _vs().Klient()
+        ^^^^^
+tests/test_validator_server.py:42: in _vs
+    return importlib.import_module("tests.helpers.validator_server")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1324: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'tests.helpers.validator_server'
+____ ERROR at setup of test_ac6_toter_server_scheitert_laut_und_startet_neu ____
+tests/test_validator_server.py:47: in klient
+    k = _vs().Klient()
+        ^^^^^
+tests/test_validator_server.py:42: in _vs
+    return importlib.import_module("tests.helpers.validator_server")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1324: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'tests.helpers.validator_server'
+___ ERROR at setup of test_ac7_zweiter_lauf_sieht_keinen_zustand_des_ersten ____
+tests/test_validator_server.py:47: in klient
+    k = _vs().Klient()
+        ^^^^^
+tests/test_validator_server.py:42: in _vs
+    return importlib.import_module("tests.helpers.validator_server")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1324: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'tests.helpers.validator_server'
+______ ERROR at setup of test_ac8_exit_regeln_wie_im_echten_prozess[zahl] ______
+tests/test_validator_server.py:47: in klient
+    k = _vs().Klient()
+        ^^^^^
+tests/test_validator_server.py:42: in _vs
+    return importlib.import_module("tests.helpers.validator_server")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1324: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'tests.helpers.validator_server'
+______ ERROR at setup of test_ac8_exit_regeln_wie_im_echten_prozess[none] ______
+tests/test_validator_server.py:47: in klient
+    k = _vs().Klient()
+        ^^^^^
+tests/test_validator_server.py:42: in _vs
+    return importlib.import_module("tests.helpers.validator_server")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1324: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'tests.helpers.validator_server'
+______ ERROR at setup of test_ac8_exit_regeln_wie_im_echten_prozess[text] ______
+tests/test_validator_server.py:47: in klient
+    k = _vs().Klient()
+        ^^^^^
+tests/test_validator_server.py:42: in _vs
+    return importlib.import_module("tests.helpers.validator_server")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1324: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'tests.helpers.validator_server'
+____ ERROR at setup of test_ac8_exit_regeln_wie_im_echten_prozess[ausnahme] ____
+tests/test_validator_server.py:47: in klient
+    k = _vs().Klient()
+        ^^^^^
+tests/test_validator_server.py:42: in _vs
+    return importlib.import_module("tests.helpers.validator_server")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1324: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'tests.helpers.validator_server'
+______________ ERROR at setup of test_ac10_browser_weg_nach_frist ______________
+tests/test_validator_server.py:47: in klient
+    k = _vs().Klient()
+        ^^^^^
+tests/test_validator_server.py:42: in _vs
+    return importlib.import_module("tests.helpers.validator_server")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1324: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'tests.helpers.validator_server'
+=================================== FAILURES ===================================
+______ test_ac1_prozess_und_server_gleich[briefing_mail_validator-False] _______
+tests/test_validator_server.py:117: in test_ac1_prozess_und_server_gleich
+    lauf, log_dir = validator_lauf(tmp_path, validator, eml, "--konfig", konfig, im_server=im_server)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: validator_lauf() got an unexpected keyword argument 'im_server'
+_______ test_ac1_prozess_und_server_gleich[briefing_mail_validator-True] _______
+tests/test_validator_server.py:117: in test_ac1_prozess_und_server_gleich
+    lauf, log_dir = validator_lauf(tmp_path, validator, eml, "--konfig", konfig, im_server=im_server)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: validator_lauf() got an unexpected keyword argument 'im_server'
+________ test_ac1_prozess_und_server_gleich[email_spec_validator-False] ________
+tests/test_validator_server.py:117: in test_ac1_prozess_und_server_gleich
+    lauf, log_dir = validator_lauf(tmp_path, validator, eml, "--konfig", konfig, im_server=im_server)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: validator_lauf() got an unexpected keyword argument 'im_server'
+________ test_ac1_prozess_und_server_gleich[email_spec_validator-True] _________
+tests/test_validator_server.py:117: in test_ac1_prozess_und_server_gleich
+    lauf, log_dir = validator_lauf(tmp_path, validator, eml, "--konfig", konfig, im_server=im_server)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: validator_lauf() got an unexpected keyword argument 'im_server'
+___ test_ac2_prozesslauf_bemerkt_fehlenden_src_pfad[briefing_mail_validator] ___
+tests/test_validator_server.py:135: in test_ac2_prozesslauf_bemerkt_fehlenden_src_pfad
+    code, aus = ziel._lauf(tmp_path, validator, eml, "--konfig", konfig, prozess=True)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: _lauf() got an unexpected keyword argument 'prozess'
+____ test_ac2_prozesslauf_bemerkt_fehlenden_src_pfad[email_spec_validator] _____
+tests/test_validator_server.py:135: in test_ac2_prozesslauf_bemerkt_fehlenden_src_pfad
+    code, aus = ziel._lauf(tmp_path, validator, eml, "--konfig", konfig, prozess=True)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: _lauf() got an unexpected keyword argument 'prozess'
+______________ test_ac5_fremde_kennung_scheitert_laut[startzeile] ______________
+tests/test_validator_server.py:222: in test_ac5_fremde_kennung_scheitert_laut
+    k = _vs().Klient(server)
+        ^^^^^
+tests/test_validator_server.py:42: in _vs
+    return importlib.import_module("tests.helpers.validator_server")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1324: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'tests.helpers.validator_server'
+_______________ test_ac5_fremde_kennung_scheitert_laut[ergebnis] _______________
+tests/test_validator_server.py:222: in test_ac5_fremde_kennung_scheitert_laut
+    k = _vs().Klient(server)
+        ^^^^^
+tests/test_validator_server.py:42: in _vs
+    return importlib.import_module("tests.helpers.validator_server")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1324: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'tests.helpers.validator_server'
+____________ test_ac6_ungeeigneter_server_scheitert_laut[ohne-fork] ____________
+tests/test_validator_server.py:250: in test_ac6_ungeeigneter_server_scheitert_laut
+    f"runpy.run_path({str(_vs().SERVER_SKRIPT)!r}, run_name='__main__')\n", "server.py")
+                          ^^^^^
+tests/test_validator_server.py:42: in _vs
+    return importlib.import_module("tests.helpers.validator_server")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1324: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'tests.helpers.validator_server'
+__________ test_ac6_ungeeigneter_server_scheitert_laut[zusatz-thread] __________
+tests/test_validator_server.py:250: in test_ac6_ungeeigneter_server_scheitert_laut
+    f"runpy.run_path({str(_vs().SERVER_SKRIPT)!r}, run_name='__main__')\n", "server.py")
+                          ^^^^^
+tests/test_validator_server.py:42: in _vs
+    return importlib.import_module("tests.helpers.validator_server")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1324: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'tests.helpers.validator_server'
+_____________________ test_ac9_ohne_opt_in_echter_prozess ______________________
+tests/test_validator_server.py:300: in test_ac9_ohne_opt_in_echter_prozess
+    lauf, _ = validator_lauf(tmp_path, "probe", b"", im_server=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: validator_lauf() got an unexpected keyword argument 'im_server'
+_______________ test_ac9_zieldatei_schaltet_ein_und_kann_prozess _______________
+tests/test_validator_server.py:306: in test_ac9_zieldatei_schaltet_ein_und_kann_prozess
+    assert json.loads(ziel._lauf(tmp_path, "probe", b"", prozess=True)[1])[1] == os.getpid()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: _lauf() got an unexpected keyword argument 'prozess'
+_____________ test_ac10_server_verschwindet_mit_dem_worker[normal] _____________
+tests/test_validator_server.py:315: in test_ac10_server_verschwindet_mit_dem_worker
+    _vs()
+tests/test_validator_server.py:42: in _vs
+    return importlib.import_module("tests.helpers.validator_server")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1324: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'tests.helpers.validator_server'
+______________ test_ac10_server_verschwindet_mit_dem_worker[kill] ______________
+tests/test_validator_server.py:315: in test_ac10_server_verschwindet_mit_dem_worker
+    _vs()
+tests/test_validator_server.py:42: in _vs
+    return importlib.import_module("tests.helpers.validator_server")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1324: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'tests.helpers.validator_server'
+_________ test_ac10_server_verschwindet_mit_dem_worker[kill-mit-kind] __________
+tests/test_validator_server.py:315: in test_ac10_server_verschwindet_mit_dem_worker
+    _vs()
+tests/test_validator_server.py:42: in _vs
+    return importlib.import_module("tests.helpers.validator_server")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.12/3.12.15/Frameworks/Python.framework/Versions/3.12/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1324: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'tests.helpers.validator_server'
+_____________________ test_trip_echter_prozess_mit_konfig ______________________
+tests/tdd/test_einstellung_gleich_mail_validatoren.py:281: in test_trip_echter_prozess_mit_konfig
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig, prozess=True)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: _lauf() got an unexpected keyword argument 'prozess'
+_____________________ test_orte_echter_prozess_mit_konfig ______________________
+tests/tdd/test_einstellung_gleich_mail_validatoren.py:360: in test_orte_echter_prozess_mit_konfig
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig, prozess=True)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: _lauf() got an unexpected keyword argument 'prozess'
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+tests/test_validator_server.py::test_ac1_prozess_und_server_gleich[email_spec_validator-False]
+tests/test_validator_server.py::test_ac1_prozess_und_server_gleich[email_spec_validator-True]
+tests/test_validator_server.py::test_ac2_prozesslauf_bemerkt_fehlenden_src_pfad[email_spec_validator]
+tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_orte_echter_prozess_mit_konfig
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/rework-3279-testsuite-tempo/src/services/scheduler_dispatch_service.py:616: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    entry["letzter_versand"] = _datetime.utcnow().isoformat() + "Z"
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_validator_server.py::test_ac1_prozess_und_server_gleich[briefing_mail_validator-False]
+FAILED tests/test_validator_server.py::test_ac1_prozess_und_server_gleich[briefing_mail_validator-True]
+FAILED tests/test_validator_server.py::test_ac1_prozess_und_server_gleich[email_spec_validator-False]
+FAILED tests/test_validator_server.py::test_ac1_prozess_und_server_gleich[email_spec_validator-True]
+FAILED tests/test_validator_server.py::test_ac2_prozesslauf_bemerkt_fehlenden_src_pfad[briefing_mail_validator]
+FAILED tests/test_validator_server.py::test_ac2_prozesslauf_bemerkt_fehlenden_src_pfad[email_spec_validator]
+FAILED tests/test_validator_server.py::test_ac5_fremde_kennung_scheitert_laut[startzeile]
+FAILED tests/test_validator_server.py::test_ac5_fremde_kennung_scheitert_laut[ergebnis]
+FAILED tests/test_validator_server.py::test_ac6_ungeeigneter_server_scheitert_laut[ohne-fork]
+FAILED tests/test_validator_server.py::test_ac6_ungeeigneter_server_scheitert_laut[zusatz-thread]
+FAILED tests/test_validator_server.py::test_ac9_ohne_opt_in_echter_prozess - ...
+FAILED tests/test_validator_server.py::test_ac9_zieldatei_schaltet_ein_und_kann_prozess
+FAILED tests/test_validator_server.py::test_ac10_server_verschwindet_mit_dem_worker[normal]
+FAILED tests/test_validator_server.py::test_ac10_server_verschwindet_mit_dem_worker[kill]
+FAILED tests/test_validator_server.py::test_ac10_server_verschwindet_mit_dem_worker[kill-mit-kind]
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_trip_echter_prozess_mit_konfig
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_orte_echter_prozess_mit_konfig
+ERROR tests/test_validator_server.py::test_ac3_kind_bekommt_genau_die_umgebung_des_aufrufs
+ERROR tests/test_validator_server.py::test_ac4_frist_beendet_kind_und_enkel
+ERROR tests/test_validator_server.py::test_ac5_abbruch_im_warten_vertauscht_keine_antwort
+ERROR tests/test_validator_server.py::test_ac6_toter_server_scheitert_laut_und_startet_neu
+ERROR tests/test_validator_server.py::test_ac7_zweiter_lauf_sieht_keinen_zustand_des_ersten
+ERROR tests/test_validator_server.py::test_ac8_exit_regeln_wie_im_echten_prozess[zahl]
+ERROR tests/test_validator_server.py::test_ac8_exit_regeln_wie_im_echten_prozess[none]
+ERROR tests/test_validator_server.py::test_ac8_exit_regeln_wie_im_echten_prozess[text]
+ERROR tests/test_validator_server.py::test_ac8_exit_regeln_wie_im_echten_prozess[ausnahme]
+ERROR tests/test_validator_server.py::test_ac10_browser_weg_nach_frist - Modu...
+================== 17 failed, 6 warnings, 10 errors in 9.53s ===================

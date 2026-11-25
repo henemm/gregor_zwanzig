@@ -185,6 +185,10 @@ export interface Felder {
 	show_stage_stats: boolean;
 	show_yesterday_comparison: boolean;
 	show_night_block: boolean;
+	/** #3036: Kurz-Zusammenfassung (report_config, nur Trip). */
+	show_compact_summary: boolean;
+	/** #3036: Großwetterlage (report_config, nur Trip). */
+	show_stability: boolean;
 	email_format: 'full' | 'compact';
 	telegram_style: 'rich' | 'kurzform';
 	hourly_enabled: boolean;
@@ -198,6 +202,8 @@ export function felderAusAntwort(a: Pick<PlacementsAntwort, 'blocks'>): Felder {
 		show_stage_stats: b.show_stage_stats !== false,
 		show_yesterday_comparison: b.show_yesterday_comparison !== false,
 		show_night_block: b.show_night_block !== false,
+		show_compact_summary: b.show_compact_summary !== false,
+		show_stability: b.show_stability !== false,
 		email_format: b.email_format === 'compact' ? 'compact' : 'full',
 		telegram_style: b.telegram_style === 'kurzform' ? 'kurzform' : 'rich',
 		hourly_enabled: b.hourly !== false
@@ -230,7 +236,7 @@ function kurzstil(kind: Kind, neu: Felder, alt: Felder): Rumpf {
 /** Teilfeld-Rumpf: nur, was sich gegenüber `alt` geändert hat. */
 export function felderNutzlast(kind: Kind, neu: Felder, alt: Felder): Rumpf {
 	if (kind === 'route') {
-		const rc = nurGeaendert(neu, alt, ['show_stage_stats', 'show_yesterday_comparison', 'email_format']);
+		const rc = nurGeaendert(neu, alt, ['show_stage_stats', 'show_yesterday_comparison', 'show_compact_summary', 'show_stability', 'email_format']);
 		const dc = nurGeaendert(neu, alt, ['show_night_block']);
 		return zusammen(Object.keys(rc).length ? { report_config: rc } : {}, kurzstil(kind, neu, alt), Object.keys(dc).length ? { display_config: dc } : {});
 	}

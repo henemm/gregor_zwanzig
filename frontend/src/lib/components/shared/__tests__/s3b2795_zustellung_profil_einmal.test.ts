@@ -24,7 +24,8 @@ const HIER = dirname(fileURLToPath(import.meta.url));
 const KOMP = join(HIER, '..', '..');
 const DATEI = {
 	zustellung: join(KOMP, 'shared', 'zustellung-tab', 'ZustellungTab.svelte'),
-	uebergang: join(KOMP, 'organisms', 'zustellung-tab', 'UebergangBlock.svelte'),
+	// #3036: Uebergangsblock aufgeloest — der Beispiel-Alarm ist der Abschnitt am Ende.
+	beispiel: join(KOMP, 'organisms', 'zustellung-tab', 'BeispielAlarm.svelte'),
 	panel: join(KOMP, 'shared', 'WetterMetrikenVersandPanel.svelte'),
 	wmt: join(KOMP, 'shared', 'WeatherMetricsTab.svelte')
 };
@@ -45,14 +46,14 @@ describe('AC-36 (F006): im Reiter Zustellung genau eine Profil-Ladestelle', () =
 	test('f006_zustellungtab_laedt_das_profil_genau_einmal', () => {
 		assert.equal(profilAbrufe(DATEI.zustellung), 1, 'ZustellungTab: nicht genau eine Profil-Ladestelle');
 		const { ast, quelle } = svelteAst(DATEI.zustellung);
-		assert.equal(einbettungenMitWeichen(ast, quelle, ['UebergangBlock']).length, 1, 'Messaufbau: ZustellungTab bettet den Uebergangsblock nicht genau einmal ein');
+		assert.equal(einbettungenMitWeichen(ast, quelle, ['BeispielAlarm']).length, 1, 'Messaufbau: ZustellungTab bettet den Beispiel-Alarm nicht genau einmal ein');
 		assert.equal(einbettungenMitWeichen(ast, quelle, ['WetterMetrikenVersandPanel', 'WeatherMetricsTab']).length, 0, 'ZustellungTab bettet die Metrik-Oberflaeche ein (zweite Profil-Ladestelle)');
 	});
 
-	test('f006_uebergangsblock_laedt_kein_profil_und_traegt_keine_metrik_oberflaeche', () => {
-		assert.equal(profilAbrufe(DATEI.uebergang), 0, 'Uebergangsblock laedt das Profil selbst');
-		const { ast, quelle } = svelteAst(DATEI.uebergang);
-		assert.equal(einbettungenMitWeichen(ast, quelle, ['WetterMetrikenVersandPanel', 'WeatherMetricsTab']).length, 0, 'Uebergangsblock traegt noch die Metrik-Oberflaeche (#3154)');
+	test('f006_beispiel_alarm_laedt_kein_profil_und_traegt_keine_metrik_oberflaeche', () => {
+		assert.equal(profilAbrufe(DATEI.beispiel), 0, 'Beispiel-Alarm laedt das Profil selbst');
+		const { ast, quelle } = svelteAst(DATEI.beispiel);
+		assert.equal(einbettungenMitWeichen(ast, quelle, ['WetterMetrikenVersandPanel', 'WeatherMetricsTab']).length, 0, 'Beispiel-Alarm traegt die Metrik-Oberflaeche (#3154)');
 	});
 
 	test('f006_weathermetricstab_laedt_nur_ohne_profil_prop_selbst', async () => {

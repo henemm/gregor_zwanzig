@@ -196,7 +196,7 @@ describe('Tabelle: Konflikt und Fehler (AC-20)', () => {
 });
 
 describe('Schalter unter der Tabelle: nur geänderte Felder am heutigen Ort', () => {
-	const trip: Felder = { show_stage_stats: true, show_yesterday_comparison: true, show_night_block: true, email_format: 'full', telegram_style: 'rich', hourly_enabled: true };
+	const trip: Felder = { show_stage_stats: true, show_yesterday_comparison: true, show_night_block: true, show_compact_summary: true, show_stability: true, email_format: 'full', telegram_style: 'rich', hourly_enabled: true };
 	test('Trip: report_config und display_config.show_night_block', () => {
 		assert.deepEqual(felderNutzlast('route', { ...trip, show_stage_stats: false }, trip), { report_config: { show_stage_stats: false } });
 		assert.deepEqual(felderNutzlast('route', { ...trip, show_night_block: false, email_format: 'compact' }, trip), {

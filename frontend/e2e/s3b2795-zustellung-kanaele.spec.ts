@@ -134,7 +134,7 @@ for (const kind of HUB_KINDS) {
 			await page.locator(`[data-testid="${HUB_SEL[kind].reiter}-zustellung"]:visible`).first().click();
 			const reiter = page.locator(`[data-testid="${HUB_SEL[kind].panel}-zustellung"]:visible`).first().getByTestId(ZT.tab);
 			await expect(reiter.getByTestId(ZT.status('premium_sms'))).toBeVisible({ timeout: 15_000 });
-			await expect(reiter.getByTestId(ZT.uebergang)).toBeVisible();
+			await expect(reiter.getByTestId(ZT.beispielAlarm)).toBeVisible();
 			await expect.poll(() => anfragen, { message: 'GET /api/auth/profile je Reiter-Aufruf' }).toBe(1);
 		} finally {
 			await hub.aufraeumen();

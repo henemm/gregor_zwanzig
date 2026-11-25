@@ -722,7 +722,7 @@ test.describe('Karte „Was steht wo“', () => {
 				const ortIds = fall.kind === 'vergleich' ? ((await stand(page.request, abo.kind, abo.id)).location_ids as string[]) : [];
 				const pruefe = async (seite: Page, a: Abo) => {
 					const z = await oeffneZustellung(seite, a.kind, a.id);
-					const karte = z.getByTestId(ZT.uebergang).getByTestId('alert-preview-card');
+					const karte = z.getByTestId(ZT.beispielAlarm).getByTestId('alert-preview-card');
 					await expect(karte.getByTestId('alert-preview-unsaved'), 'kein ungespeicherter Zustand').toHaveCount(0);
 					const anfrage = seite.waitForRequest((r) => r.method() === 'POST' && r.url().includes('/alert-preview'), { timeout: 20_000 });
 					await karte.getByTestId('alert-preview-load-btn').click();
@@ -759,16 +759,22 @@ test.describe('Karte „Was steht wo“', () => {
 		});
 	}
 
-	test('WS-15 (Trip): Kompakt sperrt die drei Mail-Blöcke, gespeicherte Werte bleiben, Ausführlich gibt sie frei', async ({ page }) => {
+	test('WS-15 (Trip): Kompakt sperrt die fünf Mail-Blöcke, gespeicherte Werte bleiben, Ausführlich gibt sie frei', async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
 		const abo = await seed(page.request, FAELLE[0], {
 			oben: { report_config: { enabled: true, morning_enabled: true, morning_time: '07:00:00', email_format: 'full', show_stage_stats: true, show_yesterday_comparison: false } }
 		});
-		const BLOECKE = ['show_stage_stats', 'show_yesterday_comparison', 'show_night_block'];
+		const BLOECKE = ['show_stage_stats', 'show_yesterday_comparison', 'show_night_block', 'show_compact_summary', 'show_stability'];
 		const GRUND = 'Wirkt nur in der ausführlichen E-Mail.';
 		const felder = async () => {
 			const t = await stand(page.request, 'route', abo.id);
-			return { stage: t.report_config.show_stage_stats, vortag: t.report_config.show_yesterday_comparison, nacht: t.display_config.show_night_block ?? null };
+			return {
+				stage: t.report_config.show_stage_stats,
+				vortag: t.report_config.show_yesterday_comparison,
+				nacht: t.display_config.show_night_block ?? null,
+				kurz: t.report_config.show_compact_summary ?? null,
+				lage: t.report_config.show_stability ?? null
+			};
 		};
 		try {
 			let karte = await oeffneKarte(page, abo);
@@ -788,7 +794,7 @@ test.describe('Karte „Was steht wo“', () => {
 				await expect(sw, `${f}: bei Kompakt gesperrt`).toHaveAttribute('aria-disabled', 'true');
 				await expect(sw, `${f}: Wert bleibt sichtbar`).toHaveAttribute('aria-checked', vorherAnzeige[f]!);
 			}
-			await expect(karte.getByText(GRUND, { exact: false }), 'Grund steht an den drei Schaltern').toHaveCount(3);
+			await expect(karte.getByText(GRUND, { exact: false }), 'Grund steht an den fünf Schaltern').toHaveCount(5);
 			// Ein Klick auf einen gesperrten Schalter schreibt nichts. Statt fester Wartezeit: danach eine sicher
 			// speichernde Geste (Format „Ausführlich“) in derselben Seite — ihr PUT muss der erste seit dem Klick
 			// sein, und die gespeicherten Blöcke sind unverändert (auch ein verzögert zusammengelegtes Speichern
@@ -835,10 +841,11 @@ test.describe('Karte „Was steht wo“', () => {
 			const abo = await seed(page.request, fall);
 			try {
 				const z = await oeffneZustellung(page, abo.kind, abo.id);
-				const ueb = z.getByTestId(ZT.uebergang);
-				await expect(ueb).toBeVisible();
-				await expect(ueb.getByTestId('alert-preview-card')).toBeVisible();
-				await expect(ueb.getByTestId('compare-hub-activation-card')).toHaveCount(abo.kind === 'vergleich' ? 1 : 0);
+				// #3036: Beispiel-Alarm als eigener Abschnitt, Pausieren-Karte (Orte) im Abschnitt unter dem Kopf.
+				const beispiel = z.getByTestId(ZT.beispielAlarm);
+				await expect(beispiel).toBeVisible();
+				await expect(beispiel.getByTestId('alert-preview-card')).toBeVisible();
+				await expect(z.getByTestId(ZT.aktivierung).getByTestId('compare-hub-activation-card')).toHaveCount(abo.kind === 'vergleich' ? 1 : 0);
 				for (const id of [...ALT_TESTIDS, ...Object.keys(KARTE_EINMAL[abo.kind])]) await expect(z.getByTestId(id), `Reiter Zustellung: ${id}`).toHaveCount(0);
 				for (const w of ALT_TEXTE) await expect(z, `Reiter Zustellung: „${w}“`).not.toContainText(w);
 
@@ -876,7 +883,7 @@ test.describe('Karte „Was steht wo“', () => {
 				}
 				expect((await page.request.get(tabellenUrl(fremd.kind, fremd.id))).status(), 'fremdes Abo nicht lesbar').toBe(404);
 
-				// Reiter Zustellung: ein Schalter außerhalb des Übergangsblocks; bei Orten zusätzlich die Pausieren-Karte im Block.
+				// Reiter Zustellung: ein Schalter der Briefing-Zeiten; bei Orten zusätzlich die Pausieren-Karte (#3036: Abschnitt unter dem Kopf).
 				const z = await oeffneZustellung(page, abo.kind, abo.id);
 				const pfad = abo.kind === 'route' ? `/api/trips/${abo.id}` : `/api/compare/presets/${abo.id}`;
 				const put = () => page.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === pfad, { timeout: 20_000 });
@@ -885,9 +892,9 @@ test.describe('Karte „Was steht wo“', () => {
 				expect((await p).status()).toBe(200);
 				if (abo.kind === 'vergleich') {
 					p = put();
-					await z.getByTestId(ZT.uebergang).getByTestId('compare-hub-activation-cta').click();
+					await z.getByTestId(ZT.aktivierung).getByTestId('compare-hub-activation-cta').click();
 					expect((await p).status()).toBe(200);
-					expect((await stand(page.request, abo.kind, abo.id)).schedule, 'Pausieren im Übergangsblock speichert').toBe('manual');
+					expect((await stand(page.request, abo.kind, abo.id)).schedule, 'Pausieren im Abschnitt Aktivierung speichert').toBe('manual');
 				}
 				expect(altStand(abo.kind, await stand(page.request, abo.kind, abo.id)), 'nach Speichern im Reiter Zustellung').toEqual(vorher);
 

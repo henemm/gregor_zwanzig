@@ -24,6 +24,7 @@ sonst bliebe die Bildungsstelle der km-Lage unbewacht.
 from __future__ import annotations
 
 import json
+import threading
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import NamedTuple
@@ -38,6 +39,7 @@ from app.models import (
 )
 from services.radar_service import NowcastResult
 from services.trip_alert import TripAlertService
+from services.trip_segments import RADAR_ZONE_POINT_SPACING_KM
 from utils.geo import haversine_km
 
 from tests.helpers.arrival_window_fixtures import stage_date
@@ -479,6 +481,70 @@ def test_alle_folgepunkte_ausgefallen_ist_der_extremfall():
     assert luecken["points_measured"] == 1 and len(luecken["gap_km"]) == 5, (
         f"AC-2: genau EIN gemessener Punkt und FUENF Luecken erwartet, war "
         f"{luecken!r}"
+    )
+
+
+#: Wartegrenze des erzwungenen Ueberholens; im parallelen Abruf kommt Punkt 2
+#: sofort, nur ein serieller Abruf laeuft hier hinein (Testvoraussetzung rot).
+_UEBERHOL_FRIST = 10.0
+
+
+class _UeberholRadar(_LueckenRadar):
+    """Erzwingt eine Ankunft GEGEN die Streckenfolge (#3054): der Abruf von
+    Punkt 1 beginnt erst, wenn Punkt 2 schon abgefragt UND beantwortet ist.
+
+    Frueher hing die Reihenfolge am Zufall des parallelen Abrufs; ein Orakel,
+    das die km-Lagen in Aufrufreihenfolge statt in Streckenfolge bildet, war
+    deshalb nur gelegentlich rot. Hier ist die Ueberholung bei jedem Lauf da.
+    """
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self._punkt2_fertig = threading.Event()
+        self.ankunft: list[int] = []
+        self.punkt1_ueberholt = False
+
+    def get_nowcast(self, lat, lon, *args, **kwargs):
+        # Index vorab aus der Geometrie, OHNE den Abruf schon zu buchen
+        # (`_index` zaehlt jeden Aufruf); Punkt 0 laeuft vor allen anderen.
+        km = haversine_km(_ZONEN_LAT0, _ZONEN_LON0, lat, lon)
+        i = 0 if self._km0 is None else round(
+            (km - self._km0) / RADAR_ZONE_POINT_SPACING_KM)
+        if i == 1:
+            self.punkt1_ueberholt = self._punkt2_fertig.wait(_UEBERHOL_FRIST)
+        try:
+            return super().get_nowcast(lat, lon, *args, **kwargs)
+        finally:
+            with self._sperre:
+                self.ankunft.append(i)
+            if i == 2:
+                self._punkt2_fertig.set()
+
+
+def test_luecken_in_streckenfolge_auch_wenn_folgepunkte_sich_ueberholen():
+    """#3054 GIVEN Folgepunkt 2 wird VOR Folgepunkt 1 abgefragt und
+    beantwortet / WHEN der Alarm protokolliert wird / THEN nennt `gap_km` die
+    Luecken in Streckenfolge (aufsteigende km), unabhaengig von der
+    Ankunftsreihenfolge.
+
+    Produktregel: die Folgepunkte laufen parallel, ausgewertet wird in
+    Eingabereihenfolge (`fetch_ordered`), also in Streckenfolge. Das Muster
+    1, 2, 4 ist absichtlich unsymmetrisch: eine Auswertung in umgekehrter
+    oder Ankunftsreihenfolge verschiebt die Luecken auf andere Punkte.
+    """
+    radar = _UeberholRadar(luecken={
+        1: {"data_unavailable": True}, 2: {"throttled": True},
+        4: {"data_unavailable": True},
+    })
+    lauf = _lauf(radar, tag="ueberholt")
+
+    assert radar.punkt1_ueberholt and radar.ankunft.index(2) < radar.ankunft.index(1), (
+        f"Testvoraussetzung: Punkt 2 muss vor Punkt 1 eintreffen, sonst prueft "
+        f"der Test die Reihenfolge-Unabhaengigkeit nicht; Ankunft {radar.ankunft}"
+    )
+    luecken = _pruefe_luecken(lauf, radar, punkte_erwartet=6)
+    assert len(luecken["gap_km"]) == 3 and luecken["gap_km"] == sorted(luecken["gap_km"]), (
+        f"`gap_km` muss drei Luecken aufsteigend nennen, war {luecken['gap_km']!r}"
     )
 
 

@@ -93,6 +93,8 @@ Die Punkte, die oben unter „Folgepflichten“ und in Nr. 5 als offen für die 
 
 **Weiter offen, nicht Teil des Baus zu #3122:** die Schalter der Trip-Mail ohne Platz im Soll-Bild (Kurz-Zusammenfassung, Quick-Take-Chips, Metriken-Überblick, Großwetterlage, Zusammenfassung, Tages-Summe). Sie bleiben bis #3036 im Übergangsblock bedienbar; die Frage gehört zu #3036.
 
+Nachtrag 2026-11-24 (#3036): entschieden, dass Kurz-Zusammenfassung und Großwetterlage eigene Schalter unter der Tabelle bekommen (nur ausführliche Mail, bei Kompakt gesperrt); die übrigen vier (Quick-Take-Chips, Metriken-Überblick, Zusammenfassung, Tages-Summe) bleiben wirkungslos und ohne Oberfläche. Diese Entscheidung ändert den Wortlaut oben nicht.
+
 ## Nachtrag 2026-11-24: E-Mail-Format „Kompakt“ auch für Orte (#3059)
 
 Überholt die Einschränkung „(Trip: …)“ in Nr. 7 und ergänzt Nr. 6 und Nr. 9 der Spec-Festlegungen; nichts wird still zurückgenommen. Spec: `docs/specs/modules/feat_3059_orte_kompakt_mail.md`.

@@ -1,0 +1,31 @@
+## Absicherung, seriell 1
+..............................                                           [100%]
+30 passed in 67.72s (0:01:07)
+exit=0
+## Absicherung, seriell 2
+..............................                                           [100%]
+30 passed in 71.76s (0:01:11)
+exit=0
+## Absicherung, -n 4 (1)
+bringing up nodes...
+bringing up nodes...
+
+..............................                                           [100%]
+30 passed in 30.06s
+exit=0
+## Absicherung, -n 4 (2)
+bringing up nodes...
+bringing up nodes...
+
+..............................                                           [100%]
+30 passed in 31.59s
+exit=0
+## Zieldatei, -n 4
+bringing up nodes...
+bringing up nodes...
+
+........................................................................ [ 48%]
+........................................................................ [ 96%]
+.....                                                                    [100%]
+149 passed in 93.39s (0:01:33)
+exit=0

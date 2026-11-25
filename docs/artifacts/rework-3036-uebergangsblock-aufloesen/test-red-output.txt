@@ -1,0 +1,731 @@
+# TDD RED — Issue #3036 (rework-3036-uebergangsblock-aufloesen), 2026-11-24T21:34:22+00:00, Basis 5c8b44855
+
+## pytest tests/tdd/test_rework_3036_placements_bloecke.py
+FFFFFF                                                                   [100%]
+=================================== FAILURES ===================================
+____________________ test_ac5_gesetzt_false_kommt_als_false ____________________
+tests/tdd/test_rework_3036_placements_bloecke.py:68: in test_ac5_gesetzt_false_kommt_als_false
+    assert "show_compact_summary" in b, "blocks ohne show_compact_summary"
+E   AssertionError: blocks ohne show_compact_summary
+E   assert 'show_compact_summary' in {'show_stage_stats': True, 'show_yesterday_comparison': True, 'show_night_block': True, 'email_format': 'full', ...}
+__________________ test_ac5_einzeln_aus_das_andere_bleibt_an ___________________
+tests/tdd/test_rework_3036_placements_bloecke.py:77: in test_ac5_einzeln_aus_das_andere_bleibt_an
+    assert b.get("show_compact_summary") is True
+E   AssertionError: assert None is True
+E    +  where None = <built-in method get of dict object at 0x7c8ebb740d00>('show_compact_summary')
+E    +    where <built-in method get of dict object at 0x7c8ebb740d00> = {'show_stage_stats': True, 'show_yesterday_comparison': True, 'show_night_block': True, 'email_format': 'full', ...}.get
+_______________________ test_ac5_fehlend_heisst_an[None] _______________________
+tests/tdd/test_rework_3036_placements_bloecke.py:85: in test_ac5_fehlend_heisst_an
+    assert b.get("show_compact_summary") is True, f"fehlend muss an sein: {b}"
+E   AssertionError: fehlend muss an sein: {'show_stage_stats': True, 'show_yesterday_comparison': True, 'show_night_block': True, 'email_format': 'full', 'telegram_style': 'rich', 'outlook': {'morning': False, 'evening': True}}
+E   assert None is True
+E    +  where None = <built-in method get of dict object at 0x7c8ebb740d80>('show_compact_summary')
+E    +    where <built-in method get of dict object at 0x7c8ebb740d80> = {'show_stage_stats': True, 'show_yesterday_comparison': True, 'show_night_block': True, 'email_format': 'full', ...}.get
+_______________________ test_ac5_fehlend_heisst_an[rc1] ________________________
+tests/tdd/test_rework_3036_placements_bloecke.py:85: in test_ac5_fehlend_heisst_an
+    assert b.get("show_compact_summary") is True, f"fehlend muss an sein: {b}"
+E   AssertionError: fehlend muss an sein: {'show_stage_stats': True, 'show_yesterday_comparison': True, 'show_night_block': True, 'email_format': 'full', 'telegram_style': 'rich', 'outlook': {'morning': False, 'evening': True}}
+E   assert None is True
+E    +  where None = <built-in method get of dict object at 0x7c8ebb7567c0>('show_compact_summary')
+E    +    where <built-in method get of dict object at 0x7c8ebb7567c0> = {'show_stage_stats': True, 'show_yesterday_comparison': True, 'show_night_block': True, 'email_format': 'full', ...}.get
+_______________________ test_ac5_fehlend_heisst_an[rc2] ________________________
+tests/tdd/test_rework_3036_placements_bloecke.py:85: in test_ac5_fehlend_heisst_an
+    assert b.get("show_compact_summary") is True, f"fehlend muss an sein: {b}"
+E   AssertionError: fehlend muss an sein: {'show_stage_stats': False, 'show_yesterday_comparison': True, 'show_night_block': True, 'email_format': 'full', 'telegram_style': 'rich', 'outlook': {'morning': False, 'evening': True}}
+E   assert None is True
+E    +  where None = <built-in method get of dict object at 0x7c8ebb781bc0>('show_compact_summary')
+E    +    where <built-in method get of dict object at 0x7c8ebb781bc0> = {'show_stage_stats': False, 'show_yesterday_comparison': True, 'show_night_block': True, 'email_format': 'full', ...}.get
+______________________ test_ac5_werte_je_nutzer_getrennt _______________________
+tests/tdd/test_rework_3036_placements_bloecke.py:95: in test_ac5_werte_je_nutzer_getrennt
+    assert (a.get("show_compact_summary"), a.get("show_stability")) == (False, True)
+E   assert (None, None) == (False, True)
+E     
+E     At index 0 diff: None != False
+E     Use -v to get more diff
+=========================== short test summary info ============================
+FAILED tests/tdd/test_rework_3036_placements_bloecke.py::test_ac5_gesetzt_false_kommt_als_false
+FAILED tests/tdd/test_rework_3036_placements_bloecke.py::test_ac5_einzeln_aus_das_andere_bleibt_an
+FAILED tests/tdd/test_rework_3036_placements_bloecke.py::test_ac5_fehlend_heisst_an[None]
+FAILED tests/tdd/test_rework_3036_placements_bloecke.py::test_ac5_fehlend_heisst_an[rc1]
+FAILED tests/tdd/test_rework_3036_placements_bloecke.py::test_ac5_fehlend_heisst_an[rc2]
+FAILED tests/tdd/test_rework_3036_placements_bloecke.py::test_ac5_werte_je_nutzer_getrennt
+
+## node --test src/lib/components/organisms/__tests__/rework_3036_bloecke_schalter.test.ts
+TAP version 13
+# Subtest: \#3036 AC-1: zwei neue Block-Schalter im Trip
+    # Subtest: show_compact_summary: genau ein Schalter, Titel und Hinweis aus dem Katalog, fehlendes Feld = an
+    not ok 1 - show_compact_summary: genau ein Schalter, Titel und Hinweis aus dem Katalog, fehlendes Feld = an
+      ---
+      error: |-
+        Schalter was-steht-wo-show_compact_summary fehlt im Trip
+        
+        0 !== 1
+        
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/organisms/__tests__/rework_3036_bloecke_schalter.test.ts:109:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+    # Subtest: show_compact_summary: gespeichert false → Schalter aus, das andere Feld bleibt an
+    not ok 2 - show_compact_summary: gespeichert false → Schalter aus, das andere Feld bleibt an
+      ---
+      error: |-
+        Expected values to be strictly equal:
+        
+        null !== 'false'
+        
+      name: 'AssertionError'
+      expected: 'false'
+      actual: ~
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/organisms/__tests__/rework_3036_bloecke_schalter.test.ts:119:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+    # Subtest: show_stability: genau ein Schalter, Titel und Hinweis aus dem Katalog, fehlendes Feld = an
+    not ok 3 - show_stability: genau ein Schalter, Titel und Hinweis aus dem Katalog, fehlendes Feld = an
+      ---
+      error: |-
+        Schalter was-steht-wo-show_stability fehlt im Trip
+        
+        0 !== 1
+        
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/organisms/__tests__/rework_3036_bloecke_schalter.test.ts:109:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+    # Subtest: show_stability: gespeichert false → Schalter aus, das andere Feld bleibt an
+    not ok 4 - show_stability: gespeichert false → Schalter aus, das andere Feld bleibt an
+      ---
+      error: |-
+        Expected values to be strictly equal:
+        
+        null !== 'false'
+        
+      name: 'AssertionError'
+      expected: 'false'
+      actual: ~
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/organisms/__tests__/rework_3036_bloecke_schalter.test.ts:119:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+    # Subtest: Schalter stehen unter „Ganze Blöcke“, vor „Einstellungen je Kanal“
+    not ok 5 - Schalter stehen unter „Ganze Blöcke“, vor „Einstellungen je Kanal“
+      ---
+      error: 'show_compact_summary nicht im Abschnitt „Ganze Blöcke“'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/organisms/__tests__/rework_3036_bloecke_schalter.test.ts:131:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+    # Subtest: Orts-Vergleich: keiner der zwei Schalter, auch wenn blocks sie trägt
+    ok 6 - Orts-Vergleich: keiner der zwei Schalter, auch wenn blocks sie trägt
+      ---
+    1..6
+not ok 1 - \#3036 AC-1: zwei neue Block-Schalter im Trip
+  ---
+  error: '5 subtests failed'
+# Subtest: \#3036 AC-4: bei E-Mail-Format Kompakt gesperrt mit „nur ausführlich“
+    # Subtest: show_compact_summary: aria-disabled, Hinweis um „Wirkt nur in der ausführlichen E-Mail.“ ergänzt, Wert bleibt
+    not ok 1 - show_compact_summary: aria-disabled, Hinweis um „Wirkt nur in der ausführlichen E-Mail.“ ergänzt, Wert bleibt
+      ---
+      error: |-
+        Schalter was-steht-wo-show_compact_summary fehlt
+        
+        0 !== 1
+        
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/organisms/__tests__/rework_3036_bloecke_schalter.test.ts:147:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+    # Subtest: show_stability: aria-disabled, Hinweis um „Wirkt nur in der ausführlichen E-Mail.“ ergänzt, Wert bleibt
+    not ok 2 - show_stability: aria-disabled, Hinweis um „Wirkt nur in der ausführlichen E-Mail.“ ergänzt, Wert bleibt
+      ---
+      error: |-
+        Schalter was-steht-wo-show_stability fehlt
+        
+        0 !== 1
+        
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/organisms/__tests__/rework_3036_bloecke_schalter.test.ts:147:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+    1..2
+not ok 2 - \#3036 AC-4: bei E-Mail-Format Kompakt gesperrt mit „nur ausführlich“
+  ---
+  error: '2 subtests failed'
+# Subtest: \#3036 AC-6: Titel und Hinweis in der Nutzersprache (EN)
+    # Subtest: show_compact_summary: englischer Titel/Hinweis aus dem Katalog, verschieden vom deutschen
+    not ok 1 - show_compact_summary: englischer Titel/Hinweis aus dem Katalog, verschieden vom deutschen
+      ---
+      error: 'Katalog en: Key wetter.wsw.bloecke.kurz fehlt'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+        k (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/organisms/__tests__/rework_3036_bloecke_schalter.test.ts:54:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/organisms/__tests__/rework_3036_bloecke_schalter.test.ts:161:21)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+    # Subtest: show_stability: englischer Titel/Hinweis aus dem Katalog, verschieden vom deutschen
+    not ok 2 - show_stability: englischer Titel/Hinweis aus dem Katalog, verschieden vom deutschen
+      ---
+      error: 'Katalog en: Key wetter.wsw.bloecke.grosswetterlage fehlt'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+        k (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/organisms/__tests__/rework_3036_bloecke_schalter.test.ts:54:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/organisms/__tests__/rework_3036_bloecke_schalter.test.ts:161:21)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+    1..2
+not ok 3 - \#3036 AC-6: Titel und Hinweis in der Nutzersprache (EN)
+  ---
+  error: '2 subtests failed'
+1..3
+# tests 10
+# suites 3
+# pass 1
+# fail 9
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3409.456826
+
+## node --test src/lib/components/shared/wetter-tab/__tests__/rework_3036_bloecke_speicherung.test.ts
+TAP version 13
+# Subtest: \#3036 AC-1: Startwert der zwei Schalter aus blocks
+    # Subtest: show_compact_summary: gespeichert false → aus
+    not ok 1 - show_compact_summary: gespeichert false → aus
+      ---
+      error: |-
+        show_compact_summary fehlt in den Feldern der Karte
+        + actual - expected
+        
+        + undefined
+        - false
+        
+      name: 'AssertionError'
+      expected: false
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/shared/wetter-tab/__tests__/rework_3036_bloecke_speicherung.test.ts:24:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+    # Subtest: show_compact_summary: fehlendes Feld → an
+    not ok 2 - show_compact_summary: fehlendes Feld → an
+      ---
+      error: |-
+        show_compact_summary ohne gespeicherten Wert muss an sein
+        + actual - expected
+        
+        + undefined
+        - true
+        
+      name: 'AssertionError'
+      expected: true
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/shared/wetter-tab/__tests__/rework_3036_bloecke_speicherung.test.ts:28:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+    # Subtest: show_stability: gespeichert false → aus
+    not ok 3 - show_stability: gespeichert false → aus
+      ---
+      error: |-
+        show_stability fehlt in den Feldern der Karte
+        + actual - expected
+        
+        + undefined
+        - false
+        
+      name: 'AssertionError'
+      expected: false
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/shared/wetter-tab/__tests__/rework_3036_bloecke_speicherung.test.ts:24:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+    # Subtest: show_stability: fehlendes Feld → an
+    not ok 4 - show_stability: fehlendes Feld → an
+      ---
+      error: |-
+        show_stability ohne gespeicherten Wert muss an sein
+        + actual - expected
+        
+        + undefined
+        - true
+        
+      name: 'AssertionError'
+      expected: true
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/shared/wetter-tab/__tests__/rework_3036_bloecke_speicherung.test.ts:28:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+    1..4
+not ok 1 - \#3036 AC-1: Startwert der zwei Schalter aus blocks
+  ---
+  error: '4 subtests failed'
+# Subtest: \#3036 AC-2: Umschalten speichert nur das geänderte Feld in report_config
+    # Subtest: show_compact_summary aus: Nutzlast { report_config: { show_compact_summary: false } }, sonst nichts
+    not ok 1 - show_compact_summary aus: Nutzlast { report_config: { show_compact_summary: false } }, sonst nichts
+      ---
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + {}
+        - {
+        -   report_config: {
+        -     show_compact_summary: false
+        -   }
+        - }
+        
+      name: 'AssertionError'
+      expected:
+        report_config:
+          show_compact_summary: false
+      actual:
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/shared/wetter-tab/__tests__/rework_3036_bloecke_speicherung.test.ts:37:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+    # Subtest: show_compact_summary wieder an: Nutzlast { report_config: { show_compact_summary: true } }
+    not ok 2 - show_compact_summary wieder an: Nutzlast { report_config: { show_compact_summary: true } }
+      ---
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + {}
+        - {
+        -   report_config: {
+        -     show_compact_summary: true
+        -   }
+        - }
+        
+      name: 'AssertionError'
+      expected:
+        report_config:
+          show_compact_summary: true
+      actual:
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/shared/wetter-tab/__tests__/rework_3036_bloecke_speicherung.test.ts:41:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+    # Subtest: show_compact_summary: Orts-Vergleich schreibt das Feld nie
+    ok 3 - show_compact_summary: Orts-Vergleich schreibt das Feld nie
+      ---
+    # Subtest: show_stability aus: Nutzlast { report_config: { show_stability: false } }, sonst nichts
+    not ok 4 - show_stability aus: Nutzlast { report_config: { show_stability: false } }, sonst nichts
+      ---
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + {}
+        - {
+        -   report_config: {
+        -     show_stability: false
+        -   }
+        - }
+        
+      name: 'AssertionError'
+      expected:
+        report_config:
+          show_stability: false
+      actual:
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/shared/wetter-tab/__tests__/rework_3036_bloecke_speicherung.test.ts:37:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+    # Subtest: show_stability wieder an: Nutzlast { report_config: { show_stability: true } }
+    not ok 5 - show_stability wieder an: Nutzlast { report_config: { show_stability: true } }
+      ---
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + {}
+        - {
+        -   report_config: {
+        -     show_stability: true
+        -   }
+        - }
+        
+      name: 'AssertionError'
+      expected:
+        report_config:
+          show_stability: true
+      actual:
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/shared/wetter-tab/__tests__/rework_3036_bloecke_speicherung.test.ts:41:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+    # Subtest: show_stability: Orts-Vergleich schreibt das Feld nie
+    ok 6 - show_stability: Orts-Vergleich schreibt das Feld nie
+      ---
+    # Subtest: Schalter umgelegt: genau ein PUT auf /api/trips/{id} mit nur diesem Feld
+    not ok 7 - Schalter umgelegt: genau ein PUT auf /api/trips/{id} mit nur diesem Feld
+      ---
+      error: |-
+        Umschalten von show_stability löst keinen PUT aus
+        
+        0 !== 1
+        
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/shared/wetter-tab/__tests__/rework_3036_bloecke_speicherung.test.ts:62:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+    1..7
+not ok 2 - \#3036 AC-2: Umschalten speichert nur das geänderte Feld in report_config
+  ---
+  error: '5 subtests failed'
+1..2
+# tests 11
+# suites 2
+# pass 2
+# fail 9
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 181.658329
+
+## node --test src/lib/i18n/__tests__/rework_3036_katalog.test.ts
+TAP version 13
+# i18n fallback: wetter.wsw.bloecke.kurz
+# i18n fallback: wetter.wsw.bloecke.kurz_hinweis
+# i18n fallback: wetter.wsw.bloecke.grosswetterlage
+# i18n fallback: wetter.wsw.bloecke.grosswetterlage_hinweis
+# Subtest: \#3036 AC-6: Titel und Hinweis der neuen Schalter in DE und EN
+    # Subtest: wetter.wsw.bloecke.kurz: DE und EN liefern einen eigenen Text (kein Schlüssel-Echo, kein deutscher Rückfall)
+    not ok 1 - wetter.wsw.bloecke.kurz: DE und EN liefern einen eigenen Text (kein Schlüssel-Echo, kein deutscher Rückfall)
+      ---
+      error: 'DE: wetter.wsw.bloecke.kurz fehlt im Katalog'
+      name: 'AssertionError'
+      expected: 'wetter.wsw.bloecke.kurz'
+      actual: 'wetter.wsw.bloecke.kurz'
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/i18n/__tests__/rework_3036_katalog.test.ts:27:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+    # Subtest: wetter.wsw.bloecke.kurz_hinweis: DE und EN liefern einen eigenen Text (kein Schlüssel-Echo, kein deutscher Rückfall)
+    not ok 2 - wetter.wsw.bloecke.kurz_hinweis: DE und EN liefern einen eigenen Text (kein Schlüssel-Echo, kein deutscher Rückfall)
+      ---
+      error: 'DE: wetter.wsw.bloecke.kurz_hinweis fehlt im Katalog'
+      name: 'AssertionError'
+      expected: 'wetter.wsw.bloecke.kurz_hinweis'
+      actual: 'wetter.wsw.bloecke.kurz_hinweis'
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/i18n/__tests__/rework_3036_katalog.test.ts:27:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+    # Subtest: wetter.wsw.bloecke.grosswetterlage: DE und EN liefern einen eigenen Text (kein Schlüssel-Echo, kein deutscher Rückfall)
+    not ok 3 - wetter.wsw.bloecke.grosswetterlage: DE und EN liefern einen eigenen Text (kein Schlüssel-Echo, kein deutscher Rückfall)
+      ---
+      error: 'DE: wetter.wsw.bloecke.grosswetterlage fehlt im Katalog'
+      name: 'AssertionError'
+      expected: 'wetter.wsw.bloecke.grosswetterlage'
+      actual: 'wetter.wsw.bloecke.grosswetterlage'
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/i18n/__tests__/rework_3036_katalog.test.ts:27:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+    # Subtest: wetter.wsw.bloecke.grosswetterlage_hinweis: DE und EN liefern einen eigenen Text (kein Schlüssel-Echo, kein deutscher Rückfall)
+    not ok 4 - wetter.wsw.bloecke.grosswetterlage_hinweis: DE und EN liefern einen eigenen Text (kein Schlüssel-Echo, kein deutscher Rückfall)
+      ---
+      error: 'DE: wetter.wsw.bloecke.grosswetterlage_hinweis fehlt im Katalog'
+      name: 'AssertionError'
+      expected: 'wetter.wsw.bloecke.grosswetterlage_hinweis'
+      actual: 'wetter.wsw.bloecke.grosswetterlage_hinweis'
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/i18n/__tests__/rework_3036_katalog.test.ts:27:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+    # Subtest: die Titel benennen Kurz-Zusammenfassung und Großwetterlage
+    not ok 5 - die Titel benennen Kurz-Zusammenfassung und Großwetterlage
+      ---
+      error: |-
+        The input did not match the regular expression /Kurz-Zusammenfassung/. Input:
+        
+        'wetter.wsw.bloecke.kurz'
+        
+      name: 'AssertionError'
+      expected:
+      actual: 'wetter.wsw.bloecke.kurz'
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/i18n/__tests__/rework_3036_katalog.test.ts:34:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+    1..5
+not ok 1 - \#3036 AC-6: Titel und Hinweis der neuen Schalter in DE und EN
+  ---
+  error: '5 subtests failed'
+# Subtest: \#3036 AC-7: kein Übergangsblock mehr im Katalog
+    # Subtest: de: kein Key zustellung.uebergang.*
+    not ok 1 - de: kein Key zustellung.uebergang.*
+      ---
+      error: |-
+        de: Übergangsblock-Texte noch im Katalog
+        + actual - expected
+        
+        + [
+        +   'zustellung.uebergang.titel',
+        +   'zustellung.uebergang.hinweis'
+        + ]
+        - []
+        
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'zustellung.uebergang.titel'
+        1: 'zustellung.uebergang.hinweis'
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/i18n/__tests__/rework_3036_katalog.test.ts:43:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+    # Subtest: en: kein Key zustellung.uebergang.*
+    not ok 2 - en: kein Key zustellung.uebergang.*
+      ---
+      error: |-
+        en: Übergangsblock-Texte noch im Katalog
+        + actual - expected
+        
+        + [
+        +   'zustellung.uebergang.titel',
+        +   'zustellung.uebergang.hinweis'
+        + ]
+        - []
+        
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'zustellung.uebergang.titel'
+        1: 'zustellung.uebergang.hinweis'
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/i18n/__tests__/rework_3036_katalog.test.ts:43:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+    1..2
+not ok 2 - \#3036 AC-7: kein Übergangsblock mehr im Katalog
+  ---
+  error: '2 subtests failed'
+1..2
+# tests 7
+# suites 2
+# pass 0
+# fail 7
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 233.744596
+
+## node --test src/lib/components/shared/__tests__/rework_3036_zustellung_ohne_uebergang.test.ts
+TAP version 13
+# Subtest: \#3036 AC-7 Reiter Zustellung (route): kein Übergangsblock, Beispiel-Alarm als eigener Abschnitt
+    # Subtest: kein Element zustellung-uebergang, kein Abschnitt „uebergang“, kein „Vorübergehend hier“
+    not ok 1 - kein Element zustellung-uebergang, kein Abschnitt „uebergang“, kein „Vorübergehend hier“
+      ---
+      error: |-
+        Übergangsblock noch im Reiter
+        
+        1 !== 0
+        
+      name: 'AssertionError'
+      expected: 0
+      actual: 1
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/shared/__tests__/rework_3036_zustellung_ohne_uebergang.test.ts:52:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+    # Subtest: Beispiel-Alarm genau einmal als Abschnitt zustellung-beispiel-alarm, letzter Abschnitt nach Stille Stunden
+    not ok 2 - Beispiel-Alarm genau einmal als Abschnitt zustellung-beispiel-alarm, letzter Abschnitt nach Stille Stunden
+      ---
+      error: |-
+        Abschnitt Beispiel-Alarm fehlt
+        
+        0 !== 1
+        
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/shared/__tests__/rework_3036_zustellung_ohne_uebergang.test.ts:61:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+    1..2
+not ok 1 - \#3036 AC-7 Reiter Zustellung (route): kein Übergangsblock, Beispiel-Alarm als eigener Abschnitt
+  ---
+  error: '2 subtests failed'
+# Subtest: \#3036 AC-7 Reiter Zustellung (vergleich): kein Übergangsblock, Beispiel-Alarm als eigener Abschnitt
+    # Subtest: kein Element zustellung-uebergang, kein Abschnitt „uebergang“, kein „Vorübergehend hier“
+    not ok 1 - kein Element zustellung-uebergang, kein Abschnitt „uebergang“, kein „Vorübergehend hier“
+      ---
+      error: |-
+        Übergangsblock noch im Reiter
+        
+        1 !== 0
+        
+      name: 'AssertionError'
+      expected: 0
+      actual: 1
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/shared/__tests__/rework_3036_zustellung_ohne_uebergang.test.ts:52:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+    # Subtest: Beispiel-Alarm genau einmal als Abschnitt zustellung-beispiel-alarm, letzter Abschnitt nach Stille Stunden
+    not ok 2 - Beispiel-Alarm genau einmal als Abschnitt zustellung-beispiel-alarm, letzter Abschnitt nach Stille Stunden
+      ---
+      error: |-
+        Abschnitt Beispiel-Alarm fehlt
+        
+        0 !== 1
+        
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/shared/__tests__/rework_3036_zustellung_ohne_uebergang.test.ts:61:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+    1..2
+not ok 2 - \#3036 AC-7 Reiter Zustellung (vergleich): kein Übergangsblock, Beispiel-Alarm als eigener Abschnitt
+  ---
+  error: '2 subtests failed'
+# Subtest: \#3036 AC-7 Orte: Pausieren/Aktivieren als fester Abschnitt direkt unter dem Kopf
+    # Subtest: Hub (Snippet activation): Karte in zustellung-aktivierung, vor den Briefing-Zeiten, genau einmal
+    not ok 1 - Hub (Snippet activation): Karte in zustellung-aktivierung, vor den Briefing-Zeiten, genau einmal
+      ---
+      error: |-
+        fester Abschnitt zustellung-aktivierung fehlt
+        
+        0 !== 1
+        
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/shared/__tests__/rework_3036_zustellung_ohne_uebergang.test.ts:78:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+    # Subtest: ohne Snippet (Trip): kein leerer Aktivierungs-Abschnitt
+    ok 2 - ohne Snippet (Trip): kein leerer Aktivierungs-Abschnitt
+      ---
+    # Subtest: Anlegen (Desktop): Aktivierungs-Banner vor den Briefing-Zeiten im Reiter
+    not ok 3 - Anlegen (Desktop): Aktivierungs-Banner vor den Briefing-Zeiten im Reiter
+      ---
+      error: |-
+        Übergangsblock noch im Anlegen
+        
+        1 !== 0
+        
+      name: 'AssertionError'
+      expected: 0
+      actual: 1
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/shared/__tests__/rework_3036_zustellung_ohne_uebergang.test.ts:91:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+    # Subtest: Anlegen (Mobil): Aktivierungs-Banner vor den Briefing-Zeiten im Reiter
+    not ok 4 - Anlegen (Mobil): Aktivierungs-Banner vor den Briefing-Zeiten im Reiter
+      ---
+      error: |-
+        Übergangsblock noch im Anlegen
+        
+        1 !== 0
+        
+      name: 'AssertionError'
+      expected: 0
+      actual: 1
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/rework-3036/frontend/src/lib/components/shared/__tests__/rework_3036_zustellung_ohne_uebergang.test.ts:91:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+    1..4
+not ok 3 - \#3036 AC-7 Orte: Pausieren/Aktivieren als fester Abschnitt direkt unter dem Kopf
+  ---
+  error: '3 subtests failed'
+1..3
+# tests 8
+# suites 3
+# pass 1
+# fail 7
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3739.592937
+
+## Playwright e2e/rework-3036-bloecke-schalter.spec.ts: nicht ausgeführt (Staging, /e2e-verify)

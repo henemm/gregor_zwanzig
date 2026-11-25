@@ -286,6 +286,62 @@ def _importbindung_vorladen():
     yield
 
 
+_PROJEKT_PFADE = (str(src) + os.sep, str(root / "api") + os.sep)
+
+
+def _fremde_loader_bindungen() -> list[tuple[object, str, object]]:
+    """Projektmodule, die einen ``app.loader``-Namen an etwas ANDERES als die
+    Loader-Funktion gebunden halten (Lambda/Testersatz aus einem Erstimport
+    unter aktivem Patch, Issue #3214). Eigene gleichnamige Definitionen eines
+    Moduls zaehlen nicht."""
+    loader = sys.modules.get("app.loader")
+    if loader is None:
+        return []
+    namen = {
+        n for n, v in vars(loader).items()
+        if callable(v) and getattr(v, "__module__", None) == "app.loader"
+    }
+    funde = []
+    for modname, mod in list(sys.modules.items()):
+        datei = getattr(mod, "__file__", None) or ""
+        if mod is loader or not datei.startswith(_PROJEKT_PFADE):
+            continue
+        attrs = getattr(mod, "__dict__", {})
+        for name in namen & attrs.keys():
+            wert = attrs[name]
+            if getattr(wert, "__module__", None) in ("app.loader", modname):
+                continue
+            funde.append((mod, name, wert))
+    return funde
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _importbindung_waechter(_importbindung_vorladen):
+    """Issue #3214: faengt die Leck-Art aus #3209 an der QUELLE. Ein Modul,
+    das ``from app.loader import X`` beim Import bindet und erstmals in einem
+    Test geladen wird, der ``app.loader.X`` per ``monkeypatch`` ersetzt,
+    behaelt den Ersatz fuer den Rest des Prozesses -- rot wird dann ein
+    unbeteiligter spaeterer Test. Nach jeder Testdatei (alle Funktions-
+    Patches sind zurueckgebaut) darf kein Projektmodul mehr einen fremden
+    Loader-Namen halten. Der Fund wird gemeldet UND repariert, damit nur die
+    verursachende Datei rot wird, nicht alle folgenden."""
+    yield
+    funde = _fremde_loader_bindungen()
+    if not funde:
+        return
+    loader = sys.modules["app.loader"]
+    for mod, name, _ in funde:
+        setattr(mod, name, getattr(loader, name))
+    zeilen = "\n".join(f"  {m.__name__}.{n} = {w!r}" for m, n, w in funde)
+    pytest.fail(
+        "Importbindung an app.loader wurde in dieser Testdatei mit einem Ersatz "
+        "eingefroren (Erstimport unter aktivem Patch). Modul in "
+        f"``_importbindung_vorladen`` aufnehmen oder den Ersatz am Modul selbst "
+        f"per monkeypatch setzen:\n{zeilen}",
+        pytrace=False,
+    )
+
+
 @pytest.fixture(scope="module", autouse=True)
 def _isolate_data_root_module(request, _redirect_data_root_session):
     """Modul-scope Gegenstueck zu ``_isolate_data_root`` (Funktionsebene,

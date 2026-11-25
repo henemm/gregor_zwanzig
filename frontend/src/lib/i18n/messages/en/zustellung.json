@@ -65,7 +65,5 @@
 	"zustellung.anpassen.titel": "Adjust",
 	"zustellung.anpassen.cooldown": "Minimum interval between two alerts",
 	"zustellung.anpassen.cooldown_sub": "of the same metric",
-	"zustellung.anpassen.minuten": "minutes",
-	"zustellung.uebergang.titel": "Here for now: example alert",
-	"zustellung.uebergang.hinweis": "Set content and display per channel in the Weather tab under “What goes where”. What is here will move in a later step and keeps working as before until then."
+	"zustellung.anpassen.minuten": "minutes"
 }

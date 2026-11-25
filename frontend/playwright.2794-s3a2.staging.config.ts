@@ -1,8 +1,8 @@
 import { defineConfig } from '@playwright/test';
 import { ausUmgebung } from './e2e/stagingZugang';
 // Issue #2794 S3a, Teil-PR 2 „Leiste und Umleitung": Staging-Lauf der Spec
-// `s3a2794-hub-reiter-wetter-zustellung.spec.ts` und `s3a2794-zustellung-inventar-speicherweg.spec.ts`
-// (AC-7/AC-8, Fix-Loop 1) gegen https://staging.gregor20.henemm.com
+// `s3a2794-hub-reiter-wetter-zustellung.spec.ts` (die Spec `s3a2794-zustellung-inventar-speicherweg.spec.ts`
+// zu AC-7/AC-8 ist mit #3036 als veraltet entfallen) gegen https://staging.gregor20.henemm.com
 // (nur /e2e-verify, nie gegen Produktion). Staging steht hinter nginx-Basic-Auth
 // (Validator-Creds), Login ueber das Setup-Projekt von #1895. Analog playwright.1895.staging.config.ts.
 //   cd frontend && npx playwright test --config playwright.2794-s3a2.staging.config.ts

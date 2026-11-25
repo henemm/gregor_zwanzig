@@ -503,19 +503,21 @@ def test_f004_sinkende_stufe_bei_gesunder_meldender_quelle_ergibt_entwarnung_und
     RED heute: still, Gedaechtnis bleibt auf 3."""
     from tests.helpers.transport_mitschrift import aufzeichner_installieren
     from tests.tdd._official_alert_allclear_fixtures import (
-        Szenario, basis_jetzt, entwarnungs_sendungen, lauf_erstwarnung, quellen,
+        Szenario, basis_jetzt, entwarnungs_sendungen, feste_uhr, lauf_erstwarnung, quellen,
     )
 
     mit = aufzeichner_installieren(monkeypatch)
-    t0 = basis_jetzt()
-    sz = Szenario("trip", monkeypatch, mit, t0, level=3, bis_stunden=7)
-    with quellen(sz.x):
-        lauf_erstwarnung(sz)
-        sz.x.alerts = [sz.warnung(2, von=sz.von + timedelta(hours=4), bis=sz.bis + timedelta(hours=5))]
-        snap = sz.lauf(15)
+    with feste_uhr():  # Aufbau UND Laeufe unter fester Uhr, nicht unter der Wanduhr
+        t0 = basis_jetzt()
+        sz = Szenario("trip", monkeypatch, mit, t0, level=3, bis_stunden=7)
+        with quellen(sz.x):
+            lauf_erstwarnung(sz)
+            sz.x.alerts = [sz.warnung(2, von=sz.von + timedelta(hours=4),
+                                      bis=sz.bis + timedelta(hours=5))]
+            snap = sz.lauf(15)
+        eintraege = sz.eintraege()
 
     assert entwarnungs_sendungen(snap, "email"), f"Sinkende Revision muss Entwarnung ergeben: {snap!r}"
-    eintraege = sz.eintraege()
     assert eintraege and all(e.get("last_reported_value") == 2.0 for e in eintraege.values()), (
         f"Gedaechtnis nach Entwarnung nicht auf 2 gesenkt: {eintraege!r}")
 

@@ -236,8 +236,10 @@ def _ohne_block(text: str, ueberschrift: str) -> str:
     return re.sub(rf"\n{re.escape(ueberschrift)}\n.*?\n\n", "\n\n", text, flags=re.S)
 
 
-def _lauf(tmp_path, validator, eml, *args):
-    lauf, _log = validator_lauf(tmp_path, validator, eml, *args)
+def _lauf(tmp_path, validator, eml, *args, prozess=False):
+    """Fork-Server (#3331); ``prozess=True`` = echter Prozess ohne installiertes src."""
+    lauf, _log = validator_lauf(tmp_path, validator, eml, *args,
+                                im_server=not prozess, ohne_installiertes_src=prozess)
     return lauf.returncode, lauf.stdout + lauf.stderr
 
 
@@ -272,6 +274,13 @@ def trip_mail(monkeypatch, tmp_path):
 def test_trip_positiv_mail_stimmt_mit_konfig(tmp_path, trip_mail):
     eml, konfig = trip_mail
     code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
+    assert code == 0, aus
+
+
+def test_trip_echter_prozess_mit_konfig(tmp_path, trip_mail):
+    """#3331 AC-2: unveraenderter Validator als echter Prozess, ohne installiertes src."""
+    eml, konfig = trip_mail
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig, prozess=True)
     assert code == 0, aus
 
 
@@ -344,6 +353,13 @@ def orte_mail(monkeypatch, tmp_path):
 def test_orte_positiv_mail_stimmt_mit_konfig(tmp_path, orte_mail):
     eml, konfig = orte_mail
     code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig)
+    assert code == 0, aus
+
+
+def test_orte_echter_prozess_mit_konfig(tmp_path, orte_mail):
+    """#3331 AC-2: unveraenderter Validator als echter Prozess, ohne installiertes src."""
+    eml, konfig = orte_mail
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig, prozess=True)
     assert code == 0, aus
 
 

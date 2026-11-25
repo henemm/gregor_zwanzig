@@ -140,9 +140,11 @@ describe('AC-35: Katalog zustellung in DE und EN', () => {
 		}
 	});
 
-	test('s3b2795_uebergangsblock_hat_eigene_ueberschrift (AC-30)', () => {
-		const de = lies('de');
-		assert.ok(Object.keys(de).some((k) => k.startsWith('zustellung.uebergang.')), 'Ueberschrift des Uebergangsblocks fehlt (zustellung.uebergang.*)');
+	// #3036 (AC-7): der Uebergangsblock ist aufgeloest, seine Ueberschrift entfaellt in DE und EN.
+	test('rework3036_kein_uebergangsblock_text_im_katalog (AC-7)', () => {
+		for (const lang of ['de', 'en'] as const) {
+			assert.deepEqual(Object.keys(lies(lang)).filter((k) => k.startsWith('zustellung.uebergang.')), [], `${lang}: zustellung.uebergang.* noch im Katalog`);
+		}
 	});
 });
 

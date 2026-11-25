@@ -336,3 +336,37 @@ class TestAC12FAdv1ArgsAfterAmpersandBoundary:
     def test_unit_args_after_stops_at_ampersand(self):
         tokens = ["pytest", "tests/", "&", "x.py"]
         assert gate._args_after(tokens, 0) == ["tests/"]
+
+
+class TestSchreibweiseUnabhaengig:
+    """Gross-/Kleinschreibung: auf Dateisystemen ohne Unterscheidung (macOS)
+    startet ``PyTest``/``PYTEST`` dieselbe Executable wie ``pytest``. Jede
+    Schreibweise wird wie die kleingeschriebene bewertet; die freien
+    Offline-Formen bleiben woertlich (nur kleingeschrieben frei)."""
+
+    @pytest.mark.parametrize("command", [
+        "uv run PyTest tests/",
+        "uv run PYTEST -n auto",
+        "PyTest",
+        ".venv/bin/PyTest tests/tdd/",
+        "NICE -n10 Pytest tests/",
+        "PYTHON3 -m PyTest tests/",
+        'sh -c "uv run PyTest tests/"',
+        "uv run PyTest --disable-socket --allow-unix-socket "
+        "--allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/",
+    ])
+    def test_breiter_lauf_in_anderer_schreibweise_blockiert(self, command):
+        result = _run_gate(command)
+        assert result.returncode == 2, (command, result.stdout + result.stderr)
+        assert "BLOCKED" in result.stderr
+
+    @pytest.mark.parametrize("command", [
+        "uv run PyTest tests/tdd/test_x.py",
+        "uv run PYTEST --tb=short -q tests/tdd/test_x.py::TestA::test_b",
+        "uv run PyTest --collect-only",
+        'grep -n "PyTest" .github/workflows/ci.yml',
+        'git commit -m "PyTest"',
+    ])
+    def test_benannte_dateien_und_textvorkommen_in_anderer_schreibweise_frei(self, command):
+        result = _run_gate(command)
+        assert result.returncode == 0, (command, result.stdout + result.stderr)

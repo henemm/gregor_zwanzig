@@ -138,11 +138,16 @@ class TestDefaultTripMetricIdsIstAusDemRegisterAbgeleitet:
         from output.renderers import trip_metric_ids as tmi_module
 
         extra = dataclasses_replace_temperature_with_next_free_rank(metric_catalog)
-        monkeypatch.setattr(
-            metric_catalog, "_METRICS", metric_catalog._METRICS + [extra],
-        )
+        # Issue #3214: der Aufraeum-Reload muss NACH dem Rueckbau des Registers
+        # laufen. Lief er (wie frueher) im ``finally`` bei noch aktivem
+        # ``monkeypatch``, las er das gestoerte Register erneut ein und die
+        # Sonde blieb fuer alle Folgetests in DEFAULT_TRIP_METRIC_IDS stehen.
         try:
-            reloaded = importlib.reload(tmi_module)
+            with monkeypatch.context() as mp:
+                mp.setattr(
+                    metric_catalog, "_METRICS", metric_catalog._METRICS + [extra],
+                )
+                reloaded = importlib.reload(tmi_module)
             assert reloaded.DEFAULT_TRIP_METRIC_IDS[-1] == "trip_1552_mutation_probe", (
                 "DEFAULT_TRIP_METRIC_IDS reagiert nicht auf eine echte "
                 "Registeraenderung -- das ist nur moeglich, wenn die Liste (wieder) "
@@ -150,6 +155,10 @@ class TestDefaultTripMetricIdsIstAusDemRegisterAbgeleitet:
             )
         finally:
             importlib.reload(tmi_module)  # Modul-Cache fuer alle Folgetests bereinigen
+        assert "trip_1552_mutation_probe" not in tmi_module.DEFAULT_TRIP_METRIC_IDS, (
+            "Aufraeum-Reload lief gegen das noch gestoerte Register -- die Sonde "
+            "wuerde in alle Folgetests durchsickern"
+        )
 
 
 def dataclasses_replace_temperature_with_next_free_rank(metric_catalog):

@@ -192,9 +192,11 @@ und wird eigenes Ticket (kein Aufweichen der Teilung).
   identisch zum bisherigen sequenziellen Ergebnis.
   - Test (Python, nach Verhalten benannt, z. B. `tests/test_preview_trend_laeuft_nebenlaeufig.py`):
     echte, kurze `time.sleep`-Funktionen als Ersatz der Abrufe (je ca. 0,3 s) ueber die
-    Austauschstellen am Scheduler-Objekt (kein Mock der eigenen Annahme): gemessene Gesamtzeit
-    deutlich unter der Summe, Zeitstempel zeigen Ueberlappung, Rueckgabe gleich der
-    sequenziellen Referenz; Trend-Zweig sieht dieselben `ContextVar`-Werte.
+    Austauschstellen am Scheduler-Objekt (kein Mock der eigenen Annahme): die Gleichzeitigkeit
+    belegt ein Ereignis-Treffpunkt (`threading.Event`) statt Wanduhr-Messung (#3248) -- der
+    Trend laeuft beim Start von Hauptabruf und Nachtwetter und erlebt das Ende des Nachtwetters,
+    ein serieller Ablauf scheitert an der Wartefrist; Rueckgabe gleich der sequenziellen
+    Referenz; Trend-Zweig sieht dieselben `ContextVar`-Werte.
 
 - **AC-4:** Given in einer Vorschau scheitert ein Zweig (Trend ODER Hauptabruf/Nachtwetter) /
   When der Bericht berechnet wird / Then bleibt das Fehlerverhalten wie heute (gleiche
@@ -293,3 +295,4 @@ Geschaetzt: ca. 120 LoC, 9 Dateien. Nicht im Scope: siehe Nicht-Ziele.
 ## Changelog
 
 - 2026-11-07: Initial spec created (Issue #1839, Epic #2733 Strang C)
+- 2026-11-24: AC-3-Testbeschreibung: Gleichzeitigkeit per Ereignis-Treffpunkt statt Zeitstempel-Ueberlappung (#3248, Verhalten unveraendert)

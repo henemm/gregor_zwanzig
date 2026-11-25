@@ -60,8 +60,8 @@ const DATEI = {
 	tripNeu: join(KOMP, 'trip-new', 'TripNewEditor.svelte'),
 	vergleichNeu: join(KOMP, 'compare-new', 'CompareNewEditor.svelte'),
 	zustellung: join(KOMP, 'shared', 'zustellung-tab', 'ZustellungTab.svelte'),
-	// #2795 S3b Teilschritt 1b: der WMT-Traeger des Reiters steht im Uebergangsblock.
-	uebergang: join(KOMP, 'organisms', 'zustellung-tab', 'UebergangBlock.svelte'),
+	// #3036: Uebergangsblock aufgeloest — der Abschnitt am Ende ist der Beispiel-Alarm.
+	beispiel: join(KOMP, 'organisms', 'zustellung-tab', 'BeispielAlarm.svelte'),
 	briefingZeiten: join(KOMP, 'organisms', 'zustellung-tab', 'BriefingZeiten.svelte'),
 	panel: join(KOMP, 'shared', 'WetterMetrikenVersandPanel.svelte'),
 	wmt: join(KOMP, 'shared', 'WeatherMetricsTab.svelte')
@@ -165,9 +165,9 @@ describe('§3: shared/zustellung-tab/ZustellungTab.svelte — Übergangsreiter',
 		assert.ok(existiert(DATEI.zustellung), 'ZustellungTab.svelte fehlt');
 		const z = traeger(DATEI.zustellung);
 		assert.deepEqual(z.e.map((x) => beschreibe(x, z.quelle)), [], 'ZustellungTab bettet direkt einen WMT-Traeger ein');
-		assert.equal(einbettungenMitWeichen(z.ast, z.quelle, ['UebergangBlock']).length, 1, 'ZustellungTab: Uebergangsblock nicht genau einmal');
-		const u = traeger(DATEI.uebergang);
-		assert.deepEqual(u.e.map((x) => beschreibe(x, u.quelle)), [], 'Uebergangsblock traegt noch die Metrik-Oberflaeche (#3154)');
+		assert.equal(einbettungenMitWeichen(z.ast, z.quelle, ['BeispielAlarm']).length, 1, 'ZustellungTab: Beispiel-Alarm nicht genau einmal');
+		const u = traeger(DATEI.beispiel);
+		assert.deepEqual(u.e.map((x) => beschreibe(x, u.quelle)), [], 'Beispiel-Alarm traegt die Metrik-Oberflaeche (#3154)');
 	});
 
 	// #2795 S3b 1b: Sprungziel #versand ist die Karte der Briefing-Zeiten (AC-40, „genau ein
@@ -179,9 +179,9 @@ describe('§3: shared/zustellung-tab/ZustellungTab.svelte — Übergangsreiter',
 		assert.equal(einbettungenMitWeichen(ast, quelle, ['BriefingZeiten']).length, 1, 'Zustellung: BriefingZeiten nicht genau einmal');
 		const b = svelteAst(DATEI.briefingZeiten);
 		assert.equal(elementeMitId(b.ast, b.quelle, 'div', 'versand').length, 1, 'Zustellung: kein Sprungziel id="versand" an den Briefing-Zeiten');
-		const u = svelteAst(DATEI.uebergang);
-		assert.equal(einbettungenMitWeichen(u.ast, u.quelle, ['WetterMetrikenVersandPanel', 'VersandTab', 'BriefingScheduleTab']).length, 0, 'Zustellung: der Uebergangsblock bringt einen Versand-Abschnitt mit (zweites #versand)');
-		assert.equal(elementeMitId(u.ast, u.quelle, 'section', 'versand').length + elementeMitId(u.ast, u.quelle, 'div', 'versand').length, 0, 'Zustellung: zweites id="versand" im Uebergangsblock');
+		const u = svelteAst(DATEI.beispiel);
+		assert.equal(einbettungenMitWeichen(u.ast, u.quelle, ['WetterMetrikenVersandPanel', 'VersandTab', 'BriefingScheduleTab']).length, 0, 'Zustellung: der Beispiel-Alarm bringt einen Versand-Abschnitt mit (zweites #versand)');
+		assert.equal(elementeMitId(u.ast, u.quelle, 'section', 'versand').length + elementeMitId(u.ast, u.quelle, 'div', 'versand').length, 0, 'Zustellung: zweites id="versand" im Beispiel-Alarm');
 	});
 
 	// #2795 S3b 1b (Spec §4, AC-27/AC-33): die Alarm-Zustellung ist Teil des Reiters (Kanal-Tabelle,

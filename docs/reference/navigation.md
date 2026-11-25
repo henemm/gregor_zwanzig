@@ -33,8 +33,8 @@ Seit Epic #2791 S3a Teil-PR 2 (2026-11-09) hat die Leiste **vier Reiter** (Trip 
   Seit #3154 (#3122 B3b, ADR-0124, Spec `feat_3122_was_steht_wo.md` Teil B Nr. 14) stehen Listen je Kanal,
   Stundenverlauf, Ausblick, Telegram-Kurzstil, 3-Tages-Ausblick (je Briefing, seit #3155), E-Mail-Format,
   Etappen-Kennzahlen, Vortag-Vergleich und Nacht-Stundentabelle allein im Reiter Wetter (Tabelle „Was steht wo“
-  mit Schaltern darunter). Im Übergangsblock am Ende des Reiters Zustellung bleiben bis #3036 nur der
-  Beispiel-Alarm und beim Ortsvergleich die Aktivierungs-Karte (Pausieren/Aktivieren).
+  mit Schaltern darunter). Seit #3036 (2026-11-24) gibt es im Reiter Zustellung keinen Übergangsblock mehr: am
+  Ende steht nur der Beispiel-Alarm, beim Ortsvergleich steht die Aktivierungs-Karte (Pausieren/Aktivieren) vor den Briefing-Zeiten.
 - **Vorschau** entfällt ersatzlos (samt Endpoint `GET /api/briefings/{id}/preview` und den verwaisten Resten
   `CompareChatBubble`/`CompareChannelSwitch`, PO-Entscheid 2026-10-22). Es bleibt nur die Alarm-Vorschau im Reiter
   Alarme (`POST /api/briefings/{id}/alert-preview`); weitere Kanal-Vorschauen gibt es in der Oberfläche nicht mehr.

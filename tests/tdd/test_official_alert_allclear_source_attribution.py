@@ -18,8 +18,15 @@ import pytest
 from tests.helpers.transport_mitschrift import aufzeichner_installieren
 from tests.tdd._official_alert_allclear_fixtures import (
     FLAECHEN, Szenario, Warnquelle, basis_jetzt, entwarnungen_gesamt,
-    entwarnungs_sendungen, lauf_erstwarnung, quellen, trip_briefing, warnung,
+    entwarnungs_sendungen, feste_uhr, lauf_erstwarnung, quellen, trip_briefing, warnung,
 )
+
+
+@pytest.fixture(autouse=True)
+def _feste_uhr():
+    """Ganzer Test unter fester Uhr (``BASIS``), nicht unter der Wanduhr."""
+    with feste_uhr():
+        yield
 
 
 @pytest.fixture
