@@ -1,0 +1,87 @@
+{
+  "verified_commit": "b1b6b7e56cef843f5d3dcb827e26f8f15507a8b7",
+  "findings": [
+    {
+      "ac": "editor-gleich-gespeichert AC-10/AC-11/AC-17",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com",
+      "evidence": "Playwright gegen Staging b1b6b7e56: 3/3 passed (plus Setup)",
+      "workflow": "fix-3359-staging-pruefungen-altfelder"
+    },
+    {
+      "ac": "compare-outlook-metric-selection AC-4 + 2 Adversary",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com",
+      "evidence": "Playwright gegen Staging b1b6b7e56: 3/3 passed",
+      "workflow": "fix-3359-staging-pruefungen-altfelder"
+    },
+    {
+      "ac": "compare-uebersicht-kanal-persistenz AC-S8-10/AC-S8-4, AC-S8-11/AC-S8-6",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com",
+      "evidence": "Playwright gegen Staging b1b6b7e56: 2/2 passed",
+      "workflow": "fix-3359-staging-pruefungen-altfelder"
+    },
+    {
+      "ac": "compare-hourly-metric-order AC-3, AC-4",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com",
+      "evidence": "Playwright gegen Staging b1b6b7e56: 2/2 passed",
+      "workflow": "fix-3359-staging-pruefungen-altfelder"
+    },
+    {
+      "ac": "was-steht-wo-karte WS-14 (Trip + drei Orte)",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com",
+      "evidence": "Playwright gegen Staging b1b6b7e56: 2/2 passed",
+      "workflow": "fix-3359-staging-pruefungen-altfelder"
+    },
+    {
+      "ac": "feat-3276-vergleich-ohne-altfelder AC-1/3, AC-2/5",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com",
+      "evidence": "Playwright gegen Staging b1b6b7e56: 2/2 passed",
+      "workflow": "fix-3359-staging-pruefungen-altfelder"
+    },
+    {
+      "ac": "hub-save-chip SC-1b (route + vergleich)",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com",
+      "evidence": "Playwright gegen Staging b1b6b7e56: 2/2 passed",
+      "workflow": "fix-3359-staging-pruefungen-altfelder"
+    },
+    {
+      "ac": "standardwerte-und-hilfe AC-6",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com",
+      "evidence": "Playwright gegen Staging b1b6b7e56: AC-6 passed (AC-7/AC-12 vorbestehender Nebenbefund ausser Scope)",
+      "workflow": "fix-3359-staging-pruefungen-altfelder"
+    },
+    {
+      "ac": "sprachwechsel de/en Smoke AC-2..AC-6",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com",
+      "evidence": "Playwright gegen Staging b1b6b7e56: 7/7 Faelle passed (plus Setup), beide Sprachen",
+      "workflow": "fix-3359-staging-pruefungen-altfelder"
+    }
+  ],
+  "verified_at": "2026-11-25T19:09:03.755516+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: #3359 reine Testarbeit; alle umgestellten Staging-Pruefungen gruen auf b1b6b7e56, Sprach-Smoke de/en gruen, kein 429; standardwerte AC-7/AC-12 vorbestehender Nebenbefund ausser Scope",
+  "scope": "docs-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "fix-3359-staging-pruefungen-altfelder": {
+      "verdict": "VERIFIED: #3359 reine Testarbeit; alle umgestellten Staging-Pruefungen gruen auf b1b6b7e56, Sprach-Smoke de/en gruen, kein 429; standardwerte AC-7/AC-12 vorbestehender Nebenbefund ausser Scope",
+      "scope": "docs-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-25T19:09:03.755516+00:00"
+    }
+  }
+}
