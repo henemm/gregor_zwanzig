@@ -279,3 +279,9 @@ Runde B: BROKEN (34 Verfälschungen, alle gefangen; Protokoll und Läufe `s3-adv
 - F008 hält (9 Fälle), 56 Verfälschungen, 52 gefangen, 4 gleichwertig; Frontend 3174 grün, Python 430 grün.
 - **F011 (Altbestand, gemessen gleich am Code 4fbf4bc51):** antwortet das GET nach dem 412 mit 200 und ETag, aber unlesbarem Rumpf, gilt der frische Stempel, obwohl nichts übernommen wurde; die nächste Eingabe überschreibt die fremde Ampel. Eigenes Issue #3378, hier nicht behoben.
 - **F012 (LOW):** Eingabe im GET-Fenster von „Nochmal speichern" plus dritte fremde Änderung: Reiter lädt neu, Konflikt bleibt gemeldet.
+
+## S3 ausgeliefert (2026-11-25), nächster Schritt S4
+
+- Live und Selbsttest bestanden auf 4ba927c14; Staging 8/8 ACs (DE und EN). Das Issue bleibt bis S4 offen.
+- **S4 (AC-16 bis AC-18):** eigener RED-Schritt. Zu entfernen: `lokalAufgeloest` und Spiegel (`verschmelzen`, `vorlageIdVon`, `zaehleAbweichungen`, `eigeneVorlageAmpel`, `ampelFehler`); F002 als Known Limitation in die Spec; F005 aus S1 (Sektoren-Wächter zu #3230); Folge-Issue für übrige Nutzer von `vorlageIdFuer`; `f007_trip_leere_auswahl.test.ts` nutzt noch `verschmelzen`.
+- Neue Issues aus S3: #3378 (abgebrochenes Nachladen nach 412, Altbestand); unübersetzter Offline-Satz im Fehlerzustand in #1199.
