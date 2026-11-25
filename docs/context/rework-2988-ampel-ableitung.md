@@ -188,3 +188,13 @@ Dieser Durchlauf liefert **nur S1** (AC-1, AC-2, AC-3, AC-14, Python-Zähler weg
 - **S4 (F005):** `zaehleAbweichungenGegen` hat keinen Produktaufrufer mehr. Mit dem Löschen entfällt der Wächter für den Mengenvergleich der Sektoren (`ampelModell.test.ts`); er gehört dann zu #3230. Die Metatexte in `ampel_deviation_cases.json` (`_issue`) und `ampel_windrichtung_cases.json` (`_abweichung`) nennen noch entfernte Python-Funktionen.
 - **F007 (Bestand):** `mitEigenerVorlage` ist für `enabled === true` und `nurAusgebbar` ohne Wächter; in S3 mit absichern.
 - **Offen beobachten:** `test_einstellung_gleich_mail_validatoren.py` lief im breiten Lauf zweimal ins 30-s-Zeitlimit (wechselnder Test), allein immer grün.
+
+## RED-Stand Scheibe S2 (2026-11-25)
+
+Dieser Durchlauf liefert **nur S2** (AC-4 bis AC-8, AC-19). S1 ist eingespielt und auf Staging geprüft.
+
+- **Referenz:** `tests/fixtures/ampel_aufloesung_2988.json`, 138 Fälle (131 Abo-Sicht, 7 Altbestand), einmalig aus dem Frontend-Code vor dem Umbau (Stand 80cf9f726) erzeugt; Generator bewusst nicht eingecheckt. Gegenprobe: alle 131 Abo-Fälle stimmen heute mit `resolve_ampel` überein. Ausgelassen ist nur `template_kein_string` (bekannte Verhaltensangleichung); die Angleichung selbst prüft `test_ac5_ungueltige_ampel_verliert_auch_ihre_vorlage`.
+- **Rot:** `tests/tdd/test_2988_ampel_aufloesung.py` (Router fehlt), `internal/handler/ampel_aufloesung_2988_test.go` (`AmpelAufloesungHandler` fehlt, das Testpaket baut bis dahin nicht), `internal/router/ampel_aufloesung_route_2988_test.go` (404), `tests/test_api_contract_drift.py::test_inventory_lists_ampel_aufloesung`.
+- **Von Anfang an grün (Wächter):** `test_ac19_resolve_ampel_unveraendert` (131 Fälle). Schärfe in /50 per Mutation nachweisen.
+- **Vertrag:** Go `AmpelAufloesungHandler(pythonURL string)` in `internal/handler/ampel_aufloesung.go`, prüft Form selbst (kein Kern-Aufruf bei 400/413), reicht den Rumpf byte-gleich weiter, Query genau `user_id`. Python `api/routers/ampel_aufloesung.py` mit `router`; Kern-400 trägt `code: bad_request` und `detail` in Nutzersprache (Text nur über den Katalog).
+- **Fallen für /50:** (1) FastAPI-Standard bei kaputtem JSON ist 422, verlangt ist 400. (2) `validate_ampel` prüft Mengenzugehörigkeit ohne Typprüfung (`alarm_ab: []`, `thunder.mittel: []` sind nicht hashbar); gelesen, nicht ausgeführt. Der Endpunkt darf daran nicht scheitern. (3) `1e999` wird in Python `inf` und sprengt die JSON-Antwort; gilt als ungültige Ampel. (4) Altbestand: nur `enabled is True`, unlesbare Zeilen übergehen. (5) `{}` als `ampel` ist Abo-Sicht, nicht Altbestand.

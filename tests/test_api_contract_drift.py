@@ -135,3 +135,12 @@ def test_inventory_lists_kind_neutral_alert_preview_and_drops_removed_previews()
     assert not not_delegate, (
         f"AC-7: Alt-Routen ohne Delegate-Kennzeichnung im Inventar: {not_delegate}"
     )
+
+
+def test_inventory_lists_ampel_aufloesung():
+    """AC-8 (Issue #2988 S2): der Endpunkt steht mit Methode, Rumpf, Antwort und
+    Fehlerfaellen im Inventar."""
+    zeile = _inventory_rows(_contract_text()).get("/api/ampel/aufloesung")
+    assert zeile, "AC-8: Inventarzeile `/api/ampel/aufloesung` fehlt"
+    for teil in ("POST", "eintraege", "ergebnisse", "vorlage_id", "400", "401", "413"):
+        assert teil in zeile, f"AC-8: {teil} fehlt in der Inventarzeile"
