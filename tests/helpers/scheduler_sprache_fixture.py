@@ -124,9 +124,11 @@ def trip_anlegen(user_id: str, coords: list[tuple[float, float]], *, sms: bool =
         stages=[Stage(id="T1", name="Etappe 3", date=TAG, start_time=time(stunden[0], 0),
                       waypoints=wps)],
         official_alerts_enabled=False,
+        # #3277: Altfeld multi_day_trend_reports=[] entfallen; es wirkte seit
+        # #3237 nicht mehr. Ohne Tabelle gilt die Vorbelegung (Ausblick nur
+        # im Abend-Briefing), die Faelle hier senden das Morgen-Briefing.
         report_config=TripReportConfig(
             trip_id=f"trip-{user_id}", send_email=True, send_telegram=True, send_sms=sms,
-            multi_day_trend_reports=[],
         ),
     )
     save_trip(trip, user_id=user_id)
@@ -226,8 +228,7 @@ def servicefehler(rig, monkeypatch, tmp_path, user_id: str) -> dict:
     from app.models import TripReportConfig
 
     trip = trip_anlegen(user_id, [INNSBRUCK, INNSBRUCK, STUBAI])
-    trip.report_config = TripReportConfig(trip_id=trip.id, send_email=False, send_sms=True,
-                                          multi_day_trend_reports=[])
+    trip.report_config = TripReportConfig(trip_id=trip.id, send_email=False, send_sms=True)
     save_trip(trip, user_id=user_id)
     wetter(monkeypatch, tmp_path, "teil")
     rig.zaehler_leeren()
@@ -357,10 +358,12 @@ def vergleich_preset(user_id: str, *, telegram_stil: str | None = None) -> dict:
         "location_ids": [o[0] for o in VERGLEICH_ORTE], "schedule": "daily",
         "profil": "ALLGEMEIN", "created_at": "2026-10-01T00:00:00Z",
         "send_telegram": True, "send_sms": True, "hourly_enabled": False,
-        "outlook_enabled": False,
+        # #3277: Ausblick aus allein ueber die Marke der Tabelle (vorher
+        # Altfeld outlook_enabled=False).
+        "display_config": {"placements": {"outlook_reports": []}},
     }
     if telegram_stil:
-        preset["display_config"] = {"telegram_style": telegram_stil}
+        preset["display_config"]["telegram_style"] = telegram_stil
     return preset
 
 

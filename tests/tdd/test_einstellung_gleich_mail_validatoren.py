@@ -876,7 +876,9 @@ def test_orte_leere_vergleichstabelle_kein_falscher_ort_fehlt(monkeypatch, tmp_p
     """N6: leere Vergleichstabelle (bewusst leere Grundauswahl, Ausblick aus) --
     der Klartext nennt die Orte ohne Zeilen; kein falsches "Ort fehlt". Die
     Ortsfolge bleibt geprueft: vertauscht scheitert sie."""
-    preset = _orte_bewusst_leer(outlook_enabled=False)
+    preset = _orte_bewusst_leer()
+    # #3277: Ausblick aus allein ueber die Marke der Tabelle.
+    preset["display_config"]["placements"] = {"outlook_reports": []}
     eml = _orte_eml(monkeypatch, preset)
     konfig = _orte_konfig(tmp_path, preset, "n6")
     code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig)
@@ -1541,18 +1543,17 @@ def test_r7_trip_kompakt_ignoriert_bausteinschalter(monkeypatch, tmp_path):
     eml = _trip_eml_r7(monkeypatch, an, stage_stats=_KENNZAHLEN)
     assert b"12.3 km" in eml, "Vorbedingung: Kennzahlen in der Kompakt-Mail"
     aus_daten = copy.deepcopy(an)
-    aus_daten["report_config"].update(show_stage_stats=False, show_outlook=False)
+    aus_daten["report_config"].update(show_stage_stats=False)
     code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, "kaus", aus_daten))
     assert code == 0, aus
 
 
 def test_r7_trip_show_outlook_aus_vollformat(monkeypatch, tmp_path):
     """Mutation V14: Ausblick aus -> im Vollformat kein Ausblick. #3237: "aus"
-    steht in der Tabelle (``outlook_reports: []``); ``show_outlook`` ist ein
-    Altfeld ohne Wirkung und bleibt nur als Beschreibung stehen."""
+    steht in der Tabelle (``outlook_reports: []``); das Altfeld
+    ``show_outlook`` ist seit #3277 entfallen."""
     daten = _trip_daten(_TRIP_FOLGE)
     aus_daten = copy.deepcopy(daten)
-    aus_daten["report_config"]["show_outlook"] = False
     aus_daten = _mit_folge(aus_daten, list(_TRIP_FOLGE), "trip", outlook_reports=[])
     konfig = _konfig(tmp_path, "oaus", aus_daten)
     code, aus = _lauf(tmp_path, TRIP, _trip_eml_r7(monkeypatch, aus_daten), "--konfig", konfig)
