@@ -178,26 +178,44 @@ _VITEST_TEMPLATE_GANZ = re.compile(_VITEST_AUFRUF + r"`([^`]*\$\{[^`]*)`")
 _TEMPLATE_PLATZHALTER = re.compile(r"\$\{[^}]*\}")
 
 
-def _template_muster(vorlage: str) -> re.Pattern:
-    """``anzeige_${id}_x`` -> ``anzeige_.+_x`` (jeder Platzhalter >= 1 Zeichen)."""
+def _hat_festen_anteil(vorlage: str) -> bool:
+    """#3020 R1b: eine Vorlage zaehlt nur mit festem Text ausserhalb der Platzhalter.
+
+    Eine reine Platzhalter-Vorlage (``${key}``, ``${a}${b}``) wuerde zu ``.+``
+    und jeden Titel treffen -- so blieben Verweise auf geloeschte Tests gruen.
+    """
+    return bool(_TEMPLATE_PLATZHALTER.sub("", vorlage).strip())
+
+
+def _template_muster(vorlage: str) -> re.Pattern | None:
+    """``anzeige_${id}_x`` -> ``anzeige_.+_x`` (jeder Platzhalter >= 1 Zeichen).
+
+    Reine Platzhalter-Vorlage -> ``None`` (trifft nie, #3020 R1b)."""
+    if not _hat_festen_anteil(vorlage):
+        return None
     teile = _TEMPLATE_PLATZHALTER.split(vorlage)
     return re.compile(".+".join(re.escape(t) for t in teile))
 
 
 def _vitest_titel_gefunden(titel: str, dateien: list[Path]) -> bool:
     """Wortgleicher Titel, fester Template-Praefix oder -- Runde 7 -- ein
-    konkreter Titel, der ein Template-Literal ausfuellt (``anzeige_${id}`` ->
-    ``anzeige_a_nie_eingestellt``)."""
+    konkreter Titel, der ein Template-Literal mit festem Textanteil ausfuellt
+    (``anzeige_${id}`` -> ``anzeige_a_nie_eingestellt``). Eine reine
+    Platzhalter-Vorlage zaehlt nie als Treffer (#3020 R1b)."""
+    titel_kurz = titel.strip()
+    if not titel_kurz:
+        return False
     muster = re.compile(_VITEST_AUFRUF + r"(['\"`])" + re.escape(titel) + r"\1")
     for d in dateien:
         quelle = d.read_text(encoding="utf-8")
         if muster.search(quelle):
             return True
         praefixe = {p.strip() for p in _VITEST_TEMPLATE_PRAEFIX.findall(quelle)}
-        if titel.strip() and titel.strip() in praefixe:
+        praefixe.discard("")
+        if titel_kurz in praefixe:
             return True
-        if titel.strip() and any(_template_muster(v).fullmatch(titel.strip())
-                                 for v in _VITEST_TEMPLATE_GANZ.findall(quelle)):
+        vorlagen = (_template_muster(v) for v in _VITEST_TEMPLATE_GANZ.findall(quelle))
+        if any(m is not None and m.fullmatch(titel_kurz) for m in vorlagen):
             return True
     return False
 

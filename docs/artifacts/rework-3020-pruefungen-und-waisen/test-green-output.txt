@@ -1,0 +1,72 @@
+TDD GREEN (nach Fix-Loop F001/F003/F004 und Merge origin/main fdb1ddaac mit #3379) -- Rework #3020 R1/R1b, Workflow rework-3020-pruefungen-und-waisen, 25.11.2026
+
+Hinweis: rework_3020_vergleich_parallele_schreiber.test.ts hydriert seit #3379 mit aufgeloestVon(seite)
+(neue Signatur standAusAbo(context, abo, aufgeloest)); reine Testverdrahtung, F11a-c wiederholt (rot, sha256 OK).
+
+### Frontend, betroffene Tests (node --test)
+cd frontend && npm test -- \
+  src/lib/components/organisms/__tests__/rework_3020_karte_schalter.test.ts \
+  src/lib/components/shared/__tests__/rework_3020_trip_nutzlast_ohne_skip_next.test.ts \
+  src/lib/components/shared/__tests__/rework_3020_vergleich_parallele_schreiber.test.ts \
+  src/lib/components/shared/wetter-tab/__tests__/rework_3020_ausblick_warnungswerte_nutzlast.test.ts \
+  src/lib/components/shared/wetter-tab/__tests__/rework_3020_nachtblock_schalter.test.ts \
+  src/lib/components/shared/zustellung-tab/__tests__/rework_3020_defaults_gleich_auslieferung.test.ts \
+  src/lib/components/shared/zustellung-tab/__tests__/rework_3020_premium_sms_schaltbar.test.ts \
+  src/lib/components/shared/zustellung-tab/__tests__/rework_3020_zustellung_ifmatch_keepalive.test.ts \
+  src/lib/components/organisms/__tests__/was_steht_wo_karte_anlegen_3305.test.ts
+ok 1 - Rework #3020 AC-11: Nachtblock-Schalter beim bestehenden und beim neuen Trip (#3305)
+ok 2 - Rework #3020 AC-15: Haken „Großwetterlage“ folgt show_stability, nie show_outlook
+ok 3 - #3305 Test 1 (AC-2, AC-4): Anlege-Modus meldet den Stand auch bei stored=false, kein PUT
+ok 4 - #3305 Test 6 (AC-10): Kartenbedienung ohne Metrikänderung lädt keine Vorschau nach
+ok 5 - #3305 Test 2 (AC-5): Metrik hinzu/weg — Zeilen ergänzt/entfernt, Einstellungen bleiben
+ok 6 - Rework #3020 AC-6: Trip-Speichernutzlast ohne skip_next
+ok 7 - Rework #3020 F001: Wetter und Zustellung schreiben im Vergleichs-Hub parallel, keiner verdraengt den anderen
+ok 8 - Rework #3020 AC-17: Trip speichert Ausblick und Warnungswerte
+ok 9 - Rework #3020 AC-8: Alt-Trip ohne show_night_block zeigt den Schalter „an“
+ok 10 - Rework #3020 AC-9/AC-10: Nachtblock wird nur gesendet, wenn der Nutzer ihn wirklich aendert
+ok 11 - Rework #3020 AC-14 (route): Reiter-Standard beim neuen Trip = Anlege-POST
+ok 12 - Rework #3020 AC-14 (vergleich): Reiter-Standard beim neuen Ortsvergleich = Anlege-POST
+ok 13 - Rework #3020 AC-13 (route): Premium-SMS folgt dem Handler
+ok 14 - Rework #3020 AC-13 (vergleich): Premium-SMS folgt dem Handler
+ok 15 - Rework #3020 AC-7: Zustellung-Reiter (Trip) -- If-Match, keepalive, Antwort-Stempel
+# tests 39
+# suites 15
+# pass 39
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+
+### Frontend, gesamte Suite
+cd frontend && npm test   (exit 0)
+# tests 11819
+# suites 2149
+# pass 11816
+# fail 0
+# cancelled 0
+# skipped 2
+# todo 1
+
+### Python, Katalog (Waechter, Katalogtest und alle Tests, die die Falllisten lesen)
+uv run pytest -o addopts="" -q tests/tdd/test_einstellung_gleich_mail_waechter_3020.py tests/tdd/test_einstellung_gleich_mail_fallliste.py \
+  tests/tdd/test_3098_telegram_resolver.py tests/tdd/test_3099_sms_resolver.py tests/tdd/test_3100_premium_sms_fallliste.py \
+  tests/tdd/test_einstellung_gleich_mail_orte.py tests/tdd/test_einstellung_gleich_mail_orte_tabelle.py \
+  tests/tdd/test_einstellung_gleich_mail_trip.py tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py \
+  tests/tdd/test_einstellung_gleich_mail_validatoren.py tests/tdd/test_orte_kompakt_pruefkatalog_3059.py \
+  tests/test_mail_recipient_parity.py tests/tdd/test_einstellung_gleich_mail_editor_standard.py \
+  tests/tdd/test_einstellung_gleich_mail_runde7_katalog.py
+996 passed, 5 xfailed, 144 warnings in 282.64s (0:04:42)
+
+### Go
+go test ./internal/store/
+ok  	github.com/henemm/gregor-api/internal/store
+go test ./internal/store/ -run Rework3020 -v
+--- PASS: TestRework3020_WarnungswerteUndAusblickJeNutzerGetrennt (0.00s)
+--- PASS: TestRework3020_SpeichernOhneAenderungErhaeltMetrikFlags_ZweiNutzer (0.00s)
+--- PASS: TestRework3020_TeilUpdateAusblickUndWarnungswerteErhaeltUebrigeFelder_ZweiNutzer (0.00s)
+--- PASS: TestRework3020_AltTripOhneNightBlockBleibtOhneFeld_ZweiNutzer (0.00s)
+--- PASS: TestRework3020_SkipNextBleibtBeimSpeichernOhneFeld_ZweiNutzer (0.00s)
+
+### Zusammenfassung
+Frontend rework_3020 + 3305: 39/39; Frontend gesamt 11816 pass / 0 fail; Katalog-pytest 996 passed / 5 xfailed; Go store ok (5x Rework3020 PASS).
+Mutationsnachweis Fix-Loop: mutationsnachweis-red.md, Abschnitt „Nachtrag Fix-Loop“ (F11a-c, F12a-b, F13, alle rot, sha256 OK).
