@@ -1,4 +1,4 @@
-"""Profil-Ampel: Validierung, Aufloesung, Abweichungszahl, Gewitterfarbe.
+"""Profil-Ampel: Validierung, Aufloesung, Gewitterfarbe.
 
 Issue #2792 S1a, ADR-0106, Spec ``docs/specs/modules/feat_2792_s1_profil_ampel.md``
 §1-§3. EIN Code fuer Trip (Objekt mit ``display_config`` als
@@ -288,42 +288,6 @@ def schwellen_aus_ampel(ampel: Mapping, metric_id: Optional[str]) -> dict:
 def _vorlage_der_ampel(ampel: Optional[Mapping]) -> str:
     tid = (ampel or {}).get("template")
     return _bekannte_vorlage(tid, "ampel.template") if tid else DEFAULT_TEMPLATE
-
-
-def _ohne_offene(seite: Any) -> dict:
-    return {k: v for k, v in (seite or {}).items() if v is not None}
-
-
-def _richtung_weicht_ab(e: Mapping, v: Mapping) -> bool:
-    """#3222: ``modus`` (fehlend = "aus") und ``sektoren`` (Menge, fehlend = leer)."""
-    modus = e.get("modus") is not None and e["modus"] != (v.get("modus") or "aus")
-    sektoren = e.get("sektoren") is not None and set(e["sektoren"]) != set(v.get("sektoren") or ())
-    return modus or sektoren
-
-
-def deviation_count(ampel: Optional[Mapping]) -> int:
-    """Anzahl Metriken (plus Gewitter), die von der Vorlage abweichen.
-
-    Issue #2794 S3a (AC-28): je Metrik zaehlen Grenzen, ``enabled`` (Metrik
-    hinzugefuegt/entfernt), ``alarm_ab`` und (#3222) ``modus``/``sektoren``,
-    hoechstens einmal je Metrik; die
-    Gewitterfarbe zaehlt einmal. Ein Wert gleich dem Vorlagenwert zaehlt nicht.
-    Metrik ohne Vorlagen-Zeile: Vorlage gilt als aus, ``alarm_ab`` = never
-    (wie ``_verschmelzen``). Paritaet zum Frontend-Spiegel ueber
-    ``tests/fixtures/ampel_deviation_cases.json``."""
-    if not ampel:
-        return 0
-    vorlage = AMPEL_TEMPLATES[_vorlage_der_ampel(ampel)]
-    ohne_zeile = {"enabled": False, "lower": {}, "upper": {}, "alarm_ab": "never"}
-    n = 0
-    for mid, e in (ampel.get("metrics") or {}).items():
-        v = vorlage["metrics"].get(mid, ohne_zeile)
-        grenzen = any(k in e and _ohne_offene(e[k]) != _ohne_offene(v.get(k)) for k in ("lower", "upper"))
-        werte = any(e.get(k) is not None and e[k] != v.get(k) for k in ("enabled", "alarm_ab"))
-        if grenzen or werte or _richtung_weicht_ab(e, v):
-            n += 1
-    gewitter = {**vorlage["thunder"], **_ohne_offene(ampel.get("thunder"))}
-    return n + (gewitter != vorlage["thunder"])
 
 
 def thunder_color(level: Any, ampel: Mapping) -> Optional[str]:

@@ -17,9 +17,9 @@ import {
 	ausgebbarTeilen,
 	AUSWAHL_ABLEITUNG,
 	auswahlLesen,
+	ohneZeile,
 	vergleichsKatalogIds,
 	verschmelzen,
-	zaehleAbweichungenGegen,
 	zuruecksetzen,
 	STANDARD_VORLAGE,
 	type AlarmAb,
@@ -114,7 +114,10 @@ export function standAusAbo(
 /** Vorlage mit ausdruecklichem `enabled` je Groesse (sonst unveraendert). */
 function mitEnabled(v: Ampel, ids: string[], an: (id: string) => boolean): Ampel {
 	if (!ids.length) return v;
-	return verschmelzen(v, { template: v.template, metrics: Object.fromEntries(ids.map((id) => [id, { enabled: an(id) }])) });
+	const aus = klon(v);
+	aus.metrics = aus.metrics ?? {};
+	for (const id of ids) aus.metrics[id] = { ...(aus.metrics[id] ?? ohneZeile()), enabled: an(id) };
+	return aus;
 }
 
 /** Wie der Kontext die Vorlage ausgibt (#3193, Tabelle statt Weiche):
@@ -159,10 +162,24 @@ export function mengeVon(s: WetterStand, vorlagen: VorlagenAmpeln, context: Kont
 }
 
 /** Zahl der Abweichungen, wie der Picker sie zeigt (AC-28: sofort nach jeder Eingabe): genau die
- *  Menge, die auch gespeichert wird (#3193). */
+ *  Menge, die auch gespeichert wird (#3193) — je Eintrag eins, die Gewitterfarbe zusammen eins (#2988). */
 export function abweichungenVon(s: WetterStand, vorlagen: VorlagenAmpeln, context: Kontext, alt: AltSchluessel = {}): number {
 	if (!vorlagen[s.vorlageId]) return 0;
-	return zaehleAbweichungenGegen(vorlageImKontext(s, vorlagen, context, alt).vorlage, mengeVon(s, vorlagen, context, alt));
+	const menge = mengeVon(s, vorlagen, context, alt);
+	return Object.keys(menge.metrics ?? {}).length + (menge.thunder ? 1 : 0);
+}
+
+/** Vollstaendige Ampel des Stands fuer „Als eigene Vorlage speichern“ (#2988): die aufgeloesten Zeilen
+ *  der Vorlage im Kontext und der Menge, `enabled` nach der Auswahl, offene Grenzen als leere Seite. */
+export function aboAmpelVon(s: WetterStand, vorlagen: VorlagenAmpeln, context: Kontext, alt: AltSchluessel = {}): Ampel {
+	const { vorlage, aufgeloest } = vorlageImKontext(s, vorlagen, context, alt);
+	const menge = abweichungsMenge(vorlage, aufgeloest, s.auswahl);
+	const metrics: Record<string, AmpelMetrik> = {};
+	for (const id of Object.keys({ ...vorlage.metrics, ...menge.metrics })) {
+		const z = aufgeloest.metrics?.[id] ?? ohneZeile();
+		metrics[id] = { ...z, enabled: s.auswahl.includes(id), lower: gueltigeSeite(z.lower), upper: gueltigeSeite(z.upper) };
+	}
+	return { template: vorlage.template, metrics, thunder: aufgeloest.thunder };
 }
 
 /** Vorlage uebernehmen oder zuruecksetzen: Auswahl, Grenzen, Alarmstufen der Vorlage (AC-11/12);
@@ -210,8 +227,8 @@ export function mitAlarmAbFuerAlle(s: WetterStand, stufe: AlarmAb, eig: Record<s
 
 export type Entwurf = { id: string; lower?: AmpelSeite | null; upper?: AmpelSeite | null; thunder?: Ampel['thunder'] };
 
-/** Seite ohne ungueltige Eingaben (NaN) — fuer die Anzeige waehrend der Eingabe. */
-function anzeigeSeite(seite: AmpelSeite | null | undefined): AmpelSeite {
+/** Seite ohne offene (null) Grenzen und ungueltige Eingaben (NaN, Anzeige waehrend der Eingabe). */
+function gueltigeSeite(seite: AmpelSeite | null | undefined): AmpelSeite {
 	const aus: AmpelSeite = {};
 	for (const [k, v] of Object.entries(seite ?? {})) {
 		if (typeof v === 'number' && Number.isFinite(v)) aus[k as keyof AmpelSeite] = v;
@@ -226,7 +243,7 @@ export function mitEntwurf(s: WetterStand, e: Entwurf | null, fuerAnzeige = fals
 	if (e.thunder) ampel.thunder = { ...(ampel.thunder ?? {}), ...e.thunder };
 	const zeile: AmpelMetrik = { ...(ampel.metrics?.[e.id] ?? { enabled: false, alarm_ab: 'never' }) };
 	for (const k of ['lower', 'upper'] as const) {
-		if (k in e) zeile[k] = fuerAnzeige ? anzeigeSeite(e[k]) : (e[k] ?? {});
+		if (k in e) zeile[k] = fuerAnzeige ? gueltigeSeite(e[k]) : (e[k] ?? {});
 	}
 	ampel.metrics = { ...(ampel.metrics ?? {}), [e.id]: zeile };
 	return { ...s, ampel };

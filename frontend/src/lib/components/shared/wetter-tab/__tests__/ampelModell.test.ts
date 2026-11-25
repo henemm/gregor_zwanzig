@@ -17,7 +17,7 @@
 //   eigenschaftenAusKatalog(apiMetrics)              -> Record<id, MetrikEigenschaften> (GET /api/metrics, nach Kategorie)
 //   vorlageIdVon(abo, vorlagen)                      -> string  (abo.template, unbekannt/fehlt -> 'allgemein')
 //   verschmelzen(vorlage: Ampel, abo?: Ampel|null)   -> Ampel   (Spiegel app.ampel._verschmelzen, mutiert nichts)
-//   zaehleAbweichungen(abo, vorlagen)                -> number  (Spiegel deviation_count; siehe Paritaets-Test)
+//   zaehleAbweichungen(abo, vorlagen)                -> number  (siehe ampelModell.paritaet.test.ts)
 //   zaehleAbweichungenGegen(vorlage: Ampel, abo)     -> number  (gleiche Zaehlung gegen eine gegebene Vorlagen-Ampel)
 //   ampelFehler(ampel)                               -> string[] (leer = gueltig; Regelgleichheit validate_ampel)
 //   grenzenFehler({lower, upper})                    -> string[] Katalogschluessel wetter.* (AC-17)

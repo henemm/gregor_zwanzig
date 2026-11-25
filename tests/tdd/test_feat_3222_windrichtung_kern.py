@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from app.ampel import deviation_count, resolve_ampel, validate_ampel
+from app.ampel import resolve_ampel, validate_ampel
 from app.ampel_templates import AMPEL_TEMPLATES
 from app.loader import load_trip, save_trip
 from app.models import GPXPoint
@@ -257,34 +257,6 @@ def test_aufgeloeste_sektorliste_ist_eine_kopie():
     abo = {"ampel": {"metrics": {"wind_direction": {"modus": "sektoren", "sektoren": ["N"]}}}}
     resolve_ampel(abo)["metrics"]["wind_direction"]["sektoren"].append("S")
     assert abo["ampel"]["metrics"]["wind_direction"]["sektoren"] == ["N"]
-
-
-# --- Abweichungszahl ---------------------------------------------------------
-
-def test_abweichungszahl_modus_und_sektoren():
-    assert deviation_count({"template": "radtour", "metrics": {"wind_direction": {"modus": "gegenwind"}}}) == 0
-    assert deviation_count({"template": "radtour", "metrics": {"wind_direction": {"modus": "aus"}}}) == 1
-    assert deviation_count({"template": "allgemein", "metrics": {"wind_direction": {"modus": "aus"}}}) == 0
-    assert deviation_count({"template": "allgemein", "metrics": {
-        "wind_direction": {"modus": "sektoren", "sektoren": []}}}) == 1
-    assert deviation_count({"template": "allgemein", "metrics": {
-        "wind_direction": {"sektoren": []}}}) == 0
-    sektoren = {"template": "allgemein", "metrics": {
-        "wind_direction": {"modus": "sektoren", "sektoren": ["N", "O"]}}}
-    assert deviation_count(sektoren) == 1
-
-
-ABWEICHUNG = json.loads((_HERE.parent / "fixtures" / "ampel_windrichtung_cases.json")
-                        .read_text(encoding="utf-8"))["abweichung"]
-
-
-@pytest.mark.parametrize("fall", ABWEICHUNG, ids=[f["name"] for f in ABWEICHUNG])
-def test_sektoren_vergleich_als_menge_bei_gleichem_modus(fall):
-    """Adversary F001: der Sektoren-Zweig allein (modus gleich) entscheidet.
-    Keine Vorlage traegt modus=sektoren, daher Zeilenvergleich direkt; derselbe
-    Fall laeuft im Frontend ueber ``zaehleAbweichungenGegen``."""
-    from app.ampel import _richtung_weicht_ab
-    assert _richtung_weicht_ab(fall["abo"], fall["vorlage"]) is fall["abweicht"]
 
 
 # --- Speichern: Read-Modify-Write, Bestand bleibt ----------------------------

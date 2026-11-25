@@ -2,7 +2,7 @@
 // Spec: docs/specs/modules/feat_2794_s3a_teil3_wetter.md, Implementation Details §1/§2.
 //
 // Reine Funktionen, EIN Code fuer Trip (`route`) und Orts-Briefing (`vergleich`).
-// Spiegel von src/app/ampel.py (`_verschmelzen`, `deviation_count`, `validate_ampel`).
+// Spiegel von src/app/ampel.py (`_verschmelzen`, `validate_ampel`).
 // Vorlagen-Ampeln kommen aus `/api/templates`, Metrik-Eigenschaften aus `/api/metrics`;
 // keine Frontend-Kopie. Texte liefert das Modell nie: nur Katalogschluessel (Bereich
 // `wetter`) und Platzhalter-Werte.
@@ -58,7 +58,7 @@ const WIND_SEKTOREN = ['N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW'];
 /** Gruppenfolge der Zeilen (Gesamt-Spec §4); welche Metrik in welche Gruppe gehoert, sagt `/api/metrics`. */
 const GRUPPEN_FOLGE = ['temperature', 'wind', 'precip_thunder', 'sky_visibility', 'snow_height'];
 
-const ohneZeile = (): AmpelMetrik => ({ enabled: false, lower: {}, upper: {}, alarm_ab: 'never' });
+export const ohneZeile = (): AmpelMetrik => ({ enabled: false, lower: {}, upper: {}, alarm_ab: 'never' });
 const istObjekt = (x: unknown): x is Record<string, unknown> => x !== null && typeof x === 'object' && !Array.isArray(x);
 
 // ── Daten-Adapter ────────────────────────────────────────────────────────────
@@ -150,7 +150,7 @@ function zeileWeichtAb(e: AmpelMetrik, v: AmpelMetrik): boolean {
 	return grenzen || werte || richtungWeichtAb(e, v);
 }
 
-/** #3222: `modus` (fehlend = "aus") und `sektoren` (Menge, fehlend = leer), Spiegel `_richtung_weicht_ab`. */
+/** #3222: `modus` (fehlend = "aus") und `sektoren` (Menge, fehlend = leer). */
 function richtungWeichtAb(e: AmpelMetrik, v: AmpelMetrik): boolean {
 	const modus = e.modus !== undefined && e.modus !== null && e.modus !== (v.modus || 'aus');
 	const soll = new Set(v.sektoren ?? []);
@@ -159,7 +159,7 @@ function richtungWeichtAb(e: AmpelMetrik, v: AmpelMetrik): boolean {
 	return modus || sektoren;
 }
 
-/** Abweichungen einer Abo-Ampel gegen eine gegebene Vorlagen-Ampel (Spiegel `deviation_count`). */
+/** Abweichungen einer Abo-Ampel gegen eine gegebene Vorlagen-Ampel. */
 export function zaehleAbweichungenGegen(vorlage: Ampel, abo: Ampel | null | undefined): number {
 	if (!abo) return 0;
 	let n = 0;

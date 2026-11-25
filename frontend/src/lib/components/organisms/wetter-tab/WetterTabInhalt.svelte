@@ -28,7 +28,7 @@
 	import type { RadarZiel } from './warnungenRadarZeilen.ts';
 	import AnpassenKarte from './AnpassenKarte.svelte';
 	import WasStehtWoKarte from './WasStehtWoKarte.svelte';
-	import { alarmZaehler, altSchluesselAusKatalog, ausgebbarTeilen, briefingAngebot, gewitterFehler, grenzenFehler, verschmelzen, zeilenGruppen } from '../../shared/wetter-tab/ampelModell.ts';
+	import { alarmZaehler, altSchluesselAusKatalog, ausgebbarTeilen, briefingAngebot, gewitterFehler, grenzenFehler, zeilenGruppen } from '../../shared/wetter-tab/ampelModell.ts';
 	import type { AlarmAb, AltSchluessel, Farbe, Kontext } from '../../shared/wetter-tab/ampelModell.ts';
 	import { eigeneVorlageAus, ladeWetterDaten, ortAnzahlVon, vorlageHerkunft, type WetterDaten } from '../../shared/wetter-tab/wetterTabLaden.ts';
 	import { SPEICHERER, anlegeSpeicherer, type SpeicherOptionen } from '../../shared/wetter-tab/wetterTabSpeicherung.ts';
@@ -235,7 +235,7 @@
 			: []
 	);
 	// #3193: dieselbe Basis wie Zaehler und Speicherweg (die Kinder leitet `mitEigenerVorlage` beim Anwenden wieder ab).
-	const aboAmpel = $derived(stand && daten ? verschmelzen(Z.vorlageImKontext(stand, vorlagen, context, altSchluessel).vorlage, Z.mengeVon(stand, vorlagen, context, altSchluessel)) : {});
+	const aboAmpel = $derived(stand && daten ? Z.aboAmpelVon(stand, vorlagen, context, altSchluessel) : {});
 	const vorlageLabel = $derived(daten?.liste.find((v) => v.id === stand?.vorlageId)?.label ?? stand?.vorlageId ?? '');
 
 	/** Weicht die Zeile in Grenzen (bzw. Gewitterfarben) von der Vorlage ab? */
