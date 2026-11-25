@@ -97,3 +97,11 @@ Python-Literale (`loader.py:649-650`), Vergleichs-Literale (`compareEditorSave.t
 
 ### Open Questions
 - keine
+
+## RED-Stand (Phase 5)
+- Neu `shared/__tests__/briefing_startwerte.test.ts`, umgebaut `trip-new/__tests__/standardwerte_payload_paritaet_trip.test.ts`: 95 Tests, 24 rot (20 Lesefunktion fehlt, 2 Zeitregel `ladeReportZustand`, 2 Zeitregel Ergänzer); 71 grün sichern den Bestand (Bitgleichheit, AC-4).
+- Schnittstelle: `leseBriefingStartwerte(rc)` aus `shared/briefingStartwerte.ts` liefert `ReportZustand` ohne `telegram_style` (snake_case, Zeiten 'HH:MM').
+- AC-6 vorgeprüft: in einer Kopie ohne `VersandTab.svelte`/`MailInhaltCard.svelte` fallen im Wächter nur die 2 Zeitregel-Fälle (dieselben wie mit).
+- Zeilenbudget: Tests 229 geändert; für die Produktion bleiben 91 von 320.
+- `svelte-check`: 33 Bestandsfehler, keiner in den beiden Testdateien (nur dort gesucht).
+- **RED-Tests sind NICHT committed** (liegen im Arbeitsbaum; Kopie `docs/artifacts/refactor-2987-standardwerte-eine-quelle/red-tests.patch`): `touched_tests_gate.py` liest TAP, lokales Node v26.10.0 gibt ohne `--test-reporter=tap` das spec-Format aus, daher nur Ersatzname „frontend: rot“ und die RED-Ausnahme (#2503) greift nicht. Gate nicht in diesem Ticket ändern (eigenes Issue angelegt, Titel beginnt mit „touched_tests_gate“). **Commit-Reihenfolge in Phase 6:** erst Umsetzung grün machen, dann zwei Commits (Produktion, dann Tests), so bleibt jeder Commit grün und unter 250 Zeilen. Beim Produktions-Commit laufen die Testdateien des Arbeitsbaums mit, die dann grün sind.
