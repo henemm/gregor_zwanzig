@@ -23,7 +23,7 @@ import { dirname, join, resolve } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
 // __tests__ -> weather-metrics-tab -> shared
-const WEATHER_METRICS_TAB = join(here, '..', '..', 'WeatherMetricsTab.svelte');
+// #3297/#3020: der Dateiinhalt-Nachweis gegen WeatherMetricsTab.svelte entfaellt (Datei geloescht).
 // __tests__ -> weather-metrics-tab -> shared -> corridor-editor
 const MODULE_SPECIFIER = '../../wetter-tab/compareMetricCatalogLoader.ts';
 const REPO_ROOT = resolve(here, ...Array(7).fill('..'));
@@ -185,22 +185,6 @@ describe('#1911 AC-3: Labels stammen aus THUNDER_LABEL_DE, einzig zulaessige Abw
 		});
 	});
 
-	// doc-compliance-test: Abwesenheits-Nachweis ist per Verhalten nicht
-	// pruefbar, nur per Dateiinhalt (CLAUDE.md-Ausnahme).
-	test('# doc-compliance-test: das alte hart codierte Level-Literal steht nicht mehr in WeatherMetricsTab.svelte', () => {
-		const source = readFileSync(WEATHER_METRICS_TAB, 'utf-8');
-		const oldLiteral =
-			/\{\s*id:\s*'leicht',\s*label:\s*'Leicht',\s*float:\s*1\.0\s*\}/;
-		assert.equal(
-			oldLiteral.test(source),
-			false,
-			'AC-3 FAIL: das hart codierte Level-Literal ' +
-				"{ id: 'leicht', label: 'Leicht', float: 1.0 } steht weiterhin in " +
-				'WeatherMetricsTab.svelte -- die Gewitter-Schwellenliste muss aus dem ' +
-				'Backend-Katalog abgeleitet werden (deriveThunderThresholdLevels), nicht ' +
-				'lokal getippt sein.'
-		);
-	});
 });
 
 describe('#1911 AC-6: eine synthetische fuenfte Stufe erscheint ohne Aenderung an der Funktion selbst', () => {

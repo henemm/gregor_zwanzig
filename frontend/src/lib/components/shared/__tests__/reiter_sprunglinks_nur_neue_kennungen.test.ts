@@ -141,16 +141,7 @@ describe('AC-10 (Verhalten): WeatherSummaryCard „Wetter" oeffnet den Reiter We
 	});
 });
 
-describe('AC-9 (Verhalten): VersandTab „Etappen oeffnen →" springt mit der neuen Kennung', () => {
-	test("handleOpenStages ruft onJump('etappen')", async () => {
-		const aufrufe: string[] = [];
-		const { u } = await umgebungFuer(datei('lib/components/shared/VersandTab.svelte'), {
-			onJump: (t: string) => aufrufe.push(t)
-		}, { jsAlsTs: true });
-		(u.handleOpenStages as () => void)();
-		assert.deepEqual(aufrufe, ['etappen']);
-	});
-});
+// #3297/#3020: AC-9 (VersandTab „Etappen oeffnen“) entfaellt — Datei geloescht.
 
 // ── Quelltext-Scan (doc-compliance-test) ────────────────────────────────────────
 
@@ -324,7 +315,6 @@ describe('AC-10 / AC-15 (Quelltext-Scan, doc-compliance-test): kein Alt-Literal,
 		'routes/trips/[id]/+page.svelte',
 		'routes/compare/[id]/+page.svelte',
 		'lib/components/edit/WeatherSummaryCard.svelte',
-		'lib/components/shared/VersandTab.svelte',
 		'lib/components/trip-detail/HubOverview.svelte',
 		// #2682: geteilte Übersicht (Baustein + Modell)
 		'lib/components/shared/hub-uebersicht/HubUebersicht.svelte',

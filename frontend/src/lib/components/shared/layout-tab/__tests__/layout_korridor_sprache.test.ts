@@ -119,7 +119,7 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 	});
 	test('Messaufbau: Golden enthaelt die deutschen Texte aller Bausteine', () => {
 		const alle = Object.keys(FAELLE).map((f) => readFileSync(path.join(GOLDEN_DIR, `${f}.de.html`), 'utf-8')).join('');
-		for (const s of ['Kanal · Auswahl &amp; Kappung', 'Preset-Auswahl', 'Detail-Werte', 'E-Mail-Inhalt', 'Erscheint nur in der E-Mail.', /* #3047 R8 F3 */ '↓ ab Platz 8 nur in der Telegram-Kurzübersicht, nicht in der Stundentabelle', 'Etappen-Vorschau', 'Als Trip speichern', 'Trip wurde erfolgreich gespeichert.'])
+		for (const s of ['Kanal · Auswahl &amp; Kappung', 'Preset-Auswahl', 'Detail-Werte', /* #3297/#3020: 'E-Mail-Inhalt'/'Erscheint nur in der E-Mail.' entfallen mit MailInhaltCard/OutlookLayoutControls */ /* #3047 R8 F3 */ '↓ ab Platz 8 nur in der Telegram-Kurzübersicht, nicht in der Stundentabelle', 'Etappen-Vorschau', 'Als Trip speichern', 'Trip wurde erfolgreich gespeichert.'])
 			assert.ok(alle.includes(s), s);
 	});
 });
@@ -154,53 +154,27 @@ describe('AC-1: Layout-Reiter englisch in Trip und Ortsvergleich, Kanalnamen und
 		hat(email.de, 'aria-label="Spalten, Reihenfolge"');
 		hatNicht(email.en, 'aria-label="Spalten, Reihenfolge"');
 	});
-	test('Spaltenkoepfe (col_label) und Kurzformen bleiben byte-gleich zur Eingabe', () => {
-		const { de, en } = deDannEn(() => bausteineRendern());
-		const kurz = (h: string) => [...h.matchAll(/class="badge-val[^"]*"[^>]*>([^<]*)</g)].map((m) => m[1]);
-		assert.ok(kurz(de).length > 0, 'Messaufbau: keine Kurzform gerendert');
-		assert.deepEqual(kurz(en), kurz(de));
-		for (const c of COL_LABELS.slice(0, 2)) {
-			hat(sichtbar(de), c);
-			hat(sichtbar(en), c);
-		}
-	});
-	test('Bausteine: Schnittlinie, Ausblick, Mail-Inhalt, Leer- und Ohne-Detail-Zustand englisch', () => {
+	// #3297/#3020: Kurzform-Badges stammten aus OutlookLayoutControls (geloescht).
+	test('Bausteine: Schnittlinie, Leer- und Ohne-Detail-Zustand englisch', () => {
 		const { de, en } = deDannEn(() => bausteineRendern());
 		const text = sichtbar(en);
 		for (const s of [
 			'↓ from position 8 only in the Telegram summary, not in the hourly table', // #3047 R8 F3
-			'3-day outlook',
-			'Appears only in the email.',
-			'3-Tages-Vorschau', // vom Trip-Aufrufer uebergebene Ueberschrift (F9) bleibt Aufrufer-Text
-			'Email content',
-			'Format',
-			'Detailed (HTML)',
-			'Compact (plain text)',
-			'In compact mode, the metrics overview + outlook are always shown. The content blocks below are disabled.',
-			// #3155 (Spec feat_3155 Nr. 8) / #3237 F002: der Haken (show_stability) traegt Name und Text der Grosswetterlage.
-			'Weather pattern',
-			'Assessment of weather stability, e.g. “stable high pressure”.',
-			'Stage figures',
-			'Distance, ascent/descent and maximum altitude of the stage as a number grid.',
-			'Comparison with yesterday',
-			"Today's weather compared with yesterday as a short line in the briefing.",
+			// #3297/#3020: Ausblick-Steuerung und Karte E-Mail-Inhalt geloescht; deren Texte prueft
+			// fuer die Konstantenliste der Fall „Mail-Inhalt: Bausteintexte“ weiter unten.
 			'No metrics — add some from “Not in the briefing”.',
 			'Columns'
 		])
 			hat(text, s);
 		hatNicht(text, 'Detail values'); // hideDetailBucket
-		assert.equal((sichtbar(de).match(/3-Tages-Ausblick/g) ?? []).length, 2);
-		assert.equal((text.match(/3-day outlook/g) ?? []).length, 2, 'Ueberschrift und Schalter-Beschriftung');
 		assert.deepEqual(deutscheReste(text, [...FREMD_REIHENFOLGE, ...API_METRIKNAMEN]), []);
 	});
-	test('Mail-Inhalt: Bausteintexte der Konstantenliste je Sprache (alle sieben)', () => {
+	test('Mail-Inhalt: Bausteintexte der Konstantenliste je Sprache', () => {
 		const { de, en } = deDannEn(() =>
 			Object.fromEntries(Object.keys(CONTENT_MODULE_DESCRIPTIONS).map((k) => [k, { ...CONTENT_MODULE_DESCRIPTIONS[k] }]))
 		);
 		assert.deepEqual(Object.keys(en), Object.keys(de));
-		// #3155 (Spec feat_3155 Nr. 8): show_outlook heisst wie die Grosswetterlage.
-		assert.equal(de.show_outlook.label, 'Großwetterlage');
-		assert.equal(en.show_outlook.label, 'Weather pattern');
+		// #3297: show_outlook entfaellt (Altschluessel); die Grosswetterlage traegt show_stability.
 		assert.equal(en.show_quick_take_tags.label, 'Quick-take chips');
 		assert.equal(en.show_quick_take_tags.description, 'Coloured keyword pills at the top, e.g. “Dry”, “Windy”.');
 		assert.equal(en.show_stability.label, 'Weather pattern');

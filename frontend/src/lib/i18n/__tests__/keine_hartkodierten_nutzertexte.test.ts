@@ -370,7 +370,6 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 	// Issue #2655 (i18n F6, AC-7): Versand-Reiter und Telegram-Kurzstil-Schalter.
 	test('F6: kein Allowlist-Eintrag deckt den Versand-Reiter oder den Kurzstil-Schalter', () => {
 		const F6 = [
-			'lib/components/shared/VersandTab.svelte',
 			'lib/components/shared/TelegramKurzstilToggle.svelte',
 			'lib/components/shared/versand-tab/VTBriefingChannels.svelte',
 			'lib/components/shared/versand-tab/VTSchedulePlan.svelte',
@@ -419,10 +418,7 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 					p.startsWith('lib/components/shared/trip-metrics/')
 			);
 		for (const p of [
-			'lib/components/shared/WeatherMetricsTab.svelte',
-			'lib/components/shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte',
 			'lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte',
-			'lib/components/shared/weather-metrics-tab/kuerzelLegende.ts',
 			'lib/components/shared/trip-metrics/tripActiveMetricNames.ts',
 			'lib/components/shared/wetter-tab/compareMetricCatalogLoader.ts',
 			'lib/i18n/metricLabel.ts'
@@ -448,8 +444,6 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 			'lib/components/shared/layout-tab/LTCutLine.svelte',
 			// #2794 S3a Teil-PR 4a: CorridorEditor/CorridorEditorMobile entfernt (Oberflaeche weg).
 			'lib/components/shared/OutputLayoutEditor.svelte',
-			'lib/components/shared/OutlookLayoutControls.svelte',
-			'lib/components/shared/MailInhaltCard.svelte',
 			'routes/gpx-upload/+page.svelte'
 		];
 		const deckt = (a: string, p: string) => (a.endsWith('/') ? p.startsWith(a) : p === a);

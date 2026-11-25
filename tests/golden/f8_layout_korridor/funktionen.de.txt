@@ -19,7 +19,6 @@ PROFILE_METRICS_WITH_SCALES(ALLGEMEIN) → [{"key":"temp_max_c","label":"Tempera
 CONTENT_MODULE_DESCRIPTIONS(show_stage_stats) → {"label":"Etappen-Kennzahlen","description":"Distanz, Auf-/Abstieg und maximale Höhe der Etappe als Zahlenraster."}
 CONTENT_MODULE_DESCRIPTIONS(show_quick_take_tags) → {"label":"Quick-Take-Chips","description":"Farbige Schlagwort-Pillen oben, z. B. „Trocken\", „Windig\"."}
 CONTENT_MODULE_DESCRIPTIONS(show_metrics_summary) → {"label":"Metriken-Überblick","description":"Ersetzt Quick-Take-Chips und Tages-Summe durch eine farbige Pille je aktiver Metrik."}
-CONTENT_MODULE_DESCRIPTIONS(show_outlook) → {"label":"Großwetterlage","description":"Einordnung der Wetterstabilität, z. B. „stabile Hochdrucklage\"."}
 CONTENT_MODULE_DESCRIPTIONS(show_stability) → {"label":"Großwetterlage","description":"Einordnung der Wetterstabilität, z. B. „stabile Hochdrucklage\"."}
 CONTENT_MODULE_DESCRIPTIONS(show_highlights) → {"label":"Zusammenfassung","description":"Kurzer Fließtext mit den wichtigsten Wetter-Highlights des Tages."}
 CONTENT_MODULE_DESCRIPTIONS(show_yesterday_comparison) → {"label":"Vortag-Vergleich","description":"Vergleich des heutigen Wetters mit dem Vortag als Kurzzeile im Briefing."}

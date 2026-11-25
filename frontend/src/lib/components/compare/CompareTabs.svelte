@@ -42,7 +42,7 @@
 	import { deriveActiveAlertMetricsFromCatalog } from '../shared/alarme-tab/activeAlertMetricsFromCatalog.ts';
 	import { materializeActiveMetricKeys } from '../shared/weather-metrics-tab/compareMetricOrder.ts';
 	// Issue #1311 (C1 von Epic #1301): geteilter Wetter-Metriken-Tab (Grundauswahl,
-	// vergleich-Kontext) — seit #1743 ueber WetterMetrikenVersandPanel eingebettet.
+	// vergleich-Kontext) — seit #1743 ueber WetterMetrikenVersandPanel (gelöscht, #3297) eingebettet.
 	import {
 		hydrateWeatherMetricsFromPreset,
 		hydrateChannelActiveMetricsFromPreset,
@@ -418,7 +418,7 @@
 		if (alarmeHydrated) hydrateWetterAlarmFelder(wizardState, updated);
 	}
 
-	// Issue #1256 Scheibe 7 (AC-35/36): eingebetteter VersandTab (context="vergleich")
+	// Issue #1256 Scheibe 7 (AC-35/36): eingebetteter VersandTab (gelöscht, #3297) (context="vergleich")
 	// — gleicher `wizardState`/gleiche `currentPreset`-Baseline wie die Nachbar-Reiter.
 	// Seit #2276 S5 speichert der Abschnitt selbst (Baseline + Diff-Gate in
 	// shared/versandVergleichSpeicherung.ts); hier bleibt nur die Hydration, die
@@ -500,16 +500,16 @@
 		});
 	});
 
-	// Issue #1311 (C1) / Issue #2276 S4: eingebetteter WeatherMetricsTab
+	// Issue #1311 (C1) / Issue #2276 S4: eingebetteter WeatherMetricsTab (gelöscht, #3297)
 	// (context="vergleich") im Hub-Tab "Wetter-Metriken" — analog Alarme-/
 	// Idealwerte-Bridge oben. Seit S4 speichert der Reiter SELBST (Baseline +
 	// Diff-Gate + kombinierte Wetter-Metriken/Layout-Orchestrierung liegen in
-	// WeatherMetricsTab.svelte/weatherMetricsCompareSave.ts) — CompareTabs
+	// WeatherMetricsTab.svelte (gelöscht, #3297)/weatherMetricsCompareSave.ts) — CompareTabs
 	// traegt nur noch die BEIDEN Hydrations-Flags (der Reiter bedient zwei
 	// Domaenen, die zu unterschiedlichen Zeitpunkten fertig laden koennen,
-	// AC-3) und mountet WeatherMetricsTab ERST, wenn
+	// AC-3) und mountet WeatherMetricsTab (gelöscht, #3297) ERST, wenn
 	// `wetterMetrikenHydrationAbgeschlossen()` beide meldet — die Orchestrierung
-	// entsteht dann per `untrack()` INNERHALB von WeatherMetricsTab bereits
+	// entsteht dann per `untrack()` INNERHALB von WeatherMetricsTab (gelöscht, #3297) bereits
 	// gegen die vollstaendig hydrierte Baseline (kein PUT ohne Nutzergeste).
 	let wetterMetrikenHydrated = $state(false);
 	let wetterMetrikenHydrating = false;
@@ -826,7 +826,7 @@
 			{#if wetterMetrikenLayoutHydrationBereit && versandHydrated && alarmeHydrated}
 				<!-- Issue #2276 S4: der Reiter speichert selbst (saveController,
 				     Hub-Queue, Basis-Rueckmeldung, EINE kombinierte Wetter-Metriken/
-				     Layout-Orchestrierung in WeatherMetricsTab.svelte) — kein Wrapper
+				     Layout-Orchestrierung in WeatherMetricsTab.svelte (gelöscht, #3297)) — kein Wrapper
 				     und keine getrennten Commit-Funktionen mehr. Gemountet wird ERST,
 				     wenn BEIDE Domaenen hydriert sind (wetterMetrikenLayoutHydrationBereit,
 				     AC-3), damit die Orchestrierung gegen eine vollstaendige Baseline
@@ -839,7 +839,7 @@
 				     Alarm-Hydration (alarmeHydrated, wie bisher der Alarme-Reiter). -->
 				<!-- Issue #2795 S3b Teilschritt 1b: der neue Reiter speichert Briefing und Alarme ueber
 				     EINEN Speicherer; die Aktivierungs-Karte und der Beispiel-Alarm stehen bis auf
-				     Weiteres in seinem Uebergangsblock (kein AlarmeTab/VersandTab mehr im Reiter).
+				     Weiteres in seinem Uebergangsblock (kein AlarmeTab/VersandTab (gelöscht, #3297) mehr im Reiter).
 				     Issue #3154: ohne Metrik-Oberflaeche — Listen, Stundenverlauf und Ausblick bedient die
 				     Karte „Was steht wo“ im Reiter Wetter (kein Wizard-Buendel mehr hier). -->
 				<ZustellungTab

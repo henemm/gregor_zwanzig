@@ -106,92 +106,9 @@ describe('AC-11: Alarme — Eigenfelder, display_config nur mit metric_alert_lev
 // #2794 S3a Teil-PR 4a (AC-31) mit beiden Schreibwegen entfernt — die Grenzen schreibt der
 // Reiter Wetter (Nutzlast-Tests in shared/wetter-tab/__tests__/).
 
-describe('AC-13: Wetter-Metriken — /weather-config nur Wetter-Metriken-Schluessel, Trip-PUT nur Inhalt + Tagesfenster', () => {
-	test('Metriken speichern: /weather-config ohne metric_alert_levels und Fremdschluessel', async () => {
-		const a = P.neuerAufbau();
-		const wm = await P.wetterMetrikenReiter(a);
-		wm.metrikenSpeichern();
-		await P.fertig(a.ctl);
-
-		assert.equal(puts().length, 2, 'Messaufbau: /weather-config, dann Trip-PUT');
-		assert.match(puts()[0].path, /\/weather-config$/);
-		const w = rumpf(0);
-		const unerlaubt = P.sortiert(w).filter((k) => !(P.DISPLAY_WETTER_METRIKEN as readonly string[]).includes(k));
-		assert.deepEqual(unerlaubt, [], `/weather-config traegt Fremdschluessel: ${JSON.stringify(unerlaubt)} (heute: Spread der ganzen display_config)`);
-		for (const k of ['metrics', 'channel_layouts']) {
-			assert.ok(k in w, `/weather-config muss den Eigen-Schluessel ${k} senden`);
-		}
-		assert.ok(!('metric_alert_levels' in w), 'metric_alert_levels gehoert dem Reiter Alarme');
-		assert.ok('show_night_block' in w, '#1721: /weather-config muss den Eigen-Schluessel show_night_block senden (gespeicherter Wert im Seed)');
-		keineFremdschluessel({ display_config: w }, 'Wetter-Metriken /weather-config', ['show_night_block']);
-	});
-
-	test('Metriken speichern: Trip-PUT = { official_alerts_enabled, report_config(nur Inhalt/Tagesfenster) }', async () => {
-		const a = P.neuerAufbau();
-		const wm = await P.wetterMetrikenReiter(a);
-		wm.metrikenSpeichern();
-		await P.fertig(a.ctl);
-
-		const t = rumpf(1);
-		assert.deepEqual(P.sortiert(t), ['official_alerts_enabled', 'report_config']);
-		const unerlaubt = P.sortiert(t.report_config).filter((k) => !(P.REPORT_WETTER_METRIKEN as readonly string[]).includes(k));
-		assert.deepEqual(
-			unerlaubt,
-			[],
-			`report_config traegt Fremdschluessel: ${JSON.stringify(unerlaubt)} (Versandzeiten, Kanaele, skip_next, … gehoeren nicht in diesen Reiter)`
-		);
-		// EXAKT, nicht nur Teilmenge: ein vergessener Eigen-Schluessel (Hauptrisiko der Spec,
-		// „wird still nicht mehr gespeichert") faellt sonst nicht auf. Der Seed traegt alle neun.
-		assert.deepEqual(
-			P.sortiert(t.report_config),
-			alsSet(P.REPORT_WETTER_METRIKEN),
-			'report_config muss GENAU die Inhalt-/Tagesfenster-Schluessel des Reiters tragen'
-		);
-		keineFremdschluessel(t, 'Wetter-Metriken Trip-PUT');
-	});
-
-	test('Tagesfenster/Inhalt (reportConfig-only-Pfad): nur Inhalt/Tagesfenster-Schluessel', async () => {
-		const a = P.neuerAufbau();
-		const wm = await P.wetterMetrikenReiter(a);
-		wm.reportConfigSpeichern({ day_window_start_hour: 6 });
-		await P.fertig(a.ctl);
-
-		assert.equal(puts().length, 1);
-		const t = rumpf(0);
-		assert.deepEqual(P.sortiert(t), ['official_alerts_enabled', 'report_config']);
-		const unerlaubt = P.sortiert(t.report_config).filter((k) => !(P.REPORT_WETTER_METRIKEN as readonly string[]).includes(k));
-		assert.deepEqual(unerlaubt, [], `report_config traegt Fremdschluessel: ${JSON.stringify(unerlaubt)}`);
-		assert.deepEqual(
-			P.sortiert(t.report_config),
-			alsSet(P.REPORT_WETTER_METRIKEN),
-			'auch der reportConfig-only-Pfad muss GENAU die Eigenschluessel des Reiters tragen (kein vergessener Schluessel)'
-		);
-		assert.equal((t.report_config as Record<string, unknown>).day_window_start_hour, 6);
-		keineFremdschluessel(t, 'Wetter-Metriken Tagesfenster');
-	});
-});
-
-describe('AC-14: Versand — nur Versand-Schluessel, kein Tagesfenster, kein E-Mail-Inhalt', () => {
-	test('Versandzeit aendern: Rumpf = { report_config } mit genau den Versand-Schluesseln', async () => {
-		const a = P.neuerAufbau();
-		const v = await P.versandReiter(a);
-		v.aendern({ morning_time: '08:00:00' });
-		await P.fertig(a.ctl);
-
-		assert.equal(puts().length, 1);
-		const b = rumpf(0);
-		assert.deepEqual(P.sortiert(b), ['report_config'], 'der Versand-Reiter sendet nur report_config');
-		assert.deepEqual(
-			P.sortiert(b.report_config),
-			alsSet(P.REPORT_VERSAND),
-			`Versand-report_config: ${JSON.stringify(P.sortiert(b.report_config))} (heute die ganze Vollkopie inkl. day_window_*, skip_next, E-Mail-Inhalt)`
-		);
-		const rc = b.report_config as Record<string, unknown>;
-		assert.equal(rc.morning_time, '08:00:00');
-		assert.ok(!('day_window_start_hour' in rc) && !('day_window_end_hour' in rc), 'kein Tagesfenster');
-		keineFremdschluessel(b, 'Versand');
-	});
-});
+// #3297/#3020: AC-13 (Alt-Reiter Wetter-Metriken) und AC-14 (Alt-Reiter Versand) prueften
+// shared/WeatherMetricsTab bzw. trip-detail/BriefingScheduleTab (geloescht, nirgends gemountet). Die
+// live Reiter Wetter/Zustellung pruefen wetter-tab/ und zustellung-tab/__tests__ sowie trip_pfad_ohne_altfelder_3297.
 
 describe('AC-15: Kopf, Tempo, Etappen — nur das eigene Feld (heute schon so)', () => {
 	test('Kopf: { name }', async () => {

@@ -255,26 +255,4 @@ describe('#3190 AC-1: Auslöser schaltet um und zeigt auf die Karte', () => {
 	}
 });
 
-// ---------------------------------------------------------------------------------------------------------------
-// AC-10: Alt-Editor WeatherMetricsTab — Karte unter der Profil-Karte, nicht am Seitenende
-// ---------------------------------------------------------------------------------------------------------------
-const { routeRendern } = await import(pathToFileURL(path.resolve(HERE, '../../shared/weather-metrics-tab/__tests__/f5Pruefstand.ts')).href);
-const { weatherMetricsTabSections } = await import(pathToFileURL(path.resolve(HERE, '../../shared/weather-metrics-tab/weatherMetricsTabSections.ts')).href);
-describe('#3190 AC-10: WeatherMetricsTab (Alt-Editor)', () => {
-	test('sections: Profil-Karte (grundauswahl) nur in „alles“/„wetter“, nicht in „zustellung“', () => {
-		assert.ok(weatherMetricsTabSections('route', 'alles').includes('grundauswahl'));
-		assert.ok(weatherMetricsTabSections('route', 'wetter').includes('grundauswahl'));
-		assert.ok(!weatherMetricsTabSections('route', 'zustellung').includes('grundauswahl'));
-	});
-	test('mit grundauswahl und offener Karte: Karte nach der Profil-Karte und vor der Grundauswahl', () => {
-		locale.set('de');
-		const h = routeRendern({ showSavePresetDialog: true });
-		const profil = h.search(/\sdata-testid="weather-preset-pill-/);
-		const karteAb = pos(h, 'save-preset-dialog');
-		const grund = pos(h, 'wm2-grundauswahl');
-		assert.ok(profil > -1 && karteAb > -1 && grund > -1, JSON.stringify({ profil, karteAb, grund }));
-		assert.ok(profil < karteAb, 'Karte steht vor der Profil-Karte');
-		assert.ok(karteAb < grund, `Karte steht nicht unmittelbar unter der Profil-Karte, sondern weiter unten (${karteAb} > ${grund})`);
-		assert.doesNotMatch(karte(h), /\srole="dialog"/);
-	});
-});
+// #3297/#3020: AC-10 (Alt-Editor WeatherMetricsTab, weatherMetricsTabSections) entfaellt — beide Dateien geloescht.

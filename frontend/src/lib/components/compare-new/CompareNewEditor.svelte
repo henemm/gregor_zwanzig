@@ -4,7 +4,7 @@
 	//
 	// Struktureller Spiegel von trip-new/TripNewEditor.svelte (#622): eigene
 	// Anlege-Shell je Domäne (ADR-0029), zusammengesetzt aus den GETEILTEN
-	// Organismen (Step2Orte, WetterTab, WeatherMetricsTab, AlarmeTab, VersandTab;
+	// Organismen (Step2Orte, WetterTab, WeatherMetricsTab (gelöscht, #3297), AlarmeTab, VersandTab (gelöscht, #3297);
 	// Stundenverlauf/Ausblick seit #3276 nur in „Was steht wo“). Die Wertebereiche-Vorbelegung
 	// ist seit #2794 S3a Teil-PR 4a eine reine Funktion (shared/wetter-tab/anlegeVorbelegung.ts).
 	// Reine Freischalt-Logik
@@ -86,7 +86,7 @@
 	import { PageHeader } from '$lib/components/atoms';
 
 	// Issue #1743: kein Schritt „Versand" mehr — der Versand-Abschnitt steht unten im
-	// Schritt Wetter-Metriken (geteilter Baustein WetterMetrikenVersandPanel).
+	// Schritt Wetter-Metriken (geteilter Baustein WetterMetrikenVersandPanel (gelöscht, #3297)).
 	// Issue #2794 S3a: Kette vergleich · orte · wetter · zustellung.
 	type CompareNewTabId = 'vergleich' | 'orte' | 'wetter' | 'zustellung';
 	const TAIL: TailIds<CompareNewTabId> = { metriken: 'wetter', zustellung: 'zustellung' };
@@ -476,7 +476,7 @@
 	const mobileEyebrow = $derived(wiz.name.trim() || $t('vergleich.neu.neuer_vergleich'));
 </script>
 
-<!-- Create-Aktivierungs-Banner als Snippet-Prop für den Reiter Zustellung (#3333 AC-11, vorher VersandTab). -->
+<!-- Create-Aktivierungs-Banner als Snippet-Prop für den Reiter Zustellung (#3333 AC-11, vorher VersandTab (gelöscht, #3297)). -->
 {#snippet versandActivationBanner()}
 	<div
 		data-testid="compare-step5-activation-banner"

@@ -35,6 +35,7 @@ import * as P from './tripMehrreiterPruefstand.ts';
 let server: FakeTripServer;
 
 const FREMDE_METRIKEN = [{ metric_id: 'cape', enabled: true, aggregations: ['max'] }];
+const TEMPO_B = { fortbewegung: 'ski', grundtempo_kmh: 3 };
 
 let langsamerGet = false;
 
@@ -70,20 +71,21 @@ async function konfliktInAUndWechsel(a: P.Aufbau): Promise<void> {
 	void alarme;
 }
 
-describe('AC-3: Fremdaenderung, A (Alarme) und B (Versand) stehen nach „Nochmal speichern" gemeinsam auf dem Server', () => {
+describe('AC-3: Fremdaenderung, A (Alarme) und B (Tempo) stehen nach „Nochmal speichern" gemeinsam auf dem Server', () => {
 	test('A erzeugt Konflikt, Wechsel, B speichert (412), Retry sendet beide Saetze erneut', async () => {
 		server.foreignWrite(P.TRIP_ID, { display_config: { metrics: FREMDE_METRIKEN } });
 		const a = P.neuerAufbau();
 		await konfliktInAUndWechsel(a);
 
-		// B (Versand) speichert bei offenem Konflikt: 412, Anzeige bleibt
-		const b = await P.versandReiter(a);
-		b.aendern({ morning_time: '08:00:00' });
-		await P.fertig(a.ctl);
+		// B speichert bei offenem Konflikt: 412, Anzeige bleibt.
+		// #3297/#3020: B war der Versand-Reiter (trip-detail/BriefingScheduleTab, geloescht); jetzt der
+		// live gemountete Tempo-Reiter (Etappen, Top-Level `tempo`) — derselbe Mehrreiter-Mechanismus.
+		const b = await P.tempoReiter(a);
+		await b.aendern(TEMPO_B);
 		const bPut = puts().at(-1)!;
-		assert.equal(bPut.status, 412, 'Vorbedingung: der Versand-PUT bei offenem Konflikt wird abgelehnt (Server traegt die Sperre)');
+		assert.equal(bPut.status, 412, 'Vorbedingung: der Tempo-PUT bei offenem Konflikt wird abgelehnt (Server traegt die Sperre)');
 		assert.equal(a.ctl.state, 'conflict', 'AC-2: die Anzeige bleibt nach dem Speichern in B');
-		assert.notEqual(rc().morning_time, '08:00:00', 'Vorbedingung: B hat noch nichts geschrieben');
+		assert.notDeepEqual(stand().tempo, TEMPO_B, 'Vorbedingung: B hat noch nichts geschrieben');
 
 		// WHEN: „Nochmal speichern"
 		const etagVorRetry = server.etagOf(P.TRIP_ID);
@@ -109,7 +111,7 @@ describe('AC-3: Fremdaenderung, A (Alarme) und B (Versand) stehen nach „Nochma
 			'sensibel',
 			'die Alarm-Aenderung aus Reiter A muss gespeichert sein (A ist nicht mehr angezeigt!)'
 		);
-		assert.equal(rc().morning_time, '08:00:00', 'die Versand-Aenderung aus Reiter B muss gespeichert sein');
+		assert.deepEqual(stand().tempo, TEMPO_B, 'die Tempo-Aenderung aus Reiter B muss gespeichert sein');
 		assert.equal(rc().skip_next, false, 'Seed unveraendert');
 
 		// Konfliktanzeige weg, Markierung weg
@@ -142,16 +144,15 @@ describe('AC-3: Fremdaenderung, A (Alarme) und B (Versand) stehen nach „Nochma
 
 // #2794 S3a Teil-PR 4a (AC-31): „Wertebereiche als zweiter Reiter" entfaellt mit dem CorridorEditor
 // (einziger Schreiber von `corridors`). Ein zweiter Reiter mit anderem Top-Level-Feld bleibt oben
-// abgedeckt (B = Versand, report_config).
+// abgedeckt (B = Tempo, Top-Level `tempo`).
 
 describe('Retry bei erneutem Konflikt: nichts geht verloren', () => {
 	test('ein weiterer Fremdschreiber waehrend des Retry ⇒ Konflikt bleibt, ein zweiter Retry sendet weiterhin BEIDE Saetze', async () => {
 		server.foreignWrite(P.TRIP_ID, { name: 'Fremd 1' });
 		const a = P.neuerAufbau();
 		await konfliktInAUndWechsel(a);
-		const b = await P.versandReiter(a);
-		b.aendern({ morning_time: '08:00:00' });
-		await P.fertig(a.ctl);
+		const b = await P.tempoReiter(a);
+		await b.aendern(TEMPO_B);
 
 		// zweiter Fremdschreiber, waehrend der Retry-GET unterwegs ist: der Server hat den
 		// GET bei Ankunft beantwortet (alter Stempel), die Antwort kommt verzoegert an.
@@ -170,6 +171,6 @@ describe('Retry bei erneutem Konflikt: nichts geht verloren', () => {
 		assert.equal(a.ctl.state, 'idle');
 		assert.equal(stand().name, 'Fremd 2');
 		assert.equal((dc().metric_alert_levels as Record<string, unknown>).wind, 'sensibel', 'A ging nicht verloren');
-		assert.equal(rc().morning_time, '08:00:00', 'B ging nicht verloren');
+		assert.deepEqual(stand().tempo, TEMPO_B, 'B ging nicht verloren');
 	});
 });

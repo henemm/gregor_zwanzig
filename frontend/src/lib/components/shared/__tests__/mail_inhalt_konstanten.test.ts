@@ -13,8 +13,8 @@ const { CONTENT_MODULE_DESCRIPTIONS, DEFAULT_DAILY_SUMMARY_METRICS } = await imp
 	'../mailInhaltKonstanten.ts'
 );
 
-test('CONTENT_MODULE_DESCRIPTIONS erklaert die Bausteine inkl. show_outlook', () => {
-	for (const key of ['show_stage_stats', 'show_metrics_summary', 'show_outlook']) {
+test('CONTENT_MODULE_DESCRIPTIONS erklaert die Bausteine inkl. show_stability', () => {
+	for (const key of ['show_stage_stats', 'show_metrics_summary', 'show_stability']) {
 		const entry = CONTENT_MODULE_DESCRIPTIONS[key];
 		assert.ok(entry, `Eintrag fehlt fuer ${key}`);
 		assert.ok(entry.label && entry.label.length > 0, `Label fehlt fuer ${key}`);
@@ -23,8 +23,8 @@ test('CONTENT_MODULE_DESCRIPTIONS erklaert die Bausteine inkl. show_outlook', ()
 });
 
 test('die drei angezeigten Schalter tragen die Labels der Karte', () => {
-	// #3155 (Spec feat_3155 Nr. 8): der Haken show_outlook traegt den Namen der Grosswetterlage.
-	assert.equal(CONTENT_MODULE_DESCRIPTIONS.show_outlook.label, 'Großwetterlage');
+	// #3297: der Alt-Haken des Ausblicks ist entfernt; die Grosswetterlage traegt show_stability.
+	assert.equal(CONTENT_MODULE_DESCRIPTIONS.show_stability.label, 'Großwetterlage');
 	assert.equal(CONTENT_MODULE_DESCRIPTIONS.show_stage_stats.label, 'Etappen-Kennzahlen');
 	assert.equal(CONTENT_MODULE_DESCRIPTIONS.show_yesterday_comparison.label, 'Vortag-Vergleich');
 });

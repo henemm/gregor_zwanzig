@@ -147,8 +147,6 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['trip.speichert', 'Speichert…', 'Saving…'],
 	['trip.speichern_laeuft', 'Speichern …', 'Saving …'],
 	['trip.fehler_speichern', 'Fehler beim Speichern', 'Error while saving'],
-	['trip.gespeichert_punkt', 'Gespeichert.', 'Saved.'],
-	['trip.zeitplan_speichern', 'Briefing-Zeitplan speichern', 'Save briefing schedule'],
 	['trip.neuer_name', 'Neuer Name:', 'New name:'],
 
 	// ── trip.layout.* — Ausgabe-Layout-Bausteine (BucketSection*, ActiveMetricRow, …) ──

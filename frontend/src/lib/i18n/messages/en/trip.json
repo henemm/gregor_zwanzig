@@ -69,8 +69,6 @@
 	"trip.speichert": "Saving…",
 	"trip.speichern_laeuft": "Saving …",
 	"trip.fehler_speichern": "Error while saving",
-	"trip.gespeichert_punkt": "Saved.",
-	"trip.zeitplan_speichern": "Save briefing schedule",
 	"trip.neuer_name": "New name:",
 	"trip.layout.leer": "No entries — add metrics from “Not in the briefing”.",
 	"trip.layout.telegram_vor": "✂ from here",

@@ -109,30 +109,7 @@ describe('AC-1 / Teil B: Typ-Alias, tote Bedingung und Kommentar-Leichen sind we
 		);
 	});
 
-	test('WeatherMetricsTab.svelte enthaelt die tautologische Kontext-Disjunktion nicht mehr', () => {
-		const quelle = lies('shared', 'WeatherMetricsTab.svelte');
-		assert.ok(
-			quelle.includes('!compareCatalogLoaded') && quelle.includes('loadCompareMetricCatalog()'),
-			'Positiv-Kontrolle: der Katalog-Ladeguard selbst muss bleiben — nur die ' +
-				'ueberfluessige Kontext-Bedingung davor entfaellt'
-		);
-		const tautologisch = quelle
-			.split('\n')
-			.map((zeile, i) => ({ nr: i + 1, zeile }))
-			.filter(
-				({ zeile }) =>
-					zeile.includes('||') &&
-					zeile.includes("context === 'vergleich'") &&
-					zeile.includes("context === 'route'")
-			);
-		assert.deepStrictEqual(
-			tautologisch.map(({ nr }) => nr),
-			[],
-			'Eine Disjunktion ueber BEIDE Werte des Union-Typs "route" | "vergleich" ist ' +
-				'immer wahr und muss ersatzlos vereinfacht werden. Fundstellen: ' +
-				tautologisch.map(({ nr, zeile }) => nr + ': ' + zeile.trim()).join(' | ')
-		);
-	});
+	// #3297/#3020: der Fall gegen WeatherMetricsTab.svelte entfaellt — Datei geloescht.
 
 	const speicherModule: Array<[string[], string]> = [
 		[['shared', 'alarmeVergleichSpeicherung.ts'], 'buildComparePresetSavePayload'],

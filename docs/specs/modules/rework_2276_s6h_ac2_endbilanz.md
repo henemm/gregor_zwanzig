@@ -98,24 +98,19 @@ Diese Scheibe:
   Zählbefehl) und prüft, dass die drei Kategorie-Summen 27/6/14 ergeben.
   Verhindert, dass diese Dokumentation und die Ratsche künftig auseinanderlaufen.
 
-## Anhang: AC-2-Endbilanz — alle 24 Ratschen-Einträge (Stand `3cece096`, S6g live; seit #2287 ohne `alarmeTabSections.ts:42`; seit #1743 mit `WetterMetrikenVersandPanel.svelte:66`; seit #1721 mit `WeatherMetricsTab.svelte:2042`; AlarmeTab-Zeilen seit #1895 S3b1 und S3b2 nachgemessen; seit #2794 S3a Teil-PR 4a ohne die 22 Einträge von `CorridorEditor.svelte`/`CorridorEditorMobile.svelte` (Oberfläche entfernt), Korridor-Logik unter `wetter-tab/`)
+## Anhang: AC-2-Endbilanz — alle 13 Ratschen-Einträge (seit #3297/#3020 ohne die elf Einträge von `VersandTab.svelte`, `WeatherMetricsTab.svelte`, `weatherMetricsTabSections.ts` und `WetterMetrikenVersandPanel.svelte` (Dateien gelöscht); Stand `3cece096`, S6g live; seit #2287 ohne `alarmeTabSections.ts:42`; seit #1743 mit `WetterMetrikenVersandPanel.svelte:66`; seit #1721 mit `WeatherMetricsTab.svelte:2042`; AlarmeTab-Zeilen seit #1895 S3b1 und S3b2 nachgemessen; seit #2794 S3a Teil-PR 4a ohne die 22 Einträge von `CorridorEditor.svelte`/`CorridorEditorMobile.svelte` (Oberfläche entfernt), Korridor-Logik unter `wetter-tab/`)
 
-### FACHLICH (12 — echter Sachunterschied, bleibt dauerhaft)
+### FACHLICH (7 — echter Sachunterschied, bleibt dauerhaft)
 
 | Datei:Zeile | Grund |
 |---|---|
 | `AlarmeTab.svelte:268` | Ableitung `unalertableSelectedMetricNames` — route liefert strukturell immer `[]` (#1435 AC-7) |
 | `AlarmeTab.svelte:553` | Anzeige-Zwilling der fachlichen Zusicherung aus `:268` |
 | `AlarmeTab.svelte:604` | Beispielwarnung: Ort- statt Etappen-Subjekt, zwei verschiedene Komponenten |
-| `VersandTab.svelte:369` | Markup-Baum Trip (`VTLaufzeitRoute`, Premium-SMS; Mehrtages-Trend seit #3155 entfallen) |
-| `VersandTab.svelte:401` | Markup-Baum Vergleich (`VTLaufzeitVergleich`, kein Mehrtages-Trend, eigener Premium-SMS-Schalter seit #2293 S2) — zwei komplette, unterschiedliche Komponenten-Bäume |
-| `WeatherMetricsTab.svelte:1393` | Metrik-Markup-Baum (#1311 C1: Vergleich-Grundauswahl) |
-| `WeatherMetricsTab.svelte:1872` | Schalter „Nacht-Stundentabelle in der Mail zeigen“ nur im Trip (#1721): die Nacht-Stundentabelle gibt es nur in der Trip-Mail, der Ortsvergleich hat keinen Nachtblock (Pendant-Sperre, Spec `fix_1721_nachtausgabe.md`) |
 | `versand-tab/vtBriefingChannelsText.ts:22` | SMS-Zeichenbudget: Trip 160 / Vergleich 153 (unterschiedliches Layout) |
 | `versand-tab/vtBriefingChannelsText.ts:29` | Einleitungstext: Etappen-Tabelle vs. Orts-Tabelle — inhaltlich verschiedene Datenform |
 | `alarme-tab/alarmeTabSections.ts:27` | Radar-Abschnitt nur im Vergleich |
 | `wetter-tab/corridorEditorState.ts:331` | Markieren-Schalter bei Tages-Summen nur im Trip gesperrt |
-| `weather-metrics-tab/weatherMetricsTabSections.ts:53` | SMS-Schwellen/Report-Config/Nachtblock/Ausblick nur im Trip (#3276: der Zweig „Stundenverlauf/Ausblick nur im Vergleich“ entfällt ersatzlos) |
 
 ### DARSTELLUNG (3 — nur Beschriftung/Sichtbarkeit, kein Datenweg-Unterschied)
 
@@ -125,28 +120,25 @@ Diese Scheibe:
 | `versand-tab/VTSchedulePlan.svelte:72` | Erklärtext „wie beim Trip" — reine Zusatzerklärung, keine Funktionsänderung |
 | `alarme-tab/alarmeTabSections.ts:38` | nur Überschrifttext |
 
-### HERKUNFT (9 — AC-2-Abweichung, bleibt bestehen, siehe Begründung oben)
+### HERKUNFT (3 — AC-2-Abweichung, bleibt bestehen, siehe Begründung oben)
 
 | Datei:Zeile | Warum es (noch) eine HERKUNFT-Verzweigung ist | Warum sie bleibt |
 |---|---|---|
 | `versandVergleichSpeicherung.ts:237` | Erzeugungs-Prädikat: nur aktiv, wenn `context === 'vergleich'` | Gate für einen strukturell anderen Persistenz-Endpoint (Compare-Preset) |
 | `wetter-tab/wertebereicheVergleichSpeicherung.ts:204` | dito für Wertebereiche | dito |
 | `weather-metrics-tab/weatherMetricsCompareSave.ts:439` | dito für Wetter-Metriken (#3276: −53 durch entfernte Altschlüssel, Fix-Loop F005: −79 durch entfernten `flushPendingWeatherMetricsSave`; #2794 Teil 3 F006: um 5 Zeilen verschoben; #3061/#3047 J5: null-Hydrierer zusammengeführt, netto unverschoben; #3097: +15 durch `hourlyMetricFormats`; Weiche unverändert) | dito **und** zugleich die von S4 AC-13 geforderte Hydration-Barriere — AC-13 hat Vorrang (siehe AC-3) |
-| `VersandTab.svelte:359` | Wirkort-Guard des Selbst-Speicher-Effekts — läuft nur im Vergleich | Effekt existiert nur für den Compare-Speicherweg; Trip speichert über einen anderen Mechanismus außerhalb dieser Datei |
-| `WeatherMetricsTab.svelte:580` | Ladepfad-Zwilling: Hydration-Guard nur für `route` | Trip und Vergleich laden ihre Kataloge über verschiedene Wege; echte Vereinheitlichung ist eine Ladeschicht-Frage, nicht Teil von S6 |
-| `WeatherMetricsTab.svelte:595` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `route` | dito |
-| `WeatherMetricsTab.svelte:624` | Ladepfad-Zwilling: SMS-Symbole nur im Vergleich laden | dito |
-| `WeatherMetricsTab.svelte:637` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `vergleich` | dito |
-| `WetterMetrikenVersandPanel.svelte:66` | #1743: Versand-Inhalt nach Herkunft — Trip-Hub über `BriefingScheduleTab`, Vergleich und Trip-Anlegen über den EINEN `VersandTab` | ersetzt die Direkt-Mounts in TripTabs/CompareTabs/Anlege-Seiten |
 
-**Summe:** 12 FACHLICH + 3 DARSTELLUNG + 9 HERKUNFT = **24**, deckungsgleich
+**Summe:** 7 FACHLICH + 3 DARSTELLUNG + 3 HERKUNFT = **13**, deckungsgleich
 mit `EINGEFROREN_SOLL_ANZAHL` (Summenzeile in #2727 korrigiert — sie nannte 14 / 46;
 Abgleich der `context ===`-Zweige gegen die Soll-Liste bestanden, kein Zweig entfällt;
 #1721 hob danach FACHLICH 27 → 28; #2794 S3a Teil-PR 4a senkte sie mit dem entfernten
-Corridor-Editor auf 14 / 3 / 9 = 26; #3155 entfernte die `isRoute`-Weiche in `VTSchedulePlan.svelte`: 13 / 3 / 9 = 25).
+Corridor-Editor auf 14 / 3 / 9 = 26; #3155 entfernte die `isRoute`-Weiche in `VTSchedulePlan.svelte`: 13 / 3 / 9 = 25; #3297/#3020 löschten den Alt-Editor samt Versand-Baustein: 7 / 3 / 3 = 13).
 
 ## Changelog
 
+- 2026-11-25: #3297/#3020 (Rückbau Alt-Editor) — `VersandTab.svelte`, `WeatherMetricsTab.svelte`,
+  `weatherMetricsTabSections.ts` und `WetterMetrikenVersandPanel.svelte` gelöscht; ihre elf Einträge
+  entfallen als ENTFERNTE Verzweigungen (FACHLICH 12 → 7, HERKUNFT 9 → 3), Summe 24 → 13 (Ratsche nachgezogen).
 - 2026-11-19: #3155 (B4, Karte „Mehrtages-Trend" entfernt) — `VTSchedulePlan.svelte:57`
   (`isRoute`-Ableitung, nur für die Trend-Karte) entfällt, FACHLICH 14 → 13, Summe 26 → 25;
   `VTSchedulePlan.svelte` 84→72 und `VersandTab.svelte` 360→359, 370→369, 406→401 nur

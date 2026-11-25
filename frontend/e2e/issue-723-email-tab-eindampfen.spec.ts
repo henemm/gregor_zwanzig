@@ -126,14 +126,14 @@ test.describe('Issue #723: E-Mail-Inhalt-Tab eingedampft', () => {
 		}
 	});
 
-	// ── AC-3: fehlendes show_outlook → Ausblick an ─────────────────────────────
+	// ── AC-3: Trip ohne Ausblick-Einstellung → Ausblick abends an ──────────────
 	// #3154: in der Karte je Briefing; Vorbelegung „nur im Abend-Briefing“ (Spec Teil B, Kartentext).
-	test('AC-3: Trip ohne show_outlook → Ausblick-Checkbox ist angehakt', async ({
+	test('AC-3: Trip ohne Ausblick-Einstellung → Abend-Ausblick ist angehakt', async ({
 		page,
 		request
 	}) => {
 		const id = tripId('ac3');
-		// report_config OHNE show_outlook
+		// report_config ohne Ausblick-Angabe (#3297: Altschluessel werden nicht mehr gesaet)
 		await createTrip(request, id, {
 			enabled: true,
 			morning_time: '07:00',
@@ -177,8 +177,8 @@ test.describe('Issue #723: E-Mail-Inhalt-Tab eingedampft', () => {
 	});
 
 	// ── AC-5: Ausblick umschalten, speichern, persistiert über Reload ──────────
-	// #3154: Ausblick im Abend-Briefing in der Karte (`outlook_reports` der Tabelle); `show_outlook` bleibt.
-	test('AC-5: show_outlook abwählen wird gespeichert und überlebt Reload', async ({
+	// #3154: Ausblick im Abend-Briefing in der Karte (`outlook_reports` der Tabelle). #3297: ohne Altschluessel-Saat.
+	test('AC-5: Abend-Ausblick abwählen wird gespeichert und überlebt Reload', async ({
 		page,
 		request
 	}) => {
@@ -186,8 +186,7 @@ test.describe('Issue #723: E-Mail-Inhalt-Tab eingedampft', () => {
 		await createTrip(request, id, {
 			enabled: true,
 			morning_time: '07:00',
-			evening_time: '18:00',
-			show_outlook: true
+			evening_time: '18:00'
 		});
 		try {
 			const karte = await openKarte(page, id);
@@ -204,7 +203,6 @@ test.describe('Issue #723: E-Mail-Inhalt-Tab eingedampft', () => {
 			expect(after.ok()).toBe(true);
 			const trip = await after.json();
 			expect(trip.display_config.placements.outlook_reports).not.toContain('evening');
-			expect(trip.report_config.show_outlook).toBe(true);
 			await page.reload();
 			await expect((await openKarte(page, id)).getByTestId('was-steht-wo-ausblick-evening')).toHaveAttribute('aria-checked', 'false');
 		} finally {

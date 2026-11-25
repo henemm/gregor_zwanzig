@@ -6,7 +6,6 @@ import { DEFAULT_DAILY_SUMMARY_METRICS } from './mailInhaltKonstanten.ts';
 
 export interface MailZustand {
 	email_format: 'full' | 'compact';
-	show_outlook: boolean;
 	show_stage_stats: boolean;
 	show_yesterday_comparison: boolean;
 	// Bestandsdaten-Erhalt: nicht im UI gezeigt, aber im Read-Modify-Write benoetigt.
@@ -28,7 +27,6 @@ export function ladeMailZustand(blob: object | null | undefined): MailZustand {
 	const c = (blob ?? {}) as Record<string, unknown>;
 	return {
 		email_format: c.email_format === 'compact' || c.email_format === 'full' ? c.email_format : 'full',
-		show_outlook: bool(c.show_outlook, true),
 		show_stage_stats: pyBool(c.show_stage_stats, true),
 		show_yesterday_comparison: pyBool(c.show_yesterday_comparison, true),
 		show_compact_summary: bool(c.show_compact_summary, true),

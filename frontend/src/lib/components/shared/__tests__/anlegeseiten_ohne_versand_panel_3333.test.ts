@@ -22,7 +22,6 @@ import { findeKomponenten, type Knoten } from './svelteInstanzPruefstand.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const COMPONENTS = resolve(HIER, '..', '..');
-const PANEL = join(COMPONENTS, 'shared', 'WetterMetrikenVersandPanel.svelte');
 const ANLEGESEITEN: Record<string, string> = {
 	TripNewEditor: join(COMPONENTS, 'trip-new', 'TripNewEditor.svelte'),
 	CompareNewEditor: join(COMPONENTS, 'compare-new', 'CompareNewEditor.svelte')
@@ -34,9 +33,7 @@ function importQuellen(ast: Knoten): string[] {
 }
 
 describe('#3333 AC-13: Anlegeseiten ohne WetterMetrikenVersandPanel (Strukturwächter)', () => {
-	test('Vakuum-Schutz: die Panel-Datei besteht bis zum Rückbau (#3020, #3036)', () => {
-		assert.ok(existsSync(PANEL), `${PANEL} fehlt — Rückbau gehört zu #3020/#3036, nicht zu #3333`);
-	});
+	// #3297/#3020: der Vakuum-Schutz („Panel-Datei besteht bis zum Rueckbau“) entfaellt — Rueckbau erledigt.
 
 	for (const [name, datei] of Object.entries(ANLEGESEITEN)) {
 		test(`${name} importiert das Alt-Panel nicht`, () => {

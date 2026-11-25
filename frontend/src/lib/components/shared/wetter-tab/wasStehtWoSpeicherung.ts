@@ -229,8 +229,7 @@ function zusammen(...teile: Rumpf[]): Rumpf {
 /** Kurzstil wie im Übergangsblock (Trip `report_config.telegram_style`, Orte `display_config.telegram_style`). */
 function kurzstil(kind: Kind, neu: Felder, alt: Felder): Rumpf {
 	if (!geaendert(neu, alt, 'telegram_style')) return {};
-	const s = { stil: neu.telegram_style, trendMorgen: false, trendAbend: false };
-	return kanalStilNutzlast(kind, s, { ...s, stil: alt.telegram_style });
+	return kanalStilNutzlast(kind, { stil: neu.telegram_style }, { stil: alt.telegram_style });
 }
 
 /** Teilfeld-Rumpf: nur, was sich gegenüber `alt` geändert hat. */

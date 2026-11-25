@@ -29,7 +29,6 @@ const N = await import('../../../utils/naismith.ts');
 type Knoten = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 const PANEL = path.join(T.KOMP, 'edit', 'EditStagesPanelNew.svelte');
-const WMT = path.join(T.KOMP, 'shared', 'WeatherMetricsTab.svelte');
 
 // Etappe wie tempo_panel_3196_fixloop3: A (0 km, 1000 m) → B (4 km, 1600 m) → C (8 km, 1000 m), 08:00.
 //   zu Fuss 4: 10:30, 12:12, Gehzeit 4:12 — Rad 20: 09:06, 09:48, Gehzeit 1:48
@@ -125,47 +124,7 @@ describe('F-A3-2 (AC-7): Anlege-Dialog zeigt genau eine Tempo-Karte', () => {
 
 // ── F-A3-3 (AC-7, Datenverlust-Schutz): Vorlage nur beim Anlegen ─────────────
 
-describe('F-A3-3: der Vorlagen-Effekt ueberschreibt keine Bestandswahl', () => {
-	const EIGENE = { primary: ['temp', 'wind'], secondary: [], off: [] };
-	async function wetterReiter(saat: Knoten) {
-		const { ast, quelle, u } = await umgebungFuer(WMT, {
-			trip: { id: 't1', tempo: { fortbewegung: 'rad', grundtempo_kmh: 20 } },
-			templates: [
-				{ id: 'alpen-trekking', metrics: ['temp', 'rain'] },
-				{ id: 'radtour', metrics: ['wind_gust', 'rain', 'temp'] },
-				{ id: 'skitouren', metrics: ['snow'] }
-			],
-			catalog: {},
-			userPresets: [],
-			buckets: structuredClone(EIGENE),
-			...saat
-		});
-		assert.equal(typeof u.applyPreset, 'function', 'Messaufbau: applyPreset nicht herleitbar (muss die ECHTE sein)');
-		const effekte = effekteVon(ast, quelle, u, 'FORTBEWEGUNG_TO_TEMPLATE');
-		assert.equal(effekte.length, 1, 'Messaufbau: Vorlagen-Effekt nicht gefunden');
-		effekte[0]();
-		return u;
-	}
-
-	test('Positivkontrolle Anlegen (createMode, sauber): Vorlage radtour wird angewendet', async () => {
-		const u = await wetterReiter({ createMode: true, isDirty: false });
-		assert.equal(u.selectedTemplate, 'radtour');
-		assert.deepEqual(u.buckets.primary, ['wind_gust', 'rain', 'temp']);
-	});
-
-	test('Bearbeiten (createMode false), Trip mit tempo Rad: Metrikwahl bleibt, kein Speicher-Anstoss', async () => {
-		const u = await wetterReiter({ createMode: false, isDirty: false });
-		assert.deepEqual(u.buckets, EIGENE, 'Bestandswahl durch die Vorlage ersetzt');
-		assert.notEqual(u.selectedTemplate, 'radtour');
-		assert.equal(u.userTouched, false, 'userTouched gesetzt — der Autosave wuerde die Vorlage speichern');
-	});
-
-	test('Anlegen mit ungesichertem Stand (isDirty): Metrikwahl bleibt', async () => {
-		const u = await wetterReiter({ createMode: true, isDirty: true });
-		assert.deepEqual(u.buckets, EIGENE, 'ungesicherte Wahl durch die Vorlage ersetzt');
-		assert.equal(u.userTouched, false);
-	});
-});
+// #3297/#3020: F-A3-3 mass den Vorlagen-Effekt (FORTBEWEGUNG_TO_TEMPLATE) in WeatherMetricsTab — Datei geloescht, der Effekt hat kein Gegenstueck im Live-Reiter.
 
 // ── F-A3-5 (AC-6): Anzeige = Rechnung ────────────────────────────────────────
 

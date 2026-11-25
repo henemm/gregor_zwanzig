@@ -224,9 +224,6 @@ const EINGEFROREN: readonly string[] = [
 	// 🔴 Issue #3155 (B4): Karte „Mehrtages-Trend" entfernt (Trend-State, Props
 	// und Haken weg, Vorbelegungs-Konstante neu) — `:360/:370/:406` ->
 	// `:359/:369/:401`, Bedingungen byte-identisch, unten inhaltlich gefesselt.
-	'VersandTab.svelte:359',
-	'VersandTab.svelte:369',
-	'VersandTab.svelte:401',
 	// 🔴 Issue #2293 Scheibe S2: `versandVergleichSpeicherung.ts:221` verschob
 	// sich auf `:235` (+14 Zeilen VOR dieser Stelle: `sendPremiumSms` in zwei
 	// Interfaces, zwei Snapshot-/Hydrations-Funktionen und der Payload-Trennung
@@ -252,17 +249,12 @@ const EINGEFROREN: readonly string[] = [
 	// dokumentierte einseitige Anlage). Soll 47 → 48.
 	// #3276: alle vier -15 (Wertprops/Rueckrufe hourly*/outlook* und Stundenverlauf-Import
 	// oberhalb entfernt), Bedingungen unveraendert, nachgemessen, unten gefesselt.
-	'WeatherMetricsTab.svelte:580',
-	'WeatherMetricsTab.svelte:595',
-	'WeatherMetricsTab.svelte:624',
-	'WeatherMetricsTab.svelte:637',
 	// 🔴 Issue #2792 S1a: die beiden Markup-Zweige um 10 Zeilen nach unten
 	// (Ampel-Zustand, Anwenden, Nutzlast im Script-Teil); Bedingungen
 	// unveraendert, nachgemessen, Inhalt unten gefesselt.
 	// #3196: beide -7 (Vorlagen-Vorbelegung haengt an der Fortbewegung: Tabelle von 11 auf 4 Eintraege),
 	// Bedingungen unveraendert, nachgemessen, Inhalt unten gefesselt.
 	// #3276: -66 (Ausblick-Handler, Bruecken-Faelle und Rueckrufe des Vergleichs entfernt).
-	'WeatherMetricsTab.svelte:1393',
 	// #2794 S3a: Schalter Nacht-Stundentabelle +4 verschoben, Text unveraendert.
 	// #2931 (Rueckbau DayWindowCard/Tagesfenster-Abschnitt): alle sechs WeatherMetricsTab-
 	// Eintraege nach oben verschoben (-7/-7/-7/-7/-20/-89: entfallene Prop onDayWindowChange,
@@ -273,7 +265,6 @@ const EINGEFROREN: readonly string[] = [
 	// #3196: -7, s. o.; #3190: +18 (Speichern-Karte unter die Profil-Karte oberhalb verschoben,
 	// Umschalter-Props am Auslöser), Bedingung unveraendert, nachgemessen, unten gefesselt.
 	// #3276: -129 (zusaetzlich die Mounts Stundenverlauf/Ausblick des Vergleichs entfernt).
-	'WeatherMetricsTab.svelte:1872',
 	// #2655 (F6): beide nur verschoben (Katalog-Import, Satz je Kontext aus
 	// dem Katalog statt Konkatenation); Bedingungen unveraendert, nachgemessen.
 	'versand-tab/vtBriefingChannelsText.ts:22',
@@ -298,7 +289,6 @@ const EINGEFROREN: readonly string[] = [
 	// #3276: die Vergleichs-Weiche (:68, `COMPARE_ONLY_SECTIONS` = 'stundenverlauf') ist
 	// ENTFERNT (Soll 25 → 24); die Trip-Weiche (:67) nimmt 'ausblick' mit auf und rutscht
 	// auf :53 (Kommentarblock zu Stundenverlauf/Ausblick gekuerzt), Bedingung unveraendert.
-	'weather-metrics-tab/weatherMetricsTabSections.ts:53',
 	// #2794 Teil 3 Fix-Loop F006: dieselbe Weiche (`wetterMetrikenVergleichSpeicherungAktiv`),
 	// nur um 5 Zeilen verschoben (Wetter-Felder aus dem Zustellungs-Speicherer entfernt).
 	// #3061/#3047 J5: der eigene null-Hydrierer ist in hydrateWeatherMetricsFromPreset
@@ -311,7 +301,6 @@ const EINGEFROREN: readonly string[] = [
 	// Versand-Inhalt nach Herkunft — Trip-Hub ueber BriefingScheduleTab (route ohne
 	// createMode), Vergleich und Trip-Anlegen ueber den EINEN VersandTab. Diese Weiche
 	// ersetzt die bisherigen Direkt-Mounts in TripTabs/CompareTabs/den Anlege-Seiten.
-	'WetterMetrikenVersandPanel.svelte:66',
 ];
 
 /** Erwartete Laenge als zweite, unabhaengige Schranke gegen ein
@@ -327,7 +316,9 @@ const EINGEFROREN: readonly string[] = [
 // #2794 S3a Teil-PR 4a: CorridorEditor/CorridorEditorMobile entfernt (22 Eintraege). Soll 48 → 26.
 // #3155 (B4): VTSchedulePlan-Weiche `isRoute` mit der Karte „Mehrtages-Trend" entfernt. Soll 26 → 25.
 // #3276: Vergleichs-Weiche `COMPARE_ONLY_SECTIONS` in weatherMetricsTabSections.ts entfernt. Soll 25 → 24.
-const EINGEFROREN_SOLL_ANZAHL = 24;
+// #3297/#3020: VersandTab (3), WeatherMetricsTab (6), weatherMetricsTabSections.ts (1) und
+// WetterMetrikenVersandPanel (1) geloescht — 11 ENTFERNTE Verzweigungen. Soll 24 → 13.
+const EINGEFROREN_SOLL_ANZAHL = 13;
 
 /**
  * S6c: die vier ueberlebenden AlarmeTab-Eintraege, GEGEN IHREN INHALT gefesselt.
@@ -374,21 +365,6 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 	// Wertprop): der Rahmen darunter (`versand-tab`-Div, `VTBriefingChannels`)
 	// ist in beiden Zweigen gleich und taugte als Anker nicht — ein vertauschtes
 	// Paar faende dort seinen Anker und die Fesselung waere wertlos.
-	{
-		eintrag: 'VersandTab.svelte:359',
-		zeile: "if (context !== 'vergleich' || !vergleichSpeicherung) return;",
-		folgt: 'versandSnapshotAus(versandZustand);'
-	},
-	{
-		eintrag: 'VersandTab.svelte:369',
-		zeile: "{#if context === 'route'}",
-		folgt: 'email: send_email,'
-	},
-	{
-		eintrag: 'VersandTab.svelte:401',
-		zeile: "{:else if context === 'vergleich'}",
-		folgt: 'email: sendEmail ?? false,'
-	},
 	// S6g (Issue #2276): die fuenf ueberlebenden WeatherMetricsTab-Eintraege —
 	// gemessen am Quelltext NACH dem Wertprop-Umbau. Alle fuenf tragen ihren
 	// Bedingungstext byte-identisch weiter (Spec Design-Entscheidung 8), nur
@@ -403,36 +379,6 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 	// #3047 N1-N3: die vier Script-Eintraege um 5 verschoben (Importe), Text unveraendert.
 	// #3097: Wertprop `hourlyMetricFormats` + Rueckruf oberhalb, +3 (Script) / +7 / +9
 	// (Markup, Bruecke und Stundenverlauf-Mount); Bedingungen unveraendert, nachgemessen.
-	{
-		eintrag: 'WeatherMetricsTab.svelte:580', // #3276: -15
-		zeile: "if (context === 'route' && trip && catalogLoaded && !isDirty) {",
-		folgt: 'normalizeStoredOutlookMetrics('
-	},
-	{
-		eintrag: 'WeatherMetricsTab.svelte:595', // #3276: -15
-		zeile: "if (context === 'route' && Object.keys(catalog).length === 0) load();",
-		folgt: 'Issue #1350 Teil 2: analog dem Route-Guard oben'
-	},
-	{
-		eintrag: 'WeatherMetricsTab.svelte:624', // #3276: -15
-		zeile: "if (context === 'vergleich' && !smsSymbols) loadSmsSymbols();",
-		folgt: '#1401 Scheibe B: der Stundenverlauf beschriftet'
-	},
-	{
-		eintrag: 'WeatherMetricsTab.svelte:637', // #3276: -15
-		zeile: "if (context === 'vergleich' && Object.keys(catalog).length === 0) {",
-		folgt: ".get<MetricCatalog>('/api/metrics')"
-	},
-	{
-		eintrag: 'WeatherMetricsTab.svelte:1393', // #2792 S1a: +10, #3047 N1-N3: +12, #3196: -7, #3276: -66, Text unveraendert
-		zeile: "{#if context === 'vergleich'}",
-		folgt: 'Issue #1311 (C1): Vergleich-Grundauswahl'
-	},
-	{
-		eintrag: 'WeatherMetricsTab.svelte:1872', // #2792 S1a: +10, #2794 S3a: +4, #3047 H1: +1, #3061/#3047 J5: +0, #3047 N1-N3: +13, #3196: -7, #3190: +18, #3276: -129, Text unveraendert
-		zeile: "{#if !createMode && context === 'route'}",
-		folgt: 'Issue #1721: Nacht-Stundentabelle der Trip-Mail'
-	}
 ];
 
 /** Wie viele Zeilen unter dem Zweig nach dem zugehoerigen Baustein gesucht wird. */

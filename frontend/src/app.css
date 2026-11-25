@@ -765,7 +765,7 @@
 
   /* === #2913 Fix Metrik-Liste (AC-7/AC-8): Variante „kompakt“ (Mockup .seg, Z. 76–78) ===
      NUR unter data-variant="kompakt" — der Standard oben (CompareTabs, MTabBar, HorizonChip,
-     VersandTab …) bleibt unverändert. Sichtbar ca. 23 px hoch, aktives Segment hell mit Ring;
+     VersandTab (gelöscht, #3297) …) bleibt unverändert. Sichtbar ca. 23 px hoch, aktives Segment hell mit Ring;
      Trefferfläche je Segment ≥ --g-tap-min unsichtbar per ::before (wie Btn data-tap). */
   [data-slot="segmented"][data-variant="kompakt"] {
     flex-wrap: wrap;
@@ -1013,7 +1013,7 @@
 
 /* #3190 (Epic #2913): Karte „Als eigene Vorlage speichern“ (Mockup Fassung 4 .card .dialog, Z.485-505).
    SavePresetDialog.svelte steht in SEITEN_SCOPE (ADR-0112, Regel (a): kein eigenes <style>), wird von
-   VorlageKarte (Reiter Wetter) und WeatherMetricsTab (Alt-Editor) eingebunden; die Optik steht darum
+   VorlageKarte (Reiter Wetter) und WeatherMetricsTab (gelöscht, #3297) (Alt-Editor) eingebunden; die Optik steht darum
    einmal hier, nur über Tokens. Ohne @layer: das Input-Atom trägt Tailwind-Utilities (h-8). */
 .spd-karte {
   display: flex;
