@@ -174,3 +174,8 @@ Keine an den PO. In der Spec zu klären: Befunde 3 (Fallzahl), 6 (`test_issue_69
 - **Achtung Umbau:** 10 der 24 nutzen `P.wetterMetrikenReiter`/`P.versandReiter` aus `tripMehrreiterPruefstand.ts`, also die toten Reiter. Sie müssen auf `wetter-tab/`, `WasStehtWoKarte`, `zustellung-tab/` umgestellt werden (AC-5, mit Mutationsprobe); ein Umbau nur des Imports reicht nicht. Die 14 anderen scheitern am Vorab-Laden toter Bausteine in `f9Pruefstand`/`f8Pruefstand`: toten Teil abtrennen.
 - **Korrektur zur Spec:** `LayoutTabPruefstand.svelte` hat 0 *Test*-Nutzer, aber `f8Pruefstand.ts` rendert ihn (Z. 46, 85, 108 f.). Löschen in S1 heißt dort umstellen; `infoboxSsr.ts` selbst lädt keine tote Datei (nur seine Nutzer über `lade(...)`).
 - Testtabelle, vom Wächter geprüftes Zeilenformat: Pfad ab `lib/` oder `routes/` in Backticks, S1 bis S4, `löschen`/`umstellen`/`Ersatzbeleg`, Begründung, Ersatzbeleg, Mutation.
+
+## Stand nach /30-write-spec (25.11.)
+- Gültig ist Spec 2.0 (`rework_3020_altbausteine_entfernen.md`), automatisch freigegeben (Ampel grün, nicht vom PO getippt). Validator: VALID nach einer Korrekturrunde.
+- Der nächste Schritt ist RED für R1. Die Umfangsüberschreitung (LoC) hat der PO nicht selbst bestätigt; blockt das LoC-Gate, ihm vorlegen, nicht umgehen (wie in S1: Setzen des Overrides wurde abgelehnt).
+- Alte Phasenartefakte (RED/GREEN/Adversary-Verdict) stammen aus S1 und gelten für R1 nicht.

@@ -4,12 +4,12 @@ type: refactor
 created: 2026-11-25
 updated: 2026-11-25
 status: draft
-version: "1.0"
+version: "2.0"
 workflow: rework-3020-altbausteine-entfernen
 tags: [rueckbau, wetter-tab, zustellung, epic-3122, epic-2795]
 ---
 
-# Rückbau Alt-Bausteine Wetter/Zustellung (WeatherMetricsTab und Umfeld)
+# Rückbau Alt-Bausteine Wetter/Zustellung, zweiter Teil (Schutz wiederherstellen, Restbestand löschen)
 
 ## Approval
 
@@ -17,190 +17,205 @@ tags: [rueckbau, wetter-tab, zustellung, epic-3122, epic-2795]
 
 ## Purpose
 
-Die alte Wetter-/Zustellungs-Oberfläche (`WeatherMetricsTab` samt Versand-, Layout- und Wertebereiche-Umfeld) wird gelöscht. Seit #3154, #3332/#3333 und #3036 zeigt sie kein Nutzer mehr; sie hält nur noch Tests, Wächter-Ausnahmen und tote Katalogschlüssel am Leben. Nutzer sehen keinen Unterschied. Die PO-Freigabe, dass Alt-Bausteine, die Anzeige `telegram_kurzform` und die SMS-Schwellen mit #3020 fallen, liegt vor (#3036, 2026-11-24).
+#3357 hat die alte Wetter-/Zustellungs-Oberfläche zum großen Teil gelöscht (12 von 54 Dateien, 60 Testdateien). Dabei sind Prüfungen weggefallen, deren Aussage am lebenden Code weiter gelten muss (Speichern ohne Datenverlust, Pause/Überspringen, Zwei-Nutzer-Trennung, Kanal-Vorgaben). Diese Spec stellt zuerst den Schutz wieder her (R1) und löscht dann den Restbestand von 42 toten Dateien (R2). Nutzer sehen in keiner Scheibe einen Unterschied. Die PO-Freigabe, dass Alt-Bausteine, `telegram_kurzform` und die SMS-Schwellen mit #3020 fallen, liegt vor (#3036, 2026-11-24).
 
 ## Source
 
-- **File:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` (Wurzel); Umfang laut Abschnitt Scope
-- **Identifier:** 54 Dateien (Listen A und B), 8 Barrel-Zeilen, 196 Katalogschlüssel je Sprache
+- **File:** `frontend/src/lib/components/` (Restbestand laut Abschnitt Scope), Tests unter `frontend/src/lib/**/__tests__/`, `tests/fixtures/einstellung_gleich_mail/`
+- **Identifier:** 42 Dateien (4 454 Zeilen), 6 Barrel-Zeilen; 24 + 33 Zeilen der Testtabelle, 145 entfallene Testfälle, 15 gestrichene Katalogfälle
 
-Schicht: **Frontend** (`frontend/src/...`), dazu Testunterbau, CI-Konfiguration und ein Hook-Eintrag. **Kein** Python-/Go-Code geändert.
+Schicht: **Frontend** und Testunterbau, CI-Konfiguration. **Kein** Python-Produktions- und kein Go-Code.
 
 **Querschnitts-Prüfpunkte:**
-- **Trip/Ortsvergleich-Teilung:** Es entsteht nichts Neues. Gelöscht wird je ein gemeinsamer Code für beide Kontexte; die lebenden Pendants (`wetter-tab/`, `WasStehtWoKarte`, `zustellung-tab/`) bleiben. Das Paar `compareChannelMetricLayouts`/`channelMetricLayouts` fällt aus `BEKANNTE_PAARE`, weil die Datei nicht mehr existiert.
-- **Mandantentrennung:** Es wird kein Endpoint geändert. Die bestehenden Roundtrip-/Speicherweg-Tests mit zwei verschiedenen Nutzern bleiben bzw. werden auf lebende Module umgestellt (AC-5).
-- **Kanäle:** E-Mail, Telegram, SMS, Premium-SMS: Briefing-/Alarm-Inhalt bleibt byteidentisch, weil kein Renderer-, Python- oder Go-Code berührt wird (AC-8).
+- **Trip/Ortsvergleich-Teilung:** Es entsteht kein neuer Baustein. R1 prüft die lebenden gemeinsamen Bausteine (`shared/wetter-tab`, `organisms/wetter-tab`, `shared/zustellung-tab`) je mit `context="route"` und `"vergleich"`. R2 löscht gemeinsamen Code ohne Importeur. Das Pendant-Paar ist schon weg: `.claude/hooks/pendant_gate.py` nennt keine der 42 Dateien und wird nicht angefasst (keine Sperren-Freigabe nötig).
+- **Mandantentrennung:** Kein Endpoint wird geändert. Jede wiederhergestellte Speicher- und Ladezusicherung läuft mit zwei verschiedenen Nutzern (AC-2). `user_id` kommt aus dem Auth-Kontext, nie `"default"`.
+- **Kanäle:** E-Mail, Telegram, SMS, Premium-SMS: Briefing- und Alarm-Inhalt bleibt unverändert, weil kein Renderer-, Python- oder Go-Code berührt wird; R1 sichert zusätzlich die Kanal-Vorgaben der Bedienung gegen die Auslieferung (AC-4).
 
 ## Estimated Scope
 
-- **LoC:** Produktion −8 881 (nur Löschungen) plus 8 Barrel-Zeilen und Katalog-Löschungen; Tests grob −10 000 bis −20 000; hinzugefügte bzw. umgeschriebene Zeilen Schätzung unter 2 000. **Das Limit von 250 LoC / 4-5 Dateien wird bewusst überschritten**; die Freigabe dieser Spec deckt das ausdrücklich ab (Begründung: fast nur Löschungen, Produktionscode wird nicht neu geschrieben). Je Scheibe wird `loc_limit_override` gesetzt.
-- **Files:** 54 gelöscht, rund 180 weitere berührt (160 rote Testdateien laut Probe-Löschung, davon ein Teil gelöscht).
-- **Effort:** high, in vier Scheiben (je eigener PR).
+- **R1 Schutz wiederherstellen:** 0 Produktionszeilen; geschätzt 20 bis 30 Testdateien neu oder geändert, Testzeilen Schätzung +1 500 bis +3 000 (nicht gemessen).
+- **R2 Restbestand löschen:** Produktion −4 454 Zeilen in 42 Dateien, 6 Barrel-Zeilen, dazu Tests, Katalogschlüssel, Ratschen. Der Testanteil ist **nicht gemessen** (79 Testdateien nennen einen der Namen, 24 importieren einen, 15 E2E-Dateien nennen einen; Regex); die Probe-Löschung misst ihn.
+- **Das Limit von 250 LoC / 4-5 Dateien wird in beiden Scheiben bewusst überschritten**; die Freigabe dieser Spec deckt das ab (R2 fast nur Löschungen, R1 nur Tests). Je Scheibe wird `loc_limit_override` gesetzt.
+- **Effort:** high, zwei Scheiben, je eigener PR.
 
 ## Scope
 
 ### Scheiben
 
-Je Scheibe: eigener PR, alle 6 CI-Checks grün, eigene Auslieferung, einzeln per Revert des PR zurückrollbar. Reihenfolge fest S1 → S2 → S3 → S4. Regel: keine Scheibe löscht eine Datei, die ein noch vorhandener Baustein importiert (Prüfung gegen `importebenen.txt` und die Zwischenkanten, siehe Implementation Details).
+Eine Spec, eine Freigabe, zwei Scheiben mit je eigenem PR. Jede Scheibe ist grün (alle 6 CI-Checks), einzeln auslieferbar und einzeln per Revert zurückrollbar. Reihenfolge fest **R1 → R2**: Die Schutzlücke besteht schon auf `main`, und das Löschen macht sie nicht kleiner.
 
 | Scheibe | Inhalt | Produktion gelöscht |
 |---|---|---|
-| S1 Testunterbau | Testhelfer von toten Dateien lösen, Probe-Löschung wiederholen, Testtabelle anlegen, Rückbau-Wächter (RED) | keine (nur der Testhelfer `LayoutTabPruefstand.svelte`, 0 Nutzer) |
-| S2 Lose Blätter | Ebene-1-Blätter ohne Panel plus Teilbaum unter `OutputLayoutEditor` | 19 Dateien, ca. 2 236 Zeilen |
-| S3 Kern | Panel, `WeatherMetricsTab`, `BriefingScheduleTab`, Wetter- und Layout-Cluster | 26 Dateien, ca. 5 081 Zeilen |
-| S4 Versand-Cluster | `VersandTab`, `VT*`, `MailInhaltCard`, `channelContactLabel`, `vtBriefingChannelsText` | 9 Dateien, ca. 1 564 Zeilen |
+| R1 Schutz wiederherstellen | Prüfungen aus #3357 am lebenden Code wieder herstellen, Prüfkatalog, Testtabelle, Wächter | keine |
+| R2 Restbestand löschen | 42 Dateien, 6 Barrel-Zeilen, Testfolgen, Katalogschlüssel, Ratschen | 42 Dateien, 4 454 Zeilen |
 
-Pfade relativ zu `frontend/src/`.
+### R1: Umfang
 
-**S2 (19):**
-`lib/components/compare/compareHourlyMetricDefs.ts`, `compare/hourlyFriendlyMap.ts`, `compare/layoutPreviewRows.ts`, `compare/versandPropsAus.ts`, `compare/wetterMetrikenPropsAus.ts`, `lib/components/organisms/AlertsCard.svelte`, `organisms/MetricOffShelf.svelte`, `organisms/OutboxCard.svelte`, `organisms/PresetRail.svelte`, `lib/components/shared/OutputLayoutEditor.svelte`, `shared/layout-tab/channelLayoutsDirty.ts`, `shared/layout-tab/ltIdealRange.ts`, `lib/components/trip-detail/TablePreview.svelte`, `trip-detail/WeatherV2Kanaele.svelte`, `trip-detail/ActiveMetricRow.svelte`, `trip-detail/BucketSection.svelte`, `trip-detail/BucketSectionOff.svelte`, `trip-detail/ChannelLimitMarkers.svelte`, `trip-detail/PresetRow.svelte`.
+Quelle zum Portieren ist Commit `8b9749601` (`git show 8b9749601:<pfad>`); die Helfer haben sich geändert, daher nicht blind kopieren. Reihenfolge (Vorrang Datenverlust und Zwei-Nutzer):
 
-**S3 (26):**
-`lib/components/shared/WetterMetrikenVersandPanel.svelte`, `shared/WeatherMetricsTab.svelte`, `lib/components/trip-detail/BriefingScheduleTab.svelte`, `lib/components/molecules/GrundauswahlLeerHinweis.svelte`, `shared/OutlookLayoutControls.svelte`, `shared/reportConfigDirty.ts`, `trip-detail/weatherSaveGate.ts`, `shared/layout-tab/LayoutTab.svelte`, `shared/layout-tab/LTCapNote.svelte`, `shared/layout-tab/LTChannelPicker.svelte`, `shared/layout-tab/LTCutLine.svelte`, und unter `shared/weather-metrics-tab/`: `AggregationMetricRow.svelte`, `MultiSymbolMetricRow.svelte`, `ThresholdMetricRow.svelte`, `WeatherV2Grundauswahl.svelte`, `WeatherV2PresetBar.svelte`, `WeatherV2Reihenfolge.svelte`, `channelMetricLayouts.ts`, `compareAggregationGrouping.ts`, `kuerzelLegende.ts`, `kuerzelMarken.ts`, `nurEinBericht.ts`, `outlookFriendlyCapability.ts`, `weatherMetricsSavePayload.ts`, `weatherMetricsTabSections.ts`, `wertebereicheAnzeige.ts`.
+1. skip_next-Schutz, 2. If-Match/keepalive-Flush an Zustellung, 3. `show_night_block` „aus bleibt aus“ (`trip_night_block_schalter_nutzlast` ist von 7 auf 1 Fall gekürzt), 4. Feld-Erhalt samt `sms_threshold`, 5. Roundtrip je Feld, 6. Retry-/412-Fälle, 7. zwei Nutzer beim Laden, 8. Kanal-Vorgaben gleich Auslieferung (Telegram, SMS, Premium-SMS), 9. Reiter Wetter und Zustellung an einem Controller; danach 10. Telegram-Grenze Orte (Katalog 23 bis 34), 11. Klebeschicht-Ladetests, 12. Übriges.
 
-**S4 (9):**
-`lib/components/shared/VersandTab.svelte`, `shared/MailInhaltCard.svelte`, `shared/versand-tab/VTBriefingChannels.svelte`, `VTLaufzeitRoute.svelte`, `VTLaufzeitVergleich.svelte`, `VTNextBriefing.svelte`, `VTSchedulePlan.svelte`, `channelContactLabel.ts`, `vtBriefingChannelsText.ts`.
+Arbeitspakete:
+- **(a)** Die 33 Zeilen mit Beleglücke der 57 Zeilen „umstellen“ in `docs/specs/modules/rework_3020_testtabelle.md`: 23 mit Vermerk „neu in S3/S4“, 16 mit Beleg, den es auf `main` nicht gibt (u. a. `wetter_tab_karte_mitspeichern_3020`, `feld_erhalt_ohne_ausnahme`, `trip_python_skip_next_ohne_412`, `s3a2794_speicher_owner_waechter`; 6 mit beidem).
+- **(b)** Die übrigen 24 Zeilen: je Zeile prüfen, ob der genannte Fall in der Belegdatei noch steht (#3357 hat u. a. `trip_reiter_roundtrip_jedes_feld` von 26 auf 13 und `trip_reiter_nutzlast_nur_eigene_felder` von 12 auf 8 Fälle gekürzt).
+- **(c)** Die 145 in weiterlaufenden Testdateien entfallenen Fälle (Namensvergleich, Beleg `testnamen_diff.txt`; umbenannte zählen mit) je Fall einordnen: umbenannt / prüfte nur toten Quelltext / Zusicherung fehlt, dann Beleg schreiben.
+- **(d)** Die 15 gestrichenen grünen Katalogfälle „Einstellung = Mail“ in `tests/fixtures/einstellung_gleich_mail/fallliste_editor.json` (SMS-LADEN-A/B, zwölf F3/F3N-Fälle Trip/Orte, P12-TL3-ORTE-KURZSTIL): je Fall mit lebendem Beleg wieder eintragen oder Streichung begründen; Verweisänderungen in `fallliste_trip.json` und `fallliste_orte.json` auswerten.
+- **(e)** `tests/tdd/test_einstellung_gleich_mail_fallliste.py`: die heute leer laufende `praefixe`-Prüfung (Zeile 492 bis 512) auf die heutigen Testdateien richten; sie darf nicht vakuum-grün sein.
+- **(f)** Rückbau-Wächter `frontend/src/lib/__tests__/rework_3020_rueckbau_waechter.test.ts`, rote Liste `rework_3020_rote_liste.ts`, Umfang `rework_3020_umfang.ts` und die Probe (`rework_3020_probe_loeschung.test.ts`, `rework_3020_probe_hooks.mjs`) liegen **nicht** im Baum (nur in `8b9749601`): neu auf den Restbestand ausrichten, Testtabelle fortschreiben.
+- **(g)** LOW-Befunde aus der Adversary-Runde, soweit noch zutreffend (R2-F1 am 25.11. bestätigt, Zeile 322-334): R2-F1 (Attribute der Karten-Einbettung in `organisms/wetter-tab/WetterTabInhalt.svelte` unbewacht: `{context}`, `onUebernahme`, `{createMode}`), R2-F2 (Ersatzbeleg muss Testdatei mit Testname sein, kein Verzeichnis), R2-F3 (Zahl der Tabellenzeilen im Wächter festhalten), R2-F4 (`wetter_tab_karte_mitspeichern_3020` in die Liste der lebenden Helfer-Nutzer).
 
-Summe 19 + 26 + 9 = 54 (Liste A 35 + Liste B 19). **Liste C (24 Dateien, fachfremd) ist nicht Umfang** und bleibt liegen.
+Regeln: Jede wiederhergestellte Zusicherung bekommt eine **Mutationsprobe am lebenden Code** (String-Ersetzung mit externer Sicherungskopie, nie `git checkout/stash/reset`). Fälle zu #3355 (Vollkopie `report_config` im Reiter Wetter) bleiben ausstehend markiert mit Verweis auf #3355; ihre Anzahl steht im Wächter und in der Testtabelle. Findet R1 einen echten Fehler im lebenden Code, entsteht ein eigenes Bug-Issue, der Fall steht ausstehend markiert mit Verweis, und er wird **nicht hier behoben**. Dazu gehören #1510 AC-4 (Briefing-Mail bei unbestätigter Adresse), die Fachkurzform je Größe in Orten und die Katalogfälle 35 bis 37 „nur morgens/abends“: R1 klärt sie, das Ergebnis steht in der Testtabelle.
 
-**Nie löschen** (lebend laut Spec #3036 Nr. 5, keine davon in A/B): `channelConnectionStatus.ts`, `sendTargetLabel.ts`, `dayWindowClamp.ts`, `nextBriefingText.ts`, `naechstesBriefingLader.svelte.ts`, `nextBriefingLoad.ts`, `reportConfigPayload.ts`, `mergeReportConfig.ts`, `ltChannels.ts`, `kanalStilSpeicherung.ts`. Ebenfalls lebend und unangetastet: `weatherMetricsCompareSave.ts`, `compareChannelMetricLayouts.ts`, `mailInhaltZustand.ts`, `mailInhaltKonstanten.ts`, `pickEigenfelder.ts` (Altfeld-Stellen darin: nicht Umfang, Rest-Umfang von #3297).
+### R2: Umfang (42 Dateien)
 
-### Affected Files (außer den 54)
+Pfade relativ zu `frontend/src/`. Menge = Schnittmenge aus `tot_nach_3357.txt` (Messung auf `c8329fea4`) mit den Listen A (26) und B (16) aus `umfangslisten.md`; `docs/artifacts/` ist gitignored, daher stehen die Pfade hier.
+
+- `lib/components/compare/` (5): `compareHourlyMetricDefs.ts`, `hourlyFriendlyMap.ts`, `layoutPreviewRows.ts`, `versandPropsAus.ts`, `wetterMetrikenPropsAus.ts`
+- `lib/components/molecules/` (1): `GrundauswahlLeerHinweis.svelte`
+- `lib/components/organisms/` (4): `AlertsCard.svelte`, `MetricOffShelf.svelte`, `OutboxCard.svelte`, `PresetRail.svelte`
+- `lib/components/shared/` (2): `OutputLayoutEditor.svelte`, `reportConfigDirty.ts`
+- `lib/components/shared/layout-tab/` (6): `LTCapNote.svelte`, `LTChannelPicker.svelte`, `LTCutLine.svelte`, `LayoutTab.svelte`, `channelLayoutsDirty.ts`, `ltIdealRange.ts`
+- `lib/components/shared/versand-tab/` (7): `VTBriefingChannels.svelte`, `VTLaufzeitRoute.svelte`, `VTLaufzeitVergleich.svelte`, `VTNextBriefing.svelte`, `VTSchedulePlan.svelte`, `channelContactLabel.ts`, `vtBriefingChannelsText.ts`
+- `lib/components/shared/weather-metrics-tab/` (9): `AggregationMetricRow.svelte`, `MultiSymbolMetricRow.svelte`, `ThresholdMetricRow.svelte`, `WeatherV2Grundauswahl.svelte`, `WeatherV2PresetBar.svelte`, `compareAggregationGrouping.ts`, `nurEinBericht.ts`, `outlookFriendlyCapability.ts`, `wertebereicheAnzeige.ts`
+- `lib/components/trip-detail/` (8): `ActiveMetricRow.svelte`, `BucketSection.svelte`, `BucketSectionOff.svelte`, `ChannelLimitMarkers.svelte`, `PresetRow.svelte`, `TablePreview.svelte`, `WeatherV2Kanaele.svelte`, `weatherSaveGate.ts`
+
+Dazu 6 Barrel-Zeilen: `lib/components/organisms/index.ts` (`OutputLayoutEditor`, `OutboxCard`, `AlertsCard`, `PresetRail`, `MetricOffShelf`) und `lib/components/trip-detail/index.ts` (`TablePreview`).
+
+**Nie löschen** (lebend laut Spec #3036 Nr. 5): `channelConnectionStatus.ts`, `sendTargetLabel.ts`, `dayWindowClamp.ts`, `nextBriefingText.ts`, `naechstesBriefingLader.svelte.ts`, `nextBriefingLoad.ts`, `reportConfigPayload.ts`, `mergeReportConfig.ts`, `ltChannels.ts`, `kanalStilSpeicherung.ts`. Lebend und unangetastet außerdem `weatherMetricsCompareSave.ts`, `compareChannelMetricLayouts.ts`, `mailInhaltZustand.ts`, `mailInhaltKonstanten.ts`, `pickEigenfelder.ts` (Altfeld-Stellen darin gehören zum Rest von #3297).
+
+**Nicht Umfang:** Liste C (24 Dateien, fachfremd), `mobile/Drawer.svelte`, `molecules/CompareStatusRow.svelte`, `molecules/ScoreToggle.svelte` (neu als tot gemeldet), #3358 (Vorlage folgt der Fortbewegung), #3355, #3351, Altfeld-Stellen in lebenden Dateien.
+
+### Affected Files
 
 | File | Change Type | Scheibe | Description |
 |------|-------------|---------|-------------|
-| `shared/weather-metrics-tab/__tests__/{f5Pruefstand,_editor_kette}.ts`, `shared/layout-tab/__tests__/f8Pruefstand.ts`, `shared/versand-tab/__tests__/f6VersandSsr.ts`, `trip-detail/__tests__/{tripMehrreiterPruefstand,f9Pruefstand}.ts`, `shared/__tests__/infoboxSsr.ts` | MODIFY | S1 | von toten Dateien auf lebende Bausteine umstellen |
-| `shared/layout-tab/__tests__/LayoutTabPruefstand.svelte` | DELETE | S1 | 0 Nutzer |
-| `lib/__tests__/rework_3020_rueckbau_waechter.test.ts` | CREATE | S1 (wächst je Scheibe) | Rückbau-Wächter |
-| `docs/specs/modules/rework_3020_testtabelle.md` | CREATE | S1, fortgeschrieben je Scheibe | Entscheid je Testdatei |
-| `lib/components/trip-detail/index.ts`, `lib/components/organisms/index.ts` | MODIFY | S2 (6 Zeilen), S3 (2 Zeilen) | Barrel-Re-Exports |
-| 160 Testdateien laut `probeloeschung_folgen.txt` (auf dem Stand der S1-Wiederholung neu bestimmt) | DELETE/MODIFY | je Scheibe | siehe Testtabelle |
-| `lib/__tests__/bausteine_waechter_regeln.ts` | MODIFY | S2, S3, S4 | `BESTAND` und `BESTAND_OBERGRENZE` (195) um die Zahl entfernter Einträge senken |
-| `shared/__tests__/context_herkunft_zweige_eingefroren.test.ts` | MODIFY | S2-S4 | Einträge gelöschter Dateien streichen, übrige unverändert |
-| `shared/__tests__/anlegeseiten_ohne_versand_panel_3333.test.ts` | MODIFY | S3 | Vakuum-Schutz „Panel-Datei existiert" ersetzen |
-| `src/routes/_home/__tests__/home_hero_paritaet.test.ts`, `src/routes/trips/[id]/__tests__/trip_hub_loeschen.test.ts` | MODIFY | S2/S3 | siehe Implementation Details Nr. 7 |
-| `frontend/src/lib/i18n/messages/{de,en}/{wertebereiche,trip,versand,layout,bausteine}.json` | MODIFY | S2-S4 | verwaiste Schlüssel (Stand Probe: 196 je Sprache), in der Scheibe des letzten Verwenders |
-| `tests/golden/{f5_wertebereiche,f6_versand_tab,f8_layout_korridor,f9_trip_flaechen}/` | MODIFY | S2-S4 | nur Blöcke toter Bausteine entfallen, lebende bytegleich |
-| `tests/fixtures/einstellung_gleich_mail/{fallliste_editor,fallliste_trip,fallliste_orte}.json` | MODIFY | S3 | 45 Fälle umhängen/neu schreiben (Implementation Details Nr. 2) |
-| `tests/unit/ein_katalog_ausnahmen.json` | MODIFY | S2 (BucketSectionOff, TablePreview), S3 (4 weitere) | 6 tote Dateien entfernen |
-| `.claude/hooks/pendant_gate.py` (Z. 83-84) | MODIFY | S3 | Paar `compareChannelMetricLayouts`/`channelMetricLayouts` aus `BEKANNTE_PAARE` streichen (Known Limitations) |
-| `tests/tdd/test_issue_289_surface_tokens.py` | MODIFY | S2 | AC-4 (liest `PresetRow.svelte`) entfällt |
-| `tests/tdd/test_issue_934_wizard_schedule.py` | MODIFY | S3 | Einzelentscheid |
-| `tests/tdd/test_issue_692_telegram_disabled_unconfigured.py` | MODIFY/DELETE | S2 (WeatherV2Kanaele) bzw. S3 | Einzelentscheid |
-| `frontend/e2e/issue-1093-unit.spec.ts`, `.github/ci_e2e_specs.txt`, `.github/workflows/ci.yml` (`E2E_MIN_SPECS`, `E2E_MIN_EXECUTED_HAUPT`) | DELETE/MODIFY | S2 | Positivliste 86 → 85 |
-| `.github/workflows/ci.yml` (svelte-check-Baseline, heute 34 Fehler / 132 Warnungen) | MODIFY | je Scheibe | nur senken |
-| `docs/reference/{frontend_components,api_contract,gates_und_ratschen,metric_output_matrix}.md`, `docs/features/architecture.md` | MODIFY | je Scheibe | gelöschte Bausteine nicht mehr als bestehend beschreiben |
+| 20 bis 30 Testdateien unter `frontend/src/lib/**/__tests__/` (Namen legt die Testtabelle fest) | CREATE/MODIFY | R1 | wiederhergestellte Zusicherungen am lebenden Code |
+| `docs/specs/modules/rework_3020_testtabelle.md` | MODIFY | R1, R2 | heute noch im Schema S1 bis S4: auf R1/R2 umstellen; Zeilen auf Restbestand, Mutationsproben, Anzahlen |
+| `frontend/src/lib/__tests__/rework_3020_rueckbau_waechter.test.ts`, `rework_3020_rote_liste.ts`, `rework_3020_umfang.ts`, `rework_3020_probe_loeschung.test.ts`, `rework_3020_probe_hooks.mjs` | CREATE | R1 (wächst in R2) | Wächter und eingefrorene Liste |
+| `tests/fixtures/einstellung_gleich_mail/{fallliste_editor,fallliste_trip,fallliste_orte}.json` | MODIFY | R1 | 15 Fälle, Verweise |
+| `tests/tdd/test_einstellung_gleich_mail_fallliste.py` | MODIFY | R1 | `praefixe` nicht mehr leer |
+| 42 Dateien (siehe oben) | DELETE | R2 | Restbestand |
+| `lib/components/organisms/index.ts`, `lib/components/trip-detail/index.ts` | MODIFY | R2 | 6 Barrel-Zeilen |
+| Testdateien laut Probe-Löschung (nicht gemessen) | DELETE/MODIFY | R2 | je rotem Test ein Entscheid |
+| `tests/tdd/test_issue_289_surface_tokens.py` (liest `PresetRow.svelte`), `tests/tdd/test_issue_692_telegram_disabled_unconfigured.py` (nennt `WeatherV2Kanaele`) | MODIFY/DELETE | R2 | Einzelentscheid in der Testtabelle; `test_issue_934_wizard_schedule.py` nennt keine der 42; ebenso Einzelentscheid für `tests/tdd/test_issue_1106_hourly_metrics_config.py` (nennt `compareHourlyMetricDefs.ts`) |
+| `frontend/e2e/issue-1093-unit.spec.ts`, `.github/ci_e2e_specs.txt`, `.github/workflows/ci.yml` | DELETE/MODIFY | R2 | Spec importiert `layoutPreviewRows.ts`; `E2E_MIN_SPECS` 86 → 85, `E2E_MIN_EXECUTED_HAUPT` 760 um die wirklich entfallenden Fälle |
+| `frontend/src/lib/__tests__/bausteine_waechter_regeln.ts` | MODIFY | R2 | `BESTAND_OBERGRENZE` (heute 188) um genau die Zahl der entfernten `BESTAND`-Einträge senken |
+| `tests/unit/ein_katalog_ausnahmen.json` | MODIFY | R2 | 5 Einträge (`WeatherV2Grundauswahl`, `outlookFriendlyCapability`, `wertebereicheAnzeige`, `BucketSectionOff`, `TablePreview`) |
+| `frontend/src/lib/components/shared/__tests__/context_herkunft_zweige_eingefroren.test.ts` | MODIFY | R2 | Einträge `VTBriefingChannels`, `VTSchedulePlan`, `vtBriefingChannelsText` streichen |
+| `frontend/src/lib/i18n/messages/{de,en}/*.json` | MODIFY | R2 | verwaiste Schlüssel (Zahl in R2 neu messen) |
+| `.github/workflows/ci.yml` (svelte-check-Baseline 34 / 132) | MODIFY | R2 | nur senken |
+| `docs/reference/{frontend_components,api_contract,gates_und_ratschen,metric_output_matrix}.md`, `docs/features/architecture.md` | MODIFY | R2 | gelöschte Bausteine nicht als bestehend beschreiben |
 
 ## Dependencies
 
 | Entity | Type | Purpose |
 |--------|------|---------|
-| `docs/context/rework-3020-altbausteine-entfernen.md` | Kontext | Analyse, Probe-Löschung, Kernbefunde |
-| `docs/artifacts/rework-3020-altbausteine-entfernen/` (gitignored, nur im Worktree) | Belege | Importebenen, rote Tests, verwaiste Schlüssel; die Pfade stehen deshalb oben in dieser Spec |
-| ADR-0112 (Bausteine-Ratsche), ADR-0124 | ADR | Ratschen nur senken; Rückbau umgesetzt |
-| `tests/tdd/test_einstellung_gleich_mail_fallliste.py` | Wächter | Abdeckungsmatrix Prüfkatalog, bleibt unverändert und grün |
-| `tests/unit/test_e2e_positivliste_ratschen_bindung.py` | Wächter | bindet `E2E_MIN_SPECS`/`E2E_MIN_EXECUTED_HAUPT` exakt |
-| `frontend/src/lib/i18n/__tests__/katalog_schluessel_haben_verwender.test.ts` | Wächter | tote Schlüssel, bleibt ungelockert |
-| `npm run elementliste:abgleich` | Skript | Nachweis „keine sichtbare Änderung" |
-| #3301, #3297, #3298, #3277 | Issues | #3301 wird mit Nachweis geschlossen; #3297 bekommt den Restumfang als Kommentar |
+| `docs/context/rework-3020-altbausteine-entfernen.md` (Abschnitt Analysis) | Kontext | Messung auf `c8329fea4` |
+| `docs/artifacts/rework-3020-altbausteine-entfernen/` (gitignored) | Belege | `tot_nach_3357.txt`, `umfangslisten.md`, `restbestand_tests.txt`, `del_3357.txt`, `testnamen_diff.txt` |
+| `docs/specs/modules/feat_3297_trip_pfad_ohne_altfelder.md` | Spec | AC-7 (Löschliste) und AC-10 (Test-Zuordnung) von #3297 sind erfüllt; diese Spec übernimmt den Rest |
+| ADR-0112, ADR-0124 | ADR | Ratschen nur senken; eine Tabelle |
+| `tests/tdd/test_einstellung_gleich_mail_fallliste.py` | Wächter | Abdeckungsmatrix Prüfkatalog |
+| `tests/unit/test_e2e_positivliste_ratschen_bindung.py` | Wächter | bindet `E2E_MIN_SPECS`/`E2E_MIN_EXECUTED_HAUPT` |
+| `frontend/src/lib/i18n/__tests__/katalog_schluessel_haben_verwender.test.ts` | Wächter | tote Katalogschlüssel, bleibt ungelockert |
+| `npm run elementliste:abgleich` (`scripts/elementliste_abgleich.ts`) | Skript | Nachweis „keine sichtbare Änderung“ |
+| #3355, #3298, #3301, #3297, #3358, #3351 | Issues | #3355 offene Fälle; #3298 behält Typen und Text-Sperre; #3301 wird mit R2 geschlossen |
 
 ## Implementation Details
 
-1. **S1 Testunterbau (Produktion unverändert).** Probe-Löschung auf dem aktuellen Stand (Branch auf `da6991ed9`, #3353/#2987 gemergt) in einer Wegwerf-Kopie wiederholen, nie im Arbeitsbaum; Ergebnis (rote Testdateien) fortschreiben. Testhelfer von toten Dateien lösen und auf lebende Bausteine (`wetter-tab/`, `WasStehtWoKarte`, `zustellung-tab/`, `placements`) umstellen: `tripMehrreiterPruefstand` (21 Nutzer), `f9Pruefstand` (16), `f5Pruefstand` (9), `_editor_kette` (5), `f6VersandSsr` (4), `f8Pruefstand` (3), `infoboxSsr`; `LayoutTabPruefstand.svelte` (0 Nutzer) löschen. Die Nutzer, die lebendes Verhalten prüfen (`tempo_*`, `trip_retry_*`, `hub_kopf_*` u. Ä.), sind danach in der normalen Kopie **und** in der Probe-Löschung grün. Nutzer, die ausschließlich tote Bausteine prüfen, behalten ihren bisherigen Helferteil bis zur Scheibe, in der ihr Baustein fällt; er wird dafür bei Bedarf vom lebenden Teil abgetrennt.
-2. **Prüfkatalog „Einstellung = Mail".** 45 Fälle hängen an Tests, die mit der Löschung rot werden: `fallliste_editor` 43 (`editor_standard_gleich_mail` 22, `telegram_kanalgrenze_je_kontext` 6, `telegram_schnittlinie_wahr` 6, `nur_ein_bericht_kennzeichnung` 4, `versand_telegram_je_kontext` 3, `lade_kanal_layouts_aus_trip` 2), `fallliste_trip` 1 (`neue_metrik_in_allen_listen`), `fallliste_orte` 1 (`neue_metrik_in_allen_listen_orte`). 57 weitere frontend-Fälle der Editor-Liste (u. a. `ac26_einstellung_gleich_ausgabe` 21, `p5c_ableitung_hub_orte_ausgabe` 17) sind nicht betroffen. Regel je Fall: (a) lebender Beleg mit gleicher Aussage vorhanden: Testverweis umhängen; (b) sonst Zusicherung auf lebendes Modul neu schreiben; (c) streichen nur, wenn die Aussage ausschließlich eine nicht mehr vorhandene Oberfläche betrifft, mit Begründung je Fall in der Testtabelle. Die Fallzahl sinkt höchstens um die nach (c) begründet gestrichenen Fälle; die Abdeckungsmatrix bleibt vollständig; `test_einstellung_gleich_mail_fallliste.py` wird nicht gelockert. Umhängen geschieht in S3 (die Fälle laufen über `WeatherMetricsTab`/`channelMetricLayouts`).
-3. **Reihenfolge und Zwischenkanten.** Importgraph ist zyklenfrei, 5 Ebenen. Geprüfte Kanten: `reportConfigDirty` und `weatherSaveGate` haben nur Importeure in S3 (`WeatherMetricsTab`, `BriefingScheduleTab`); `weatherMetricsSavePayload` → `channelMetricLayouts` beide S3; `hourlyFriendlyMap` (S2) importiert `outlookFriendlyCapability` (S3), also ist die Richtung S2 vor S3 zulässig; `LTCutLine` und `kuerzelLegende` werden nur von `WeatherV2Reihenfolge` importiert (alle S3); `WetterMetrikenVersandPanel` und `BriefingScheduleTab` (beide S3) importieren `VersandTab` (S4), daher S4 nach S3; `MailInhaltCard` und die `VT*`-Dateien importieren keine S2-/S3-Datei. Vor jeder Scheibe prüft der Rückbau-Wächter bzw. `svelte-check`/`vite build`, dass kein verbleibender Import auf eine gelöschte Datei zeigt.
-4. **Barrels.** S2: `trip-detail/index.ts` (`TablePreview`), `organisms/index.ts` (`OutputLayoutEditor`, `OutboxCard`, `AlertsCard`, `PresetRail`, `MetricOffShelf`); S3: `WeatherMetricsTab` in beiden Barrels. Insgesamt 8 Zeilen.
-5. **E2E.** Von 21 Playwright-Dateien mit Namenstreffern importiert nur `frontend/e2e/issue-1093-unit.spec.ts` ein totes Modul (`layoutPreviewRows.ts`); sie steht auf der CI-Positivliste (3 Testfälle, prüft nur toten Code) und wird in S2 gelöscht; `.github/ci_e2e_specs.txt` und `E2E_MIN_SPECS` (86 → 85) sowie `E2E_MIN_EXECUTED_HAUPT` (um die tatsächlich wegfallenden Fälle) werden exakt nachgezogen. Die übrigen 11 CI-gelisteten Dateien nennen die Namen nur und steuern die laufende Oberfläche; sie bleiben unverändert grün und sind der E2E-Beleg „keine sichtbare Änderung".
-6. **Python.** `test_issue_692_...` und `test_issue_934_...` sind `pytest.mark.staging` (nicht Kern-Schicht). 692 nennt `WeatherV2Kanaele`/`WeatherMetricsTab` nur in Kommentar/Assertion-Text und prüft per Playwright eine nicht mehr vorhandene Oberfläche; 934 (`TestBug1KeineDoppelteUI`) sucht die `WeatherMetricsTab`-Funktion im Bundle (`createMode`) und wird gegenstandslos: Einzelentscheid in der Testtabelle (S3). `test_issue_289_surface_tokens.py` AC-4 entfällt in S2. `ein_katalog_ausnahmen.json`: 6 tote Dateien raus. Übrige Python-Treffer sind Kommentare/Docstrings, nicht Umfang. `pendant_gate.py` Z. 83-84 wird in S3 gestrichen, sonst bricht `test_jede_datei_der_ausnahmeliste_existiert_im_repo` (die Liste darf nur schrumpfen); `EINGEFROREN`/`_BESTANDSPAARE` in den Tests bleiben unverändert (beide verkraften laut ihren Kommentaren das Streichen; beim Lauf zu bestätigen).
-7. **Einzelfälle Frontend.** `trip_hub_loeschen.test.ts` wird rot, weil es `f9Pruefstand` lädt (löst S1). `home_hero_paritaet.test.ts` Z. 140-141 verlangt die Existenz von `shared/OutlookLayoutControls.svelte`: dieser Testfall entfällt in S3, der Rest bleibt. `anlegeseiten_ohne_versand_panel_3333.test.ts:37`: Vakuum-Schutz „Panel-Datei existiert" wird umgestellt auf „kein Import und kein Mount in Anlege-/Hub-Dateien, Datei existiert nicht mehr". Rückbau-Wächter (`daywindowcard_rueckbau_waechter`, `mail_inhalt_rueckbau_waechter`, `totcode_rueckbau_speicherweg` u. Ä.) prüfen Abwesenheit in toten Dateien: eine gelöschte Datei erfüllt sie stärker; Entscheid je Test in der Testtabelle. `compare_versand_wertprops` (Z. 518, 536) und `compare_wetter_metriken_wertprops` (Z. 424) bewachen `versandPropsAus`/`wetterMetrikenPropsAus` und werden mit S2 umgestellt oder gelöscht.
-8. **Ratschen.** `BESTAND_OBERGRENZE` steht bei 195; 33 tote `.svelte`-Namen kommen darin vor (Analyse: S2 12, S3 14, S4 7). Je Scheibe exakt um die Zahl der entfernten `BESTAND`-Einträge senken. `context_herkunft_zweige_eingefroren`: Einträge der gelöschten Dateien streichen, Fließtext in `docs/reference/gates_und_ratschen.md` nachziehen. Golden-Verzeichnisse: Diff nur Löschungen. svelte-check-Baseline in `ci.yml` nach jeder Scheibe auf den in CI gemessenen Wert senken, nie anheben.
-9. **Katalogschlüssel.** 196 verwaiste Schlüssel je DE und EN (wertebereiche 76, trip 46, versand 36, layout 24, bausteine 14) laut Probe; in der Scheibe entfernen, in der der letzte Verwender fällt. Zahl auf dem neuen Stand neu messen. `katalog_schluessel_haben_verwender` bleibt ungelockert; Pin-Tests (`deutsch_unveraendert`) nur um entfernte Schlüssel kürzen.
-10. **Altdaten.** Es wird keine Speicherstelle geändert. Gespeicherte Altfelder (`telegram_kurzform`, SMS-Schwellen, `channel_layouts` u. a.) bleiben unverändert im Bestand (Merge, nie Replace; ADR-0101, CLAUDE.md Daten-Schema-Pflicht); sie verlieren nur ihre tote Bedienoberfläche.
-11. **Testtabelle.** `docs/specs/modules/rework_3020_testtabelle.md` (versioniert) enthält je Testdatei der 160: Scheibe, Entscheid (löschen / umstellen / Ersatzbeleg), Begründung, Ersatzbeleg-Pfad; sie wird in S1 angelegt und vor jeder Löschung der Scheibe fortgeschrieben. Umgestellte Zusicherungen erhalten eine Mutationsprobe (String-Ersetzung mit externer Sicherung, nie `git checkout/stash/reset`).
-12. **Mutationsprobe und TDD-RED.** RED = der neue Rückbau-Wächter einer Scheibe schlägt vor der Löschung fehl (Datei existiert/wird importiert), grün nach der Löschung. Für umgestellte Zusicherungen: Verfälschung des lebenden Moduls macht den umgestellten Test rot.
-13. **Gate-Konfiguration** (`openspec.yaml`) bleibt unverändert. Keine neue ADR.
+1. **R1 je Zeile entscheiden.** Für jede Zeile und jeden entfallenen Fall gilt: lebender Beleg vorhanden (Verweis nachziehen, Beleg muss eine Testdatei **mit Testname** sein) oder Zusicherung am lebenden Modul neu schreiben (Ablauf: Test rot gegen verfälschten lebenden Code, grün gegen echten) oder streichen mit Begründung „Ohne lebende Aussage:“, nur wenn die Aussage ausschließlich eine nicht mehr vorhandene Oberfläche betraf. Bei Zweifel schreiben, nicht streichen.
+2. **Lebende Module** für R1: `shared/wetter-tab/ampelSchreiben.ts`, `organisms/wetter-tab/WetterTabInhalt.svelte` und `WasStehtWoKarte.svelte`, `shared/zustellung-tab/zustellungSpeicherung.ts`, `kanalStilSpeicherung.ts`; die Helfer der Prüfstände (`f9Pruefstand`, `tripMehrreiterPruefstand` u. a.) bleiben, soweit sie lebenden Code laden.
+3. **Prüfkatalog.** Regel je Fall: wieder eintragen mit lebendem Beleg, sonst Streichung begründen. Die Zahl der Fälle sinkt höchstens um begründet gestrichene Fälle. Der Test `test_einstellung_gleich_mail_fallliste.py` wird nicht gelockert, nur die Prüfung der Testdateien wird scharf gestellt.
+4. **R2 Ablauf (Reihenfolge fest):** (1) Vor Beginn prüfen, ob eine andere Sitzung an #3298 oder #3301 arbeitet. (2) **Probe-Löschung in einer Wegwerf-Kopie, nie im Arbeitsbaum:** 42 Dateien und 6 Barrel-Zeilen entfernen, `vite build`, `svelte-check`, Frontend-Tests laufen lassen, rote Testdateien messen. (3) Testtabelle: je rotem Test ein Entscheid (löschen / umstellen / Ersatzbeleg) mit Begründung. (4) Rückbau-Wächter wird RED (Dateien existieren noch). (5) Löschen, Wächter grün. (6) Verwaiste Katalogschlüssel DE/EN und Ratschen mitziehen. `compareHourlyMetricDefs.ts` und `hourlyFriendlyMap.ts` fallen hier; danach wird #3301 mit Nachweis geschlossen und #3298 mit einem Kommentar versehen (Typen und Text-Sperre bleiben dort).
+5. **Ratschen.** `BESTAND_OBERGRENZE` um genau die Zahl der entfernten `BESTAND`-Einträge senken (26 der 42 Dateinamen kommen in der Datei vor; R2 prüft, ob alle in `BESTAND` stehen). `E2E_MIN_SPECS` 86 → 85, `E2E_MIN_EXECUTED_HAUPT` exakt nach CI-Messung, svelte-check-Baseline auf den in CI gemessenen Wert. Nie anheben. Keine Gate-Konfiguration (`openspec.yaml`) ändern.
+6. **Katalogschlüssel.** In R2 neu messen; Schlüssel in der Scheibe entfernen, in der der letzte Verwender fällt; `katalog_schluessel_haben_verwender` bleibt ungelockert, Pin-Tests (`deutsch_unveraendert`) nur um entfernte Schlüssel kürzen. Neue Nutzertexte entstehen nicht.
+7. **Altdaten.** Keine Speicherstelle wird geändert. Gespeicherte Altfelder (`telegram_kurzform`, SMS-Schwellen, `channel_layouts` u. a.) bleiben im Bestand (Merge, nie Replace; ADR-0101, CLAUDE.md Daten-Schema-Pflicht); sie verlieren nur ihre tote Bedienoberfläche.
+8. **Abgrenzung zu #3297.** Dessen Löschliste ist durch #3357 erfüllt; #3297 und #3020 werden nicht zusammen geschlossen. #3020 schließt erst nach R2.
 
 ## Expected Behavior
 
-- **Input:** Nutzer öffnet Trip-Hub, Orte-Hub, Trip-Anlegen oder Orte-Anlegen (DE/EN, Computer und Handy).
-- **Output:** Identisch zu vorher; keine Funktion, kein Text, kein Element fällt weg oder kommt hinzu.
-- **Side effects:** 54 Dateien weniger im Bundle; kleinere Test- und Katalogmenge; niedrigere Ratschen-Obergrenzen.
+- **Input:** Nutzer öffnet Trip-Hub, Orte-Hub, Trip-Anlegen oder Orte-Anlegen (DE/EN, Computer und Handy), speichert Wetter- und Zustellungs-Einstellungen.
+- **Output:** Identisch zu vorher; kein Element, Text oder Verhalten fällt weg oder kommt hinzu.
+- **Side effects:** R1 mehr und schärfere Tests; R2 42 Dateien weniger im Bundle, kleinere Test- und Katalogmenge, niedrigere Ratschen-Obergrenzen.
 
 ## Definition of Done
 
-- AC-1 bis AC-13 erfüllt und je Scheibe belegt (Kern-Tests, CI-E2E, Staging); die Testtabelle ist vollständig, keine Zusicherung still entfallen, umgestellte Zusicherungen mit Mutationsprobe.
-- Alle 54 Dateien der Listen A und B gelöscht, Liste C und die Nie-löschen-Liste unberührt.
-- Je Scheibe: 6 CI-Checks grün, Adversary-Prüfung ohne offenen Befund, Staging-Rauchtest in DE und EN (Computer und Handy), Elementlisten-Abgleich unverändert, live auf Produktion mit Selftest Exit 0.
-- Ratschen nur gesenkt, Golden-Dateien nur mit Löschungen, keine Änderung an der Gate-Konfiguration. Einzige menschliche Sperren-Freigabe: die Streichung in `pendant_gate.py` (S3, siehe Known Limitations).
-- #3301 mit Nachweis geschlossen, Restumfang in #3297 kommentiert, Doku nachgezogen.
+- [ ] **R1:** AC-1 bis AC-6 und AC-11 erfüllt; 6 CI-Checks grün; Adversary-Prüfung ohne offenen Befund; jede wiederhergestellte Zusicherung mit Mutationsprobe in der Testtabelle; echte Fehler als eigene Issues; Staging-Rauchtest; live auf Produktion mit Selftest Exit 0.
+- [ ] **R2:** AC-1 und AC-7 bis AC-12 erfüllt; 42 Dateien gelöscht, Nie-löschen-Liste und Liste C unberührt; 6 CI-Checks grün; Adversary-Prüfung ohne offenen Befund; Staging-Rauchtest DE und EN (Computer und Handy); Elementlisten-Abgleich unverändert; live auf Produktion mit Selftest Exit 0.
+- [ ] Ratschen nur gesenkt, keine Änderung der Gate-Konfiguration. #3301 mit Nachweis geschlossen, #3298 kommentiert, #3020 erst nach R2 geschlossen, Doku nachgezogen.
 
 ## Test Plan
 
 ### Automated Tests (TDD RED)
 
-- [ ] Rückbau-Wächter (`rework_3020_rueckbau_waechter.test.ts`, node --test): GIVEN Scheibe n ist ausgeliefert / WHEN alle Pfade der Scheiben 2..n geprüft werden / THEN keine Datei existiert und kein Quelltext importiert sie; RED vor jeder Löschung.
-- [ ] Nutzer der umgestellten Testhelfer (je Scheibe): grün in normaler Kopie und in der Probe-Löschung.
-- [ ] Elementlisten-Abgleich vor/nach jeder Scheibe identisch (DE und EN).
-- [ ] CI-Positivliste E2E (11 + übrige) grün; Staging-Rauchtest je Scheibe.
-- [ ] `test_einstellung_gleich_mail_fallliste.py` grün, Abdeckungsmatrix unverändert.
-- [ ] Mutationsprobe je umgestellter Zusicherung (Testtabelle, Spalte Mutation).
-- [ ] `katalog_schluessel_haben_verwender`, `bausteine_waechter`, `test_e2e_positivliste_ratschen_bindung.py`, `test_pendant_gate_bekannte_paare.py`: grün ohne Lockerung.
+- [ ] Test 1 (R1): GIVEN Altfelder und die Daten eines zweiten Nutzers WHEN Reiter Wetter oder Zustellung (Trip und Orte) ein Feld ändert und speichert THEN gehen weder Altfelder noch fremde Daten verloren (Roundtrip je Feld, Feld-Erhalt samt `sms_threshold`, `show_night_block` aus bleibt aus). RED: Mutationsprobe am lebenden Speicherweg.
+- [ ] Test 2 (R1): GIVEN pausierter oder übersprungener Trip WHEN ein Reiter speichert THEN bleibt `skip_next` unberührt, ohne 412; die Fälle zu #3355 stehen sichtbar als ausstehend.
+- [ ] Test 3 (R1): GIVEN Konflikt (412) oder Wiederholung WHEN der zweite Reiter speichert THEN trägt er das alte If-Match, und der Flush beim Verlassen läuft (keepalive).
+- [ ] Test 4 (R1): GIVEN Kanal-Vorgaben der Bedienung (Telegram, SMS, Premium-SMS) WHEN der Standard angezeigt und ausgeliefert wird THEN sind beide gleich, in `route` und `vergleich`.
+- [ ] Test 5 (R1): GIVEN die 15 gestrichenen Katalogfälle WHEN `test_einstellung_gleich_mail_fallliste.py` läuft THEN ist jeder Fall mit lebendem Beleg eingetragen oder begründet gestrichen, und die `praefixe`-Prüfung läuft nicht leer.
+- [ ] Test 6 (R1): GIVEN die Testtabelle WHEN der Wächter läuft THEN hat jede der 60 gelöschten Testdateien (57 „umstellen“ = 33 + 24, dazu 3 „löschen“) und jeder der 145 Fälle einen Entscheid, die Zeilen- und die Ausstehend-Anzahl stimmen, jeder Ersatzbeleg ist eine existierende Testdatei mit Testname.
+- [ ] Test 7 (R2): GIVEN die 42 Dateien WHEN der Rückbau-Wächter vor der Löschung läuft THEN ist er rot (Dateien existieren), nach der Löschung grün (keine Datei, kein Import, kein Barrel-Eintrag, Nie-löschen-Liste vorhanden).
+- [ ] Test 8 (R2): GIVEN die Probe-Löschung WHEN die roten Testdateien gemessen sind THEN steht jede genau einmal mit Entscheid in der Testtabelle.
+- [ ] Test 9 (R2): GIVEN Ratschen und Katalog WHEN die Wächter laufen THEN sind `bausteine_waechter`, `test_e2e_positivliste_ratschen_bindung.py`, `katalog_schluessel_haben_verwender` und `context_herkunft_zweige_eingefroren` grün ohne Lockerung.
+- [ ] Test 10 (je Scheibe): GIVEN der Elementlisten-Abgleich vor und nach der Scheibe WHEN beide verglichen werden THEN sind sie in DE und EN identisch; Staging-Rauchtest grün.
+- [ ] Test 11 (je Scheibe): GIVEN der PR WHEN CI und Diff-Prüfung laufen THEN 6 Checks grün, kein Python-/Go-Produktionscode im Diff, bei R2 baut der Probe-Revert (AC-11).
+- [ ] Test 12 (R2): GIVEN R2 ist ausgeliefert WHEN Issues und die fünf Doku-Dateien geprüft werden THEN stimmen Issue-Status, Kommentar an #3298 und Namenssuche (AC-12).
 
 ## Acceptance Criteria
 
-- **AC-1:** Given ein Nutzer mit Trips und Orte-Vergleichen / When er nach jeder der vier Scheiben Trip-Hub, Orte-Hub, Trip-Anlegen und Orte-Anlegen in DE und EN auf Computer und Handy öffnet / Then sind Elemente, Texte und Bedienung unverändert
-  - Test: `npm run elementliste:abgleich` vor und nach jeder Scheibe identisch (DE/EN), die 11 CI-gelisteten E2E-Dateien mit Namenstreffern unverändert grün, Rauchtest auf Staging je Scheibe.
+- **AC-1:** Given ein Nutzer mit Trips und Orte-Vergleichen / When er nach jeder Scheibe Trip-Hub, Orte-Hub, Trip-Anlegen und Orte-Anlegen in DE und EN auf Computer und Handy öffnet / Then sind Elemente, Texte und Bedienung unverändert (Scheibe R1 und R2)
+  - Test: `npm run elementliste:abgleich` vor und nach jeder Scheibe identisch (DE/EN); die E2E-Dateien der CI-Positivliste, die einen der Namen nennen, bleiben grün (außer `issue-1093-unit.spec.ts`, das in R2 fällt, weil es nur ein totes Modul prüft); Rauchtest auf Staging je Scheibe.
 
-- **AC-2:** Given Bestandsdaten mit Altfeldern (`telegram_kurzform`, SMS-Schwellen, `channel_layouts` u. a.) / When ein Nutzer im Trip-Hub oder Orte-Hub (Reiter Wetter oder Zustellung) eine Einstellung ändert und speichert / Then bleiben alle nicht geänderten Altfelder erhalten und die Daten eines zweiten Nutzers bleiben unberührt
-  - Test: bestehende Roundtrip-/Speicherweg-Tests (Read-Modify-Write, zwei verschiedene Nutzer) laufen weiter grün bzw. sind auf lebende Module umgestellt (`trip_reiter_roundtrip_jedes_feld`, `merge_report_config_read_modify_write` und Entsprechungen laut Testtabelle).
+- **AC-2:** Given Bestandsdaten mit Altfeldern (`telegram_kurzform`, `sms_threshold`, `channel_layouts`, `show_night_block` u. a.) und ein zweiter Nutzer mit eigenen Daten / When ein Nutzer im Reiter Wetter oder Zustellung (Trip und Orte) ein Feld ändert und speichert, auch nach Fehlern, Wiederholung oder 412 / Then bleiben alle nicht geänderten Felder erhalten, „aus“ bleibt aus, und die Daten des zweiten Nutzers sind unberührt (Scheibe R1)
+  - Test: Roundtrip je Feld, Feld-Erhalt, Retry-/412-Fälle, Laden mit zwei Nutzern in der Vorrangreihenfolge; je Zusicherung Mutationsprobe am lebenden Speicherweg macht den Test rot.
 
-- **AC-3:** Given Scheibe n ist umgesetzt / When der Rückbau-Wächter läuft / Then existiert keine Datei der Scheiben 2..n mehr, kein Quelltext importiert oder mountet sie, und keine ist neu angelegt (Muster Rückbau-Wächter; Strukturwächter, kein Verhaltensnachweis).
-  - Test: `rework_3020_rueckbau_waechter.test.ts` rot vor, grün nach jeder Löschung; Vakuum-Schutz: Liste der 54 Pfade hat je Scheibe die in dieser Spec genannte Länge (19/26/9).
+- **AC-3:** Given ein pausierter oder übersprungener Trip / When ein Reiter speichert / Then bleibt der Schutz von `skip_next` erhalten, soweit er am lebenden Code gilt; wo er wegen #3355 nicht gilt, steht der Fall sichtbar als ausstehend mit Verweis auf #3355 (Scheibe R1)
+  - Test: `trip_python_skip_next_ohne_412` (gelöschte Datei) wiederhergestellt und `trip_reiter_nutzlast_nur_eigene_felder` (vorhandene Datei, von 12 auf 8 Fälle gekürzt) um die fehlenden Fälle ergänzt; Anzahl der ausstehenden Fälle im Wächter und in der Testtabelle festgehalten; Mutationsprobe `skip_next` mitgesendet macht grüne Fälle rot.
 
-- **AC-4:** Given die 160 roten Testdateien der Probe-Löschung (neu gemessen in S1) / When eine Scheibe gelöscht wird / Then steht für jede betroffene Testdatei in der Testtabelle `rework_3020_testtabelle.md` ein Entscheid (löschen, umstellen oder Ersatzbeleg) mit Begründung, und keine Zusicherung entfällt still
-  - Test: Abgleich der Testtabelle gegen die rote Liste der Probe-Löschung der Scheibe (jede Datei genau einmal, nur Entscheid „löschen" bei Aussage über eine nicht mehr vorhandene Oberfläche); bei „umstellen" Mutationsprobe (Verfälschung des lebenden Moduls macht den Test rot).
+- **AC-4:** Given die Kanal-Vorgaben der Bedienung für Telegram, SMS und Premium-SMS / When der Nutzer sie in Trip oder Orte sieht und der Versand sie ausliefert / Then sind angezeigte und ausgelieferte Vorgabe gleich (Scheibe R1)
+  - Test: Vergleichstest am lebenden Reiter Zustellung je Kanal und Kontext (Ersatz für `versand_tab_defaults_gleich_auslieferung`); Mutationsprobe an der Vorgabe macht ihn rot.
 
-- **AC-5:** Given Zusicherungen zu Speicherweg, Zwei-Nutzer-Trennung und Premium-SMS in Tests mit toten Komponenten als Maßstab / When die Tests umgestellt werden / Then prüfen sie dieselbe Aussage an lebenden Modulen (`wetter-tab`, `WasStehtWoKarte`, `zustellung-tab`, `placements`)
-  - Test: je umgestellter Test die Mutationsprobe aus der Testtabelle (Spalte Mutation), z. B. falscher Feldname im lebenden Speicherweg macht den Test rot.
+- **AC-5:** Given der Prüfkatalog „Einstellung = Mail“ / When die 15 gestrichenen Fälle bearbeitet sind / Then ist jeder mit lebendem Beleg wieder eingetragen oder mit Begründung gestrichen, und die Prüfung der Testdateien in `test_einstellung_gleich_mail_fallliste.py` läuft nicht mehr leer (Scheibe R1)
+  - Test: `tests/tdd/test_einstellung_gleich_mail_fallliste.py` grün; eine Mutationsprobe (Verweis auf nicht vorhandenen Test) macht ihn rot, `praefixe` bzw. die ersetzte Prüfung ist nicht leer.
 
-- **AC-6:** Given der Prüfkatalog „Einstellung = Mail" (`tests/fixtures/einstellung_gleich_mail`) / When S3 die 45 Fälle umhängt, neu schreibt oder (nur mit Begründung) streicht / Then bleibt die Abdeckungsmatrix vollständig und `test_einstellung_gleich_mail_fallliste.py` unverändert grün
-  - Test: Wächter `tests/tdd/test_einstellung_gleich_mail_fallliste.py` grün ohne Änderung der Datei; je Fall Eintrag (a/b/c) in der Testtabelle; die 57 nicht betroffenen Fälle unverändert.
+- **AC-6:** Given die 60 in #3357 gelöschten Testdateien und die 145 entfallenen Fälle / When R1 ausgeliefert ist / Then steht für jede der 60 Dateien (57 „umstellen“ = 33 + 24, 3 „löschen“) und jeden Fall ein Entscheid in der Testtabelle, keine Zusicherung entfällt still, und echte Fehler im lebenden Code haben ein eigenes Issue (Scheibe R1)
+  - Test: Rückbau-Wächter prüft beide Richtungen (Tabelle gegen rote Liste), Zeilenzahl und Zahl der ausstehenden Fälle festgehalten, jeder Ersatzbeleg ist Testdatei mit Testname.
 
-- **AC-7:** Given die Ratschen (`BESTAND_OBERGRENZE`, `context_herkunft_zweige_eingefroren`, svelte-check-Baseline, `E2E_MIN_SPECS`, `E2E_MIN_EXECUTED_HAUPT`, `BEKANNTE_PAARE`, `ein_katalog_ausnahmen.json`) / When eine Scheibe ausgeliefert wird / Then sind sie nur gesenkt bzw. um die gelöschten Einträge gekürzt, nie angehoben, und die Golden-Verzeichnisse haben nur Löschungen im Diff
-  - Test: Bindungstest `test_e2e_positivliste_ratschen_bindung.py`, `bausteine_waechter.test.ts`, `test_pendant_gate_bekannte_paare.py` grün; Diff-Prüfung der Ratschenwerte und der Golden-Dateien im PR (Positivliste 86 → 85).
+- **AC-7:** Given die 42 Dateien aus Scope / When R2 ausgeliefert ist / Then existiert keine von ihnen, kein Quelltext und kein Barrel importiert sie, und die Nie-löschen-Liste ist vorhanden (Scheibe R2)
+  - Test: Rückbau-Wächter rot vor, grün nach der Löschung; `svelte-check` und `vite build` ohne unaufgelöste Importe (Strukturwächter, kein Verhaltensnachweis).
 
-- **AC-8:** Given Briefing- und Alarm-Versand über E-Mail, Telegram, SMS und Premium-SMS / When die vier Scheiben ausgeliefert sind / Then ist der Inhalt aller vier Kanäle unverändert, weil kein Python- oder Go-Code geändert wurde
-  - Test: Diff der Scheiben enthält keine Datei unter `src/`, `api/`, `internal/`, `cmd/`; Kern-Schicht und `briefing_mail_validator.py` gegen Staging-Mail grün (kein Mock).
+- **AC-8:** Given die Probe-Löschung in einer Wegwerf-Kopie / When die roten Testdateien gemessen sind / Then hat jede einen Entscheid (löschen, umstellen, Ersatzbeleg) mit Begründung in der Testtabelle, und kein Test wird ohne Entscheid gelöscht (Scheibe R2)
+  - Test: Abgleich Testtabelle gegen die Messung; bei „umstellen“ Mutationsprobe am lebenden Modul.
 
-- **AC-9:** Given Katalogschlüssel in `wertebereiche`, `trip`, `versand`, `layout`, `bausteine` (Stand Probe: 196 verwaist je Sprache) / When die jeweils letzte verwendende Datei gelöscht ist / Then sind diese Schlüssel in DE und EN entfernt, kein lebender Schlüssel fehlt, und die Zählung auf dem neuen Stand ist in der Testtabelle bzw. im PR genannt
-  - Test: `katalog_schluessel_haben_verwender.test.ts` ungelockert grün, Katalog-Paritätstest DE/EN und `keine_hartkodierten_nutzertexte` grün; Anzeige auf Staging in DE und EN ohne sichtbaren Schlüssel-Rohtext (Teil des Rauchtests aus AC-1).
+- **AC-9:** Given verwaiste Katalogschlüssel in DE und EN / When der letzte Verwender gelöscht ist / Then sind sie in beiden Sprachen entfernt, kein lebender Schlüssel fehlt (Scheibe R2)
+  - Test: `katalog_schluessel_haben_verwender` ungelockert grün, Katalog-Parität DE/EN und `keine_hartkodierten_nutzertexte` grün; kein Schlüssel-Rohtext auf Staging in DE und EN.
 
-- **AC-10:** Given jede der vier Scheiben / When der PR geprüft wird / Then sind alle 6 CI-Checks (`test`, `lint`, `go-test`, `svelte-check`, `frontend-test`, `e2e`) grün, die Scheibe ist einzeln auslieferbar und per Revert des PR zurückrollbar
-  - Test: CI-Lauf je PR grün; nach Auslieferung Selftest Exit 0; bei S2-S4 Probe-Revert in Wegwerf-Kopie baut (`vite build` Exit 0).
+- **AC-10:** Given die Ratschen (`BESTAND_OBERGRENZE`, `context_herkunft_zweige_eingefroren`, `ein_katalog_ausnahmen.json`, `E2E_MIN_SPECS`, `E2E_MIN_EXECUTED_HAUPT`, svelte-check-Baseline) / When R2 ausgeliefert ist / Then sind sie nur gesenkt bzw. um gelöschte Einträge gekürzt, nie angehoben (Scheibe R2)
+  - Test: `test_e2e_positivliste_ratschen_bindung.py`, `bausteine_waechter.test.ts` grün; Diff der Ratschenwerte im PR (Positivliste 86 → 85).
 
-- **AC-11:** Given S1 / When die Probe-Löschung auf dem Stand nach #3353/#2987 in einer Wegwerf-Kopie wiederholt wird / Then sind die Nutzer der umgestellten Helfer (`tripMehrreiterPruefstand`, `f9Pruefstand`, `f5Pruefstand`, `_editor_kette`, `f6VersandSsr`, `f8Pruefstand`), soweit sie lebendes Verhalten prüfen, auch dort grün, und `LayoutTabPruefstand.svelte` ist gelöscht
-  - Test: Ergebnisliste der Wiederholung in der Testtabelle; `vite build` Exit 0 in der Kopie; Arbeitsbaum unberührt.
+- **AC-11:** Given jede Scheibe / When der PR geprüft wird / Then sind alle 6 CI-Checks (`test`, `lint`, `go-test`, `svelte-check`, `frontend-test`, `e2e`) grün, die Scheibe ist einzeln auslieferbar und per Revert zurückrollbar, und der Inhalt aller vier Kanäle bleibt unverändert (Scheibe R1 und R2)
+  - Test: CI je PR grün, Selftest Exit 0 nach Auslieferung; Diff enthält keine Datei unter den Wurzelordnern `src/` (Python-Core), `api/`, `internal/`, `cmd/` (`frontend/src/` ist nicht gemeint); bei R2 baut ein Probe-Revert in einer Wegwerf-Kopie (`vite build` Exit 0).
 
-- **AC-12:** Given #3301 und #3297 / When S2 ausgeliefert ist (`compareHourlyMetricDefs.ts` gelöscht) bzw. S4 abgeschlossen ist / Then ist #3301 mit Nachweis geschlossen und #3297 trägt den Restumfang (Altfeld-Stellen in lebenden Dateien wie `weatherMetricsCompareSave.ts`) als Kommentar
-  - Test: Issue-Status und Kommentar nach Auslieferung; kein Eintrag zu `compareHourlyMetricDefs` mehr in `ein_katalog_ausnahmen.json`/Wächtern.
-
-- **AC-13:** Given die Doku (`frontend_components.md`, `api_contract.md`, `gates_und_ratschen.md`, `metric_output_matrix.md`, `docs/features/architecture.md`) / When eine Scheibe ausgeliefert ist / Then beschreibt keine dieser Dateien einen gelöschten Baustein als bestehend (Ausnahme: ausdrücklich als entfernt/historisch markiert)
-  - Test: Suche nach den Namen der gelöschten Dateien in den fünf Dokumenten je Scheibe; jeder verbleibende Treffer ist im Text als entfernt oder historisch erkennbar (Strukturprüfung, kein Verhaltensnachweis).
+- **AC-12:** Given #3301, #3298, #3020 und die Doku / When R2 ausgeliefert ist / Then ist #3301 mit Nachweis geschlossen, #3298 kommentiert (Typen und Text-Sperre bleiben), #3020 geschlossen, und keine Doku-Datei (`frontend_components.md`, `api_contract.md`, `gates_und_ratschen.md`, `metric_output_matrix.md`, `docs/features/architecture.md`) beschreibt einen gelöschten Baustein als bestehend (Scheibe R2)
+  - Test: Issue-Status und Kommentar; Namenssuche der gelöschten Dateien in den fünf Dokumenten, jeder Treffer ist als entfernt oder historisch erkennbar (Strukturprüfung).
 
 ## Known Limitations
 
-- **Hook-Eintrag:** `.claude/hooks/pendant_gate.py` ist als Infrastruktur geschützt. Die eine nötige Streichung in S3 (Z. 83-84) braucht voraussichtlich eine einmalige menschliche Freigabe (`override`). Das ist als Definition-of-Done-Schritt von S3 ausgewiesen; es gibt keinen Umgehungsweg. Ohne die Streichung wird `test_jede_datei_der_ausnahmeliste_existiert_im_repo` rot.
-- **Probe-Löschung** läuft lokal auf Node 26 (CI Node 22); Python- und Playwright-Tests laufen dort nicht. Der CI-Lauf je PR ist der maßgebliche Beleg. Drei Tests sind schon vor der Löschung rot und aus den 160 herausgerechnet: `pill_toene_kontrast`, `anlege_lock_engine_waechter`, `weather_metric_kuerzel_marken` (Ursache nicht Teil dieser Spec).
-- Der Skript-Befund beruht auf Regex statt Parser; dynamische Pfade und CSS sind nicht geprüft. Gegenprobe: `svelte-check` und `vite build` je Scheibe.
-- Zahlen (160 rote Dateien, 196 Schlüssel, 45 Fälle) sind Stand Probe auf `819a37abf`/`da6991ed9`-Vorgänger; S1 misst neu, die Testtabelle gilt.
-- LoC-Limit 250 überschritten, bewusst; Freigabe dieser Spec deckt das ab. Keine Seiteneffekte außerhalb des Tickets: Liste C bleibt liegen, kein Drive-by.
-- Keine Dateiinhalt-Checks als Verhaltensnachweis außer den benannten Strukturwächtern (AC-3, AC-7, AC-13).
+- **Testfolgen von R2 sind nicht gemessen.** 79 Testdateien nennen einen der 42 Namen, 24 importieren einen, 15 E2E-Dateien nennen einen (Regex, kein Parser); die Probe-Löschung misst die roten Tests. Zahlen zu R1 (20 bis 30 Testdateien) und zum Testanteil sind Schätzungen.
+- Die 24 „nur vorhandene Dateien“-Zeilen der Testtabelle sind bisher nur nach Dateiname geprüft; R1 prüft den Fall.
+- Probe-Löschung läuft lokal auf Node 26 (CI Node 22), Python- und Playwright-Tests laufen dort nicht; der CI-Lauf je PR ist maßgeblich.
+- Wächter und rote Liste müssen in R1 neu entstehen (aus `8b9749601` portiert), sie liegen auf `main` nicht mehr vor.
+- Offener Fehler #3355 (Vollkopie `report_config` im Reiter Wetter) wird nicht behoben; #3358 (Vorlage folgt der Fortbewegung) ebenso nicht.
+- LoC-Limit 250 in beiden Scheiben bewusst überschritten; keine Seiteneffekte außerhalb des Tickets, Liste C bleibt liegen. Vor R2 ist erneut zu prüfen, ob eine andere Sitzung an #3298 oder #3301 arbeitet.
+- AC-6, AC-7 und AC-12 sind bewusst Strukturwächter (Tests mit `# doc-compliance-test` gekennzeichnet), AC-8 bis AC-10 sind Abgleiche und Ratschen; keine davon ist ein Verhaltensnachweis. Verhalten belegen AC-1 bis AC-5.
+- Der Kommentar in `src/app/metric_catalog.py:1314` nennt `outlookFriendlyCapability.ts` und veraltet mit R2. Er bleibt stehen, weil kein Python-Produktionscode geändert wird; er wird als Nebenbefund an #3298 vermerkt.
+- `docs/artifacts/` ist gitignored; was für R1 und R2 gebraucht wird, steht in dieser Spec und der Testtabelle. Die Messlisten braucht nur die Umsetzung in diesem Worktree.
 
 ## Architektur-Entscheidung (ADR)
 
 - **ADR-Nr.:** keine (ADR-0112 und ADR-0124 werden umgesetzt)
-- **Rationale:** Der Rückbau führt eine bereits entschiedene Linie aus (Epic #3122/#2795, PO-Freigabe in #3036); es entsteht keine neue Entscheidungsfläche.
+- **Rationale:** Der Rückbau führt eine bereits entschiedene Linie aus (Epic #3122/#2795, PO-Freigabe #3036); es entsteht keine neue Entscheidungsfläche.
 
 ## Changelog
 
 - 2026-11-25: Initial spec created
+- 2026-11-25: Version 2.0, vollständig neu gefasst. #3357 (`c8329fea4`) hat 12 der 54 Dateien und 60 Testdateien gelöscht; die Scheiben S1 bis S4 (19/26/9) und AC-3/4/6/11/12 der Fassung 1.0 beziehen sich auf den überholten Stand. Neu: zwei Scheiben R1 (Schutz wiederherstellen) und R2 (Restbestand 42 Dateien löschen).

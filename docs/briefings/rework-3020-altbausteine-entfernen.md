@@ -1,7 +1,7 @@
 ---
 spec_file: docs/specs/modules/rework_3020_altbausteine_entfernen.md
-spec_sha256: 830e7896eaef305ed38de99034fda62be702ebdf211e71e081c659f6eeea6555
-spec_frozen_sha256: 8949fc20d5b5e18489ec5e841faa0d25b4168693536cccb30c421f950eda0d93
+spec_sha256: 94165fc15c3bfe54bd0beb39321f94e05d707aacfd7f6f67bd5328eb920d83f7
+spec_frozen_sha256: 52e049ee1e902946efbd739459593aeb3a69db429b126581debddfe75e9e3412
 ---
 
 # PO-Briefing: rework-3020-altbausteine-entfernen
@@ -12,21 +12,21 @@ spec_frozen_sha256: 8949fc20d5b5e18489ec5e841faa0d25b4168693536cccb30c421f950eda
 
 ## Was gebaut wird
 
-Die alte, nirgends mehr sichtbare Wetter- und Versand-Oberfläche wird in vier einzeln auslieferbaren Schritten gelöscht, ohne dass Nutzer etwas bemerken.
+Verlorene Schutz-Prüfungen werden wiederhergestellt, dann 42 tote Alt-Dateien gelöscht; Nutzer bemerken keine Änderung.
 
 ## Definition of Done
 
-Alle 54 alten Bausteine sind gelöscht, Trip- und Orte-Seiten sehen in Deutsch und Englisch auf Staging und Produktion unverändert aus.
+Beide Schritte sind auf Produktion, alle 42 Dateien gelöscht, Trip- und Orte-Seiten in Deutsch und Englisch unverändert, Tests grün.
 
 ## Wie geprüft wird
 
-Elementlisten-Vergleich, bestehende Browser-Tests und Strukturwächter belegen Unverändertheit; umgestellte Tests bekommen eine Gegenprobe, Inhalt der vier Kanäle wird nicht berührt.
+Elementlisten-Vergleich vor und nach jedem Schritt, Gegenproben an wiederhergestellten Tests und Strukturwächter; Löschungen selbst beweisen kein Verhalten.
 
 ## Kritische Anmerkungen
 
-- Das Limit von 250 Zeilen und fünf Dateien wird bewusst weit überschritten (fast nur Löschungen); Freigabe deckt das ab.
-- Eine Änderung an einer geschützten Hook-Datei braucht in Schritt 3 voraussichtlich eine einmalige menschliche Freigabe.
-- Rund 160 Tests werden gelöscht oder umgestellt; die Entscheidung je Test steht erst in einer Tabelle, die in Schritt 1 entsteht.
+- Limit von 250 Zeilen und fünf Dateien wird bewusst weit überschritten; die Freigabe deckt das ab.
+- Testfolgen der Löschung sind nicht gemessen; wie viele Tests entfallen, zeigt erst die Probe-Löschung.
+- Echte Fehler, die Schritt 1 findet, werden nur als eigene Tickets erfasst, nicht behoben.
 
 ## Freigabe-Frage
 
