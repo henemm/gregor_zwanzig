@@ -1,0 +1,1005 @@
+TAP version 13
+# Subtest: \#3298 AC-5: kein Altname im Frontend-Produktionscode (RED auf Ist-Stand)
+    # Subtest: Dateimenge ist nicht trivial (Scan laeuft wirklich ueber frontend/src)
+    ok 1 - Dateimenge ist nicht trivial (Scan laeuft wirklich ueber frontend/src)
+      ---
+      duration_ms: 29.046259
+      type: 'test'
+      ...
+    # Subtest: Scan des echten Baums: keine Treffer (Datei:Zeile: Name)
+    not ok 2 - Scan des echten Baums: keine Treffer (Datei:Zeile: Name)
+      ---
+      duration_ms: 79.726146
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/altfeld_namen_sperre.test.ts:129:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Altnamen im Frontend-Produktionscode:
+        lib/components/compare/compareEditorSave.ts:187: outlook_enabled
+        lib/components/compare/compareEditorSave.ts:398: outlook_enabled
+        lib/components/shared/alarmeVergleichSpeicherung.ts:171: outlook_enabled
+        lib/components/shared/pickEigenfelder.ts:75: channel_layouts
+        lib/components/shared/pickEigenfelder.ts:78: outlook_metrics
+        lib/components/shared/pickEigenfelder.ts:79: outlook_metric_formats
+        lib/components/shared/versandVergleichSpeicherung.ts:172: outlook_enabled
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:94: channel_active_metrics
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:133: hourly_metrics
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:135: outlook_metrics
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:137: outlook_metric_formats
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:138: outlook_enabled
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:140: hourly_metric_formats
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:172: outlook_enabled
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:265: outlook_enabled
+        lib/components/shared/wetter-tab/wertebereicheVergleichSpeicherung.ts:77: outlook_enabled
+        lib/types.ts:326: channel_layouts
+        lib/types.ts:327: channel_layouts_per_report
+        lib/types.ts:338: outlook_metrics
+        lib/types.ts:342: outlook_metric_formats
+        lib/types.ts:755: outlook_enabled
+        + actual - expected
+        
+        + [
+        +   'lib/components/compare/compareEditorSave.ts:187: outlook_enabled',
+        +   'lib/components/compare/compareEditorSave.ts:398: outlook_enabled',
+        +   'lib/components/shared/alarmeVergleichSpeicherung.ts:171: outlook_enabled',
+        +   'lib/components/shared/pickEigenfelder.ts:75: channel_layouts',
+        +   'lib/components/shared/pickEigenfelder.ts:78: outlook_metrics',
+        +   'lib/components/shared/pickEigenfelder.ts:79: outlook_metric_formats',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:172: outlook_enabled',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:94: channel_active_metrics',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:133: hourly_metrics',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:135: outlook_metrics',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:137: outlook_metric_formats',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:138: outlook_enabled',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:140: hourly_metric_formats',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:172: outlook_enabled',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:265: outlook_enabled',
+        +   'lib/components/shared/wetter-tab/wertebereicheVergleichSpeicherung.ts:77: outlook_enabled',
+        +   'lib/types.ts:326: channel_layouts',
+        +   'lib/types.ts:327: channel_layouts_per_report',
+        +   'lib/types.ts:338: outlook_metrics',
+        +   'lib/types.ts:342: outlook_metric_formats',
+        +   'lib/types.ts:755: outlook_enabled'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'lib/components/compare/compareEditorSave.ts:187: outlook_enabled'
+        1: 'lib/components/compare/compareEditorSave.ts:398: outlook_enabled'
+        2: 'lib/components/shared/alarmeVergleichSpeicherung.ts:171: outlook_enabled'
+        3: 'lib/components/shared/pickEigenfelder.ts:75: channel_layouts'
+        4: 'lib/components/shared/pickEigenfelder.ts:78: outlook_metrics'
+        5: 'lib/components/shared/pickEigenfelder.ts:79: outlook_metric_formats'
+        6: 'lib/components/shared/versandVergleichSpeicherung.ts:172: outlook_enabled'
+        7: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:94: channel_active_metrics'
+        8: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:133: hourly_metrics'
+        9: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:135: outlook_metrics'
+        10: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:137: outlook_metric_formats'
+        11: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:138: outlook_enabled'
+        12: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:140: hourly_metric_formats'
+        13: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:172: outlook_enabled'
+        14: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:265: outlook_enabled'
+        15: 'lib/components/shared/wetter-tab/wertebereicheVergleichSpeicherung.ts:77: outlook_enabled'
+        16: 'lib/types.ts:326: channel_layouts'
+        17: 'lib/types.ts:327: channel_layouts_per_report'
+        18: 'lib/types.ts:338: outlook_metrics'
+        19: 'lib/types.ts:342: outlook_metric_formats'
+        20: 'lib/types.ts:755: outlook_enabled'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/altfeld_namen_sperre.test.ts:134:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: jede ERLAUBT-Ausnahme ist gueltig (Grund >= 20 Zeichen, Ablauf nicht ueberschritten)
+    ok 3 - jede ERLAUBT-Ausnahme ist gueltig (Grund >= 20 Zeichen, Ablauf nicht ueberschritten)
+      ---
+      duration_ms: 0.15914
+      type: 'test'
+      ...
+    1..3
+not ok 1 - \#3298 AC-5: kein Altname im Frontend-Produktionscode (RED auf Ist-Stand)
+  ---
+  duration_ms: 109.809886
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/altfeld_namen_sperre.test.ts:121:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3298 AC-6: Selbstnachweis mit synthetischem Quelltext (Werkzeug, schon gruen)
+    # Subtest: Verstoss erkannt, mit Datei, Zeile und Name
+    ok 1 - Verstoss erkannt, mit Datei, Zeile und Name
+      ---
+      duration_ms: 0.394581
+      type: 'test'
+      ...
+    # Subtest: Name in Zeilen-, Block- und HTML-Kommentar ist kein Treffer
+    ok 2 - Name in Zeilen-, Block- und HTML-Kommentar ist kein Treffer
+      ---
+      duration_ms: 0.1227
+      type: 'test'
+      ...
+    # Subtest: hourly_enabled und laengere Namen loesen nichts aus (wortgenau)
+    ok 3 - hourly_enabled und laengere Namen loesen nichts aus (wortgenau)
+      ---
+      duration_ms: 0.106901
+      type: 'test'
+      ...
+    # Subtest: channel_layouts_per_report zaehlt einmal als eigener Name, nicht als channel_layouts
+    ok 4 - channel_layouts_per_report zaehlt einmal als eigener Name, nicht als channel_layouts
+      ---
+      duration_ms: 0.149851
+      type: 'test'
+      ...
+    # Subtest: gueltiger ERLAUBT-Eintrag besteht
+    ok 5 - gueltiger ERLAUBT-Eintrag besteht
+      ---
+      duration_ms: 0.274551
+      type: 'test'
+      ...
+    # Subtest: abgelaufener ERLAUBT-Eintrag schlaegt an
+    ok 6 - abgelaufener ERLAUBT-Eintrag schlaegt an
+      ---
+      duration_ms: 0.19479
+      type: 'test'
+      ...
+    # Subtest: zu kurzer Grund wird abgelehnt
+    ok 7 - zu kurzer Grund wird abgelehnt
+      ---
+      duration_ms: 0.2517
+      type: 'test'
+      ...
+    # Subtest: Ausnahme gilt nur fuer ihre Datei
+    ok 8 - Ausnahme gilt nur fuer ihre Datei
+      ---
+      duration_ms: 0.125881
+      type: 'test'
+      ...
+    1..8
+ok 2 - \#3298 AC-6: Selbstnachweis mit synthetischem Quelltext (Werkzeug, schon gruen)
+  ---
+  duration_ms: 2.108884
+  type: 'suite'
+  ...
+# Subtest: \#3298 AC-7: Namensliste == ALTFELDER in src/app/loader.py (Werkzeug, schon gruen)
+    # Subtest: beide Mengen identisch, zehn Namen
+    ok 1 - beide Mengen identisch, zehn Namen
+      ---
+      duration_ms: 0.697952
+      type: 'test'
+      ...
+    # Subtest: Gegenprobe: eine synthetisch abweichende Liste wird erkannt
+    ok 2 - Gegenprobe: eine synthetisch abweichende Liste wird erkannt
+      ---
+      duration_ms: 0.490621
+      type: 'test'
+      ...
+    1..2
+ok 3 - \#3298 AC-7: Namensliste == ALTFELDER in src/app/loader.py (Werkzeug, schon gruen)
+  ---
+  duration_ms: 1.313873
+  type: 'suite'
+  ...
+# Subtest: \#3298 AC-1 (Zusatz): types.ts ohne multi_day_trend_morning/evening
+    # Subtest: kein multi_day_trend_morning/evening ausserhalb von Kommentaren
+    not ok 1 - kein multi_day_trend_morning/evening ausserhalb von Kommentaren
+      ---
+      duration_ms: 1.099341
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/altfeld_namen_sperre.test.ts:210:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + [
+        +   'lib/types.ts:284',
+        +   'lib/types.ts:285'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'lib/types.ts:284'
+        1: 'lib/types.ts:285'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/altfeld_namen_sperre.test.ts:214:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    1..1
+not ok 4 - \#3298 AC-1 (Zusatz): types.ts ohne multi_day_trend_morning/evening
+  ---
+  duration_ms: 1.178621
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/altfeld_namen_sperre.test.ts:208:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3298 AC-8: hourlyFriendlyMap.ts geloescht, kein Produktionsimport
+    # Subtest: geloescht: lib/components/compare/hourlyFriendlyMap.ts
+    not ok 1 - geloescht: lib/components/compare/hourlyFriendlyMap.ts
+      ---
+      duration_ms: 0.24396
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/altfeld_namen_sperre.test.ts:221:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/compare/hourlyFriendlyMap.ts existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/altfeld_namen_sperre.test.ts:222:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: keine Produktionsdatei importiert hourlyFriendlyMap (statisch oder dynamisch)
+    ok 2 - keine Produktionsdatei importiert hourlyFriendlyMap (statisch oder dynamisch)
+      ---
+      duration_ms: 28.658318
+      type: 'test'
+      ...
+    1..2
+not ok 5 - \#3298 AC-8: hourlyFriendlyMap.ts geloescht, kein Produktionsimport
+  ---
+  duration_ms: 29.078679
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/altfeld_namen_sperre.test.ts:218:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3298 AC-2: Anlegen (POST) ohne Altschluessel, insbesondere ohne outlook_enabled
+    # Subtest: baueVergleichAnlegeRumpf: kein Altschluessel (top-level und display_config)
+    not ok 1 - baueVergleichAnlegeRumpf: kein Altschluessel (top-level und display_config)
+      ---
+      duration_ms: 2.330665
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:135:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        POST /api/compare/presets enthaelt Altschluessel
+        + actual - expected
+        
+        + [
+        +   'outlook_enabled'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'outlook_enabled'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:137:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: legeVergleichAn: der an der Netzgrenze ankommende POST traegt keinen Altschluessel
+    not ok 2 - legeVergleichAn: der an der Netzgrenze ankommende POST traegt keinen Altschluessel
+      ---
+      duration_ms: 0.497541
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:142:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + [
+        +   'outlook_enabled'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'outlook_enabled'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:152:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: buildNewComparePresetPayload: ein mitgegebenes outlookEnabled wird nicht gesendet
+    not ok 3 - buildNewComparePresetPayload: ein mitgegebenes outlookEnabled wird nicht gesendet
+      ---
+      duration_ms: 0.344451
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:155:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + [
+        +   'outlook_enabled'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'outlook_enabled'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:157:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Feldsatz des Ortsvergleichs traegt keine camelCase-Altfelder mehr
+    not ok 4 - Feldsatz des Ortsvergleichs traegt keine camelCase-Altfelder mehr
+      ---
+      duration_ms: 0.3515
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:160:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        compareFeldsatzStandard() haelt noch tote Wizardfelder
+        + actual - expected
+        
+        + [
+        +   'outlookEnabled',
+        +   'hourlyMetricKeys',
+        +   'outlookMetricKeys',
+        +   'outlookMetricFormats',
+        +   'hourlyMetricFormats'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'outlookEnabled'
+        1: 'hourlyMetricKeys'
+        2: 'outlookMetricKeys'
+        3: 'outlookMetricFormats'
+        4: 'hourlyMetricFormats'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:162:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..4
+not ok 6 - \#3298 AC-2: Anlegen (POST) ohne Altschluessel, insbesondere ohne outlook_enabled
+  ---
+  duration_ms: 4.334427
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:130:1'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3298 AC-2: Reiter speichern (PUT) ohne Altschluessel, Bestand beider Nutzer bleibt
+    # Subtest: alarme: PUT-Rumpf ohne Altschluessel; Altbestand und Nachbar-Nutzer unveraendert
+    ok 1 - alarme: PUT-Rumpf ohne Altschluessel; Altbestand und Nachbar-Nutzer unveraendert
+      ---
+      duration_ms: 21.275766
+      type: 'test'
+      ...
+    # Subtest: versand: PUT-Rumpf ohne Altschluessel; Altbestand und Nachbar-Nutzer unveraendert
+    ok 2 - versand: PUT-Rumpf ohne Altschluessel; Altbestand und Nachbar-Nutzer unveraendert
+      ---
+      duration_ms: 2.972925
+      type: 'test'
+      ...
+    # Subtest: wertebereiche: PUT-Rumpf ohne Altschluessel; Altbestand und Nachbar-Nutzer unveraendert
+    ok 3 - wertebereiche: PUT-Rumpf ohne Altschluessel; Altbestand und Nachbar-Nutzer unveraendert
+      ---
+      duration_ms: 2.562553
+      type: 'test'
+      ...
+    # Subtest: wetterMetriken: PUT-Rumpf ohne Altschluessel; Altbestand und Nachbar-Nutzer unveraendert
+    not ok 4 - wetterMetriken: PUT-Rumpf ohne Altschluessel; Altbestand und Nachbar-Nutzer unveraendert
+      ---
+      duration_ms: 1.642743
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:181:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        wetterMetriken: Altschluessel im PUT-Rumpf
+        + actual - expected
+        
+        + [
+        +   'outlook_enabled'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'outlook_enabled'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:192:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..4
+not ok 7 - \#3298 AC-2: Reiter speichern (PUT) ohne Altschluessel, Bestand beider Nutzer bleibt
+  ---
+  duration_ms: 28.76713
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:168:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3298 AC-2: Layout-Flush und Voll-Rumpf ohne outlook_enabled
+    # Subtest: flushPendingLayoutSave: Aenderung am Stundenverlauf-Schalter sendet kein outlook_enabled
+    not ok 1 - flushPendingLayoutSave: Aenderung am Stundenverlauf-Schalter sendet kein outlook_enabled
+      ---
+      duration_ms: 0.378032
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:214:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + [
+        +   'outlook_enabled'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'outlook_enabled'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:219:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: buildComparePresetSavePayload: edits.outlookEnabled ueberschreibt den Bestand nicht
+    not ok 2 - buildComparePresetSavePayload: edits.outlookEnabled ueberschreibt den Bestand nicht
+      ---
+      duration_ms: 0.289241
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:223:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Bestandswert reist nur ueber den Spread
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:233:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 8 - \#3298 AC-2: Layout-Flush und Voll-Rumpf ohne outlook_enabled
+  ---
+  duration_ms: 0.786292
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:211:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3298 AC-3: Hydration liest keine Altfelder
+    # Subtest: hydrateLayoutFieldsFromPreset: Altwerte aendern das Ergebnis nicht, nur hourlyEnabled
+    not ok 1 - hydrateLayoutFieldsFromPreset: Altwerte aendern das Ergebnis nicht, nur hourlyEnabled
+      ---
+      duration_ms: 0.632381
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:246:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          {
+            hourlyEnabled: true,
+        +   hourlyMetricFormats: {
+        +     temp_c: true
+        +   },
+        +   hourlyMetricKeys: [
+        +     'temp_c',
+        +     'wind_kmh'
+        +   ],
+        +   outlookEnabled: false,
+        +   outlookMetricFormats: {
+        +     temp_max_c: true
+        +   },
+        +   outlookMetricKeys: [
+        +     'temp_max_c',
+        +     'precip_sum_mm'
+        +   ]
+        -   hourlyMetricFormats: null,
+        -   hourlyMetricKeys: null,
+        -   outlookEnabled: true,
+        -   outlookMetricFormats: null,
+        -   outlookMetricKeys: null
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        hourlyMetricKeys: ~
+        hourlyEnabled: true
+        outlookMetricKeys: ~
+        outlookMetricFormats: ~
+        outlookEnabled: true
+        hourlyMetricFormats: ~
+      actual:
+        hourlyMetricKeys:
+          0: 'temp_c'
+          1: 'wind_kmh'
+        hourlyEnabled: true
+        outlookMetricKeys:
+          0: 'temp_max_c'
+          1: 'precip_sum_mm'
+        outlookMetricFormats:
+          temp_max_c: true
+        outlookEnabled: false
+        hourlyMetricFormats:
+          temp_c: true
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:247:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: Lese-Naht channel_active_metrics ist entfernt
+    not ok 2 - Lese-Naht channel_active_metrics ist entfernt
+      ---
+      duration_ms: 9.077366
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:252:2'
+      failureType: 'testCodeFailure'
+      error: 'hydrateChannelActiveMetricsFromPreset existiert noch'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:255:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: feldsatzAusVorlage (Anlegen aus Vorlage): Altwerte ohne Wirkung, keine camelCase-Altfelder
+    not ok 3 - feldsatzAusVorlage (Anlegen aus Vorlage): Altwerte ohne Wirkung, keine camelCase-Altfelder
+      ---
+      duration_ms: 1.131603
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:259:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Altwerte der Vorlage veraendern den Feldsatz
+        + actual - expected
+        ... Skipped lines
+        
+          {
+            activeMetricKeys: [
+              'wind_max_kmh',
+              'snow_depth_cm',
+              'temp_max_c'
+        ...
+              email: null,
+        +     sms: [
+        +       {
+        +         aggregation: 'max',
+        +         metric_id: 'temp'
+        +       }
+        +     ],
+        -     sms: null,
+              telegram: null
+            },
+            channelThresholds: {
+              email: 'gering',
+              sms: 'gering',
+        ...
+            hourlyEnabled: true,
+        +   hourlyMetricFormats: {
+        +     temp_c: true
+        +   },
+        +   hourlyMetricKeys: [
+        +     'temp_c',
+        +     'wind_kmh'
+        +   ],
+        -   hourlyMetricFormats: null,
+        -   hourlyMetricKeys: null,
+            idealRanges: {
+              snow_depth_cm: {
+                max: 200,
+                min: 30
+              },
+        ...
+            officialWarningsEnabled: true,
+        +   outlookEnabled: false,
+        +   outlookMetricFormats: {
+        +     temp_max_c: true
+        +   },
+        +   outlookMetricKeys: [
+        +     'temp_max_c',
+        +     'precip_sum_mm'
+        +   ],
+        -   outlookEnabled: true,
+        -   outlookMetricFormats: null,
+        -   outlookMetricKeys: null,
+            pickedIds: [
+              'loc-a',
+              'loc-b'
+            ],
+            radarAlertEnabled: false,
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        officialAlertsEnabled: true
+        officialWarningsEnabled: true
+        radarAlertEnabled: false
+        metricAlertLevels:
+          wind_max_kmh: 'standard'
+          snow_depth_cm: 'sensibel'
+        channels:
+          email: true
+          telegram: true
+          sms: false
+          premium_sms: false
+        channelThresholds:
+          email: 'gering'
+          telegram: 'hoch'
+          sms: 'gering'
+        alertMetricChannels:
+        alertCooldownMinutes: 45
+        alertQuietFrom: '22:00'
+        alertQuietTo: '07:00'
+        corridors:
+          0:
+            metric: 'wind_max_kmh'
+            range:
+              0: 0
+              1: 40
+            notify: true
+            mark: true
+          1:
+            metric: 'snow_depth_cm'
+            range:
+              0: 30
+              1: 200
+            notify: false
+            mark: true
+        activeMetricKeys:
+          0: 'wind_max_kmh'
+          1: 'snow_depth_cm'
+          2: 'temp_max_c'
+        telegramStyle: 'rich'
+        activityProfile: ~
+        idealRanges:
+          wind_max_kmh:
+            min: 0
+            max: 40
+          snow_depth_cm:
+            min: 30
+            max: 200
+        sendEmail: true
+        sendTelegram: true
+        sendSms: false
+        sendPremiumSms: false
+        morningEnabled: true
+        morningTime: '06:30'
+        eveningEnabled: false
+        eveningTime: '18:00'
+        endDate: '2026-12-01'
+        channelActiveMetricKeys:
+          email: ~
+          telegram: ~
+          sms: ~
+        dayWindowStartHour: 5
+        dayWindowEndHour: 18
+        hourlyMetricKeys: ~
+        hourlyEnabled: true
+        outlookMetricKeys: ~
+        outlookMetricFormats: ~
+        outlookEnabled: true
+        hourlyMetricFormats: ~
+        name: 'X (Kopie)'
+        region: 'Tirol'
+        vorlageId: 'wandern'
+        pickedIds:
+          0: 'loc-a'
+          1: 'loc-b'
+        schedule: 'daily_morning'
+        officialAlertTriggersEnabled: true
+      actual:
+        officialAlertsEnabled: true
+        officialWarningsEnabled: true
+        radarAlertEnabled: false
+        metricAlertLevels:
+          wind_max_kmh: 'standard'
+          snow_depth_cm: 'sensibel'
+        channels:
+          email: true
+          telegram: true
+          sms: false
+          premium_sms: false
+        channelThresholds:
+          email: 'gering'
+          telegram: 'hoch'
+          sms: 'gering'
+        alertMetricChannels:
+        alertCooldownMinutes: 45
+        alertQuietFrom: '22:00'
+        alertQuietTo: '07:00'
+        corridors:
+          0:
+            metric: 'wind_max_kmh'
+            range:
+              0: 0
+              1: 40
+            notify: true
+            mark: true
+          1:
+            metric: 'snow_depth_cm'
+            range:
+              0: 30
+              1: 200
+            notify: false
+            mark: true
+        activeMetricKeys:
+          0: 'wind_max_kmh'
+          1: 'snow_depth_cm'
+          2: 'temp_max_c'
+        telegramStyle: 'rich'
+        activityProfile: ~
+        idealRanges:
+          wind_max_kmh:
+            min: 0
+            max: 40
+          snow_depth_cm:
+            min: 30
+            max: 200
+        sendEmail: true
+        sendTelegram: true
+        sendSms: false
+        sendPremiumSms: false
+        morningEnabled: true
+        morningTime: '06:30'
+        eveningEnabled: false
+        eveningTime: '18:00'
+        endDate: '2026-12-01'
+        channelActiveMetricKeys:
+          email: ~
+          telegram: ~
+          sms:
+            0:
+              metric_id: 'temp'
+              aggregation: 'max'
+        dayWindowStartHour: 5
+        dayWindowEndHour: 18
+        hourlyMetricKeys:
+          0: 'temp_c'
+          1: 'wind_kmh'
+        hourlyEnabled: true
+        outlookMetricKeys:
+          0: 'temp_max_c'
+          1: 'precip_sum_mm'
+        outlookMetricFormats:
+          temp_max_c: true
+        outlookEnabled: false
+        hourlyMetricFormats:
+          temp_c: true
+        name: 'X (Kopie)'
+        region: 'Tirol'
+        vorlageId: 'wandern'
+        pickedIds:
+          0: 'loc-a'
+          1: 'loc-b'
+        schedule: 'daily_morning'
+        officialAlertTriggersEnabled: true
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:262:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 9 - \#3298 AC-3: Hydration liest keine Altfelder
+  ---
+  duration_ms: 11.053498
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:242:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3298 AC-4: WETTER_DISPLAY_KEYS ohne Altnamen
+    # Subtest: Whitelist besteht genau aus den fuenf erlaubten Schluesseln
+    not ok 1 - Whitelist besteht genau aus den fuenf erlaubten Schluesseln
+      ---
+      duration_ms: 0.20963
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:273:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          [
+            'ampel',
+        +   'channel_layouts',
+            'metrics',
+        +   'outlook_metric_formats',
+        +   'outlook_metrics',
+            'preset_name',
+            'show_night_block',
+            'telegram_kurzform'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'ampel'
+        1: 'metrics'
+        2: 'preset_name'
+        3: 'show_night_block'
+        4: 'telegram_kurzform'
+      actual:
+        0: 'ampel'
+        1: 'channel_layouts'
+        2: 'metrics'
+        3: 'outlook_metric_formats'
+        4: 'outlook_metrics'
+        5: 'preset_name'
+        6: 'show_night_block'
+        7: 'telegram_kurzform'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:274:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: pickEigenfelder (Wetter): Altnamen in den Eingabedaten werden nicht uebernommen
+    not ok 2 - pickEigenfelder (Wetter): Altnamen in den Eingabedaten werden nicht uebernommen
+      ---
+      duration_ms: 0.2664
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:277:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + [
+        +   'display_config.channel_layouts',
+        +   'display_config.outlook_metrics',
+        +   'display_config.outlook_metric_formats'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'display_config.channel_layouts'
+        1: 'display_config.outlook_metrics'
+        2: 'display_config.outlook_metric_formats'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:292:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 10 - \#3298 AC-4: WETTER_DISPLAY_KEYS ohne Altnamen
+  ---
+  duration_ms: 0.549001
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:270:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..10
+# tests 31
+# suites 10
+# pass 16
+# fail 15
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 395.099772
