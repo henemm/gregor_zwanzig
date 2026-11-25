@@ -1,0 +1,39 @@
+{
+  "verified_commit": "99e52b2d37796435e3985e41e26e5ce0d0de9c5c",
+  "findings": [],
+  "verified_at": "2026-11-25T17:02:56.952184+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: 1/1 ACs gr\u00fcn (AC-9, DE+EN)",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "feat-3298-altfeld-typen-sperre": {
+      "verdict": "VERIFIED: 1/1 ACs gr\u00fcn (AC-9, DE+EN)",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-25T17:02:56.952184+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
