@@ -169,3 +169,15 @@ Danach entfallen im Frontend: `verschmelzen`, `ampelFehler`, `metrikFehler`, `wi
 ### Open Questions
 
 Keine.
+
+## RED-Stand Scheibe S1 (2026-11-25)
+
+Dieser Durchlauf liefert **nur S1** (AC-1, AC-2, AC-3, AC-14, Python-Zähler weg). Für S2 bis S4 folgt je Scheibe ein eigener RED-Schritt im selben Workflow, sonst wäre S1 nicht einzeln auslieferbar.
+
+- **Referenz:** `tests/fixtures/ampel_zaehler_referenz_2988.json`, 367 Fälle (Zähler, gepackte eigene-Vorlage-Ampel) und 93 Speicher-Rümpfe, einmalig aus dem Code vor dem Umbau (Stand b47b34553) erzeugt; der Generator ist bewusst nicht eingecheckt. Fälle: `WT/__tests__/zaehlerFaelle2988.ts`, Prüfstand: `WT/__tests__/reiter2988.ts`.
+- **Rot (15):** `eigene_vorlage_payload_2988.test.ts` (12: `aboAmpelVon` fehlt, `modus`/`sektoren` gehen im Dialog verloren), `tests/tdd/test_2988_kein_python_zaehler.py` (3).
+- **Von Anfang an grün (Wächter, kein RED möglich, weil der Umbau das Verhalten erhalten soll):** `zaehler_referenz_2988`, `speicher_payload_2988`, `zaehler_ohne_netz_2988`. Ihre Schärfe ist in /50 per Mutation nachzuweisen (Gewitter nicht mitzählen, `mitEnabled` mutiert Vorlage, Menge statt Vorlage im Kontext, Kind-Ableitung).
+- **Vertrag:** `aboAmpelVon(stand, vorlagen, context, alt = {})` in `wetterZustand.ts`; tiefe Kopie, keine `null`-Grenzen, jede Zeile mit `lower`/`upper`; nichtssagende Zeilen ohne Vorlagen-Zeile bleiben weg. `thunder` und `template` aus der Vorlage im Kontext plus Stand.
+- **In /50 zu entfernen:** `tests/tdd/test_ampel_abweichungszaehler.py` ganz; in `test_ampel_modell_und_aufloesung.py` `test_abweichungszahl_zaehlt_grenzen_gewitter_und_alarmstufe` und der Import; in `test_feat_3222_windrichtung_kern.py` `test_abweichungszahl_modus_und_sektoren`, `test_sektoren_vergleich_als_menge_bei_gleichem_modus` und der Import. Fixtures bleiben (Frontend liest sie bis S4). Ist `_vorlage_der_ampel` danach ohne Aufrufer, entfällt es mit.
+- **Bekannt:** Die Fälle `windrichtung_modus_abweichend` und `windrichtung_sektoren_hinzugefuegt` stehen in der Referenz mit 0 (heutiges Verhalten, Known Limitation, gehört zu #3230); das `expected: 1` der alten Fixture galt der Python-Zahl.
+- **Live:** `frontend/e2e/rework-2988-zaehler.spec.ts` (nicht ausgeführt, läuft in `/e2e-verify`).
