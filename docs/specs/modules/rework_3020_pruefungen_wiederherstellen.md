@@ -81,7 +81,7 @@ R1, Prüfungen für lebendes Verhalten, am heutigen Code neu geschrieben (alte D
 |---|---|---|
 | `trip_python_skip_next_ohne_412` | neuer Test | AC-5 (Go-Store, zwei Nutzer), AC-6 (Nutzlast) |
 | `trip_versand_reiter_ohne_dauer_keepalive` | neuer Test | AC-7 (Zustellung-Reiter); Teilersatz für den Trip-Speichertakt: `trip_speicherung_reicht_keepalive_durch.test.ts::Gegenprobe: regulärer Flush (Feld verlassen) → PUT OHNE keepalive, MIT dem bekannten If-Match` |
-| `trip_night_block_schalter_verdrahtung` | neuer Test | AC-8 bis AC-11 |
+| `trip_night_block_schalter_verdrahtung` | neuer Test | AC-8 bis AC-10; AC-11 Verweis auf #3305 |
 | `feld_erhalt_ohne_ausnahme` | neuer Test | AC-12 (Go-Store, zwei Nutzer) |
 | `editor_speichern_ohne_aenderung` | neuer Test | AC-12 (Speichern ohne Änderung im Server) |
 | `editor_aenderung_gleich_erwartung` | Verweis | `ac26_einstellung_gleich_ausgabe.test.ts::minus_dann_plus_haengt_hinten_an` |
@@ -144,8 +144,8 @@ Zeigt ein wiederhergestellter Test einen echten Produktfehler, wird er gemeldet 
 - **AC-10:** Given der Nutzer hat den Nachtblock-Schalter geändert / When er die Änderung verwirft / Then ist der Sende-Merker zurückgesetzt und der nächste Speichervorgang sendet das Feld nicht.
   - Test: `node --test` gegen `wasStehtWoSpeicherung.ts`, eigener Test.
 
-- **AC-11:** Given ein noch nicht gespeicherter neuer Trip / When die Karte geöffnet wird / Then gibt es den Nachtblock-Schalter nicht.
-  - Test: `node --test` gegen Kartenmodell im Anlegen-Modus, eigener Test.
+- **AC-11:** Given ein noch nicht gespeicherter neuer Trip / When die Karte im Anlegen-Modus den Nachtblock-Schalter zeigt und der Nutzer ihn umschaltet / Then wird der Wert mit dem Anlegen gemeldet und es gibt keinen Teilfeld-PUT. Das Verhalten des Alt-Editors („kein Schalter beim Anlegen“) ist durch #3305 (Tabelle beim Trip-Anlegen, PO-freigegeben, live) abgelöst.
+  - Test: Verweis `was_steht_wo_karte_anlegen_3305.test.ts::Schalter (Nacht-Block): gemeldet mit felder und felderStart, kein Teilfeld-PUT`; der in RED geschriebene Gegentest `rework_3020_nachtblock_schalter` wird auf diesen Stand gebracht bzw. der Fall dort entfernt.
 
 - **AC-12:** Given zwei Nutzer mit je einem Trip mit `display_config.metrics.morning_enabled`, `evening_enabled`, `format_mode` / When Nutzer A speichert, ohne diese Felder zu ändern oder mitzusenden / Then sind die drei Felder bei A unverändert, bei B ebenso.
   - Test: Go-Test `internal/store/trip_display_config_felderhalt_test.go` (echter Store, zwei `user_id`).
