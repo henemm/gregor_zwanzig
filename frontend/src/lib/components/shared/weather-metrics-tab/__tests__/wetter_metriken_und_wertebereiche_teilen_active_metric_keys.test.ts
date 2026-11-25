@@ -122,24 +122,22 @@ describe('AC-4: activeMetricKeys live gelesen — Wetter-Metriken-Änderung + We
 	});
 
 	test('Wetter-Metriken-SaveFn liest ihre Felder ERST bei Ausführung: eine Live-Änderung NACH aenderungMelden(), VOR dem Flush, landet trotzdem im PUT', async () => {
-		const { ws, ctl, wetterMetriken, bedienung } = hub();
+		const { ctl, wetterMetriken, bedienung } = hub();
 
-		// #2794 F006: Metrikauswahl gehoert dem Reiter Wetter. #3276: gemessen an den eigenen
-		// Schaltern (die Stundenverlauf-Liste ist Altschluessel).
+		// #2794 F006: Metrikauswahl gehoert dem Reiter Wetter. #3276/#3298: gemessen am einzigen
+		// eigenen Schalter (Stundenverlauf). Die Live-Aenderung NACH der Meldung stellt den
+		// Ausgangsstand wieder her: liest die SaveFn erst bei Ausfuehrung, gibt es nichts zu senden;
+		// eine eingefrorene Kopie schickte dagegen den ueberholten Stand `false`.
 		bedienung.hourlyEnabledToggle();
 		wetterMetriken.aenderungMelden();
-		// Weitere Live-Mutation VOR dem Flush (z. B. durch eine zweite, schnelle Geste):
-		bedienung.outlookEnabledToggle();
+		bedienung.hourlyEnabledToggle();
 
 		await ctl.flush();
 
-		assert.equal(puts().length, 1);
-		const g = gespeichert() as Record<string, unknown>;
-		assert.equal(g.hourly_enabled, false);
 		assert.equal(
-			g.outlook_enabled,
-			false,
-			'die SaveFn muss ihre Felder ERST bei Ausführung lesen — sonst geht eine spätere Live-Änderung verloren'
+			puts().length,
+			0,
+			'die SaveFn muss ihre Felder ERST bei Ausführung lesen — sonst sendet sie einen überholten Stand'
 		);
 	});
 });

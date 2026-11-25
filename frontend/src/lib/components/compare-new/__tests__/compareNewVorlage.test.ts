@@ -175,16 +175,16 @@ test('AC-1 Tagesfenster wird uebernommen', () => {
 	assert.equal(s.dayWindowStartHour, 7);
 	assert.equal(s.dayWindowEndHour, 21);
 });
-test('AC-1 Stundenverlauf: Schalter + Metriken werden uebernommen', () => {
-	const s = belegt(vorlage());
-	assert.equal(s.hourlyEnabled, false);
-	assert.deepEqual(s.hourlyMetricKeys, ['temp_max_c']);
+test('AC-1 Stundenverlauf-Schalter wird uebernommen', () => {
+	assert.equal(belegt(vorlage()).hourlyEnabled, false);
 });
-test('AC-1 Ausblick: Schalter + Metriken + Formate werden uebernommen', () => {
-	const s = belegt(vorlage());
-	assert.equal(s.outlookEnabled, false);
-	assert.deepEqual(s.outlookMetricKeys, ['temp_max_c']);
-	assert.deepEqual(s.outlookMetricFormats, { temp_max_c: true });
+// Issue #3298: Stundenverlauf-/Ausblick-Auswahl, Ausblick-Schalter und Formate sind Altfelder
+// (ADR-0124); die Vorlage traegt sie nicht mehr in den Feldsatz.
+test('#3298 Altfelder der Vorlage landen nicht im Feldsatz', () => {
+	const s = belegt(vorlage()) as unknown as Record<string, unknown>;
+	for (const k of ['outlookEnabled', 'hourlyMetricKeys', 'outlookMetricKeys', 'outlookMetricFormats', 'hourlyMetricFormats']) {
+		assert.ok(!(k in s), `${k} im Feldsatz aus Vorlage`);
+	}
 });
 test('AC-1 Kurzform (telegram_style) wird uebernommen', () => {
 	assert.equal(belegt(vorlage()).telegramStyle, 'kurzform');
@@ -261,24 +261,6 @@ test('AC-8 ohne Vorlage entspricht der Zustand dem Standard (kein Suffix)', () =
 
 // ── AC-9: Sentinel-Semantik ──────────────────────────────────────────────────
 
-test('AC-9 bewusst leeres hourly_metrics [] bleibt []', () => {
-	const p = vorlage();
-	(p.display_config as Record<string, unknown>).hourly_metrics = [];
-	assert.deepEqual(belegt(p).hourlyMetricKeys, []);
-});
-test('AC-9 fehlendes hourly_metrics bleibt null (nie eingestellt)', () => {
-	const p = vorlage();
-	delete (p.display_config as Record<string, unknown>).hourly_metrics;
-	assert.strictEqual(belegt(p).hourlyMetricKeys, null);
-});
-test('AC-9 bewusst leere outlook_metrics [] bleibt [], fehlende bleibt null', () => {
-	const leer = vorlage();
-	(leer.display_config as Record<string, unknown>).outlook_metrics = [];
-	assert.deepEqual(belegt(leer).outlookMetricKeys, []);
-	const fehlt = vorlage();
-	delete (fehlt.display_config as Record<string, unknown>).outlook_metrics;
-	assert.strictEqual(belegt(fehlt).outlookMetricKeys, null);
-});
 test('AC-9 fehlendes end_date => endDate null (nicht "" und nicht undefined)', () => {
 	const p = vorlage();
 	delete (p as { end_date?: string }).end_date;
@@ -313,20 +295,10 @@ test('AC-1 aktive Metriken werden uebernommen, fehlend bleibt null', () => {
 test('AC-1 Idealwerte (ideal_ranges) werden uebernommen', () => {
 	assert.deepEqual(belegt(vorlage()).idealRanges, { wind_kmh: { min: 0, max: 20 } });
 });
-test('AC-1 Kanal-Metriken (channel_active_metrics) werden uebernommen', () => {
-	assert.deepEqual(belegt(vorlage()).channelActiveMetricKeys, {
-		email: null,
-		telegram: ['wind_kmh'],
-		sms: null
-	});
-});
-test('AC-9 outlook_metric_formats: fehlend bleibt null, {} bleibt {}', () => {
-	const fehlt = vorlage();
-	delete (fehlt.display_config as Record<string, unknown>).outlook_metric_formats;
-	assert.strictEqual(belegt(fehlt).outlookMetricFormats, null);
-	const leer = vorlage();
-	(leer.display_config as Record<string, unknown>).outlook_metric_formats = {};
-	assert.deepEqual(belegt(leer).outlookMetricFormats, {});
+// Issue #3298: die Lese-Naht der Kanal-Metriken ist entfernt — ein Altwert der Vorlage
+// aendert den Feldsatz nicht, die Kanaele folgen der Grundauswahl (Standard).
+test('#3298 Kanal-Metriken der Vorlage (Altschluessel) werden nicht gelesen', () => {
+	assert.deepEqual(belegt(vorlage()).channelActiveMetricKeys, neuerFeldsatz().channelActiveMetricKeys);
 });
 
 // ── Adversary F002: minimale Vorlage => keine erfundenen Werte ──────────────
@@ -338,9 +310,6 @@ test('F002 minimale Vorlage (nur name + location_ids): Standardwerte bleiben', (
 	assert.deepEqual(s.pickedIds, ['a']);
 	assert.equal(s.region, '');
 	assert.strictEqual(s.activeMetricKeys, null);
-	assert.strictEqual(s.hourlyMetricKeys, null);
-	assert.strictEqual(s.outlookMetricKeys, null);
-	assert.strictEqual(s.outlookMetricFormats, null);
 	assert.strictEqual(s.endDate, null);
 	assert.equal(s.officialAlertsEnabled, frisch.officialAlertsEnabled);
 	assert.equal(s.radarAlertEnabled, frisch.radarAlertEnabled);

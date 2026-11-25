@@ -15,12 +15,6 @@
 // Vergleichs-Editor direkt aus dem Trip-Modul importiert.
 
 import type { ChannelId } from '$lib/components/shared/layout-tab/ltChannels';
-import {
-	normalizeStoredActiveMetrics,
-	registeredCompareMetricCatalog,
-	type CompareSelectionEntry,
-	type StoredActiveMetric
-} from './compareMetricSelection.ts';
 
 /** Die drei Metrik-Kanaele des Compare-Briefings. Premium-SMS ist seit #2275
  *  auch Versandkanal des Vergleichs-Briefings, traegt aber den SMS-Inhalt und
@@ -36,30 +30,9 @@ export function emptyCompareChannelActiveMetrics(): CompareChannelActiveMetrics 
 	return { email: null, telegram: null, sms: null };
 }
 
-/**
- * Lese-Naht: `display_config.channel_active_metrics` -> Auswahl-Schluessel je
- * Kanal. Ein FEHLENDER Kanal-Key bleibt `null` (nie editiert), ein
- * vorhandenes leeres Array bleibt `[]` (bewusste Leerauswahl, AC-S8-11) —
- * dieselbe „fehlend != leer"-Semantik wie `active_metrics` selbst
- * (#1191/#1366). Die Uebersetzung Alt-/Neuformat -> Schluessel macht
- * unveraendert `normalizeStoredActiveMetrics()`, verlustfrei (#1373).
- */
-export function compareChannelActiveMetricsFromStored(
-	stored: Record<string, StoredActiveMetric[]> | undefined,
-	catalog: CompareSelectionEntry[] = registeredCompareMetricCatalog()
-): CompareChannelActiveMetrics {
-	const result = emptyCompareChannelActiveMetrics();
-	if (!stored || typeof stored !== 'object') return result;
-	for (const ch of COMPARE_CHANNEL_IDS) {
-		if (stored[ch] === undefined) continue;
-		result[ch] = normalizeStoredActiveMetrics(stored[ch], catalog) ?? [];
-	}
-	return result;
-}
-
-// Issue #3276 (Spec-AC-38): die Schreib-Naht `mergeAllCompareChannelActiveMetricsForSave`
-// ist entfallen — der Ortsvergleich sendet `channel_active_metrics` nicht mehr
-// (Altschluessel, Tabelle „Was steht wo" ist die Quelle, ADR-0124).
+// Issue #3276/#3298 (Spec-AC-38): Schreib- und Lese-Naht der Kanal-Auswahl sind
+// entfallen — der Ortsvergleich sendet und liest den Altschluessel nicht mehr
+// (Tabelle „Was steht wo" ist die Quelle, ADR-0124).
 
 /**
  * Copy-on-write-Startpunkt des ersten Kanal-Edits: Klon der globalen

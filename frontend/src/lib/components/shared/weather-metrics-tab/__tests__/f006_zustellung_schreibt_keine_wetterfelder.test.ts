@@ -46,7 +46,7 @@ function keineWetterFelder(body: unknown, wo: string): void {
 
 describe('F006/AC-38: Nutzlast des Zustellungs-Speicherers ohne Felder des Reiters Wetter', () => {
 	const gesten: Array<[string, (ws: Record<string, unknown>) => void]> = [
-		['Stundenverlauf-Reihenfolge', (ws) => wetterMetrikenBedienung(ws).hourlyDragEnd(['temp_max_c', 'wind_max_kmh'])],
+		['Stundenverlauf-Schalter', (ws) => wetterMetrikenBedienung(ws).hourlyEnabledToggle()],
 		['Kanal-Auswahl', (ws) => (ws.channelActiveMetricKeys = { email: ['wind_max_kmh'], telegram: null, sms: null })],
 		['Metrik-Auswahl in der Kopie', (ws) => wetterMetrikenBedienung(ws).toggleMetric('gust_max_kmh')],
 		['Tagesfenster in der Kopie', (ws) => wetterMetrikenBedienung(ws).setDayWindow(6, 21)],

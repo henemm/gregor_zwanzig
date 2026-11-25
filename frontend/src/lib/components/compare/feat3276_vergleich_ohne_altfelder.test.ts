@@ -30,7 +30,10 @@ import {
 	type CompareFeldsatz,
 	type NewComparePresetFields
 } from './compareEditorSave.ts';
-import { baueWetterMetrikenNutzlast } from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
+import {
+	baueWetterMetrikenNutzlast,
+	type WetterMetrikenLayoutSnapshot
+} from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
 import { baueVersandNutzlast } from '../shared/versandVergleichSpeicherung.ts';
 import { baueAlarmNutzlast } from '../shared/alarmeVergleichSpeicherung.ts';
 import { baueWertebereichNutzlast } from '../shared/wetter-tab/wertebereicheVergleichSpeicherung.ts';
@@ -137,6 +140,7 @@ describe('#3276 AC-1: Anlegen (POST) ohne Altschluessel', () => {
 describe('#3276 AC-2: Speichern (PUT) ohne Altschluessel, Bestand bleibt', () => {
 	test('Zustellungs-Speicherer sendet keinen Altschluessel, auch nach Aenderung', () => {
 		const preset = presetMitAltfeldern();
+		// #3298: die camelCase-Altfelder kennt der Snapshot-Typ nicht mehr; Fremdlast per Cast.
 		const { body } = baueWetterMetrikenNutzlast(preset, {
 			activeMetricKeys: ['temp_max_c'],
 			channelActiveMetricKeys: { email: ['wind_max_kmh'], telegram: null, sms: [] },
@@ -149,7 +153,7 @@ describe('#3276 AC-2: Speichern (PUT) ohne Altschluessel, Bestand bleibt', () =>
 			outlookMetricFormats: { temp_max_c: false },
 			outlookEnabled: true,
 			hourlyMetricFormats: { temp_c: false }
-		});
+		} as WetterMetrikenLayoutSnapshot);
 		assert.deepEqual(altschluesselIn((body as unknown as Record<string, unknown>).display_config), []);
 	});
 
@@ -217,7 +221,8 @@ describe('#3276 AC-2: Speichern (PUT) ohne Altschluessel, Bestand bleibt', () =>
 // existiert in keinem Kontext mehr, Nachweis trip_pfad_altfeld_loeschnachweis_3297.test.ts).
 
 describe('#3276 F002: Rumpf des Anlege-Editors (CompareNewEditor) ohne Altschluessel', () => {
-	// Feldsatz, wie ihn der Anlege-Editor haelt, mit befuellten Alt-Feldern.
+	// Feldsatz, wie ihn der Anlege-Editor haelt, mit befuellten Alt-Feldern. #3298: die
+	// camelCase-Altfelder kennt der Typ nicht mehr; sie werden als Fremdlast untergeschoben.
 	function wizMitAltwerten(): CompareFeldsatz {
 		return {
 			...compareFeldsatzStandard(),
@@ -230,7 +235,7 @@ describe('#3276 F002: Rumpf des Anlege-Editors (CompareNewEditor) ohne Altschlue
 			outlookMetricKeys: ['temp_max_c', 'precip_sum_mm'],
 			outlookMetricFormats: { temp_max_c: true },
 			hourlyMetricFormats: { temp_c: true }
-		};
+		} as CompareFeldsatz;
 	}
 	const AMPEL = { template: 'wandern', overrides: {} };
 	const AUSWAHL = [{ metric_id: 'temp', aggregation: 'max' }];
@@ -247,14 +252,14 @@ describe('#3276 F002: Rumpf des Anlege-Editors (CompareNewEditor) ohne Altschlue
 	});
 
 	test('auch mit leeren Alt-Feldern und ohne Wetter-Stand kein Altschluessel (nicht einmal leer)', () => {
-		const wiz: CompareFeldsatz = {
+		const wiz = {
 			...wizMitAltwerten(),
 			channelActiveMetricKeys: { email: [], telegram: [], sms: [] },
 			hourlyMetricKeys: [],
 			outlookMetricKeys: [],
 			outlookMetricFormats: {},
 			hourlyMetricFormats: {}
-		};
+		} as CompareFeldsatz;
 		const body = baueVergleichAnlegeRumpf(wiz);
 		assert.deepEqual(altschluesselIn(body), [], 'top-level');
 		assert.deepEqual(altschluesselIn(body.display_config), [], 'display_config');

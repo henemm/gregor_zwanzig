@@ -39,8 +39,8 @@ import {
 	buildComparePresetSavePayload,
 	buildNewComparePresetPayload
 } from '../compareEditorSave.ts';
-import { hydrateLayoutFieldsFromPreset } from '../../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
 import {
+	normalizeStoredOutlookMetrics,
 	registerCompareMetricCatalog,
 	type CompareSelectionEntry
 } from '../../shared/weather-metrics-tab/compareMetricSelection.ts';
@@ -205,16 +205,16 @@ describe('AC-8 — die Ausblick-Auswahl zeigt je Groesse einen einzigen Eintrag'
 		// Ausgangslage aus einer BESTANDS-Auswahl, in der Tief UND Hoch der
 		// gefuehlten Temperatur gespeichert sind: die Bedienflaeche zeigt dafuer
 		// eine Zeile, ein Klick darauf muss die Groesse ganz abwaehlen.
-		const geladen = hydrateLayoutFieldsFromPreset(
-			makePreset({
-				outlook_metrics: [
-					{ metric_id: 'wind_chill', aggregation: 'min' },
-					{ metric_id: 'wind_chill', aggregation: 'max' },
-					{ metric_id: 'precipitation', aggregation: 'sum' }
-				]
-			}),
+		// #3298: die Hub-Hydration liest den Ausblick nicht mehr; die Rueckuebersetzung
+		// des Bestands wird direkt am Leser gemessen.
+		const geladen = normalizeStoredOutlookMetrics(
+			[
+				{ metric_id: 'wind_chill', aggregation: 'min' },
+				{ metric_id: 'wind_chill', aggregation: 'max' },
+				{ metric_id: 'precipitation', aggregation: 'sum' }
+			],
 			CATALOG
-		).outlookMetricKeys;
+		);
 		const nachher = toggleOutlookMetricKeyFromState(geladen, 'wind_chill');
 
 		assert.deepEqual(
@@ -232,21 +232,20 @@ describe('AC-8 — die Ausblick-Auswahl zeigt je Groesse einen einzigen Eintrag'
 
 describe('Lesepfad — gespeicherte Paare werden zu je einer Kennung', () => {
 	test('Bestands-Preset mit Temperatur min UND max zeigt einen einzigen Eintrag; die Drei-Werte-Semantik bleibt', () => {
-		const bestand = hydrateLayoutFieldsFromPreset(
-			makePreset({
-				outlook_metrics: [
-					{ metric_id: 'temperature', aggregation: 'min' },
-					{ metric_id: 'temperature', aggregation: 'max' },
-					{ metric_id: 'precipitation', aggregation: 'sum' }
-				]
-			}),
+		// #3298: gemessen direkt am Leser (die Hub-Hydration liest den Ausblick nicht mehr).
+		const bestand = normalizeStoredOutlookMetrics(
+			[
+				{ metric_id: 'temperature', aggregation: 'min' },
+				{ metric_id: 'temperature', aggregation: 'max' },
+				{ metric_id: 'precipitation', aggregation: 'sum' }
+			],
 			CATALOG
 		);
 
 		assert.deepEqual(
-			bestand.outlookMetricKeys,
+			bestand,
 			['temperature', 'precipitation'],
-			`Die geladene Ausblick-Auswahl lautet ${JSON.stringify(bestand.outlookMetricKeys)} statt ` +
+			`Die geladene Ausblick-Auswahl lautet ${JSON.stringify(bestand)} statt ` +
 				"['temperature', 'precipitation']. Tief und Hoch derselben Groesse muessen beim Lesen " +
 				'zu EINEM Eintrag werden, sonst erscheint „Temperatur" doppelt in der Auswahl (AC-2/AC-8).'
 		);
@@ -255,13 +254,12 @@ describe('Lesepfad — gespeicherte Paare werden zu je einer Kennung', () => {
 		// Zustaende nicht einebnen — sonst waere „nie eingestellt" (sieben feste
 		// Spalten) von „bewusst geleert" (Block entfaellt) nicht mehr zu trennen.
 		assert.equal(
-			hydrateLayoutFieldsFromPreset(makePreset({}), CATALOG).outlookMetricKeys,
+			normalizeStoredOutlookMetrics(undefined, CATALOG),
 			null,
 			'Ein Preset ohne gespeicherte Ausblick-Auswahl muss als null zurueckkommen (AC-7).'
 		);
 		assert.deepEqual(
-			hydrateLayoutFieldsFromPreset(makePreset({ outlook_metrics: [] }), CATALOG)
-				.outlookMetricKeys,
+			normalizeStoredOutlookMetrics([], CATALOG),
 			[],
 			'Eine bewusst geleerte Auswahl muss als [] zurueckkommen, nicht als null (AC-7).'
 		);
