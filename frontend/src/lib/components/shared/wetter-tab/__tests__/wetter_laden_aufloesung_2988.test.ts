@@ -4,7 +4,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { AUFLOESUNG, KONTEXTE, aufgeloestVon, echterPost, funktion, json, modul, oeffne, pythonAufloesung, refVorlagen, referenzLaden, sollAmpel, type Json } from './laden2988.ts';
+import { AUFLOESUNG, KONTEXTE, aufgeloestVon, baue, echterPost, funktion, json, modul, oeffne, pythonAufloesung, refVorlagen, referenzLaden, sollAmpel, type Json } from './laden2988.ts';
 import { live, liveVergleichsKatalog } from './wetterTabDaten.ts';
 import { toCompareSelectionEntries } from '../../weather-metrics-tab/compareMetricSelection.ts';
 import type { Kontext } from '../ampelModell.ts';
@@ -191,6 +191,107 @@ describe('AC-9 (#2988): der Reiter zeigt die Server-Antwort, nichts lokal Gerech
 			assert.deepEqual(json(d.aufgeloest), vorher, 'Stand teilt Objekte mit der Antwort');
 			assert.deepEqual(json((await standAus(context, structuredClone(ABO), d)).ampel), vorher.ampel);
 		});
+	}
+});
+
+// Vor dem Umbau las der Reiter das Abo erst nach dem Laden. Kommt waehrenddessen ein noch laufendes Speichern
+// zurueck, darf die Ampel nicht vom alten und die Auswahl vom neuen Abo stammen.
+describe('AC-9/AC-14 (#2988): das Abo ändert sich während des Ladens', () => {
+	const ABOS = ['wandern', 'skitouren', 'radtour'].map((template, i) => ({
+		id: 'x',
+		name: 'X',
+		display_config: { ampel: { template, metrics: { gust: { alarm_ab: ['orange', 'never', 'yellow'][i] } } } }
+	}));
+	const PROP = { route: 'trip', vergleich: 'preset' };
+	/** Waehrend der n-ten Frage setzt die Seite das n-te Folge-Abo; die Frage `scheitertBei` (1-basiert) wirft danach. */
+	async function reiter(context: Kontext, wechsel: Json[], o: { createMode?: boolean; scheitertBei?: number; start?: Json } = {}) {
+		const offen = structuredClone(wechsel);
+		const fns: Json[] = [];
+		let nr = 0;
+		const r: Json = await baue(context, structuredClone(o.start ?? ABOS[0]), {
+			createMode: o.createMode,
+			post: async (pfad, rumpf) => {
+				nr++;
+				const antwort = await echterPost(pfad, rumpf);
+				if (offen.length) r.u[PROP[context]] = offen.shift();
+				if (nr === o.scheitertBei) throw { status: 503 };
+				return antwort;
+			},
+			netz: { put: async () => ({}) },
+			saat: { saveController: { schedule: (fn: Json) => void fns.push(fn) } }
+		});
+		return { r, fns, gefragt: () => r.posts().map((p: Json) => p.rumpf.eintraege[0].ampel.template) };
+	}
+	function zeigt(r: Json, abo: Json): void {
+		assert.equal(r.u.phase, 'bereit');
+		assert.equal(r.u.stand.vorlageId, abo.display_config.ampel.template);
+		assert.deepEqual(json(r.u.stand.ampel), aufgeloestVon(abo).ampel);
+		assert.equal(r.u.gemeldet, r.u.signatur(r.u.stand), 'Laden gilt als Änderung');
+	}
+	/** Die Ampel einer Nutzlast: Trip `weather-config` (Anlegen: unter `weatherConfig`), Vergleich `display_config`. */
+	const ampelAus = (n: Json): Json => n.ampel ?? n.weatherConfig?.ampel ?? n.display_config?.ampel;
+	for (const context of KONTEXTE) {
+		for (const anzahl of [1, 2]) {
+			const letztes = ABOS[anzahl];
+			const soll = letztes.display_config.ampel;
+			test(`${context}_${anzahl}_mal_geaendert_der_letzte_stand_gilt`, async () => {
+				const { r, fns, gefragt } = await reiter(context, ABOS.slice(1, 1 + anzahl));
+				await r.laden();
+				zeigt(r, letztes);
+				assert.deepEqual(gefragt(), ['wandern', 'skitouren', 'radtour'].slice(0, 1 + anzahl));
+				assert.deepEqual([r.schreibend(), fns], [[], []], 'Laden speichert');
+			});
+			test(`${context}_${anzahl}_mal_geaendert_naechste_eingabe_speichert_die_neue_ampel`, async () => {
+				const { r, fns } = await reiter(context, ABOS.slice(1, 1 + anzahl));
+				await r.laden();
+				r.grenze('gust', 'upper', 'yellow', 11);
+				assert.equal(fns.length, 1);
+				await fns[0]();
+				const ampel = ampelAus(r.schreibend()[0].rumpf);
+				assert.equal(ampel.template, soll.template, 'alte Ampel gespeichert');
+				assert.equal(ampel.metrics.gust.alarm_ab, soll.metrics.gust.alarm_ab);
+				assert.equal(ampel.metrics.gust.upper.yellow, 11);
+			});
+			test(`${context}_anlegen_${anzahl}_mal_geaendert_meldet_nur_den_letzten_stand`, async () => {
+				const { r } = await reiter(context, ABOS.slice(1, 1 + anzahl), { createMode: true });
+				await r.laden();
+				zeigt(r, letztes);
+				assert.deepEqual(r.gemeldet.map((n: Json) => [ampelAus(n).template, ampelAus(n).metrics.gust.alarm_ab]), [[soll.template, soll.metrics.gust.alarm_ab]]);
+				assert.deepEqual(r.schreibend(), []);
+			});
+		}
+		// F003: nur das eine Feld aendert sich; die Vorlage haengt auch an ihm.
+		const NUR_FELD: Record<string, (v: string) => Json> = {
+			preset_name: (v) => ({ id: 'x', name: 'X', display_config: { preset_name: v } }),
+			profil: (v) => ({ id: 'x', name: 'X', profil: v, display_config: {} })
+		};
+		for (const [feld, bau] of Object.entries(NUR_FELD)) {
+			test(`${context}_nur_${feld}_geaendert_fragt_erneut_und_zeigt_die_neue_vorlage`, async () => {
+				const neu = bau('skitouren');
+				const { r, fns } = await reiter(context, [neu], { start: bau('wandern') });
+				await r.laden();
+				assert.equal(r.u.phase, 'bereit');
+				assert.deepEqual(r.posts().map((p: Json) => p.rumpf.eintraege[0]), [eintrag(bau('wandern')), eintrag(neu)]);
+				assert.equal(r.u.stand.vorlageId, 'skitouren', 'Vorlage des alten Abos');
+				assert.deepEqual(json(r.u.stand.ampel), aufgeloestVon(neu).ampel);
+				assert.equal(r.u.gemeldet, r.u.signatur(r.u.stand), 'Laden gilt als Änderung');
+				assert.deepEqual([r.schreibend(), fns], [[], []], 'Laden speichert');
+			});
+		}
+		for (const createMode of [false, true]) {
+			test(`${context}_${createMode ? 'anlegen' : 'hub'}_nachfrage_scheitert_fehlerzustand_dann_erneut_laden`, async () => {
+				const { r, fns, gefragt } = await reiter(context, [ABOS[1]], { createMode, scheitertBei: 2 });
+				await r.laden();
+				assert.equal(r.u.phase, 'fehler');
+				assert.equal(r.u.stand, null, 'Reiter hydriert trotz Fehler');
+				assert.deepEqual([r.schreibend(), fns, r.gemeldet, r.updates], [[], [], [], []], 'trotz Fehler gespeichert');
+				await r.laden();
+				zeigt(r, ABOS[1]);
+				assert.deepEqual(gefragt(), ['wandern', 'skitouren', 'skitouren']);
+				assert.deepEqual([r.schreibend(), fns], [[], []]);
+				assert.equal(r.gemeldet.length, createMode ? 1 : 0);
+			});
+		}
 	}
 });
 
