@@ -4,13 +4,13 @@
 //
 // #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 13/14): die Kanal-Reiter sind aus dem Reiter Zustellung
 // entfernt; die Wirkung heisst heute: Haken je Kanal-Spalte der Karte „Was steht wo“ (Reiter Wetter), gespeichert in
-// `display_config.placements` — `channel_active_metrics` ist Altfeld und bleibt unberuehrt.
+// `display_config.placements` (allein wirksam seit #3277; #3359: kein Altfeld-Vergleich mehr).
 //
 // Ausfuehren (lokal gegen ci-stack.sh mit der Haupt-Config, oder gegen Staging, aus frontend/):
 //   npx playwright test --project=tests e2e/compare-uebersicht-kanal-persistenz.staging.spec.ts
 
 import { test, expect } from '@playwright/test';
-import { folge, gespeichertAn, haken, oeffneKarte, seedAbo, stand, tabelle, tabelleGespeichert, zeile } from './was-steht-wo.helpers';
+import { folge, gespeichertAn, haken, oeffneKarte, seedAbo, tabelle, tabelleGespeichert, zeile } from './was-steht-wo.helpers';
 
 const KANAELE = ['email', 'telegram', 'sms'] as const;
 
@@ -25,7 +25,6 @@ test.describe('#1703 S8: Kanal-eigene Uebersichts-Auswahl ueberlebt Speichern un
 			let karte = await oeffneKarte(page, 'vergleich', abo.id);
 			const zeilen = await folge(karte);
 			expect(zeilen.length, 'Messaufbau: mindestens vier Zeilen').toBeGreaterThanOrEqual(4);
-			const altfeld = (await stand(page.request, 'vergleich', abo.id)).display_config.channel_active_metrics ?? null;
 			for (const [i, k] of KANAELE.entries()) {
 				const gespeichert = tabelleGespeichert(page, abo.id);
 				await haken(karte, zeilen[i], k).click();
@@ -38,7 +37,6 @@ test.describe('#1703 S8: Kanal-eigene Uebersichts-Auswahl ueberlebt Speichern un
 				await expect(haken(karte, zeilen[i], k), `AC-S8-10: ${k} verloren`).not.toBeChecked();
 				expect(gespeichertAn(p, zeilen[i], k), `AC-S8-10: ${k} nicht gespeichert`).toBe(false);
 			}
-			expect((await stand(page.request, 'vergleich', abo.id)).display_config.channel_active_metrics ?? null, 'Altfeld unberuehrt').toEqual(altfeld);
 
 			const put = page.waitForResponse((r) => r.request().method() === 'PUT' && r.url().includes(`/api/compare/presets/${abo.id}`), { timeout: 20_000 });
 			await page.locator(`[data-testid="wetter-zeile-entfernen-${zeilen[3]}"]:visible`).first().click();
@@ -89,13 +87,18 @@ test.describe('#1703 S8: Kanal-eigene Uebersichts-Auswahl ueberlebt Speichern un
 			const karte = await oeffneKarte(page, 'vergleich', abo.id);
 			const m = (await folge(karte))[0];
 			await expect(haken(karte, m, 'email')).toBeChecked();
+			// #3359: seit #3237 legt die Orte-Anlage die Tabelle schon beim Anlegen an (`stored` ist von Beginn an
+			// wahr). Die Abschlusszeile unten ist nur eine Absicherung des Messaufbaus (das Abfangen wirkt, der Server
+			// bleibt unberuehrt) -- der PUT erreicht den Server nie. Der eigentliche Schutz sind die UI-Zeilen
+			// davor: Meldung sichtbar, Haken springt auf den gespeicherten Stand zurueck.
+			const vorher = (await tabelle(page.request, 'vergleich', abo.id)).placements;
 			await page.route(`**/api/briefings/${abo.id}/placements**`, (route) =>
 				route.request().method() === 'PUT' ? route.fulfill({ status: 500, json: { error: 'boom' } }) : route.continue()
 			);
 			await haken(karte, m, 'email').click();
 			await expect(karte.getByTestId('was-steht-wo-meldung'), 'Meldung bei gescheitertem Speichern').toBeVisible({ timeout: 15_000 });
 			await expect(haken(karte, m, 'email'), 'Haken springt auf den gespeicherten Stand').toBeChecked({ timeout: 15_000 });
-			expect((await tabelle(page.request, 'vergleich', abo.id)).stored, 'nichts gespeichert').toBe(false);
+			expect((await tabelle(page.request, 'vergleich', abo.id)).placements, 'Messaufbau: abgefangener PUT hat den Server nicht erreicht').toEqual(vorher);
 		} finally {
 			await abo.aufraeumen();
 		}

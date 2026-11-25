@@ -429,7 +429,9 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 					).toBeUndefined();
 					// Alt slice4 AC-11 (Kind-Kontrast AN-12): im Vergleich ist `channel_layouts`
 					// Ballast (#1351) — der Anlege-POST darf die Attrappe nicht wieder senden.
-					// Beim Trip ist das Feld eine echte Kanal-Auswahl (#1575), daher kein Zweig.
+					// Seit #3277 wirkt das Feld auch beim Trip nicht mehr (Wahrheit allein in
+					// `display_config.placements`); dessen Fehlen im Trip-POST prüft
+					// feat-3297-trip-ohne-altfelder.spec.ts, daher hier kein Trip-Zweig.
 					expect(
 						(rumpf.display_config as Rumpf | undefined)?.channel_layouts,
 						'AN-6: Anlege-POST des Vergleichs trägt wieder die channel_layouts-Attrappe'

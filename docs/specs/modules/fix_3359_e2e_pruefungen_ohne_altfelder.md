@@ -145,3 +145,4 @@ Offene Detailfrage für den RED-Lauf: normalisiert Python eine gesäte `placemen
 ## Changelog
 
 - 2026-11-25: Initial spec created
+- 2026-11-25 (/50-implement): Entscheidung zu `kurzform-gefuehlte-temperatur-kind-mitnahme` S1: **umgestellt, nicht gestrichen.** Der SMS-Teil ist über `placements.rows` ausdrückbar: die Saat trägt eine eigene Tabelle mit `wind_chill` `places.sms = true` (`version: 1`); nach dem unbeteiligten Speichern enthält `placements.rows` keine eingefrorene Kind-Größe (keine Kind-Zeile mit `places.sms = false`), `wind_chill` bleibt für SMS angehakt, die Server-Tabelle weist `wind_chill` an der SMS-Stelle als „on“ aus, und `placements` ist gleich dem GET-vorher-Stand. Weitere Festlegungen aus dem RED-Lauf: Vergleiche immer GET-vorher gegen GET-nachher (Python normalisiert `placements`), Saat-Zeilen weichen bewusst von der Grundauswahl ab.

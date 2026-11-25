@@ -17,7 +17,7 @@
 //
 // AC-3 KORRIGIERT (Team-Lead-Gegencheck): KEINE Schnittlinie, da der
 // Stundenverlauf laut Backend ausschließlich in der E-Mail erscheint
-// (`hourly_metrics` geht nur an `render_compare_email`, comparison.py:230-242;
+// (die Stellen-Spalte „Stundenverlauf“ der Tabelle wirkt nur in `render_compare_email`;
 // `render_compare_telegram`, :360, hat keinen Stundendaten-Bezug; SMS hat
 // `max_table_cols: 0`). Eine Telegram-Kappungslinie wäre eine Falschaussage —
 // exakt die mit #1360 AC-4 beseitigte Fehlerklasse. Getestet wird stattdessen:
@@ -61,10 +61,8 @@ test.afterEach(async ({ page }) => {
 	createdLocationIds = [];
 });
 
-// Drei Stundengrößen (Frontend-Vokabular aus compareHourlyMetricDefs.ts) —
-// bewusst OHNE 'wind_dir_deg' (Merge-only, nie Teil der sortierbaren Liste,
-// s. orderableHourlyMetricKeys).
-const START_ORDER = ['temp_c', 'wind_kmh', 'uv_index'];
+// #3359: die frühere Saat einer eigenen Stundenverlauf-Reihenfolge ist entfallen (Altfeld ohne Wirkung
+// seit #3277); die Stellen-Spalte „Stundenverlauf“ kommt aus der Tabelle der Grundauswahl.
 
 async function createLocation(page: Page, name: string, lat: number, lon: number): Promise<string> {
 	const loc = await createTestLocation(page.request, { name, lat, lon });
@@ -82,7 +80,7 @@ async function createPreset(page: Page, name: string, locationIds: string[]): Pr
 			hour_from: 7,
 			hour_to: 16,
 			empfaenger: ['urlauber@example.com'],
-			display_config: { hourly_metrics: [...START_ORDER], active_metrics: ['temp_max_c', 'wind_max_kmh', 'sunny_hours_h'] }
+			display_config: { active_metrics: ['temp_max_c', 'wind_max_kmh', 'sunny_hours_h'] }
 		}
 	});
 	expect(res.ok(), 'Preset-Anlage fehlgeschlagen: ' + res.status()).toBeTruthy();

@@ -1,4 +1,4 @@
-// gz-eigenstaendig: prueft den Wegfall der Vergleichs-Altschluessel (channel_layouts, outlook_metrics u. a.) im Vergleich-POST/PUT; der Trip behaelt diese Felder bis #3297 und hat daher hier kein Gegenstueck
+// gz-eigenstaendig: prueft den Wegfall der Vergleichs-Altschluessel (Liste ALTSCHLUESSEL unten) im Vergleich-POST/PUT; das Trip-Gegenstueck ist feat-3297-trip-ohne-altfelder.spec.ts
 // E2E (Staging / lokaler E2E-Stack) — Issue #3276 (Epic #3122, Spec-AC-38 zweiter Teil).
 // Spec: docs/specs/modules/feat_3276_vergleich_altfelder_entfernen.md (AC-1, AC-2, AC-3, AC-5)
 //
@@ -92,13 +92,28 @@ test.describe('#3276 — Ortsvergleich ohne Altfelder', () => {
 		browser
 	}) => {
 		const suffix = Date.now();
-		const alt = {
-			hourly_metrics: ['temp_c'],
-			outlook_metrics: ['temp_max_c'],
-			channel_layouts: { email: ['temp_max_c'] }
+		// #3359 (Spec fix_3359 AC-5): Bestand mit eigener Tabelle „Was steht wo“, die bewusst von der Tabelle
+		// aus der Grundauswahl abweicht (Reihenfolge, einzelne Stellen ab, Ausblick nur abends). Die Altfelder
+		// wirken seit #3277 nicht mehr und werden nicht mehr gesät; die Fehlen-Prüfung im PUT bleibt.
+		const bestand = {
+			active_metrics: ['temp_max_c', 'wind_max_kmh', 'precip_sum_mm', 'sunny_hours_h'],
+			placements: {
+				version: 1,
+				rows: [
+					{ metric_id: 'wind', places: { email: true, telegram: false, sms: true, hourly: true, outlook: false } },
+					{ metric_id: 'temperature', places: { email: true, telegram: true, sms: false, hourly: false, outlook: true } },
+					{ metric_id: 'precipitation', places: { email: false, telegram: true, sms: true, hourly: true, outlook: true } }
+				],
+				outlook_reports: ['evening']
+			}
 		};
 		const lA = await createTestLocation(pageA.request, { name: `E2E 3276 A ${suffix}`, lat: 46.7, lon: 11.7 });
-		const idA = await legeVergleichAn(pageA, `E2E 3276 A ${suffix}`, [lA.id], { region: 'A', ...alt });
+		const idA = await legeVergleichAn(pageA, `E2E 3276 A ${suffix}`, [lA.id], { region: 'A', ...bestand });
+		const aVorher = await (await pageA.request.get(`/api/compare/presets/${idA}`)).json();
+		expect(
+			((aVorher.display_config?.placements?.rows ?? []) as Array<{ metric_id: string }>).map((r) => r.metric_id),
+			'Messaufbau: eigene Tabelle von A gespeichert'
+		).toEqual(['wind', 'temperature', 'precipitation']);
 
 		const ctxB = await browser.newContext();
 		const pageB = await ctxB.newPage();
@@ -107,7 +122,7 @@ test.describe('#3276 — Ortsvergleich ohne Altfelder', () => {
 		try {
 			await registriereBestaetigtenZweitnutzer(pageA.request, pageB.request, 'e2e3276b' + suffix, wegwerfPasswort());
 			lB = await createTestLocation(pageB.request, { name: `E2E 3276 B ${suffix}`, lat: 46.8, lon: 11.6 });
-			idB = await legeVergleichAn(pageB, `E2E 3276 B ${suffix}`, [lB.id], { region: 'B', ...alt });
+			idB = await legeVergleichAn(pageB, `E2E 3276 B ${suffix}`, [lB.id], { region: 'B', ...bestand });
 			const bVorher = await (await pageB.request.get(`/api/compare/presets/${idB}`)).json();
 
 			// A aendert im Versand-Reiter etwas und speichert (echter UI-Speicherweg, PUT).
@@ -127,9 +142,8 @@ test.describe('#3276 — Ortsvergleich ohne Altfelder', () => {
 			}
 
 			const aNachher = await (await pageA.request.get(`/api/compare/presets/${idA}`)).json();
-			for (const [k, v] of Object.entries(alt)) {
-				expect(aNachher.display_config?.[k], `Bestand ${k} von A verloren`).toEqual(v);
-			}
+			expect(aNachher.display_config?.placements, 'Tabelle „Was steht wo“ von A veraendert').toEqual(aVorher.display_config?.placements);
+			expect(aNachher.display_config?.active_metrics, 'Grundauswahl von A veraendert').toEqual(aVorher.display_config?.active_metrics);
 			const bNachher = await (await pageB.request.get(`/api/compare/presets/${idB}`)).json();
 			expect(bNachher.display_config).toEqual(bVorher.display_config);
 		} finally {

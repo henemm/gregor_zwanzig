@@ -10,7 +10,7 @@
 //   - trip-hub-kopf-region-aktivitaet.spec.ts AC-11 (Trip) :974 → SC-5,
 //     AC-11 (Vergleich) :1000 → SC-6
 //   Trip-Auslöser nach Vorbild issue-758-save-indicator.spec.ts AC-1 (bleibt bestehen).
-//   #2347 S4 Teil D: compare-flow-navigation F001 (Bestand mit channel_layouts öffnet
+//   #2347 S4 Teil D: compare-flow-navigation F001 (Bestand mit eigener Kanal-Auswahl öffnet
 //   ohne Ungespeichert) → SC-1b je kind.
 //
 // Kein fester Schlaf: „null PUTs" (SC-3) wird per `expect.poll` als Stabilitäts-
@@ -126,35 +126,53 @@ for (const kind of HUB_KINDS) {
 	});
 
 	// SC-1b — #2347 S4 Teil D: Alt compare-flow-navigation F001 „bestehender Vergleich MIT
-	// gesetzten channel_layouts öffnet ohne Ungespeichert-Anzeige" (Fix-Loop #1256: ein
-	// Katalog-Rewrite der Kanal-Layouts machte den Stand beim bloßen Öffnen schmutzig).
-	// Kein Kind-Kontrast: beide Arten tragen `display_config.channel_layouts` (Trip: echte
-	// Kanal-Auswahl, WeatherMetricsTab.svelte liest sie beim Laden zurück, #1575 S3;
-	// Vergleich: Bestandsfeld, das der Compare-Speicherpfad verwirft, compareEditorSave.ts
-	// #1351). Geöffnet wird der Reiter, der das Feld verarbeitet (Wetter-Metriken mit dem
-	// geteilten LayoutTab) — der Standard-Reiter allein würde den Fehlerweg nie betreten.
-	// Nur die Metrik-Kennung ist katalogbedingt je Art (Trip `gust`, Vergleich `wind_max_kmh`).
-	test(`SC-1b (${kind}): Bestand MIT channel_layouts im Reiter Wetter (Karte) öffnen ⇒ Chip idle, null PUTs, Feld unverändert`, async ({
+	// eigener Kanal-Auswahl öffnet ohne Ungespeichert-Anzeige" (Fix-Loop #1256: ein
+	// Katalog-Rewrite der Kanal-Auswahl machte den Stand beim bloßen Öffnen schmutzig).
+	// #3359 (Spec fix_3359 AC-6): die Kanal-Auswahl steht seit #3277 allein in der Tabelle „Was steht wo“
+	// (`display_config.placements`); der Bestand trägt deshalb eine eigene Tabelle, die bewusst von der
+	// Tabelle aus der Grundauswahl abweicht (Reihenfolge, einzelne Stellen ab, Ausblick nur morgens) — eine
+	// Tabelle gleich der Grundauswahl würde einen Rewrite nicht verraten. Kein Kind-Kontrast: beide Arten
+	// tragen dieselbe Form; nur die Stellen (Stundenverlauf nur bei Orten) und die Grundauswahl sind je Art.
+	// Geöffnet wird der Reiter, der die Tabelle verarbeitet (Wetter, Karte „Was steht wo“).
+	test(`SC-1b (${kind}): Bestand MIT eigener Tabelle im Reiter Wetter (Karte) öffnen ⇒ Chip idle, null PUTs, Tabelle unverändert`, async ({
 		page
 	}) => {
 		await page.setViewportSize(DESKTOP);
-		const metrik = kind === 'route' ? 'gust' : 'wind_max_kmh';
-		const eintrag = [{ metric_id: metrik, enabled: true, bucket: 'primary', order: 0 }];
+		const zeilen =
+			kind === 'route'
+				? [
+						{ metric_id: 'gust', places: { email: true, telegram: false, sms: true, outlook: false } },
+						{ metric_id: 'temperature', places: { email: false, telegram: true, sms: true, outlook: true } },
+						{ metric_id: 'wind', places: { email: true, telegram: true, sms: false, outlook: true } }
+					]
+				: [
+						{ metric_id: 'wind', places: { email: true, telegram: false, sms: true, hourly: true, outlook: false } },
+						{ metric_id: 'temperature', places: { email: false, telegram: true, sms: true, hourly: false, outlook: true } },
+						{ metric_id: 'precipitation', places: { email: true, telegram: true, sms: false, hourly: true, outlook: true } }
+					];
+		const grundauswahl =
+			kind === 'route'
+				? { metrics: ['temperature', 'wind', 'gust', 'precipitation', 'thunder'].map((metric_id) => ({ metric_id, enabled: true })) }
+				: { active_metrics: ['temp_max_c', 'wind_max_kmh', 'precip_sum_mm', 'sunny_hours_h'] };
 		const hub = await seedHub(page.request, kind, {
-			extra: { display_config: { channel_layouts: { email: eintrag, telegram: eintrag, sms: eintrag } } }
+			extra: { display_config: { ...grundauswahl, placements: { version: 1, rows: zeilen, outlook_reports: ['morning'] } } }
 		});
 		try {
-			const vorher = ((await stand(page, kind, hub.id)).display_config as Record<string, unknown> | undefined)
-				?.channel_layouts;
+			const vorherDc = (await stand(page, kind, hub.id)).display_config as Record<string, unknown> | undefined;
+			const vorher = vorherDc?.placements as { rows?: Array<{ metric_id: string }> } | undefined;
 			expect(
-				Object.keys((vorher as Record<string, unknown> | undefined) ?? {}),
-				'Vorbedingung: der Bestand trägt channel_layouts — sonst prüft SC-1b nichts.'
-			).toEqual(expect.arrayContaining(['email', 'telegram', 'sms']));
+				(vorher?.rows ?? []).map((r) => r.metric_id),
+				'Vorbedingung: der Bestand trägt die eigene Tabelle — sonst prüft SC-1b nichts.'
+			).toEqual(zeilen.map((z) => z.metric_id));
 
 			const puts = zaehlePuts(page, hubApiPath(kind, hub.id));
+			// Auch die Tabelle selbst (PUT /api/briefings/{id}/placements) und beim Trip die Metrik-Auswahl
+			// (PUT …/weather-config) dürfen beim bloßen Öffnen nicht geschrieben werden.
+			const tabellenPuts = zaehlePuts(page, `/api/briefings/${hub.id}/placements`);
+			const auswahlPuts = zaehlePuts(page, `${hubApiPath(kind, hub.id)}/weather-config`);
 			// #2794 S3a: der Abschnitt Layout/Kanal stand im Reiter Zustellung. #3154: die Kanal-Listen sind
-			// dort entfernt; die Inhalte je Kanal liest seither die Karte „Was steht wo“ im Reiter Wetter
-			// (ohne gespeicherte Tabelle aus den Altfeldern) — sie ist der Wirkort, der beim Öffnen nichts schreiben darf.
+			// dort entfernt; die Inhalte je Kanal zeigt seither die Karte „Was steht wo“ im Reiter Wetter
+			// — sie ist der Wirkort, der beim Öffnen nichts schreiben darf.
 			await openHub(page, kind, hub.id, { tab: 'wetter' });
 			await expect(
 				page.locator('[data-testid="was-steht-wo"]:visible [data-testid="was-steht-wo-show_stage_stats"], [data-testid="was-steht-wo"]:visible [data-testid="was-steht-wo-stundenverlauf"]').first(),
@@ -168,7 +186,7 @@ for (const kind of HUB_KINDS) {
 			await expect
 				.poll(
 					async () => {
-						const zustand = `${puts.length}|${await chip(page).getAttribute('data-state')}`;
+						const zustand = `${puts.length + tabellenPuts.length + auswahlPuts.length}|${await chip(page).getAttribute('data-state')}`;
 						if (zustand !== '0|idle') {
 							seit = 0;
 							return zustand;
@@ -181,9 +199,10 @@ for (const kind of HUB_KINDS) {
 				.toBe('stabil');
 			await expect(chip(page)).not.toContainText('Nicht gespeichert');
 
-			const nachher = ((await stand(page, kind, hub.id)).display_config as Record<string, unknown> | undefined)
-				?.channel_layouts;
-			expect(nachher, 'SC-1b: channel_layouts hat sich durch bloßes Öffnen verändert').toEqual(vorher);
+			const nachherDc = (await stand(page, kind, hub.id)).display_config as Record<string, unknown> | undefined;
+			expect(nachherDc?.placements, 'SC-1b: die Tabelle „Was steht wo“ hat sich durch bloßes Öffnen verändert').toEqual(vorher);
+			const auswahl = kind === 'route' ? 'metrics' : 'active_metrics';
+			expect(nachherDc?.[auswahl], 'SC-1b: die Grundauswahl hat sich durch bloßes Öffnen verändert').toEqual(vorherDc?.[auswahl]);
 		} finally {
 			await hub.aufraeumen();
 		}
