@@ -21,6 +21,7 @@ import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
+import { aufloesungPost, live } from '../../shared/wetter-tab/__tests__/wetterTabDaten.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FRONTEND = path.resolve(HERE, '../../../../..');
@@ -36,7 +37,12 @@ const schreiben: any = await import(pathToFileURL(path.join(SHARED_WT, 'ampelSch
 after(() => locale.set('de'));
 
 const noop = () => {};
-const VORLAGEN = { allgemein: { metrics: {} } };
+/** Eigene Vorlagen, wie der Reiter sie lädt (echter Lader, Auflösung mit echtem Python, #2988). */
+const eigene = async (antwort: unknown, kind: string) => {
+	const d = live();
+	const daten: Record<string, unknown> = { '/api/metrics': d.metrics, '/api/templates': d.templates, '/api/metric-presets': antwort };
+	return (await laden.ladeWetterDaten({ get: async (p: string) => daten[p], post: aufloesungPost() }, kind, {})).eigene;
+};
 const AMPEL = { template: 'wandern', metrics: { wind: { enabled: true } } };
 
 const ENTITAETEN: Record<string, string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&nbsp;': ' ' };
@@ -126,15 +132,15 @@ describe('#3189 AC-5: vorlageHerkunft — aus Trip bzw. Orts-Vergleich, nie im A
 // ---------------------------------------------------------------------------------------------------------------
 describe('#3189 AC-1: eigeneVorlageAus übernimmt den Herkunftsnamen', () => {
 	test('mit herkunft: herkunftName gesetzt', () => {
-		const e = laden.eigeneVorlageAus({ id: 'n1', name: 'Neu', kind: 'route', metrics: [], herkunft: { id: 'gr221', name: 'GR221' } }, VORLAGEN);
+		const e = laden.eigeneVorlageAus({ id: 'n1', name: 'Neu', kind: 'route', metrics: [], herkunft: { id: 'gr221', name: 'GR221' } }, AMPEL);
 		assert.equal(e.herkunftName, 'GR221', JSON.stringify(e));
 	});
 	test('ohne herkunft: kein herkunftName-Feld', () => {
-		const e = laden.eigeneVorlageAus({ id: 'n2', name: 'Neu', kind: 'route', metrics: [] }, VORLAGEN);
+		const e = laden.eigeneVorlageAus({ id: 'n2', name: 'Neu', kind: 'route', metrics: [] }, AMPEL);
 		assert.equal('herkunftName' in e, false, JSON.stringify(e));
 	});
-	test('Liste eigeneVorlagen trägt den Herkunftsnamen je Vorlage', () => {
-		const l = laden.eigeneVorlagen({ presets: [{ id: 'v1', name: 'V', kind: 'vergleich', metrics: [], herkunft: { id: 'c1', name: 'Mallorca Nord' } }] }, 'vergleich', VORLAGEN);
+	test('geladene Liste trägt den Herkunftsnamen je Vorlage', async () => {
+		const l = await eigene({ presets: [{ id: 'v1', name: 'V', kind: 'vergleich', metrics: [], herkunft: { id: 'c1', name: 'Mallorca Nord' } }] }, 'vergleich');
 		assert.equal(l.length, 1);
 		assert.equal(l[0].herkunftName, 'Mallorca Nord', JSON.stringify(l[0]));
 	});
@@ -159,7 +165,7 @@ describe('#3189 AC-4: Unterzeile eigener Vorlagen nach Priorität', () => {
 	for (const sprache of ['de', 'en'] as const) {
 		for (const context of ['route', 'vergleich'] as const) {
 			test(`${sprache}, ${context}: Beschreibung vor Herkunft vor nur „${ERWARTET[sprache].ohne}“`, async () => {
-				const h = await menue(sprache, context, laden.eigeneVorlagen(ANTWORT(context), context, VORLAGEN));
+				const h = await menue(sprache, context, await eigene(ANTWORT(context), context));
 				for (const id of ['mitbeschr', 'mitherk', 'ohne'] as const) {
 					assert.equal(unterzeile(h, id), ERWARTET[sprache][id], `${sprache}/${context}/${id}`);
 				}
@@ -167,12 +173,12 @@ describe('#3189 AC-4: Unterzeile eigener Vorlagen nach Priorität', () => {
 		}
 	}
 	test('AC-1/AC-4: frisch gespeicherte Vorlage (POST-Antwort) zeigt die Herkunft ohne Neuladen', async () => {
-		const neu = laden.eigeneVorlageAus({ id: 'frisch', name: 'Neu', kind: 'route', metrics: [], herkunft: { id: 'gr221', name: 'GR221' } }, VORLAGEN);
+		const neu = laden.eigeneVorlageAus({ id: 'frisch', name: 'Neu', kind: 'route', metrics: [], herkunft: { id: 'gr221', name: 'GR221' } }, AMPEL);
 		const h = await menue('de', 'route', [neu]);
 		assert.equal(unterzeile(h, 'frisch'), 'eigene · aus GR221 gespeichert');
 	});
 	test('AC-4: Name ist Nutzertext und wird nie übersetzt (EN behält „Mallorca Frühling“)', async () => {
-		const e = laden.eigeneVorlageAus({ id: 'u', name: 'X', kind: 'route', metrics: [], herkunft: { id: 't', name: 'Mallorca Frühling' } }, VORLAGEN);
+		const e = laden.eigeneVorlageAus({ id: 'u', name: 'X', kind: 'route', metrics: [], herkunft: { id: 't', name: 'Mallorca Frühling' } }, AMPEL);
 		const h = await menue('en', 'route', [e]);
 		assert.equal(unterzeile(h, 'u'), 'own · saved from Mallorca Frühling');
 	});

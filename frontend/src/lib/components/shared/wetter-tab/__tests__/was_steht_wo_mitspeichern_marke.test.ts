@@ -12,7 +12,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { live } from './wetterTabDaten.ts';
+import { aufgeloestVon, live } from './wetterTabDaten.ts';
 import { vorlagenAusTemplates } from '../ampelModell.ts';
 import { standAusAbo, type AboSicht } from '../wetterZustand.ts';
 import { SPEICHERER } from '../wetterTabSpeicherung.ts';
@@ -28,7 +28,10 @@ function client() {
 	return {
 		aufrufe,
 		get: <T>(pfad: string) => neu('GET', pfad) as Promise<T>,
-		put: <T>(pfad: string, rumpf: unknown) => neu('PUT', pfad, rumpf) as Promise<T>
+		put: <T>(pfad: string, rumpf: unknown) => neu('PUT', pfad, rumpf) as Promise<T>,
+		post: async <T>(pfad: string): Promise<T> => {
+			throw new Error(`unerwartet: POST ${pfad}`);
+		}
 	};
 }
 /** Controller mit Entprellung je Besitzer: der Vorgang läuft erst bei `lauf(besitzer)`. */
@@ -64,7 +67,7 @@ function aufbau() {
 		uebernehmen: (a: PlacementsAntwort) => (lokal = structuredClone(a.placements))
 	});
 	const vv = vorlagenAusTemplates(live().templates);
-	const stand = standAusAbo('route', TRIP, vv);
+	const stand = standAusAbo('route', TRIP, aufgeloestVon(TRIP));
 	const reiter = SPEICHERER.route({
 		client: c,
 		stand: () => stand,
@@ -141,7 +144,7 @@ describe('#3237 Runde 14: Änderung zwischen den beiden Trip-PUTs bleibt ungespe
 		let lokal: Placements = p('wind', 'gust');
 		const tabelle = erstelleTabellenSpeicherung({ client: c, kind: 'vergleich', id: 'cp-1', saveController: ctl, placements: () => structuredClone(lokal), uebernehmen: () => {} });
 		const vv = vorlagenAusTemplates(live().templates);
-		const stand = standAusAbo('vergleich', ORTE, vv);
+		const stand = standAusAbo('vergleich', ORTE, aufgeloestVon(ORTE));
 		const reiter = SPEICHERER.vergleich({ client: c, stand: () => stand, vorlagen: () => vv, abo: () => ORTE, saveController: ctl as never, uebernehmen: (_a, g) => tabelle.nachReiterSpeichern(g), placements: () => tabelle.zumMitsenden(true) });
 		const einmal = async (dazwischen: () => void) => {
 			reiter.melden();

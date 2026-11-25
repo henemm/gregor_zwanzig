@@ -23,6 +23,8 @@ import { DESKTOP, MOBIL, WT, oeffneWetter } from './s3a2794-teil3.helpers';
 
 type Json = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 const VORSCHAU_PFAD = '/api/briefings/placements/vorschau';
+/** Auflösung der Ampel: nur Lesen, aber POST (#2988). */
+const AUFLOESUNG_PFAD = '/api/ampel/aufloesung';
 const einName = (tag: string) => `${E2E_TEST_PREFIX}TA-${tag}-${Date.now()}`;
 
 test.afterEach(async ({ page }) => {
@@ -58,7 +60,7 @@ const schreibAufrufe = (m: Mitschnitt) =>
 	m.alle.filter(
 		(x) =>
 			['PUT', 'PATCH', 'DELETE'].includes(x.methode) ||
-			(x.methode === 'POST' && x.pfad !== VORSCHAU_PFAD && x.pfad !== '/api/trips' && !x.pfad.startsWith('/api/gpx/') && !x.pfad.startsWith('/api/locations/resolve'))
+			(x.methode === 'POST' && x.pfad !== VORSCHAU_PFAD && x.pfad !== AUFLOESUNG_PFAD && x.pfad !== '/api/trips' && !x.pfad.startsWith('/api/gpx/') && !x.pfad.startsWith('/api/locations/resolve'))
 	);
 
 /** Stabilitätsfenster statt festem Schlaf. */

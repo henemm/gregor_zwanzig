@@ -802,10 +802,13 @@ export function wetterPruefMetriken(liste: ListenElement[], ctx: string): string
 }
 
 const SCHREIBEND = new Set(['PUT', 'POST', 'PATCH', 'DELETE']);
+/** #2988: die Auflösung der Ampel liest nur, ist aber ein POST. */
+const istAufloesung = (a: { method: string; url: string }) =>
+	a.method.toUpperCase() === 'POST' && new URL(a.url, 'http://gz.invalid').pathname === '/api/ampel/aufloesung';
 
 /** #2966 (AC-7) Schreib-Tripwire: jede schreibende Anfrage während der Bedienung ist ein Befund (null = keine). */
 export function schreibBefund(anfragen: { method: string; url: string }[]): string | null {
-	const schreibend = anfragen.filter((a) => SCHREIBEND.has(a.method.toUpperCase()));
+	const schreibend = anfragen.filter((a) => SCHREIBEND.has(a.method.toUpperCase()) && !istAufloesung(a));
 	if (schreibend.length === 0) return null;
 	return `Schreib-Tripwire: ${schreibend.length} schreibende Anfrage(n) während der Bedienung: ${schreibend.map((a) => `${a.method.toUpperCase()} ${a.url}`).join(', ')}`;
 }

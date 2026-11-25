@@ -22,7 +22,7 @@ import { register } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { live, vergleichsKatalogFetch } from './wetterTabDaten.ts';
+import { aufloesungPost, aufgeloestVon, live, vergleichsKatalogFetch } from './wetterTabDaten.ts';
 import { vorlagenAusTemplates } from '../ampelModell.ts';
 import { standAusAbo, type AboSicht } from '../wetterZustand.ts';
 import { tripNutzlast, vergleichNutzlast } from '../wetterTabSpeicherung.ts';
@@ -67,7 +67,7 @@ function alleSchluessel(x: unknown, aus: string[] = []): string[] {
 describe('F005/AC-21: Radar-Regen speichern (nur Orts-Briefing)', () => {
 	test('Orts-Briefing: Radar eingeschaltet ⇒ der gesendete Rumpf traegt radar_alert_enabled = true', () => {
 		const v = vorlagen();
-		const stand = { ...standAusAbo('vergleich', VERGLEICH, v), radarAn: true };
+		const stand = { ...standAusAbo('vergleich', VERGLEICH, aufgeloestVon(VERGLEICH)), radarAn: true };
 		const n = vergleichNutzlast({ client: null as never, stand: () => stand, vorlagen: () => v, abo: () => VERGLEICH });
 		assert.equal(n.radar_alert_enabled, true, 'Radar-Schalter an wird nicht gespeichert');
 	});
@@ -75,7 +75,7 @@ describe('F005/AC-21: Radar-Regen speichern (nur Orts-Briefing)', () => {
 	test('Orts-Briefing: Radar ausgeschaltet ⇒ false (Gegenprobe)', () => {
 		const v = vorlagen();
 		const abo = { ...VERGLEICH, radar_alert_enabled: true };
-		const stand = { ...standAusAbo('vergleich', abo, v), radarAn: false };
+		const stand = { ...standAusAbo('vergleich', abo, aufgeloestVon(abo)), radarAn: false };
 		const n = vergleichNutzlast({ client: null as never, stand: () => stand, vorlagen: () => v, abo: () => abo });
 		assert.equal(n.radar_alert_enabled, false);
 	});
@@ -83,7 +83,7 @@ describe('F005/AC-21: Radar-Regen speichern (nur Orts-Briefing)', () => {
 	// abgelöst durch #2800: früher „Trip: keiner der beiden PUT-Teile schreibt radar_alert_enabled".
 	test('Trip: der Trip-Rumpf schreibt radar_alert_enabled aus dem Stand, das Wetter-Fragment nicht (#2800)', () => {
 		const v = vorlagen();
-		const stand = { ...standAusAbo('route', TRIP, v), radarAn: true };
+		const stand = { ...standAusAbo('route', TRIP, aufgeloestVon(TRIP)), radarAn: true };
 		const n = tripNutzlast({ client: null as never, stand: () => stand, vorlagen: () => v, abo: () => TRIP });
 		assert.equal((n.tripFelder as Record<string, unknown>).radar_alert_enabled, true, `Trip schreibt Radar nicht: ${JSON.stringify(n.tripFelder)}`);
 		assert.ok(!alleSchluessel(n.weatherConfig).includes('radar_alert_enabled'), `Radar im display_config-Fragment: ${JSON.stringify(n.weatherConfig)}`);
@@ -93,19 +93,19 @@ describe('F005/AC-21: Radar-Regen speichern (nur Orts-Briefing)', () => {
 // Fix-Loop 2, F-A2: die Radar-Kette an Lesestelle und Aenderungs-Erkennung.
 describe('F-A2/AC-21: Radar lesen und Umlegen als Aenderung erkennen', () => {
 	test('standAusAbo: radar_alert_enabled true ⇒ an; false oder fehlend ⇒ aus', () => {
-		const v = vorlagen();
-		assert.equal(standAusAbo('vergleich', { ...VERGLEICH, radar_alert_enabled: true }, v).radarAn, true, 'Abo mit Radar an oeffnet mit Radar aus');
-		assert.equal(standAusAbo('vergleich', { ...VERGLEICH, radar_alert_enabled: false }, v).radarAn, false);
+		assert.equal(standAusAbo('vergleich', { ...VERGLEICH, radar_alert_enabled: true }, aufgeloestVon(VERGLEICH)).radarAn, true, 'Abo mit Radar an oeffnet mit Radar aus');
+		assert.equal(standAusAbo('vergleich', { ...VERGLEICH, radar_alert_enabled: false }, aufgeloestVon(VERGLEICH)).radarAn, false);
 		const ohne = { ...VERGLEICH };
 		delete ohne.radar_alert_enabled;
-		assert.equal(standAusAbo('vergleich', ohne, v).radarAn, false);
+		assert.equal(standAusAbo('vergleich', ohne, aufgeloestVon(ohne)).radarAn, false);
 	});
 
 	test('WetterTab (Instanz-Skript): Umlegen des Radar-Schalters loest einen Speichervorgang aus', async () => {
 		const berichte: unknown[] = [];
 		const daten = live();
 		const api = {
-			get: async (p: string) => (p === '/api/metrics' ? daten.metrics : p === '/api/templates' ? daten.templates : [])
+			get: async (p: string) => (p === '/api/metrics' ? daten.metrics : p === '/api/templates' ? daten.templates : []),
+			post: aufloesungPost()
 		};
 		const { u } = await umgebungFuer(WETTER_TAB, {
 			context: 'vergleich',

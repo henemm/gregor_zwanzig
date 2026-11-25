@@ -10,7 +10,7 @@
 //       home.aktion.pausentag_ziel = „→ Etappen" / „→ Stages".
 //
 //   B4: deriveVergleichKennzahlen(preset, status, briefing, orte, vorlagen?: VorlagenAmpeln | null)
-//         .wertebereicheKarte zählt standAusAbo('vergleich', preset, vorlagen).auswahl
+//         .wertebereicheKarte zählt standAusAbo('vergleich', preset, aufgeloest).auswahl
 //         (dieselbe Quelle wie der Reiter Wetter), NICHT display_config.ideal_ranges.
 //         Texte: vergleich.hub.wertebereiche_kurz/_lang mit echtem Singular/Plural
 //         („1 Metrik im Briefing" / „3 Metriken im Briefing", EN „1 metric in the briefing" /
@@ -31,7 +31,7 @@ import { register } from 'node:module';
 import { parse } from 'svelte/compiler';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { live, vergleichsKatalogFetch } from '../wetter-tab/__tests__/wetterTabDaten.ts';
+import { aufgeloestVon, live, vergleichsKatalogFetch } from '../wetter-tab/__tests__/wetterTabDaten.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const SHARED = resolve(HIER, '..');
@@ -133,7 +133,7 @@ describe('B4 (AC-8/AC-9/AC-10): Karte „Wetter" zählt die Metriken im Briefing
 		const v = await vorlagen();
 		const ids = await dreiMetriken();
 		const p = preset({ active_metrics: ids });
-		const soll = (await wetterZustand()).standAusAbo('vergleich', p, v).auswahl.length;
+		const soll = (await wetterZustand()).standAusAbo('vergleich', p, aufgeloestVon(p)).auswahl.length;
 		assert.equal(soll, 3, 'Fixtur-Schutz: Reiter Wetter zählt drei gewählte Metriken');
 		const k = m.deriveVergleichKennzahlen(p, 'active', null, [], v, await katalog()).wertebereicheKarte;
 		assert.equal(k.beschreibungKurz, '3 Metriken im Briefing');
@@ -156,7 +156,7 @@ describe('B4 (AC-8/AC-9/AC-10): Karte „Wetter" zählt die Metriken im Briefing
 		const v = await vorlagen();
 		const alt = await katalog();
 		const p = preset({});
-		const n = (await wetterZustand()).standAusAbo('vergleich', p, v, alt).auswahl.length;
+		const n = (await wetterZustand()).standAusAbo('vergleich', p, aufgeloestVon(p), alt).auswahl.length;
 		assert.ok(n > 1, 'Fixtur-Schutz: Standard liefert mehrere Metriken');
 		const k = m.deriveVergleichKennzahlen(p, 'active', null, [], v, alt).wertebereicheKarte;
 		assert.equal(k.beschreibungKurz, `${n} Metriken im Briefing`);

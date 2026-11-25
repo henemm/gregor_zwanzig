@@ -27,7 +27,7 @@ import { erstelleAlarmeVergleichSpeicherung } from '../../shared/alarmeVergleich
 import { umgebungFuer, type Knoten } from '../../shared/__tests__/svelteInstanzPruefstand.ts';
 import { createController } from '../../shared/__tests__/versandVergleichPruefstand.ts';
 import { createGoMergeServer, vollerVergleich, type GoMergeServer } from '../../shared/__tests__/goMergeServerPruefstand.ts';
-import { live } from '../../shared/wetter-tab/__tests__/wetterTabDaten.ts';
+import { aufgeloestVon, live } from '../../shared/wetter-tab/__tests__/wetterTabDaten.ts';
 import { vorlagenAusTemplates } from '../../shared/wetter-tab/ampelModell.ts';
 import { standAusAbo, type AboSicht, type WetterStand } from '../../shared/wetter-tab/wetterZustand.ts';
 import { SPEICHERER } from '../../shared/wetter-tab/wetterTabSpeicherung.ts';
@@ -81,7 +81,7 @@ async function hub() {
 		},
 		saveController: ctl
 	} as never);
-	let stand: WetterStand = standAusAbo('vergleich', abo() as AboSicht, vorlagen);
+	let stand: WetterStand = standAusAbo('vergleich', abo() as AboSicht, aufgeloestVon(abo()));
 	const wetter = SPEICHERER.vergleich({
 		client: api,
 		stand: () => stand,

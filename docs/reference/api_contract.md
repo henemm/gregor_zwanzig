@@ -205,7 +205,7 @@ Fehlerantworten der Go-API, die über `handler.WriteError`/`WriteErrorWith` lauf
 | `/api/admin/users/{id}/disabled` | PUT — nur Admin, Konto sperren/entsperren (#2155 S3) |
 | `/api/admin/users/{id}/tier` | PUT — nur Admin, Tier setzen (#2155 S3) |
 | `/api/alert-metric-channel-keys` | GET — Session-Pflicht, nutzerunabhängig (Issue #1895 S3a). Proxy auf Python `GET /alert-metric-channel-keys`. Antwort `{"keys": {<AlertMetric>: [<schlüssel>, …]}, "accepted": [<schlüssel>, …]}`: `keys` bildet je Alarm-Zeile auf die sortierte Liste der `alert_metric_channels`-Speicherschlüssel ab, die der Leser für diese Zeile liest (z. B. `wind_gust → ["gust"]`, `wind_change → ["gust", "wind"]`, `snow_line → ["freezing_level"]`; `humidity` fehlt); `accepted` ist die sortierte Vereinigung aller Listen plus den Legacy-Schlüssel `snowfall_limit` (nur von der Migration geschrieben, nie Ziel in `keys`). Einzige Quelle: `weather_change_detection.alert_metric_channel_keys()`; `/api/metrics` bleibt unverändert. Details Abschnitt „alert_metric_channels" |
-| `/api/ampel/aufloesung` | POST — Rumpf `{"eintraege": [...]}` (höchstens 32, 256 KB), Antwort `{"ergebnisse": [{"vorlage_id", "ampel"}]}`; 400 `bad_request`, 401 `unauthorized`, 413 `payload_too_large`; zustandslos, ohne `ETag`; §11 „Ampel auflösen“ (#2988 S2) |
+| `/api/ampel/aufloesung` | POST — Rumpf `{"eintraege": [...]}` (höchstens 32, 256 KiB), Antwort `{"ergebnisse": [{"vorlage_id", "ampel"}]}`; 400 `bad_request`, 401 `unauthorized`, 413 `payload_too_large`; zustandslos, ohne `ETag`; §11 „Ampel auflösen“ (#2988 S2) |
 | `/api/archive/stats` | GET |
 | `/api/auth/account/delete` | POST — Kontoloeschung mit Re-Auth (#2160, ADR-0081; ersetzt den entfallenen DELETE auf `/api/auth/account`) |
 | `/api/auth/account/delete-code` | POST — Lösch-Code an die wirksame Adresse (#2160) |
@@ -1461,7 +1461,7 @@ Rumpf:   { eintraege: [ { ampel?: {...}|null, preset_name?: string|null,
 |---|---|---|
 | 400 | `bad_request` | kein gültiges UTF-8, kein JSON-Objekt, `eintraege` keine Liste oder mehr als 32, Eintrag kein Objekt, `preset_name`/`profil` weder Text noch null, `metrics` weder Liste noch null; keine Teilantwort. Der Kern prüft dasselbe, zusätzlich zu tiefe Schachtelung und nicht lesbare Zahlen |
 | 401 | `unauthorized` | keine gültige Anmeldung, vor allem anderen |
-| 413 | `payload_too_large` | Rumpf über 256 KB |
+| 413 | `payload_too_large` | Rumpf über 256 KiB |
 | 502 | `upstream_unreachable` | Kern nicht erreichbar oder Antwort nicht binnen 120 s |
 
 ### Tabelle „Was steht wo“ `display_config.placements` (Issue #3122, ADR-0124, seit B1a)
