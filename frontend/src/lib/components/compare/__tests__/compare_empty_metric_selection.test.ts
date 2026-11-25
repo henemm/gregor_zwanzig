@@ -14,7 +14,6 @@ import {
 	buildNewComparePresetPayload,
 	type NewComparePresetFields
 } from '../compareEditorSave.ts';
-import { applyHourlyMetricToggle } from '../compareHourlyMetricDefs.ts';
 
 function fullFields(): NewComparePresetFields {
 	return {
@@ -112,15 +111,5 @@ describe('buildNewComparePresetPayload — hourly_metrics wird nie gesendet (#32
 	}
 });
 
-describe('applyHourlyMetricToggle — AC-8: aus echter Leerauswahl heraus anhaken', () => {
-	test('ein Klick aus leerer Auswahl ergibt genau die eine angehakte Spalte', () => {
-		const result = applyHourlyMetricToggle([], 'temp_c', true);
-
-		assert.deepEqual(
-			result,
-			['temp_c'],
-			`RED: erwartet genau ['temp_c'], erhalten ${JSON.stringify(result)} — ` +
-				'aus "nichts" wird heute die volle Vorgabemenge minus zuletzt abgewaehlter Spalte gebaut'
-		);
-	});
-});
+// Issue #3301: der Block „applyHourlyMetricToggle — AC-8" ist mit compareHourlyMetricDefs.ts
+// entfallen (kein Produktionscode nutzte die Umschalt-Hilfe mehr).
