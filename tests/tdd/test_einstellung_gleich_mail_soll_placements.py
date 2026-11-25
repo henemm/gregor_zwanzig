@@ -505,7 +505,7 @@ def test_ac12_abnahme_3156_echte_mail_ohne_soll_verletzung(monkeypatch, tmp_path
     eml = _trip_eml(monkeypatch, daten)
     # #3237: Ampelpunkt + Wortstufe tragen keine Zahl -> Rohwerte als Pruefdaten.
     code, aus = _lauf(tmp_path, "briefing_mail_validator", eml, "--konfig",
-                      _konfig(tmp_path, "abnahme_3156", daten), *_ampel_rohwerte())
+                      _konfig(tmp_path, "abnahme_3156", daten), *_ampel_rohwerte(), prozess=True)
     assert "soll Zahl (Roh) zeigen" not in aus, aus
     assert "SOLL: Darstellung" not in aus, aus
     assert code == 0, aus
