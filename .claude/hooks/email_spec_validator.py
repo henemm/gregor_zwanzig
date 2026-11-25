@@ -1757,8 +1757,15 @@ def validate_message(
     if warnungen is not None:
         warnungen.extend(hinweise)
 
-    body = _extract_html_body(msg)
     soll = None if konfig is None else _soll_modul().soll_aus_daten(konfig, lang)
+    # Issue #3059: Format gegen Soll (``display_config.email_format``); eine
+    # Kompakt-Mail laeuft durch den Kompakt-Zweig statt der HTML-Pruefungen.
+    format_fehler = _soll_format(msg, soll)
+    if _ist_format(msg) == "compact":
+        fehler = format_fehler + validate_compact(msg, soll)
+        return len(fehler) == 0, fehler
+
+    body = _extract_html_body(msg)
     # Fehlender Header (Alt-Mails vor diesem Feature) oder Wert != "false"
     # => True (bisheriges strenges Verhalten bleibt der sichere Default).
     hourly_enabled = msg.get("X-GZ-Compare-Hourly-Enabled") != "false"
@@ -1779,8 +1786,102 @@ def validate_message(
         all_errors.extend(pruefe_windrichtung_orte(body, windrichtung, lang))
     if soll is not None:  # Issue #3047: nur mit --konfig, sonst unveraendert
         all_errors.extend(pruefe_soll(msg, soll, lang, briefing))
+    all_errors = format_fehler + all_errors
 
     return len(all_errors) == 0, all_errors
+
+
+# --------------------------------------------------------------------------- #
+# Issue #3059: Kompakt-Mail der Orte (ein text/plain-Teil, ASCII, < 2 KB)
+# Vorlage: briefing_mail_validator.py ``_validate_compact``.
+# --------------------------------------------------------------------------- #
+_COMPACT_MAX_BYTES = 2048
+_COMPACT_STUNDE_RE = re.compile(r"^\s*\d{1,2}:\d{2}\b")
+_COMPACT_HINWEIS_RE = re.compile(r"^\+(\d+)\s")
+
+
+def _ist_format(msg) -> str:
+    """Ist-Format der Mail: Kopf ``X-GZ-Format``; fehlt er (Bestand der
+    ausfuehrlichen Orte-Mail), gilt ``"full"``."""
+    return (msg.get("X-GZ-Format") or "full").strip()
+
+
+def _soll_format(msg, soll: "dict | None") -> List[str]:
+    """Format gegen das Soll aus ``--konfig`` (Wortlaut wie Trip)."""
+    if soll is None or soll.get("kontext") != "orte":
+        return []
+    ist, erwartet = _ist_format(msg), soll.get("email_format", "full")
+    if ist != erwartet:
+        return [f"SOLL: Format '{ist}' statt '{erwartet}' (email_format)"]
+    return []
+
+
+def _compact_text(msg) -> str:
+    roh = msg.get_payload(decode=True) or b""
+    try:
+        return roh.decode(msg.get_content_charset() or "us-ascii")
+    except (LookupError, UnicodeDecodeError):
+        return roh.decode("utf-8", errors="replace")
+
+
+def validate_compact(msg, soll: "dict | None" = None) -> List[str]:
+    """Kompakt-Zweig: genau ein Teil ``text/plain``, reines ASCII (7bit oder
+    quoted-printable), unter 2 KB, keine Stundentabelle; mit ``--konfig`` je
+    Ort genau eine Ortszeile (beginnt mit dem ASCII-gefalteten Namen) in der
+    Ortsfolge der Konfiguration. Ein Kuerzungs-Hinweis ``+N ...`` erlaubt das
+    Fehlen der letzten N Orte. Kopf- und Fusszeilen-Wortlaut prueft der Zweig
+    nicht (Renderer-Sache)."""
+    if msg.is_multipart() or msg.get_content_type() != "text/plain":
+        return [f"COMPACT: erwartet genau einen Teil text/plain (kein multipart), ist "
+                f"'{msg.get_content_type()}' multipart={msg.is_multipart()}"]
+    fehler: List[str] = []
+    text = _compact_text(msg)
+    cte = (msg.get("Content-Transfer-Encoding") or "").strip().lower()
+    if not text.isascii():
+        fehler.append("COMPACT: Text ist nicht reines ASCII (7bit-Verletzung)")
+    elif cte and cte not in ("7bit", "quoted-printable"):
+        fehler.append(f"COMPACT: Content-Transfer-Encoding '{cte}', erwartet 7bit")
+    groesse = len(text.encode("utf-8"))
+    if groesse >= _COMPACT_MAX_BYTES:
+        fehler.append(f"COMPACT: Text {groesse} Byte >= Grenze {_COMPACT_MAX_BYTES} Byte (zu gross)")
+    if len([z for z in text.splitlines() if _COMPACT_STUNDE_RE.match(z)]) >= 2:
+        fehler.append("COMPACT: enthaelt eine Stundentabelle (>= 2 Zeilen mit HH:MM) -- verboten")
+    if soll is not None and soll.get("kontext") == "orte":
+        if soll.get("orte_unpruefbar"):
+            fehler.append(f"COMPACT: Ortsfolge nicht pruefbar: {soll['orte_unpruefbar']}")
+        elif soll.get("orte") is not None:
+            fehler += _compact_ortszeilen(text, list(soll["orte"]))
+    return fehler
+
+
+def _compact_ortszeilen(text: str, orte: List[str]) -> List[str]:
+    """Je erwartetem Ort genau eine Ortszeile, Folge wie ``location_ids``."""
+    zeilen = text.splitlines()
+    hinweise = [int(m.group(1)) for z in zeilen if (m := _COMPACT_HINWEIS_RE.match(z.strip()))]
+    weggelassen = hinweise[-1] if hinweise else 0
+    if weggelassen > len(orte):
+        return [f"COMPACT: Hinweis nennt {weggelassen} nicht gezeigte Orte, konfiguriert sind {len(orte)}"]
+    erwartet = orte[:len(orte) - weggelassen]
+    fehler: List[str] = []
+    stellen: List[Tuple[int, str]] = []
+    for name in dict.fromkeys(erwartet):
+        gefaltet = _soll_modul()._falten(name)
+        treffer = [i for i, z in enumerate(zeilen)
+                   if z.startswith(gefaltet) and not z[len(gefaltet):len(gefaltet) + 1].isalnum()]
+        if not treffer:
+            fehler.append(f"COMPACT: Ortszeile fuer '{name}' fehlt")
+        elif len(treffer) > len([n for n in erwartet if n == name]):
+            fehler.append(f"COMPACT: Ort '{name}' steht {len(treffer)}-mal (erwartet genau eine Ortszeile)")
+        else:
+            stellen.append((treffer[0], name))
+    for name in orte[len(erwartet):]:
+        gefaltet = _soll_modul()._falten(name)
+        if any(z.startswith(gefaltet) and not z[len(gefaltet):len(gefaltet) + 1].isalnum() for z in zeilen):
+            fehler.append(f"COMPACT: Ort '{name}' steht trotz Kuerzungs-Hinweis in der Mail")
+    folge = [n for _i, n in sorted(stellen)]
+    if not fehler and folge != [n for n in dict.fromkeys(erwartet)]:
+        fehler.append(f"COMPACT: Ortsfolge {folge} statt {list(dict.fromkeys(erwartet))}")
+    return fehler
 
 
 def _min_orte(gesetzt: "int | None", konfig: "dict | None") -> int:

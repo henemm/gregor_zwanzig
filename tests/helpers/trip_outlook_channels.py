@@ -152,8 +152,7 @@ def trip(*, outlook_metrics, enabled_ids=None, telegram_layout_ids=None,
              display_config=dc, official_warnings=None)
     t.report_config = TripReportConfig(
         trip_id=trip_id, send_email=True, send_telegram=True, send_sms=False,
-        send_premium_sms=False, show_outlook=True,
-        multi_day_trend_reports=["evening"], email_format=email_format,
+        send_premium_sms=False, email_format=email_format,
     )
     t.official_alerts_enabled = False
     t.official_alert_triggers_enabled = False

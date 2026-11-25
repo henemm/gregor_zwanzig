@@ -176,7 +176,8 @@ const ALT_TEXTE = ['Kurzstil', 'Mehrtages-Trend', 'E-Mail-Inhalt', 'E-Mail: Form
 /** Bedienelemente der Karte unter der Tabelle: wie oft im Reiter Wetter, je Kontext. */
 const KARTE_EINMAL: Record<HubKind, Record<string, number>> = {
 	route: { 'was-steht-wo-kurzstil': 1, 'was-steht-wo-email-format': 1, 'was-steht-wo-ausblick-morning': 1, 'was-steht-wo-ausblick-evening': 1, 'was-steht-wo-show_stage_stats': 1, 'was-steht-wo-show_yesterday_comparison': 1, 'was-steht-wo-show_night_block': 1, 'was-steht-wo-stundenverlauf': 0 },
-	vergleich: { 'was-steht-wo-kurzstil': 1, 'was-steht-wo-email-format': 0, 'was-steht-wo-ausblick-morning': 1, 'was-steht-wo-ausblick-evening': 1, 'was-steht-wo-show_stage_stats': 0, 'was-steht-wo-show_yesterday_comparison': 0, 'was-steht-wo-show_night_block': 0, 'was-steht-wo-stundenverlauf': 1 }
+	// #3059 (AC-13): der E-Mail-Format-Schalter steht auch bei Orten genau einmal in der Karte.
+	vergleich: { 'was-steht-wo-kurzstil': 1, 'was-steht-wo-email-format': 1, 'was-steht-wo-ausblick-morning': 1, 'was-steht-wo-ausblick-evening': 1, 'was-steht-wo-show_stage_stats': 0, 'was-steht-wo-show_yesterday_comparison': 0, 'was-steht-wo-show_night_block': 0, 'was-steht-wo-stundenverlauf': 1 }
 };
 const PREMIUM_HINWEIS = 'Bekommt vorerst denselben Text wie die SMS. Eine eigene Auswahl kommt später.';
 
@@ -194,8 +195,10 @@ const ALTFELDER: Record<HubKind, { oben: Json; dc: Json }> = {
 		dc: { channel_layouts: { sms: [{ metric_id: 'wind', enabled: true }, { metric_id: 'precipitation', enabled: true }] } }
 	},
 	vergleich: {
-		oben: { morning_enabled: true, morning_time: '07:00:00', outlook_enabled: false, hourly_enabled: true },
-		dc: { hourly_metrics: ['temperature', 'wind'], hourly_metric_formats: { wind: true }, outlook_metric_formats: { temperature: true } }
+		// #3277: `outlook_enabled` gibt es nicht mehr (Go verwirft es); „Ausblick aus“ steht allein in der
+		// Marke `placements.outlook_reports` (ADR-0124 Nr. 6).
+		oben: { morning_enabled: true, morning_time: '07:00:00', hourly_enabled: true },
+		dc: { hourly_metrics: ['temperature', 'wind'], hourly_metric_formats: { wind: true }, outlook_metric_formats: { temperature: true }, placements: { outlook_reports: [] } }
 	}
 };
 /** Vergleichbarer Ausschnitt eines gespeicherten Abos (ohne die Felder, die der Test selbst schaltet). */
@@ -203,7 +206,7 @@ function altStand(kind: HubKind, s: Json): Json {
 	const { morning_enabled: _m, show_stage_stats: _e, ...rc } = (s.report_config ?? {}) as Json;
 	return kind === 'route'
 		? { report_config: rc, display_config: s.display_config }
-		: { display_config: s.display_config, outlook_enabled: s.outlook_enabled };
+		: { display_config: s.display_config };
 }
 
 test.describe('Karte „Was steht wo“', () => {
@@ -856,7 +859,8 @@ test.describe('Karte „Was steht wo“', () => {
 				for (const id of ALT_TESTIDS) await expect(reiter.getByTestId(id), `Reiter Wetter: ${id}`).toHaveCount(0);
 				await expect(reiter.getByText(PREMIUM_HINWEIS, { exact: true })).toHaveCount(1);
 				await expect(reiter.getByText('Telegram: Kurzstil', { exact: true })).toHaveCount(1);
-				await expect(reiter.getByText('E-Mail: Format', { exact: true })).toHaveCount(abo.kind === 'route' ? 1 : 0);
+				// #3059 (AC-13): „E-Mail: Format“ in beiden Kontexten genau einmal (Trip und Orte).
+				await expect(reiter.getByText('E-Mail: Format', { exact: true })).toHaveCount(1);
 				// AC-30: Roh/Einfach erreichbar; Kurzstil ohne verbundenes Telegram gesperrt.
 				await expect(karte.locator('[data-slot="roh-einfach"]').first()).toBeVisible();
 				await expect(karte.getByTestId('was-steht-wo-kurzstil')).toHaveAttribute('aria-disabled', 'true');
@@ -873,12 +877,12 @@ test.describe('Karte „Was steht wo“', () => {
 			try {
 				const vorher = altStand(abo.kind, await stand(page.request, abo.kind, abo.id));
 				const fremdVorher = altStand(fremd.kind, await stand(zweit.seite.request, fremd.kind, fremd.id));
-				expect(vorher, 'Messaufbau: Altfelder gespeichert').toMatchObject(abo.kind === 'route' ? { report_config: { multi_day_trend_reports: ['morning'] } } : { outlook_enabled: false });
-				// #3155: Orte-Anlage mit outlook_enabled false schreibt die Marke „aus“ (leere Liste, ADR-0124 Nr. 6).
+				expect(vorher, 'Messaufbau: Altfelder gespeichert').toMatchObject(abo.kind === 'route' ? { report_config: { multi_day_trend_reports: ['morning'] } } : { display_config: { placements: { outlook_reports: [] } } });
+				// #3155/#3277: Orte-Anlage mit der Marke „aus“ (leere Liste, ADR-0124 Nr. 6) behält sie.
 				// #3237 (AC-2): dazu die volle Tabelle aus der Grundauswahl.
 				if (abo.kind === 'vergleich') {
 					const anlage = vorher.display_config.placements as Json;
-					expect(anlage.outlook_reports, 'Anlage-Marke bei outlook_enabled false').toEqual([]);
+					expect(anlage.outlook_reports, 'Anlage-Marke „Ausblick aus“').toEqual([]);
 					expect((anlage.rows as Json[] | undefined)?.length ?? 0, 'Anlage: volle Tabelle').toBeGreaterThan(0);
 				}
 				expect((await page.request.get(tabellenUrl(fremd.kind, fremd.id))).status(), 'fremdes Abo nicht lesbar').toBe(404);
@@ -921,15 +925,16 @@ test.describe('Karte „Was steht wo“', () => {
 // Vorbelegung des 3-Tages-Ausblicks an (seit #3237 mit voller Tabelle aus der Grundauswahl); die Karte
 // zeigt sie. Der Reiter Wetter kennt die Karte „Mehrtages-Trend“, ihre Haken und alte Namen nicht mehr.
 test.describe('Karte „Was steht wo“ — #3155 Vorbelegung und ein Name', () => {
-	for (const [name, slots, soll] of [
-		['Morgen und Abend an', { morning_enabled: true, evening_enabled: true }, { morning: 'false', evening: 'true', reports: ['evening'] }],
-		['nur Morgen an', { morning_enabled: true, evening_enabled: false }, { morning: 'true', evening: 'false', reports: ['morning'] }],
-		// Ausblick bei der Anlage aus: Marke mit leerer Liste (ADR-0124 Nr. 6), beide Schalter aus.
-		['Ausblick aus', { morning_enabled: true, evening_enabled: true, outlook_enabled: false }, { morning: 'false', evening: 'false', reports: [] }]
+	for (const [name, slots, soll, marke] of [
+		['Morgen und Abend an', { morning_enabled: true, evening_enabled: true }, { morning: 'false', evening: 'true', reports: ['evening'] }, undefined],
+		['nur Morgen an', { morning_enabled: true, evening_enabled: false }, { morning: 'true', evening: 'false', reports: ['morning'] }, undefined],
+		// Ausblick bei der Anlage aus: Marke mit leerer Liste (ADR-0124 Nr. 6), beide Schalter aus. #3277: das
+		// Altfeld `outlook_enabled` ist entfallen, „aus“ kommt allein über die mitgeschickte Marke der Tabelle.
+		['Ausblick aus', { morning_enabled: true, evening_enabled: true }, { morning: 'false', evening: 'false', reports: [] }, { outlook_reports: [] }]
 	] as const) {
 		test(`WS-B4 (drei Orte, ${name}): neu angelegtes Abo — Ausblick nach der Regel vorbelegt, Karte zeigt es`, async ({ page }) => {
 			await page.setViewportSize(DESKTOP);
-			const abo = await seed(page.request, FAELLE[1], { oben: { ...slots, morning_time: '07:00:00', evening_time: '18:00:00' } });
+			const abo = await seed(page.request, FAELLE[1], { oben: { ...slots, morning_time: '07:00:00', evening_time: '18:00:00' }, ...(marke ? { placements: { outlook_reports: [...marke.outlook_reports] } } : {}) });
 			try {
 				const gespeichert = await stand(page.request, 'vergleich', abo.id);
 				// #3237 (AC-2): die Anlage schreibt die volle Tabelle aus der Grundauswahl, Ausblick nach der Regel vorbelegt.

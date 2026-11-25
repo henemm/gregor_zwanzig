@@ -466,16 +466,18 @@ class TestTrendRendering:
         assert "Etappen" in report.email_plain
 
     def test_trend_disabled_in_config(self):
-        """Trend should not appear when multi_day_trend_reports excludes report type.
+        """Trend should not appear when the table names no briefing with outlook.
 
         Gleicher Grund wie test_trend_no_future_stages: 'Etappen' allein steht
         seit #1241 immer im Footer, daher pruefen wir die Ausblick-Sektion
-        gezielt (#911)."""
+        gezielt (#911). #3277: "Ausblick erscheint im" steht allein in
+        ``placements.outlook_reports``."""
         from app.metric_catalog import build_default_display_config
         from output.renderers.trip_report import TripReportFormatter
+        from tests.helpers.tabelle_aus_wunsch import tabelle
 
         dc = build_default_display_config()
-        dc.multi_day_trend_reports = []
+        dc.placements = tabelle(dc, "trip", outlook_reports=[])
 
         formatter = TripReportFormatter()
         last_seg = self._make_last_segment()
@@ -493,14 +495,15 @@ class TestTrendRendering:
 
 
 # ===========================================================================
-# TEST: multi_day_trend_reports persistence
+# TEST: "Ausblick erscheint im" persistence (#3277: Tabelle statt Altfeld)
 # ===========================================================================
 
-class TestMultiDayTrendReportsPersistence:
-    """Test that multi_day_trend_reports survives save/load round-trip."""
+class TestOutlookReportsPersistence:
+    """``placements.outlook_reports`` uebersteht Speichern/Laden. #3277: das
+    Altfeld ``multi_day_trend_reports`` (samt Migration des Bool-Altfelds
+    ``show_multi_day_trend``) ist entfallen; die Aussage gilt fuer die Tabelle."""
 
     def test_persistence_round_trip(self):
-        """multi_day_trend_reports persists through save and load."""
         import json
         import tempfile
         from pathlib import Path
@@ -508,12 +511,13 @@ class TestMultiDayTrendReportsPersistence:
         from app.trip import Trip, Stage, Waypoint
         from app.trip import AggregationConfig
         from app.metric_catalog import build_default_display_config
+        from tests.helpers.tabelle_aus_wunsch import tabelle
 
         wp = Waypoint(id="G1", name="Start", lat=39.75, lon=2.65, elevation_m=100)
         stage = Stage(id="T1", name="Tag 1", date=date(2026, 2, 18), waypoints=[wp])
 
         dc = build_default_display_config()
-        dc.multi_day_trend_reports = ["morning", "evening"]
+        dc.placements = tabelle(dc, "trip", outlook_reports=["morning", "evening"])
 
         trip = Trip(
             id="persist-test", name="Persist Test", stages=[stage],
@@ -524,36 +528,10 @@ class TestMultiDayTrendReportsPersistence:
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "persist-test.json"
             data = _trip_to_dict(trip)
+            assert "multi_day_trend_reports" not in data["display_config"]
             with open(path, "w") as f:
                 json.dump(data, f, indent=2)
 
             loaded = load_trip(path, user_id="default")
             assert loaded.display_config is not None
-            assert loaded.display_config.multi_day_trend_reports == ["morning", "evening"], \
-                "multi_day_trend_reports should persist through save/load"
-
-    def test_migration_from_old_bool_field(self):
-        """Old show_multi_day_trend=False migrates to empty list."""
-        import json
-        import tempfile
-        from pathlib import Path
-        from app.loader import load_trip
-
-        old_json = {
-            "id": "migrate-test", "name": "Migrate Test",
-            "stages": [{"id": "T1", "name": "Tag 1", "date": "2026-02-18",
-                        "waypoints": [{"id": "G1", "name": "X", "lat": 39.0, "lon": 2.0, "elevation_m": 100}]}],
-            "display_config": {
-                "trip_id": "migrate-test", "metrics": [],
-                "show_night_block": True, "night_interval_hours": 2,
-                "thunder_forecast_days": 2, "show_multi_day_trend": False,
-                "sms_metrics": [], "updated_at": "2026-02-17T10:00:00+00:00",
-            }
-        }
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = Path(tmpdir) / "migrate-test.json"
-            with open(path, "w") as f:
-                json.dump(old_json, f)
-            loaded = load_trip(path, user_id="default")
-            assert loaded.display_config.multi_day_trend_reports == [], \
-                "Old show_multi_day_trend=False should migrate to empty list"
+            assert loaded.display_config.placements["outlook_reports"] == ["morning", "evening"]

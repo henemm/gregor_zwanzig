@@ -402,14 +402,13 @@ def _morgenausblick_trip_anlegen() -> None:
 
     _trip_anlegen(NUTZER_A, TRIP_A_MORGENAUSBLICK, TRIP_NAME_A, ETAPPE_A)
     trip = _trip(NUTZER_A, TRIP_A_MORGENAUSBLICK)
-    trip.report_config.multi_day_trend_reports = ["morning", "evening"]
     treffer = [mc for mc in trip.display_config.metrics if mc.metric_id == "wind"]
     assert treffer, "Vorbedingung: Wind-Metrik vorhanden"
     for mc in treffer:
         mc.morning_enabled = False
         mc.evening_enabled = True
     # #3237: "Ausblick auch morgens" steht in der Tabelle (``outlook_reports``);
-    # das Altfeld ``multi_day_trend_reports`` bleibt als Beschreibung stehen.
+    # das Altfeld ``multi_day_trend_reports`` ist seit #3277 entfallen.
     from tests.helpers.tabelle_aus_wunsch import tabelle
 
     trip.display_config.placements = tabelle(
@@ -459,7 +458,6 @@ def test_f004_morgen_ausblick_in_der_vorschau_nutzt_morgen_spalten(monkeypatch):
     etappen = [dataclasses.replace(s, date=heute + timedelta(days=i))
                for i, s in enumerate(trip.stages[:4])]
     trip = dataclasses.replace(trip, stages=etappen)
-    trip.report_config.multi_day_trend_reports = ["morning", "evening"]
     for mc in trip.display_config.metrics:
         if mc.metric_id == "wind":
             mc.morning_enabled, mc.evening_enabled = False, True

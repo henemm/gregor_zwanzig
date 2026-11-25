@@ -93,29 +93,17 @@ def _render_beide(monkeypatch_a, monkeypatch_b):
 
 def test_ac1_golden_trips_laden_unveraendert(monkeypatch):
     """AC-1: beide Golden-JSONs werden ueber ``load_trip`` 1:1 eingelesen --
-    Kanal-Layouts und Kaskade entstehen exakt wie im JSON, ohne synthetische
+    die Grundauswahl entsteht exakt wie im JSON, ohne synthetische
     Nachbearbeitung im Testcode. Direkter Attributvergleich, keine
-    Produktfunktion als Vergleichsmassstab."""
+    Produktfunktion als Vergleichsmassstab. #3277: die Kanal-Layouts
+    (``channel_layouts``) sind Altfelder und werden nicht mehr gelesen."""
     from app.loader import load_trip
 
     for name in ("golden_a", "golden_b"):
         data = golden_dict(name)
         trip = load_trip(data, user_id="default")
         dc = trip.display_config
-        assert dc.per_channel_layouts is not None
-        for kanal in ("email", "telegram", "sms"):
-            geladen = dc.per_channel_layouts[kanal]
-            roh = data["display_config"]["channel_layouts"][kanal]
-            assert len(geladen) == len(roh), (
-                f"{name}/{kanal}: {len(geladen)} geladene vs. {len(roh)} "
-                f"JSON-Eintraege"
-            )
-            for mc, roh_mc in zip(geladen, roh):
-                assert mc.metric_id == roh_mc["metric_id"]
-                assert mc.enabled == roh_mc.get("enabled", True)
-                assert mc.bucket == roh_mc.get("bucket", "primary")
-                assert mc.order == roh_mc.get("order", 0)
-                assert mc.use_friendly_format == roh_mc.get("use_friendly_format", True)
+        assert not hasattr(dc, "per_channel_layouts")
         globale = dc.metrics
         roh_global = data["display_config"]["metrics"]
         assert len(globale) == len(roh_global)

@@ -25,14 +25,17 @@ from tests.tdd.test_telegram_kurzstil_trip_alert import (
 
 
 def _mit_telegram_auswahl(trip, telegram_ids: list[str]):
-    cfg = UnifiedWeatherDisplayConfig(
+    # #3277: die Kanal-Auswahl steht in der Tabelle "Was steht wo" (das
+    # Modellfeld der Kanal-Ebene ist entfallen).
+    from tests.helpers.tabelle_aus_wunsch import mit_wunsch
+
+    cfg = mit_wunsch(UnifiedWeatherDisplayConfig(
         trip_id=trip.id,
         metrics=[MetricConfig(metric_id="temperature", enabled=True)],
-        per_channel_layouts={
-            "sms": [MetricConfig(metric_id="temperature", enabled=True)],
-            "telegram": [MetricConfig(metric_id=m, enabled=True) for m in telegram_ids],
-        },
-    )
+    ), per_channel_layouts={
+        "sms": [MetricConfig(metric_id="temperature", enabled=True)],
+        "telegram": [MetricConfig(metric_id=m, enabled=True) for m in telegram_ids],
+    })
     return dataclasses.replace(trip, display_config=cfg)
 
 

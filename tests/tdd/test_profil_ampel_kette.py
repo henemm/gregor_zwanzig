@@ -42,6 +42,8 @@ from zoneinfo import ZoneInfo
 import pytest
 from bs4 import BeautifulSoup
 
+from tests.helpers.tabelle_aus_wunsch import mit_wunsch
+
 from app.ampel import resolve_ampel
 
 SKI = resolve_ampel({"display_config": {"preset_name": "skitouren"}})
@@ -825,6 +827,10 @@ EINSTIEGE = {
     ("renderers/email/plain.py", "render_plain"): 1,
     ("renderers/email/compact.py", "render_compact"): 1,
     ("renderers/email/compare_html.py", "render_compare_html"): 1,
+    # Issue #3059: Kompakt-Mail der Orte -- Geschwister von render_compare_html,
+    # loest die Ampel einmal aus dem Pflicht-Preset auf (nie None) und reicht
+    # sie keyword-only an den Ausblick (_ausblickzeile) durch.
+    ("renderers/email/compact_compare.py", "render_compare_compact"): 1,
     ("renderers/comparison.py", "render_comparison_text"): 1,
     # Issue #3047 B-K7: Orte-Telegram traegt den 3-Tages-Ausblick (Ampel des Presets).
     ("renderers/comparison.py", "render_compare_telegram"): 1,
@@ -1072,9 +1078,10 @@ def test_trip_abweichungsalarm_faerbt_ueber_den_versandweg_nach_der_trip_ampel(
         stages=[Stage(id="T1", name="Tag 1", date=datetime(2026, 5, 1).date(),
                       waypoints=[Waypoint(id="G1", name="Start", lat=47.0, lon=11.0,
                                           elevation_m=1000.0)])],
-        display_config=UnifiedWeatherDisplayConfig(
+        # #3277: E-Mail-Form ueber die Tabelle (Kanal-Ebene als Modellfeld entfallen).
+        display_config=mit_wunsch(UnifiedWeatherDisplayConfig(
             trip_id=tid, preset_name=preset_name,
-            metrics=[MetricConfig(metric_id="gust", enabled=True)],
+            metrics=[MetricConfig(metric_id="gust", enabled=True)]),
             per_channel_layouts={"email": [
                 MetricConfig(metric_id="gust", enabled=True, format_mode="simplified")]},
         ),

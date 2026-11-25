@@ -812,16 +812,11 @@ class UnifiedWeatherDisplayConfig:
     show_night_block: bool = True
     night_interval_hours: int = 2
     thunder_forecast_days: int = 2
-    multi_day_trend_reports: list[str] = field(default_factory=lambda: ["evening"])  # DEPRECATED: use TripReportConfig.multi_day_trend_reports
     sms_metrics: list[str] = field(default_factory=list)  # Phase 3
-    # Issue #429 — kanal-spezifische Layout-Listen.
-    # None = keine Kanal-Layouts gespeichert → Fallback auf globale `metrics`.
-    # Leere Liste pro Kanal = expliziter User-Wunsch („leer"), kein Fallback (AC-7).
-    per_channel_layouts: Optional[dict[str, list[MetricConfig]]] = None
-    # Issue #434 — per-report-Overrides (Abend ≠ Morgen).
-    # Struktur: { "morning": { "email": [...] }, "evening": { "email": [...] } }.
-    # None = kein per-report-Override → nächste Kaskadenebene (per_channel_layouts).
-    per_report_layouts: Optional[dict[str, dict[str, list[MetricConfig]]]] = None
+    # Issue #3277: die Altfelder multi_day_trend_reports, per_channel_layouts
+    # (channel_layouts), per_report_layouts (channel_layouts_per_report),
+    # outlook_metrics und outlook_metric_formats sind entfallen; die Tabelle
+    # placements ist die einzige Quelle (ADR-0124 Nr. 6/8).
     # Issue #614: optionale Kurzform (SMS-Tages-Max) als Anhang an Telegram-Briefings.
     telegram_kurzform: bool = False
     # Issue #846: Preset-Name für Alert-Schwellen ("deaktiviert" | "entspannt" |
@@ -829,27 +824,6 @@ class UnifiedWeatherDisplayConfig:
     # Frontend (AlertsTab) und trip_alert._select_change_detector lesen dieses Feld.
     alert_preset: Optional[str] = None
     metric_alert_levels: Optional[dict[str, str]] = None  # metric → SensLevel (off|entspannt|standard|sensibel)
-    # Issue #1720 S1 / #1848 A2: Spaltenauswahl der 3-Tages-Vorschau als reine
-    # KENNUNGEN (["temperature", "gust"]) -- dasselbe Vokabular wie Kanal-
-    # An/Aus, Reihenfolge, SMS-Kuerzel und Schwellwerte, und dasselbe wie im
-    # Ortsvergleich. Welche Auswertungen eine Kennung zeigt, leitet der Katalog
-    # ab (compare_outlook_metric_ids.derived_aggregations()); die Paar-Altform
-    # [{"metric_id": ..., "aggregation": ...}] (#1373/ADR-0037) bleibt dauerhaft
-    # lesbar und wird im Ladepfad normalisiert (metric_catalog.
-    # normalize_outlook_metric_ids()).
-    # Drei-Werte-Semantik (ADR-0037/ADR-0055): None/fehlt = die bisherigen
-    # sieben festen Spalten · [] = der Ausblick-Block entfaellt ganz · gefuellt
-    # = gewaehlte Groessen in Auswahlreihenfolge.
-    outlook_metrics: Optional[list[str]] = None
-    # Issue #2049: Roh/Einfach je Ausblick-Groesse, {kennung: bool} (True =
-    # Einfach). PARALLELES Feld statt Objektform in `outlook_metrics` -- jenes
-    # bleibt eine reine Kennungsliste (#1848 A2), strukturell dasselbe Muster
-    # wie `channel_layouts` neben `metrics`. Fehlende Kennung = Roh; der
-    # Ausblick-Default ist hart "Roh" und folgt bewusst NICHT dem
-    # `default_format_mode` des Katalogs (der waere fuer cloud_total/sunshine/
-    # wind_direction symbol/scale und aenderte bestehende Trips ohne jede
-    # Nutzeraktion).
-    outlook_metric_formats: Optional[dict[str, bool]] = None
     # Issue #2792 S1a / ADR-0106: Profil-Ampel des Abos ({template, metrics,
     # thunder}, Struktur Spec feat_2792 §1). None = Vorlage (preset_name bzw.
     # allgemein). Aufloesung ueber app.ampel.ampel_for; in S1a ohne Leser.
@@ -1057,9 +1031,8 @@ class TripReportConfig:
     # unbekannter Key im rohen Dict wird schlicht nicht mehr abgegriffen,
     # kein Crash). save_trip()'s RMW-Merge (_deep_merge_preserve_unknown)
     # bewahrt einen evtl. vorhandenen Alt-Wert in der Datei zusaetzlich.
-    multi_day_trend_reports: list[str] = field(
-        default_factory=lambda: ["evening"]
-    )                                           # F3: Etappen-Ausblick morning/evening
+    # Issue #3277: multi_day_trend_reports und show_outlook entfallen; der
+    # Ausblick folgt allein placements.outlook_reports (ADR-0124 Nr. 6).
 
     # Mail-Elemente abschaltbar (Issue #621) — Default = alles an (bisheriges Verhalten)
     show_stage_stats: bool = True               # Etappen-Kennzahlen-Raster
@@ -1070,7 +1043,6 @@ class TripReportConfig:
         default_factory=lambda: ["precipitation", "wind", "visibility", "thunder"]
     )                                           # Tages-Summe-Auswahl
     show_metrics_summary: bool = False          # Metriken-Überblick (Issue #664)
-    show_outlook: bool = True                   # Issue #721: Ausblick-Block (Großwetterlage + nächste Etappen)
     email_format: str = "full"                  # Issue #722: "full" | "compact"
     telegram_style: str = "rich"                # Issue #1260: "rich" | "kurzform"
     show_yesterday_comparison: bool = True      # Issue #750: Vortag-Vergleich-Sektion

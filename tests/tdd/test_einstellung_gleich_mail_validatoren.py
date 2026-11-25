@@ -876,7 +876,9 @@ def test_orte_leere_vergleichstabelle_kein_falscher_ort_fehlt(monkeypatch, tmp_p
     """N6: leere Vergleichstabelle (bewusst leere Grundauswahl, Ausblick aus) --
     der Klartext nennt die Orte ohne Zeilen; kein falsches "Ort fehlt". Die
     Ortsfolge bleibt geprueft: vertauscht scheitert sie."""
-    preset = _orte_bewusst_leer(outlook_enabled=False)
+    preset = _orte_bewusst_leer()
+    # #3277: Ausblick aus allein ueber die Marke der Tabelle.
+    preset["display_config"]["placements"] = {"outlook_reports": []}
     eml = _orte_eml(monkeypatch, preset)
     konfig = _orte_konfig(tmp_path, preset, "n6")
     code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig)
@@ -1393,10 +1395,11 @@ def _mit_etappen(daten: dict, folgende: int) -> dict:
 def _trip_eml_r7(monkeypatch, daten: dict, *, lang: str = "de", report: str = "evening",
                  stage_stats: dict | None = None, vortag: bool = False, tage=None) -> bytes:
     """Wie ``_trip_eml``, zusaetzlich Morgen/Abend (Ausblick nur fuer Berichte in
-    ``multi_day_trend_reports``, wie der Scheduler), Etappen-Kennzahlen und
+    ``placements.outlook_reports``, wie der Scheduler), Etappen-Kennzahlen und
     Vortag-Vergleich (Renderer gatet sie an ``show_stage_stats``/
     ``show_yesterday_comparison``)."""
     from app.ampel import resolve_ampel
+    from services.report_config_resolver import resolve_report_render_options
     from app.loader import load_trip
     from output.renderers.email.outlook import build_outlook_row
     from services.notification_service import NotificationService, TripReportRequest
@@ -1422,7 +1425,9 @@ def _trip_eml_r7(monkeypatch, daten: dict, *, lang: str = "de", report: str = "e
     NotificationService(user_id=uid).send_trip_report(TripReportRequest(
         trip=trip, report_type=report, segment_weather=[seg], trip_tz=fx.TZ,
         night_weather=fx.night_weather(), stage_name=fx.STAGE_NAME,
-        multi_day_trend=zeilen if report in (rc.multi_day_trend_reports or []) else None,
+        # #3277: wie der Zeitplaner -- "Ausblick erscheint im" aus der Tabelle.
+        multi_day_trend=zeilen if resolve_report_render_options(
+            rc, trip.display_config, report).show_multi_day_trend else None,
         report_config=rc, display_config=trip.display_config, send_email=True,
         stage_stats=stage_stats, day_comparison=vergleich,
     ))
@@ -1538,18 +1543,17 @@ def test_r7_trip_kompakt_ignoriert_bausteinschalter(monkeypatch, tmp_path):
     eml = _trip_eml_r7(monkeypatch, an, stage_stats=_KENNZAHLEN)
     assert b"12.3 km" in eml, "Vorbedingung: Kennzahlen in der Kompakt-Mail"
     aus_daten = copy.deepcopy(an)
-    aus_daten["report_config"].update(show_stage_stats=False, show_outlook=False)
+    aus_daten["report_config"].update(show_stage_stats=False)
     code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, "kaus", aus_daten))
     assert code == 0, aus
 
 
 def test_r7_trip_show_outlook_aus_vollformat(monkeypatch, tmp_path):
     """Mutation V14: Ausblick aus -> im Vollformat kein Ausblick. #3237: "aus"
-    steht in der Tabelle (``outlook_reports: []``); ``show_outlook`` ist ein
-    Altfeld ohne Wirkung und bleibt nur als Beschreibung stehen."""
+    steht in der Tabelle (``outlook_reports: []``); das Altfeld
+    ``show_outlook`` ist seit #3277 entfallen."""
     daten = _trip_daten(_TRIP_FOLGE)
     aus_daten = copy.deepcopy(daten)
-    aus_daten["report_config"]["show_outlook"] = False
     aus_daten = _mit_folge(aus_daten, list(_TRIP_FOLGE), "trip", outlook_reports=[])
     konfig = _konfig(tmp_path, "oaus", aus_daten)
     code, aus = _lauf(tmp_path, TRIP, _trip_eml_r7(monkeypatch, aus_daten), "--konfig", konfig)

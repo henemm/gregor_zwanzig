@@ -73,6 +73,8 @@ class ComparePreviewService:
         return {
             "subject": bericht["subject"],
             "email_html": bericht["email_html"],
+            # Issue #3059: bei Kompakt ist das HTML leer, der Text IST die Mail.
+            "email_text": bericht["email_text"],
             "telegram": bericht["telegram"],
             "sms": bericht["sms"],
             "sms_char_count": len(bericht["sms"]),

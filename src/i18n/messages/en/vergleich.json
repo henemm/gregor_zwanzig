@@ -44,6 +44,8 @@
   "vergleich.ort.abruf_kontingent_erschoepft": "Your weather request quota for today is used up; no cached data is available for this location. It resets at midnight (UTC).",
   "vergleich.telegram.keine_werte": "no values",
   "vergleich.telegram.uebersprungen": "… +{n} more locations (Telegram limit) — full version by email",
+  "vergleich.kompakt.nicht_gezeigt.one": "+{count} location not shown",
+  "vergleich.kompakt.nicht_gezeigt.other": "+{count} locations not shown",
   "vergleich.niederschlagsart.rain": "Rain",
   "vergleich.niederschlagsart.snow": "Snow",
   "vergleich.niederschlagsart.mixed": "Mixed precipitation",

@@ -497,17 +497,13 @@ class TestReportOptionsMigration:
         assert config.show_compact_summary is True, \
             "Default must be True"
 
-    def test_model_has_multi_day_trend_reports(self):
-        """TripReportConfig must have multi_day_trend_reports field with default ['evening']."""
-        from app.models import TripReportConfig
-        config = TripReportConfig(trip_id="test")
-        assert hasattr(config, "multi_day_trend_reports"), \
-            "TripReportConfig must have multi_day_trend_reports"
-        assert config.multi_day_trend_reports == ["evening"], \
-            f"Default must be ['evening'], got {config.multi_day_trend_reports}"
+    # #3277: ``test_model_has_multi_day_trend_reports`` und
+    # ``test_scheduler_reads_from_report_config`` entfallen mit dem Feld
+    # ``multi_day_trend_reports`` (ADR-0124 Nr. 6: placements.outlook_reports);
+    # die Roundtrip-Tests pruefen weiter ``show_compact_summary``.
 
     def test_loader_serializes_new_fields(self):
-        """Save→load roundtrip must preserve show_compact_summary and multi_day_trend_reports."""
+        """Save→load roundtrip must preserve show_compact_summary."""
         import json
         import tempfile
         from pathlib import Path
@@ -550,8 +546,6 @@ class TestReportOptionsMigration:
         assert trip.report_config is not None
         assert trip.report_config.show_compact_summary is False, \
             "show_compact_summary must survive load"
-        assert trip.report_config.multi_day_trend_reports == ["morning", "evening"], \
-            "multi_day_trend_reports must survive load"
 
         # Now test serialization via _trip_to_dict
         from app.loader import _trip_to_dict
@@ -560,9 +554,8 @@ class TestReportOptionsMigration:
         assert "show_compact_summary" in rc_data, \
             "show_compact_summary must be serialized in report_config"
         assert rc_data["show_compact_summary"] is False
-        assert "multi_day_trend_reports" in rc_data, \
-            "multi_day_trend_reports must be serialized in report_config"
-        assert rc_data["multi_day_trend_reports"] == ["morning", "evening"]
+        # #3277: das Altfeld wird nicht mehr geschrieben.
+        assert "multi_day_trend_reports" not in rc_data
 
     def test_loader_migration_fallback_from_display_config(self):
         """When report_config lacks the fields, loader falls back to display_config values."""
@@ -619,8 +612,6 @@ class TestReportOptionsMigration:
         assert trip.report_config is not None
         assert trip.report_config.show_compact_summary is False, \
             "Should fall back to display_config value (False)"
-        assert trip.report_config.multi_day_trend_reports == ["morning"], \
-            "Should fall back to display_config value (['morning'])"
 
     def test_loader_report_config_takes_precedence(self):
         """When report_config HAS the fields, those values win over display_config."""
@@ -676,35 +667,6 @@ class TestReportOptionsMigration:
 
         assert trip.report_config.show_compact_summary is False, \
             "report_config value should take precedence"
-        assert trip.report_config.multi_day_trend_reports == ["morning", "evening"], \
-            "report_config value should take precedence"
-
-    def test_scheduler_reads_from_report_config(self):
-        """Scheduler must read multi_day_trend_reports from report_config, not display_config."""
-        from app.models import TripReportConfig
-
-        # Create a fake trip with report_config having morning only
-        rc = TripReportConfig(trip_id="test-sched")
-        rc.multi_day_trend_reports = ["morning"]
-
-        fake_trip = _FakeTrip(
-            id="test-sched",
-            name="Scheduler Test",
-            stages=[],
-            display_config=_FakeDisplayConfig(multi_day_trend_reports=["evening"]),
-            report_config=rc,
-        )
-
-        # Simulate the scheduler logic (should read from report_config)
-        rc_obj = fake_trip.report_config
-        dc_obj = fake_trip.display_config
-        trend_reports = (
-            rc_obj.multi_day_trend_reports
-            if rc_obj is not None
-            else (dc_obj.multi_day_trend_reports if dc_obj else ["evening"])
-        )
-        assert trend_reports == ["morning"], \
-            f"Should read from report_config, got {trend_reports}"
 
     def test_scheduler_patches_display_config_compact_summary(self):
         """Scheduler must patch display_config.show_compact_summary from report_config (Option A)."""

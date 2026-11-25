@@ -284,7 +284,6 @@ class TripReportFormatter:
             stage_total=stage_total,
             trip_url=trip_url,
             email_format=options.email_format,
-            show_outlook=options.show_outlook,
             trip_metrics_altbestand=_trip_metrics_altbestand,
             # Issue #1425 Schritt 1: trip.corridors markiert Stundentabellen-
             # Zellen im HTML-Teil (Durchreichweg trip.py:193 -> render_email
@@ -321,21 +320,12 @@ class TripReportFormatter:
         # Metriken eintraegt, die in der uebergebenen dc enabled sind.
         # Issue #3098 (ADR-0121): die Menge/Folge/Format kommt ausschliesslich
         # aus der Resolver-Telegram-Liste (Adapter ``telegram_metric_configs``).
-        # Die Telegram-Kanal-Ebene wird aus _dc_telegram entfernt, damit
-        # ``render_for_channel`` die Liste nicht erneut kaskadiert; die Klasse
+        # Seit #3277 traegt das Modell keine Kanal-Ebenen mehr; die Klasse
         # ist die Basisklasse (keine Unterklassen-Methode liest einen Altpfad).
         _dc_telegram = UnifiedWeatherDisplayConfig(**{
             **{f.name: getattr(_dc_uncollapsed, f.name)
                for f in dataclasses.fields(UnifiedWeatherDisplayConfig) if f.init},
             "metrics": telegram_metric_configs(_telegram_rows, _dc_uncollapsed),
-            "per_channel_layouts": {
-                k: v for k, v in (_dc_uncollapsed.per_channel_layouts or {}).items()
-                if k != "telegram"
-            } or None,
-            "per_report_layouts": {
-                rt: {k: v for k, v in kanaele.items() if k != "telegram"}
-                for rt, kanaele in (_dc_uncollapsed.per_report_layouts or {}).items()
-            } or None,
         })
         seg_tables_telegram = [self._extract_hourly_rows(s, _dc_telegram, ampel=_ampel) for s in segments]
         # Adversary F004 (S2-Fix-Runde): dc=_dc_telegram statt dc=_dc_uncollapsed

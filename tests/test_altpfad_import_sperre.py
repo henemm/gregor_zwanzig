@@ -1,7 +1,8 @@
 # doc-compliance-test
 """AST-Import-Waechter: der Altpfad der Kanal-Listen kehrt nicht zurueck (#3237).
 
-SPEC: docs/specs/modules/feat_3237_altpfad_entfernen.md, AC-9, AC-11.
+SPEC: docs/specs/modules/feat_3237_altpfad_entfernen.md, AC-9, AC-11;
+docs/specs/modules/feat_3277_altfelder_entfernen.md, AC-8.
 
 Werkzeug-Klasse (CLAUDE.md-Ausnahme ``# doc-compliance-test``): der Waechter
 liest Produktions-Quelltext als DATEN (``ast.walk``) und meldet jeden Import,
@@ -44,6 +45,8 @@ VERBOTEN = frozenset({
     "_options_bisher",
     # Migrationsskript (AC-11)
     "migrate_3157_placements",
+    # #3277 AC-8: toter Code ohne Produktionsaufrufer (compare_outlook_metric_ids)
+    "resolve_hourly_metric_formats",
 })
 
 #: (Datei relativ zur Wurzel, Name) -> (Begruendung, EXPIRY). Leer: keine Ausnahme.
@@ -119,6 +122,9 @@ def test_ac9_erlaubnisliste_traegt_begruendung_und_ist_nicht_abgelaufen():
     "dc.get_metrics_for_channel('email', 'evening')\n",
     "import scripts.migrate_3157_placements\n",
     "def erstanlage_begleitfelder():\n    pass\n",
+    # #3277 AC-8
+    "from output.renderers.compare_outlook_metric_ids import resolve_hourly_metric_formats\n",
+    "from output.renderers import compare_outlook_metric_ids as c\nc.resolve_hourly_metric_formats({})\n",
 ])
 def test_selbstnachweis_verbotener_name_wird_erkannt(quelle):
     assert verstoesse(quelle, "src/beispiel.py", erlaubt={}), quelle

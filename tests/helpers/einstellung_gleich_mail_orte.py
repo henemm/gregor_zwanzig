@@ -229,6 +229,9 @@ def sende_orte_mail(preset_json: dict, *, uid: Optional[str] = None,
     # #3237: die Einstellung des Falls steht in der Tabelle (Altfelder wirken nicht).
     preset_json = orte_wunsch_als_tabelle(preset_json)
     pfad = preset_ablegen(uid, preset_json)
+    # #3277: der Versand speichert den Status ueber Python und verwirft dabei
+    # die Altfelder; das Orakel liest den abgelegten Stand VOR dem Versand.
+    roh = json.loads(pfad.read_text(encoding="utf-8"))
     gesendet: list[dict] = []
     telegram: list[str] = []
     versatz = _VERSATZ[briefing]
@@ -250,7 +253,7 @@ def sende_orte_mail(preset_json: dict, *, uid: Optional[str] = None,
     assert len(gesendet) == 1, f"Vorbedingung: genau eine Mail erwartet, {len(gesendet)} gesendet"
     assert len(telegram) <= 1, f"Vorbedingung: hoechstens eine Telegram-Sendung, {len(telegram)}"
     m = gesendet[0]
-    return OrteMail(uid, json.loads(pfad.read_text(encoding="utf-8")), m["subject"],
+    return OrteMail(uid, roh, m["subject"],
                     m["html"], m["plain"], list(empfaenger),
                     telegram[0] if telegram else None)
 
@@ -690,6 +693,63 @@ def klartext_ausblick(plain: str, lang: str = "de") -> dict[str, list[tuple[str,
         tag = next((z for z in rest if re.match(r"^\S{2,3}\s", z)), None)
         if tag is not None:
             aus[ort] = _zelltoken(tag.split(None, 1)[1])
+    return aus
+
+
+# ---------------------------------------------------------------------------
+# Parser Kompakt-Mail (Issue #3059): eine Zeile je Ort ``Name: [!] K Wert ...``,
+# darunter eingerueckt ``<Ausblick-Name>: Tag Kopf Wert ... | Tag ...``.
+# ---------------------------------------------------------------------------
+
+
+def kuerzel_von(metric_id: str) -> str:
+    """Kuerzel einer Katalog-Groesse in der Kompakt-Ortszeile (``compact_label``,
+    Protokoll-Token -- statisch aus dem Register)."""
+    return next(m.compact_label for m in _katalog() if m.id == metric_id)
+
+
+def _kompakt_ortszeilen(text: str, orte=ORTSNAMEN) -> dict[str, str]:
+    """{Ort: Rest der Ortszeile nach ``Name:``} in Mailfolge."""
+    aus: dict[str, str] = {}
+    for z in text.splitlines():
+        for ort in orte:
+            if z.startswith(f"{ort}:"):
+                aus[ort] = z[len(ort) + 1:].strip()
+    return aus
+
+
+def kompakt_vergleichswerte(text: str, orte=ORTSNAMEN) -> dict[str, list[tuple[str, str]]]:
+    """{Ort: [(Kuerzel, Wert)]} der Kompakt-Ortszeilen; ein Token ist Kuerzel,
+    wenn es ein ``compact_label`` des Registers ist (Warnmarker davor zaehlt nicht)."""
+    kuerzel = {m.compact_label for m in _katalog()}
+    aus: dict[str, list[tuple[str, str]]] = {}
+    for ort, rest in _kompakt_ortszeilen(text, orte).items():
+        paare: list[list[str]] = []
+        for tok in rest.split():
+            if tok in kuerzel:
+                paare.append([tok, ""])
+            elif paare:
+                paare[-1][1] = f"{paare[-1][1]} {tok}".strip()
+        aus[ort] = [(k, v) for k, v in paare]
+    return aus
+
+
+def kompakt_ausblick(text: str, lang: str = "de", orte=ORTSNAMEN) -> dict[str, list[tuple[str, str]]]:
+    """{Ort: [(Spaltenkopf, Wert)] des ersten Tags der Ausblick-Zeile unter
+    der Ortszeile} (nur Orte mit Ausblick-Zeile)."""
+    from utils.ascii_fold import fold_ascii
+
+    name = fold_ascii(katalogtext("mail.ausblick.name", lang))
+    aus: dict[str, list[tuple[str, str]]] = {}
+    aktuell = None
+    for z in text.splitlines():
+        kopf = next((o for o in orte if z.startswith(f"{o}:")), None)
+        if kopf is not None:
+            aktuell = kopf
+            continue
+        if aktuell is not None and z.strip().startswith(f"{name}:"):
+            erster_tag = z.strip()[len(name) + 1:].split(" | ")[0].strip()
+            aus[aktuell] = _zelltoken(erster_tag.split(None, 1)[1] if " " in erster_tag else "")
     return aus
 
 

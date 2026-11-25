@@ -323,11 +323,13 @@ describe('Blöcke und Einstellungen je Kanal (AC-29, AC-30, AC-37)', () => {
 		const an = await karte(trip({ blocks: { ...trip().blocks, telegram_style: 'kurzform' } }), { context: 'route' });
 		assert.equal(attr(eins(an, 'data-testid="was-steht-wo-kurzstil"').auf, 'aria-disabled'), null);
 	});
-	test('drei Orte: Stundenverlauf „je Ort“, kein E-Mail-Format, keine Trip-Blöcke', async () => {
+	// #3059 (AC-13): das E-Mail-Format gehört seither auch zu Orten (Format-Schalter: was_steht_wo_karte_orte_format_3059.test.ts).
+	test('drei Orte: Stundenverlauf „je Ort“, E-Mail-Format, keine Trip-Blöcke', async () => {
 		const s = text(await karte(orte(3), { context: 'vergleich' }));
 		assert.ok(s.includes('Stundenverlauf Stunden-Tabelle je Ort unter der Übersicht, nur in der E-Mail.'));
 		assert.ok(s.includes('Tageswerte der nächsten drei Tage'));
-		for (const w of ['E-Mail: Format', 'Etappen-Kennzahlen', 'Vortag-Vergleich', 'Nacht-Stundentabelle']) assert.ok(!s.includes(w), `${w} gehört nicht zu Orten`);
+		assert.ok(s.includes('E-Mail: Format'), 'E-Mail-Format gehört seit #3059 auch zu Orten');
+		for (const w of ['Etappen-Kennzahlen', 'Vortag-Vergleich', 'Nacht-Stundentabelle']) assert.ok(!s.includes(w), `${w} gehört nicht zu Orten`);
 	});
 	test('ein Ort: „Stunden-Tabelle unter der Übersicht, nur in der E-Mail.“ ohne „je Ort“ (AC-37)', async () => {
 		const s = text(await karte(orte(1), { context: 'vergleich' }));

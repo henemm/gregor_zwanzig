@@ -545,13 +545,15 @@ def test_abo_ohne_tabelle_zeigt_die_umrechnung(client):
 def test_orte_ohne_tabelle_zeigt_die_umrechnung(client):
     from services.placements import placements_aus_grundauswahl
 
+    # #3277: das Altfeld ``outlook_enabled`` wirkt nicht mehr (ADR-0124 Nr. 6);
+    # die Umrechnung traegt die Vorbelegung des Ausblicks.
     _orte(NUTZER_A, "o-alt", extra={"outlook_enabled": False})
     antwort = _ok(client, "o-alt", "vergleich")
     soll = placements_aus_grundauswahl({"active_metrics": ORTE_GRUND}, "compare",
-                                       enabled_reports=["morning"], outlook_enabled=False)
+                                       enabled_reports=["morning"])
     assert antwort["stored"] is False
     assert antwort["placements"] == soll
-    assert antwort["outlook_reports"] == []
+    assert antwort["outlook_reports"] == ["morning"]
 
 
 def test_get_schreibt_nichts(client):

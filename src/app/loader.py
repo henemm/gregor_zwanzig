@@ -20,9 +20,6 @@ from output.channels.seven_io_base import mask_number
 from services.file_lock import atomic_write_json, exclusive_lock
 from i18n import language_from_user_dict
 from app.ampel import validate_ampel
-from app.metric_catalog import (
-    normalize_outlook_metric_formats, normalize_outlook_metric_ids,
-)
 from app.models import (
     AlertMetric,
     AlertRule,
@@ -134,6 +131,32 @@ def _clamped_day_window(
     if start_hour == end_hour:
         return None, None
     return start_hour, end_hour
+
+
+#: Issue #3277 (Spec feat_3277 Schritt 1, ADR-0124 Nr. 6/8): die zehn
+#: wirkungslosen Altfelder. Die Tabelle ``placements`` ist die einzige Quelle;
+#: Speichern ueber Python verwirft diese Namen aktiv (oberste Ebene,
+#: ``display_config``, ``report_config``), alle anderen Schluessel bleiben per
+#: Merge erhalten (ADR-0101). Einzige Stelle im Backend, die die Namen nennt
+#: (Feldnamen-Waechter ``tests/test_altfeld_namen_sperre.py``).
+ALTFELDER = (
+    "channel_layouts", "channel_layouts_per_report", "channel_active_metrics",
+    "outlook_metrics", "outlook_metric_formats", "hourly_metrics",
+    "hourly_metric_formats", "show_outlook", "multi_day_trend_reports",
+    "outlook_enabled",
+)
+
+
+def altfelder_entfernen(daten: dict) -> dict:
+    """Entfernt die zehn ``ALTFELDER`` in-place aus oberster Ebene,
+    ``display_config`` und ``report_config`` und gibt ``daten`` zurueck
+    (Issue #3277). Alle anderen Schluessel bleiben unberuehrt."""
+    ebenen = [daten] + [daten[k] for k in ("display_config", "report_config")
+                        if isinstance(daten.get(k), dict)]
+    for ebene in ebenen:
+        for name in ALTFELDER:
+            ebene.pop(name, None)
+    return daten
 
 
 def _deep_merge_preserve_unknown(base: dict, overlay: dict) -> dict:
@@ -663,10 +686,6 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
                 "show_compact_summary",
                 dc_data.get("show_compact_summary", True),
             ),
-            multi_day_trend_reports=rc_data.get(
-                "multi_day_trend_reports",
-                dc_data.get("multi_day_trend_reports", ["evening"]),
-            ),
             show_stage_stats=rc_data.get("show_stage_stats", True),
             show_quick_take_tags=rc_data.get("show_quick_take_tags", True),
             show_stability=rc_data.get("show_stability", True),
@@ -676,7 +695,6 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
                 ["precipitation", "wind", "visibility", "thunder"],
             ),
             show_metrics_summary=rc_data.get("show_metrics_summary", False),
-            show_outlook=rc_data.get("show_outlook", True),
             email_format=rc_data.get("email_format", "full"),
             telegram_style=rc_data.get("telegram_style", "rich"),
             show_yesterday_comparison=rc_data.get("show_yesterday_comparison", True),
@@ -1119,86 +1137,6 @@ def _parse_display_config(
         # Ableitung, sonst stuende in der Mail mehr als im Editor (#3047 N1).
         _append_derived_metrics(metrics)
 
-    # Issue #429/#1394 (T4): kanal-spezifische Layouts laden (optional,
-    # backward-compat). Wenn channel_layouts fehlt → None, damit
-    # get_metrics_for_channel auf die globale Liste zurückfällt. Eine
-    # bewusst vollstaendig geleerte Kanal-Konfiguration (alle Kanal-Listen
-    # []) wird seit #1394 NICHT mehr auf None zurueckgefallen (AC-7,
-    # models.py:603-606 dokumentiert diesen Vertrag bereits). Ist eine
-    # Kanal-Ebene vorhanden, ERSETZT sie die globale Liste HIER beim Laden
-    # NICHT -- sie wird erst beim Lesen ueber get_metrics_for_channel() gegen
-    # das globale Maximum geschnitten (ADR-0050, Issue #1719 Scheibe 2); hier
-    # wird nur roh geparst.
-    per_channel_layouts: Optional[Dict[str, List[MetricConfig]]] = None
-    raw_channel_layouts = data.get("channel_layouts")
-    if (
-        raw_channel_layouts
-        and isinstance(raw_channel_layouts, dict)
-    ):
-        per_channel_layouts = {}
-        for ch, ch_metrics in raw_channel_layouts.items():
-            if not isinstance(ch_metrics, list):
-                continue
-            ch_parsed: List[MetricConfig] = []
-            for mc_data in ch_metrics:
-                mc_data = _coerce_metric_entry(mc_data)  # Issue #1262
-                ch_explicit_mode, ch_friendly = _normalize_legacy_mode(mc_data)
-                ch_parsed.append(MetricConfig(
-                    metric_id=mc_data["metric_id"],
-                    enabled=mc_data.get("enabled", True),
-                    morning_enabled=mc_data.get("morning_enabled"),
-                    evening_enabled=mc_data.get("evening_enabled"),
-                    use_friendly_format=ch_friendly,
-                    format_mode=ch_explicit_mode,
-                    alert_enabled=mc_data.get("alert_enabled", False),
-                    alert_threshold=mc_data.get("alert_threshold"),
-                    horizons=mc_data.get("horizons"),
-                    bucket=mc_data.get("bucket", "primary"),
-                    order=mc_data.get("order", 0),
-                    sms_threshold=mc_data.get("sms_threshold"),
-                ))
-            # Issue #1728 DEC-6b: dieselbe Ableitung wie auf der globalen
-            # Liste -- sonst waehlt ein vor dieser Scheibe gespeichertes
-            # Kanal-Layout die neuen Kennungen stillschweigend ab.
-            per_channel_layouts[ch] = _append_derived_metrics(ch_parsed)
-
-    # Issue #434: per-report-Overrides laden (optional, backward-compat).
-    per_report_layouts: Optional[Dict[str, Dict[str, List[MetricConfig]]]] = None
-    raw_per_report = data.get("channel_layouts_per_report")
-    if raw_per_report and isinstance(raw_per_report, dict):
-        per_report_layouts = {}
-        for report_type, channels_dict in raw_per_report.items():
-            if not isinstance(channels_dict, dict):
-                continue
-            per_report_layouts[report_type] = {}
-            for ch, ch_metrics in channels_dict.items():
-                if not isinstance(ch_metrics, list):
-                    continue
-                pr_parsed: List[MetricConfig] = []
-                for mc_data in ch_metrics:
-                    mc_data = _coerce_metric_entry(mc_data)  # Issue #1262
-                    pr_mode, pr_friendly = _normalize_legacy_mode(mc_data)
-                    pr_parsed.append(MetricConfig(
-                        metric_id=mc_data["metric_id"],
-                        enabled=mc_data.get("enabled", True),
-                        morning_enabled=mc_data.get("morning_enabled"),
-                        evening_enabled=mc_data.get("evening_enabled"),
-                        use_friendly_format=pr_friendly,
-                        format_mode=pr_mode,
-                        alert_enabled=mc_data.get("alert_enabled", False),
-                        alert_threshold=mc_data.get("alert_threshold"),
-                        horizons=mc_data.get("horizons"),
-                        bucket=mc_data.get("bucket", "primary"),
-                        order=mc_data.get("order", 0),
-                        sms_threshold=mc_data.get("sms_threshold"),
-                    ))
-                # Issue #1728 DEC-6b (wie oben, per-Report-Ebene).
-                per_report_layouts[report_type][ch] = _append_derived_metrics(
-                    pr_parsed
-                )
-        if not per_report_layouts:
-            per_report_layouts = None
-
     return UnifiedWeatherDisplayConfig(
         trip_id=data.get("trip_id", ""),
         metrics=metrics,
@@ -1206,22 +1144,11 @@ def _parse_display_config(
         show_night_block=data.get("show_night_block", True),
         night_interval_hours=data.get("night_interval_hours", 2),
         thunder_forecast_days=data.get("thunder_forecast_days", 2),
-        multi_day_trend_reports=data.get("multi_day_trend_reports", ["evening"] if data.get("show_multi_day_trend", True) else []),
         sms_metrics=data.get("sms_metrics") or [],
-        per_channel_layouts=per_channel_layouts,
-        per_report_layouts=per_report_layouts,
         telegram_kurzform=data.get("telegram_kurzform", False),
         alert_preset=data.get("alert_preset"),  # Issue #846
         metric_alert_levels=_migrate_metric_alert_levels(data.get("metric_alert_levels")),  # Issue #946/#959
-        # Issue #1720 S1 / #1848 A2: beim Lesen auf reine Kennungen
-        # normalisieren -- Bestandsdateien halten die Paar-Altform, und zwei
-        # Paare derselben Groesse (Tief UND Hoch) sind EINE Kennung. `None`
-        # (Feld fehlt) und `[]` (bewusst geleert) bleiben unterscheidbar.
-        outlook_metrics=normalize_outlook_metric_ids(data.get("outlook_metrics")),
-        # Issue #2049: paralleles Feld, dieselbe Drei-Werte-Semantik. Nicht-
-        # faehige Kennungen und nicht-boolesche Werte fallen beim Lesen heraus.
-        outlook_metric_formats=normalize_outlook_metric_formats(
-            data.get("outlook_metric_formats")),
+        # Issue #3277: die Altfelder (ALTFELDER) werden nicht mehr gelesen.
         ampel=_ampel_beim_laden(data.get("ampel"), owner_id or data.get("trip_id", "")),
         # Issue #3122: Roh-Durchreichung (Kopie, damit Modell und Eingabe-Dict
         # sich nicht teilen); nur ein Objekt gilt, alles andere = fehlt.
@@ -1748,7 +1675,6 @@ def save_location(location: SavedLocation, user_id: str) -> Path:
             "show_night_block": dc.show_night_block,
             "night_interval_hours": dc.night_interval_hours,
             "thunder_forecast_days": dc.thunder_forecast_days,
-            "multi_day_trend_reports": dc.multi_day_trend_reports,
             "sms_metrics": dc.sms_metrics,
             "telegram_kurzform": dc.telegram_kurzform,
             "updated_at": dc.updated_at.isoformat(),
@@ -1756,23 +1682,7 @@ def save_location(location: SavedLocation, user_id: str) -> Path:
             **({"placements": copy.deepcopy(dc.placements)}
                if dc.placements is not None else {}),
         }
-        # Issue #429: per_channel_layouts serialisieren (latenter Bug-Fix)
-        if dc.per_channel_layouts is not None:
-            data["display_config"]["channel_layouts"] = {
-                ch: [_metric_to_dict(mc) for mc in metrics
-                     if not getattr(mc, "derived", False)]
-                for ch, metrics in dc.per_channel_layouts.items()
-            }
-        # Issue #434: per_report_layouts serialisieren
-        if dc.per_report_layouts is not None:
-            data["display_config"]["channel_layouts_per_report"] = {
-                report_type: {
-                    ch: [_metric_to_dict(mc) for mc in metrics
-                     if not getattr(mc, "derived", False)]
-                    for ch, metrics in channels_dict.items()
-                }
-                for report_type, channels_dict in dc.per_report_layouts.items()
-            }
+        # Issue #3277: die Altfelder werden nicht mehr geschrieben.
 
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
@@ -1977,7 +1887,6 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "show_night_block": dc.show_night_block,
             "night_interval_hours": dc.night_interval_hours,
             "thunder_forecast_days": dc.thunder_forecast_days,
-            "multi_day_trend_reports": dc.multi_day_trend_reports,
             "sms_metrics": dc.sms_metrics,
             "telegram_kurzform": dc.telegram_kurzform,
             "updated_at": dc.updated_at.isoformat(),
@@ -1988,21 +1897,6 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             **({"alert_preset": dc.alert_preset} if dc.alert_preset is not None else {}),
             **({"metric_alert_levels": dc.metric_alert_levels}
                if dc.metric_alert_levels is not None else {}),
-            # Issue #1720 S1: BEDINGT schreiben, nicht unbedingt -- sonst
-            # bekaeme jeder Trip nach dem ersten Speichern ein explizites
-            # `outlook_metrics` und "nie gesetzt" (sieben feste Spalten) waere
-            # von "bewusst geleert" (Block entfaellt) nicht mehr zu trennen.
-            # Issue #1848 A2: geschrieben wird die KENNUNGSFORM. Ein Bestands-
-            # Trip, der nur weitergespeichert wird, verlaesst damit die
-            # Paar-Altform -- das bedingte `is not None` bleibt unberuehrt.
-            **({"outlook_metrics": normalize_outlook_metric_ids(dc.outlook_metrics)}
-               if dc.outlook_metrics is not None else {}),
-            # Issue #2049: ebenfalls BEDINGT -- ein unbedingt geschriebenes
-            # leeres Mapping machte "nie eingestellt" von "alles auf Roh"
-            # ununterscheidbar (dieselbe Begruendung wie eine Zeile darueber).
-            **({"outlook_metric_formats":
-                normalize_outlook_metric_formats(dc.outlook_metric_formats)}
-               if dc.outlook_metric_formats is not None else {}),
             # Issue #2792 S1a: BEDINGT -- None (keine/verworfene Ampel) bleibt
             # ungeschrieben, der Bestand auf der Platte bleibt per Merge erhalten.
             **({"ampel": dc.ampel} if dc.ampel is not None else {}),
@@ -2011,23 +1905,6 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             **({"placements": copy.deepcopy(dc.placements)}
                if dc.placements is not None else {}),
         }
-        # Issue #429: per_channel_layouts serialisieren (latenter Bug-Fix)
-        if dc.per_channel_layouts is not None:
-            data["display_config"]["channel_layouts"] = {
-                ch: [_metric_to_dict(mc) for mc in metrics
-                     if not getattr(mc, "derived", False)]
-                for ch, metrics in dc.per_channel_layouts.items()
-            }
-        # Issue #434: per_report_layouts serialisieren
-        if dc.per_report_layouts is not None:
-            data["display_config"]["channel_layouts_per_report"] = {
-                report_type: {
-                    ch: [_metric_to_dict(mc) for mc in metrics
-                     if not getattr(mc, "derived", False)]
-                    for ch, metrics in channels_dict.items()
-                }
-                for report_type, channels_dict in dc.per_report_layouts.items()
-            }
 
     # Serialize alert cooldown and quiet hours (Issue #181)
     if trip.alert_cooldown_minutes is not None:
@@ -2084,14 +1961,12 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "change_threshold_precip_mm": trip.report_config.change_threshold_precip_mm,
             "wind_exposition_min_elevation_m": trip.report_config.wind_exposition_min_elevation_m,
             "show_compact_summary": trip.report_config.show_compact_summary,
-            "multi_day_trend_reports": trip.report_config.multi_day_trend_reports,
             "show_stage_stats": trip.report_config.show_stage_stats,
             "show_quick_take_tags": trip.report_config.show_quick_take_tags,
             "show_stability": trip.report_config.show_stability,
             "show_highlights": trip.report_config.show_highlights,
             "daily_summary_metrics": trip.report_config.daily_summary_metrics,
             "show_metrics_summary": trip.report_config.show_metrics_summary,
-            "show_outlook": trip.report_config.show_outlook,
             "email_format": trip.report_config.email_format,
             "telegram_style": trip.report_config.telegram_style,
             "show_yesterday_comparison": trip.report_config.show_yesterday_comparison,
@@ -2223,6 +2098,8 @@ def _write_trip_locked(trip: Trip, path: Path, existing: dict) -> None:
     # -- ganzer Unterbaum, kein tiefer Merge mit dem Plattenstand.
     if "placements" in python_data.get("display_config", {}):
         merged["display_config"]["placements"] = python_data["display_config"]["placements"]
+    # Issue #3277: Altfelder aus Bestand und ``extra`` verwerfen (nach dem Merge).
+    altfelder_entfernen(merged)
     atomic_write_json(path, merged)
 
 

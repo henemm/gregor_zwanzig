@@ -175,7 +175,9 @@ _OFFLINE_KEEP_FILES = (
 _C2_SPLIT_FILES = (
     # 19 statt 21 (#3237): test_trend_rendering_{html,plain}_two_lines als
     # reiner Altpfad (multi_day_trend_reports als Schalter) geloescht.
-    ("tests/integration/test_multi_day_trend.py", 19, "live"),
+    # 18 statt 19 (#3277): die zwei Altfeld-Persistenztests (multi_day_trend_reports)
+    # sind durch einen Tabellen-Persistenztest (outlook_reports) ersetzt.
+    ("tests/integration/test_multi_day_trend.py", 18, "live"),
     ("tests/integration/test_trip_segment_weather.py", 9, "live"),
     ("tests/tdd/test_forecast_confidence_backend.py", 16, "live"),
     ("tests/unit/test_openmeteo_endpoint_routing.py", 9, "live"),

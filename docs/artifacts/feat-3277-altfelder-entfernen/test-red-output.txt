@@ -1,0 +1,268 @@
+......FFFFFFFF.F..FF.F...FF..FFF..................F..................... [ 96%]
+...                                                                      [100%]
+=================================== FAILURES ===================================
+E   AssertionError: ['show_outlook', 'multi_day_trend_reports', 'outlook_enabled', 'display_config.channel_layouts', 'display_config.channel_layouts_per_report', 'display_config.channel_active_metrics', ...]
+    assert ['show_outloo...metrics', ...] == []
+      
+      Left contains 15 more items, first extra item: 'show_outlook'
+      Use -v to get more diff
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_3277_altfelder_entfernen.py:210: AssertionError: ['show_outlook', 'multi_day_trend_reports', 'outlook_enabled', 'display_config.channel_layouts', 'display_config.channel_layouts_per_report', 'display_config.channel_active_metrics', ...]
+E   AssertionError: ['show_outlook', 'multi_day_trend_reports', 'outlook_enabled', 'display_config.channel_layouts', 'display_config.channel_layouts_per_report', 'display_config.channel_active_metrics', ...]
+    assert ['show_outloo...metrics', ...] == []
+      
+      Left contains 15 more items, first extra item: 'show_outlook'
+      Use -v to get more diff
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_3277_altfelder_entfernen.py:225: AssertionError: ['show_outlook', 'multi_day_trend_reports', 'outlook_enabled', 'display_config.channel_layouts', 'display_config.channel_layouts_per_report', 'display_config.channel_active_metrics', ...]
+E   AssertionError: ['show_outlook', 'multi_day_trend_reports', 'outlook_enabled', 'display_config.channel_layouts', 'display_config.channel_layouts_per_report', 'display_config.channel_active_metrics', ...]
+    assert ['show_outloo...metrics', ...] == []
+      
+      Left contains 13 more items, first extra item: 'show_outlook'
+      Use -v to get more diff
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_3277_altfelder_entfernen.py:235: AssertionError: ['show_outlook', 'multi_day_trend_reports', 'outlook_enabled', 'display_config.channel_layouts', 'display_config.channel_layouts_per_report', 'display_config.channel_active_metrics', ...]
+E   AssertionError: ['display_config.channel_layouts', 'display_config.channel_layouts_per_report', 'display_config.multi_day_trend_reports']
+    assert ['display_con...rend_reports'] == []
+      
+      Left contains 3 more items, first extra item: 'display_config.channel_layouts'
+      Use -v to get more diff
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_3277_altfelder_entfernen.py:254: AssertionError: ['display_config.channel_layouts', 'display_config.channel_layouts_per_report', 'display_config.multi_day_trend_reports']
+E   AssertionError: ['multi_day_trend_reports', 'outlook_metrics', 'outlook_metric_formats', 'per_channel_layouts', 'per_report_layouts', 'report_config.multi_day_trend_reports', ...]
+    assert ['multi_day_t...reports', ...] == []
+      
+      Left contains 7 more items, first extra item: 'multi_day_trend_reports'
+      Use -v to get more diff
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_3277_altfelder_entfernen.py:276: AssertionError: ['multi_day_trend_reports', 'outlook_metrics', 'outlook_metric_formats', 'per_channel_layouts', 'per_report_layouts', 'report_config.multi_day_trend_reports', ...]
+E   AssertionError: assert ['multi_day_t...port_layouts'] == []
+      
+      Left contains 5 more items, first extra item: 'multi_day_trend_reports'
+      Use -v to get more diff
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_3277_altfelder_entfernen.py:284: AssertionError: assert ['multi_day_t...port_layouts'] == []
+E   AssertionError: ['multi_day_trend_reports', 'outlook_metrics', 'outlook_metric_formats', 'per_channel_layouts', 'per_report_layouts']
+    assert ['multi_day_t...port_layouts'] == []
+      
+      Left contains 5 more items, first extra item: 'multi_day_trend_reports'
+      Use -v to get more diff
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_3277_altfelder_entfernen.py:296: AssertionError: ['multi_day_trend_reports', 'outlook_metrics', 'outlook_metric_formats', 'per_channel_layouts', 'per_report_layouts']
+E   AssertionError: (PosixPath('/tmp/pytest-of-hem/pytest-3546/test_ac4_nur_dateien_von_nutze0/users/nutzer-a3277x/briefings/trip-3277.jso...ay_config.channel_layouts', 'display_config.channel_layouts_per_report', 'display_config.channel_active_metrics', ...])
+    assert ['show_outloo...metrics', ...] == []
+      
+      Left contains 15 more items, first extra item: 'show_outlook'
+      Use -v to get more diff
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_3277_altfelder_entfernen.py:310: AssertionError: (PosixPath('/tmp/pytest-of-hem/pytest-3546/test_ac4_nur_dateien_von_nutze0/users/nutzer-a3277x/briefings/trip-3277.jso...ay_config.channel_layouts', 'display_config.channel_layouts_per_report', 'display_config.channel_active_metrics', ...])
+E   AssertionError: ['render_email', 'render_html', 'render_plain', 'ReportRenderOptions']
+    assert ['render_emai...enderOptions'] == []
+      
+      Left contains 4 more items, first extra item: 'render_email'
+      Use -v to get more diff
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_3277_altfelder_entfernen.py:343: AssertionError: ['render_email', 'render_html', 'render_plain', 'ReportRenderOptions']
+E   AssertionError: ['placements_aus_grundauswahl', 'resolve_channel_lists', 'ausblick_briefings', '_Abo']
+    assert ['placements_...ings', '_Abo'] == []
+      
+      Left contains 4 more items, first extra item: 'placements_aus_grundauswahl'
+      Use -v to get more diff
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_3277_altfelder_entfernen.py:382: AssertionError: ['placements_aus_grundauswahl', 'resolve_channel_lists', 'ausblick_briefings', '_Abo']
+E   AssertionError: assert (False, []) == (True, ['temp...ure', 'wind'])
+      
+      At index 0 diff: False != True
+      Use -v to get more diff
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_3277_altfelder_entfernen.py:400: AssertionError: assert (False, []) == (True, ['temp...ure', 'wind'])
+E   AssertionError: assert {'morning': F...ening': False} == {'morning': T...ening': False}
+      
+      Omitting 1 identical items, use -vv to show
+      Differing items:
+      {'morning': False} != {'morning': True}
+      Use -v to get more diff
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_3277_altfelder_entfernen.py:421: AssertionError: assert {'morning': F...ening': False} == {'morning': T...ening': False}
+E   AssertionError: migrate_2454_derived_children.py
+    assert not True
+     +  where True = exists()
+     +    where exists = ((PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit') / 'scripts') / 'migrate_2454_derived_children.py').exists
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_3277_altfelder_entfernen.py:475: AssertionError: migrate_2454_derived_children.py
+E   AssertionError: backfill_display_config_issue111.py
+    assert not True
+     +  where True = exists()
+     +    where exists = ((PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit') / 'scripts') / 'backfill_display_config_issue111.py').exists
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_3277_altfelder_entfernen.py:475: AssertionError: backfill_display_config_issue111.py
+E   AssertionError: 52 Altfeld-Namen im Backend:
+      src/app/loader.py:1133: channel_layouts
+      src/app/loader.py:1167: channel_layouts_per_report
+      src/app/loader.py:1751: multi_day_trend_reports
+      src/app/loader.py:1751: multi_day_trend_reports
+      src/app/loader.py:1760: per_channel_layouts
+      src/app/loader.py:1767: per_report_layouts
+      src/app/loader.py:1980: multi_day_trend_reports
+      src/app/loader.py:1980: multi_day_trend_reports
+      src/app/loader.py:2015: per_channel_layouts
+      src/app/loader.py:2022: per_report_layouts
+      src/app/loader.py:2087: multi_day_trend_reports
+      src/app/loader.py:2094: show_outlook
+      src/app/loader.py:2087: multi_day_trend_reports
+      src/app/loader.py:2094: show_outlook
+      src/app/loader.py:1209: multi_day_trend_reports
+      src/app/loader.py:1761: channel_layouts
+      src/app/loader.py:1768: channel_layouts_per_report
+      src/app/loader.py:2016: channel_layouts
+      src/app/loader.py:2023: channel_layouts_per_report
+      src/app/loader.py:667: multi_day_trend_reports
+      src/app/loader.py:679: show_outlook
+      src/app/loader.py:1220: outlook_metrics
+      src/app/loader.py:1224: outlook_metric_formats
+      src/app/loader.py:1998: outlook_metrics
+      src/app/loader.py:2003: outlook_metric_formats
+      src/app/loader.py:668: multi_day_trend_reports
+      src/app/loader.py:1764: per_channel_layouts
+      src/app/loader.py:1774: per_report_layouts
+      src/app/loader.py:2019: per_channel_layouts
+      src/app/loader.py:2029: per_report_layouts
+      src/app/models.py:815: multi_day_trend_reports
+      src/app/models.py:820: per_channel_layouts
+      src/app/models.py:824: per_report_layouts
+      src/app/models.py:1060: multi_day_trend_reports
+      src/app/models.py:1073: show_outlook
+      src/output/renderers/trip_report.py:287: show_outlook
+      src/output/renderers/trip_report.py:332: per_channel_layouts
+      src/output/renderers/trip_report.py:337: per_report_layouts
+      src/services/placements_view_service.py:716: outlook_enabled
+      src/services/report_config_resolver.py:111: show_outlook
+      src/services/report_config_resolver.py:86: show_outlook
+      src/services/report_config_resolver.py:87: multi_day_trend_reports
+      src/services/report_config_resolver.py:364: outlook_enabled
+      src/services/report_config_resolver.py:284: outlook_enabled
+      .claude/hooks/_soll_aus_konfiguration.py:647: outlook_enabled
+      scripts/backfill_display_config_issue111.py:47: multi_day_trend_reports
+      scripts/backfill_display_config_issue111.py:47: multi_day_trend_reports
+      scripts/migrate_2454_derived_children.py:116: channel_layouts
+      scripts/migrate_2454_derived_children.py:122: channel_layouts_per_report
+      scripts/migrate_2792_profil_ampel.py:200: channel_layouts
+      scripts/migrate_2792_profil_ampel.py:202: channel_layouts_per_report
+      scripts/migrate_2792_profil_ampel.py:206: channel_active_metrics
+    assert not ['src/app/loader.py:1133: channel_layouts', 'src/app/loader.py:1167: channel_layouts_per_report', 'src/app/loader.py:1...i_day_trend_reports', 'src/app/loader.py:1760: per_channel_layouts', 'src/app/loader.py:1767: per_report_layouts', ...]
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/test_altfeld_namen_sperre.py:172: AssertionError: 52 Altfeld-Namen im Backend:
+E   AssertionError: Altfeld-Namen im Go-Code:
+      internal/model/compare_preset.go:71: outlook_enabled
+    assert not ['internal/model/compare_preset.go:71: outlook_enabled']
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/test_altfeld_namen_sperre.py:179: AssertionError: Altfeld-Namen im Go-Code:
+E   AssertionError: []
+    assert 0 == 1
+     +  where 0 = len([])
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/test_altfeld_namen_sperre.py:193: AssertionError: []
+E   AssertionError: Altpfad-Namen im Produktionscode:
+      src/output/renderers/compare_outlook_metric_ids.py:371: resolve_hourly_metric_formats
+    assert not ['src/output/renderers/compare_outlook_metric_ids.py:371: resolve_hourly_metric_formats']
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/test_altpfad_import_sperre.py:101: AssertionError: Altpfad-Namen im Produktionscode:
+==================================== PASSES ====================================
+______ test_ac1_trip_alle_zehn_altfelder_gleich_golden[trip_voll-morning] ______
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+______ test_ac1_trip_alle_zehn_altfelder_gleich_golden[trip_voll-evening] ______
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+________ test_ac5_ausblick_folgt_allein_outlook_reports[berichte0-True] ________
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+_______ test_ac5_ausblick_folgt_allein_outlook_reports[berichte1-False] ________
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+_______ test_ac9_validator_vorschau_gleich_bisherigem_stand[mit_feldern] _______
+------------------------------ Captured log call -------------------------------
+WARNING  utils.timezone:timezone.py:131 Keine aufloesbare Zeitzone fuer ? — es gilt Weltzeit (UTC). Ruhezeit, Tageszaehler und Faelligkeit rechnen damit NICHT in der Ortszeit.
+_________ test_ac5_trip_vier_kanaele_gleich_golden[trip_voll-morning] __________
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+_________ test_ac5_trip_vier_kanaele_gleich_golden[trip_voll-evening] __________
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+_______ test_ac6_trip_altfelder_aendern_keinen_kanal[trip_voll-morning] ________
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+_______ test_ac6_trip_altfelder_aendern_keinen_kanal[trip_voll-evening] ________
+------------------------------ Captured log call -------------------------------
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+WARNING  app.loader:loader.py:81 Unknown format_mode 'simplified' for metric 'cloud_total'; falling back to default 'symbol'
+=========================== short test summary info ============================
+PASSED tests/tdd/test_3277_altfelder_entfernen.py::test_ac1_trip_alle_zehn_altfelder_gleich_golden[trip_gemischt-morning]
+PASSED tests/tdd/test_3277_altfelder_entfernen.py::test_ac1_trip_alle_zehn_altfelder_gleich_golden[trip_gemischt-evening]
+PASSED tests/tdd/test_3277_altfelder_entfernen.py::test_ac1_trip_alle_zehn_altfelder_gleich_golden[trip_voll-morning]
+PASSED tests/tdd/test_3277_altfelder_entfernen.py::test_ac1_trip_alle_zehn_altfelder_gleich_golden[trip_voll-evening]
+PASSED tests/tdd/test_3277_altfelder_entfernen.py::test_ac1_orte_alle_zehn_altfelder_gleich_golden[orte_gemischt]
+PASSED tests/tdd/test_3277_altfelder_entfernen.py::test_ac1_orte_alle_zehn_altfelder_gleich_golden[orte_voll]
+PASSED tests/tdd/test_3277_altfelder_entfernen.py::test_ac4_zugriff_als_default_trifft_keine_nutzerdatei
+PASSED tests/tdd/test_3277_altfelder_entfernen.py::test_ac5_ausblick_folgt_allein_outlook_reports[berichte0-True]
+PASSED tests/tdd/test_3277_altfelder_entfernen.py::test_ac5_ausblick_folgt_allein_outlook_reports[berichte1-False]
+PASSED tests/tdd/test_3277_altfelder_entfernen.py::test_ac6_briefing_mit_rows_unveraendert
+PASSED tests/tdd/test_3277_altfelder_entfernen.py::test_ac9_validator_vorschau_gleich_bisherigem_stand[mit_feldern]
+PASSED tests/tdd/test_3277_altfelder_entfernen.py::test_ac9_validator_vorschau_gleich_bisherigem_stand[ohne_felder]
+PASSED tests/tdd/test_3277_altfelder_entfernen.py::test_ac9_request_felder_sind_im_waechter_begruendet_erlaubt
+PASSED tests/tdd/test_3277_altfelder_entfernen.py::test_ac10_gate_testmails_ohne_altfeld_namen
+PASSED tests/tdd/test_3277_altfelder_entfernen.py::test_ac10_gate_testmail_vergleich_baut_weiter_mit_windrichtung
+PASSED tests/test_altfeld_namen_sperre.py::test_ac7_erlaubnisliste_traegt_begruendung_und_ist_nicht_abgelaufen
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_verstoss_wird_erkannt[dc.get('show_outlook', True)\n]
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_verstoss_wird_erkannt[data = {'multi_day_trend_reports': []}\n]
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_verstoss_wird_erkannt[x = rc.show_outlook\n]
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_verstoss_wird_erkannt[dc['outlook_enabled']\n]
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_verstoss_wird_erkannt[y = trip.display_config.per_channel_layouts\n]
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_verstoss_wird_erkannt[class C:\n    multi_day_trend_reports: list = None\n]
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_go_json_tag_wird_erkannt_kommentar_nicht
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_zentrale_liste_ist_frei
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_renderer_innenwelt_ist_frei[def f(*, hourly_metrics=None, outlook_enabled=True):\n    pass\n]
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_renderer_innenwelt_ist_frei[render(outlook_metrics=[], hourly_metric_formats={})\n]
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_renderer_innenwelt_ist_frei[outlook_metrics = view.outlook\n]
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_renderer_innenwelt_ist_frei[def g():\n    per_channel_layouts: dict = {}\n    return per_channel_layouts\n]
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_renderer_innenwelt_ist_frei[z = opts.outlook_metrics\n]
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_erlaubter_eintrag_besteht
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_abgelaufener_eintrag_faellt
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_zu_kurzer_grund_wird_abgelehnt
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_andere_namen_und_texte_sind_frei
+PASSED tests/test_altpfad_import_sperre.py::test_ac11_migrationsskript_ist_entfernt
+PASSED tests/test_altpfad_import_sperre.py::test_ac9_erlaubnisliste_traegt_begruendung_und_ist_nicht_abgelaufen
+PASSED tests/test_altpfad_import_sperre.py::test_selbstnachweis_verbotener_name_wird_erkannt[from services.placements import placements_from_legacy\n]
+PASSED tests/test_altpfad_import_sperre.py::test_selbstnachweis_verbotener_name_wird_erkannt[from services import channel_list_resolver as c\nc.legacy_lists(dc, 'trip', 'evening')\n]
+PASSED tests/test_altpfad_import_sperre.py::test_selbstnachweis_verbotener_name_wird_erkannt[dc.get_metrics_for_channel('email', 'evening')\n]
+PASSED tests/test_altpfad_import_sperre.py::test_selbstnachweis_verbotener_name_wird_erkannt[import scripts.migrate_3157_placements\n]
+PASSED tests/test_altpfad_import_sperre.py::test_selbstnachweis_verbotener_name_wird_erkannt[def erstanlage_begleitfelder():\n    pass\n]
+PASSED tests/test_altpfad_import_sperre.py::test_selbstnachweis_verbotener_name_wird_erkannt[from output.renderers.compare_outlook_metric_ids import resolve_hourly_metric_formats\n]
+PASSED tests/test_altpfad_import_sperre.py::test_selbstnachweis_verbotener_name_wird_erkannt[from output.renderers import compare_outlook_metric_ids as c\nc.resolve_hourly_metric_formats({})\n]
+PASSED tests/test_altpfad_import_sperre.py::test_selbstnachweis_erlaubter_eintrag_besteht
+PASSED tests/test_altpfad_import_sperre.py::test_selbstnachweis_abgelaufener_eintrag_faellt
+PASSED tests/test_altpfad_import_sperre.py::test_selbstnachweis_bleibende_namen_sind_frei
+PASSED tests/tdd/test_3237_golden_vier_kanaele.py::test_ac5_trip_vier_kanaele_gleich_golden[trip_gemischt-morning]
+PASSED tests/tdd/test_3237_golden_vier_kanaele.py::test_ac5_trip_vier_kanaele_gleich_golden[trip_gemischt-evening]
+PASSED tests/tdd/test_3237_golden_vier_kanaele.py::test_ac5_trip_vier_kanaele_gleich_golden[trip_voll-morning]
+PASSED tests/tdd/test_3237_golden_vier_kanaele.py::test_ac5_trip_vier_kanaele_gleich_golden[trip_voll-evening]
+PASSED tests/tdd/test_3237_golden_vier_kanaele.py::test_ac6_trip_altfelder_aendern_keinen_kanal[trip_gemischt-morning]
+PASSED tests/tdd/test_3237_golden_vier_kanaele.py::test_ac6_trip_altfelder_aendern_keinen_kanal[trip_gemischt-evening]
+PASSED tests/tdd/test_3237_golden_vier_kanaele.py::test_ac6_trip_altfelder_aendern_keinen_kanal[trip_voll-morning]
+PASSED tests/tdd/test_3237_golden_vier_kanaele.py::test_ac6_trip_altfelder_aendern_keinen_kanal[trip_voll-evening]
+PASSED tests/tdd/test_3237_golden_vier_kanaele.py::test_ac5_orte_vier_kanaele_gleich_golden[orte_gemischt]
+PASSED tests/tdd/test_3237_golden_vier_kanaele.py::test_ac5_orte_vier_kanaele_gleich_golden[orte_voll]
+PASSED tests/tdd/test_3237_golden_vier_kanaele.py::test_ac6_orte_altfelder_aendern_keinen_kanal[orte_gemischt]
+PASSED tests/tdd/test_3237_golden_vier_kanaele.py::test_ac6_orte_altfelder_aendern_keinen_kanal[orte_voll]
+FAILED tests/tdd/test_3277_altfelder_entfernen.py::test_ac2_save_trip_entfernt_altfelder_und_erhaelt_den_rest
+FAILED tests/tdd/test_3277_altfelder_entfernen.py::test_ac2_update_trip_entfernt_altfelder
+FAILED tests/tdd/test_3277_altfelder_entfernen.py::test_ac2_vergleich_speichern_entfernt_altfelder_und_erhaelt_den_rest
+FAILED tests/tdd/test_3277_altfelder_entfernen.py::test_ac2_save_location_schreibt_keine_altfelder
+FAILED tests/tdd/test_3277_altfelder_entfernen.py::test_ac3_geladener_trip_traegt_keine_alt_attribute
+FAILED tests/tdd/test_3277_altfelder_entfernen.py::test_ac3_modellklassen_haben_keine_altfelder
+FAILED tests/tdd/test_3277_altfelder_entfernen.py::test_ac3_geladener_ort_traegt_keine_alt_attribute
+FAILED tests/tdd/test_3277_altfelder_entfernen.py::test_ac4_nur_dateien_von_nutzer_a_werden_bereinigt
+FAILED tests/tdd/test_3277_altfelder_entfernen.py::test_ac5_email_renderer_signaturen_ohne_show_outlook
+FAILED tests/tdd/test_3277_altfelder_entfernen.py::test_ac6_keine_parameter_outlook_enabled
+FAILED tests/tdd/test_3277_altfelder_entfernen.py::test_ac6_briefing_ohne_rows_ignoriert_outlook_enabled
+FAILED tests/tdd/test_3277_altfelder_entfernen.py::test_ac6_soll_hook_ohne_rows_ignoriert_outlook_enabled
+FAILED tests/tdd/test_3277_altfelder_entfernen.py::test_ac10_verbrauchte_einmal_skripte_sind_geloescht[migrate_2454_derived_children.py]
+FAILED tests/tdd/test_3277_altfelder_entfernen.py::test_ac10_verbrauchte_einmal_skripte_sind_geloescht[backfill_display_config_issue111.py]
+FAILED tests/test_altfeld_namen_sperre.py::test_ac7_kein_python_backend_code_nennt_ein_altfeld
+FAILED tests/test_altfeld_namen_sperre.py::test_ac7_kein_go_code_nennt_ein_altfeld
+FAILED tests/test_altfeld_namen_sperre.py::test_ac7_zentrale_entfernungsliste_genau_einmal_mit_den_zehn_namen
+FAILED tests/test_altpfad_import_sperre.py::test_ac9_kein_produktionscode_nutzt_den_altpfad
+18 failed, 57 passed in 7.90s
