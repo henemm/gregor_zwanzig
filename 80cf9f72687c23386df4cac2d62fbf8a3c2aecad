@@ -1,0 +1,68 @@
+{
+  "verified_commit": "80cf9f72687c23386df4cac2d62fbf8a3c2aecad",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/ID?tab=wetter und /compare/ID?tab=wetter:AC-1",
+      "evidence": "rework-2988-zaehler.spec.ts auf Staging 80cf9f726, beide Kontexte 2 von 2 gruen: sieben Bedienungen, Zaehler binnen 2 s, 0 Aufrufe der Aufloesung",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-2",
+      "status": "SKIPPED",
+      "url": "n/a:AC-2",
+      "evidence": "reiner Kern-Test zaehler_referenz_2988 im CI-Gate, keine eigene Live-Oberflaeche",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/ID?tab=wetter und /compare/ID?tab=wetter:AC-3",
+      "evidence": "Als eigene Vorlage speichern in beiden Kontexten: Rumpf mit ampel und metrics, Abweichung gust 41 enthalten, Metrikliste gleich Auswahl, wind_direction modus gegenwind bleibt erhalten",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-14",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/ID?tab=wetter und /compare/ID?tab=wetter:AC-14",
+      "evidence": "Speichern im Reiter in beiden Kontexten: Fremdfelder, Tagesfenster 6 bis 20, report_config gleich vorher, kein Schluessel verloren",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-25T16:14:58.656577+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: 2988 S1 live geprueft",
+  "scope": "full-stack",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: 2988 S1 live geprueft",
+      "scope": "full-stack",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-25T16:14:58.656577+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
