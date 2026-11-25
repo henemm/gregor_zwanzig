@@ -25,6 +25,8 @@ import { DESKTOP, MOBIL, WT, oeffneWetter } from './s3a2794-teil3.helpers';
 
 type Json = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 const VORSCHAU_PFAD = '/api/briefings/placements/vorschau';
+/** Auflösung der Ampel: nur Lesen, aber POST (#2988). */
+const AUFLOESUNG_PFAD = '/api/ampel/aufloesung';
 const ANLEGE_PFAD = ANLEGE_SEL.vergleich.postPfad; // /api/compare/presets
 const ALTSCHLUESSEL = ['channel_layouts', 'outlook_metrics', 'outlook_metric_formats', 'channel_active_metrics', 'hourly_metrics', 'hourly_metric_formats'];
 const einName = (tag: string) => `${E2E_TEST_PREFIX}VA-${tag}-${Date.now()}`;
@@ -63,7 +65,7 @@ const anlegePosts = (m: Mitschnitt) => m.alle.filter((x) => x.methode === 'POST'
 /** Schreibaufrufe außer Vorschau, Anlege-POST und Test-Orten (vor dem Seitenaufruf) — beim Anlegen darf es keine geben. */
 const schreibAufrufe = (m: Mitschnitt) =>
 	m.alle.filter(
-		(x) => ['PUT', 'PATCH', 'DELETE'].includes(x.methode) || (x.methode === 'POST' && x.pfad !== VORSCHAU_PFAD && x.pfad !== ANLEGE_PFAD && x.pfad !== '/api/locations')
+		(x) => ['PUT', 'PATCH', 'DELETE'].includes(x.methode) || (x.methode === 'POST' && x.pfad !== VORSCHAU_PFAD && x.pfad !== AUFLOESUNG_PFAD && x.pfad !== ANLEGE_PFAD && x.pfad !== '/api/locations')
 	);
 
 /** Profil-Lesung im Browser mit Test-Chat-ID (Kurzstil bedienbar); das gespeicherte Profil bleibt unverändert. */

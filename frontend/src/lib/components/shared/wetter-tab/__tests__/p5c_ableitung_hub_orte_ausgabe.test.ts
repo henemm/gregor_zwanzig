@@ -22,7 +22,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 
-import { WETTER_TAB, live, vergleichsKatalogFetch } from './wetterTabDaten.ts';
+import { aufloesungPost, aufgeloestVon, WETTER_TAB, live, vergleichsKatalogFetch } from './wetterTabDaten.ts';
 import { umgebungFuer } from '../../__tests__/svelteInstanzPruefstand.ts';
 import { ebene1, pythonAusgabe } from './ausgabeOrakel.ts';
 import { alarmZaehler, altSchluesselAusKatalog, eigenschaftenAusKatalog, vorlagenAusTemplates } from '../ampelModell.ts';
@@ -53,7 +53,7 @@ function tripSpeichern(abo: Abo, s: Z.WetterStand): Abo {
 }
 /** Was 6ddf4a1 fuer eine Auswahl ohne Bestand schrieb (Orakel „vor p5a“). */
 const vorP5a = (auswahl: string[]): Abo => ({ display_config: { metrics: auswahl.map((id) => ({ metric_id: id, enabled: true })) }, report_config: {} });
-const lesen = (abo: Abo) => Z.standAusAbo('route', abo as never, VORLAGEN, {}, { eig: EIG });
+const lesen = (abo: Abo) => Z.standAusAbo('route', abo as never, aufgeloestVon(abo), {}, { eig: EIG });
 
 // Nutzer A legt aus „allgemein“ an (Vorlage ohne Kind-Groessen), Nutzer B aus „alpen-trekking“
 // (Nacht-Tiefst ausdruecklich, Windchill ohne Kinder).
@@ -61,7 +61,7 @@ const ANLEGEN = ['allgemein', 'alpen-trekking'] as const;
 const neu: Record<string, { stand: Z.WetterStand; gespeichert: Abo; vorher: Abo }> = {};
 for (const v of ANLEGEN) {
 	const abo: Abo = { display_config: { ampel: { template: v } } };
-	const stand = Z.standAusAbo('route', abo as never, VORLAGEN, {}, { eig: EIG, alsVorlage: true });
+	const stand = Z.standAusAbo('route', abo as never, aufgeloestVon(abo), {}, { eig: EIG, alsVorlage: true });
 	const vorlagenAuswahl = Object.entries(VORLAGEN[v].metrics ?? {}).filter(([, e]) => e?.enabled === true).map(([id]) => id);
 	neu[v] = { stand, gespeichert: tripSpeichern(abo, stand), vorher: vorP5a(vorlagenAuswahl) };
 }
@@ -151,7 +151,8 @@ describe('p5c-1 Eigene Vorlage und „+“ ohne Doppelte', () => {
 
 describe('p5c-1 Vergleich: „+“ Temperatur leitet keine Trip-Kinder ab', () => {
 	test('vergleich_plus_ohne_kinder', () => {
-		const s = Z.standAusAbo('vergleich', { display_config: { active_metrics: [{ metric_id: 'wind', aggregation: 'max' }] } } as never, VORLAGEN, ALT, { eig: EIG });
+		const abo = { display_config: { active_metrics: [{ metric_id: 'wind', aggregation: 'max' }] } };
+		const s = Z.standAusAbo('vergleich', abo as never, aufgeloestVon(abo), ALT, { eig: EIG });
 		assert.deepEqual(Z.mitMetrik(s, 'temperature', 'vergleich').auswahl, ['wind', 'temperature']);
 	});
 });
@@ -164,7 +165,8 @@ describe('p5c-1 Verdrahtung: der Reiter (WetterTabInhalt) reicht beim „+“ se
 			if (pfad === '/api/templates') return LIVE.templates;
 			if (pfad === '/api/metric-presets') return [];
 			throw new Error(`unerwartet: ${pfad}`);
-		}
+		},
+		post: aufloesungPost()
 	};
 	async function plusTemperatur(context: 'route' | 'vergleich', abo: Abo): Promise<string[]> {
 		const { u } = await umgebungFuer(tab, {
@@ -256,7 +258,7 @@ const ORTE_NIE: Record<string, { abo: Abo; weg: string }> = {
 };
 const orteNach = Object.fromEntries(
 	Object.entries(ORTE_NIE).map(([id, f]) => {
-		const s = Z.ohneMetrik(Z.standAusAbo('vergleich', f.abo as never, VORLAGEN, ALT, { eig: EIG }), f.weg);
+		const s = Z.ohneMetrik(Z.standAusAbo('vergleich', f.abo as never, aufgeloestVon(f.abo), ALT, { eig: EIG }), f.weg);
 		return [id, orteSpeichern(f.abo, s)];
 	})
 );

@@ -104,6 +104,63 @@ export function pythonAufloesen(ampeln: Json[]): Json[] {
 	return JSON.parse(stdout.trim());
 }
 
+// Auflösung wie POST /api/ampel/aufloesung (#2988 S3): echtes `resolve_entwurf`, Formprüfung je Eintrag
+// wie im Endpunkt. Jeder Lauf bringt die Vorlagen und das leere Abo mit; weitere Einträge kosten nur
+// beim ersten Mal einen Python-Lauf.
+const PY_AUFLOESUNG = [
+	'import sys, json',
+	"sys.path.insert(0, 'src'); sys.path.insert(0, '.')",
+	'from app.ampel import resolve_entwurf',
+	'from app.ampel_templates import AMPEL_TEMPLATES',
+	'from api.routers.ampel_aufloesung import _eintrag_ok',
+	'eintraege = json.loads(sys.stdin.read())',
+	'for e in eintraege:',
+	"    assert _eintrag_ok(e), 'Formfehler (400): ' + json.dumps(e)[:300]",
+	"vorlagen = [{}] + [{'ampel': {'template': tid}} for tid in AMPEL_TEMPLATES]",
+	'print(json.dumps([[e, resolve_entwurf(e)] for e in vorlagen + eintraege], ensure_ascii=False))'
+].join('\n');
+
+/** Ergebnis eines Eintrags: `{vorlage_id, ampel}` (vollständig, `ampel.template` = `vorlage_id`). */
+export type Aufgeloest = { vorlage_id: string; ampel: Json };
+
+const aufloesungen = new Map<string, string>();
+const eintragSchluessel = (e: Json) => JSON.stringify([e?.ampel ?? null, e?.preset_name ?? null, e?.profil ?? null, e?.metrics ?? null]);
+
+/** Ergebnisse des echten `resolve_entwurf` in Reihenfolge der Einträge (je Eintrag gemerkt). */
+export function pythonAufloesung(eintraege: Json[]): Aufgeloest[] {
+	const fehlend = eintraege.filter((e) => !aufloesungen.has(eintragSchluessel(e)));
+	if (fehlend.length) {
+		const stdout = execFileSync('uv', ['run', 'python3', '-c', PY_AUFLOESUNG], {
+			cwd: REPO,
+			encoding: 'utf-8',
+			input: JSON.stringify(fehlend),
+			maxBuffer: 64 * 1024 * 1024,
+			stdio: ['pipe', 'pipe', 'pipe']
+		});
+		const paare = JSON.parse(stdout.trim()) as [Json, Aufgeloest][];
+		// Die gesendeten Einträge behalten ihren eigenen Schlüssel (Zahlen wie 1.0 kommen sonst anders zurück).
+		paare.forEach(([e, r], i) => aufloesungen.set(eintragSchluessel(fehlend[i - (paare.length - fehlend.length)] ?? e), JSON.stringify(r)));
+	}
+	return eintraege.map((e) => JSON.parse(aufloesungen.get(eintragSchluessel(e))!));
+}
+
+/** Aufgelöste Ampel eines Abos (Trip oder Ortsvergleich); die Metrikliste des Abos spielt keine Rolle. */
+export function aufgeloestVon(abo: Json): Aufgeloest {
+	const dc = abo?.display_config ?? {};
+	const text = (x: unknown) => (typeof x === 'string' ? x : null);
+	return pythonAufloesung([{ ampel: dc.ampel ?? null, preset_name: text(dc.preset_name), profil: text(abo?.profil) }])[0];
+}
+
+/** Client-`post` für die Auflösung mit echtem Python; jeder andere Pfad und jeder Formfehler wirft. */
+export function aufloesungPost(): <T = Json>(pfad: string, rumpf?: unknown) => Promise<T> {
+	return async <T = Json>(pfad: string, rumpf?: unknown): Promise<T> => {
+		if (pfad !== '/api/ampel/aufloesung') throw new Error(`unerwartet: POST ${pfad}`);
+		const eintraege = (JSON.parse(JSON.stringify(rumpf ?? null)) as Json)?.eintraege;
+		if (!Array.isArray(eintraege) || eintraege.length > 32) throw new Error('POST /api/ampel/aufloesung: 400 bad_request');
+		return { ergebnisse: pythonAufloesung(eintraege) } as T;
+	};
+}
+
 /** Ampel ohne offene (null) Grenzwerte — Python kopiert `None`, ein Spiegel darf sie weglassen. */
 export function ohneOffene(ampel: Json): Json {
 	const k = structuredClone(ampel);

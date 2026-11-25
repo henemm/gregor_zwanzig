@@ -18,7 +18,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 
-import { live, REPO } from './wetterTabDaten.ts';
+import { aufgeloestVon, live, REPO } from './wetterTabDaten.ts';
 import { vorlagenAusTemplates } from '../ampelModell.ts';
 import { standAusAbo, type AboSicht } from '../wetterZustand.ts';
 import { tripNutzlast, vergleichNutzlast } from '../wetterTabSpeicherung.ts';
@@ -67,7 +67,7 @@ for (const kontext of ['route', 'vergleich'] as const) {
 	describe(`E4 ${kontext}: Reiter Wetter zeigt „beides an", sobald Briefing ODER Alarm an ist`, () => {
 		for (const f of FAELLE) {
 			test(`e4_${kontext}_lesen_${f.name}_ist_${f.an}`, () => {
-				const s = standAusAbo(kontext, abo(kontext, f.felder), vorlagen());
+				const s = standAusAbo(kontext, abo(kontext, f.felder), aufgeloestVon(abo(kontext, f.felder)));
 				assert.equal(s.warnungenAn, f.an, `${f.name}: ${JSON.stringify(f.felder)}`);
 			});
 		}
@@ -78,7 +78,7 @@ for (const kontext of ['route', 'vergleich'] as const) {
 			test(`e4_${kontext}_speichern_${f.name}`, () => {
 				const a = abo(kontext, f.felder);
 				const v = vorlagen();
-				const s = standAusAbo(kontext, a, v);
+				const s = standAusAbo(kontext, a, aufgeloestVon(a));
 				const opt = { client: null as never, stand: () => s, vorlagen: () => v, abo: () => a };
 				const felder = kontext === 'route' ? tripNutzlast(opt).tripFelder : vergleichNutzlast(opt);
 				const ow = (f.felder.official_warnings ?? {}) as Record<string, unknown>;
@@ -93,7 +93,7 @@ for (const kontext of ['route', 'vergleich'] as const) {
 describe('E4: Editor-Regel gleich der Python-Lesefunktion (Briefing und Alarm)', () => {
 	test('e4_paritaet_python_alle_faelle', () => {
 		const py = pythonRegel(FAELLE.map((f) => f.felder));
-		const ts = FAELLE.map((f) => standAusAbo('vergleich', abo('vergleich', f.felder), vorlagen()).warnungenAn);
+		const ts = FAELLE.map((f) => standAusAbo('vergleich', abo('vergleich', f.felder), aufgeloestVon(abo('vergleich', f.felder))).warnungenAn);
 		assert.deepEqual(ts, py, FAELLE.map((f) => f.name).join(', '));
 		assert.deepEqual(py, FAELLE.map((f) => f.an));
 	});

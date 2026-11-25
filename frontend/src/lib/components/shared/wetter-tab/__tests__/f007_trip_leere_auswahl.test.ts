@@ -19,7 +19,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { live } from './wetterTabDaten.ts';
+import { aufgeloestVon, live } from './wetterTabDaten.ts';
 import { aktiveMetriken, auswahlLesen, eigenschaftenAusKatalog, registerStandard, verschmelzen, vorlagenAusTemplates } from '../ampelModell.ts';
 import { mitMetrik, standAusAbo, type AboSicht } from '../wetterZustand.ts';
 import { tripNutzlast } from '../wetterTabSpeicherung.ts';
@@ -50,13 +50,13 @@ describe('F007 (#3047 E1): Trip mit metrics: [] zeigt den Mail-Standard, keine l
 	});
 
 	test('Oeffnen des Reiters: Auswahl = Register-Standard', () => {
-		const s = standAusAbo('route', TRIP_LEER, vorlagen(), {}, { eig: EIG });
+		const s = standAusAbo('route', TRIP_LEER, aufgeloestVon(TRIP_LEER), {}, { eig: EIG });
 		assert.deepEqual(s.auswahl, STANDARD);
 	});
 
 	test('Anlege-Kette: ohne Liste gilt die Vorlage', () => {
 		const v = vorlagen();
-		const s = standAusAbo('route', TRIP_LEER, v, {}, { eig: EIG, alsVorlage: true });
+		const s = standAusAbo('route', TRIP_LEER, aufgeloestVon(TRIP_LEER), {}, { eig: EIG, alsVorlage: true });
 		// #3047 p5c (Tech-Lead-Entscheidung, Ausgabe unveraendert): samt der Kinder, die Python aus den
 		// Eltern der Vorlage ableitet (Mail-Nachweis: p5c_ableitung_hub_orte_ausgabe.test.ts).
 		const vorlage = aktiveMetriken(v.wandern);
@@ -66,7 +66,7 @@ describe('F007 (#3047 E1): Trip mit metrics: [] zeigt den Mail-Standard, keine l
 
 	test('Erstes Speichern mit einer Plus-Metrik schreibt die volle Liste, nicht nur die neue Metrik', () => {
 		const v = vorlagen();
-		const start = standAusAbo('route', TRIP_LEER, v, {}, { eig: EIG });
+		const start = standAusAbo('route', TRIP_LEER, aufgeloestVon(TRIP_LEER), {}, { eig: EIG });
 		const neu = 'dewpoint';
 		assert.ok(!start.auswahl.includes(neu), `Messaufbau: ${neu} ist schon im Standard`);
 		const s = mitMetrik(start, neu);

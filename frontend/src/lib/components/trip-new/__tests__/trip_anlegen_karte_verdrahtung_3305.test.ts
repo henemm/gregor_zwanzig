@@ -25,7 +25,7 @@ import { register } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { umgebungFuer, findeKomponenten, attributAusdruck, ohneTypen, werte, type Knoten } from '../../shared/__tests__/svelteInstanzPruefstand.ts';
-import { live } from '../../shared/wetter-tab/__tests__/wetterTabDaten.ts';
+import { aufloesungPost, live } from '../../shared/wetter-tab/__tests__/wetterTabDaten.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const FRONTEND = resolve(HIER, '../../../../..');
@@ -43,7 +43,8 @@ const LIVE_API = {
 		if (pfad === '/api/templates') return d.templates;
 		if (pfad === '/api/metric-presets') return [];
 		throw new Error(`unerwartet: ${pfad}`);
-	}
+	},
+	post: aufloesungPost()
 };
 const ruhe = () => new Promise((r) => setImmediate(r));
 const z = (state: string, extra: J = {}) => ({ state, format: null, reason: null, example: null, ampel: null, mark: null, ...extra });

@@ -203,3 +203,32 @@ Dieser Durchlauf liefert **nur S2** (AC-4 bis AC-8, AC-19). S1 ist eingespielt u
 
 - **F006:** Der Vertrag (`api_contract.md`, Zeile `/api/ampel/aufloesung`) und sein Wächter schreiben „256 KB", umgesetzt und getestet sind 256 KiB. Bei der nächsten Berührung in S3/S4 angleichen.
 - **F007:** Kein Test prüft Großschreibung bei `alarm_ab`, `thunder.mittel`, `thunder.hoch` („RED" ist ungültig). In S3 einen Testfall ergänzen.
+
+## RED-Stand Scheibe S3 (2026-11-25)
+
+Dieser Durchlauf liefert **nur S3** (AC-9 bis AC-13, AC-15; AC-1 und AC-14 wiederholt). S1 und S2 sind live.
+
+**Vertrag (Tests und Umsetzung richten sich danach):**
+
+- `WT/ampelAufloesung.ts` (neu, ohne Browser-/SvelteKit-Import):
+  - `type AufloesungEintrag = { ampel?: unknown; preset_name?: string | null; profil?: string | null; metrics?: unknown[] | null }`, `type Aufgeloest = { vorlage_id: string; ampel: Ampel }`, `interface AufloesungClient { post<T>(path: string, body: unknown): Promise<T> }`.
+  - `loeseAmpelnAuf(client, eintraege): Promise<Aufgeloest[]>`: `POST /api/ampel/aufloesung` mit `{eintraege}`, Pakete zu je 32, Reihenfolge erhalten, leere Liste = kein Aufruf. Wirft bei Client-Fehler und bei unbrauchbarer Antwort (`ergebnisse` fehlt, falsche Länge, Eintrag ohne `vorlage_id` oder `ampel.metrics`).
+  - `eintragAusAbo(abo): AufloesungEintrag`: genau die drei Schlüssel `ampel` (aus `display_config.ampel`, sonst null), `preset_name` (aus `display_config.preset_name`), `profil` (aus `abo.profil`); die beiden letzten nur als Text, sonst null (ein Nicht-Text im Bestand wäre 400 für die ganze Anfrage). Abo null/undefined = alles null. **Nie `metrics`**: ein Trip ohne Ampel mit gespeicherter `metrics`-Liste würde sonst als Altbestand einer eigenen Vorlage gelesen.
+  - `eintragAusVorlage(p: MetricPreset): AufloesungEintrag`: mit `ampel` nur `{ampel}`; sonst `{metrics}` mit je genau `metric_id` und `enabled`, fehlende oder unlesbare Liste = `[]` (heutiges Verhalten: „allgemein", alles aus).
+- `ladeWetterDaten(client, kind, abo)`: `WetterDaten` trägt zusätzlich `aufgeloest: Aufgeloest` (das Abo). Ein Aufruf: Eintrag 0 = Abo, danach die eigenen Vorlagen der Art in Listenreihenfolge (Pakete nach je 32 Einträgen). `LeseClient` bekommt `post`.
+- `eigeneVorlageAus(p, ampel: Ampel)`: Ampel kommt fertig herein. `eigeneVorlagen(antwort, kind, vorlagen)` entfällt als Export (der Lader ordnet selbst zu). Frisch gespeichert: `p.ampel` aus der POST-Antwort, kein Aufruf; fehlt sie, kommt die Vorlage erst beim nächsten Laden in die Liste.
+- `standAusAbo(context, abo, aufgeloest: Aufgeloest, alt = {}, quellen = {})`: der dritte Parameter ersetzt `vorlagen` ganz; synchron; die Ampel wird kopiert, `vorlageId = aufgeloest.vorlage_id`, `ampel.template = vorlageId`.
+- `zuruecksetzen(vorlageId, vorlagen)` = tiefe Kopie der Vorlage (unbekannt: „allgemein"); `mitVorlage` in Signatur und Wirkung unverändert.
+- `SchreibClient` bekommt `post`; `SpeicherOptionen.neuGeladen?: (abo, aufgeloest) => void`. 412: `client.get`, dann `loeseAmpelnAuf(client, [eintragAusAbo(frisch)])`, dann erst `uebernehmen(frisch)` und `neuGeladen(frisch, aufgeloest)`; scheitert eines der beiden Netz-Schritte, passiert keines von beiden und der 412 wird weitergeworfen. **Scheitert die Auflösung nach gelungenem `get`, wird der ETag von vor dem `get` wiederhergestellt** (`getKnownEtag`/`setKnownEtag`, Muster `retryConflict`), und zwar nur in diesem Fall: sonst ginge die nächste Eingabe mit frischem If-Match durch und überschriebe die fremde Ampel still (gemessen). Bei gelungenem Neuladen gilt der neue ETag.
+- **Übergang bis S4:** `hubUebersichtModell.ts` ruft `standAusAbo` an zwei Stellen; dort wird in S3 die Auflösung lokal über `vorlageIdFuer` und `verschmelzen` gebildet (kleine Hilfsfunktion, S4 löscht sie). Siebte Produktdatei; die Übersichten ändern sich in S3 nicht.
+- **Testhilfe** in `WT/__tests__/wetterTabDaten.ts`: `pythonAufloesung(eintraege): Aufgeloest[]` (echtes `resolve_entwurf`, je Eintrag gemerkt, Fehlende in EINEM Python-Lauf), `aufgeloestVon(abo): Aufgeloest`, `aufloesungPost()` (Client-`post` für `/api/ampel/aufloesung` mit echtem Python, sonst Fehler). Alle geben Kopien zurück.
+
+**Stand:**
+
+- **Neu** (`WT/__tests__/`): `ampel_aufloesung_2988`, `wetter_laden_aufloesung_2988`, `wetter_laden_fehler_2988`, `signatur_stabil_2988`, `vergleich_412_aufloesung_2988`, `eigene_vorlage_gespeichert_2988`, `anlegen_2988`, Prüfstand `laden2988.ts`; e2e `rework-2988-laden/konflikt/anlegen.spec.ts` (nur geladen, laufen in `/e2e-verify`); 276 von 397 rot. `test_api_contract_drift.py` 2 rot („256 KiB", F006); Großschreibung (F007) als Wächter grün.
+- **Referenz:** `tests/fixtures/ampel_laden_referenz_2988.json` aus dem Code c18a7c779 (103 Abos, 20 eigene Vorlagen). Abweichung alt/Python nur bei ungültiger Ampel mit `template` (Known Limitation), dort gilt Python (Feld `hinweis`).
+- **Umgestellt:** 34 Bestands-Testdateien auf den Vertrag; 6 e2e-Dateien zählen `POST /api/ampel/aufloesung` nicht mehr als Schreiben (jeder andere POST bleibt erfasst). In /50 sind daher keine Tests anzupassen.
+- **Erfüllbarkeit:** mit einer provisorischen Umsetzung außerhalb des Repos liefen alle `*2988*` grün; alle 34 Verfälschungen wurden am Ende gefangen. `signatur_stabil` und `eigene_vorlage_gespeichert` sind überwiegend Wächter.
+- **Wartet auf S4:** `f007_trip_leere_auswahl.test.ts` nutzt weiter `verschmelzen`.
+- **Nebenbefund (nicht hier beheben):** `o.uebernehmen?.(await o.client.put(…))` in `wetterTabSpeicherung.ts` sendet keinen PUT, wenn `uebernehmen` fehlt; der Reiter setzt es immer.
+- **CI-e2e:** der Stack startet Python und Go (gelesen, nicht ausgeführt), die Auflösung ist dort erreichbar.

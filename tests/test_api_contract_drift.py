@@ -142,7 +142,7 @@ def test_inventory_lists_ampel_aufloesung():
     Fehlerfaellen im Inventar."""
     zeile = _inventory_rows(_contract_text()).get("/api/ampel/aufloesung")
     assert zeile, "AC-8: Inventarzeile `/api/ampel/aufloesung` fehlt"
-    for teil in ("POST", "eintraege", "ergebnisse", "vorlage_id", "höchstens 32,", " 256 KB",
+    for teil in ("POST", "eintraege", "ergebnisse", "vorlage_id", "höchstens 32,", " 256 KiB",
                  "400 `bad_request`", "401 `unauthorized`", "413 `payload_too_large`"):
         assert teil in zeile, f"AC-8: {teil} fehlt in der Inventarzeile"
     assert re.fullmatch(r"\| `[^|]+` \| [^|]+ \|", zeile), "AC-8: Inventarzeile hat nicht zwei Zellen"
@@ -176,5 +176,5 @@ def test_abschnitt_ampel_aufloesen_vollstaendig():
                  "`preset_name`/`profil`", "`metrics`", "keine Teilantwort"):
         assert teil in fehler["400", "bad_request"], f"AC-8: 400 ohne „{teil}“"
     assert "Anmeldung" in fehler["401", "unauthorized"]
-    assert "über 256 KB" in fehler["413", "payload_too_large"]
+    assert "über 256 KiB" in fehler["413", "payload_too_large"]
     assert "120 s" in fehler["502", "upstream_unreachable"]

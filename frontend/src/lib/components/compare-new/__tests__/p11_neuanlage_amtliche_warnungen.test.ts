@@ -17,8 +17,7 @@ import { buildNewComparePresetPayload, compareFeldsatzStandard } from '../../com
 import { alarmePropsAus } from '../../compare/alarmePropsAus.ts';
 import { amtlicheWarnungenAn } from '../../shared/wetter-tab/amtlicheWarnungen.ts';
 import { standAusAbo, type AboSicht } from '../../shared/wetter-tab/wetterZustand.ts';
-import { vorlagenAusTemplates } from '../../shared/wetter-tab/ampelModell.ts';
-import { live } from '../../shared/wetter-tab/__tests__/wetterTabDaten.ts';
+import { aufgeloestVon } from '../../shared/wetter-tab/__tests__/wetterTabDaten.ts';
 
 test('p11 Vergleich anlegen: Reiter Wetter und Zustellung zeigen „an"', () => {
 	const wiz = compareFeldsatzStandard();
@@ -27,7 +26,7 @@ test('p11 Vergleich anlegen: Reiter Wetter und Zustellung zeigen „an"', () => 
 		official_alerts_enabled: wiz.officialAlertsEnabled,
 		official_warnings: { enabled: wiz.officialWarningsEnabled }
 	} as unknown as AboSicht;
-	assert.equal(standAusAbo('vergleich', abo, vorlagenAusTemplates(live().templates)).warnungenAn, true, 'Reiter Wetter');
+	assert.equal(standAusAbo('vergleich', abo, aufgeloestVon(abo)).warnungenAn, true, 'Reiter Wetter');
 	assert.equal(alarmePropsAus(wiz).officialWarningsEnabled, true, 'Schalter im Schritt Zustellung zeigt „aus"');
 });
 

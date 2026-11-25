@@ -41,7 +41,7 @@ import { buildAlarmeDeliveryPayload } from '../../shared/alarme-tab/alarmeDelive
 import { tripNutzlast } from '../../shared/wetter-tab/wetterTabSpeicherung.ts';
 import { standAusAbo, type AboSicht } from '../../shared/wetter-tab/wetterZustand.ts';
 import { vorlagenAusTemplates } from '../../shared/wetter-tab/ampelModell.ts';
-import { live } from '../../shared/wetter-tab/__tests__/wetterTabDaten.ts';
+import { aufgeloestVon, live } from '../../shared/wetter-tab/__tests__/wetterTabDaten.ts';
 import { createFakeTripServer, type FakeTripServer } from '../../../__tests__/fakeTripServer.ts';
 import { setupStepTrip } from '../../../utils/cockpitHelpers568.ts';
 import type { DisplayConfig, Trip } from '../../../types.ts';
@@ -193,7 +193,7 @@ describe('#3297 AC-3: Reiter-PUTs ohne Altschluessel, Bestand bleibt (Go-Merge)'
 	test('Reiter Wetter: beide PUTs ohne Altschluessel, Bestand sonst erhalten', async () => {
 		const trip = (await abo()) as unknown as AboSicht;
 		const v = vorlagenAusTemplates(live().templates);
-		const stand = standAusAbo('route', trip, v);
+		const stand = standAusAbo('route', trip, aufgeloestVon(trip));
 		const n = tripNutzlast({ client: null as never, stand: () => stand, vorlagen: () => v, abo: () => trip });
 		assert.deepEqual(altschluesselFunde(n.weatherConfig), [], 'PUT /weather-config enthaelt Altschluessel');
 		assert.deepEqual(altschluesselFunde(n.tripFelder), [], 'PUT /api/trips enthaelt Altschluessel (Bestand durchgereicht)');

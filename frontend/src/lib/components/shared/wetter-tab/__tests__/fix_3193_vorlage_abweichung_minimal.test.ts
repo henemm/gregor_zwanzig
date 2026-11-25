@@ -17,7 +17,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { WETTER_TAB, live, liveVergleichsKatalog, vergleichsKatalogFetch } from './wetterTabDaten.ts';
+import { aufloesungPost, aufgeloestVon, WETTER_TAB, live, liveVergleichsKatalog, vergleichsKatalogFetch } from './wetterTabDaten.ts';
 import { attributAusdruck, findeKomponenten, ohneTypen, umgebungFuer, werte, type Knoten } from '../../__tests__/svelteInstanzPruefstand.ts';
 import { aktiveMetriken, AUSWAHL_ABLEITUNG, vorlagenAusTemplates, type Ampel } from '../ampelModell.ts';
 import { tripNutzlast, vergleichNutzlast } from '../wetterTabSpeicherung.ts';
@@ -39,6 +39,7 @@ const api = {
 		if (pfad === '/api/metric-presets') return [];
 		throw new Error(`unerwartet: ${pfad}`);
 	},
+	post: aufloesungPost(),
 	put: async () => {
 		throw new Error('Messaufbau: kein Netz-Schreiben im Kern-Test');
 	}
@@ -289,7 +290,7 @@ describe('Test 7: eigene Vorlage (aboAmpel) misst gegen die Vorlage im Kontext',
 
 describe('Test 6: Vergleichs-Katalog unbekannt — Basis bleibt die Rohvorlage', () => {
 	test('vergleich_ohne_katalog_kein_absturz', () => {
-		const s0 = standAusAbo('vergleich', aboNachVorlage('vergleich', 'alpen-trekking'), VORLAGEN, {});
+		const s0 = standAusAbo('vergleich', aboNachVorlage('vergleich', 'alpen-trekking'), aufgeloestVon(aboNachVorlage('vergleich', 'alpen-trekking')), {});
 		const s = mitVorlage(s0, 'wandern', VORLAGEN, 'vergleich', {});
 		assert.ok(s.auswahl.includes('temperature_night'), 'ohne Katalog wird nichts herausgefiltert');
 		assert.equal(abweichungenVon(s, VORLAGEN, 'vergleich'), 0);

@@ -36,7 +36,7 @@ import {
 	ohneTypen,
 	type Knoten
 } from '../../shared/__tests__/svelteInstanzPruefstand.ts';
-import { live } from '../../shared/wetter-tab/__tests__/wetterTabDaten.ts';
+import { aufgeloestVon, live } from '../../shared/wetter-tab/__tests__/wetterTabDaten.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 // __tests__ -> trip-detail -> components -> lib -> src -> frontend
@@ -181,8 +181,7 @@ describe('F001 / AC-32 U4: Alarm-Zeile der Trip-Übersicht am Wirkort', () => {
 		const nachher = ho.zeile();
 
 		const d = live();
-		const vorlagen = am.vorlagenAusTemplates(d.templates);
-		const stand = wz.standAusAbo('route', TRIP, vorlagen);
+		const stand = wz.standAusAbo('route', TRIP, aufgeloestVon(TRIP));
 		const z = am.alarmZaehler(stand.ampel, stand.auswahl, am.eigenschaftenAusKatalog(d.metrics));
 		assert.equal(z.art, 'zaehler', 'Fixtur-Schutz: Böen ist alarmfähig');
 		assert.equal(nachher.time, tr(z.schluessel, z.werte), `Alarm-Zeile zeigt nicht den Zähler: „${nachher.time}"`);

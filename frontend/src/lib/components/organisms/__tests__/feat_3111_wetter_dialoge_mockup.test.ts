@@ -16,6 +16,7 @@ import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
+import { aufloesungPost, live } from '../../shared/wetter-tab/__tests__/wetterTabDaten.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FRONTEND = path.resolve(HERE, '../../../../..');
@@ -26,7 +27,7 @@ register(pathToFileURL(path.join(FRONTEND, 'test-svelte-ssr-hooks.mjs')).href, p
 register(pathToFileURL(path.join(HERE, 'startzustandHook.mjs')).href, pathToFileURL(FRONTEND + '/').href);
 const { render } = await import('svelte/server');
 const { locale } = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/i18n/index.ts')).href);
-const { eigeneVorlagen, eigeneVorlageAus, ortAnzahlVon } = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/components/shared/wetter-tab/wetterTabLaden.ts')).href);
+const { eigeneVorlageAus, ladeWetterDaten, ortAnzahlVon } = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/components/shared/wetter-tab/wetterTabLaden.ts')).href);
 after(() => locale.set('de'));
 
 const datei = (n: string) => path.join(WT, `${n}.svelte`);
@@ -169,8 +170,16 @@ const EIGENE_ANTWORT = {
 		{ id: 'e2', name: 'Ohne Text', kind: 'route', metrics: [] },
 	],
 };
+// Eigene Vorlagen, wie der Reiter sie lädt (echter Lader, Auflösung mit echtem Python, #2988).
+const EIGENE = (
+	await ladeWetterDaten(
+		{ get: async (p: string) => (p === '/api/metric-presets' ? EIGENE_ANTWORT : p === '/api/templates' ? live().templates : live().metrics), post: aufloesungPost() },
+		'route',
+		{}
+	)
+).eigene;
 const vorlageProps = (context: string, aktiv = 'alpen-trekking', abweichungen = 0) => ({
-	context, vorlageId: aktiv, liste: LISTE, eigene: eigeneVorlagen(EIGENE_ANTWORT, 'route', { allgemein: { metrics: {} } }), abweichungen,
+	context, vorlageId: aktiv, liste: LISTE, eigene: EIGENE, abweichungen,
 	metrikName: (id: string) => `<${id}>`, aboAmpel: {}, onUebernehmen: noop, onEigene: noop, onZuruecksetzen: noop, onGespeichert: noop,
 });
 const menue = async (sprache: 'de' | 'en', props: Record<string, unknown>, start = offen) => {
@@ -330,13 +339,13 @@ describe('#3111 AC-6 (F002): Hub-Verdrahtung — Ortezahl aus location_ids errei
 describe('#3111 AC-5 (F002): frisch gespeicherte eigene Vorlage behält ihre Beschreibung', () => {
 	// Laden UND „gespeichert“ im Hub (WetterTabInhalt.vorlageGespeichert) bilden die Karte über eigeneVorlageAus.
 	test('mit Beschreibung: beschreibung gesetzt, Unterzeile „eigene · …“ in der Karte', async () => {
-		const e = eigeneVorlageAus({ id: 'n1', name: 'Neu', kind: 'route', description: 'für Mallorca', metrics: [] }, { allgemein: { metrics: {} } });
+		const e = eigeneVorlageAus({ id: 'n1', name: 'Neu', kind: 'route', description: 'für Mallorca', metrics: [] }, { template: 'allgemein', metrics: {} });
 		assert.equal(e.beschreibung, 'für Mallorca');
 		const h = await menue('de', { ...vorlageProps('route'), eigene: [e] });
 		assert.ok(eigeneTexte(elementMit(h, 'wetter-vorlage-eigene-n1')).includes('eigene · für Mallorca'));
 	});
 	test('ohne Beschreibung: kein beschreibung-Feld', () => {
-		const e = eigeneVorlageAus({ id: 'n2', name: 'Neu', kind: 'route', metrics: [] }, { allgemein: { metrics: {} } });
+		const e = eigeneVorlageAus({ id: 'n2', name: 'Neu', kind: 'route', metrics: [] }, { template: 'allgemein', metrics: {} });
 		assert.equal('beschreibung' in e, false);
 	});
 });
