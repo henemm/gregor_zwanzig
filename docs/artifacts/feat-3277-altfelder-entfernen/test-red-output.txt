@@ -1,4 +1,5 @@
-......FFFFFFFF.F..FF.F...FFF.FFF.............F........................   [100%]
+......FFFFFFFF.F..FF.F...FF..FFF..................F..................... [ 96%]
+...                                                                      [100%]
 =================================== FAILURES ===================================
 E   AssertionError: ['show_outlook', 'multi_day_trend_reports', 'outlook_enabled', 'display_config.channel_layouts', 'display_config.channel_layouts_per_report', 'display_config.channel_active_metrics', ...]
     assert ['show_outloo...metrics', ...] == []
@@ -41,12 +42,12 @@ E   AssertionError: ['multi_day_trend_reports', 'outlook_metrics', 'outlook_metr
       Left contains 5 more items, first extra item: 'multi_day_trend_reports'
       Use -v to get more diff
 /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_3277_altfelder_entfernen.py:296: AssertionError: ['multi_day_trend_reports', 'outlook_metrics', 'outlook_metric_formats', 'per_channel_layouts', 'per_report_layouts']
-E   AssertionError: (PosixPath('/tmp/pytest-of-hem/pytest-3542/test_ac4_nur_dateien_von_nutze0/users/nutzer-a3277x/briefings/trip-3277.jso...ay_config.channel_layouts', 'display_config.channel_layouts_per_report', 'display_config.channel_active_metrics', ...])
+E   AssertionError: (PosixPath('/tmp/pytest-of-hem/pytest-3546/test_ac4_nur_dateien_von_nutze0/users/nutzer-a3277x/briefings/trip-3277.jso...ay_config.channel_layouts', 'display_config.channel_layouts_per_report', 'display_config.channel_active_metrics', ...])
     assert ['show_outloo...metrics', ...] == []
       
       Left contains 15 more items, first extra item: 'show_outlook'
       Use -v to get more diff
-/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_3277_altfelder_entfernen.py:310: AssertionError: (PosixPath('/tmp/pytest-of-hem/pytest-3542/test_ac4_nur_dateien_von_nutze0/users/nutzer-a3277x/briefings/trip-3277.jso...ay_config.channel_layouts', 'display_config.channel_layouts_per_report', 'display_config.channel_active_metrics', ...])
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_3277_altfelder_entfernen.py:310: AssertionError: (PosixPath('/tmp/pytest-of-hem/pytest-3546/test_ac4_nur_dateien_von_nutze0/users/nutzer-a3277x/briefings/trip-3277.jso...ay_config.channel_layouts', 'display_config.channel_layouts_per_report', 'display_config.channel_active_metrics', ...])
 E   AssertionError: ['render_email', 'render_html', 'render_plain', 'ReportRenderOptions']
     assert ['render_emai...enderOptions'] == []
       
@@ -81,24 +82,17 @@ E   AssertionError: backfill_display_config_issue111.py
      +  where True = exists()
      +    where exists = ((PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit') / 'scripts') / 'backfill_display_config_issue111.py').exists
 /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_3277_altfelder_entfernen.py:475: AssertionError: backfill_display_config_issue111.py
-E   AssertionError: ['scripts/send_gate_test_mails.py:447: hourly_metrics']
-    assert ['scripts/sen...urly_metrics'] == []
-      
-      Left contains one more item: 'scripts/send_gate_test_mails.py:447: hourly_metrics'
-      Use -v to get more diff
-/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/tdd/test_3277_altfelder_entfernen.py:484: AssertionError: ['scripts/send_gate_test_mails.py:447: hourly_metrics']
-E   AssertionError: 172 Altfeld-Namen im Backend:
+E   AssertionError: 52 Altfeld-Namen im Backend:
       src/app/loader.py:1133: channel_layouts
       src/app/loader.py:1167: channel_layouts_per_report
-      src/app/loader.py:1209: multi_day_trend_reports
-      src/app/loader.py:1220: outlook_metrics
-      src/app/loader.py:1223: outlook_metric_formats
-      src/app/loader.py:666: multi_day_trend_reports
-      src/app/loader.py:679: show_outlook
       src/app/loader.py:1751: multi_day_trend_reports
       src/app/loader.py:1751: multi_day_trend_reports
+      src/app/loader.py:1760: per_channel_layouts
+      src/app/loader.py:1767: per_report_layouts
       src/app/loader.py:1980: multi_day_trend_reports
       src/app/loader.py:1980: multi_day_trend_reports
+      src/app/loader.py:2015: per_channel_layouts
+      src/app/loader.py:2022: per_report_layouts
       src/app/loader.py:2087: multi_day_trend_reports
       src/app/loader.py:2094: show_outlook
       src/app/loader.py:2087: multi_day_trend_reports
@@ -112,145 +106,27 @@ E   AssertionError: 172 Altfeld-Namen im Backend:
       src/app/loader.py:679: show_outlook
       src/app/loader.py:1220: outlook_metrics
       src/app/loader.py:1224: outlook_metric_formats
-      src/app/loader.py:1999: outlook_metrics
       src/app/loader.py:1998: outlook_metrics
-      src/app/loader.py:2005: outlook_metric_formats
       src/app/loader.py:2003: outlook_metric_formats
       src/app/loader.py:668: multi_day_trend_reports
-      src/app/loader.py:1998: outlook_metrics
-      src/app/loader.py:2004: outlook_metric_formats
+      src/app/loader.py:1764: per_channel_layouts
+      src/app/loader.py:1774: per_report_layouts
+      src/app/loader.py:2019: per_channel_layouts
+      src/app/loader.py:2029: per_report_layouts
       src/app/models.py:815: multi_day_trend_reports
-      src/app/models.py:843: outlook_metrics
-      src/app/models.py:852: outlook_metric_formats
+      src/app/models.py:820: per_channel_layouts
+      src/app/models.py:824: per_report_layouts
       src/app/models.py:1060: multi_day_trend_reports
       src/app/models.py:1073: show_outlook
-      src/output/renderers/compare_hourly_metric_ids.py:128: hourly_metrics
-      src/output/renderers/compare_hourly_metric_ids.py:171: hourly_metrics
-      src/output/renderers/compare_hourly_metric_ids.py:217: hourly_metrics
-      src/output/renderers/compare_outlook_metric_ids.py:80: outlook_metrics
-      src/output/renderers/comparison.py:192: outlook_enabled
-      src/output/renderers/comparison.py:193: outlook_metrics
-      src/output/renderers/comparison.py:194: outlook_metric_formats
-      src/output/renderers/comparison.py:195: hourly_metrics
-      src/output/renderers/comparison.py:203: hourly_metric_formats
-      src/output/renderers/comparison.py:541: hourly_metrics
-      src/output/renderers/comparison.py:545: outlook_enabled
-      src/output/renderers/comparison.py:546: outlook_metrics
-      src/output/renderers/comparison.py:547: outlook_metric_formats
-      src/output/renderers/comparison.py:554: hourly_metric_formats
-      src/output/renderers/comparison.py:831: outlook_enabled
-      src/output/renderers/comparison.py:832: outlook_metrics
-      src/output/renderers/comparison.py:833: outlook_metric_formats
-      src/output/renderers/comparison.py:582: hourly_metrics
-      src/output/renderers/comparison.py:586: outlook_enabled
-      src/output/renderers/comparison.py:587: outlook_metrics
-      src/output/renderers/comparison.py:588: outlook_metric_formats
-      src/output/renderers/comparison.py:601: hourly_metric_formats
-      src/output/renderers/comparison.py:605: outlook_enabled
-      src/output/renderers/comparison.py:609: outlook_metrics
-      src/output/renderers/comparison.py:611: outlook_metric_formats
-      src/output/renderers/comparison.py:616: hourly_metrics
-      src/output/renderers/comparison.py:629: hourly_metric_formats
-      src/output/renderers/email/__init__.py:52: outlook_metrics
-      src/output/renderers/email/__init__.py:69: show_outlook
-      src/output/renderers/email/__init__.py:168: outlook_metrics
-      src/output/renderers/email/__init__.py:180: show_outlook
-      src/output/renderers/email/__init__.py:208: outlook_metrics
-      src/output/renderers/email/__init__.py:218: show_outlook
-      src/output/renderers/email/__init__.py:122: outlook_metrics
-      src/output/renderers/email/compact.py:134: outlook_metrics
-      src/output/renderers/email/compare_html.py:1096: hourly_metrics
-      src/output/renderers/email/compare_html.py:1119: hourly_metrics
-      src/output/renderers/email/compare_html.py:1132: hourly_metrics
-      src/output/renderers/email/compare_html.py:1163: hourly_metric_formats
-      src/output/renderers/email/compare_html.py:1219: hourly_metrics
-      src/output/renderers/email/compare_html.py:1221: hourly_metric_formats
-      src/output/renderers/email/compare_html.py:1292: hourly_metrics
-      src/output/renderers/email/compare_html.py:1294: hourly_metric_formats
-      src/output/renderers/email/compare_html.py:1338: outlook_metrics
-      src/output/renderers/email/compare_html.py:1339: outlook_metric_formats
-      src/output/renderers/email/compare_html.py:1424: outlook_metrics
-      src/output/renderers/email/compare_html.py:1426: outlook_metric_formats
-      src/output/renderers/email/compare_html.py:1608: outlook_metrics
-      src/output/renderers/email/compare_html.py:1609: outlook_enabled
-      src/output/renderers/email/compare_html.py:1639: hourly_metrics
-      src/output/renderers/email/compare_html.py:1639: outlook_metrics
-      src/output/renderers/email/compare_html.py:1640: outlook_enabled
-      src/output/renderers/email/compare_html.py:1663: hourly_metrics
-      src/output/renderers/email/compare_html.py:1664: outlook_metrics
-      src/output/renderers/email/compare_html.py:1664: outlook_enabled
-      src/output/renderers/email/compare_html.py:1805: hourly_metrics
-      src/output/renderers/email/compare_html.py:1809: outlook_enabled
-      src/output/renderers/email/compare_html.py:1810: outlook_metrics
-      src/output/renderers/email/compare_html.py:1811: outlook_metric_formats
-      src/output/renderers/email/compare_html.py:1818: hourly_metric_formats
-      src/output/renderers/email/compare_html.py:1237: hourly_metric_formats
-      src/output/renderers/email/compare_html.py:1315: hourly_metric_formats
-      src/output/renderers/email/compare_html.py:1374: outlook_metric_formats
-      src/output/renderers/email/compare_html.py:1973: hourly_metric_formats
-      src/output/renderers/email/compare_html.py:1984: outlook_metric_formats
-      src/output/renderers/email/helpers.py:591: outlook_metrics
-      src/output/renderers/email/helpers.py:626: outlook_metrics
-      src/output/renderers/email/html.py:830: outlook_metrics
-      src/output/renderers/email/html.py:842: show_outlook
-      src/output/renderers/email/outlook.py:545: outlook_metric_formats
-      src/output/renderers/email/outlook.py:648: outlook_metric_formats
-      src/output/renderers/email/outlook.py:628: outlook_metric_formats
-      src/output/renderers/email/plain.py:166: outlook_metrics
-      src/output/renderers/email/plain.py:176: show_outlook
-      src/output/renderers/narrow.py:697: outlook_metrics
-      src/output/renderers/narrow.py:783: outlook_metrics
-      src/output/renderers/trip_report.py:268: outlook_metrics
       src/output/renderers/trip_report.py:287: show_outlook
-      src/output/renderers/trip_report.py:374: outlook_metrics
-      src/output/renderers/trip_report.py:287: show_outlook
-      src/services/channel_list_resolver.py:65: outlook_enabled
-      src/services/channel_list_resolver.py:80: outlook_enabled
-      src/services/compare_briefing_aufbau.py:108: hourly_metrics
-      src/services/compare_briefing_aufbau.py:109: hourly_metric_formats
-      src/services/compare_briefing_aufbau.py:114: outlook_enabled
-      src/services/compare_briefing_aufbau.py:115: outlook_metrics
-      src/services/compare_briefing_aufbau.py:116: outlook_metric_formats
-      src/services/compare_briefing_aufbau.py:170: outlook_enabled
-      src/services/compare_briefing_aufbau.py:171: outlook_metrics
-      src/services/compare_briefing_aufbau.py:172: outlook_metric_formats
-      src/services/compare_briefing_aufbau.py:108: hourly_metrics
-      src/services/compare_briefing_aufbau.py:109: hourly_metric_formats
-      src/services/compare_briefing_aufbau.py:114: outlook_enabled
-      src/services/compare_briefing_aufbau.py:115: outlook_metrics
-      src/services/compare_briefing_aufbau.py:116: outlook_metric_formats
-      src/services/compare_briefing_aufbau.py:170: outlook_enabled
-      src/services/compare_briefing_aufbau.py:171: outlook_metrics
-      src/services/compare_briefing_aufbau.py:172: outlook_metric_formats
-      src/services/placements.py:275: outlook_enabled
-      src/services/placements_view_service.py:75: outlook_enabled
-      src/services/placements_view_service.py:226: outlook_enabled
-      src/services/placements_view_service.py:716: outlook_enabled
-      src/services/placements_view_service.py:212: outlook_enabled
-      src/services/placements_view_service.py:226: outlook_enabled
-      src/services/placements_view_service.py:237: outlook_enabled
-      src/services/placements_view_service.py:212: outlook_enabled
-      src/services/placements_view_service.py:237: outlook_enabled
+      src/output/renderers/trip_report.py:332: per_channel_layouts
+      src/output/renderers/trip_report.py:337: per_report_layouts
       src/services/placements_view_service.py:716: outlook_enabled
       src/services/report_config_resolver.py:111: show_outlook
-      src/services/report_config_resolver.py:189: hourly_metrics
-      src/services/report_config_resolver.py:196: outlook_enabled
-      src/services/report_config_resolver.py:201: outlook_metrics
-      src/services/report_config_resolver.py:206: outlook_metric_formats
-      src/services/report_config_resolver.py:209: hourly_metric_formats
       src/services/report_config_resolver.py:86: show_outlook
       src/services/report_config_resolver.py:87: multi_day_trend_reports
-      src/services/report_config_resolver.py:142: show_outlook
-      src/services/report_config_resolver.py:284: outlook_enabled
-      src/services/report_config_resolver.py:352: hourly_metrics
-      src/services/report_config_resolver.py:355: hourly_metric_formats
       src/services/report_config_resolver.py:364: outlook_enabled
-      src/services/report_config_resolver.py:365: outlook_metrics
-      src/services/report_config_resolver.py:366: outlook_metric_formats
       src/services/report_config_resolver.py:284: outlook_enabled
-      .claude/hooks/_soll_aus_konfiguration.py:484: outlook_enabled
-      .claude/hooks/_soll_aus_konfiguration.py:647: outlook_enabled
-      .claude/hooks/_soll_aus_konfiguration.py:499: outlook_enabled
       .claude/hooks/_soll_aus_konfiguration.py:647: outlook_enabled
       scripts/backfill_display_config_issue111.py:47: multi_day_trend_reports
       scripts/backfill_display_config_issue111.py:47: multi_day_trend_reports
@@ -259,17 +135,16 @@ E   AssertionError: 172 Altfeld-Namen im Backend:
       scripts/migrate_2792_profil_ampel.py:200: channel_layouts
       scripts/migrate_2792_profil_ampel.py:202: channel_layouts_per_report
       scripts/migrate_2792_profil_ampel.py:206: channel_active_metrics
-      scripts/send_gate_test_mails.py:447: hourly_metrics
-    assert not ['src/app/loader.py:1133: channel_layouts', 'src/app/loader.py:1167: channel_layouts_per_report', 'src/app/loader.py:1...look_metrics', 'src/app/loader.py:1223: outlook_metric_formats', 'src/app/loader.py:666: multi_day_trend_reports', ...]
-/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/test_altfeld_namen_sperre.py:150: AssertionError: 172 Altfeld-Namen im Backend:
+    assert not ['src/app/loader.py:1133: channel_layouts', 'src/app/loader.py:1167: channel_layouts_per_report', 'src/app/loader.py:1...i_day_trend_reports', 'src/app/loader.py:1760: per_channel_layouts', 'src/app/loader.py:1767: per_report_layouts', ...]
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/test_altfeld_namen_sperre.py:172: AssertionError: 52 Altfeld-Namen im Backend:
 E   AssertionError: Altfeld-Namen im Go-Code:
       internal/model/compare_preset.go:71: outlook_enabled
     assert not ['internal/model/compare_preset.go:71: outlook_enabled']
-/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/test_altfeld_namen_sperre.py:157: AssertionError: Altfeld-Namen im Go-Code:
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/test_altfeld_namen_sperre.py:179: AssertionError: Altfeld-Namen im Go-Code:
 E   AssertionError: []
     assert 0 == 1
      +  where 0 = len([])
-/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/test_altfeld_namen_sperre.py:171: AssertionError: []
+/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/test_altfeld_namen_sperre.py:193: AssertionError: []
 E   AssertionError: Altpfad-Namen im Produktionscode:
       src/output/renderers/compare_outlook_metric_ids.py:371: resolve_hourly_metric_formats
     assert not ['src/output/renderers/compare_outlook_metric_ids.py:371: resolve_hourly_metric_formats']
@@ -328,16 +203,22 @@ PASSED tests/tdd/test_3277_altfelder_entfernen.py::test_ac6_briefing_mit_rows_un
 PASSED tests/tdd/test_3277_altfelder_entfernen.py::test_ac9_validator_vorschau_gleich_bisherigem_stand[mit_feldern]
 PASSED tests/tdd/test_3277_altfelder_entfernen.py::test_ac9_validator_vorschau_gleich_bisherigem_stand[ohne_felder]
 PASSED tests/tdd/test_3277_altfelder_entfernen.py::test_ac9_request_felder_sind_im_waechter_begruendet_erlaubt
+PASSED tests/tdd/test_3277_altfelder_entfernen.py::test_ac10_gate_testmails_ohne_altfeld_namen
 PASSED tests/tdd/test_3277_altfelder_entfernen.py::test_ac10_gate_testmail_vergleich_baut_weiter_mit_windrichtung
 PASSED tests/test_altfeld_namen_sperre.py::test_ac7_erlaubnisliste_traegt_begruendung_und_ist_nicht_abgelaufen
 PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_verstoss_wird_erkannt[dc.get('show_outlook', True)\n]
 PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_verstoss_wird_erkannt[data = {'multi_day_trend_reports': []}\n]
-PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_verstoss_wird_erkannt[x = rc.outlook_enabled\n]
-PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_verstoss_wird_erkannt[def f(*, hourly_metrics=None):\n    pass\n]
-PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_verstoss_wird_erkannt[render(outlook_metrics=[])\n]
-PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_verstoss_wird_erkannt[class C:\n    channel_layouts_per_report: dict = None\n]
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_verstoss_wird_erkannt[x = rc.show_outlook\n]
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_verstoss_wird_erkannt[dc['outlook_enabled']\n]
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_verstoss_wird_erkannt[y = trip.display_config.per_channel_layouts\n]
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_verstoss_wird_erkannt[class C:\n    multi_day_trend_reports: list = None\n]
 PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_go_json_tag_wird_erkannt_kommentar_nicht
 PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_zentrale_liste_ist_frei
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_renderer_innenwelt_ist_frei[def f(*, hourly_metrics=None, outlook_enabled=True):\n    pass\n]
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_renderer_innenwelt_ist_frei[render(outlook_metrics=[], hourly_metric_formats={})\n]
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_renderer_innenwelt_ist_frei[outlook_metrics = view.outlook\n]
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_renderer_innenwelt_ist_frei[def g():\n    per_channel_layouts: dict = {}\n    return per_channel_layouts\n]
+PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_renderer_innenwelt_ist_frei[z = opts.outlook_metrics\n]
 PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_erlaubter_eintrag_besteht
 PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_abgelaufener_eintrag_faellt
 PASSED tests/test_altfeld_namen_sperre.py::test_selbstnachweis_zu_kurzer_grund_wird_abgelehnt
@@ -380,9 +261,8 @@ FAILED tests/tdd/test_3277_altfelder_entfernen.py::test_ac6_briefing_ohne_rows_i
 FAILED tests/tdd/test_3277_altfelder_entfernen.py::test_ac6_soll_hook_ohne_rows_ignoriert_outlook_enabled
 FAILED tests/tdd/test_3277_altfelder_entfernen.py::test_ac10_verbrauchte_einmal_skripte_sind_geloescht[migrate_2454_derived_children.py]
 FAILED tests/tdd/test_3277_altfelder_entfernen.py::test_ac10_verbrauchte_einmal_skripte_sind_geloescht[backfill_display_config_issue111.py]
-FAILED tests/tdd/test_3277_altfelder_entfernen.py::test_ac10_gate_testmails_ohne_altfeld_namen
 FAILED tests/test_altfeld_namen_sperre.py::test_ac7_kein_python_backend_code_nennt_ein_altfeld
 FAILED tests/test_altfeld_namen_sperre.py::test_ac7_kein_go_code_nennt_ein_altfeld
 FAILED tests/test_altfeld_namen_sperre.py::test_ac7_zentrale_entfernungsliste_genau_einmal_mit_den_zehn_namen
 FAILED tests/test_altpfad_import_sperre.py::test_ac9_kein_produktionscode_nutzt_den_altpfad
-19 failed, 51 passed in 7.76s
+18 failed, 57 passed in 7.90s

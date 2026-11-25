@@ -6,9 +6,14 @@ AC-9 (Schritt 6), AC-10.
 
 Werkzeug-Klasse (CLAUDE.md-Ausnahme ``# doc-compliance-test``): der Waechter
 liest Quelltext als DATEN. Python (``src``, ``api``, ``.claude/hooks``,
-``scripts``) per ``ast.walk``: ein Altfeld-Name als Schluessel-/String-Literal,
-Attribut, Parameter, Schluesselwort-Argument oder annotiertes Feld (Modell)
-ist ein Treffer. Go (``internal``, ``cmd``, ohne ``_test.go``) per Textsuche
+``scripts``) per ``ast.walk`` (Tech-Lead-Entscheidung 25.11.: gesperrt ist der Zugriff
+auf GESPEICHERTE Altfelder):
+(a) String-Literal genau gleich einem der zehn Namen (dict-Schluessel,
+    ``.get("...")``, Subscript);
+(b) Attributzugriff/annotiertes Feld der Modell-Attribute ``show_outlook``,
+    ``multi_day_trend_reports``, ``per_channel_layouts``, ``per_report_layouts``;
+(c) Funktionsparameter, Schluesselwort-Argumente und lokale Variablen sind
+    frei (Renderer-Innenwelt, Werte aus ``placements``/View-Model). Go (``internal``, ``cmd``, ohne ``_test.go``) per Textsuche
 nach dem Namen in Anfuehrungszeichen (Schluessel-Literal, JSON-Tag);
 Kommentare zaehlen nicht.
 
@@ -43,12 +48,22 @@ ALTFELD_NAMEN = frozenset({
     "outlook_enabled",
 })
 
+#: Modell-Attribute der Altfelder (Regel b): Attributzugriff und Felddefinition
+#: sind in jeder Form gesperrt. Die uebrigen Namen sind auch Renderer-interne
+#: Parameter (Werte aus ``placements``/View-Model) und fallen nur unter Regel a.
+MODELL_NAMEN = frozenset({
+    "show_outlook", "multi_day_trend_reports", "per_channel_layouts", "per_report_layouts",
+})
+
 #: Name der zentralen Entfernungsliste (Spec Schritt 1).
 LISTEN_NAME = "ALTFELDER"
 
 _VALIDATOR_GRUND = ("Request-Parameter der Validator-Vorschau ohne Store-Bezug: liest nur den "
                     "Body, baut daraus placements, laedt/schreibt kein Abo (Spec Schritt 6)")
 _ABLAUF = date(2027, 2, 23)
+
+_RESOLVER_GRUND = ("Renderer-interner Schluessel: _compare_hourly/_compare_outlook bauen "
+                   "CompareRenderOptions(**dict) aus dem View-Model, kein Speicher-Zugriff")
 
 #: (Datei relativ zur Wurzel, Name) -> (Begruendung, Ablaufdatum).
 ERLAUBT: dict[tuple[str, str], tuple[str, date]] = {
@@ -57,6 +72,12 @@ ERLAUBT: dict[tuple[str, str], tuple[str, date]] = {
     ("src/services/validator_render_service.py", "hourly_metrics"): (_VALIDATOR_GRUND, _ABLAUF),
     ("src/services/validator_render_service.py", "hourly_metric_formats"):
         (_VALIDATOR_GRUND, _ABLAUF),
+    ("src/services/report_config_resolver.py", "hourly_metrics"): (_RESOLVER_GRUND, _ABLAUF),
+    ("src/services/report_config_resolver.py", "hourly_metric_formats"):
+        (_RESOLVER_GRUND, _ABLAUF),
+    ("src/services/report_config_resolver.py", "outlook_metrics"): (_RESOLVER_GRUND, _ABLAUF),
+    ("src/services/report_config_resolver.py", "outlook_metric_formats"):
+        (_RESOLVER_GRUND, _ABLAUF),
 }
 
 
@@ -75,23 +96,24 @@ def _listen_literale(baum: ast.AST) -> set[int]:
 
 
 def _namen(baum: ast.AST) -> list[tuple[int, str]]:
-    """(Zeile, Name) jeder Stelle, an der ein Altfeld-Name als Literal,
-    Attribut, Parameter, Schluesselwort oder annotiertes Feld steht."""
+    """(Zeile, Name) jeder Stelle, die ein GESPEICHERTES Altfeld anspricht:
+    (a) String-Literal genau gleich einem der zehn Namen (Schluessel, ``.get``,
+    Subscript); (b) Attributzugriff oder annotiertes Feld der Modell-Attribute
+    ``MODELL_NAMEN``. Funktionsparameter, Schluesselwort-Argumente und lokale
+    Variablen zaehlen nicht (Renderer-Innenwelt, Werte aus der Tabelle)."""
     frei = _listen_literale(baum)
+    felder = {id(f) for c in ast.walk(baum) if isinstance(c, ast.ClassDef)
+              for f in c.body if isinstance(f, ast.AnnAssign)}
     treffer: list[tuple[int, str]] = []
     for k in ast.walk(baum):
         name = None
         if isinstance(k, ast.Constant) and isinstance(k.value, str) and id(k) not in frei:
-            name = k.value
+            name = k.value if k.value in ALTFELD_NAMEN else None
         elif isinstance(k, ast.Attribute):
-            name = k.attr
-        elif isinstance(k, ast.arg):
-            name = k.arg
-        elif isinstance(k, ast.keyword):
-            name = k.arg
-        elif isinstance(k, ast.AnnAssign) and isinstance(k.target, ast.Name):
-            name = k.target.id
-        if name in ALTFELD_NAMEN:
+            name = k.attr if k.attr in MODELL_NAMEN else None
+        elif id(k) in felder and isinstance(k.target, ast.Name):
+            name = k.target.id if k.target.id in MODELL_NAMEN else None
+        if name:
             treffer.append((getattr(k, "lineno", 0), name))
     return treffer
 
@@ -187,10 +209,10 @@ def test_ac7_erlaubnisliste_traegt_begruendung_und_ist_nicht_abgelaufen():
 @pytest.mark.parametrize("quelle", [
     "dc.get('show_outlook', True)\n",
     "data = {'multi_day_trend_reports': []}\n",
-    "x = rc.outlook_enabled\n",
-    "def f(*, hourly_metrics=None):\n    pass\n",
-    "render(outlook_metrics=[])\n",
-    "class C:\n    channel_layouts_per_report: dict = None\n",
+    "x = rc.show_outlook\n",
+    "dc['outlook_enabled']\n",
+    "y = trip.display_config.per_channel_layouts\n",
+    "class C:\n    multi_day_trend_reports: list = None\n",
 ])
 def test_selbstnachweis_verstoss_wird_erkannt(quelle):
     assert verstoesse(quelle, "src/beispiel.py", erlaubt={}), quelle
@@ -211,21 +233,32 @@ def test_selbstnachweis_zentrale_liste_ist_frei():
     assert verstoesse(quelle + "y = d['show_outlook']\n", "src/app/loader.py", erlaubt={})
 
 
+@pytest.mark.parametrize("quelle", [
+    "def f(*, hourly_metrics=None, outlook_enabled=True):\n    pass\n",
+    "render(outlook_metrics=[], hourly_metric_formats={})\n",
+    "outlook_metrics = view.outlook\n",
+    "def g():\n    per_channel_layouts: dict = {}\n    return per_channel_layouts\n",
+    "z = opts.outlook_metrics\n",
+])
+def test_selbstnachweis_renderer_innenwelt_ist_frei(quelle):
+    assert verstoesse(quelle, "src/beispiel.py", erlaubt={}) == []
+
+
 def test_selbstnachweis_erlaubter_eintrag_besteht():
     erlaubt = {("src/beispiel.py", "hourly_metrics"):
                ("Selbstnachweis: befristete Ausnahme", date(2099, 1, 1))}
-    assert verstoesse("f(hourly_metrics=[])\n", "src/beispiel.py", erlaubt=erlaubt) == []
+    assert verstoesse("d.get('hourly_metrics')\n", "src/beispiel.py", erlaubt=erlaubt) == []
 
 
 def test_selbstnachweis_abgelaufener_eintrag_faellt():
     erlaubt = {("src/beispiel.py", "hourly_metrics"):
                ("Selbstnachweis: abgelaufene Ausnahme", date(2000, 1, 1))}
-    assert verstoesse("f(hourly_metrics=[])\n", "src/beispiel.py", erlaubt=erlaubt)
+    assert verstoesse("d.get('hourly_metrics')\n", "src/beispiel.py", erlaubt=erlaubt)
 
 
 def test_selbstnachweis_zu_kurzer_grund_wird_abgelehnt():
     erlaubt = {("src/beispiel.py", "hourly_metrics"): ("zu kurz", date(2099, 1, 1))}
-    assert verstoesse("f(hourly_metrics=[])\n", "src/beispiel.py", erlaubt=erlaubt)
+    assert verstoesse("d.get('hourly_metrics')\n", "src/beispiel.py", erlaubt=erlaubt)
 
 
 def test_selbstnachweis_andere_namen_und_texte_sind_frei():
