@@ -1,0 +1,59 @@
+{
+  "verified_commit": "539d169636a6b3d1722e0202f391d0879f741080",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "staging_mail_pruefen --typ beide (de)",
+      "evidence": "Trip- und Compare-Mail echt zugestellt, Validatoren Exit 0, Wegwerf-Nutzer geloescht",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-1-en",
+      "status": "PASS",
+      "url": "staging_mail_pruefen --typ beide --lang en",
+      "evidence": "Trip- und Compare-Mail (Nutzer en) zugestellt, Validatoren Exit 0",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "Alarm-Pfade",
+      "status": "PASS",
+      "url": "send_gate_test_mails official/radar de+en",
+      "evidence": "official_alert und radar_alert Validator je Sprache Exit 0",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "Windrichtung",
+      "status": "PASS",
+      "url": "send_gate_test_mails briefing/compare de+en",
+      "evidence": "briefing_mail_validator und email_spec_validator mit --windrichtung je Sprache Exit 0",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "Altfelder-API",
+      "status": "PASS",
+      "url": "/api/trips, /api/compare/presets",
+      "evidence": "Trip (Nutzer en) und Ortsvergleich gespeichert, GET und Liste ohne show_outlook, multi_day_trend_reports, outlook_enabled; aufgeraeumt. Hinweis: Go reicht report_config unveraendert durch, mitgeschickte Altschluessel kommen als Echo zurueck (Bestandsverhalten).",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-25T09:50:26.836187+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Altfelder-Rueckbau (#3277) auf Staging 539d169: Mails Trip/Compare/Alarme/Windrichtung DE+EN bestanden, API ohne Altfelder",
+  "scope": "backend",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Altfelder-Rueckbau (#3277) auf Staging 539d169: Mails Trip/Compare/Alarme/Windrichtung DE+EN bestanden, API ohne Altfelder",
+      "scope": "backend",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-25T09:50:26.836187+00:00"
+    }
+  }
+}
