@@ -105,3 +105,8 @@ Upstream: PR #3353 nur für S4. Downstream: #3297 → #3298 → #3277.
 
 ### Open Questions
 Keine an den PO. In der Spec zu klären: Befunde 3 (Fallzahl), 6 (`test_issue_692`), 8, 9.
+
+### Nachtrag 25.11. nach Rebase
+- PR #3353 (#2987) ist gemergt, der Branch steht darauf. **S4 ist damit nicht mehr blockiert**; Befund 7 und die Upstream-Abhängigkeit sind überholt, die Sperre für die vier Dateien von #2987 ebenso.
+- Die Probe-Löschung lief auf dem Stand davor. Neu seither im Frontend: 6 Dateien, darunter `reportConfigPayload.ts`, `zustellungModell.ts`, `tripNewLogic.ts`, `briefingStartwerte.ts`. Probe in S1 auf dem neuen Stand wiederholen.
+- `docs/artifacts/` ist per `.gitignore` ausgenommen: Belegdateien liegen nur in diesem Worktree auf der Platte.
