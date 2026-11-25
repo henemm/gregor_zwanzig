@@ -80,8 +80,6 @@ BEKANNTE_PAARE = (
     ("src/services/compare_alert_channels.py", "src/services/alert_channels.py"),
     ("src/services/compare_preview_service.py", "src/services/preview_service.py"),
     ("src/services/compare_weather_snapshot.py", "src/services/weather_snapshot.py"),
-    (f"{FE}/shared/weather-metrics-tab/compareChannelMetricLayouts.ts",
-     f"{FE}/shared/weather-metrics-tab/channelMetricLayouts.ts"),
     # nachgemessen 2026-10-24 (Adversary F003): achtes Paar
     ("src/services/trip_forecast.py", "src/services/forecast.py"),
 )
