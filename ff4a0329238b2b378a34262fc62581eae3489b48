@@ -1,0 +1,89 @@
+{
+  "verified_commit": "ff4a0329238b2b378a34262fc62581eae3489b48",
+  "findings": [
+    {
+      "ac": "AC-1/AC-8/AC-14",
+      "status": "PASS",
+      "url": "POST /api/scheduler/compare-presets/<id>/send (Staging-Kern)",
+      "evidence": "Wegwerf-Nutzer, 3 Orte (einer 'M\u00fcnster-S\u00f6ll'), Preset display_config.email_format=compact, echt zugestellt; email_spec_validator --konfig (Soll compact) Exit 0, DE. Betreff GZM 250815-b4fe040c.",
+      "workflow": "feat-3059-orte-kompakt-zusatzbloecke"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "Nutzer en, +en@",
+      "evidence": "Dieselbe Kompakt-Strecke mit Nutzer en; Validator --lang en --konfig compact Exit 0. Betreff GZM 250815-d8eab296.",
+      "workflow": "feat-3059-orte-kompakt-zusatzbloecke"
+    },
+    {
+      "ac": "AC-14 Gegenprobe",
+      "status": "PASS",
+      "url": "Staging-Mail",
+      "evidence": "Preset ohne email_format (ausf\u00fchrliche Mail) gegen Soll compact: Validator Exit 1 'SOLL: Format full statt compact'.",
+      "workflow": "feat-3059-orte-kompakt-zusatzbloecke"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "staging_mail_pruefen --typ compare",
+      "evidence": "Preset ohne email_format: ausf\u00fchrliche HTML-Vergleichsmail, Validator Exit 0 in DE und EN.",
+      "workflow": "feat-3059-orte-kompakt-zusatzbloecke"
+    },
+    {
+      "ac": "AC-3/AC-5/AC-13",
+      "status": "PASS",
+      "url": "/compare/<id>?tab=wetter",
+      "evidence": "Playwright gegen Staging, DE und EN: Format-Schalter genau einmal in Karte 'Was steht wo' der Orte, Kompakt -> PUT 200, display_config.email_format=compact, hourly_enabled/telegram_short unver\u00e4ndert, nach Neuladen Kompakt gew\u00e4hlt, Stundenverlauf gesperrt, Ausblick bedienbar, kein Trip-Wort.",
+      "workflow": "feat-3059-orte-kompakt-zusatzbloecke"
+    },
+    {
+      "ac": "AC-12 / Telegram-Scope",
+      "status": "PASS",
+      "url": "Staging-Checkout ff4a032, Staging-Bot",
+      "evidence": "GZ_TELEGRAM_LIVE=1 pytest -m live test_issue_686_telegram_functional_live.py + test_telegram_live_zweisprachig.py: 10 passed, 0 skipped (6:49).",
+      "workflow": "feat-3059-orte-kompakt-zusatzbloecke"
+    },
+    {
+      "ac": "Regression Trip",
+      "status": "PASS",
+      "url": "staging_mail_pruefen",
+      "evidence": "Trip-Briefing ausf\u00fchrlich (DE, GZM 250817-96eef1cf) und kompakt (EN, GZM 250818-2da823d6) echt zugestellt, briefing_mail_validator Exit 0. Trip kompakt DE nicht gelaufen: Registrierungs-Ratenlimit 429.",
+      "workflow": "feat-3059-orte-kompakt-zusatzbloecke"
+    }
+  ],
+  "verified_at": "2026-11-25T08:25:33.973908+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Orte-Kompaktmail DE+EN echt zugestellt und gegen Soll validiert, Gegenprobe rot, Ausf\u00fchrlich unver\u00e4ndert, Format-Schalter Orte-Karte per Playwright DE+EN, Telegram-Live 10/10",
+  "scope": "full-stack",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "feat-3059-orte-kompakt-zusatzbloecke": {
+      "verdict": "VERIFIED: Orte-Kompaktmail DE+EN echt zugestellt und gegen Soll validiert, Gegenprobe rot, Ausf\u00fchrlich unver\u00e4ndert, Format-Schalter Orte-Karte per Playwright DE+EN, Telegram-Live 10/10",
+      "scope": "full-stack",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-25T08:25:33.973908+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
