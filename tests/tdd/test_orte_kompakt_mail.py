@@ -645,6 +645,35 @@ def test_f003_warnmarker_je_amtlicher_stufe(stufe, marker):
     assert not zeile1.startswith("Randort01: !"), f"F003: Marker ohne Warnung: {zeile1!r}"
 
 
+def test_f012_unbekannte_kennung_wird_ausgelassen_und_gemeldet(caplog):
+    """F012: Eine Kennung ohne Vergleichszeile in der E-Mail-Auswahl wird in
+    der Ortszeile ausgelassen (kein Kuerzel, kein Wert), die bekannten
+    Groessen stehen unveraendert da, und genau EINE Warnung mit der Kennung
+    und dem #3059-Bezug landet im Log des Renderers (kein stilles Verwerfen)."""
+    import logging
+
+    from output.renderers.email.compact_compare import render_compare_compact
+
+    unbekannt = "gibt_es_nicht_3059"
+    result = _renderer_ergebnis(1)
+    bekannt = render_compare_compact(result, enabled_metrics=["temp_max", "wind_max"],
+                                     preset=preset_dict("basis"))
+    logger_name = "output.renderers.email.compact_compare"
+    with caplog.at_level(logging.WARNING, logger=logger_name):
+        text = render_compare_compact(
+            result, enabled_metrics=["temp_max", unbekannt, "wind_max"],
+            preset=preset_dict("basis"))
+    zeile = _ortszeile(text, "Randort00")
+    assert unbekannt not in text, f"F012: unbekannte Kennung im Text:\n{text}"
+    assert zeile == _ortszeile(bekannt, "Randort00"), "F012: bekannte Groessen veraendert"
+    assert f" {_kuerzel('temperature')} " in zeile and f" {_kuerzel('wind')} " in zeile, zeile
+    meldungen = [r for r in caplog.records
+                 if r.name == logger_name and r.levelno == logging.WARNING]
+    assert len(meldungen) == 1, f"F012: genau eine Warnung erwartet, war {meldungen}"
+    nachricht = meldungen[0].getMessage()
+    assert unbekannt in nachricht and "#3059" in nachricht, nachricht
+
+
 def test_f003_stufe_1_ohne_marker():
     """F003: Stufe 1 (gruen) liegt unter der Startschwelle -> kein Marker."""
     from services.official_alerts.models import OfficialAlert

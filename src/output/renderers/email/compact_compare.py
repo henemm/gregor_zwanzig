@@ -22,6 +22,7 @@ SPEC: docs/specs/modules/feat_3059_orte_kompakt_mail.md
 """
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from app.ampel import resolve_ampel
@@ -34,6 +35,8 @@ from output.renderers.email.helpers import (
     _AMPEL_STAGE_TONES, build_origin_footer, format_trend_tokens,
     render_origin_footer_text,
 )
+
+logger = logging.getLogger(__name__)
 
 #: Obergrenze der Kompakt-Mail in Byte (renderer_email_spec.md, wie Trip);
 #: der Text bleibt STRIKT darunter (``< COMPACT_MAX_BYTES``), wie der Validator.
@@ -100,9 +103,11 @@ def _ortszeile(loc_result: LocationResult, renderer_ids: list[str],
         teile.append(t("vergleich.ort.fehler", lang, fehler=loc_result.error))
         return _ascii(" ".join(teile))
     summary = _daily_summary(loc_result) if loc_result.hourly_data else None
+    verworfen: list[str] = []
     for rid in renderer_ids:
         row = _PLAIN_ROWS_BY_ID.get(rid)
         if row is None:
+            verworfen.append(rid)
             continue
         value = _metric_value(loc_result, rid, summary)
         if value is None:
@@ -113,12 +118,19 @@ def _ortszeile(loc_result: LocationResult, renderer_ids: list[str],
                 friendly=bool((metric_formats or {}).get(rid)), summary=summary,
             )
         teile.append(f"{kuerzel[rid]} {zelle}")
+    if verworfen:
+        # Issue #3059: sichtbares Signal statt stiller Verwerfung (Muster der
+        # Compare-Aufloeser, #1405).
+        logger.warning(
+            "render_compare_compact: %s ohne Vergleichszeile -- Groesse wird "  # i18n-log
+            "in der Kompakt-Mail ausgelassen (#3059)", verworfen,
+        )
     return _ascii(" ".join(teile))
 
 
 def _ausblickzeile(loc_result: LocationResult, outlook_metrics: Optional[list],
-                   outlook_metric_formats: Optional[dict], ampel: dict,
-                   lang: Lang) -> str:
+                   outlook_metric_formats: Optional[dict], lang: Lang, *,
+                   ampel: dict) -> str:
     """Eingerueckte 3-Tages-Ausblick-Zeile eines Ortes (eine Zeile, Tage
     durch " | " getrennt). Zellen aus demselben Zeilenbau wie die
     ausfuehrliche Mail (``_build_location_outlook_rows``, ``cells_ascii``)."""
@@ -221,7 +233,7 @@ def render_compare_compact(
         block = [_ortszeile(loc_result, renderer_ids, kuerzel, metric_formats, lang)]
         if outlook_enabled and outlook_metrics != [] and loc_result.error is None:
             block.append(_ausblickzeile(
-                loc_result, outlook_metrics, outlook_metric_formats, ampel, lang))
+                loc_result, outlook_metrics, outlook_metric_formats, lang, ampel=ampel))
         bloecke.append(block)
 
     fuss = ["-" * 20, _ascii(render_origin_footer_text(build_origin_footer(
