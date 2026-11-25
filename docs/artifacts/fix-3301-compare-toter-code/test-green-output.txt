@@ -1,0 +1,33 @@
+== #3301 Zieltests (aus frontend/):
+   npm test -- src/lib/__tests__/compare_toter_code_3301.test.ts src/lib/components/compare/compareEditorHourlyMetrics.test.ts src/lib/components/compare/__tests__/compare_empty_metric_selection.test.ts
+    ok 1 - gelöscht: lib/components/compare/compareHourlyMetricDefs.ts
+    ok 2 - keine Produktionsdatei importiert compareHourlyMetricDefs (statisch, Barrel-Export, dynamisch)
+ok 1 - \#3301 AC-1: compareHourlyMetricDefs.ts gelöscht, kein Produktionsimport
+    ok 1 - Importkette ist auflösbar und nicht trivial
+    ok 2 - keine Datei der Importkette bindet WeatherMetricsTab oder layout_kanal ein (ohne Kommentare)
+ok 2 - \#3301 AC-2: Anlegeseite Ortsvergleich ohne Kanal-Layout-Karte
+ok 3 - buildNewComparePresetPayload — AC-7: bewusste Leerauswahl beim Anlegen
+ok 4 - buildNewComparePresetPayload — active_metrics: "nie eingestellt" vs. bewusst leer (Issue \#1366 F002)
+ok 5 - buildNewComparePresetPayload — hourly_metrics wird nie gesendet (\#3276)
+    ok 1 - ein Editor-Wert hourlyMetricKeys ueberschreibt den Bestand nicht mehr
+    ok 2 - ohne Bestand entsteht kein hourly_metrics (auch nicht als [])
+    ok 3 - bestehendes display_config.hourly_metrics bleibt per RMW erhalten, wenn hourlyMetricKeys fehlt
+ok 6 - buildComparePresetSavePayload — hourly_metrics (Issue \#1106, seit \#3276 nur Bestand)
+# tests 14
+# pass 14
+# fail 0
+
+== Komplette node-test-Suite (npm test, frontend/)
+# tests 11157
+# suites 2097
+# pass 11154
+# fail 0
+# cancelled 0
+# skipped 2
+# todo 1
+
+== npm run build (frontend/): exit 0
+
+== npx svelte-check --tsconfig ./tsconfig.json --output machine
+COMPLETED 2279 FILES 32 ERRORS 72 WARNINGS 51 FILES_WITH_PROBLEMS
+Baseline ci.yml: 34 Fehler / 132 Warnings -> eingehalten (32 <= 34, 72 <= 132)

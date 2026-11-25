@@ -1,0 +1,282 @@
+TAP version 13
+# Subtest: \#3301 AC-1: compareHourlyMetricDefs.ts gelöscht, kein Produktionsimport
+    # Subtest: gelöscht: lib/components/compare/compareHourlyMetricDefs.ts
+    ok 1 - gelöscht: lib/components/compare/compareHourlyMetricDefs.ts
+      ---
+      duration_ms: 0.559792
+      type: 'test'
+      ...
+    # Subtest: keine Produktionsdatei importiert compareHourlyMetricDefs (statisch, Barrel-Export, dynamisch)
+    ok 2 - keine Produktionsdatei importiert compareHourlyMetricDefs (statisch, Barrel-Export, dynamisch)
+      ---
+      duration_ms: 93.394524
+      type: 'test'
+      ...
+    1..2
+ok 1 - \#3301 AC-1: compareHourlyMetricDefs.ts gelöscht, kein Produktionsimport
+  ---
+  duration_ms: 94.685987
+  type: 'suite'
+  ...
+# Subtest: \#3301 AC-2: Anlegeseite Ortsvergleich ohne Kanal-Layout-Karte
+    # Subtest: Importkette ist auflösbar und nicht trivial
+    ok 1 - Importkette ist auflösbar und nicht trivial
+      ---
+      duration_ms: 33.314801
+      type: 'test'
+      ...
+    # Subtest: keine Datei der Importkette bindet WeatherMetricsTab oder layout_kanal ein (ohne Kommentare)
+    ok 2 - keine Datei der Importkette bindet WeatherMetricsTab oder layout_kanal ein (ohne Kommentare)
+      ---
+      duration_ms: 76.695903
+      type: 'test'
+      ...
+    1..2
+ok 2 - \#3301 AC-2: Anlegeseite Ortsvergleich ohne Kanal-Layout-Karte
+  ---
+  duration_ms: 110.204405
+  type: 'suite'
+  ...
+# Subtest: buildNewComparePresetPayload — AC-7: bewusste Leerauswahl beim Anlegen
+    # Subtest: leere activeMetricKeys senden display_config.active_metrics ausdruecklich als []
+    ok 1 - leere activeMetricKeys senden display_config.active_metrics ausdruecklich als []
+      ---
+      duration_ms: 1.121132
+      type: 'test'
+      ...
+    1..1
+ok 3 - buildNewComparePresetPayload — AC-7: bewusste Leerauswahl beim Anlegen
+  ---
+  duration_ms: 1.806164
+  type: 'suite'
+  ...
+# Subtest: buildNewComparePresetPayload — active_metrics: "nie eingestellt" vs. bewusst leer (Issue \#1366 F002)
+    # Subtest: activeMetricKeys=null (Wetter-Metriken-Bereich nie geoeffnet) -> Schluessel active_metrics fehlt (Default bleibt "alle")
+    ok 1 - activeMetricKeys=null (Wetter-Metriken-Bereich nie geoeffnet) -> Schluessel active_metrics fehlt (Default bleibt "alle")
+      ---
+      duration_ms: 0.156681
+      type: 'test'
+      ...
+    # Subtest: activeMetricKeys=[] (Bereich geoeffnet, bewusst alles abgewaehlt) -> active_metrics wird explizit als [] gesendet (AC-7 bleibt gueltig)
+    ok 2 - activeMetricKeys=[] (Bereich geoeffnet, bewusst alles abgewaehlt) -> active_metrics wird explizit als [] gesendet (AC-7 bleibt gueltig)
+      ---
+      duration_ms: 0.098591
+      type: 'test'
+      ...
+    # Subtest: drei gewaehlte Groessen -> genau diese drei, in der gewaehlten Reihenfolge
+    ok 3 - drei gewaehlte Groessen -> genau diese drei, in der gewaehlten Reihenfolge
+      ---
+      duration_ms: 0.259051
+      type: 'test'
+      ...
+    1..3
+ok 4 - buildNewComparePresetPayload — active_metrics: "nie eingestellt" vs. bewusst leer (Issue \#1366 F002)
+  ---
+  duration_ms: 0.661082
+  type: 'suite'
+  ...
+# Subtest: buildNewComparePresetPayload — hourly_metrics wird nie gesendet (\#3276)
+    # Subtest: hourlyMetricKeys=null -> Schluessel hourly_metrics fehlt
+    ok 1 - hourlyMetricKeys=null -> Schluessel hourly_metrics fehlt
+      ---
+      duration_ms: 0.19407
+      type: 'test'
+      ...
+    # Subtest: hourlyMetricKeys=[] -> Schluessel hourly_metrics fehlt
+    ok 2 - hourlyMetricKeys=[] -> Schluessel hourly_metrics fehlt
+      ---
+      duration_ms: 0.132831
+      type: 'test'
+      ...
+    # Subtest: hourlyMetricKeys=["temp_c"] -> Schluessel hourly_metrics fehlt
+    ok 3 - hourlyMetricKeys=["temp_c"] -> Schluessel hourly_metrics fehlt
+      ---
+      duration_ms: 0.203291
+      type: 'test'
+      ...
+    1..3
+ok 5 - buildNewComparePresetPayload — hourly_metrics wird nie gesendet (\#3276)
+  ---
+  duration_ms: 0.682011
+  type: 'suite'
+  ...
+# Subtest: buildComparePresetSavePayload — hourly_metrics (Issue \#1106, seit \#3276 nur Bestand)
+    # Subtest: ein Editor-Wert hourlyMetricKeys ueberschreibt den Bestand nicht mehr
+    ok 1 - ein Editor-Wert hourlyMetricKeys ueberschreibt den Bestand nicht mehr
+      ---
+      duration_ms: 1.153353
+      type: 'test'
+      ...
+    # Subtest: ohne Bestand entsteht kein hourly_metrics (auch nicht als [])
+    ok 2 - ohne Bestand entsteht kein hourly_metrics (auch nicht als [])
+      ---
+      duration_ms: 0.21515
+      type: 'test'
+      ...
+    # Subtest: bestehendes display_config.hourly_metrics bleibt per RMW erhalten, wenn hourlyMetricKeys fehlt
+    ok 3 - bestehendes display_config.hourly_metrics bleibt per RMW erhalten, wenn hourlyMetricKeys fehlt
+      ---
+      duration_ms: 0.28199
+      type: 'test'
+      ...
+    1..3
+ok 6 - buildComparePresetSavePayload — hourly_metrics (Issue \#1106, seit \#3276 nur Bestand)
+  ---
+  duration_ms: 2.468195
+  type: 'suite'
+  ...
+# Subtest: buildComparePresetSavePayload — Endpoint (AC-3)
+    # Subtest: zielt auf den Compare-Presets-Store, NICHT auf /api/subscriptions
+    ok 1 - zielt auf den Compare-Presets-Store, NICHT auf /api/subscriptions
+      ---
+      duration_ms: 0.747311
+      type: 'test'
+      ...
+    1..1
+ok 7 - buildComparePresetSavePayload — Endpoint (AC-3)
+  ---
+  duration_ms: 1.483512
+  type: 'suite'
+  ...
+# Subtest: buildComparePresetSavePayload — Datenverlust-Schutz (AC-3)
+    # Subtest: empfaenger bleibt erhalten, wenn nur der Name geändert wird
+    ok 1 - empfaenger bleibt erhalten, wenn nur der Name geändert wird
+      ---
+      duration_ms: 0.694151
+      type: 'test'
+      ...
+    # Subtest: schedule/hour_from/hour_to/weekday/previous_schedule round-trippen unverändert
+    ok 2 - schedule/hour_from/hour_to/weekday/previous_schedule round-trippen unverändert
+      ---
+      duration_ms: 0.131081
+      type: 'test'
+      ...
+    # Subtest: geänderte Felder (location_ids, profil) werden überschrieben
+    ok 3 - geänderte Felder (location_ids, profil) werden überschrieben
+      ---
+      duration_ms: 0.11841
+      type: 'test'
+      ...
+    # Subtest: display_config: editierte region überschreibt, fremde Schlüssel bleiben erhalten
+    ok 4 - display_config: editierte region überschreibt, fremde Schlüssel bleiben erhalten
+      ---
+      duration_ms: 1.541992
+      type: 'test'
+      ...
+    # Subtest: id wird nie geändert (server-managed, aus Original)
+    ok 5 - id wird nie geändert (server-managed, aus Original)
+      ---
+      duration_ms: 0.122031
+      type: 'test'
+      ...
+    1..5
+ok 8 - buildComparePresetSavePayload — Datenverlust-Schutz (AC-3)
+  ---
+  duration_ms: 2.853635
+  type: 'suite'
+  ...
+# Subtest: buildComparePresetSavePayload — Alarm-Konfiguration (Issue \#1170)
+    # Subtest: gesetzte Alarm-Felder landen im Payload (display_config.metric_alert_levels + top-level cooldown/quiet), Rest round-trippt
+    ok 1 - gesetzte Alarm-Felder landen im Payload (display_config.metric_alert_levels + top-level cooldown/quiet), Rest round-trippt
+      ---
+      duration_ms: 0.344231
+      type: 'test'
+      ...
+    # Subtest: fehlende Alarm-Felder in edits lassen bereits gesetzte Werte aus original unangetastet (Round-Trip)
+    ok 2 - fehlende Alarm-Felder in edits lassen bereits gesetzte Werte aus original unangetastet (Round-Trip)
+      ---
+      duration_ms: 0.143741
+      type: 'test'
+      ...
+    1..2
+ok 9 - buildComparePresetSavePayload — Alarm-Konfiguration (Issue \#1170)
+  ---
+  duration_ms: 0.79204
+  type: 'suite'
+  ...
+# Subtest: buildComparePresetSavePayload — Alarm-Trigger + Kanäle (\#1216)
+    # Subtest: gesetzte Trigger-/Kanal-Felder landen als JSON-Keys im PUT-Body
+    ok 1 - gesetzte Trigger-/Kanal-Felder landen als JSON-Keys im PUT-Body
+      ---
+      duration_ms: 0.234791
+      type: 'test'
+      ...
+    # Subtest: fehlende Trigger-/Kanal-Felder in edits ändern den Round-Trip nicht (Keys fehlen)
+    ok 2 - fehlende Trigger-/Kanal-Felder in edits ändern den Round-Trip nicht (Keys fehlen)
+      ---
+      duration_ms: 0.277111
+      type: 'test'
+      ...
+    1..2
+ok 10 - buildComparePresetSavePayload — Alarm-Trigger + Kanäle (\#1216)
+  ---
+  duration_ms: 0.633571
+  type: 'suite'
+  ...
+# Subtest: buildComparePresetSavePayload — channel_layouts bleibt erhalten (\#3039 AC-11)
+    # Subtest: Speichern aus einem anderen Reiter: channel_layouts und Zusatzfeld bleiben unverändert erhalten
+    ok 1 - Speichern aus einem anderen Reiter: channel_layouts und Zusatzfeld bleiben unverändert erhalten
+      ---
+      duration_ms: 0.267501
+      type: 'test'
+      ...
+    1..1
+ok 11 - buildComparePresetSavePayload — channel_layouts bleibt erhalten (\#3039 AC-11)
+  ---
+  duration_ms: 0.388032
+  type: 'suite'
+  ...
+# Subtest: buildComparePresetSavePayload — corridors (\#1231 Slice 4)
+    # Subtest: gesetztes corridors-Array landet als Top-Level-Feld im PUT-Body
+    ok 1 - gesetztes corridors-Array landet als Top-Level-Feld im PUT-Body
+      ---
+      duration_ms: 0.23124
+      type: 'test'
+      ...
+    # Subtest: fehlendes corridors in edits laesst den Key im Body komplett weg (Round-Trip via Original)
+    ok 2 - fehlendes corridors in edits laesst den Key im Body komplett weg (Round-Trip via Original)
+      ---
+      duration_ms: 0.10114
+      type: 'test'
+      ...
+    1..2
+ok 12 - buildComparePresetSavePayload — corridors (\#1231 Slice 4)
+  ---
+  duration_ms: 0.396552
+  type: 'suite'
+  ...
+# Subtest: buildNewComparePresetPayload — Kanal-Auswahl der Uebersicht (\#1703 S8)
+    # Subtest: \#3276: editierte Kanaele stehen NICHT im POST-Body (auch kein geleerter Kanal als [])
+    ok 1 - \#3276: editierte Kanaele stehen NICHT im POST-Body (auch kein geleerter Kanal als [])
+      ---
+      duration_ms: 0.418411
+      type: 'test'
+      ...
+    1..1
+ok 13 - buildNewComparePresetPayload — Kanal-Auswahl der Uebersicht (\#1703 S8)
+  ---
+  duration_ms: 0.46803
+  type: 'suite'
+  ...
+# Subtest: buildComparePresetSavePayload — Kanal-Edit erreicht den Bestand nicht (\#3039 F007 / \#3276)
+    # Subtest: telegram editiert: alle Kanaele und channel_layouts bleiben unveraendert
+    ok 1 - telegram editiert: alle Kanaele und channel_layouts bleiben unveraendert
+      ---
+      duration_ms: 0.18099
+      type: 'test'
+      ...
+    1..1
+ok 14 - buildComparePresetSavePayload — Kanal-Edit erreicht den Bestand nicht (\#3039 F007 / \#3276)
+  ---
+  duration_ms: 0.22971
+  type: 'suite'
+  ...
+1..14
+# tests 29
+# suites 14
+# pass 29
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 851.218877
