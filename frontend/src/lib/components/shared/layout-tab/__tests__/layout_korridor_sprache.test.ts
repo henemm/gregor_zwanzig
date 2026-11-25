@@ -4,8 +4,9 @@
 // SSR-Renders (svelte/server, Pruefstand f8Pruefstand.ts):
 //   * AC-6: Deutsch ist byte-gleich zur Ausgabe VOR der Umstellung
 //     (tests/golden/f8_layout_korridor/*.de.html und funktionen.de.txt),
-//   * AC-1: Layout-Reiter in Trip und Ortsvergleich englisch, Kanalnamen und
-//     Kurzformen unveraendert,
+//   * AC-1: Mail-Inhalt-Bausteintexte je Sprache. #3366: die Render-Faelle des
+//     Layout-Reiters (LayoutTab, LTCapNote, LTChannelPicker, LTCutLine; ohne
+//     Produktionsaufrufer, geloescht) und ihre Golden entfallen,
 //   * AC-2: Korridor-Logik (Zeilennamen, Profil-Metriken) je Sprache, Einheiten,
 //     Skalen und Standardgrenzen gleich. #2794 S3a Teil-PR 4a (AC-31): die
 //     Render-Faelle des entfernten Korridor-Editors (CorridorEditor/-Mobile) und
@@ -29,7 +30,6 @@ import {
 	FRONTEND,
 	GOLDEN_DIR,
 	CAP_FAELLE,
-	COL_LABELS,
 	ROUTE_KORRIDORE,
 	ROUTE_EXTRA,
 	VERGLEICH_DEFS,
@@ -39,8 +39,7 @@ import {
 	lt,
 	ce,
 	CONTENT_MODULE_DESCRIPTIONS,
-	layoutTabRendern,
-	bausteineRendern,
+	ausgabeLayoutRendern,
 	htmlFaelle,
 	funktionsTabelle,
 	schreibeGolden
@@ -95,9 +94,9 @@ function deutscheReste(text: string, ausnahmen: string[] = []): string[] {
 }
 /** Fremdbausteine mit eigenem Deutsch (andere Pakete), deren Woerter Ankerteile treffen. */
 const FREMD_REIHENFOLGE = ['layout.ausgabe.reihenfolge']; // WeatherV2Reihenfolge (F5) titelt selbst „Reihenfolge"
-/** Der Fixture-Katalog des Layout-Reiters traegt API-Metriknamen (Böen, Niederschlag; F5),
- *  die zugleich Trip-Korridor-Zeilennamen sind — im Layout-Reiter keine Paket-Texte. */
-const API_METRIKNAMEN = ['layout.korridor_zeile.']
+/** Der Fixture-Katalog traegt API-Metriknamen (Böen, Niederschlag; F5), die zugleich
+ *  Trip-Korridor-Zeilennamen sind — im Ausgabe-Layout keine Paket-Texte. */
+const API_METRIKNAMEN = ['layout.korridor_zeile.'];
 
 describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)', () => {
 	const FAELLE = htmlFaelle();
@@ -119,53 +118,35 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 	});
 	test('Messaufbau: Golden enthaelt die deutschen Texte aller Bausteine', () => {
 		const alle = Object.keys(FAELLE).map((f) => readFileSync(path.join(GOLDEN_DIR, `${f}.de.html`), 'utf-8')).join('');
-		for (const s of ['Kanal · Auswahl &amp; Kappung', 'Preset-Auswahl', 'Detail-Werte', /* #3297/#3020: 'E-Mail-Inhalt'/'Erscheint nur in der E-Mail.' entfallen mit MailInhaltCard/OutlookLayoutControls */ /* #3047 R8 F3 */ '↓ ab Platz 8 nur in der Telegram-Kurzübersicht, nicht in der Stundentabelle', 'Etappen-Vorschau', 'Als Trip speichern', 'Trip wurde erfolgreich gespeichert.'])
+		for (const s of [/* #3366: Layout-Reiter-Texte entfallen mit LayoutTab/LTCutLine */ 'Etappen-Vorschau', 'Als Trip speichern', 'Trip wurde erfolgreich gespeichert.'])
 			assert.ok(alle.includes(s), s);
 	});
 });
 
-describe('AC-1: Layout-Reiter englisch in Trip und Ortsvergleich, Kanalnamen und Kurzformen unveraendert', () => {
-	for (const context of ['route', 'vergleich'] as const) {
-		test(`${context}: erst de, dann ohne Neuladen en (E-Mail, Telegram, SMS)`, () => {
-			const rendern = () => (['email', 'telegram', 'sms'] as const).map((k) => layoutTabRendern(context, k, 9)).join('\n');
-			const { de, en } = deDannEn(() => sichtbar(rendern()));
-			for (const s of ['Kanal · Auswahl & Kappung', 'Reihenfolge', 'Spalten', 'Detail-Werte', 'Preset-Auswahl']) hat(de, s);
-			for (const s of ['Channel · selection & cutoff', 'Order', 'Columns', 'Detail values', 'Preset selection', 'In the briefing as a column', 'In the briefing as a detail', 'One table column per metric. Order = left to right.', 'Shown as a compact line directly below the table.', 'SMS · priority list', 'Characters', 'SMS has at most 140 characters. Order: top = more important. Anything that no longer fits the budget is left out automatically.'])
-				hat(en, s);
-			// Kanalnamen (Eigennamen) und Platzgrenzen stehen in beiden Sprachen gleich.
-			const sms = context === 'route' ? '160' : '153';
-			// #3047 R8 (AC-24): Orts-Vergleich-Telegram kappt nicht (Badge ∞), Trip-Stundentabelle 7.
-			for (const s of ['Email ∞', context === 'route' ? 'Telegram 7' : 'Telegram ∞', `SMS ${sms}`]) {
-				hat(de, s);
-				hat(en, s);
-			}
-			hat(en, 'Email shows everything · no limit');
-			hat(en, `SMS: no grid, no table — plain text, ${sms} characters`);
-			hat(en, context === 'route' ? 'Telegram: 9 Metriken · too wide — max 7, further forward = safer' : 'Telegram: 9 Metriken · all in the message, from position 8 in a second line per location');
-			assert.deepEqual(deutscheReste(en, API_METRIKNAMEN), []);
-		});
-	}
+describe('AC-1: Ausgabe-Layout englisch, Mail-Inhalt je Sprache', () => {
+	// #3366: Kanal-Umschalter, Kappungs-Hinweis und Schnittlinie gehoerten zum geloeschten
+	// Layout-Reiter; der geteilte Ausgabe-Layout-Editor (OutputLayoutEditor) bleibt geprueft.
+	test('Ausgabe-Layout: erst de, dann ohne Neuladen en (E-Mail, Telegram, SMS)', () => {
+		const rendern = () => (['email', 'telegram', 'sms'] as const).map((k) => ausgabeLayoutRendern(k)).join('\n');
+		const { de, en } = deDannEn(() => sichtbar(rendern()));
+		for (const s of ['Reihenfolge', 'Spalten', 'Detail-Werte', 'Preset-Auswahl']) hat(de, s);
+		for (const s of ['Order', 'Columns', 'Detail values', 'Preset selection', 'In the briefing as a column', 'In the briefing as a detail', 'One table column per metric. Order = left to right.', 'Shown as a compact line directly below the table.', 'SMS · priority list', 'Characters', 'SMS has at most 140 characters. Order: top = more important. Anything that no longer fits the budget is left out automatically.'])
+			hat(en, s);
+		assert.deepEqual(deutscheReste(en, API_METRIKNAMEN), []);
+	});
 	test('aria-Beschriftungen des Ausgabe-Layouts englisch', () => {
-		const { de, en } = deDannEn(() => layoutTabRendern('route', 'sms'));
+		const { de, en } = deDannEn(() => ausgabeLayoutRendern('sms'));
 		hat(de, 'aria-label="SMS-Metriken, Reihenfolge"');
 		hat(en, 'aria-label="SMS metrics, order"');
-		const email = deDannEn(() => layoutTabRendern('route', 'email'));
+		const email = deDannEn(() => ausgabeLayoutRendern('email'));
 		hat(email.en, 'aria-label="Columns, order"'); // „, Reihenfolge" haengt BucketSection an (seit F9 #2658 sprachfaehig)
 		hat(email.de, 'aria-label="Spalten, Reihenfolge"');
 		hatNicht(email.en, 'aria-label="Spalten, Reihenfolge"');
 	});
-	// #3297/#3020: Kurzform-Badges stammten aus OutlookLayoutControls (geloescht).
-	test('Bausteine: Schnittlinie, Leer- und Ohne-Detail-Zustand englisch', () => {
-		const { de, en } = deDannEn(() => bausteineRendern());
+	test('Leer- und Ohne-Detail-Zustand englisch', () => {
+		const { en } = deDannEn(() => [ausgabeLayoutRendern('sms', 'leer'), ausgabeLayoutRendern('email', 'ohne_detail')].join('\n'));
 		const text = sichtbar(en);
-		for (const s of [
-			'↓ from position 8 only in the Telegram summary, not in the hourly table', // #3047 R8 F3
-			// #3297/#3020: Ausblick-Steuerung und Karte E-Mail-Inhalt geloescht; deren Texte prueft
-			// fuer die Konstantenliste der Fall „Mail-Inhalt: Bausteintexte“ weiter unten.
-			'No metrics — add some from “Not in the briefing”.',
-			'Columns'
-		])
-			hat(text, s);
+		for (const s of ['No metrics — add some from “Not in the briefing”.', 'Columns']) hat(text, s);
 		hatNicht(text, 'Detail values'); // hideDetailBucket
 		assert.deepEqual(deutscheReste(text, [...FREMD_REIHENFOLGE, ...API_METRIKNAMEN]), []);
 	});
@@ -242,12 +223,7 @@ describe('AC-3: Kappungs- und Abwahl-Hinweis je Sprache (gleiche Zahlen und Kana
 		assert.match('Telegram only shows the most important values', WERTUNG);
 		assert.doesNotMatch(ERWARTET.telegram_zu_breit[1], WERTUNG);
 	});
-	test('LTCapNote im Layout-Reiter zeigt denselben Satz wie die Funktion (Wirkort)', () => {
-		const limit = lt.ltLimitForChannel('telegram', 160);
-		const { en } = deDannEn(() => ({ html: layoutTabRendern('route', 'telegram', 9), fn: lt.ltCapNoteText({ channel: 'telegram', limit, colCount: 9, subject: 'Metriken', hasLabelColumn: false }) }));
-		assert.equal(en.fn, 'Telegram: 9 Metriken · too wide — max 7, further forward = safer');
-		hat(sichtbar(en.html), en.fn);
-	});
+	// #3366: der Wirkort-Fall (LTCapNote im Layout-Reiter) entfaellt mit der geloeschten Komponente.
 });
 
 describe('AC-4: zwei Nutzer, zwei Sprachen, gleiche Wertebereiche, gleiche Speicher-Nutzlast', () => {
@@ -293,7 +269,7 @@ describe('AC-4: zwei Nutzer, zwei Sprachen, gleiche Wertebereiche, gleiche Speic
 		return {
 			lang,
 			fremd,
-			layout: sichtbar(layoutTabRendern('route', 'email')),
+			layout: sichtbar(ausgabeLayoutRendern('email')), // #3366: Ausgabe-Layout statt geloeschtem Layout-Reiter
 			// #2794 S3a Teil-PR 4a: die Korridor-Ansicht (CorridorEditor) ist entfernt; die
 			// Zeilennamen der Logik folgen weiter der Sprache, die Nutzlast bleibt sprachfrei.
 			zeilenNamen: zeilen.map((z: { label: string }) => z.label),
@@ -310,8 +286,8 @@ describe('AC-4: zwei Nutzer, zwei Sprachen, gleiche Wertebereiche, gleiche Speic
 		assert.equal(b.lang, 'de');
 		assert.equal(a.fremd, null, 'A liest den Trip von B');
 		assert.equal(b.fremd, null, 'B liest den Trip von A');
-		hat(a.layout, 'Channel · selection & cutoff');
-		hat(b.layout, 'Kanal · Auswahl & Kappung');
+		hat(a.layout, 'Detail values');
+		hat(b.layout, 'Detail-Werte');
 		assert.ok(a.zeilenNamen.includes('Wind gusts'), `A (en): ${a.zeilenNamen.join(', ')}`);
 		assert.ok(b.zeilenNamen.includes('Böen'), `B (de): ${b.zeilenNamen.join(', ')}`);
 		assert.deepEqual(a.nutzlast, b.nutzlast);

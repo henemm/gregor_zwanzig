@@ -1,6 +1,7 @@
-// Issue #2657 (i18n F8, Epic #2644) — gemeinsamer SSR-Pruefstand fuer den
-// geteilten Layout-Reiter (LayoutTab + LTCapNote/LTChannelPicker/LTCutLine,
-// OutputLayoutEditor), Ausblick-Steuerung, Mail-Inhalt und die GPX-Seite.
+// Issue #2657 (i18n F8, Epic #2644) — gemeinsamer SSR-Pruefstand fuer die
+// Kappungs-Funktionen (ltChannels.ts), Mail-Inhalt und die GPX-Seite.
+// #3366: der Layout-Reiter (LayoutTab + LTCapNote/LTChannelPicker/LTCutLine) ist
+// als Waise geloescht, seine Render-Faelle und Golden entfallen.
 // #2794 S3a Teil-PR 4a (AC-31): der Korridor-Editor (CorridorEditor/
 // CorridorEditorMobile) ist als Oberflaeche entfernt — seine Faelle samt Golden
 // entfallen; die Korridor-Logik (`ce`, shared/wetter-tab/corridorEditorState.ts)
@@ -33,7 +34,6 @@ register(pathToFileURL(path.join(HERE, 'f8VarianteHook.mjs')).href, basis);
 
 const { render } = await import('svelte/server');
 const imp = async (datei: string) => await import(pathToFileURL(datei).href);
-const komp = async (datei: string) => (await imp(datei)).default;
 /** Komponente mit umgelenkten `$state`-Startwerten (s. f8VarianteHook.mjs). */
 const variante = async (datei: string, ersetzungen: [string, string][]) =>
 	(await import(`${pathToFileURL(datei).href}?f8variante=${Buffer.from(JSON.stringify(ersetzungen)).toString('base64url')}`)).default;
@@ -43,8 +43,11 @@ export const lt = await imp(path.join(LT, 'ltChannels.ts'));
 export const ce = await imp(path.join(SHARED, 'wetter-tab', 'corridorEditorState.ts'));
 export const { CONTENT_MODULE_DESCRIPTIONS } = await imp(path.join(SHARED, 'mailInhaltKonstanten.ts'));
 
-const LayoutTabPruefstand = await komp(path.join(HERE, 'LayoutTabPruefstand.svelte'));
-const LTCutLine = await komp(path.join(LT, 'LTCutLine.svelte'));
+// #3366: der Layout-Reiter (LayoutTab, LTCapNote, LTChannelPicker, LTCutLine) war ohne
+// Produktionsaufrufer und ist geloescht; seine Render-Faelle samt Golden entfallen.
+// Die Funktionen aus ltChannels.ts (lebt) bleiben in der Funktionstabelle; der geteilte
+// Ausgabe-Layout-Editor (OutputLayoutEditor, lebt) wird direkt gerendert.
+const OutputLayoutEditor = (await imp(path.join(SHARED, 'OutputLayoutEditor.svelte'))).default;
 
 // GPX-Seite: Vorschau/Speichern erscheinen erst nach dem Hochladen (Klick).
 const GPX_ZUSTAND: [string, string][] = [
@@ -54,13 +57,11 @@ const GPX_ZUSTAND: [string, string][] = [
 ];
 const GpxSeite = await variante(GPX_SEITE, GPX_ZUSTAND);
 
-export type Kontext = 'route' | 'vergleich';
-const nix = () => {};
 const g = globalThis as unknown as Record<string, unknown>;
 const ohneKommentare = (html: string) => html.replace(/<!--[\s\S]*?-->/g, '');
 const html = (k: unknown, props: Record<string, unknown> = {}) => ohneKommentare(render(k as never, { props } as never).body);
 
-// ── Layout-Reiter ────────────────────────────────────────────────────────────
+// ── Ausgabe-Layout-Editor ────────────────────────────────────────────────────
 
 /** Metrik-Katalog wie GET /api/metrics (Labels sind API-Daten, nicht Paket-Texte). */
 const KATALOG = {
@@ -71,36 +72,19 @@ const KATALOG = {
 	],
 	precipitation: [{ id: 'precipitation', label: 'Niederschlag', unit: 'mm', category: 'precipitation', default_enabled: true, col_label: 'Rain' }]
 };
-export const COL_LABELS = ['Temp', 'Wind', 'Gust', 'Rain'];
 const BUCKETS = { primary: ['temperature', 'wind', 'gust'], secondary: ['precipitation'], off: [] as string[] };
+const LEER = { primary: [] as string[], secondary: [] as string[], off: ['temperature'] };
 
-/** Layout-Reiter eines Kontexts fuer einen Kanal. #3047 R8: Vergleich mit den Props des echten Aufrufers (WeatherMetricsTab: Metriken als Zeilen, ohne Label-Spalte). */
-export function layoutTabRendern(context: Kontext, channel: 'email' | 'telegram' | 'sms', colCount = 3): string {
-	const props =
-		context === 'route'
-			? { context, channel, colCount, subjectLabel: 'Metriken', hasLabelColumn: false }
-			: { context, channel, colCount, subjectLabel: 'Metriken', hasLabelColumn: false, smsCharLimit: lt.SMS_COMPARE_CHAR_LIMIT };
-	return html(LayoutTabPruefstand, {
-		...props,
+/** Ausgabe-Layout-Editor fuer einen Kanal (Props wie im frueheren Layout-Reiter-Pruefstand). */
+export function ausgabeLayoutRendern(channel: 'email' | 'telegram' | 'sms', variante: 'voll' | 'leer' | 'ohne_detail' = 'voll'): string {
+	return html(OutputLayoutEditor, {
 		catalog: KATALOG,
-		buckets: BUCKETS,
-		templates: [{ id: 'wandern', label: 'Wandern', metrics: ['temperature', 'wind'] }]
+		buckets: variante === 'leer' ? LEER : BUCKETS,
+		friendlyMap: {},
+		channel,
+		templates: [{ id: 'wandern', label: 'Wandern', metrics: ['temperature', 'wind'] }],
+		hideDetailBucket: variante === 'ohne_detail'
 	});
-}
-
-/** Ausblick-Steuerung, Mail-Inhalt, Schnittlinie und Leer-/Sonderzustaende des Ausgabe-Layouts. */
-export function bausteineRendern(): string {
-	const katalog = [
-		{ metric: 'temp_max_c', label: 'Temperatur', metric_id: 'temperature', aggregation: 'max', aggregation_label: 'max', col_label: 'Temp' },
-		{ metric: 'wind_max_kmh', label: 'Wind', metric_id: 'wind', aggregation: 'max', aggregation_label: 'max', col_label: 'Wind' }
-	];
-	const leer = { primary: [] as string[], secondary: [] as string[], off: ['temperature'] };
-	return [
-		html(LTCutLine, { label: 'Telegram', platz: 8, context: 'route' }), // #3047 R8 F3
-		// #3297/#3020: Ausblick-Steuerung (OutlookLayoutControls) und Karte E-Mail-Inhalt (MailInhaltCard) geloescht.
-		html(LayoutTabPruefstand, { context: 'route', channel: 'sms', colCount: 0, subjectLabel: 'Metriken', hasLabelColumn: false, catalog: KATALOG, buckets: leer }),
-		html(LayoutTabPruefstand, { context: 'route', channel: 'email', colCount: 9, subjectLabel: 'Metriken', hasLabelColumn: false, catalog: KATALOG, buckets: BUCKETS, hideDetailBucket: true })
-	].join('\n');
 }
 
 // ── Korridor-Logik (Daten fuer die Speicher-Nutzlast, AC-4) ─────────────────
@@ -156,9 +140,6 @@ export function gpxRendern(zustand: Zustand = {}): string {
 /** Golden-Faelle HTML (Spec Implementation Details 6). */
 export function htmlFaelle(): Record<string, () => string> {
 	return {
-		layout_tab_route: () => (['email', 'telegram', 'sms'] as const).map((k) => layoutTabRendern('route', k)).join('\n'),
-		layout_tab_vergleich: () => (['email', 'telegram', 'sms'] as const).map((k) => layoutTabRendern('vergleich', k, 9)).join('\n'),
-		bausteine: bausteineRendern,
 		gpx_start: () => gpxRendern(),
 		gpx_vorschau: () => gpxRendern({ parsedStage: GPX_ETAPPE, tripName: GPX_ETAPPE.name }),
 		gpx_gespeichert: () => gpxRendern({ parsedStage: GPX_ETAPPE, tripName: GPX_ETAPPE.name, savedTripId: 'gr20-etappe-1' })

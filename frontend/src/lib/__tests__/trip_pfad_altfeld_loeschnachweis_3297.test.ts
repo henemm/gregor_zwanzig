@@ -19,7 +19,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, posix, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SRC = fileURLToPath(new URL('../../', import.meta.url)); // frontend/src/
@@ -92,6 +92,74 @@ describe('#3297/#3020 AC-7: toter Alt-Editor gelöscht, keine Importe, Vergleich
 	});
 
 	for (const rel of ERHALTEN) {
+		test(`erhalten (Regressionsschutz, heute grün): ${rel}`, () => {
+			assert.equal(existsSync(pfad(rel)), true, `${rel} wurde mitgelöscht, wird aber noch gebraucht`);
+		});
+	}
+});
+
+// #3366 S2 (Spec rework_3366_waisen_waechter_layout_tab.md, AC-5): layout-tab-Waisen und 9 Barrels.
+// Barrels heißen alle `index`, daher kein Basisnamen-Scan, sondern Auflösung des Modulpfads auf
+// den gelöschten Pfad (ohne Endung) bzw. das Barrel-Verzeichnis. RED heute: alle 15 existieren,
+// LayoutTab.svelte importiert die LT-Bausteine.
+const GELOESCHT_3366 = [
+	'lib/components/shared/layout-tab/LTCapNote.svelte',
+	'lib/components/shared/layout-tab/LTChannelPicker.svelte',
+	'lib/components/shared/layout-tab/LTCutLine.svelte',
+	'lib/components/shared/layout-tab/LayoutTab.svelte',
+	'lib/components/shared/layout-tab/channelLayoutsDirty.ts',
+	'lib/components/shared/layout-tab/ltIdealRange.ts',
+	'lib/components/email-preview/index.ts',
+	'lib/components/ui/dot/index.ts',
+	'lib/components/ui/elev-sparkline/index.ts',
+	'lib/components/ui/eyebrow/index.ts',
+	'lib/components/ui/input/index.ts',
+	'lib/components/ui/pill/index.ts',
+	'lib/components/ui/segmented/index.ts',
+	'lib/components/ui/topo/index.ts',
+	'lib/components/ui/wicon/index.ts'
+];
+
+const ERHALTEN_3366 = ['lib/components/shared/layout-tab/ltChannels.ts', 'lib/index.ts'];
+
+/** Ziele, unter denen eine gelöschte Datei importiert werden konnte (ohne Endung, Barrel auch als Verzeichnis). */
+function importZiele(rel: string): string[] {
+	const ohne = rel.replace(/\.(svelte|ts)$/, '');
+	return ohne.endsWith('/index') ? [ohne, ohne.slice(0, -'/index'.length)] : [ohne];
+}
+
+/** Modulpfad eines Imports → normalisierter Pfad relativ zu src ohne Endung, oder null (Paket). */
+function modulZiel(spez: string, von: string): string | null {
+	let p: string;
+	if (spez.startsWith('$lib/')) p = 'lib/' + spez.slice(5);
+	else if (spez.startsWith('.')) p = posix.join(posix.dirname(von), spez);
+	else return null;
+	return posix.normalize(p).replace(/\.(svelte|ts|js)$/, '');
+}
+
+describe('#3366 AC-5: layout-tab-Waisen und Barrels gelöscht, keine Importe, ltChannels und lib/index erhalten', () => {
+	for (const rel of GELOESCHT_3366) {
+		test(`gelöscht: ${rel}`, () => {
+			assert.equal(existsSync(pfad(rel)), false, `${rel} existiert noch`);
+		});
+	}
+
+	test('keine Produktionsdatei importiert eine in #3366 gelöschte Datei (statisch, Barrel-Export, dynamisch)', () => {
+		const ziele = new Map<string, string>();
+		for (const rel of GELOESCHT_3366) for (const z of importZiele(rel)) ziele.set(z, rel);
+		const muster = /(?:from|import\s*\()\s*['"]([^'"]+)['"]/g;
+		const funde: string[] = [];
+		for (const rel of produktionsdateien()) {
+			const text = readFileSync(pfad(rel), 'utf8');
+			for (const m of text.matchAll(muster)) {
+				const z = modulZiel(m[1], rel);
+				if (z !== null && ziele.has(z)) funde.push(`${rel} -> ${ziele.get(z)}`);
+			}
+		}
+		assert.deepEqual(funde, [], 'Produktions-Importe der in #3366 gelöschten Dateien');
+	});
+
+	for (const rel of ERHALTEN_3366) {
 		test(`erhalten (Regressionsschutz, heute grün): ${rel}`, () => {
 			assert.equal(existsSync(pfad(rel)), true, `${rel} wurde mitgelöscht, wird aber noch gebraucht`);
 		});

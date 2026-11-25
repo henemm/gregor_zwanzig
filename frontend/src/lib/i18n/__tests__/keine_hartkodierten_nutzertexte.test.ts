@@ -438,10 +438,7 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 	// Mail-Inhalt und GPX-Seite stehen unter keinem Eintrag mehr; ihre .ts-Helfer unter der TS-Ratsche.
 	test('F8: kein Allowlist-Eintrag deckt Layout-Reiter, Korridor-Editor, Ausgabe-Layout, Mail-Inhalt oder GPX-Seite', () => {
 		const F8 = [
-			'lib/components/shared/layout-tab/LayoutTab.svelte',
-			'lib/components/shared/layout-tab/LTCapNote.svelte',
-			'lib/components/shared/layout-tab/LTChannelPicker.svelte',
-			'lib/components/shared/layout-tab/LTCutLine.svelte',
+			// #3366: LayoutTab, LTCapNote, LTChannelPicker, LTCutLine als Waisen geloescht.
 			// #2794 S3a Teil-PR 4a: CorridorEditor/CorridorEditorMobile entfernt (Oberflaeche weg).
 			'lib/components/shared/OutputLayoutEditor.svelte',
 			'routes/gpx-upload/+page.svelte'
