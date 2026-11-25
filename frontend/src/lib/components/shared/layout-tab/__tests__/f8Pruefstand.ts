@@ -45,8 +45,6 @@ export const { CONTENT_MODULE_DESCRIPTIONS } = await imp(path.join(SHARED, 'mail
 
 const LayoutTabPruefstand = await komp(path.join(HERE, 'LayoutTabPruefstand.svelte'));
 const LTCutLine = await komp(path.join(LT, 'LTCutLine.svelte'));
-const OutlookLayoutControls = await komp(path.join(SHARED, 'OutlookLayoutControls.svelte'));
-const MailInhaltCard = await komp(path.join(SHARED, 'MailInhaltCard.svelte'));
 
 // GPX-Seite: Vorschau/Speichern erscheinen erst nach dem Hochladen (Klick).
 const GPX_ZUSTAND: [string, string][] = [
@@ -96,15 +94,10 @@ export function bausteineRendern(): string {
 		{ metric: 'temp_max_c', label: 'Temperatur', metric_id: 'temperature', aggregation: 'max', aggregation_label: 'max', col_label: 'Temp' },
 		{ metric: 'wind_max_kmh', label: 'Wind', metric_id: 'wind', aggregation: 'max', aggregation_label: 'max', col_label: 'Wind' }
 	];
-	const ausblick = (p: Record<string, unknown>) =>
-		html(OutlookLayoutControls, { metricKeys: null, catalog: katalog, onMetricKeys: nix, ...p });
 	const leer = { primary: [] as string[], secondary: [] as string[], off: ['temperature'] };
 	return [
 		html(LTCutLine, { label: 'Telegram', platz: 8, context: 'route' }), // #3047 R8 F3
-		ausblick({ enabled: true, onEnabledChange: nix }),
-		ausblick({ title: '3-Tages-Vorschau', showEmailOnlyHint: false }),
-		html(MailInhaltCard, { reportConfig: { email_format: 'full', show_stability: true } }), // #3237 F002: Haken = show_stability
-		html(MailInhaltCard, { reportConfig: { email_format: 'compact' } }),
+		// #3297/#3020: Ausblick-Steuerung (OutlookLayoutControls) und Karte E-Mail-Inhalt (MailInhaltCard) geloescht.
 		html(LayoutTabPruefstand, { context: 'route', channel: 'sms', colCount: 0, subjectLabel: 'Metriken', hasLabelColumn: false, catalog: KATALOG, buckets: leer }),
 		html(LayoutTabPruefstand, { context: 'route', channel: 'email', colCount: 9, subjectLabel: 'Metriken', hasLabelColumn: false, catalog: KATALOG, buckets: BUCKETS, hideDetailBucket: true })
 	].join('\n');

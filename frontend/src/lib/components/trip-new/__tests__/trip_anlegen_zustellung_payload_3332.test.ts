@@ -143,7 +143,9 @@ describe('#3332 Test 2 (AC-2, AC-3): mitZustellung mischt den Stand in report_co
 		assert.equal(p.alert_quiet_from, '22:30');
 		assert.equal(p.alert_quiet_to, '06:15');
 		assert.equal(p.alert_cooldown_minutes, 45);
-		assert.ok('multi_day_trend_reports' in p.report_config, 'ergaenzeVersandStandard bleibt im POST');
+		// #3297: Nachweis des Versand-Standards ueber telegram_style (die Ausblick-Liste entfaellt als Altschluessel).
+		assert.ok('telegram_style' in p.report_config, 'ergaenzeVersandStandard bleibt im POST');
+		assert.equal('multi_day_trend_reports' in p.report_config, false, 'Altschluessel im POST');
 		assert.equal(p.report_config.email_format, 'compact', 'Mail-Inhalt verloren');
 	});
 

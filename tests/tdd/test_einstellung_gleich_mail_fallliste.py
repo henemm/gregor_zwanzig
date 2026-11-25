@@ -495,8 +495,16 @@ def test_template_literal_titel_alle_gefunden():
     # Ganz dynamischer Titel (``test(`${name} ...`)``) gehoert zum Helfer
     # ``rotErwartet``; dessen Aufrufe werden als eigene Titel gefunden.
     praefixe.discard("")
-    assert praefixe, "keine Template-Literal-Titel gefunden -- Muster pruefen"
     faelle = [f for _, f in _alle_faelle(lade_falllisten(FALLLISTEN_DIR)) if _ist_vitest_fall(f)]
+    # #3297/#3020: editor_standard_gleich_mail.test.ts und neue_metrik_in_allen_listen*.test.ts
+    # sind mit dem Alt-Editor geloescht, ``praefixe`` ist damit heute leer (die Teilmengen-
+    # Pruefung unten bleibt scharf, sobald dort wieder Template-Titel stehen). Die Muster-Probe
+    # laeuft deshalb an den Dateien, auf die die Fallliste per ``datei.test.ts::titel`` zeigt.
+    verwiesen = {Path(str(f["test"]).split(".test.ts::")[0] + ".test.ts").name
+                 for f in faelle if ".test.ts::" in str(f["test"])}
+    vorlagen = {v for d in vitest_dateien if d.name in verwiesen
+                for v in _VITEST_TEMPLATE_GANZ.findall(d.read_text(encoding="utf-8"))}
+    assert vorlagen, "keine Template-Literal-Titel gefunden -- Muster pruefen"
     titel = {str(f["test"]).split(".test.ts::")[-1].strip() for f in faelle}
     fehlend = [f["id"] for f in faelle if f["status"] in STATUS_MIT_TEST
                and not _pruefe_vitest_verweis(str(f["test"]), vitest_dateien)]

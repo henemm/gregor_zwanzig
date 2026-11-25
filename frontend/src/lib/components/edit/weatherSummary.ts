@@ -7,7 +7,7 @@
 // gespeicherten display_config.
 //
 // Bucket-Parsing ist KONSISTENT mit dem Loader in
-// shared/WeatherMetricsTab.svelte::initFromTrip (#360/#364, Issue #1311: von
+// shared/WeatherMetricsTab.svelte (gelöscht, #3297)::initFromTrip (#360/#364, Issue #1311: von
 // trip-detail/ nach shared/ verschoben):
 // - primary  → Spalten
 // - secondary → Detail
@@ -58,7 +58,7 @@ export function summarizeTripWeather(
 	}
 
 	// Bucket-Format erkennen: irgendeine Metrik trägt bucket oder order
-	// (deckt sich mit hasBuckets in WeatherMetricsTab::initFromTrip).
+	// (deckt sich mit hasBuckets in WeatherMetricsTab (gelöscht, #3297)::initFromTrip).
 	const hasBuckets = metrics.some((m) => m.bucket || m.order !== undefined);
 
 	let spalten = 0;

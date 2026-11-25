@@ -35,7 +35,7 @@ import {
 	ladeReportZustand,
 	kanaeleRendern,
 	naechstesBriefingRendern,
-	tabRendern,
+
 	htmlFaelle,
 	funktionsTabelle,
 	schreibeGolden
@@ -113,10 +113,11 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 describe('AC-1: Versand-Reiter englisch in Trip und Ortsvergleich, Kanalnamen unveraendert', () => {
 	for (const context of ['route', 'vergleich'] as const) {
 		test(`${context}: erst de, dann ohne Neuladen en`, () => {
-			const { de, en } = deDannEn(() => sichtbar(kanaeleRendern(context, PROFILE.alles_gekoppelt) + tabRendern(context)));
-			for (const s of ['Geplantes Briefing · Kanäle', 'Morgen-Briefing', 'Nächstes Briefing', 'Briefing-Zeitplan', 'Laufzeit']) hat(de, s);
-			for (const s of ['Planned briefing · channels', 'Morning briefing', 'Evening briefing', 'Next briefing', 'Briefing schedule', 'Duration', 'Active', 'Time', 'Morning 07:00', 'Evening 18:00'])
-				hat(en, s);
+			const { de, en } = deDannEn(() => sichtbar(kanaeleRendern(context, PROFILE.alles_gekoppelt)));
+			// #3297/#3020: Zeitplan, Laufzeit und „Naechstes Briefing" kamen aus dem ganzen Reiter
+			// shared/VersandTab (geloescht); geprueft wird der Kanal-Baustein.
+			for (const s of ['Geplantes Briefing · Kanäle']) hat(de, s);
+			for (const s of ['Planned briefing · channels']) hat(en, s);
 			for (const s of ['Telegram (987654321)', 'SMS (+491511234567)', 'Premium-SMS (Garmin inReach) (+15551234567)', 'E-Mail (golden@example.org)']) {
 				hat(de, s);
 				hat(en, s);
@@ -129,7 +130,7 @@ describe('AC-1: Versand-Reiter englisch in Trip und Ortsvergleich, Kanalnamen un
 		});
 	}
 	test('Trip: Einleitung, Unterzeilen, Laufzeit und Kurzstil-Schalter englisch', () => {
-		const { de, en } = deDannEn(() => sichtbar(kanaeleRendern('route', PROFILE.alles_gekoppelt) + tabRendern('route')));
+		const { de, en } = deDannEn(() => sichtbar(kanaeleRendern('route', PROFILE.alles_gekoppelt)));
 		hat(en, 'The trip briefing is a stage table — email carries all columns, Telegram the first 7, SMS has no grid, plain text.');
 		hat(en, 'Layout · full table');
 		hat(en, 'Layout · 7 columns');
@@ -140,20 +141,13 @@ describe('AC-1: Versand-Reiter englisch in Trip und Ortsvergleich, Kanalnamen un
 		// „Was steht wo" gesteuert; weder ihr Titel noch ihre Unterzeile stehen noch da.
 		for (const alt of ['Mehrtages-Trend', '3–7-Tage-Ausblick', 'Sonntags ·']) assert.ok(!de.includes(alt), `de: „${alt}" steht noch im Versand-Reiter`);
 		for (const alt of ['Multi-day trend', '3–7-day outlook']) assert.ok(!en.includes(alt), `en: „${alt}" steht noch im Versand-Reiter`);
-		hat(en, 'Runs with the trip · ends 31.10.2026');
-		hat(en, 'Open stages →');
 	});
 	test('Ortsvergleich: Einleitung, Zeitplan-Hinweis mit Hervorhebung, Laufzeit englisch', () => {
-		const { en } = deDannEn(() => kanaeleRendern('vergleich', PROFILE.nur_email) + tabRendern('vergleich'));
+		const { en } = deDannEn(() => kanaeleRendern('vergleich', PROFILE.nur_email));
 		const text = sichtbar(en);
 		// #3047 R8 (AC-24): Orts-Vergleich-Telegram kappt nicht.
 		hat(text, 'The location comparison is a wide table — email carries all columns, Telegram all rows (from position 8 in a second line per location), SMS has no grid, plain text.');
 		hat(text, 'Layout · no grid, 153 characters');
-		hat(text, 'As with a trip: the Morning briefing shows today, the Evening briefing shows tomorrow. You only choose the time.');
-		assert.match(en, /<strong[^>]*>Morning briefing<\/strong>/);
-		hat(text, 'Until further notice');
-		hat(text, 'Until a date');
-		hat(text, 'Delivery continues without an end date.');
 		hat(text, 'Premium SMS is available from the Premium level');
 		hat(text, 'SMS is available from the Standard level');
 		hat(text, 'Telegram chat ID missing — set it up in your account');
@@ -312,7 +306,7 @@ describe('AC-4: zwei Nutzer, zwei Sprachen, eigene Kanaele, gleiche report_confi
 		const zustand = { ...ladeReportZustand({ send_email: true, send_telegram: true, morning_time: '07:00:00' }), telegram_style: 'rich' };
 		return {
 			lang,
-			text: sichtbar(kanaeleRendern('route', profil) + tabRendern('route')),
+			text: sichtbar(kanaeleRendern('route', profil)),
 			ziel: sendTargetLabel(profil, kanaele).text,
 			dialog: sendConfirmModel('trip', profil, kanaele).beschreibung,
 			nutzlast: baueReportConfigPayload({ live: { send_email: true }, zustand })

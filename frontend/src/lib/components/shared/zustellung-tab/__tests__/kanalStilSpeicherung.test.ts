@@ -27,7 +27,7 @@ import { clearEtagRegistry } from '../../../../etagRegistry.ts';
 import { createGoMergeServer, vollerVergleich, type GoMergeServer } from '../../__tests__/goMergeServerPruefstand.ts';
 import { createController } from '../../wetter-tab/__tests__/wertebereicheVergleichPruefstand.ts';
 import { ladeReportZustand } from '../../versand-tab/reportConfigPayload.ts';
-import { kanalStilNutzlast, kanalStilStart } from '../kanalStilSpeicherung.ts';
+import { kanalStilNutzlast } from '../kanalStilSpeicherung.ts';
 import { erstelleFelderSpeicherung, felderAusAntwort, type Felder } from '../../wetter-tab/wasStehtWoSpeicherung.ts';
 import { erstelleZustellungSpeicherung } from '../zustellungSpeicherung.ts';
 import { standAusTrip } from '../zustellungModell.ts';
@@ -40,45 +40,27 @@ const ticks = async (n = 10) => {
 
 // ── F004: Nutzlast je Kontext ───────────────────────────────────────────────
 
+// #3297 (AC-4): der unsichtbare Mehrtages-Trend-Schalter ist entfernt — die Trip-Nutzlast traegt nur
+// `telegram_style`, keine Trend-Felder (der Ausblick steht in `placements.outlook_reports`).
 describe('F004: Nutzlast des Kanal-Stils', () => {
-	test('f004_trip_report_config_mit_trend_liste_ohne_fremde_schluessel', () => {
-		const start = kanalStilStart('route', tripVoll());
-		assert.deepEqual(start, { stil: 'rich', trendMorgen: false, trendAbend: true }, 'Messaufbau: Startwerte aus report_config');
-		const n = kanalStilNutzlast('route', { stil: 'kurzform', trendMorgen: true, trendAbend: true });
-		assert.deepEqual(n, {
-			report_config: {
-				telegram_style: 'kurzform',
-				multi_day_trend_morning: true,
-				multi_day_trend_evening: true,
-				multi_day_trend_reports: ['morning', 'evening']
-			}
-		});
-		assert.deepEqual(
-			(kanalStilNutzlast('route', { stil: 'rich', trendMorgen: false, trendAbend: false }) as Json).report_config.multi_day_trend_reports,
-			[],
-			'beide Trends aus ⇒ leere Liste (sonst bliebe der alte Trend beim Python-Report aktiv)'
-		);
+	test('f004_trip_report_config_nur_telegram_style', () => {
+		assert.deepEqual(kanalStilNutzlast('route', { stil: 'kurzform' }), { report_config: { telegram_style: 'kurzform' } });
+		assert.deepEqual(kanalStilNutzlast('route', { stil: 'rich' }, { stil: 'rich' }), { report_config: {} }, 'unveraenderter Stil sendet nichts');
 	});
 
-	test('f004_trip_nach_server_merge_bleiben_fremdfelder_und_der_trend_kommt_wieder', () => {
+	test('f004_trip_nach_server_merge_bleiben_fremdfelder', () => {
 		const trip = tripVoll();
-		const n = kanalStilNutzlast('route', { stil: 'kurzform', trendMorgen: true, trendAbend: false }) as Json;
+		const n = kanalStilNutzlast('route', { stil: 'kurzform' }) as Json;
 		// Go mergt report_config je Schluessel.
 		const danach = { ...trip.report_config, ...n.report_config };
-		for (const k of ['enabled', 'morning_time', 'evening_time', 'send_email', 'show_outlook', 'email_format', 'day_window_start_hour']) {
+		for (const k of Object.keys(trip.report_config).filter((k) => k !== 'telegram_style')) {
 			assert.deepEqual(danach[k], trip.report_config[k], `report_config.${k} wurde ueberschrieben`);
 		}
-		const neuGeladen = ladeReportZustand(danach);
-		assert.equal(neuGeladen.telegram_style, 'kurzform');
-		// #3155 (Spec feat_3155 Entscheidung 4): der Versand-Zustand fuehrt keine Trend-Bool-Felder
-		// mehr; gueltig bleibt, dass die Liste (die Python liest) nach dem Merge den Stand traegt.
-		assert.deepEqual(danach.multi_day_trend_reports, ['morning'], 'Ausblick-Liste ist nach dem Neuladen falsch');
-		assert.deepEqual(kanalStilStart('route', { ...trip, report_config: danach }), { stil: 'kurzform', trendMorgen: true, trendAbend: false });
+		assert.equal(ladeReportZustand(danach).telegram_style, 'kurzform');
 	});
 
 	test('f004_orte_nur_display_config_telegram_style', () => {
-		assert.deepEqual(kanalStilStart('vergleich', undefined, presetVoll()), { stil: 'rich', trendMorgen: false, trendAbend: false });
-		assert.deepEqual(kanalStilNutzlast('vergleich', { stil: 'kurzform', trendMorgen: true, trendAbend: true }), {
+		assert.deepEqual(kanalStilNutzlast('vergleich', { stil: 'kurzform' }), {
 			display_config: { telegram_style: 'kurzform' }
 		});
 	});

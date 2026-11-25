@@ -24,7 +24,6 @@ import { HOUR_OPTIONS, toHourOption } from '../../../../utils/time.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const VT_SCHEDULE_PLAN = join(here, '..', 'VTSchedulePlan.svelte');
-const VERSAND_TAB = join(here, '..', '..', 'VersandTab.svelte');
 
 /**
  * Extrahiert den kompletten Element-Block (oeffnender Tag), der einen
@@ -99,22 +98,5 @@ describe('AC-1: VTSchedulePlan.svelte bietet die Versandzeit als Stunden-Auswahl
 	// dupliziert werden — es gibt genau EINEN Import-/Nutzungsort, der beide
 	// Kontexte (context="route" implizit als Default, context="vergleich"
 	// explizit) mit derselben Komponente bedient.
-	test('VersandTab.svelte nutzt dieselbe VTSchedulePlan-Instanz fuer route UND vergleich (kein Duplikat)', () => {
-		assert.ok(existsSync(VERSAND_TAB), 'VersandTab.svelte fehlt');
-		const src = readFileSync(VERSAND_TAB, 'utf-8');
-		const importCount = (src.match(/import VTSchedulePlan from '\.\/versand-tab\/VTSchedulePlan\.svelte'/g) || [])
-			.length;
-		assert.equal(importCount, 1, 'VTSchedulePlan darf nur EINMAL importiert werden (geteilte Komponente)');
-
-		const usageCount = (src.match(/<VTSchedulePlan/g) || []).length;
-		assert.equal(
-			usageCount,
-			2,
-			'VTSchedulePlan muss fuer BEIDE Kontexte (route + vergleich) verwendet werden, keine eigene Kopie je Kontext'
-		);
-		assert.ok(
-			src.includes('context="vergleich"'),
-			'die vergleich-Verwendung muss context="vergleich" explizit setzen'
-		);
-	});
+	// #3297/#3020: Faelle gegen shared/VersandTab bzw. MailInhaltCard (Quelltext/Render) entfallen — Dateien geloescht.
 });

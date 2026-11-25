@@ -51,8 +51,6 @@ import { parse } from 'svelte/compiler';
 const here = dirname(fileURLToPath(import.meta.url));
 const HUB = join(here, '..', 'CompareTabs.svelte');
 const NEW_EDITOR = join(here, '..', '..', 'compare-new', 'CompareNewEditor.svelte');
-const BRIEFING_TAB = join(here, '..', '..', 'trip-detail', 'BriefingScheduleTab.svelte');
-const PANEL = join(here, '..', '..', 'shared', 'WetterMetrikenVersandPanel.svelte');
 
 function ast(file: string): unknown {
 	if (!existsSync(file)) {
@@ -246,30 +244,8 @@ describe('AC-1 (#1743 umgezogen): der Versand-Abschnitt hat keinen Sammel-Wrappe
 		}
 	});
 
-	test('AC-7: im Baustein bekommt der VersandTab im Abschnitt #versand die Prop activation', () => {
-		const abschnitt = findVersandAbschnitt(ast(PANEL));
-		assert.ok(abschnitt, 'WetterMetrikenVersandPanel hat keinen <section id="versand">');
-		const versand = findComponents(abschnitt, 'VersandTab');
-		assert.equal(versand.length, 1, 'genau ein VersandTab im Abschnitt #versand');
-		assert.ok(propNamen(versand[0]).includes('activation'), 'VersandTab im Abschnitt bekommt die Aktivierungs-Karte nicht durchgereicht');
-	});
+	// #3297/#3020: Faelle gegen WetterMetrikenVersandPanel/BriefingScheduleTab/VersandTab entfallen — Dateien geloescht.
 
-	test('Baustein: VersandTab sitzt im Abschnitt <section id="versand">, dort ohne Sammel-Ereignisse', () => {
-		const abschnitt = findVersandAbschnitt(ast(PANEL));
-		assert.ok(abschnitt, 'WetterMetrikenVersandPanel hat keinen <section id="versand">');
-		const testid = (abschnitt.attributes ?? []).find((a: any) => a.type === 'Attribute' && a.name === 'data-testid');
-		assert.equal(
-			Array.isArray(testid?.value) ? testid.value.map((t: any) => t.data ?? '').join('') : null,
-			'versand-abschnitt',
-			'der Abschnitt trägt data-testid="versand-abschnitt" (red-schnittstellen.md)'
-		);
-		assert.equal(findComponents(abschnitt, 'VersandTab').length, 1, 'genau ein VersandTab im Abschnitt #versand');
-		assert.deepEqual(
-			findElementsWithHandlers(abschnitt, ['onchange', 'onfocusout', 'onclick']).map((e) => e.name),
-			[],
-			'kein Sammel-Wrapper im Versand-Abschnitt'
-		);
-	});
 });
 
 describe('AC-9/AC-12: Anlege-Seite (Reiter Zustellung, #3333) und Trip-Seite mounten ohne Hub-Speicherweg', () => {
@@ -292,14 +268,4 @@ describe('AC-9/AC-12: Anlege-Seite (Reiter Zustellung, #3333) und Trip-Seite mou
 		}
 	});
 
-	test('AC-12: BriefingScheduleTab mountet VersandTab weiterhin im route-Kontext mit bind:reportConfig', () => {
-		const mounts = findComponents(ast(BRIEFING_TAB), 'VersandTab');
-		assert.equal(mounts.length, 1, 'Vorbedingung: die Trip-Seite mountet VersandTab genau einmal');
-		const props = propNamen(mounts[0]);
-		assert.ok(props.includes('reportConfig'), 'der Trip-Zweig speichert weiterhin über den report_config-Blob');
-		assert.ok(
-			!props.includes('preset') && !props.includes('enqueueHubWrite'),
-			'der Trip-Zweig darf die Vergleichs-Orchestrierung nicht verdrahten'
-		);
-	});
 });

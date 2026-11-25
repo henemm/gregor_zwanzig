@@ -52,8 +52,9 @@ describe('F201 (Trip): Reiter verlassen und zurueckkehren nach einem Konflikt', 
 		await P.fertig(a.ctl);
 		assert.equal(a.ctl.state, 'conflict', 'Vorbedingung: 412');
 
-		// Reiterwechsel Versand und zurueck: der Alarme-Reiter wird NEU aus dem Seitenstand gebaut
-		await P.versandReiter(ausSeite(a, seite));
+		// Reiterwechsel (Etappen, #3297: vorher der geloeschte Versand-Reiter) und zurueck: der
+		// Alarme-Reiter wird NEU aus dem Seitenstand gebaut
+		await P.etappenReiter(ausSeite(a, seite));
 		const zurueck = await P.alarmeReiter(ausSeite(a, seite));
 		assert.equal(
 			(zurueck.inst.u.routeMetricLevels as Record<string, unknown>).wind,
@@ -89,31 +90,8 @@ describe('F201 (Trip): Reiter verlassen und zurueckkehren nach einem Konflikt', 
 		assert.equal(angezeigt, 'sensibel');
 	});
 
-	test('Versand: der zurueckgekehrte Reiter zeigt die erste Eingabe; zweite Aenderung ⇒ beide auf dem Server', async () => {
-		server.foreignWrite(P.TRIP_ID, { name: 'Fremder Name' });
-		const a = P.neuerAufbau();
-		const seite = await P.tripSeite(a, server);
-
-		const erster = await P.versandReiter(ausSeite(a, seite));
-		erster.aendern({ morning_time: '08:00:00' });
-		await P.fertig(a.ctl);
-		assert.equal(a.ctl.state, 'conflict', 'Vorbedingung: 412');
-
-		const zurueck = await P.versandReiter(ausSeite(a, seite));
-		assert.equal(
-			(zurueck.inst.u.reportConfig as Record<string, unknown>).morning_time,
-			'08:00:00',
-			'der neu gemountete Versand-Reiter zeigt die ungesicherte Eingabe'
-		);
-		zurueck.aendern({ evening_time: '20:00:00' });
-		await P.fertig(a.ctl);
-
-		await a.ctl.retryConflict();
-		assert.equal(a.ctl.state, 'idle');
-		assert.equal(stand().name, 'Fremder Name');
-		assert.equal(rc().morning_time, '08:00:00', 'die erste Eingabe ging nicht verloren');
-		assert.equal(rc().evening_time, '20:00:00', 'die zweite steht auch auf dem Server');
-	});
+	// #3297/#3020: der Fall „Versand: zurueckgekehrter Reiter“ pruefte trip-detail/BriefingScheduleTab (geloescht);
+	// derselbe Mechanismus ist oben mit dem Alarme-Reiter abgedeckt.
 
 	test("bei 'geholt' (Retry-GET) enthaelt der Seitenstand GET-Stand ⊕ ausstehende Eingaben (kein Stand ohne Eingabe)", async () => {
 		server.foreignWrite(P.TRIP_ID, { name: 'Fremder Name' });

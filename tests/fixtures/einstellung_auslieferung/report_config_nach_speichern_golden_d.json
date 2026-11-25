@@ -11,6 +11,5 @@
   "send_premium_sms": true,
   "telegram_style": "kurzform",
   "email_format": "compact",
-  "change_threshold_wind_kmh": 25,
-  "multi_day_trend_reports": []
+  "change_threshold_wind_kmh": 25
 }

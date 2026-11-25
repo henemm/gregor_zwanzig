@@ -19,7 +19,6 @@ PROFILE_METRICS_WITH_SCALES(ALLGEMEIN) → [{"key":"temp_max_c","label":"Tempera
 CONTENT_MODULE_DESCRIPTIONS(show_stage_stats) → {"label":"Stage figures","description":"Distance, ascent/descent and maximum altitude of the stage as a number grid."}
 CONTENT_MODULE_DESCRIPTIONS(show_quick_take_tags) → {"label":"Quick-take chips","description":"Coloured keyword pills at the top, e.g. “Dry”, “Windy”."}
 CONTENT_MODULE_DESCRIPTIONS(show_metrics_summary) → {"label":"Metrics overview","description":"Replaces quick-take chips and the daily summary with one coloured pill per active metric."}
-CONTENT_MODULE_DESCRIPTIONS(show_outlook) → {"label":"Weather pattern","description":"Assessment of weather stability, e.g. “stable high pressure”."}
 CONTENT_MODULE_DESCRIPTIONS(show_stability) → {"label":"Weather pattern","description":"Assessment of weather stability, e.g. “stable high pressure”."}
 CONTENT_MODULE_DESCRIPTIONS(show_highlights) → {"label":"Summary","description":"Short text with the day's main weather highlights."}
 CONTENT_MODULE_DESCRIPTIONS(show_yesterday_comparison) → {"label":"Comparison with yesterday","description":"Today's weather compared with yesterday as a short line in the briefing."}

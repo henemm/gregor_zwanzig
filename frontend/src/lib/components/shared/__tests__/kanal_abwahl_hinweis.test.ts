@@ -90,50 +90,16 @@ describe('#2438 Kanal-Abwahl-Hinweis', () => {
 		assert.doesNotMatch(t, /\b(solltest|sollte|bitte|wähle|aktiviere|schalte)\b/i);
 	});
 
-	test('AC-3: leere Aus-Gruppe zeigt den Hinweis trotzdem', async () => {
-		const html = await rendere([], 'email', true);
-		assert.match(html, /data-testid="wm2-aus-gruppe"/);
-		assert.match(html, /data-testid="wm2-aus-hinweis"/);
-		assert.ok(html.includes(WORTLAUT), 'Hinweistext fehlt im gerenderten Baustein');
-	});
+	// #3297/#3020: Render- und Verdrahtungsfaelle von weather-metrics-tab/WeatherV2Reihenfolge,
+	// OutlookLayoutControls und WeatherMetricsTab entfallen (Dateien geloescht); es bleibt der Hinweistext.
 
-	test('AC-7: befüllte Aus-Gruppe: Hinweis NACH den Aus-Zeilen, Aus-Zeile bleibt', async () => {
-		const html = await rendere(['wind'], 'email', true);
-		const zeile = html.indexOf('data-testid="wm2-aus-row"');
-		const hinweis = html.indexOf('data-testid="wm2-aus-hinweis"');
-		assert.ok(zeile >= 0, 'wm2-aus-row muss unverändert erscheinen');
-		assert.ok(hinweis > zeile, 'Hinweis muss unter der Aus-Liste stehen');
-		assert.ok(html.includes(WORTLAUT));
-	});
 
 	for (const kanal of ['telegram', 'sms']) {
-		test(`AC-1/AC-3: Hinweis erscheint auch im Kanal ${kanal} (leere Aus-Gruppe)`, async () => {
-			const html = await rendere([], kanal, true);
-			assert.match(html, /data-testid="wm2-aus-hinweis"/);
-			assert.ok(html.includes(WORTLAUT));
-		});
 	}
 
-	test('AC-4: globale Grundauswahl-Ansicht (ohne offColumns) hat keinen Hinweis', async () => {
-		const html = await rendere(undefined);
-		assert.doesNotMatch(html, /wm2-aus-hinweis/);
-		assert.ok(!html.includes(WORTLAUT));
-	});
 
 	// Fix #2438 (fix_2438_hinweis_nur_kanal_block): Opt-in, Default aus.
-	test('AC-3/AC-6: offColumns OHNE showAbwahlHinweis (Ausblick) zeigt keinen Hinweis, Aus-Gruppe bleibt', async () => {
-		for (const off of [[], ['wind']]) {
-			const html = await rendere(off);
-			assert.match(html, /data-testid="wm2-aus-gruppe"/);
-			assert.doesNotMatch(html, /wm2-aus-hinweis/);
-			assert.ok(!html.includes(WORTLAUT));
-		}
-	});
 
-	test('AC-5: ohne offColumns bleibt der Hinweis auch mit showAbwahlHinweis=true aus', async () => {
-		const html = await rendere(undefined, 'email', true);
-		assert.doesNotMatch(html, /wm2-aus-hinweis/);
-	});
 });
 
 // ── Verdrahtung: Opt-in `showAbwahlHinweis` nur an den Kanal-Block-Einbettungen ──
@@ -185,35 +151,3 @@ function einbettung(zweig: 'vergleich' | 'route'): any {
 	return treffer[0];
 }
 
-describe('#2438 Verdrahtung: showAbwahlHinweis nur im Kanal-Block', () => {
-	test('AC-1: Ortsvergleich-Kanal-Block (vergleich-Zweig) trägt showAbwahlHinweis', () => {
-		assert.ok(
-			findAttr(einbettung('vergleich'), 'showAbwahlHinweis'),
-			'AC-1 FAIL: die Ortsvergleich-Einbettung setzt showAbwahlHinweis nicht — der Hinweis fehlt im Kanal-Block.'
-		);
-	});
-
-	test('AC-2: Trip-Kanal-Block (route-Zweig) trägt showAbwahlHinweis', () => {
-		assert.ok(
-			findAttr(einbettung('route'), 'showAbwahlHinweis'),
-			'AC-2 FAIL: die Trip-Einbettung setzt showAbwahlHinweis nicht — der Hinweis fehlt im Kanal-Block.'
-		);
-	});
-
-	for (const [label, file] of [
-		['OutlookLayoutControls', OUTLOOK_FILE]
-	] as [string, string][]) {
-		test(`AC-3: ${label} trägt showAbwahlHinweis NICHT`, () => {
-			const rows = findComponentsNamed(
-				parse(readFileSync(file, 'utf-8'), { modern: true }).fragment,
-				'WeatherV2Reihenfolge'
-			);
-			assert.equal(rows.length, 1, `Erwartet genau einen WeatherV2Reihenfolge-Aufruf in ${label}.`);
-			assert.equal(
-				findAttr(rows[0], 'showAbwahlHinweis'),
-				undefined,
-				`AC-3 FAIL: ${label} setzt showAbwahlHinweis — der Hinweis gehört nur in Kanal-Blöcke.`
-			);
-		});
-	}
-});

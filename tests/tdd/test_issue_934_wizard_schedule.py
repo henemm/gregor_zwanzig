@@ -15,7 +15,6 @@ Technische Grundlage:
 """
 
 import os
-import re
 import json
 import uuid
 import pytest
@@ -75,70 +74,12 @@ class TestBug1KeineDoppelteUI:
 
     Fix: {#if !createMode} Guard in WeatherMetricsTab.svelte.
 
-    Nachweis: Der kompilierte JS-Bundle der Staging-App darf im WeatherMetricsTab-
-    Bereich KEINEN Rendering-Code für "Morgen-Report" enthalten.
+    #3297/#3020: WeatherMetricsTab.svelte ist geloescht; die Bundle-Analyse
+    ``test_bundle_metriken_tab_hat_keine_zeitplan_render_calls`` suchte nur dessen
+    createMode-Guard und entfaellt. Die Nachfolge (WetterTabInhalt) kennt keinen
+    createMode-Zweig und keine Zeitplan-Maske; der Nachweis aus Nutzersicht laeuft
+    ueber den DOM-Test unten und ``test_metriken_tab_zeigt_keine_zeitplan_elemente_in_edit_modus``.
     """
-
-    def test_bundle_metriken_tab_hat_keine_zeitplan_render_calls(self):
-        """
-        Prüft dass der JS-Bundle in der WeatherMetricsTab-Funktion
-        keinen Morgen-Report/Abend-Report Rendering-Code enthält.
-
-        Methode: Chunk-URLs via Playwright (nach Login) ermitteln, dann
-        per httpx herunterladen. Der Chunk mit dem createMode-Prop-Lese-
-        Muster (E(n,`createMode`)) enthält WeatherMetricsTab. "Morgen-Report"
-        darf in einem ±5000-Zeichen-Fenster um diese Stelle NICHT vorkommen.
-        """
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
-            try:
-                pw_login(page)
-                page.goto(f"{BASE_URL}/trips/new", wait_until="networkidle", timeout=15000)
-                html = page.content()
-            finally:
-                browser.close()
-
-        chunk_urls = list(set(re.findall(r'/_app/immutable/[^"\']+\.js', html)))
-        assert chunk_urls, "Keine JS-Chunks nach Login gefunden"
-
-        wetter_metriken_func = None
-        morgen_report_offset_in_bundle = None
-
-        for chunk_path in chunk_urls:
-            chunk_resp = httpx.get(f"{BASE_URL}{chunk_path}", timeout=15)
-            if chunk_resp.status_code != 200:
-                continue
-            bundle = chunk_resp.text
-
-            # WeatherMetricsTab-Funktion identifizieren via Svelte-Prop-Lese-Muster.
-            # createMode wird als Named-Prop über E(n,`createMode`) gelesen — nicht minifiziert.
-            prop_pos = bundle.find("`createMode`")
-            if prop_pos == -1:
-                continue
-
-            morgen_pos = bundle.find("Morgen-Report")
-            if morgen_pos != -1:
-                morgen_report_offset_in_bundle = morgen_pos
-
-            # Fenster um WeatherMetricsTab (±5000 Zeichen um den Prop-Lese-Punkt)
-            func_start = max(0, prop_pos - 2000)
-            func_end = min(len(bundle), prop_pos + 5000)
-            wetter_metriken_func = bundle[func_start:func_end]
-            break
-
-        assert wetter_metriken_func is not None, (
-            "WeatherMetricsTab-Funktion (`createMode`-Prop) nicht im Bundle gefunden"
-        )
-
-        # Kernaussage: "Morgen-Report" darf NICHT im WeatherMetricsTab-Bereich erscheinen.
-        # Ist der {#if !createMode}-Guard weg, enthält WeatherMetricsTab EditReportConfigSection
-        # inline und "Morgen-Report aktivieren" wäre in diesem Fenster.
-        assert "Morgen-Report" not in wetter_metriken_func, (
-            f"BUG 1 NOCH VORHANDEN: 'Morgen-Report' erscheint im WeatherMetricsTab-Bereich "
-            f"des Bundles (Offset ~{morgen_report_offset_in_bundle}). "
-            f"Der {{#if !createMode}}-Guard fehlt oder wirkt nicht."
-        )
 
     def test_playwright_trips_new_metriken_tab_ohne_zeitplan_content(self):
         """
@@ -377,6 +318,8 @@ class TestBug2StateErhaltTabWechsel:
 
     def test_metriken_tab_zeigt_keine_zeitplan_elemente_in_edit_modus(self):
         """
+        (#3297: WeatherMetricsTab geloescht, der Wetter-Reiter ist WetterTabInhalt;
+        die Zusicherung unten gilt unveraendert fuer den sichtbaren Reiter.)
         Im Edit-Modus hat WeatherMetricsTab createMode=false →
         EditReportConfigSection SOLL sichtbar sein (das ist korrektes Verhalten).
         Dieser Test dokumentiert den erwarteten Zustand nach dem Fix.

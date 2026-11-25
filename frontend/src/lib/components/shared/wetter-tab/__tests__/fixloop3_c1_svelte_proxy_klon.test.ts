@@ -27,7 +27,6 @@ import { eigeneVorlagePayload, tripSpeicherPayload, vergleichSpeicherPayload } f
 import { amtlicheWarnungenFelder } from '../amtlicheWarnungen.ts';
 import { mitAlarmAb, mitEigenerVorlage, mitEntwurf, standAusAbo, type AboSicht, type WetterStand } from '../wetterZustand.ts';
 import { SPEICHERER, tripNutzlast } from '../wetterTabSpeicherung.ts';
-import { ampelBeimAnwenden } from '../../weather-metrics-tab/weatherMetricsSavePayload.ts';
 
 // `svelte/internal/client` bringt keine Typdeklaration mit — Laufzeit-Import ueber eine Variable.
 const SVELTE_CLIENT = 'svelte/internal/client';
@@ -134,11 +133,7 @@ describe('C1: Modell-Funktionen klonen Svelte-$state-Proxys (Stand und Abo aus d
 		);
 	});
 
-	test('Reiter Wetter in der Zustellung (Teil 2): ampelBeimAnwenden mit Proxy-Vorlage', () => {
-		const preset = alsState({ ampel: { template: 'wandern', metrics: { gust: { alarm_ab: 'red' } } } });
-		istProxy(preset.ampel);
-		assert.deepEqual(ampelBeimAnwenden(preset, 'wandern'), { template: 'wandern', metrics: { gust: { alarm_ab: 'red' } } });
-	});
+	// #3297/#3020: ampelBeimAnwenden (weatherMetricsSavePayload.ts) ist geloescht.
 });
 
 // ── Vergleich: Speicherer mit Proxy-Stand und Proxy-Abo bis zum PUT (Muster f003) ─────────────

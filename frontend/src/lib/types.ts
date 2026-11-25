@@ -283,7 +283,6 @@ export interface ReportConfig {
 	wind_exposition_min_elevation_m?: number | null;
 	multi_day_trend_morning?: boolean;
 	multi_day_trend_evening?: boolean;
-	multi_day_trend_reports?: string[];
 	// Issue #619 — E-Mail-Elemente abschaltbar (Backend seit #621 live)
 	show_stage_stats?: boolean;
 	show_quick_take_tags?: boolean;
@@ -292,8 +291,6 @@ export interface ReportConfig {
 	daily_summary_metrics?: string[];
 	// Issue #664 — Metriken-Überblick (ersetzt Quick-Take + Tages-Summe)
 	show_metrics_summary?: boolean;
-	// Issue #721/#723 — Ausblick-Block (Großwetterlage + nächste Etappen + Sicherheit%)
-	show_outlook?: boolean;
 	// Issue #722 — E-Mail-Format: "full" (HTML multipart) | "compact" (plain-text only)
 	email_format?: 'full' | 'compact';
 	// Issue #785 — Vortag-Vergleich im Briefing (Default an, wenn Feld fehlt)
@@ -343,6 +340,14 @@ export interface DisplayConfig {
 	// Feld, damit `outlook_metrics` eine reine Kennungsliste bleibt. Fehlende
 	// Kennung = Roh; das Feld ganz fehlend = nie eingestellt.
 	outlook_metric_formats?: Record<string, boolean>;
+	// Issue #3297 (ADR-0124 Nr. 5/6): Tabelle „Was steht wo“ — einzige Quelle für Platzierung und
+	// 3-Tages-Ausblick je Briefing (`outlook_reports`). Volles Format: wetter-tab/wasStehtWoStand.ts.
+	placements?: {
+		version?: number;
+		rows?: Array<{ metric_id: string; places?: Record<string, unknown>; formats?: Record<string, unknown>; [feld: string]: unknown }>;
+		outlook_reports?: string[];
+		[feld: string]: unknown;
+	};
 }
 
 // Epic #138 Issue #177 — User-definierte Metric-Presets (Server-seitig persistiert).

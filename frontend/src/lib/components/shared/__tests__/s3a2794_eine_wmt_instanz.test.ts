@@ -196,52 +196,7 @@ describe('§3: shared/zustellung-tab/ZustellungTab.svelte — Übergangsreiter',
 	});
 });
 
-describe('§2: Panel und WeatherMetricsTab tragen den bereich-Filter', () => {
-	// Teil-PR 3: das Panel kennt keinen Bereich wetter mehr (der Reiter Wetter ist der WetterTab) —
-	// die Zusicherung „Versand erscheint nie im Reiter wetter" wandert an die Schnittstelle: die Prop
-	// `bereich` laesst nur 'zustellung' | 'alles' zu, der Versand-Abschnitt (#versand) bleibt Sprungziel.
-	test('s3a2794_panel_versand_abschnitt_nie_im_bereich_wetter', () => {
-		const { ast, quelle } = svelteAst(DATEI.panel);
-		assert.equal(elementeMitId(ast, quelle, 'section', 'versand').length, 1, 'Panel: kein <section id="versand">');
-		const literale: string[] = [];
-		(function lauf(n: unknown): void {
-			if (n === null || typeof n !== 'object') return;
-			if (Array.isArray(n)) return n.forEach(lauf);
-			const k = n as Knoten;
-			if (k.type === 'TSPropertySignature' && k.key?.name === 'bereich') {
-				(function typ(t: Knoten | undefined): void {
-					if (!t) return;
-					if (t.type === 'TSLiteralType') literale.push(String(t.literal.value));
-					for (const u of (t.types ?? []) as Knoten[]) typ(u);
-					typ(t.typeAnnotation);
-				})(k.typeAnnotation);
-			}
-			for (const [f, v] of Object.entries(k)) if (f !== 'parent' && f !== 'loc' && f !== 'metadata') lauf(v);
-		})(ast.instance?.content);
-		assert.deepEqual(literale.sort(), ['alles', 'zustellung'], `Panel: bereich-Prop erlaubt ${JSON.stringify(literale)}`);
-	});
-
-	test('s3a2794_panel_reicht_bereich_an_wmt_durch', () => {
-		const { ast, quelle } = svelteAst(DATEI.panel);
-		const wmt = einbettungenMitWeichen(ast, quelle, ['WeatherMetricsTab']);
-		assert.equal(wmt.length, 1, 'Panel: genau eine WeatherMetricsTab-Einbettung erwartet');
-		const explizit = attribut(wmt[0].knoten, quelle, 'bereich') !== null;
-		const perStreuung =
-			(wmt[0].knoten.attributes as Knoten[]).some((a) => a.type === 'SpreadAttribute') && !propNamen(ast).includes('bereich');
-		assert.ok(explizit, `Panel: WeatherMetricsTab bekommt kein bereich-Attribut (Streuung ohne eigenes bereich: ${perStreuung})`);
-	});
-
-	test('s3a2794_wmt_leitet_abschnitte_aus_context_und_bereich_ab', () => {
-		const { ast, quelle } = svelteAst(DATEI.wmt);
-		assert.ok(propNamen(ast).includes('bereich'), 'WeatherMetricsTab: keine Prop bereich');
-		const a = aufrufe(ast.instance?.content).filter((c) => c.callee?.name === 'weatherMetricsTabSections');
-		assert.ok(a.length >= 1, 'WeatherMetricsTab ruft weatherMetricsTabSections nicht auf');
-		assert.ok(
-			a.some((c) => (c.arguments as Knoten[]).length === 2 && quelle.slice(c.arguments[1].start, c.arguments[1].end) === 'bereich'),
-			'WeatherMetricsTab: weatherMetricsTabSections(context, bereich) — bereich wird nicht übergeben'
-		);
-	});
-});
+// #3297/#3020: §2 (Panel und WeatherMetricsTab tragen den bereich-Filter) entfaellt — beide Dateien geloescht.
 
 // ── Trip-Anlegen: EINE dauerhafte WMT-Instanz je Viewport-Zweig ───────────────
 

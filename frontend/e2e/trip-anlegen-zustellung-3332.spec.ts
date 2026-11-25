@@ -146,7 +146,7 @@ test.describe('#3332 Reiter Zustellung beim Trip-Anlegen', () => {
 		expect(r.report_config?.evening_enabled, 'AC-2').toBe(false);
 		expect(r.report_config?.send_email, 'AC-2').toBe(true);
 		expect(r.report_config?.send_telegram, 'AC-2').toBe(true);
-		expect(r.report_config?.multi_day_trend_reports, 'Ausblick-Vorbelegung bleibt im POST').toBeDefined();
+		expect('multi_day_trend_reports' in (r.report_config ?? {}), '#3297: kein Altschluessel im POST (Ausblick-Vorbelegung entfaellt)').toBe(false);
 		expect(r.alert_channels?.telegram, 'AC-3').toBe(true);
 		expect(r.alert_channel_thresholds?.telegram, 'AC-3').toBe('HIGH');
 		expect(r.alert_quiet_from, 'AC-2').toBe('22:30');

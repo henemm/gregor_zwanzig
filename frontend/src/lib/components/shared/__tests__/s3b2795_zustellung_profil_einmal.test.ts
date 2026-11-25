@@ -56,31 +56,5 @@ describe('AC-36 (F006): im Reiter Zustellung genau eine Profil-Ladestelle', () =
 		assert.equal(einbettungenMitWeichen(ast, quelle, ['WetterMetrikenVersandPanel', 'WeatherMetricsTab']).length, 0, 'Beispiel-Alarm traegt die Metrik-Oberflaeche (#3154)');
 	});
 
-	test('f006_weathermetricstab_laedt_nur_ohne_profil_prop_selbst', async () => {
-		const { ast, quelle } = svelteAst(DATEI.wmt);
-		assert.ok(propNamen(ast).includes('profil'), 'WeatherMetricsTab nimmt keine Prop profil');
-		const abrufe = aufrufe(ast.instance?.content).filter(
-			(a) => (a.callee as Knoten)?.name === 'fetch' && (a.arguments?.[0] as Knoten)?.value === '/api/auth/profile'
-		);
-		assert.equal(abrufe.length, 1, `Messaufbau: erwartet genau eine Profil-Ladestelle in WeatherMetricsTab, gefunden ${abrufe.length}`);
-		// Die umschliessende Bedingung finden: ConditionalExpression, deren alternate den Abruf enthaelt.
-		let bedingung: Knoten | null = null;
-		(function lauf(n: unknown): void {
-			if (bedingung || n === null || typeof n !== 'object') return;
-			if (Array.isArray(n)) return n.forEach(lauf);
-			const k = n as Knoten;
-			if (k.type === 'ConditionalExpression' && k.alternate.start <= abrufe[0].start && abrufe[0].end <= k.alternate.end) {
-				bedingung = k;
-				return;
-			}
-			for (const [f, v] of Object.entries(k)) if (f !== 'parent' && f !== 'loc' && f !== 'metadata') lauf(v);
-		})(ast.instance?.content);
-		assert.ok(bedingung, 'WeatherMetricsTab ruft /api/auth/profile bedingungslos ab — im Reiter Zustellung zweiter Abruf');
-		const test = quelle.slice((bedingung as Knoten).test.start, (bedingung as Knoten).test.end);
-		const nimmtProp = quelle.slice((bedingung as Knoten).consequent.start, (bedingung as Knoten).consequent.end);
-		assert.equal(werte(test, { profil: null }), true, 'profil=null (Abruf im Reiter gescheitert) loest einen zweiten Abruf aus');
-		assert.equal(werte(test, { profil: PROFIL }), true, 'ein uebergebenes Profil loest einen zweiten Abruf aus');
-		assert.equal(werte(test, { profil: undefined }), false, 'ohne Prop (Anlegeseiten) laedt WeatherMetricsTab nicht mehr selbst');
-		assert.deepEqual(await werte(nimmtProp, { profil: PROFIL, Promise }), PROFIL, 'der Zweig mit Prop liefert nicht das uebergebene Profil');
-	});
+	// #3297/#3020: Fall WeatherMetricsTab-Profil entfaellt (Datei geloescht).
 });

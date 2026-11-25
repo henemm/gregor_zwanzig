@@ -19,7 +19,7 @@
 //
 // D2 (#1301, #1292 P4): official_alerts_enabled wird HIER NICHT MEHR
 // geschrieben. Das Feld ist fachlich Bericht-Inhalt; alleiniger Schreiber
-// ist jetzt der Inhalt-Bereich (WeatherMetricsTab / CompareInhaltSection).
+// ist jetzt der Inhalt-Bereich (WeatherMetricsTab (gelöscht, #3297) / CompareInhaltSection).
 // Der Alarm-Tab war ein doppelter Schreibpfad und ueberschrieb per
 // Last-Writer-Wins einen im Inhalt-Tab gesetzten Wert — beseitigt.
 //

@@ -24,32 +24,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // # doc-compliance-test
 // ---------------------------------------------------------------------------
 
-test('AC-1: WeatherMetricsTab nutzt PUT-Response, nicht manuell konstruierten Payload', () => {
-	const src = readFileSync(
-		join(__dirname, '../shared/WeatherMetricsTab.svelte'),
-		'utf-8'
-	);
-	const antiPattern = 'onTripUpdate?.({ ...trip, display_config: payload, report_config: reportConfig })';
-	assert.ok(
-		!src.includes(antiPattern),
-		'WeatherMetricsTab.svelte darf alert_rules NICHT manuell konstruieren — Server-Response nutzen (Issue #850)'
-	);
-});
+// #3297/#3020: die Faelle gegen WeatherMetricsTab entfallen — Datei geloescht.
 
-test('AC-1: WeatherMetricsTab nutzt api.put<Trip> Rückgabewert für onTripUpdate', () => {
-	const src = readFileSync(
-		join(__dirname, '../shared/WeatherMetricsTab.svelte'),
-		'utf-8'
-	);
-	assert.ok(
-		src.includes('api.put<Trip>'),
-		'WeatherMetricsTab.svelte muss api.put<Trip> verwenden (Issue #850)'
-	);
-	assert.ok(
-		src.includes('onTripUpdate?.(updated)'),
-		'WeatherMetricsTab.svelte muss onTripUpdate(updated) mit Server-Response aufrufen (Issue #850)'
-	);
-});
 
 // ---------------------------------------------------------------------------
 // AC-2: AlertPreviewCard enthält Link auf Wetter-Metriken-Tab

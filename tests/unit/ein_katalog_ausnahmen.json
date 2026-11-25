@@ -25,9 +25,6 @@
     "frontend/src/lib/components/molecules/AlertRow.svelte": {
       "FRONTEND_LISTE": 2
     },
-    "frontend/src/lib/components/shared/WeatherMetricsTab.svelte": {
-      "FRONTEND_LISTE": 1
-    },
     "frontend/src/lib/components/shared/mailInhaltKonstanten.ts": {
       "FRONTEND_LISTE": 1
     },
@@ -250,5 +247,5 @@
       "VERARBEITUNG_AUSSEN": 1
     }
   },
-  "hoechststand": 434
+  "hoechststand": 433
 }

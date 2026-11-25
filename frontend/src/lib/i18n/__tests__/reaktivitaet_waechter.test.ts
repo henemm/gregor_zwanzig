@@ -41,12 +41,10 @@ const BEREICHE: Record<string, string[]> = {
 		'lib/components/ui/SaveIndicator.svelte'
 	],
 	'F6 #2655 Versand-Reiter': [
-		'lib/components/shared/VersandTab.svelte',
 		'lib/components/shared/TelegramKurzstilToggle.svelte',
 		'lib/components/shared/versand-tab/'
 	],
 	'F5 #2654 Wertebereiche-Reiter': [
-		'lib/components/shared/WeatherMetricsTab.svelte',
 		'lib/components/shared/StandardwerteSpeichernKnopf.svelte',
 		'lib/components/shared/weather-metrics-tab/'
 	],
@@ -54,9 +52,6 @@ const BEREICHE: Record<string, string[]> = {
 		'lib/components/shared/layout-tab/',
 		// #2794 S3a Teil-PR 4a: corridor-editor/ (CorridorEditor, CorridorEditorMobile) entfernt.
 		'lib/components/shared/OutputLayoutEditor.svelte',
-		'lib/components/shared/OutlookLayoutControls.svelte',
-		'lib/components/shared/MailInhaltCard.svelte',
-		'lib/components/shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte',
 		'routes/gpx-upload/'
 	],
 	'F9 #2658 Trip-Hub, Anlegen, Etappen-Editor, Vorschau-Rahmen': [
@@ -78,7 +73,6 @@ const BEREICHE: Record<string, string[]> = {
 		'lib/components/compare/',
 		'lib/components/compare-new/',
 		'lib/components/shared/hub-uebersicht/',
-		'lib/components/shared/OutlookLayoutControls.svelte',
 		'routes/compare/[id]/',
 		'routes/compare/new/'
 	]
@@ -180,8 +174,8 @@ describe('Bestand: Sprachwechsel ohne Neuladen erreicht jede Anzeige', () => {
 		assert.equal(gezaehlt, 5);
 	});
 
-	test('Messaufbau F8: ohne die $locale-Lesung waeren drei Ableitungen/Ausdruecke gemeldet', () => {
-		// LTCapNote (1), MailInhaltCard (1), Abwahl-Hinweis (1). Die neun Fundstellen von
+	test('Messaufbau F8: ohne die $locale-Lesung waere eine Ableitung gemeldet', () => {
+		// LTCapNote (1); MailInhaltCard (1) und der Abwahl-Hinweis (1) entfallen mit #3297/#3020. Die neun Fundstellen von
 		// CorridorEditor (4) und CorridorEditorMobile (5) entfallen mit #2794 S3a Teil-PR 4a.
 		const { dateien } = scanneEintraege(SRC, BEREICHE['F8 #2657 Layout-Reiter, Korridor-Editor, Ausgabe-Layout, GPX']);
 		let gezaehlt = 0;
@@ -189,7 +183,7 @@ describe('Bestand: Sprachwechsel ohne Neuladen erreicht jede Anzeige', () => {
 			const q = (readFileSync(join(SRC, rel), 'utf8') as string).replace(/\(void \$locale, /g, '(');
 			gezaehlt += scanneKomponente(q, join(SRC, rel), SRC, rel).length;
 		}
-		assert.equal(gezaehlt, 3);
+		assert.equal(gezaehlt, 1);
 	});
 
 	test('Messaufbau F7: ohne die $locale-Lesung waeren zwei Ableitungen/Ausdruecke gemeldet', () => {

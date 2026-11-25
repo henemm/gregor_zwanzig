@@ -6,9 +6,6 @@
     "evening_enabled": true,
     "morning_time": "07:00:00",
     "evening_time": "18:00:00",
-    "multi_day_trend_reports": [
-      "evening"
-    ],
     "send_email": true,
     "send_telegram": false,
     "send_sms": false,
@@ -26,7 +23,6 @@
       "thunder"
     ],
     "show_metrics_summary": false,
-    "show_outlook": true,
     "email_format": "full",
     "show_yesterday_comparison": true
   },

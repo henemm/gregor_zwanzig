@@ -488,59 +488,8 @@ describe('#1717 AC-9: Meldedatum ist ein Daten-Label, keine Fussnote', () => {
 // bewacht er nichts).
 
 const EMPTY_TESTID = 'briefings-channel-empty';
-const VERSAND_TAB_FILE = path.join(FRONTEND, 'src/lib/components/shared/VersandTab.svelte');
-const VersandTab = (await import(pathToFileURL(VERSAND_TAB_FILE).href)).default;
 
-/** /trips/[id] — Trip-Editor-Versand-Tab (route-Zweig). */
-function renderVersandTabRoute(cfg: Record<string, unknown>): string {
-	return render(VersandTab, { props: { context: 'route', reportConfig: cfg } }).body;
-}
-
-describe('#1717 Kanalzaehler: Premium-SMS allein ist ein aktiver Kanal', () => {
-	const NUR_PREMIUM = {
-		send_email: false,
-		send_telegram: false,
-		send_sms: false,
-		send_premium_sms: true
-	};
-	const ALLE_AUS = { ...NUR_PREMIUM, send_premium_sms: false };
-
-	test('nur_premium_sms_aktiv_zeigt_keinen_leerzustand_in_beiden_fassungen', () => {
-		for (const [ort, renderer] of [
-			['VersandTab (/trips/[id])', renderVersandTabRoute]
-		] as Array<[string, (c: Record<string, unknown>) => string]>) {
-			// Gegenprobe: der Leerzustand ist in diesem Aufbau erreichbar.
-			assert.ok(
-				renderer(ALLE_AUS).includes(`data-testid="${EMPTY_TESTID}"`),
-				`${ort}: Mit allen vier Kanaelen AUS muss der Leerzustand ` +
-					`"${EMPTY_TESTID}" erscheinen. Fehlt er hier, prueft der Fall unten nichts.`
-			);
-
-			assert.ok(
-				!renderer(NUR_PREMIUM).includes(`data-testid="${EMPTY_TESTID}"`),
-				`${ort}: Nur Premium-SMS ist eingeschaltet — das Briefing geht raus, die ` +
-					`Oberflaeche behauptet aber "Kein Kanal aktiv" (${EMPTY_TESTID}) und sperrt die ` +
-					'Zeitplan-Optionen weg. Der Kanal-Zaehler muss send_premium_sms mitzaehlen.'
-			);
-		}
-	});
-
-	test('zeitplan_optionen_erscheinen_wenn_nur_premium_sms_aktiv_ist', () => {
-		// Positivseite derselben Zusicherung: nicht nur "kein Leerzustand",
-		// sondern der Inhalt, den der Leerzustand ersetzt, ist tatsaechlich da.
-		for (const [ort, renderer] of [
-			['VersandTab (/trips/[id])', renderVersandTabRoute]
-		] as Array<[string, (c: Record<string, unknown>) => string]>) {
-			const html = renderer(NUR_PREMIUM);
-			assert.ok(
-				html.includes('data-testid="morning-master-switch"'),
-				`${ort}: Bei aktivem Premium-SMS muessen die Zeitplan-Karten (Morgen-Briefing) ` +
-					'gerendert sein — sonst kann der Nutzer die Sendezeit seines einzigen Kanals ' +
-					'nicht einstellen.'
-			);
-		}
-	});
-});
+// #3297/#3020: der Kanalzaehler-Fall rendert shared/VersandTab (geloescht).
 
 // ─── #1717 AC-10 ─────────────────────────────────────────────────────────────
 

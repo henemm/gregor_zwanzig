@@ -85,32 +85,4 @@ describe('AC-7: Rueckbau von EditReportConfigSection, reportConfigWrite, Briefin
 	});
 });
 
-describe('AC-8: Baustein liegt in shared/, Ortsvergleich mountet die Karte nie', () => {
-	test('MailInhaltCard_liegt_in_shared_und_nirgends_sonst', () => {
-		assert.ok(existsSync(join(COMPONENTS, 'shared', 'MailInhaltCard.svelte')), 'AC-8: shared/MailInhaltCard.svelte fehlt.');
-		const orte = readdirSync(COMPONENTS)
-			.filter((d) => statSync(join(COMPONENTS, d)).isDirectory() && d !== 'shared')
-			.filter((d) => existsSync(join(COMPONENTS, d, 'MailInhaltCard.svelte')));
-		assert.deepEqual(orte, [], `AC-8: MailInhaltCard.svelte liegt ausserhalb shared/: ${orte.join(', ')} (Pendant-Sperre).`);
-	});
-
-	test('ortsvergleich_quellcode_mountet_keine_mail_inhalt_karte', () => {
-		const wurzeln = [
-			join(COMPONENTS, 'compare'),
-			join(COMPONENTS, 'compare-new'),
-			join(FRONTEND, 'src', 'routes', 'compare')
-		];
-		const treffer: string[] = [];
-		for (const w of wurzeln) {
-			for (const f of dateien(w)) {
-				if (/__tests__|\.test\.ts$/.test(f)) continue;
-				readFileSync(f, 'utf-8').split('\n').forEach((z, i) => {
-					if (!istKommentar(z) && /MailInhaltCard|report-mail-content/.test(z)) {
-						treffer.push(`${relative(REPO, f)}:${i + 1}: ${z.trim().slice(0, 100)}`);
-					}
-				});
-			}
-		}
-		assert.deepEqual(treffer, [], `AC-8: Ortsvergleich bindet die route-eigene Karte ein:\n${treffer.join('\n')}`);
-	});
-});
+// #3297/#3020: AC-8 (MailInhaltCard liegt in shared/) entfaellt — die Karte ist geloescht.

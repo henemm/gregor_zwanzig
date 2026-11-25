@@ -33,6 +33,8 @@ let server: FakeTripServer;
 
 /** Die Fremdaenderung: ein anderer Tab / der Python-Core setzt `metrics` neu. */
 const FREMDE_METRIKEN = [{ metric_id: 'cape', enabled: true, aggregations: ['max'] }];
+/** #3297: Aenderung des zweiten Reiters (Tempo, Etappen). */
+const TEMPO_B = { fortbewegung: 'ski', grundtempo_kmh: 3 };
 
 beforeEach(async () => {
 	clearEtagRegistry();
@@ -60,16 +62,17 @@ async function konfliktInReiterA(a: P.Aufbau): Promise<void> {
 }
 
 describe('W1 / AC-1: Fremdaenderung ueberlebt ein Speichern aus Reiter B nach dem Konflikt in Reiter A', () => {
-	test('B = Wetter-Metriken: Server-`metrics` bleibt die Fremdaenderung, B-PUT traegt If-Match und bekommt 412', async () => {
+	test('B = Tempo: Server-`metrics` bleibt die Fremdaenderung, B-PUT traegt If-Match und bekommt 412', async () => {
 		const a = P.neuerAufbau();
 		await konfliktInReiterA(a);
 		const ifMatchA = puts()[0].ifMatch;
 		assert.ok(ifMatchA, 'Vorbedingung: der PUT von A trug If-Match');
 
-		// Reiterwechsel: A ist ausgehaengt, B (Wetter-Metriken) speichert ueber denselben Controller.
-		const wm = await P.wetterMetrikenReiter(a);
-		wm.metrikenSpeichern();
-		await P.fertig(a.ctl);
+		// Reiterwechsel: A ist ausgehaengt, B speichert ueber denselben Controller.
+		// #3297/#3020: B war der Alt-Reiter Wetter-Metriken (shared/WeatherMetricsTab, geloescht); jetzt
+		// der live gemountete Tempo-Reiter (Etappen) — derselbe Mehrreiter-Mechanismus.
+		const b = await P.tempoReiter(a);
+		await b.aendern(TEMPO_B);
 
 		assert.deepEqual(
 			metrikenAufServer(),
@@ -103,9 +106,9 @@ describe('W1 / AC-1: Fremdaenderung ueberlebt ein Speichern aus Reiter B nach de
 	test('Server-Stand nach dem Konflikt: weder A noch B haben etwas geschrieben', async () => {
 		const a = P.neuerAufbau();
 		await konfliktInReiterA(a);
-		const wm = await P.wetterMetrikenReiter(a);
-		wm.metrikenSpeichern();
-		await P.fertig(a.ctl);
+		const b = await P.tempoReiter(a);
+		await b.aendern(TEMPO_B);
+		assert.deepEqual(server.stand(P.TRIP_ID).tempo, P.vollerTrip().tempo, 'B hat trotz Konflikt geschrieben');
 
 		const dc = server.stand(P.TRIP_ID).display_config as Record<string, unknown>;
 		const seed = P.vollerTrip().display_config as Record<string, unknown>;
@@ -118,17 +121,15 @@ describe('W1 / AC-1: Fremdaenderung ueberlebt ein Speichern aus Reiter B nach de
 });
 
 describe('Gegenprobe: ohne Konflikt schreibt Reiter B normal (der Test ist nicht vakuum-gruen)', () => {
-	test('frischer Stand: Wetter-Metriken-Reiter speichert, der Server-Stand aendert sich', async () => {
+	test('frischer Stand: Tempo-Reiter speichert, der Server-Stand aendert sich', async () => {
 		// frischen Stand holen: Registry kennt den aktuellen ETag
 		await api.get(P.TRIP_PFAD);
 		const a = P.neuerAufbau(P.vollerTrip());
-		const wm = await P.wetterMetrikenReiter(a);
-		wm.inst.u.telegramKurzform = true;
-		wm.metrikenSpeichern();
-		await P.fertig(a.ctl);
+		const b = await P.tempoReiter(a);
+		await b.aendern(TEMPO_B);
 
 		assert.equal(puts().at(-1)!.status, 200, 'ohne Konflikt muss der PUT durchgehen');
-		assert.equal((server.stand(P.TRIP_ID).display_config as Record<string, unknown>).telegram_kurzform, true);
+		assert.deepEqual(server.stand(P.TRIP_ID).tempo, TEMPO_B);
 		assert.equal(a.ctl.state, 'idle');
 	});
 });

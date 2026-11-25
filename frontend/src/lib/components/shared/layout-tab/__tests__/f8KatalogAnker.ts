@@ -75,19 +75,8 @@ export const F8_ANKER: [schluessel: string, de: string, en: string][] = [
 	['layout.ausgabe.detail_eyebrow', 'Im Briefing als Detail', 'In the briefing as a detail'],
 	['layout.ausgabe.detail_werte', 'Detail-Werte', 'Detail values'],
 	['layout.ausgabe.detail_hinweis', 'Erscheinen als kompakte Zeile direkt unter der Tabelle.', 'Shown as a compact line directly below the table.'],
-	// Ausblick-Steuerung (OutlookLayoutControls)
-	['layout.ausblick.titel', '3-Tages-Ausblick', '3-day outlook'],
-	['layout.ausblick.nur_email', 'Erscheint nur in der E-Mail.', 'Appears only in the email.'],
-	// Mail-Inhalt (MailInhaltCard, mailInhaltKonstanten.ts)
-	['layout.mail_inhalt.titel', 'E-Mail-Inhalt', 'Email content'],
-	['layout.mail_inhalt.format', 'Format', 'Format'],
-	['layout.mail_inhalt.ausfuehrlich', 'Ausführlich (HTML)', 'Detailed (HTML)'],
-	['layout.mail_inhalt.kompakt', 'Kompakt (Nur-Text)', 'Compact (plain text)'],
-	[
-		'layout.mail_inhalt.kompakt_hinweis',
-		'Im Kompakt-Modus werden fix Metriken-Überblick + Ausblick gezeigt. Die Inhalts-Bausteine unten sind deaktiviert.',
-		'In compact mode, the metrics overview + outlook are always shown. The content blocks below are disabled.'
-	],
+	// #3297/#3020: Ausblick-Steuerung (OutlookLayoutControls) und Kopf/Format der Karte MailInhaltCard
+	// geloescht, ihre Schluessel entfallen. Bausteintexte (mailInhaltKonstanten.ts) bleiben:
 	['layout.mail_inhalt.etappen_kennzahlen', 'Etappen-Kennzahlen', 'Stage figures'],
 	['layout.mail_inhalt.etappen_kennzahlen_text', 'Distanz, Auf-/Abstieg und maximale Höhe der Etappe als Zahlenraster.', 'Distance, ascent/descent and maximum altitude of the stage as a number grid.'],
 	['layout.mail_inhalt.quick_take', 'Quick-Take-Chips', 'Quick-take chips'],

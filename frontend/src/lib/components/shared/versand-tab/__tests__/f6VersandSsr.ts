@@ -36,7 +36,6 @@ export const { formatNextBriefing } = await imp(path.join(VT, 'nextBriefingText.
 export const { vtBriefingLeadText, vtBriefingSubTexts } = await imp(path.join(VT, 'vtBriefingChannelsText.ts'));
 export const { baueReportConfigPayload, ladeReportZustand } = await imp(path.join(VT, 'reportConfigPayload.ts'));
 
-const VersandTab = await komp(path.join(VT, '..', 'VersandTab.svelte'));
 const VTBriefingChannels = await komp(path.join(VT, 'VTBriefingChannels.svelte'));
 const VTSchedulePlan = await komp(path.join(VT, 'VTSchedulePlan.svelte'));
 const VTLaufzeitRoute = await komp(path.join(VT, 'VTLaufzeitRoute.svelte'));
@@ -123,13 +122,7 @@ export function kanaeleRendern(context: Kontext, profil: Record<string, unknown>
 	return html(VTBriefingChannels, props);
 }
 
-/** Der ganze Reiter (SSR: Profil noch nicht geladen). */
-export function tabRendern(context: Kontext): string {
-	if (context === 'route') {
-		return html(VersandTab, { context, trip: { id: 't1', stages: [{ date: '2026-10-28' }, { date: '2026-10-31' }] } });
-	}
-	return html(VersandTab, { context, sendEmail: true, sendTelegram: false, endDate: null, preset: { id: 'p1' } });
-}
+// #3297/#3020: `tabRendern` (der ganze Reiter shared/VersandTab) entfaellt — die Datei ist geloescht.
 
 /** #2869: nur der Baustein „Nächstes Briefing" (VTNextBriefing) mit einem Backend-Wert. */
 export function naechstesBriefingRendern(nextBriefing: Record<string, unknown> | null, context: Kontext): string {
@@ -170,7 +163,7 @@ export function htmlFaelle(): Record<string, () => string> {
 	const f: Record<string, () => string> = {};
 	for (const name of Object.keys(PROFILE)) {
 		for (const context of ['route', 'vergleich'] as const) {
-			f[`${name}_${context}`] = () => kanaeleRendern(context, PROFILE[name]) + '\n' + tabRendern(context);
+			f[`${name}_${context}`] = () => kanaeleRendern(context, PROFILE[name]);
 		}
 	}
 	f.bausteine = bausteineRendern;

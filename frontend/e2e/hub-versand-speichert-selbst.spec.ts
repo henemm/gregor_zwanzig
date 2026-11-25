@@ -65,9 +65,6 @@ const VERSAND_REPORT_KEYS = new Set([
 	'evening_enabled',
 	'morning_time',
 	'evening_time',
-	'multi_day_trend_morning',
-	'multi_day_trend_evening',
-	'multi_day_trend_reports',
 	'send_email',
 	'send_telegram',
 	'send_sms',
@@ -411,7 +408,7 @@ for (const kind of HUB_KINDS) {
 								evening_enabled: false,
 								morning_time: '06:00:00',
 								evening_time: '18:00:00',
-								show_outlook: false,
+								show_stage_stats: false,
 								email_format: 'compact'
 							},
 							display_config: { metrics: [{ metric_id: 'gust', enabled: true, bucket: 'primary', order: 0 }] }

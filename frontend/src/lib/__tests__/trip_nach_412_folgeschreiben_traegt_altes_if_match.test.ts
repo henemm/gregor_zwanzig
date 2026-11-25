@@ -113,21 +113,8 @@ describe('AC-18 / §4.1: nach 412 bleibt der alte ETag, die Ressource ist als Ko
 });
 
 describe('AC-18: jeder weitere Schreiber traegt das alte If-Match (Reiter B, Kopf, Aktivitaet)', () => {
-	test('Reiter B (Wetter-Metriken): beide PUTs bzw. der erste tragen das alte If-Match, der Server schreibt nichts', async () => {
-		const { alterEtag } = await konfliktHerstellen();
-		const vorher = JSON.stringify(server.stand(P.TRIP_ID));
-		const a = P.neuerAufbau();
-		const w = await P.wetterMetrikenReiter(a);
-		w.metrikenSpeichern();
-		await P.fertig(a.ctl);
-		const neue = puts().slice(1);
-		assert.ok(neue.length >= 1, 'Messaufbau: Reiter B hat geschrieben');
-		for (const p of neue) {
-			assert.equal(p.ifMatch, alterEtag, `${p.path}: altes If-Match erwartet`);
-			assert.equal(p.status, 412);
-		}
-		assert.equal(JSON.stringify(server.stand(P.TRIP_ID)), vorher);
-	});
+	// #3297/#3020: „Reiter B (Wetter-Metriken)“ pruefte shared/WeatherMetricsTab (geloescht); Reiter B
+	// ist unten mit Kopf, Tempo und Etappen abgedeckt.
 
 	test('Kopf (Umbenennen): altes If-Match, 412, Name auf dem Server unveraendert, lokaler trip wird nicht ersetzt', async () => {
 		const { alterEtag } = await konfliktHerstellen();

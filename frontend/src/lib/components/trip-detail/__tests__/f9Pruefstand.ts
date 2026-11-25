@@ -130,7 +130,6 @@ const K = {
 	TablePreview: await komp(td('TablePreview.svelte')),
 	WeatherV2Kanaele: await komp(td('WeatherV2Kanaele.svelte')),
 	TripTabs: await komp(td('TripTabs.svelte')),
-	BriefingScheduleStatus: await variante(td('BriefingScheduleTab.svelte'), [["let statusMsg = $state('');", "let statusMsg = $state('Gespeichert.');"]]),
 	WaypointsPanelFehler: await variante(td('WaypointsPanel.svelte'), [['let saveError = $state<string | null>(null);', "let saveError = $state<string | null>('Speichern fehlgeschlagen');"]]),
 	EtappenStripHover: await variante(wp('EtappenStrip.svelte'), [['let hoverGap = $state<number | null>(null);', 'let hoverGap = $state<number | null>(0);']]),
 	StageCard: await komp(wp('StageCard.svelte')),
@@ -238,8 +237,8 @@ export function layoutRendern(): string {
 		html(K.PresetRow, { id: 'eins', label: 'Eins', metricCount: 1, isActive: false, onSelect: nix }),
 		html(K.TablePreview, { catalog: KATALOG, enabledMap: { temperature: true, gust: true }, friendlyMap: { gust: true }, horizonsMap: { gust: { today: true, tomorrow: false, day_after: false }, temperature: { today: true, tomorrow: false, day_after: false } }, categoryOrder: ['temperature', 'wind'], indicatorCapable: (id: string) => id === 'gust' }),
 		html(K.WeatherV2Kanaele, { channels: { email: true, telegram: true, sms: true }, primaryCount: 10, telegramKurzform: true, onChange: nix, onKurzformChange: nix, availability: { email: true, telegram: true, sms: false } }),
-		...(['morning', 'evening', 'alert'] as const).map((kind) => html(K.ReportLine, { kind, time: '07:00', channels: ['email', 'telegram'], active: true, alert: kind === 'alert' })),
-		html(K.BriefingScheduleStatus, { trip: tripLaufend() })
+		...(['morning', 'evening', 'alert'] as const).map((kind) => html(K.ReportLine, { kind, time: '07:00', channels: ['email', 'telegram'], active: true, alert: kind === 'alert' }))
+		// #3297/#3020: der Render von trip-detail/BriefingScheduleTab entfaellt — die Datei ist geloescht.
 	].join('\n');
 }
 
@@ -347,7 +346,6 @@ const FLAG = {
 	]),
 	wegpunkte: await variante(td('WaypointsPanel.svelte'), [['let saveError = $state<string | null>(null);', "let saveError = $state<string | null>('');"]]),
 	panel: await panelVariante([['let saveError = $state<string | null>(null);', "let saveError = $state<string | null>('');"]]),
-	zeitplan: await variante(td('BriefingScheduleTab.svelte'), [['let statusKey = $state<MessageKey | null>(null);', "let statusKey = $state<MessageKey | null>('trip.fehler_speichern');"]]),
 	historie: await variante(path.join(KOMP, 'shared', 'BriefingHistory.svelte'), [['let eigenError = $state(false);', 'let eigenError = $state(true);']]),
 	seite: await seitenVariante([
 		['let errorKey = $state<MessageKey | null>(null);', "let errorKey = $state<MessageKey | null>('aktionen.fehler.allgemein');"],
@@ -359,7 +357,6 @@ export function fehlerFlagsRendern(): string {
 		html(FLAG.header, { kind: 'trip', name: 'GR20 Nord 2026', region: 'Korsika', profile: 'trekking', profileOptions: [], testidPrefix: 'trip', onSaveField: async () => {} }),
 		html(FLAG.wegpunkte, { trip: tripLaufend() }),
 		html(FLAG.panel, { stages: structuredClone(ETAPPEN), tripId: 'gd-gr20', showSave: true }),
-		html(FLAG.zeitplan, { trip: tripLaufend() }),
 		html(FLAG.historie, { id: '', kind: 'route' }),
 		html(FLAG.seite, { data: { trip: tripLaufend(), metricsCatalog: KATALOG, profile: null } })
 	].join('\n');

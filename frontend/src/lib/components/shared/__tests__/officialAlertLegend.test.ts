@@ -35,7 +35,6 @@ const SHARED_DIR = join(here, '..');
 // __tests__ -> shared -> components -> lib -> src -> frontend -> repo
 const REPO_ROOT = join(here, '..', '..', '..', '..', '..', '..');
 const FRONTEND_SRC = join(REPO_ROOT, 'frontend', 'src');
-const WEATHER_METRICS_TAB = join(SHARED_DIR, 'WeatherMetricsTab.svelte');
 const HAZARD_SYMBOLS_PY = join(REPO_ROOT, 'src', 'output', 'tokens', 'hazard_symbols.py');
 
 const LEGEND_TESTID = 'official-alerts-symbol-legend';
@@ -82,53 +81,7 @@ function frontendSources(dir = FRONTEND_SRC, acc: string[] = []): string[] {
 	return acc;
 }
 
-describe('AC-9: Legende beim Schalter „Amtliche Warnungen"', () => {
-	test('Die Legende existiert als eigene Bedienstelle im geteilten Snippet', () => {
-		const src = read(WEATHER_METRICS_TAB);
-		assert.ok(
-			src.includes(LEGEND_TESTID),
-			`WeatherMetricsTab muss die Kürzel-Legende rendern (testid "${LEGEND_TESTID}"), ` +
-				'im geteilten officialAlertsToggle-Snippet (Sichtbarkeit kontextabhängig, s.u.).'
-		);
-	});
-
-	test('Die Legende erklärt den `!`-Marker', () => {
-		const src = read(WEATHER_METRICS_TAB);
-		const idx = src.indexOf(LEGEND_TESTID);
-		assert.ok(idx >= 0, `Legende (testid "${LEGEND_TESTID}") fehlt komplett.`);
-		const block = src.slice(idx, idx + 3000);
-		assert.ok(
-			block.includes('!'),
-			'Die Legende muss den `!`-Marker als Kennzeichen des Warn-Blocks erklären.'
-		);
-	});
-
-	test('Die Legende ordnet L/M/H den Warnfarben gelb/orange/rot zu', () => {
-		const src = read(WEATHER_METRICS_TAB);
-		const idx = src.indexOf(LEGEND_TESTID);
-		assert.ok(idx >= 0, `Legende (testid "${LEGEND_TESTID}") fehlt komplett.`);
-		const block = src.slice(idx, idx + 3000);
-		for (const needle of ['gelb', 'orange', 'rot', 'L', 'M', 'H']) {
-			assert.ok(
-				block.includes(needle),
-				`Die L/M/H-Zuordnung der Legende muss "${needle}" nennen.`
-			);
-		}
-	});
-
-	test('Die Legende wird aus Daten gerendert, nicht als starrer Text', () => {
-		const src = read(WEATHER_METRICS_TAB);
-		const idx = src.indexOf(LEGEND_TESTID);
-		assert.ok(idx >= 0, `Legende (testid "${LEGEND_TESTID}") fehlt komplett.`);
-		const block = src.slice(idx, idx + 3000);
-		assert.ok(
-			block.includes('{#each'),
-			'Die 9 Kürzel müssen über die Backend-Katalog-Daten iteriert werden ' +
-				'({#each …}), nicht als 9 handgeschriebene Zeilen — sonst entsteht ' +
-				'genau die zweite Liste, die AC-9 verbietet.'
-		);
-	});
-});
+// #3297/#3020: Faelle gegen WeatherMetricsTab.svelte entfallen (Datei geloescht).
 
 // FB01 (Adversary Scheibe B, HIGH — abgeloest durch Issue #1332, PO-Korrektur
 // 2026-07-23): urspruenglich beschrieb die Legende ausschliesslich die
@@ -214,79 +167,7 @@ function renderTagConditions(ast: any, source: string, snippetName: string): str
 	return result;
 }
 
-describe('FB01: Die Legende erscheint in BEIDEN Kontexten (#1332)', () => {
-	const source = read(WEATHER_METRICS_TAB);
-	const ast = parse(source, { modern: true });
-
-	test('Die Legende haengt an KEINER Bedingung ueber `context` mehr', () => {
-		const conditions = ifConditionsAbove(ast, source, LEGEND_TESTID);
-		assert.ok(conditions, `Legende (testid "${LEGEND_TESTID}") im Template nicht gefunden.`);
-		const guard = conditions!.find((c) => /\bcontext\b/.test(c));
-		assert.equal(
-			guard, undefined,
-			'Die Legende darf im Vergleich-Kontext nicht mehr ausgeblendet werden (#1332: ' +
-				'Vergleichs-SMS und -Telegram zeigen dasselbe Kuerzel-/Warn-Block-Format wie der ' +
-				`Trip-Pfad). Gefundene context-Bedingung: ${guard}`
-		);
-		const symbolGuard = conditions!.find((c) => /\bsmsSymbols\b/.test(c));
-		assert.ok(
-			symbolGuard,
-			'Die Legende muss weiterhin an den geladenen Kuerzel-Katalog (`smsSymbols`) ' +
-				`gebunden sein (Fail-soft ohne Katalog). Gefundene Bedingungen: ${JSON.stringify(conditions)}`
-		);
-	});
-
-	test('Die 9 Kuerzel und der `!`-Hinweis liegen vollstaendig hinter dieser Bedingung', () => {
-		// Kein zweiter, ungeschuetzter Legenden-Block: der `!`-Hinweistext und die
-		// Kuerzel-Schleife duerfen nur EINMAL vorkommen — innerhalb der Legende.
-		const marker = 'beginnt der Warn-Block mit';
-		assert.equal(
-			source.split(marker).length - 1, 1,
-			'Der `!`-Marker-Hinweis kommt mehrfach vor — mindestens eine Kopie liegt ' +
-				'ausserhalb des kontextabhaengigen Legenden-Blocks.'
-		);
-		const legendIdx = source.indexOf(LEGEND_TESTID);
-		const markerIdx = source.indexOf(marker);
-		assert.ok(
-			markerIdx > legendIdx && markerIdx - legendIdx < 3000,
-			'Der `!`-Marker-Hinweis steht nicht innerhalb des Legenden-Blocks.'
-		);
-		assert.equal(
-			source.split('h.sms_symbol').length - 1, 1,
-			'Die Kuerzel-Schleife kommt mehrfach vor — Legende ggf. dupliziert.'
-		);
-	});
-
-	test('Der Schalter „Amtliche Warnungen" bleibt in BEIDEN Kontexten (Non-Regression)', () => {
-		const conditions = ifConditionsAbove(ast, source, 'report-show-official-alerts');
-		assert.ok(conditions, 'Der Schalter (testid "report-show-official-alerts") fehlt komplett.');
-		const contextGuard = conditions!.find((c) => /\bcontext\b/.test(c));
-		assert.equal(
-			contextGuard, undefined,
-			'Der Schalter selbst darf NICHT kontextabhaengig ausgeblendet werden — er ist ' +
-				`im Vergleich die einzige Heimat von official_alerts_enabled. Bedingung: ${contextGuard}`
-		);
-		// Und die Vergleich-Aufrufstelle rendert das geteilte Snippet weiterhin.
-		// Issue #1360: frueher als Zeichen-Abstand geprueft
-		// (`renderIdx - vergleichIdx < 3000`). Diese Naeherung war bruechig — der
-		// neue Abschnitt 'stundenverlauf' (Spec compare_layout_tab_dissolution,
-		// Punkt 2: zwischen 'reihenfolge' und 'official_alerts') schob den Aufruf
-		// legitim ueber die Grenze, ohne dass sich am Verhalten etwas aenderte.
-		// Jetzt STRUKTURELL geprueft: der Render-Aufruf liegt im Block
-		// `{#if sections.includes('official_alerts')}` — unabhaengig davon, wie
-		// viel davor steht.
-		const renderConditions = renderTagConditions(ast, source, 'officialAlertsToggle');
-		assert.ok(
-			renderConditions,
-			'Der Vergleich-Zweig rendert das geteilte officialAlertsToggle-Snippet nicht mehr.'
-		);
-		assert.ok(
-			renderConditions!.some((c) => /sections\.includes\(\s*'official_alerts'\s*\)/.test(c)),
-			'Der officialAlertsToggle-Aufruf haengt nicht am Abschnitt-Schalter ' +
-				`\`sections.includes('official_alerts')\`. Bedingungen: ${JSON.stringify(renderConditions)}`
-		);
-	});
-});
+// #3297/#3020: FB01/F003 lasen WeatherMetricsTab.svelte (Datei geloescht).
 
 // F003 (Adversary-Fund, Fix-Loop 2 / #1332): die Legende haengt an
 // `smsSymbols` (s. FB01 oben), aber `smsSymbols` wurde ausschliesslich in
@@ -295,76 +176,6 @@ describe('FB01: Die Legende erscheint in BEIDEN Kontexten (#1332)', () => {
 // die Legende erschien nie, obwohl der {#if}-Guard laengst context-frei war.
 // Geprueft wird per Instance-Script-AST, dass es einen eigenen Ladepfad
 // (`$effect`, an eine 'vergleich'-Bedingung gekoppelt) gibt.
-describe('F003: Ladepfad fuer smsSymbols im Vergleich-Kontext (#1332 Fix-Loop 2)', () => {
-	const source = read(WEATHER_METRICS_TAB);
-	const ast = parse(source, { modern: true });
-	const instanceBody = (ast as any).instance.content.body as any[];
-
-	function effectStatements(): any[] {
-		return instanceBody.filter(
-			(stmt) =>
-				stmt.type === 'ExpressionStatement' &&
-				stmt.expression?.type === 'CallExpression' &&
-				stmt.expression.callee?.name === '$effect'
-		);
-	}
-
-	test('Es gibt einen $effect-Block, dessen Bedingung an context === "vergleich" haengt und smsSymbols laedt', () => {
-		const effects = effectStatements();
-		assert.ok(effects.length > 0, 'Keine $effect-Bloecke im Instance-Script gefunden.');
-		const matching = effects.filter((stmt) => {
-			const block = source.slice(stmt.start, stmt.end);
-			const hasVergleichGuard = /context\s*===\s*['"]vergleich['"]/.test(block);
-			const loadsSymbols = /loadSmsSymbols\s*\(/.test(block) || /\/api\/sms-symbols/.test(block);
-			return hasVergleichGuard && loadsSymbols;
-		});
-		assert.equal(
-			matching.length, 1,
-			'Es muss genau einen $effect-Block geben, der context === "vergleich" prueft ' +
-				'UND smsSymbols laedt (loadSmsSymbols() oder direkt /api/sms-symbols) — ' +
-				'sonst bleibt smsSymbols im Vergleich-Kontext fuer immer null und die ' +
-				'Legende erscheint nie (F003).'
-		);
-	});
-
-	test('Der neue Ladepfad ist idempotent (Guard `!smsSymbols`), keine Endlosschleife', () => {
-		const effects = effectStatements();
-		const vergleichEffect = effects.find((stmt) => {
-			const block = source.slice(stmt.start, stmt.end);
-			return /context\s*===\s*['"]vergleich['"]/.test(block) &&
-				(/loadSmsSymbols\s*\(/.test(block) || /\/api\/sms-symbols/.test(block));
-		});
-		assert.ok(vergleichEffect, 'Vergleich-$effect fuer smsSymbols nicht gefunden.');
-		const block = source.slice(vergleichEffect.start, vergleichEffect.end);
-		assert.ok(
-			/!\s*smsSymbols/.test(block),
-			'Der Vergleich-$effect muss per `!smsSymbols` guarden, sonst feuert er bei ' +
-				'jedem reaktiven Re-Run erneut (Endlosschleife/Doppel-Fetch).'
-		);
-	});
-
-	test('loadSmsSymbols() selbst ist idempotent und wird auch von load() (Route) genutzt', () => {
-		const fnIdx = source.indexOf('async function loadSmsSymbols()');
-		assert.ok(fnIdx >= 0, 'Es muss eine eigene Funktion `loadSmsSymbols()` geben (extrahiert aus load()).');
-		const fnBlock = source.slice(fnIdx, fnIdx + 400);
-		assert.ok(
-			/if\s*\(\s*smsSymbols\s*\)\s*return/.test(fnBlock),
-			'loadSmsSymbols() muss frueh zurueckkehren, wenn smsSymbols schon gesetzt ist (Idempotenz).'
-		);
-		assert.ok(
-			fnBlock.includes('/api/sms-symbols'),
-			'loadSmsSymbols() muss den Katalog-Endpunkt /api/sms-symbols aufrufen.'
-		);
-		const loadIdx = source.indexOf('async function load()');
-		assert.ok(loadIdx >= 0, 'load() (Route-Pfad) fehlt.');
-		const loadBlock = source.slice(loadIdx, source.indexOf('\n\t$effect', loadIdx));
-		assert.ok(
-			loadBlock.includes('loadSmsSymbols()'),
-			'load() (Route) muss weiterhin loadSmsSymbols() aufrufen — sonst laedt der Route-Pfad ' +
-				'die Kuerzel nicht mehr (Non-Regression).'
-		);
-	});
-});
 
 describe('AC-9: Kürzel kommen aus dem Backend, nicht aus einer zweiten Liste', () => {
 	test('Der Backend-Katalog wird ans Frontend ausgeliefert', () => {
@@ -418,15 +229,6 @@ describe('AC-9: Kürzel kommen aus dem Backend, nicht aus einer zweiten Liste', 
 		);
 	});
 
-	test('Jede SMS-schwellenwertfähige Metrik zeigt ihr SMS-Kürzel', () => {
-		const src = read(WEATHER_METRICS_TAB);
-		assert.ok(
-			src.includes('sms_symbol') || src.includes('smsSymbol'),
-			'Die 7 schwellenwertfähigen Metriken müssen ihr SMS-Kürzel aus dem ' +
-				'Backend-Metrik-Katalog anzeigen (Feld `sms_symbol` je Metrik, ' +
-				`Spec Abschnitt 5a): ${SMS_THRESHOLD_METRIC_IDS.join(', ')}.`
-		);
-	});
 });
 
 /** Rekursive Dateiliste für Backend-Verzeichnisse (.py/.go). */

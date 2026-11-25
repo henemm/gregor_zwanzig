@@ -62,29 +62,8 @@ describe('jeder Schreiber: 412 ⇒ `trip` der Seite traegt die abgelehnte Nutzla
 	// #2794 S3a Teil-PR 4a (AC-31): der Schreiber „Wertebereiche" (CorridorEditor) ist mit der
 	// Oberflaeche entfernt; die Grenzen schreibt der Reiter Wetter (eigene Tests in wetter-tab/).
 
-	test('Wetter-Metriken (Katalog): display_config-Teil UND report_config-Teil', async () => {
-		const { a, seite, neu } = await seiteMit();
-		const wm = await P.wetterMetrikenReiter(neu());
-		wm.inst.u.telegramKurzform = true;
-		wm.inst.u.reportConfig = { ...(wm.inst.u.reportConfig as Rec), show_stage_stats: false };
-		wm.metrikenSpeichern();
-		await P.fertig(a.ctl);
-		assert.equal(abgelehnt().length, 1, 'Vorbedingung: der erste PUT (/weather-config) wird abgelehnt');
-		const t = seite.trip();
-		assert.equal((t.display_config as Rec).telegram_kurzform, true, 'Wetter-Fragment (/weather-config) im Seitenstand');
-		assert.equal((t.report_config as Rec).show_stage_stats, false, 'Trip-Rumpf (report_config) im Seitenstand');
-		assert.equal((t.display_config as Rec).trip_id, P.TRIP_ID, 'uebrige display_config-Schluessel bleiben (einstufiger Merge)');
-	});
-
-	test('Wetter-Metriken (nur Inhalt/Tagesfenster)', async () => {
-		const { a, seite, neu } = await seiteMit();
-		const wm = await P.wetterMetrikenReiter(neu());
-		wm.reportConfigSpeichern({ day_window_start_hour: 6 });
-		await P.fertig(a.ctl);
-		assert.equal(abgelehnt().length, 1);
-		assert.equal((seite.trip().report_config as Rec).day_window_start_hour, 6);
-		traegt(seite.trip(), abgelehnt()[0].anfrage as Rec);
-	});
+	// #3297/#3020: die Schreiber „Wetter-Metriken (Katalog)“ und „(nur Inhalt/Tagesfenster)“ waren
+	// shared/WeatherMetricsTab (geloescht, nirgends gemountet); den Reiter Wetter pruefen wetter-tab/__tests__.
 
 	test('Kopf (Name)', async () => {
 		const { seite, neu } = await seiteMit();
