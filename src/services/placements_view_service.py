@@ -258,7 +258,8 @@ def _antwort(kind, abo: _Abo, vm, placements, gespeichert, muster: _Muster, lang
     zeilen = [{
         "metric_id": r.metric_id, "name": get_metric(r.metric_id).label(lang),
         "position": r.position, "parent": eltern.get(r.metric_id),
-        "cells": {stelle: _zelle(r.metric_id, stelle, c, muster) for stelle, c in r.cells},
+        "cells": {stelle: _zelle(r.metric_id, stelle, _karten_zelle(abo.surface, r.metric_id, stelle, c),
+                                 muster) for stelle, c in r.cells},
     } for r in vm.rows]
     max_laenge = _sms_max_laenge(abo.surface)
     return {
@@ -296,6 +297,19 @@ def _sms_max_laenge(surface: str) -> int:
     from output.renderers.sms_trip import SMSTripFormatter
 
     return inspect.signature(SMSTripFormatter.format_sms).parameters["max_length"].default
+
+
+def _karten_zelle(surface: str, metric_id: str, stelle: str, cell):
+    """#3373: Die SMS-Zelle einer Trip-Eltern-Zeile ohne eigenes SMS-Symbol
+    (Temperatur) zeigt die Karte gesperrt (``kein_kuerzel``). Reine
+    Darstellung: die Versand-Aufloesung (``vm``) bleibt unveraendert."""
+    from app.metric_catalog import karten_sperre
+    from services.placements import PlacementCell
+
+    grund = karten_sperre(metric_id, stelle, surface)
+    if grund and cell.state != "locked":
+        return PlacementCell("locked", None, grund)
+    return cell
 
 
 def _zelle(metric_id: str, stelle: str, cell, muster: _Muster) -> dict:

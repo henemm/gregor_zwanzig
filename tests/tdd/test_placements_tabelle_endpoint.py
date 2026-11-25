@@ -474,7 +474,11 @@ def test_ac17_hochziehen_aendert_marken(client):
 
 @pytest.mark.parametrize("kind", ["route", "vergleich"])
 def test_ac7_jede_gesperrte_kombination_als_locked_mit_grund(client, kind):
-    from app.metric_catalog import stellen_sperre
+    # #3373: die Karte sperrt zusaetzlich die SMS-Zelle der Trip-Eltern-Zeile
+    # Temperatur (``karten_sperre``); sie zeigt die Token ihrer Kinder ohne
+    # eigene Zeile, alle uebrigen gesperrten Zellen bleiben ohne Beispiel.
+    from app.metric_catalog import karten_sperre as stellen_sperre
+    from app.metric_catalog import stellen_sperre as versand_sperre
 
     if kind == "route":
         _trip(NUTZER_A, "t-lock", grund=TRIP_GRUND + ["temperature", "temperature_night"],
@@ -492,7 +496,8 @@ def test_ac7_jede_gesperrte_kombination_als_locked_mit_grund(client, kind):
             if grund:
                 gesehen += 1
                 assert (zelle["state"], zelle["reason"]) == ("locked", grund)
-                assert zelle["example"] is None
+                if versand_sperre(zeile["metric_id"], stelle, surface):
+                    assert zelle["example"] is None
             else:
                 assert zelle["state"] != "locked"
     assert gesehen > 0

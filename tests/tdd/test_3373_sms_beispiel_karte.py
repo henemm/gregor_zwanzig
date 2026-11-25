@@ -550,6 +550,35 @@ def test_ac6_gespeichertes_temperatur_sms_an_aendert_den_versand_nicht(client):
             assert mit["sms"] == ohne["sms"], (rt, mit["sms"], ohne["sms"])
 
 
+@pytest.mark.parametrize("fall,placements", [
+    ("ohne_tabelle", None),
+    ("nur_eltern_zeile", TEMPERATUR_SMS_AN),
+    ("leere_tabelle", {"version": 1, "rows": []}),
+])
+def test_ac6_eltern_sperre_der_karte_aendert_die_versand_aufloesung_nicht(fall, placements):
+    """Fix-Loop 3: Die Sperre der SMS-Zelle "Temperatur" ist reine Darstellung
+    der Karte. Die Kanal-Aufloesung des Versands behaelt ``temperature`` in der
+    SMS-Liste (Stand vor #3373), und die echte Versand-SMS traegt Nacht- und
+    Tageswerte (``N…``, ``D…``) -- auch wenn die Kind-Zeilen nur ueber den
+    Eltern-Haken wirken (keine eigenen Zeilen gespeichert)."""
+    from freezegun import freeze_time
+
+    from app.loader import get_data_root, load_trip
+    from services.channel_list_resolver import resolve_channel_lists
+
+    kennung = f"t-3373-eltern-{fall.replace('_', '-')}"
+    _trip(NUTZER_A, kennung, grund=["temperature", "wind"], placements=placements)
+    trip = load_trip(kennung, data_dir=get_data_root(), user_id=NUTZER_A)
+    for rt in ("morning", "evening"):
+        sms_liste = [r.metric_id for r in resolve_channel_lists(trip.display_config, "trip", rt).sms]
+        assert "temperature" in sms_liste, (rt, sms_liste)
+    with freeze_time("2026-07-14T04:00:00+00:00"):
+        sms = _versand_texte(NUTZER_A, kennung, "evening")["sms"]
+    assert _token(sms, "N"), f"Nacht-Tiefstwert fehlt in der Versand-SMS: {sms!r}"
+    assert any(re.fullmatch(r"D-?\d+(/-?\d+)?", t) for t in sms.split(" ")), (
+        f"Tageswert fehlt in der Versand-SMS: {sms!r}")
+
+
 # ---------------------------------------------------------------------------
 # AC-7: Nacht im E-Mail- und Telegram-Beispiel bei Nachtblock
 # ---------------------------------------------------------------------------
