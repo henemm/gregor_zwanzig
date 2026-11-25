@@ -1,0 +1,96 @@
+{
+  "verified_commit": "33caf4a02747c8dc7e22e45156f2e1021f063bfd",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com",
+      "evidence": "Staging: Trip mit Etappe 'Tag 1' -> sms_example.text beginnt mit 'E1 ' (DE und EN). Faelle freier Name/ohne Etappen/unsortiert nur im Kern-Test belegt, nicht auf Staging gemessen.",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com",
+      "evidence": "Staging: Abend-Fassung enthaelt 'N10' (Zeile temperature_night SMS-Beispiel N10), DE und EN. Morgen-Fassung ohne N und Spitzen bis Fensterende nur im Kern-Test belegt.",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com",
+      "evidence": "Staging: Text enthaelt 'TH:L@14(M@15) TH+:M@15' (TH+ mit Stufe M), DE und EN. Fall ohne Folgetag-Gewitter und Scheduler-Ableitung nur im Kern-Test (bekannte Grenze in Spec).",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com",
+      "evidence": "Staging: Beispiel 104/160 Zeichen, DE und EN identisch. Zeichengleichheit zum echten Versand und 'passt nicht mehr' nur im Kern-Test (Orakel) belegt; Trip-Mail-Laeufe (staging_mail_pruefen --typ trip, de und en) Exit 0.",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com",
+      "evidence": "Staging DE+EN: temperature SMS-Zelle state=locked, reason=kein_kuerzel, example 'D14/18' (kein N); temperature_night SMS-Beispiel 'N10'; wind_chill SMS-Zelle state=on. Browser-Screenshot: Strich + 'kein Kuerzel D14/18' statt Haken, DE und EN.",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com",
+      "evidence": "Staging: Trip-Mail DE und EN ueber echten Versandweg, staging_mail_pruefen --typ trip Exit 0 (Briefing-Mail-Validator bestanden). Byte-Gleichheit gegen Referenz, SMS/Telegram und Orte-Karte nur im Kern-Test belegt.",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com",
+      "evidence": "Staging: Trip-Mail DE und EN Validator Exit 0. Vergleich Karten-Beispiel E-Mail/Telegram mit Versand-Nacht nur im Kern-Test belegt; Karte zeigt Zeile Tiefsttemperatur Nacht Telegram 'on'.",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-8",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com",
+      "evidence": "Staging: zwei Konten (DE-Pruefkonto, EN-Konto) getrennt gemessen, je eigener Trip und eigene Karte. Fremdzugriff 403/404 nicht auf Staging gemessen, nur im Kern-Test belegt.",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-25T21:59:57.094918+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Karte #3373 auf Staging in DE und EN gemessen (E1-Kopf, N, TH+, Temperatur-SMS gesperrt mit D-Bereich, wind_chill schaltbar); Trip-Mail DE/EN Exit 0; nur-Kern-Belege gekennzeichnet",
+  "scope": "full-stack",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Karte #3373 auf Staging in DE und EN gemessen (E1-Kopf, N, TH+, Temperatur-SMS gesperrt mit D-Bereich, wind_chill schaltbar); Trip-Mail DE/EN Exit 0; nur-Kern-Belege gekennzeichnet",
+      "scope": "full-stack",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-25T21:59:57.094918+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
