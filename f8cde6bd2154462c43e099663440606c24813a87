@@ -1,0 +1,39 @@
+{
+  "verified_commit": "f8cde6bd2154462c43e099663440606c24813a87",
+  "findings": [],
+  "verified_at": "2026-11-25T14:05:03.904531+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: 3/3 ACs gr\u00fcn",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "fix-3301-compare-toter-code": {
+      "verdict": "VERIFIED: 3/3 ACs gr\u00fcn",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-25T14:05:03.904531+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
