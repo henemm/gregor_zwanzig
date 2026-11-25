@@ -393,10 +393,10 @@ class TestCascadeKeepsDerivedDayDirections:
         nachher = json.loads(path.read_text(encoding="utf-8"))["display_config"]
 
         abgeleitet = {*NEW_IDS, "temperature_night", "wind_chill_night"}
+        # #3277: die Kanal-Ebenen sind Altfelder; Python-Speichern verwirft sie.
+        assert "channel_layouts" not in nachher
+        assert "channel_layouts_per_report" not in nachher
         for pfad, liste in (
-            ("channel_layouts.sms", nachher["channel_layouts"]["sms"]),
-            ("channel_layouts_per_report.evening.sms",
-             nachher["channel_layouts_per_report"]["evening"]["sms"]),
             ("metrics", nachher["metrics"]),
         ):
             materialisiert = [m["metric_id"] for m in liste

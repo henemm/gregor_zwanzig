@@ -217,7 +217,9 @@ def trip_modell_als_tabelle(dc, *, outlook_reports: Optional[Sequence[str]] = No
     ist die EINE Zeilenfolge, wenn sie von der Grundauswahl abweicht.
     ``outlook_reports`` (z. B. aus ``multi_day_trend_reports``): Briefings mit
     Ausblick; gesetzt, entsteht immer eine Tabelle.
-    Altfelder bleiben als Beschreibung stehen. Rein."""
+    Seit #3277 sind die Altfelder keine Modellfelder mehr: gelesen werden
+    gewoehnliche Attribute (``WUNSCH_ATTRIBUTE``, ``mit_wunsch``), sie bleiben
+    als Beschreibung stehen. Rein."""
     import dataclasses
 
     listen: dict = {}
@@ -252,5 +254,32 @@ def trip_modell_als_tabelle(dc, *, outlook_reports: Optional[Sequence[str]] = No
             folge = ids
     if not listen and outlook_reports is None:
         return dc
-    return dataclasses.replace(dc, placements=tabelle(
+    neu = dataclasses.replace(dc, placements=tabelle(
         dc, "trip", listen=listen, outlook_reports=outlook_reports, folge=folge))
+    # #3277: die Wunsch-Beschreibung (keine Modellfelder mehr) reist mit, damit
+    # ein zweiter Aufruf (z. B. Formate nach der Auswahl) beide kennt.
+    for name in WUNSCH_ATTRIBUTE:
+        if name in vars(dc):
+            setattr(neu, name, vars(dc)[name])
+    return neu
+
+
+#: #3277: Namen der frueheren Modellfelder, die Tests als WUNSCH-Beschreibung
+#: an ein ``UnifiedWeatherDisplayConfig`` haengen (gewoehnliche Attribute,
+#: keine Datenklassen-Felder). Das Produkt liest sie nicht; wirksam ist allein
+#: die daraus gebaute Tabelle (``trip_modell_als_tabelle``).
+WUNSCH_ATTRIBUTE = ("outlook_metrics", "outlook_metric_formats", "per_channel_layouts")
+
+
+def mit_wunsch(dc, **wunsch):
+    """Kopie von ``dc`` mit Wunsch-Beschreibung (``WUNSCH_ATTRIBUTE``) und der
+    daraus gebauten Tabelle (#3277: ersetzt ``dataclasses.replace`` mit den
+    entfernten Modellfeldern)."""
+    import copy
+
+    unbekannt = set(wunsch) - set(WUNSCH_ATTRIBUTE)
+    assert not unbekannt, f"kein Wunsch-Attribut: {sorted(unbekannt)}"
+    neu = copy.copy(dc)
+    for name, wert in wunsch.items():
+        setattr(neu, name, wert)
+    return trip_modell_als_tabelle(neu)

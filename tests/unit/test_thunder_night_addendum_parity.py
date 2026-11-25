@@ -169,7 +169,6 @@ def _trip(*, show_night_block: bool):
         display_config=display_config,
         report_config=TripReportConfig(
             trip_id="tdd-1651-paritaet",
-            multi_day_trend_reports=["evening"],
             send_email=False, send_sms=False, send_telegram=False,
         ),
     )
@@ -222,7 +221,7 @@ def _run_both_paths(monkeypatch, tmp_path, *, show_night_block: bool):
     recorder = _ForecastRecorder(monkeypatch)
 
     # "morning": Zieltag ist HEUTE, in beiden Pfaden identisch, und der
-    # Mehrtages-Ausblick ist aus (multi_day_trend_reports=["evening"]) --
+    # Mehrtages-Ausblick ist aus (Grundauswahl-Tabelle: nur Abend, #3277) --
     # damit greift in beiden Pfaden derselbe Bauweg.
     scheduler = TripReportSchedulerService(user_id="default")
     # #1724: Zieltag haengt am Trip (dessen Ortszeit) und am Zeitpunkt.

@@ -368,22 +368,6 @@ def _friendly_outlook_text(
     return None if zelle.form == "zahl" else zelle.text
 
 
-def resolve_hourly_metric_formats(stored: object) -> dict[str, bool] | None:
-    """Orte-Stundenverlauf: ``display_config.hourly_metric_formats`` (#3097,
-    ADR-0121 Nachtrag 3b) -> ``{kennung: bool}``; ``None`` = nie eingestellt.
-
-    Nur boolesche Werte zaehlen (wahr = Einfach, ausdruecklich falsch = Roh),
-    und nur fuer Groessen mit zwei Formen an der Stelle ``hourly`` der Quelle
-    ``zwei_formen_stellen`` (#3156): Sonnenstunden (gesperrt) und Windrichtung
-    (immer Kompass) fallen heraus."""
-    from app.metric_catalog import zwei_formen_stellen
-
-    if not isinstance(stored, dict):
-        return None
-    return {k: v for k, v in stored.items()
-            if isinstance(v, bool) and "hourly" in zwei_formen_stellen(k)}
-
-
 def outlook_zellen(
     value: object, column: dict, *, lang: Lang = "de", ampel: dict,
 ) -> dict[str, str]:
@@ -517,7 +501,6 @@ __all__ = [
     "derived_aggregations",
     "outlook_grundauswahl_ids",
     "resolve_outlook_metrics",
-    "resolve_hourly_metric_formats",
     "outlook_columns",
     "format_outlook_value",
     "format_outlook_range_cell",

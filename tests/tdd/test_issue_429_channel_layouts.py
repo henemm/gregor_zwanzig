@@ -125,65 +125,11 @@ def _parse(data: dict[str, Any]):
     return _parse_display_config(data)
 
 
-# ---------------------------------------------------------------------------
-# AC-1: Loader liest `channel_layouts` und befüllt `per_channel_layouts`
-# ---------------------------------------------------------------------------
-
-
-def test_ac1_loader_reads_channel_layouts():
-    """AC-1: Trip-JSON mit channel_layouts → per_channel_layouts ist nicht None."""
-    dc = _parse(_per_channel_trip_data())
-
-    # NEUE API — existiert in der RED-Phase noch nicht.
-    assert hasattr(dc, "per_channel_layouts"), (
-        "UnifiedWeatherDisplayConfig braucht ein per_channel_layouts-Feld (Issue #429)."
-    )
-    assert dc.per_channel_layouts is not None
-    assert "email" in dc.per_channel_layouts
-    assert "telegram" in dc.per_channel_layouts
-
-    email_layout = dc.per_channel_layouts["email"]
-    # Issue #1728 DEC-6b: der Ladepfad haengt fehlende ABGELEITETE Groessen
-    # (Nachtfenster-Skalare + Tagesrichtungen) auch an jede Kanal-Ebene an --
-    # sonst waehlt ein vor #1728 gespeichertes Layout sie stillschweigend ab.
-    # Geprueft wird deshalb die GESPEICHERTE Liste (derived=False) in ihrer
-    # Reihenfolge; die Zusicherung ist unveraendert „das Layout kommt
-    # unverfaelscht und in Reihenfolge aus der Datei".
-    gespeichert = [m for m in email_layout if not m.derived]
-    assert len(gespeichert) == 6, (
-        f"Gespeicherte Kanal-Liste veraendert: "
-        f"{[m.metric_id for m in gespeichert]!r}"
-    )
-    assert gespeichert[0].metric_id == "temperature"
-    assert gespeichert[1].metric_id == "wind_chill"
-    assert gespeichert[0].bucket == "primary"
-    assert gespeichert[5].bucket == "secondary"
-    assert all(m.derived for m in email_layout[6:]), (
-        "Alles hinter der gespeicherten Liste muss abgeleitet sein — sonst "
-        "haengt der Ladepfad echte Nutzerauswahl an."
-    )
-
-
-def test_all_empty_channel_layouts_kept_as_dict_not_none():
-    """Issue #1394 (T4, AC-7): alle Kanal-Listen leer -> per_channel_layouts
-    bleibt ein Dict mit leeren Listen je Kanal, faellt NICHT mehr auf None
-    (globaler Rueckfall) zurueck. Revidiert bewusst die urspruengliche
-    #429-Erwartung (siehe Spec docs/specs/modules/trip_empty_metric_selection.md
-    'Bestandstests, die angepasst werden müssen') -- eine bewusst geleerte
-    Kanal-Konfiguration ist eine Nutzerwahl, kein 'nicht gesetzt'."""
-    data = {
-        "trip_id": "all-empty",
-        "metrics": [
-            {"metric_id": "temperature", "enabled": True, "bucket": "primary", "order": 0},
-        ],
-        "channel_layouts": {"email": [], "telegram": [], "signal": [], "sms": []},
-        "updated_at": "2026-05-28T10:00:00",
-    }
-    dc = _parse(data)
-    assert dc.per_channel_layouts is not None
-    assert dc.per_channel_layouts == {
-        "email": [], "telegram": [], "signal": [], "sms": [],
-    }
+# #3277: ``test_ac1_loader_reads_channel_layouts`` und
+# ``test_all_empty_channel_layouts_kept_as_dict_not_none`` entfallen mit dem
+# Lesen des Altfelds ``channel_layouts`` (Modellfeld ``per_channel_layouts``
+# entfernt, ADR-0124 Nr. 8; Nachweis "wird nicht gelesen":
+# tests/tdd/test_3277_altfelder_entfernen.py AC-3).
 
 
 # ---------------------------------------------------------------------------

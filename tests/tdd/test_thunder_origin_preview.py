@@ -28,12 +28,12 @@ dreimal auf ein gruen getestetes, wirkungsloses Kriterium hereingefallen
 
 DIE BEIDEN BAUWEGE SIND NICHT AUSTAUSCHBAR (Spec „Am Code gemessen" 1).
 Die Vorschau erscheint nur bei ``not outlook_active`` mit
-``outlook_active = show_outlook and bool(multi_day_trend)``:
+``outlook_active = bool(multi_day_trend)`` (Ausblick laut Tabelle):
 
   * Morgen-Standard: kein Trend  ⇒ Vorschau sichtbar ⇒ RUECKFALLPFAD
     (``_build_thunder_forecast``) — der Regelfall, AC-1.
-  * Abend-Standard: Trend + ``show_outlook=True`` ⇒ Vorschau unsichtbar.
-  * Abend mit ``show_outlook=False`` ⇒ Vorschau sichtbar ⇒ PRIMAERPFAD
+  * Abend-Standard: Trend + Ausblick laut Tabelle ⇒ Vorschau unsichtbar.
+  * Abend ohne Ausblick (``ausblick_aus``) ⇒ Vorschau sichtbar ⇒ PRIMAERPFAD
     (``_thunder_entry_from_trend_row``) — AC-2, AC-7, AC-8.
 
 Woran der jeweils gemeinte Bauweg festgemacht ist — strukturell, nicht per
@@ -386,7 +386,7 @@ def _primaer(punkte: list[ForecastDataPoint], *,
     Trend-Zeile stammen.
 
     Gibt Eintrag UND Trend-Zeilen zurueck, weil die Mail beides braucht: die
-    Vorschau erscheint nur bei ``show_outlook=False`` TROTZ vorhandenem Trend.
+    Vorschau erscheint nur ohne Ausblick (``ausblick_aus``) TROTZ vorhandenem Trend.
     """
     zeilen = [_trend_zeile(punkte, report_config=report_config,
                            traeger_verwerfen=traeger_verwerfen)]
@@ -403,20 +403,19 @@ def _primaer(punkte: list[ForecastDataPoint], *,
 
 def _mail(forecast: dict | None, *, trend: list[dict] | None = None,
           report_config: TripReportConfig | None = None,
-          report_type: str = "morning"):
+          report_type: str = "morning", ausblick_aus: bool = False):
     """Das ECHTE Trip-Briefing (HTML + Klartext + SMS + Telegram-Bubbles)
     ueber den produktiven Formatierer — Pruefort = Wirkort.
 
-    #3237: der Mehrtages-Ausblick wird allein ueber die Tabelle "Was steht
-    wo" geschaltet (``placements.outlook_reports``); ``show_outlook`` wirkt
-    nicht mehr. Die Tests beschreiben "Ausblick aus" weiter per
-    ``TripReportConfig(show_outlook=False)`` -- hier wird daraus die Tabelle
-    ohne Briefing mit Ausblick (``outlook_enabled=False``)."""
+    #3237/#3277: der Mehrtages-Ausblick wird allein ueber die Tabelle "Was
+    steht wo" geschaltet (``placements.outlook_reports``); das Altfeld
+    ``show_outlook`` ist entfallen. ``ausblick_aus=True`` = Tabelle ohne
+    Briefing mit Ausblick (``outlook_reports: []``)."""
     from services.placements import placements_aus_grundauswahl
 
     dc = build_default_display_config()
-    if report_config is not None and report_config.show_outlook is False:
-        dc.placements = placements_aus_grundauswahl(dc, "trip", outlook_enabled=False)
+    if ausblick_aus:
+        dc.placements = {**placements_aus_grundauswahl(dc, "trip"), "outlook_reports": []}
     return TripReportFormatter().format_email(
         [_ruhige_etappe()], "Test-Trip", report_type,
         display_config=dc, tz=_TZ,
@@ -532,7 +531,7 @@ def test_ac1_rueckfallpfad_eine_zutat_klartext_und_html():
 
 def test_ac2_primaerpfad_eine_zutat_klartext_und_html():
     """AC-2: Given einen Abend-Bericht mit ausdruecklich ausgeschaltetem
-    Mehrtages-Ausblick (``show_outlook=False``), obwohl ein Mehrtages-Trend
+    Mehrtages-Ausblick (``ausblick_aus``), obwohl ein Mehrtages-Trend
     vorliegt, mit DERSELBEN tragenden Zutat wie in AC-1 / When die
     Trip-Vollmail erzeugt wird / Then zeigt die Gewitter-Vorschau denselben
     Herkunfts-Zusatz — obwohl hier der ANDERE interne Bauweg laeuft.
@@ -549,7 +548,7 @@ def test_ac2_primaerpfad_eine_zutat_klartext_und_html():
     """
     forecast, zeilen = _primaer([_dp(14, cape=1500.0, cin=5.0), _dp(21, lpi=35.0)])
     bericht = _mail(forecast, trend=zeilen, report_type="evening",
-                    report_config=TripReportConfig(show_outlook=False))
+                    report_config=TripReportConfig(), ausblick_aus=True)
     zeile = _beide_fassungen(bericht)
     assert zeile == (
         f"{_DATUM}: ⚡ Gewitter möglich ab 14:00 · CAPE, "
@@ -726,7 +725,7 @@ def test_ac6_kein_gewitter_zeigt_nie_herkunft():
         f"erscheinen, sonst beweist die ruhige Zeile nichts: {laut_r!r}")
 
     # --- PRIMAERPFAD (_thunder_entry_from_trend_row, :2376) ----------------
-    aus = TripReportConfig(show_outlook=False)
+    aus = TripReportConfig()
     forecast, zeilen = _primaer(_kein_gewitter_am_tag(), report_config=aus)
     assert zeilen[0].get("hourly_thunder_signals"), (
         "Fixture-Fehler: die Trend-Zeile MUSS eine Traegerliste fuehren, sonst "
@@ -734,12 +733,12 @@ def test_ac6_kein_gewitter_zeigt_nie_herkunft():
         f"anhaengen und der Test bewacht nichts: {sorted(zeilen[0])!r}")
     _ohne_herkunft(
         _beide_fassungen(_mail(forecast, trend=zeilen, report_type="evening",
-                               report_config=aus)),
+                               report_config=aus, ausblick_aus=True)),
         "Primaerpfad",
     )
     forecast_g, zeilen_g = _primaer(_eine_zutat_14uhr(), report_config=aus)
     laut_p = _beide_fassungen(_mail(forecast_g, trend=zeilen_g,
-                                    report_type="evening", report_config=aus))
+                                    report_type="evening", report_config=aus, ausblick_aus=True))
     assert laut_p == mit, (
         "Gegenprobe Primaerpfad gescheitert: oberhalb NONE MUSS die Herkunft "
         f"auch ueber die Trend-Zeile erscheinen: {laut_p!r}")
@@ -764,14 +763,14 @@ def test_ac7_primaerpfad_abweichendes_fenster():
     Herkunft und Nachtteil MITEINANDER umschalten — ein Test mit
     Standardfenster allein bewiese hier nichts.
     """
-    eng = TripReportConfig(show_outlook=False, day_window_start_hour=6,
+    eng = TripReportConfig(day_window_start_hour=6,
                            day_window_end_hour=14)
     forecast, zeilen = _primaer(
         [_dp(10, dichte=0.1), _dp(18, cape=3000.0, cin=5.0)],
         report_config=eng,
     )
     zeile = _beide_fassungen(_mail(forecast, trend=zeilen, report_type="evening",
-                                   report_config=eng))
+                                   report_config=eng, ausblick_aus=True))
     assert zeile == (
         f"{_DATUM}: ⚡ Starkes Gewitter erwartet ab 10:00 · Blitzdichte, "
         "nachts starkes Gewitter ab 18:00"
@@ -782,13 +781,13 @@ def test_ac7_primaerpfad_abweichendes_fenster():
         "Die Zutat der 18-Uhr-Stunde liegt ausserhalb des konfigurierten "
         f"Fensters und gehoert nicht zur gezeigten Stufe: {zeile!r}")
 
-    weit = TripReportConfig(show_outlook=False)
+    weit = TripReportConfig()
     forecast_w, zeilen_w = _primaer(
         [_dp(10, dichte=0.1), _dp(18, cape=3000.0, cin=5.0)],
         report_config=weit,
     )
     zeile_w = _beide_fassungen(_mail(forecast_w, trend=zeilen_w,
-                                     report_type="evening", report_config=weit))
+                                     report_type="evening", report_config=weit, ausblick_aus=True))
     assert zeile_w == (
         f"{_DATUM}: ⚡ Starkes Gewitter erwartet ab 10:00 · Blitzdichte, CAPE"
     ), (
@@ -816,11 +815,11 @@ def test_ac8_primaerpfad_failsoft_ohne_traegerquelle():
     sehr wohl. Pflicht-Mutation (d) der Spec haengt dem Fail-soft-Zweig eine
     Herkunft aus dem Kalendertags-Maximum an; daran faellt der erste Teil.
     """
-    eng = TripReportConfig(show_outlook=False, day_window_start_hour=6,
+    eng = TripReportConfig(day_window_start_hour=6,
                            day_window_end_hour=14)
     forecast, zeilen = _primaer([_dp(21, cape=3000.0, cin=5.0)], report_config=eng)
     zeile = _beide_fassungen(_mail(forecast, trend=zeilen, report_type="evening",
-                                   report_config=eng))
+                                   report_config=eng, ausblick_aus=True))
     assert zeile == (
         f"{_DATUM}: ⚡ Starkes Gewitter erwartet, "
         "nachts starkes Gewitter ab 21:00"
@@ -837,7 +836,7 @@ def test_ac8_primaerpfad_failsoft_ohne_traegerquelle():
         report_config=eng,
     )
     zeile_g = _beide_fassungen(_mail(forecast_g, trend=zeilen_g,
-                                     report_type="evening", report_config=eng))
+                                     report_type="evening", report_config=eng, ausblick_aus=True))
     assert zeile_g == (
         f"{_DATUM}: ⚡ Starkes Gewitter erwartet ab 10:00 · CAPE, "
         "nachts starkes Gewitter ab 21:00"
@@ -995,14 +994,14 @@ def test_ac11_ohne_traegerinfo_bleibt_byte_identisch():
         "Rueckfallpfad ohne Traegerliste: die Zeile bleibt byte-identisch zu "
         f"heute: {ohne_r!r}")
 
-    aus = TripReportConfig(show_outlook=False)
+    aus = TripReportConfig()
     forecast_p, zeilen_p = _primaer(_eine_zutat_14uhr(), report_config=aus,
                                     traeger_verwerfen=True)
     assert "hourly_thunder_signals" not in zeilen_p[0], (
         "Fixture-Fehler: eine Alt-Zeile darf das S5a-Traegerfeld gar nicht "
         f"fuehren: {sorted(zeilen_p[0])!r}")
     ohne_p = _beide_fassungen(_mail(forecast_p, trend=zeilen_p,
-                                    report_type="evening", report_config=aus))
+                                    report_type="evening", report_config=aus, ausblick_aus=True))
     assert ohne_p == heute, (
         "Primaerpfad ohne Traegerfeld: die Zeile bleibt byte-identisch zu "
         f"heute: {ohne_p!r}")

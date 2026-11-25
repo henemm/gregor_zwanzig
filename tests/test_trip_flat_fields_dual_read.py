@@ -88,14 +88,14 @@ def _trip_dict(**stage_overrides) -> dict:
             "change_threshold_precip_mm": 10.0,
             "wind_exposition_min_elevation_m": None,
             "show_compact_summary": True,
-            "multi_day_trend_reports": ["evening"],
+            # #3277: die Altfelder ``multi_day_trend_reports``/``show_outlook``
+            # sind entfernt; Python-Speichern verwirft sie bewusst (AC-2).
             "show_stage_stats": True,
             "show_quick_take_tags": True,
             "show_stability": True,
             "show_highlights": True,
             "daily_summary_metrics": ["precipitation", "wind"],
             "show_metrics_summary": False,
-            "show_outlook": True,
             "email_format": "full",
             "telegram_style": "rich",
             "show_yesterday_comparison": True,

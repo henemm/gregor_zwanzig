@@ -839,7 +839,6 @@ def render_html(
     show_stage_stats: bool = True,
     show_stability: bool = True,
     sent_at: Optional[datetime] = None,
-    show_outlook: bool = True,
     day_comparison: Optional["DayComparison"] = None,
     stage_total: Optional[int] = None,
     trip_url: Optional[str] = None,
@@ -1196,7 +1195,7 @@ def render_html(
 
     # Issue #1313 (E1): Gewitter-Vorschau entfaellt, wenn der Mehrtages-
     # Ausblick in derselben Mail aktiv ist (gleiche Datenquelle, Dopplung).
-    outlook_active = show_outlook and bool(multi_day_trend) and _outlook_metrics != []
+    outlook_active = bool(multi_day_trend) and _outlook_metrics != []
 
     thunder_html = ""
     if thunder_forecast and not outlook_active:
@@ -1273,7 +1272,7 @@ def render_html(
             )
 
         _outlook_stability_html = ""
-        if show_outlook and show_stability and stability_result is not None:
+        if show_stability and stability_result is not None:
             _outlook_stability_html = render_stability_label_html(stability_result, lang=lang)
 
         # AC-9 (#911), #3155: Eyebrow "3-Tages-Ausblick" über dem Ausblick-Block
@@ -1425,15 +1424,13 @@ def render_html(
             f'{_html.escape(confidence_hint)}</p></div>'
         )
 
-    if show_outlook:
-        stability_html = ""
-        if not multi_day_trend:
-            stability_html = render_stability_label_html(
-                stability_result if show_stability else None, lang=lang,
-            )
-    else:
-        stability_html = ""
-        trend_html = ""
+    # Issue #3277: show_outlook entfallen (war immer an); der Ausblick folgt
+    # allein ``multi_day_trend`` (aus placements.outlook_reports).
+    stability_html = ""
+    if not multi_day_trend:
+        stability_html = render_stability_label_html(
+            stability_result if show_stability else None, lang=lang,
+        )
 
     changes_html = ""
     if changes:

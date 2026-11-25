@@ -345,23 +345,27 @@ def test_outlook_enabled_default_true_end_to_end(compare_env, tmp_path):
 
 
 def test_outlook_enabled_false_suppresses_both_formats(compare_env, tmp_path):
-    """AC-7: Given outlook_enabled=False im aufgeloesten Preset / Then fehlt
-    der Ausblick sowohl in HTML als auch Klartext; Versand- und Vorschau-Pfad
-    reichen denselben Wert durch (Divergenz-Schutz #1297).
+    """AC-7: Given ein Abo ohne Briefing mit Ausblick (Tabelle
+    ``outlook_reports: []``; #3277: das Altfeld ``outlook_enabled`` ist
+    entfallen) / Then fehlt der Ausblick sowohl in HTML als auch Klartext;
+    Versand- und Vorschau-Pfad reichen denselben Wert durch (Divergenz-Schutz
+    #1297).
     """
     from app.loader import get_data_dir, save_location
     from app.user import ComparisonResult
     from output.renderers.comparison import render_compare_email
     from services.report_config_resolver import resolve_compare_render_options
     from tests.helpers.compare_briefings import write_compare_briefings
+    from tests.helpers.tabelle_aus_wunsch import tabelle
 
     user_id = compare_env
     loc = _resolvable_location("loc-b4-off")
-    preset = _preset("cp-b4-off", loc.id, outlook_enabled=False)
+    preset = _preset("cp-b4-off", loc.id, display_config={
+        "placements": tabelle({}, "compare", outlook_reports=[])})
 
     assert resolve_compare_render_options(preset).outlook_enabled is False, (
-        "resolve_compare_render_options soll outlook_enabled=False aus dem "
-        "Preset uebernehmen (AC-7)"
+        "resolve_compare_render_options soll den Ausblick ohne Briefing in "
+        "outlook_reports abschalten (AC-7)"
     )
 
     dispatch_kwargs = _dispatch_kwargs(dict(preset), loc, user_id, tmp_path)

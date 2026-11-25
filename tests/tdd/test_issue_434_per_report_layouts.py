@@ -93,103 +93,36 @@ def _parse(data: dict[str, Any]):
     return _parse_display_config(data)
 
 
-# ---------------------------------------------------------------------------
-# AC-1: Loader liest channel_layouts_per_report und befüllt per_report_layouts
-# ---------------------------------------------------------------------------
-
-
-def test_ac1_loader_reads_channel_layouts_per_report():
-    """AC-1: Trip-JSON mit channel_layouts_per_report → per_report_layouts korrekt befüllt."""
-    dc = _parse(_per_report_trip_data())
-
-    # NEUE API — existiert in der RED-Phase noch nicht.
-    assert hasattr(dc, "per_report_layouts"), (
-        "UnifiedWeatherDisplayConfig braucht ein per_report_layouts-Feld (Issue #434)."
-    )
-    assert dc.per_report_layouts is not None
-
-    assert "morning" in dc.per_report_layouts
-    assert "email" in dc.per_report_layouts["morning"]
-    # Issue #1728 DEC-6b: abgeleitete Groessen werden auch hier angehaengt
-    # (s. test_issue_429_channel_layouts). Geprueft wird die GESPEICHERTE
-    # Liste — die Zusicherung „per-Report-Ebene kommt unverfaelscht und in
-    # Reihenfolge aus der Datei" ist unveraendert.
-    morning_email = [m for m in dc.per_report_layouts["morning"]["email"]
-                     if not m.derived]
-    assert len(morning_email) == 2
-    assert morning_email[0].metric_id == "temperature"
-    assert morning_email[1].metric_id == "precipitation"
-
-    assert "evening" in dc.per_report_layouts
-    assert "email" in dc.per_report_layouts["evening"]
-    evening_email = [m for m in dc.per_report_layouts["evening"]["email"]
-                     if not m.derived]
-    assert len(evening_email) == 3
-    assert evening_email[0].metric_id == "wind"
-    assert evening_email[1].metric_id == "gust"
-    assert evening_email[2].metric_id == "wind_chill"
 
 
 # ---------------------------------------------------------------------------
-# AC-6: Roundtrip — per_channel_layouts + per_report_layouts werden serialisiert
+# #3277: AC-1 (Loader liest channel_layouts_per_report) und AC-6 (Roundtrip
+# der Kanal-/Bericht-Ebenen) entfallen mit dem Lesen und Schreiben dieser
+# Altfelder (ADR-0124 Nr. 8: die Tabelle "Was steht wo" ist die einzige
+# Quelle). Verbleibende Zusicherung: der Bestand laedt fehlerfrei, das Modell
+# traegt die Ebenen nicht, und Serialisieren schreibt sie nicht zurueck.
 # ---------------------------------------------------------------------------
 
 
-def test_ac6_roundtrip_per_channel_and_per_report_layouts():
-    """AC-6: Laden → Trip bauen → _trip_to_dict → _parse → per_report_layouts identisch."""
+def test_3277_bestand_mit_bericht_ebenen_laedt_ohne_altfelder():
     from datetime import date
-    from app.loader import _parse_display_config, _trip_to_dict
-    from app.trip import Trip, Stage, Waypoint, AggregationConfig
+    from app.loader import _trip_to_dict
+    from app.trip import AggregationConfig, Stage, Trip, Waypoint
     from app.profile import ActivityProfile
 
-    # Trip-Objekt mit per_report_layouts aufbauen
-    dc = _parse_display_config(_per_report_trip_data())
-
-    agg = AggregationConfig.for_profile(ActivityProfile.SUMMER_TREKKING)
-    stage = Stage(
-        id="s1", name="Etappe 1",
-        date=date(2026, 7, 1),
-        waypoints=[Waypoint(id="w1", name="Start", lat=42.0, lon=9.0, elevation_m=100)],
-    )
+    dc = _parse(_per_report_trip_data())
+    assert not hasattr(dc, "per_report_layouts")
+    assert not hasattr(dc, "per_channel_layouts")
     trip = Trip(
-        id="test-434-roundtrip",
-        name="Test Trip #434",
-        stages=[stage],
-        aggregation=agg,
+        id="test-434-roundtrip", name="Test Trip #434",
+        stages=[Stage(id="s1", name="Etappe 1", date=date(2026, 7, 1),
+                      waypoints=[Waypoint(id="w1", name="Start", lat=42.0, lon=9.0,
+                                          elevation_m=100)])],
+        aggregation=AggregationConfig.for_profile(ActivityProfile.SUMMER_TREKKING),
         display_config=dc,
     )
-
-    # Serialisieren
-    trip_dict = _trip_to_dict(trip)
-    dc_dict = trip_dict.get("display_config", {})
-
-    # per_channel_layouts muss enthalten sein (latenter Bug aus #429 wird mitgefixt)
-    assert "channel_layouts" in dc_dict, (
-        "per_channel_layouts muss als channel_layouts serialisiert werden "
-        "(latenter Bug seit #429)."
-    )
-
-    # per_report_layouts muss enthalten sein
-    assert "channel_layouts_per_report" in dc_dict, (
-        "per_report_layouts muss als channel_layouts_per_report serialisiert werden."
-    )
-
-    # Roundtrip: reparsen und vergleichen
-    dc2 = _parse_display_config(dc_dict)
-
-    assert dc2.per_report_layouts is not None
-    assert "morning" in dc2.per_report_layouts
-    assert [m.metric_id for m in dc2.per_report_layouts["morning"]["email"]] == (
-        [m.metric_id for m in dc.per_report_layouts["morning"]["email"]]
-    ), "Roundtrip für morning.email muss bit-identisch sein."
-
-    assert "evening" in dc2.per_report_layouts
-    assert [m.metric_id for m in dc2.per_report_layouts["evening"]["email"]] == (
-        [m.metric_id for m in dc.per_report_layouts["evening"]["email"]]
-    ), "Roundtrip für evening.email muss bit-identisch sein."
-
-    # per_channel_layouts Roundtrip
-    assert dc2.per_channel_layouts is not None
-    assert [m.metric_id for m in dc2.per_channel_layouts["email"]] == (
-        [m.metric_id for m in dc.per_channel_layouts["email"]]
-    ), "Roundtrip für per_channel_layouts.email muss bit-identisch sein."
+    dc_dict = _trip_to_dict(trip)["display_config"]
+    assert "channel_layouts" not in dc_dict
+    assert "channel_layouts_per_report" not in dc_dict
+    assert [m.metric_id for m in dc.metrics if not m.derived] == [
+        e["metric_id"] for e in _per_report_trip_data()["metrics"]]

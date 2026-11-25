@@ -65,10 +65,9 @@ def _render(report_type="evening", email_format="full", *, trend=None,
     rc = TripReportConfig(
         trip_id=trip.id,
         email_format=email_format,
-        multi_day_trend_reports=[report_type],
     )
-    # #3237: "Ausblick erscheint im" steht in der Tabelle (``outlook_reports``);
-    # das Altfeld ``multi_day_trend_reports`` bleibt als Beschreibung stehen.
+    # #3237/#3277: "Ausblick erscheint im" steht allein in der Tabelle
+    # (``outlook_reports``); das Altfeld ist entfallen.
     trip.display_config = dataclasses.replace(
         trip.display_config,
         placements=tabelle(trip.display_config, "trip", outlook_reports=[report_type]))

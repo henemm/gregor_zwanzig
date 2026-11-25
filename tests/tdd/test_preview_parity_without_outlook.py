@@ -52,7 +52,7 @@ def _trip_with_a_single_stage():
     """Trip OHNE Folgeetappe: der Ausblick entfaellt regulaer (Klasse A).
 
     ``show_night_block=False`` haelt den Vergleich auf die Ausblick-Frage
-    fokussiert; ``multi_day_trend_reports=["evening"]`` schaltet den Ausblick
+    fokussiert; die Grundauswahl-Tabelle (``outlook_reports`` Abend, #3277) schaltet den Ausblick
     fuer diesen Report-Typ ueberhaupt erst scharf (sonst greift der
     ``show_outlook``-Riegel in den Renderern).
     """
@@ -83,9 +83,9 @@ def _trip_with_a_single_stage():
         updated_at=datetime.now(timezone.utc),
         show_night_block=False,
     )
-    report_config = TripReportConfig(
-        trip_id=_TRIP_ID, multi_day_trend_reports=[_REPORT_TYPE],
-    )
+    # #3277: ohne Tabelle gilt die Grundauswahl-Tabelle (Ausblick im
+    # Abend-Briefing); das Altfeld ``multi_day_trend_reports`` ist entfallen.
+    report_config = TripReportConfig(trip_id=_TRIP_ID)
     return Trip(
         id=_TRIP_ID,
         name="TDD 1486 Ausblick entfaellt",

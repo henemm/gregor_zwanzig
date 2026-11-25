@@ -341,18 +341,18 @@ def _mit_grundauswahl_tabelle(daten: dict) -> dict:
         from services.compare_slot_scheduler import resolve_preset_slots
 
         slots = resolve_preset_slots(daten)
-        surface, outlook_enabled = "compare", daten.get("outlook_enabled")
+        surface = "compare"  # #3277: Altfeld outlook_enabled wirkt nicht mehr
         an = tuple(r for r, ein in (("morning", slots.morning_enabled),
                                     ("evening", slots.evening_enabled)) if ein)
     else:
         from app.loader import load_trip_from_dict
         from services.report_config_resolver import trip_enabled_reports
 
-        surface, outlook_enabled = "trip", None
+        surface = "trip"
         an = trip_enabled_reports(load_trip_from_dict(copy.deepcopy(daten)).report_config)
     dc = daten.setdefault("display_config", {})
     dc["placements"] = placements_aus_grundauswahl(
-        copy.deepcopy(dc), surface, enabled_reports=an, outlook_enabled=outlook_enabled)
+        copy.deepcopy(dc), surface, enabled_reports=an)
     return daten
 
 

@@ -240,39 +240,20 @@ def display_config(*, enabled_ids: Optional[set[str]] = None,
 
 
 def mit_outlook_metrics(dc, outlook_metrics):
-    """Setzt die Vorschau-Auswahl -- mit sprechendem RED-Fehler, solange das
-    Feld in ``UnifiedWeatherDisplayConfig`` fehlt."""
-    from tests.helpers.tabelle_aus_wunsch import trip_modell_als_tabelle
+    """Setzt die Vorschau-Auswahl. #3237: sie wirkt nur ueber die Tabelle
+    "Was steht wo"; #3277: die Auswahl ist kein Modellfeld mehr, sondern
+    Wunsch-Beschreibung (``tabelle_aus_wunsch.mit_wunsch``)."""
+    from tests.helpers.tabelle_aus_wunsch import mit_wunsch
 
-    try:
-        # #3237: die Auswahl wirkt nur ueber die Tabelle "Was steht wo"; das
-        # Altfeld bleibt als Beschreibung stehen.
-        return trip_modell_als_tabelle(dataclasses.replace(dc, outlook_metrics=outlook_metrics))
-    except TypeError as exc:
-        raise AssertionError(
-            "UnifiedWeatherDisplayConfig kennt das Feld 'outlook_metrics' noch "
-            "nicht (#1720 S1, Spec Source: src/app/models.py:774-807). Ohne "
-            "dieses Feld kann eine Vorschau-Auswahl weder gespeichert noch "
-            f"gerendert werden.\nUrsprungsfehler: {exc}"
-        ) from exc
+    return mit_wunsch(dc, outlook_metrics=outlook_metrics)
 
 
 def mit_outlook_metric_formats(dc, formats):
-    """Setzt die Roh/Einfach-Zuordnung des Ausblicks -- mit sprechendem
-    RED-Fehler, solange das Feld in ``UnifiedWeatherDisplayConfig`` fehlt
-    (#2049, Spec Source: src/app/models.py:860)."""
-    from tests.helpers.tabelle_aus_wunsch import trip_modell_als_tabelle
+    """Setzt die Roh/Einfach-Zuordnung des Ausblicks (#2049) ueber die
+    Tabelle (wie ``mit_outlook_metrics``)."""
+    from tests.helpers.tabelle_aus_wunsch import mit_wunsch
 
-    try:
-        return trip_modell_als_tabelle(dataclasses.replace(dc, outlook_metric_formats=formats))
-    except TypeError as exc:
-        raise AssertionError(
-            "UnifiedWeatherDisplayConfig kennt das Feld "
-            "'outlook_metric_formats' noch nicht (#2049, Spec Source: "
-            "src/app/models.py:860, Sibling von 'outlook_metrics'). Ohne "
-            "dieses Feld kann eine Roh/Einfach-Zuordnung je Ausblick-Groesse "
-            f"weder gespeichert noch gerendert werden.\nUrsprungsfehler: {exc}"
-        ) from exc
+    return mit_wunsch(dc, outlook_metric_formats=formats)
 
 
 def _segment_weather():

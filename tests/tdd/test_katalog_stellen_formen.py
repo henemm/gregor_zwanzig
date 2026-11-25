@@ -80,18 +80,9 @@ def test_email_spalte_gleich_format_modes():
     assert alt - telegram == {"thunder"}, "Gewitter: zwei Formen nur in der E-Mail"
 
 
-def test_stundenverlauf_filtert_nach_stundenverlauf_spalte():
-    """Renderer folgt der Quelle (#3156): der Orte-Stundenverlauf uebernimmt
-    ein gespeichertes Einfach nur fuer Metriken mit zwei Formen an der Stelle
-    ``hourly``; Sonnenstunden (gesperrt) und Windrichtung (immer Kompass)
-    fallen heraus."""
-    from output.renderers.compare_outlook_metric_ids import resolve_hourly_metric_formats
-
-    k = _katalog()
-    gespeichert = {m: True for m in ALLE_IDS}
-    aus = resolve_hourly_metric_formats(gespeichert)
-    assert set(aus) == {m for m in ALLE_IDS if "hourly" in k.zwei_formen_stellen(m)}
-    assert not {"sunshine", "wind_direction"} & set(aus)
+# #3277: ``test_stundenverlauf_filtert_nach_stundenverlauf_spalte`` entfaellt
+# mit der geloeschten Funktion ``resolve_hourly_metric_formats`` (Lesen des
+# Altfelds ``display_config.hourly_metric_formats``, ohne Produktionsaufrufer).
 
 
 @pytest.mark.parametrize("metric_id", ALLE_IDS)

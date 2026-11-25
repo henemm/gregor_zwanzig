@@ -229,6 +229,9 @@ def sende_orte_mail(preset_json: dict, *, uid: Optional[str] = None,
     # #3237: die Einstellung des Falls steht in der Tabelle (Altfelder wirken nicht).
     preset_json = orte_wunsch_als_tabelle(preset_json)
     pfad = preset_ablegen(uid, preset_json)
+    # #3277: der Versand speichert den Status ueber Python und verwirft dabei
+    # die Altfelder; das Orakel liest den abgelegten Stand VOR dem Versand.
+    roh = json.loads(pfad.read_text(encoding="utf-8"))
     gesendet: list[dict] = []
     telegram: list[str] = []
     versatz = _VERSATZ[briefing]
@@ -250,7 +253,7 @@ def sende_orte_mail(preset_json: dict, *, uid: Optional[str] = None,
     assert len(gesendet) == 1, f"Vorbedingung: genau eine Mail erwartet, {len(gesendet)} gesendet"
     assert len(telegram) <= 1, f"Vorbedingung: hoechstens eine Telegram-Sendung, {len(telegram)}"
     m = gesendet[0]
-    return OrteMail(uid, json.loads(pfad.read_text(encoding="utf-8")), m["subject"],
+    return OrteMail(uid, roh, m["subject"],
                     m["html"], m["plain"], list(empfaenger),
                     telegram[0] if telegram else None)
 

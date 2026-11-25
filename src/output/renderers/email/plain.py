@@ -173,7 +173,6 @@ def render_plain(
     stability_result: Optional["StabilityResult"] = None,
     show_stage_stats: bool = True,
     show_stability: bool = True,
-    show_outlook: bool = True,
     day_comparison: Optional["DayComparison"] = None,
     trip_metrics_altbestand: bool = True,
     undelivered: Optional[list] = None,
@@ -271,8 +270,7 @@ def render_plain(
         lines.append("")
 
     # Issue #122 / F12: Stabilitäts-Label (vor dem Konfidenz-Hinweis).
-    # Issue #721: show_outlook gates the entire outlook block (stability + trend).
-    if show_outlook and stability_result is not None and show_stability:
+    if stability_result is not None and show_stability:
         # Issue #2665: dieselben Schluessel wie HTML (``mail.stabilitaet.*``).
         # Unbekanntes Label: KeyError wie bisher (HTML-Zweig ebenso).
         _key = {"STABIL": "stabil", "WECHSELHAFT": "wechselhaft",
@@ -352,7 +350,7 @@ def render_plain(
 
     # Issue #1313 (E1): Gewitter-Vorschau entfaellt, wenn der Mehrtages-
     # Ausblick in derselben Mail aktiv ist (gleiche Datenquelle, Dopplung).
-    outlook_active = show_outlook and bool(multi_day_trend) and _outlook_metrics != []
+    outlook_active = bool(multi_day_trend) and _outlook_metrics != []
 
     if thunder_forecast and not outlook_active:
         # Fix #1482: Ueberschrift nur mit Eintraegen -- dieselbe Absicherung,
@@ -381,11 +379,7 @@ def render_plain(
         lines.append(render_outlook_plain(multi_day_trend, show_acc=True,
                                           metrics=_outlook_metrics, lang=lang,
                                           ampel=ampel))
-    elif (
-        show_outlook
-        and outlook_state is not None
-        and outlook_state != _OutlookState.FOUND
-    ):
+    elif outlook_state is not None and outlook_state != _OutlookState.FOUND:
         # Fix #1486: der Ausblick entfaellt nicht mehr wortlos, er sagt warum.
         # Aufrufer ohne `outlook_state` (Default None) bleiben unveraendert.
         lines.append(f"━━ {t('mail.ausblick.name', lang)} ━━")

@@ -171,12 +171,9 @@ def test_ac1_outlook_reports_nach_vorbelegung(surface, enabled, erwartet):
     assert placements["outlook_reports"] == erwartet
 
 
-def test_ac2_orte_ausblick_ausgeschaltet_ergibt_leere_briefings():
-    """Orte mit ``outlook_enabled=false`` bei der Anlage: Ausblick aus (``[]``),
-    wie bisher die Anlage-Marke der Go-Anlage (#3155)."""
-    placements = _quelle()(_orte_dc(), "compare", enabled_reports=("morning",),
-                           outlook_enabled=False)
-    assert placements["outlook_reports"] == []
+# #3277: ``test_ac2_orte_ausblick_ausgeschaltet_ergibt_leere_briefings``
+# entfaellt mit dem Parameter ``outlook_enabled`` der Grundauswahl-Tabelle
+# (ADR-0124 Nr. 6; die Anlage-Marke bleibt, siehe Tests darueber).
 
 
 @pytest.mark.parametrize("surface,dc_fn,alt", [
@@ -322,19 +319,19 @@ def test_ac1_ac2_ac10_erstanlage_liefert_volle_tabelle_je_nutzer(placements_clie
 
 
 @pytest.mark.parametrize("outlook_enabled,ausblick", [
-    (False, []),
+    (False, ["morning"]),
     (True, ["morning"]),
 ])
 def test_ac2_erstanlage_vergleich_folgt_ausblick_schalter(
         placements_client, outlook_enabled, ausblick):
-    """GIVEN ein Orts-Vergleich-Abo (nur Morgen) mit ``outlook_enabled``
-    WHEN die Go-Anlage den Kern-Endpunkt ``.../placements/erstanlage`` fragt
-    THEN traegt die Tabelle ``outlook_reports == []`` bei ausgeschaltetem
-    Ausblick, sonst die Vorbelegung ``["morning"]``.
+    """GIVEN ein Orts-Vergleich-Abo (nur Morgen) mit dem Altfeld
+    ``outlook_enabled`` WHEN die Go-Anlage den Kern-Endpunkt
+    ``.../placements/erstanlage`` fragt THEN traegt die Tabelle die
+    Vorbelegung ``["morning"]``.
 
-    Adversary Lauf 4 F001: der Schalter muss vom Abo bis in die Antwort
-    durchgereicht werden (``outlook_enabled=None`` hiesse Vorbelegung).
-    Trip-Abos kennen keinen eigenen Ausblick-Schalter."""
+    #3277 (ADR-0124 Nr. 6): das Altfeld wirkt nicht mehr, in keiner Richtung
+    (Prod: alle Werte ``true``, keine Bedienflaeche). Vorher (#3237, Adversary
+    Lauf 4 F001) lieferte ``false`` hier ``[]``."""
     _orte(NUTZER_A, "aus3237", morgen=True, abend=False,
           extra={"outlook_enabled": outlook_enabled})
     antwort = placements_client.get("/api/briefings/aus3237/placements/erstanlage",
