@@ -37,9 +37,15 @@ Grundlage ist Issue #2988 (Eintrag P10 der Paritäts-Bestandsaufnahme #1986). An
 
 ## Estimated Scope
 
-- **LoC:** ca. +350/-220 Code, vier Scheiben je höchstens 250 LoC Code (Tests, Doku, Fixtures zählen nicht)
+- **LoC:** ca. 690 geänderte Zeilen Code (Summe der vier Scheiben, geschätzt), je Scheibe höchstens 250 (Tests, Doku, Fixtures zählen nicht)
 - **Files:** 14 Produktdateien, ca. 35 Testdateien (31 Frontend-Testdateien nutzen den Spiegel, 23 davon `standAusAbo`)
 - **Effort:** high (vier Lieferungen nacheinander; ein Issue, Issue-Schluss erst nach S4)
+
+## Scope
+
+- **Enthalten:** Auflösung (Vorlage + Abweichungen → Ampel, Vorlagen-ID des Reiters, Gültigkeit, Altbestand eigener Vorlagen) nur noch in Python; Reiter Wetter, Anlegen und Übersichten lesen das Ergebnis; Spiegel im Frontend gelöscht; Paritätsfixtures werden Regressionsfixtures. Dateien je Scheibe: Tabellen unter „Scheiben".
+- **Bewusst im Frontend:** das Editier-Delta (Zähler, kleinste Speichermenge). Grund: AC-28 der freigegebenen Reiter-Spec `feat_2794_s3a_teil3_wetter.md` verlangt den Zähler sofort nach jeder Eingabe, und diese Rechnung hat in Python kein Gegenstück, ist also nach dem Umbau keine Doppelung mehr.
+- **Nicht enthalten:** siehe Known Limitations.
 
 ## Dependencies
 
@@ -49,7 +55,7 @@ Grundlage ist Issue #2988 (Eintrag P10 der Paritäts-Bestandsaufnahme #1986). An
 | `app/ampel_templates.py` (`AMPEL_TEMPLATES`, `DEFAULT_TEMPLATE`) | module | Vorlagen, Rückfall „allgemein" |
 | `GET /api/templates`, `/api/metrics`, `/api/metric-presets`, `/api/compare/metrics` | endpoint | liefern weiter Vorlagen, Katalog, eigene Vorlagen (unverändert) |
 | `internal/handler/placements.go` (`BriefingPlacementsPreviewHandler`), `preview_proxy.go` (`forwardPreview`) | module | Vorbild: Anmeldung, 256 KiB, Objektprüfung, `user_id` aus der Anmeldung |
-| `api/routers/placements.py`, `services/send_outcomes.py` (`error_body`) | module | Vorbild Router und Fehlerform |
+| `api/routers/placements.py`, `src/services/send_outcomes.py` (`error_body`) | module | Vorbild Router und Fehlerform |
 | `docs/reference/api_contract.md`, `tests/test_api_contract_drift.py` | doc/test | Vertrag, Drift-Wächter |
 | `tests/unit/ein_katalog_ausnahmen.json` | ratchet | sinkt in S4 |
 | ADR-0106, ADR-0126, ADR-0127 | adr | tragen die Entscheidung (siehe ADR-Abschnitt) |
@@ -224,6 +230,13 @@ Teilweise abgelöst wird nur der Teil „Python-Referenz und Frontend-Spiegel li
 - **AC-19:** Given ein Abo mit Abweichungen / When E-Mail, Telegram, SMS und Premium-SMS gerendert werden / Then ist `resolve_ampel` für die 7 Vorlagen und die Fixture-Abos gleich dem Stand vor dem Umbau, und die bestehenden Renderer-Kerntests der vier Kanäle bleiben unverändert grün.
   - Scheibe: S2, bleibt bis S4
   - Test: Kern `test_2988_ampel_aufloesung.py` (Vergleich gegen eingefrorene Referenz) plus unveränderte Renderer-Tests.
+
+## Definition of Done
+
+- AC-1 bis AC-19 grün (Kern ohne Netz, Live-Teile gegen Staging), vier Lieferungen S1 bis S4 eingespielt.
+- Auflösung existiert nur in Python; im Frontend ist kein Spiegel mehr vorhanden, die Ratsche ist gesunken.
+- Speicher-Payloads und Bestandsdaten unverändert; Renderer-Kerntests der vier Kanäle unverändert grün.
+- Produktion aktualisiert, Selftest Exit 0; Folge-Issue für `vorlageIdFuer` angelegt; Issue-Schluss erst nach S4.
 
 ## Known Limitations
 
