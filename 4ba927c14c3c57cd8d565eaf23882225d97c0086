@@ -1,0 +1,96 @@
+{
+  "verified_commit": "4ba927c14c3c57cd8d565eaf23882225d97c0086",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/trips/ID?tab=wetter und /compare/ID?tab=wetter:AC-1",
+      "evidence": "rework-2988-zaehler.spec.ts auf Staging 4ba927c14 beide Kontexte gruen: sieben Bedienungen, Zaehler binnen 2 s, 0 Aufrufe der Aufloesung; Zusatzlauf: beim Oeffnen genau 1 POST, beim Grenzaendern/Speichern/eigene Vorlage keine weitere",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "/trips/ID?tab=wetter und /compare/ID?tab=wetter:AC-9",
+      "evidence": "rework-2988-laden.spec.ts AC-9 route+vergleich gruen: Vorlage, 3 Abweichungen, Grenzen 41/61/77, Alarmstufe Rot, Gewitterfarbe, eigene Vorlagen (mit Ampel und Altformat) in der Liste und uebernehmbar",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-10",
+      "status": "PASS",
+      "url": "/trips/ID?tab=wetter und /compare/ID?tab=wetter:AC-10",
+      "evidence": "Netzabbruch und HTTP 503 je Kontext gruen: Erneut laden sichtbar, kein PUT/POST, Stand unveraendert, nach Erneut laden bereit; DE und EN (Profilsprache) Fehlerzustand und Wiederherstellung gesehen, EN: The metrics could not be loaded ... Load again",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-11",
+      "status": "PASS",
+      "url": "/trips/ID?tab=wetter und /compare/ID?tab=wetter:AC-11",
+      "evidence": "je Kontext mit Abweichungen, Altformat ohne Ampel, nie eingestellt: Oeffnen und 2 s Warten schreibt nichts, Stand vorher gleich nachher",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-12",
+      "status": "PASS",
+      "url": "/compare/ID?tab=wetter:AC-12",
+      "evidence": "zwei Sitzungen: 412, Konflikt-Anzeige data-state=conflict, fremde Alarmstufe sichtbar, genau ein Nachladen der Aufloesung; scheitert die Aufloesung bleibt Eingabe stehen und Server behaelt fremde Ampel; Zusatz: Eingabe mit gleichem Wert 0 PUTs, Server {wind:{alarm_ab:red}} unveraendert; mit Aenderung PUT 412, Server unveraendert",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-13",
+      "status": "PASS",
+      "url": "/trips/ID?tab=wetter und /compare/ID?tab=wetter:AC-13",
+      "evidence": "eigene Vorlage speichern: Option steht sofort in der Liste, 0 zusaetzliche Aufloesungs-POSTs binnen 1,5 s, Uebernahme schreibt gust yellow 43 in den Abo-Stand (beide Kontexte)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-14",
+      "status": "PASS",
+      "url": "/trips/ID?tab=wetter und /compare/ID?tab=wetter:AC-14",
+      "evidence": "Speichern im Reiter: Trip weather-config {ampel,metrics,placements} plus Trip-PUT {official_alerts_enabled,official_warnings,radar_alert_enabled,report_config}; Vergleich PUT mit display_config; fremde Felder und report_config (Tagesfenster 6-20, fremder Schluessel) gleich vorher, nichts verloren",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-15",
+      "status": "PASS",
+      "url": "/trips/new und /compare/new:AC-15",
+      "evidence": "rework-2988-anlegen.spec.ts route+vergleich gruen: Vorlage waehlen, Grenze aendern, anlegen, Abo traegt Ampel und Auswahl, vor dem Anlegen kein Speichern",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-25T21:41:35.276600+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: 8/8 ACs gruen (S3 Issue 2988: AC-1, AC-9 bis AC-15), frontend-only, DE und EN",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: 8/8 ACs gruen (S3 Issue 2988: AC-1, AC-9 bis AC-15), frontend-only, DE und EN",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-25T21:41:35.276600+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
