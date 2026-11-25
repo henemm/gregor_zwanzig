@@ -1,7 +1,4 @@
 {
-	"layout.tab.eyebrow": "Channel · selection & cutoff",
-	"layout.kappung.schnittlinie_route": "↓ from position {platz} only in the {kanal} summary, not in the hourly table",
-	"layout.kappung.schnittlinie_vergleich": "↓ from position {platz} in a second {kanal} line per location",
 	"layout.kappung.zeigt_alles": "{kanal} shows everything · no limit",
 	"layout.kappung.zeichen": "{kanal}: no grid, no table — plain text, {zeichen} characters",
 	"layout.kappung.zeilen_umbruch": "{kanal}: {anzahl} {subjekt} · all in the message, from position {platz} in a second line per location",

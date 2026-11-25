@@ -186,7 +186,9 @@ const NEU_IN_F6 = [
 const NEU_IN_F5 = F5_ANKER.map(([k]) => k);
 /** #2657 (F8) Layout-Reiter, Korridor-Editor, Ausgabe-Layout, Mail-Inhalt, GPX: Bereich layout.json. */
 const NEU_IN_F8 = [
-	'layout.tab.eyebrow', 'layout.kappung.schnittlinie_route', 'layout.kappung.schnittlinie_vergleich', 'layout.kappung.zeigt_alles', 'layout.kappung.zeichen',
+	// #3366: layout.tab.eyebrow und layout.kappung.schnittlinie_route/_vergleich entfallen mit
+	// LayoutTab/LTCutLine (Waisen, geloescht).
+	'layout.kappung.zeigt_alles', 'layout.kappung.zeichen',
 	'layout.kappung.anzahl_passt', 'layout.kappung.anzahl_zu_breit', 'layout.kappung.spalten_passt.one',
 	'layout.kappung.spalten_passt.other', 'layout.kappung.spalten_zu_breit.one',
 	'layout.kappung.spalten_zu_breit.other', 'layout.hinweis.kanal_abwahl',

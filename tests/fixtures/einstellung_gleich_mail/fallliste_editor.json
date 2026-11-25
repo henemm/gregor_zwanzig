@@ -719,7 +719,7 @@
    "status": "gruen",
    "seite": "frontend",
    "zustand": "hinweis_grundauswahl_leer",
-   "verweis": "#3020 R1b: GrundauswahlLeerHinweis (Waise, #3366) ersetzt durch den Leertext der geteilten Karte (ADR-0097); der Zweig ist kontextfrei, der Test laeuft mit context vergleich"
+   "verweis": "#3020 R1b: GrundauswahlLeerHinweis (Waise, Loeschung mit #3383) ersetzt durch den Leertext der geteilten Karte (ADR-0097); der Zweig ist kontextfrei, der Test laeuft mit context vergleich"
   },
   {
    "id": "D-orte_vergleichstabelle-hinweis_grundauswahl_leer-frontend",
@@ -1883,7 +1883,7 @@
    "ac": "AC-4 (#3020)",
    "befund": "F3",
    "status": "gruen",
-   "verweis": "ADR-0124 Nr. 3: beim Trip zeigt die Telegram-Spalte der Karte ab der achten Metrik „nur Tageswert“ (Telegram-Schnittlinie, ersetzt E-R8-F3-* mit der Alt-LTCutLine); Browser-Fall #3375"
+   "verweis": "ADR-0124 Nr. 3: beim Trip zeigt die Telegram-Spalte der Karte ab der achten Metrik „nur Tageswert“ (Telegram-Schnittlinie, ersetzt E-R8-F3-* mit der Alt-LTCutLine, die mit #3366 geloescht ist); Browser-Fall #3375"
   }
  ]
 }

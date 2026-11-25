@@ -592,10 +592,6 @@ const BESTAND: string[] = [
 	'lib/components/shared/hub-kopf/HubKopf.svelte',
 	'lib/components/shared/hub-reiterflaeche/HubReiterflaeche.svelte',
 	'lib/components/shared/hub-uebersicht/HubUebersicht.svelte',
-	'lib/components/shared/layout-tab/LTCapNote.svelte',
-	'lib/components/shared/layout-tab/LTChannelPicker.svelte',
-	'lib/components/shared/layout-tab/LTCutLine.svelte',
-	'lib/components/shared/layout-tab/LayoutTab.svelte',
 	'lib/components/shared/status-schild/StatusSchild.svelte',
 	'lib/components/shared/subscription-header/SubscriptionHeader.svelte',
 	'lib/components/shared/versand-tab/VTBriefingChannels.svelte',
@@ -723,7 +719,8 @@ const BESTAND: string[] = [
 // MetricGroup, HorizonChip entfernt).
 // #3047 Runde 7 (p11): AlarmeScheduleTab.svelte entfernt (→ 197).
 // #3190: SavePresetDialog.svelte nach SEITEN_SCOPE (Inline-Karte aus Bausteinen) (→ 196).
-const BESTAND_OBERGRENZE = 188; // #3297/#3020: sieben Alt-Editor-Bausteine geloescht (vorher 195, #3276)
+// #3366: Layout-Reiter LTCapNote, LTChannelPicker, LTCutLine, LayoutTab geloescht (Waisen) (188 → 184).
+const BESTAND_OBERGRENZE = 184; // #3297/#3020: sieben Alt-Editor-Bausteine geloescht (vorher 195, #3276)
 
 /** Token-Verstöße je Baustein-Datei (Ist-Stand 2026-11-10, ADR-0112). Darf nur sinken. */
 const AUSNAHMEN: Ausnahmen = {
