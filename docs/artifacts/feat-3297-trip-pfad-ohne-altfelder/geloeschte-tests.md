@@ -89,6 +89,12 @@ Spalte 2 nennt die gelöschte Produktionsdatei, die der Test importierte, render
 | `trip-detail/__tests__/trip_python_skip_next_ohne_412.test.ts` | trip-detail/BriefingScheduleTab.svelte |
 | `trip-detail/__tests__/trip_versand_reiter_ohne_dauer_keepalive.test.ts` | trip-detail/BriefingScheduleTab.svelte |
 
+Zusätzlich gelöschte Testfunktion (Python, Staging-Schicht):
+`tests/tdd/test_issue_934_wizard_schedule.py::TestBug1KeineDoppelteUI::test_bundle_metriken_tab_hat_keine_zeitplan_render_calls`
+→ shared/WeatherMetricsTab.svelte (suchte im Staging-Bundle das Fenster um dessen `createMode`-Prop;
+die Nachfolge WetterTabInhalt hat keinen createMode-Zweig). Die DOM-Tests derselben Datei
+(Anlegen-Wizard, Bearbeiten-Reiter ohne „Morgen-Report") bleiben.
+
 Zusätzlich gelöscht: die Golden-Dateien `tests/golden/f5_wertebereiche/*` (14 Dateien, Render-Ausgabe
 von `f5Pruefstand.ts` = WeatherMetricsTab).
 
