@@ -1,0 +1,220 @@
+frontend/e2e/hub-versand-speichert-selbst.spec.ts: vorher 9 main 9 S1 9; entfallen 0, neu 0, in S1 noch 0
+frontend/e2e/hub-wetter-metriken-speichert-selbst.spec.ts: vorher 7 main 7 S1 7; entfallen 0, neu 0, in S1 noch 0
+frontend/e2e/issue-619-mail-elements-ui.spec.ts: vorher 7 main 7 S1 7; entfallen 0, neu 0, in S1 noch 0
+frontend/e2e/issue-723-email-tab-eindampfen.spec.ts: vorher 5 main 5 S1 5; entfallen 2, neu 2, in S1 noch 2
+    - [S1] AC-3: Trip ohne show_outlook → Ausblick-Checkbox ist angehakt
+    - [S1] AC-5: show_outlook abwählen wird gespeichert und überlebt Reload
+frontend/e2e/trip-anlegen-zustellung-3332.spec.ts: vorher 4 main 4 S1 4; entfallen 0, neu 0, in S1 noch 0
+frontend/src/lib/__tests__/elementliste_uebersicht_2969.test.ts: vorher 5 main 5 S1 5; entfallen 0, neu 0, in S1 noch 0
+frontend/src/lib/__tests__/ink4_waechter.test.ts: vorher 7 main 7 S1 7; entfallen 0, neu 0, in S1 noch 0
+frontend/src/lib/__tests__/trip_nach_412_folgeschreiben_traegt_altes_if_match.test.ts: vorher 10 main 9 S1 10; entfallen 1, neu 0, in S1 noch 0
+    - Reiter B (Wetter-Metriken): beide PUTs bzw. der erste tragen das alte If-Match, der Server schreibt nichts
+alerts-tab/issue_850_alert_metrics_stale.test.ts: vorher 3 main 1 S1 3; entfallen 2, neu 0, in S1 noch 2
+    - [S1] AC-1: WeatherMetricsTab nutzt PUT-Response, nicht manuell konstruierten Payload
+    - [S1] AC-1: WeatherMetricsTab nutzt api.put<Trip> Rückgabewert für onTripUpdate
+compare/__tests__/compare_layout_tab_dissolution.test.ts: vorher 13 main 11 S1 13; entfallen 2, neu 0, in S1 noch 2
+    - [S1] #3276: WeatherMetricsTab mountet keine CompareHourlyLayoutControls mehr
+    - [S1] #3276: weder Vergleich noch Trip fuehren den Abschnitt 'stundenverlauf'
+compare/__tests__/fix_3061_hub_hydrierer.test.ts: vorher 9 main 8 S1 9; entfallen 1, neu 0, in S1 noch 1
+    - [S1] AC-5: Trip-Einbettung reicht weiter buckets.primary, nie null als Altbestand-Signal
+compare/__tests__/totcode_rueckbau_speicherweg.test.ts: vorher 6 main 5 S1 6; entfallen 1, neu 0, in S1 noch 1
+    - [S1] WeatherMetricsTab.svelte enthaelt die tautologische Kontext-Disjunktion nicht mehr
+compare/__tests__/versand_panel_ohne_wrapper_div.test.ts: vorher 9 main 6 S1 9; entfallen 3, neu 0, in S1 noch 3
+    - [S1] AC-12: BriefingScheduleTab mountet VersandTab weiterhin im route-Kontext mit bind:reportConfig
+    - [S1] AC-7: im Baustein bekommt der VersandTab im Abschnitt #versand die Prop activation
+    - [S1] Baustein: VersandTab sitzt im Abschnitt <section id="versand">, dort ohne Sammel-Ereignisse
+compare/feat3276_vergleich_ohne_altfelder.test.ts: vorher 11 main 9 S1 11; entfallen 2, neu 0, in S1 noch 2
+    - [S1] Trip unveraendert: Ausblick bleibt im Bereich Zustellung (Rueckbau Trip ist #3297)
+    - [S1] Vergleich: weder im Bereich Zustellung noch in der Gesamtsicht
+organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts: vorher 12 main 10 S1 12; entfallen 2, neu 0, in S1 noch 2
+    - [S1] mit grundauswahl und offener Karte: Karte nach der Profil-Karte und vor der Grundauswahl
+    - [S1] sections: Profil-Karte (grundauswahl) nur in „alles“/„wetter“, nicht in „zustellung“
+shared/__tests__/ac2_endbilanz_deckt_alle_47_ab.test.ts: vorher 5 main 5 S1 5; entfallen 2, neu 2, in S1 noch 2
+    - [S1] aus der Ratsche extrahiert: genau 24 Eintraege (Positiv-Kontrolle des Regex)
+    - [S1] aus der Spec extrahiert: FACHLICH 12, DARSTELLUNG 3, HERKUNFT 9, Summe 24
+shared/__tests__/anlegeseiten_ohne_versand_panel_3333.test.ts: vorher 3 main 2 S1 3; entfallen 1, neu 0, in S1 noch 1
+    - [S1] Vakuum-Schutz: die Panel-Datei besteht bis zum Rückbau (#3020, #3036)
+shared/__tests__/compareMetricOrder.test.ts: vorher 9 main 6 S1 9; entfallen 3, neu 0, in S1 noch 3
+    - [S1] AC-1: sms_schwellen/report_config bleiben route-exklusiv
+    - [S1] AC-1: vergleich zeigt den geteilten Reihenfolge-Abschnitt (layout_kanal)
+    - [S1] AC-9: route-Kontext (Regressionsschutz Trip, tagesfenster seit #2931 entfernt)
+shared/__tests__/context_herkunft_zweige_eingefroren.test.ts: vorher 6 main 6 S1 6; entfallen 0, neu 0, in S1 noch 0
+shared/__tests__/endbilanz_summenzeile_stimmt.test.ts: vorher 2 main 2 S1 2; entfallen 2, neu 2, in S1 noch 2
+    - [S1] Messaufbau: jede Tabelle hat so viele Einträge, wie ihre Überschrift nennt (HERKUNFT 9 seit #2794 Teil-PR 4a)
+    - [S1] die Summenzeile nennt 9 HERKUNFT und als Gesamtzahl die Summe der Tabellenzeilen (= EINGEFROREN_SOLL_ANZAHL)
+shared/__tests__/infobox_nur_beim_anlegen.test.ts: vorher 14 main 14 S1 14; entfallen 0, neu 0, in S1 noch 0
+shared/__tests__/kanal_abwahl_hinweis.test.ts: vorher 10 main 1 S1 10; entfallen 9, neu 0, in S1 noch 9
+    - [S1] AC-1/AC-3: Hinweis erscheint auch im Kanal ${kanal} (leere Aus-Gruppe)
+    - [S1] AC-1: Ortsvergleich-Kanal-Block (vergleich-Zweig) trägt showAbwahlHinweis
+    - [S1] AC-2: Trip-Kanal-Block (route-Zweig) trägt showAbwahlHinweis
+    - [S1] AC-3/AC-6: offColumns OHNE showAbwahlHinweis (Ausblick) zeigt keinen Hinweis, Aus-Gruppe bleibt
+    - [S1] AC-3: ${label} trägt showAbwahlHinweis NICHT
+    - [S1] AC-3: leere Aus-Gruppe zeigt den Hinweis trotzdem
+    - [S1] AC-4: globale Grundauswahl-Ansicht (ohne offColumns) hat keinen Hinweis
+    - [S1] AC-5: ohne offColumns bleibt der Hinweis auch mit showAbwahlHinweis=true aus
+    - [S1] AC-7: befüllte Aus-Gruppe: Hinweis NACH den Aus-Zeilen, Aus-Zeile bleibt
+shared/__tests__/mail_inhalt_konstanten.test.ts: vorher 3 main 3 S1 3; entfallen 1, neu 1, in S1 noch 1
+    - [S1] CONTENT_MODULE_DESCRIPTIONS erklaert die Bausteine inkl. show_outlook
+shared/__tests__/mail_inhalt_rueckbau_waechter.test.ts: vorher 5 main 3 S1 5; entfallen 2, neu 0, in S1 noch 2
+    - [S1] MailInhaltCard_liegt_in_shared_und_nirgends_sonst
+    - [S1] ortsvergleich_quellcode_mountet_keine_mail_inhalt_karte
+shared/__tests__/mail_inhalt_zustand.test.ts: vorher 16 main 7 S1 16; entfallen 9, neu 0, in S1 noch 9
+    - [S1] effect_weist_reportConfig_den_payload_zu__kein_void
+    - [S1] eigene_Werte_sind_der_State_gleichen_Namens__kein_Literal_kein_anderer_Identifier
+    - [S1] eigene_hat_exakt_die_Felder_von_ladeMailZustand
+    - [S1] onMount_hat_guard_if_nicht_reportConfig_return_vor_dem_restore
+    - [S1] onMount_ruft_ladeMailZustand_auf
+    - [S1] onMount_uebergibt_den_blob_originalReportConfig_an_ladeMailZustand
+    - [S1] onMount_weist_JEDEM_Feld_von_ladeMailZustand_seinen_State_aus_z_zu
+    - [S1] snapshot_ist_originalReportConfig_und_live_ist_untrack_reportConfig
+    - [S1] startzustand_nutzt_ladeMailZustand_per_untrack
+shared/__tests__/officialAlertLegend.test.ts: vorher 13 main 2 S1 13; entfallen 11, neu 0, in S1 noch 11
+    - [S1] Der Schalter „Amtliche Warnungen" bleibt in BEIDEN Kontexten (Non-Regression)
+    - [S1] Der neue Ladepfad ist idempotent (Guard `!smsSymbols`), keine Endlosschleife
+    - [S1] Die 9 Kuerzel und der `!`-Hinweis liegen vollstaendig hinter dieser Bedingung
+    - [S1] Die Legende erklärt den `!`-Marker
+    - [S1] Die Legende existiert als eigene Bedienstelle im geteilten Snippet
+    - [S1] Die Legende haengt an KEINER Bedingung ueber `context` mehr
+    - [S1] Die Legende ordnet L/M/H den Warnfarben gelb/orange/rot zu
+    - [S1] Die Legende wird aus Daten gerendert, nicht als starrer Text
+    - [S1] Es gibt einen $effect-Block, dessen Bedingung an context === "vergleich" haengt und smsSymbols laedt
+    - [S1] Jede SMS-schwellenwertfähige Metrik zeigt ihr SMS-Kürzel
+    - [S1] loadSmsSymbols() selbst ist idempotent und wird auch von load() (Route) genutzt
+shared/__tests__/official_alerts_single_control_ui.test.ts: vorher 4 main 3 S1 4; entfallen 1, neu 0, in S1 noch 1
+    - [S1] WeatherMetricsTab (Trip-Inhalt) zeigt „Amtliche Warnungen im Bericht"
+shared/__tests__/reiter_sprunglinks_nur_neue_kennungen.test.ts: vorher 22 main 21 S1 22; entfallen 1, neu 0, in S1 noch 1
+    - [S1] handleOpenStages ruft onJump('etappen')
+shared/__tests__/reportConfigDirty.test.ts: vorher 5 main 5 S1 5; entfallen 0, neu 0, in S1 noch 0
+shared/__tests__/s3a2794_eine_wmt_instanz.test.ts: vorher 23 main 20 S1 23; entfallen 3, neu 0, in S1 noch 3
+    - [S1] s3a2794_panel_reicht_bereich_an_wmt_durch
+    - [S1] s3a2794_panel_versand_abschnitt_nie_im_bereich_wetter
+    - [S1] s3a2794_wmt_leitet_abschnitte_aus_context_und_bereich_ab
+shared/__tests__/s3a2794_zustellung_ziel_und_bereich.test.ts: vorher 3 main 1 S1 3; entfallen 2, neu 0, in S1 noch 2
+    - [S1] s3a2794_f008_panel_reicht_bereich_an_weathermetricstab_durch
+    - [S1] s3a2794_f008_zustellungtab_ohne_panel_und_filter_wirkt
+shared/__tests__/s3b2795_zustellung_profil_einmal.test.ts: vorher 3 main 2 S1 3; entfallen 1, neu 0, in S1 noch 1
+    - [S1] f006_weathermetricstab_laedt_nur_ohne_profil_prop_selbst
+shared/__tests__/versand_vergleich_premium_sms.test.ts: vorher 10 main 8 S1 10; entfallen 2, neu 0, in S1 noch 2
+    - [S1] Props destrukturieren sendPremiumSms und onSendPremiumSmsChange
+    - [S1] der vergleich-Zweig reicht onPremiumSmsChange an VTBriefingChannels durch (Freischalt-Gate)
+shared/layout-tab/__tests__/layout_korridor_sprache.test.ts: vorher 17 main 16 S1 20; entfallen 3, neu 2, in S1 noch 3
+    - [S1] Bausteine: Schnittlinie, Ausblick, Mail-Inhalt, Leer- und Ohne-Detail-Zustand englisch
+    - [S1] Mail-Inhalt: Bausteintexte der Konstantenliste je Sprache (alle sieben)
+    - [S1] Spaltenkoepfe (col_label) und Kurzformen bleiben byte-gleich zur Eingabe
+shared/versand-tab/__tests__/channel_checkbox_dedupe_render.test.ts: vorher 11 main 9 S1 11; entfallen 2, neu 0, in S1 noch 2
+    - [S1] nur_premium_sms_aktiv_zeigt_keinen_leerzustand_in_beiden_fassungen
+    - [S1] zeitplan_optionen_erscheinen_wenn_nur_premium_sms_aktiv_ist
+shared/versand-tab/__tests__/merge_report_config_read_modify_write.test.ts: vorher 20 main 12 S1 20; entfallen 8, neu 0, in S1 noch 8
+    - [S1] Mail-Format ueberlebt einen nachfolgenden Kanal-Klick in VersandTab
+    - [S1] MailInhaltCard schreibt kein telegram_style (Schalter gehoert VersandTab)
+    - [S1] MailInhaltCard setzt showSchedule und showChannels literal auf false
+    - [S1] MailInhaltCard.svelte liest reportConfig live (untrack)
+    - [S1] MailInhaltCard: kein Feld steht gleichzeitig in eigene und einer bedingten Gruppe
+    - [S1] VersandTab-Pfad: Mail-Inhalt-Aenderung des Nachbarn bleibt erhalten
+    - [S1] VersandTab.svelte liest reportConfig live (untrack), nicht den Schnappschuss
+    - [S1] der Schluessel-Extraktor findet die Gruppen wirklich (Positivkontrolle)
+shared/versand-tab/__tests__/naechstes_briefing_baustein_render.test.ts: vorher 7 main 5 S1 7; entfallen 2, neu 0, in S1 noch 2
+    - [S1] VersandTab context=${context}: genau eine Zeile vt-next-briefing, ohne geladenen Wert keine Zeit
+    - [S1] bestehende Versand-testids bleiben erhalten (Stichprobe)
+shared/versand-tab/__tests__/naechstes_briefing_verdrahtung.test.ts: vorher 13 main 9 S1 13; entfallen 4, neu 0, in S1 noch 4
+    - [S1] Anlege-Seite (Trip ohne saveController): keine id ⇒ kein Abruf
+    - [S1] Trip: fragt trip_id ab und zeigt .trips[id]
+    - [S1] Vergleich: fragt preset_id ab und zeigt .compare[id]
+    - [S1] neues savedAt ⇒ neue Quelle; ungespeicherte Zeitplan-Eingaben ändern die Quelle nicht
+shared/versand-tab/__tests__/telegram_unterzeile_render.test.ts: vorher 4 main 2 S1 4; entfallen 2, neu 0, in S1 noch 2
+    - [S1] kurzform -> Unterzeile verweist auf SMS-Auswahl, KEIN zweiter Schalter
+    - [S1] rich bzw. ohne Angabe -> Layout · N Spalten
+shared/versand-tab/__tests__/versand_tab_sprache.test.ts: vorher 18 main 18 S1 21; entfallen 0, neu 0, in S1 noch 0
+shared/versand-tab/__tests__/vt_schedule_plan_hour_step.test.ts: vorher 6 main 5 S1 6; entfallen 1, neu 0, in S1 noch 1
+    - [S1] VersandTab.svelte nutzt dieselbe VTSchedulePlan-Instanz fuer route UND vergleich (kein Duplikat)
+shared/weather-metrics-tab/__tests__/daywindowcard_rueckbau_waechter.test.ts: vorher 10 main 5 S1 10; entfallen 5, neu 0, in S1 noch 5
+    - [S1] abschnittsliste_enthaelt_kein_tagesfenster__route_und_vergleich_alle_bereiche
+    - [S1] keine_prop_onDayWindowChange_und_kein_aufruf
+    - [S1] prop_bleibt__${name}
+    - [S1] props_interface_gefunden
+    - [S1] ssr_markup_ohne_tagesfenster_und_ohne_dwc__${ctx}
+shared/weather-metrics-tab/__tests__/thunderThresholdLevels.test.ts: vorher 11 main 10 S1 11; entfallen 1, neu 0, in S1 noch 1
+    - [S1] # doc-compliance-test: das alte hart codierte Level-Literal steht nicht mehr in WeatherMetricsTab.svelte
+shared/weather-metrics-tab/__tests__/vorlage_speichern_karte_3190.test.ts: vorher 13 main 11 S1 13; entfallen 2, neu 0, in S1 noch 2
+    - [S1] WeatherMetricsTab Karte zu: aria-expanded=false
+    - [S1] WeatherMetricsTab verdrahtet Auslöser und Karte: aria-controls = id der Karte, aria-expanded=true
+shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts: vorher 14 main 14 S1 14; entfallen 0, neu 0, in S1 noch 0
+shared/wetter-tab/__tests__/ampelSchreiben.test.ts: vorher 18 main 18 S1 18; entfallen 0, neu 0, in S1 noch 0
+shared/wetter-tab/__tests__/f004_trip_tagesfenster_lesequelle.test.ts: vorher 4 main 4 S1 4; entfallen 0, neu 0, in S1 noch 0
+shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts: vorher 11 main 11 S1 11; entfallen 0, neu 0, in S1 noch 0
+shared/wetter-tab/__tests__/fixloop3_c1_svelte_proxy_klon.test.ts: vorher 7 main 6 S1 7; entfallen 1, neu 0, in S1 noch 1
+    - [S1] Reiter Wetter in der Zustellung (Teil 2): ampelBeimAnwenden mit Proxy-Vorlage
+shared/wetter-tab/__tests__/fixloop6_trip_wieder_hinzu_hinten.test.ts: vorher 5 main 5 S1 5; entfallen 0, neu 0, in S1 noch 0
+shared/wetter-tab/__tests__/s3a2794_teil4a_umzug_waechter.test.ts: vorher 10 main 10 S1 10; entfallen 0, neu 0, in S1 noch 0
+shared/zustellung-tab/__tests__/kanalStilSpeicherung.test.ts: vorher 5 main 5 S1 5; entfallen 2, neu 2, in S1 noch 2
+    - [S1] f004_trip_nach_server_merge_bleiben_fremdfelder_und_der_trend_kommt_wieder
+    - [S1] f004_trip_report_config_mit_trend_liste_ohne_fremde_schluessel
+shared/zustellung-tab/__tests__/p12_zustellung_gleich_ausgabe.test.ts: vorher 5 main 4 S1 5; entfallen 1, neu 0, in S1 noch 1
+    - [S1] tl3_kurzstil_gleich_telegram_${id}
+trip-detail/__tests__/tempo_fixloop4_3196.test.ts: vorher 8 main 5 S1 8; entfallen 3, neu 0, in S1 noch 3
+    - [S1] Anlegen mit ungesichertem Stand (isDirty): Metrikwahl bleibt
+    - [S1] Bearbeiten (createMode false), Trip mit tempo Rad: Metrikwahl bleibt, kein Speicher-Anstoss
+    - [S1] Positivkontrolle Anlegen (createMode, sauber): Vorlage radtour wird angewendet
+trip-detail/__tests__/tempo_verdrahtung_3196_fixloop2.test.ts: vorher 10 main 8 S1 10; entfallen 2, neu 0, in S1 noch 2
+    - [S1] ${f} ⇒ ${vorlage}
+    - [S1] Kette Anlegen: Wahl MTB in der Karte ⇒ stubTrip ⇒ Vorlage radtour
+trip-detail/__tests__/trip_hub_sprache.test.ts: vorher 21 main 21 S1 24; entfallen 0, neu 0, in S1 noch 0
+trip-detail/__tests__/trip_konflikt_schreibt_seitenstand_fort.test.ts: vorher 7 main 5 S1 8; entfallen 2, neu 0, in S1 noch 0
+    - Wetter-Metriken (Katalog): display_config-Teil UND report_config-Teil
+    - Wetter-Metriken (nur Inhalt/Tagesfenster)
+trip-detail/__tests__/trip_mehrreiter_nach_412_kein_verlust.test.ts: vorher 4 main 4 S1 4; entfallen 2, neu 2, in S1 noch 0
+    - B = Wetter-Metriken: Server-`metrics` bleibt die Fremdaenderung, B-PUT traegt If-Match und bekommt 412
+    - frischer Stand: Wetter-Metriken-Reiter speichert, der Server-Stand aendert sich
+trip-detail/__tests__/trip_night_block_schalter_nutzlast.test.ts: vorher 7 main 1 S1 7; entfallen 6, neu 0, in S1 noch 6
+    - [S1] Alt-Trip: Schalter steht auf an (Standard true)
+    - [S1] Alt-Trip: andere Metrik speichern sendet show_night_block NICHT
+    - [S1] Nutzer legt den Schalter auf aus: /weather-config traegt show_night_block=false
+    - [S1] Trip mit gespeichertem Wert: der Wert wird beim Speichern mitgegeben
+    - [S1] Versand-Reiter sendet show_night_block nie
+    - [S1] onToggleNightBlock setzt Geste + Sende-Merker: /weather-config traegt show_night_block=false
+trip-detail/__tests__/trip_reiter_nutzlast_nur_eigene_felder.test.ts: vorher 12 main 8 S1 18; entfallen 4, neu 0, in S1 noch 0
+    - Metriken speichern: /weather-config ohne metric_alert_levels und Fremdschluessel
+    - Metriken speichern: Trip-PUT = { official_alerts_enabled, report_config(nur Inhalt/Tagesfenster) }
+    - Tagesfenster/Inhalt (reportConfig-only-Pfad): nur Inhalt/Tagesfenster-Schluessel
+    - Versandzeit aendern: Rumpf = { report_config } mit genau den Versand-Schluesseln
+trip-detail/__tests__/trip_reiter_roundtrip_jedes_feld.test.ts: vorher 26 main 13 S1 27; entfallen 13, neu 0, in S1 noch 4
+    - Amtliche Warnungen im Bericht AUS (official_alerts_enabled=false)
+    - Ausblick-Formate: Auswahl und Leerung
+    - [S1] Ausblick: Auswahl und Loeschfall (leer)
+    - E-Mail-Inhalt (alle sieben Schluessel, je ein Wert ungleich dem Seed) und Tagesfenster
+    - [S1] Kanaele: alle vier, auch das Abschalten (false)
+    - Kanal-Layout Telegram: eigener Eintrag, Bestand der anderen Kanaele bleibt
+    - Kanal-Layout/Telegram-Kurzform
+    - [S1] Loeschfall: ALLE Metriken abgewaehlt — keine aktive Metrik auf dem Server
+    - Metrik-Auswahl: zwei Metriken aktiv
+    - Telegram-Stil und Mehrtages-Trend-Schalter
+    - Voreinstellung (preset_name)
+    - [S1] Zeiten, Slots und Hauptschalter
+    - der Versand-Reiter beruehrt weder Tagesfenster noch E-Mail-Inhalt auf dem Server
+trip-detail/__tests__/trip_retry_adoption_schutz.test.ts: vorher 4 main 4 S1 4; entfallen 1, neu 1, in S1 noch 0
+    - Nutzer tippt im Versand-Reiter, waehrend 'Nochmal speichern' laeuft ⇒ kein 'wiederholt', beide Eingaben landen auf dem Server
+trip-detail/__tests__/trip_retry_fehlerpfade_kein_verlust.test.ts: vorher 19 main 17 S1 19; entfallen 2, neu 0, in S1 noch 2
+    - [S1] F501 Teil-Erfolg: ein NIE gespeicherter, veralteter Reiter bekommt danach 412 — Fremdaenderung bleibt, Eingabe nicht still geschrieben
+    - [S1] outlook_metrics === null ⇒ kein outlook_metrics-Schluessel in irgendeinem PUT-Rumpf
+trip-detail/__tests__/trip_retry_nach_reiterwechsel.test.ts: vorher 3 main 3 S1 3; entfallen 0, neu 0, in S1 noch 0
+trip-detail/__tests__/trip_retry_reiterwechsel_eingabe_bleibt.test.ts: vorher 4 main 3 S1 4; entfallen 1, neu 0, in S1 noch 0
+    - Versand: der zurueckgekehrte Reiter zeigt die erste Eingabe; zweite Aenderung ⇒ beide auf dem Server
+trip-new/__tests__/standardwerte_payload_paritaet_trip.test.ts: vorher 17 main 12 S1 17; entfallen 6, neu 1, in S1 noch 6
+    - [S1] #3155 AC-7 (F001): Anlage beide Briefings -> nur Morgen, verkettet (${fall}) -> ["morning"]
+    - [S1] #3155 AC-7: Morgen- und Abend-Briefing an -> 3-Tages-Ausblick nur abends (multi_day_trend_reports ["evening"])
+    - [S1] #3155 AC-7: nur Abend-Briefing an -> ["evening"]
+    - [S1] #3155 AC-7: nur Morgen-Briefing an -> 3-Tages-Ausblick im Morgen-Briefing (["morning"])
+    - [S1] #3155 AC-7: vorhandener Wert gewinnt (${JSON.stringify(vorhanden)})
+    - [S1] #3155: keine Trend-Felder der entfallenen Karte im neuen report_config
+trip-new/__tests__/trip_anlegen_zustellung_payload_3332.test.ts: vorher 13 main 13 S1 13; entfallen 0, neu 0, in S1 noch 0
+trip-new/__tests__/trip_anlegen_zustellung_verdrahtung_3332.test.ts: vorher 11 main 11 S1 11; entfallen 0, neu 0, in S1 noch 0
+frontend/src/lib/i18n/__tests__/deutsch_unveraendert.test.ts: vorher 5 main 5 S1 5; entfallen 0, neu 0, in S1 noch 0
+frontend/src/lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts: vorher 34 main 34 S1 34; entfallen 0, neu 0, in S1 noch 0
+frontend/src/lib/i18n/__tests__/reaktivitaet_waechter.test.ts: vorher 8 main 8 S1 8; entfallen 1, neu 1, in S1 noch 1
+    - [S1] Messaufbau F8: ohne die $locale-Lesung waeren drei Ableitungen/Ausdruecke gemeldet
+frontend/src/lib/issue_568_home_redesign.test.ts: vorher 14 main 16 S1 14; entfallen 0, neu 2, in S1 noch 0
+frontend/src/lib/utils/__tests__/report_slot_aktiv.test.ts: vorher 12 main 11 S1 12; entfallen 1, neu 0, in S1 noch 1
+    - [S1] VersandTab(route) — ${f.name}
+frontend/src/routes/_home/__tests__/home_hero_paritaet.test.ts: vorher 9 main 8 S1 9; entfallen 1, neu 0, in S1 noch 1
+    - [S1] OutlookLayoutControls liegt in shared/
+entfallen gesamt 145
