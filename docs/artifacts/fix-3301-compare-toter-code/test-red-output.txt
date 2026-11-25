@@ -1,0 +1,79 @@
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/__tests__/compare_toter_code_3301.test.ts
+
+TAP version 13
+# Subtest: \#3301 AC-1: compareHourlyMetricDefs.ts gelöscht, kein Produktionsimport
+    # Subtest: gelöscht: lib/components/compare/compareHourlyMetricDefs.ts
+    not ok 1 - gelöscht: lib/components/compare/compareHourlyMetricDefs.ts
+      ---
+      duration_ms: 1.103014
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/compare_toter_code_3301.test.ts:98:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/compare/compareHourlyMetricDefs.ts existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/compare_toter_code_3301.test.ts:99:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: keine Produktionsdatei importiert compareHourlyMetricDefs (statisch, Barrel-Export, dynamisch)
+    ok 2 - keine Produktionsdatei importiert compareHourlyMetricDefs (statisch, Barrel-Export, dynamisch)
+      ---
+      duration_ms: 38.90717
+      type: 'test'
+      ...
+    1..2
+not ok 1 - \#3301 AC-1: compareHourlyMetricDefs.ts gelöscht, kein Produktionsimport
+  ---
+  duration_ms: 40.733934
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/compare_toter_code_3301.test.ts:97:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3301 AC-2: Anlegeseite Ortsvergleich ohne Kanal-Layout-Karte
+    # Subtest: Importkette ist auflösbar und nicht trivial
+    ok 1 - Importkette ist auflösbar und nicht trivial
+      ---
+      duration_ms: 17.423729
+      type: 'test'
+      ...
+    # Subtest: keine Datei der Importkette bindet WeatherMetricsTab oder layout_kanal ein (ohne Kommentare)
+    ok 2 - keine Datei der Importkette bindet WeatherMetricsTab oder layout_kanal ein (ohne Kommentare)
+      ---
+      duration_ms: 32.842802
+      type: 'test'
+      ...
+    1..2
+ok 2 - \#3301 AC-2: Anlegeseite Ortsvergleich ohne Kanal-Layout-Karte
+  ---
+  duration_ms: 50.431191
+  type: 'suite'
+  ...
+1..2
+# tests 4
+# suites 2
+# pass 3
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 225.262515
