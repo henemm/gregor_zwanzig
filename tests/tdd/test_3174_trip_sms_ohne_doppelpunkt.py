@@ -130,7 +130,8 @@ def test_ac5_karte_ordnet_werte_trotz_tokenartigem_etappennamen(client):
     antwort = _ok(client, "t-3174", "route")
     versand = _trip_versand_sms(NUTZER_A, "t-3174")
 
-    assert versand.startswith("W99 "), versand
+    # #3373: der Kopf ist die nummerierte Etappe (``Etappe 1: W99`` -> ``E1``).
+    assert versand.startswith("E1 "), versand
     assert antwort["sms_example"]["text"] == versand
     token_teil = versand.split(" ")[1:]
     zeilen = {z["metric_id"]: z["cells"]["sms"] for z in antwort["rows"]}

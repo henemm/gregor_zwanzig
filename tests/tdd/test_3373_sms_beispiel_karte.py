@@ -202,6 +202,183 @@ def test_ac3_th_plus_aus_dem_folgetag_gewitter_wie_im_versand(client):
     assert ThunderLevel.MED.value[0] in _token(versand, "TH+")[0]
 
 
+def test_ac3_herausgeloeste_ableitung_gleich_scheduler_ableitung():
+    """Die netzfreie Ableitung (``gewitter_aus_trend``), die die Karte nutzt,
+    liefert fuer dieselbe Eingabe dieselben ``+1``/``+2``-Eintraege wie die
+    Gewitter-Vorschau des Versands (``_build_thunder_forecast_from_trend_or_fetch``);
+    alle Offsets liegen im Trend, also entsteht kein Abruf."""
+    from datetime import datetime, timedelta, timezone
+
+    from app.ampel import resolve_ampel
+    from app.loader import get_data_root, load_trip
+    from output.renderers.email.outlook import build_outlook_row
+    from services import placements_beispiel as pb
+    from services.trip_report_scheduler import TripReportSchedulerService
+    from services.weather_metrics import summarize_points
+
+    kennung = "t-3373-ac3-direkt"
+    _trip(NUTZER_A, kennung, grund=["thunder", "wind"])
+    trip = load_trip(kennung, data_dir=get_data_root(), user_id=NUTZER_A)
+    zeilen = [{**build_outlook_row(summarize_points(p), p, wd, pb.ZONE,
+                                   trip_display_config=trip.display_config,
+                                   report_type="evening", context="route",
+                                   ampel=resolve_ampel(trip)),
+               "date": pb.TAG + timedelta(days=i + 1)}
+              for i, (wd, p) in enumerate(pb.ausblick_tage())]
+    svc = TripReportSchedulerService(user_id=NUTZER_A)
+    nacht = _beispiel_nacht()
+
+    herausgeloest, fehlt = svc.gewitter_aus_trend(
+        trip, pb.TAG, tz=pb.ZONE, multi_day_trend=zeilen, night_weather=nacht)
+    versand = svc._build_thunder_forecast_from_trend_or_fetch(
+        trip, pb.TAG, now_utc=datetime(2026, 7, 14, 4, 0, tzinfo=timezone.utc),
+        tz=pb.ZONE, multi_day_trend=zeilen, night_weather=nacht)
+
+    assert fehlt == set()
+    assert set(herausgeloest) == {"+1", "+2"}
+    assert herausgeloest == versand
+
+
+def _nacht_mit_gewitter_um_2():
+    """Beispiel-Nacht, in der am Folgetag um 02 Uhr ein Gewitter (MED) steht;
+    die Trend-Zeile des Folgetags hat dort keins (``_gewitter`` nur 14-17)."""
+    import dataclasses
+    from datetime import timedelta
+
+    from app.models import NormalizedTimeseries, ThunderLevel
+    from services import placements_beispiel as pb
+    from utils.timezone import local_dt
+
+    folgetag = pb.TAG + timedelta(days=1)
+    nacht = _beispiel_nacht()
+    daten = [dataclasses.replace(p, thunder_level=ThunderLevel.MED)
+             if local_dt(p.ts, pb.ZONE).date() == folgetag and local_dt(p.ts, pb.ZONE).hour == 2
+             else p for p in nacht.data]
+    return NormalizedTimeseries(meta=nacht.meta, data=daten)
+
+
+def _gewitter_versand(svc, trip, zeilen, nacht):
+    from datetime import datetime, timezone
+
+    from services import placements_beispiel as pb
+
+    return svc._build_thunder_forecast_from_trend_or_fetch(
+        trip, pb.TAG, now_utc=datetime(2026, 7, 14, 4, 0, tzinfo=timezone.utc),
+        tz=pb.ZONE, multi_day_trend=zeilen, night_weather=nacht)
+
+
+def _trend_mit_datum(trip):
+    from datetime import timedelta
+
+    from app.ampel import resolve_ampel
+    from output.renderers.email.outlook import build_outlook_row
+    from services import placements_beispiel as pb
+    from services.weather_metrics import summarize_points
+
+    return [{**build_outlook_row(summarize_points(p), p, wd, pb.ZONE,
+                                 trip_display_config=trip.display_config,
+                                 report_type="evening", context="route",
+                                 ampel=resolve_ampel(trip)),
+             "date": pb.TAG + timedelta(days=i + 1)}
+            for i, (wd, p) in enumerate(pb.ausblick_tage())]
+
+
+def test_ac6_nacht_gewitter_ergaenzt_nur_den_folgetag_im_versand():
+    """F002 (Fix-Loop 1): Die Nachtreihe ist allein fuer ``+1`` die Gegenquelle
+    der Stunden 00-06 (#1651). Ein Nacht-Gewitter um 02 Uhr, das die Trend-
+    Zeile nicht kennt, erscheint im Gewitter-Satz des Folgetags (Versand-
+    Ableitung), ``+2`` bleibt unberuehrt."""
+    from app.loader import get_data_root, load_trip
+    from services.trip_report_scheduler import TripReportSchedulerService
+
+    kennung = "t-3373-nacht-gewitter"
+    _trip(NUTZER_A, kennung, grund=["thunder", "wind"])
+    trip = load_trip(kennung, data_dir=get_data_root(), user_id=NUTZER_A)
+    zeilen = _trend_mit_datum(trip)
+    svc = TripReportSchedulerService(user_id=NUTZER_A)
+
+    ruhig = _gewitter_versand(svc, trip, zeilen, _beispiel_nacht())
+    gewitter = _gewitter_versand(svc, trip, zeilen, _nacht_mit_gewitter_um_2())
+
+    assert "02:00" not in ruhig["+1"]["text"], ruhig["+1"]["text"]
+    assert "02:00" in gewitter["+1"]["text"], (
+        f"Nacht-Gewitter fehlt im Folgetag-Satz: {gewitter['+1']['text']!r}")
+    assert gewitter["+2"] == ruhig["+2"], "die Nachtreihe darf +2 nicht beruehren"
+
+
+def test_ac6_rueckfall_abruf_fuer_fehlende_trend_zeilen_mit_nachtreihe():
+    """F003 (Fix-Loop 1): Fehlen die Trend-Zeilen, holt der Versand die Tage
+    nach (``_collect_future_stage_weather``, hier eine Test-Unterklasse mit
+    festen Daten statt Netz), uebernimmt ``+1``/``+2`` aus dem Abruf und reicht
+    die Nachtreihe an diese Ableitung durch (Nacht-Gewitter im ``+1``-Satz)."""
+    import dataclasses
+    from datetime import timedelta
+
+    from app.loader import get_data_root, load_trip
+    from app.models import NormalizedTimeseries, ThunderLevel
+    from services import placements_beispiel as pb
+    from services.trip_report_scheduler import TripReportSchedulerService
+
+    gewuenscht: list = []
+
+    class _FesterAbruf(TripReportSchedulerService):
+        def _collect_future_stage_weather(self, trip, target_date, now_utc, wanted_dates=None):
+            gewuenscht.append(set(wanted_dates or ()))
+            seg = pb.trip_segmente()[0]
+            punkte = (pb.tagespunkte(pb.TAG + timedelta(days=1))
+                      + pb.tagespunkte(pb.TAG + timedelta(days=2)))
+            return [dataclasses.replace(
+                seg, timeseries=NormalizedTimeseries(meta=seg.timeseries.meta, data=punkte))]
+
+    kennung = "t-3373-rueckfall"
+    _trip(NUTZER_A, kennung, grund=["thunder", "wind"])
+    trip = load_trip(kennung, data_dir=get_data_root(), user_id=NUTZER_A)
+    svc = _FesterAbruf(user_id=NUTZER_A)
+
+    ruhig = _gewitter_versand(svc, trip, [], _beispiel_nacht())
+    gewitter = _gewitter_versand(svc, trip, [], _nacht_mit_gewitter_um_2())
+
+    assert gewuenscht and gewuenscht[0] == {pb.TAG + timedelta(days=1), pb.TAG + timedelta(days=2)}
+    assert set(ruhig) >= {"+1", "+2"}, ruhig
+    assert ruhig["+1"]["level"] == ruhig["+2"]["level"] == ThunderLevel.MED
+    assert "02:00" not in ruhig["+1"]["text"]
+    assert "02:00" in gewitter["+1"]["text"], (
+        f"Nachtreihe kommt im Rueckfall nicht an: {gewitter['+1']['text']!r}")
+
+
+def test_ac3_gewitter_saetze_in_der_sprache_der_karte_wie_versand_en():
+    """F005 (Fix-Loop 2): Die Gewitter-Ableitung des Beispiels spricht die
+    Sprache der Karte. Englischer Nutzer: Beispiel-Ableitung (``_trip_gewitter``
+    mit ``lang="en"``) und ``nur_ableitung("en")`` sind gleich der Versand-
+    Ableitung seines Schedulers (Sprache aus ``user.json``) und englisch."""
+    from app.loader import get_data_root, load_trip
+    from services import placements_beispiel as pb
+    from services.placements_view_service import _trip_gewitter
+    from services.trip_report_scheduler import TripReportSchedulerService
+
+    nutzer = "p3373-en"
+    profil = Path(get_data_root()) / "users" / nutzer / "user.json"
+    profil.parent.mkdir(parents=True, exist_ok=True)
+    profil.write_text(json.dumps({"id": nutzer, "language": "en"}), encoding="utf-8")
+    kennung = "t-3373-en"
+    _trip(nutzer, kennung, grund=["thunder", "wind"])
+    trip = load_trip(kennung, data_dir=get_data_root(), user_id=nutzer)
+    zeilen = _trend_mit_datum(trip)
+    nacht = _nacht_mit_gewitter_um_2()
+
+    versand_en = _gewitter_versand(TripReportSchedulerService(user_id=nutzer), trip, zeilen, nacht)
+    karte_en = _trip_gewitter(trip, zeilen, nacht, "en")
+    karte_de = _trip_gewitter(trip, zeilen, nacht, "de")
+    direkt_en, _fehlt = TripReportSchedulerService.nur_ableitung("en").gewitter_aus_trend(
+        trip, pb.TAG, tz=pb.ZONE, multi_day_trend=zeilen, night_weather=nacht)
+
+    assert karte_en == versand_en == direkt_en
+    for key in ("+1", "+2"):
+        assert karte_en[key]["text"] != karte_de[key]["text"], (key, karte_en[key]["text"])
+        assert "Gewitter" not in karte_en[key]["text"], karte_en[key]["text"]
+        assert "Gewitter" in karte_de[key]["text"], karte_de[key]["text"]
+
+
 # ---------------------------------------------------------------------------
 # AC-4: zeichengleich, Laenge, "passt nicht mehr"
 # ---------------------------------------------------------------------------

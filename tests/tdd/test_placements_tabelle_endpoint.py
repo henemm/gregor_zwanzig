@@ -881,7 +881,8 @@ def test_t7_antwort_haengt_nicht_am_tag_des_abrufs(client, kind, kennung):
 
 #: Fingerabdruck der Beispieldaten je ``VERSION``. Wer die Daten aendert,
 #: erhoeht ``placements_beispiel.VERSION`` und traegt den neuen Wert ein.
-BEISPIEL_FINGERABDRUCK = {1: "234803e3fa81a6a02011d175f952d8b5f1c01df3a76eb97843034afc3adec366"}
+#: #3373: VERSION 2 = Nacht am Ziel dazu (Fingerabdruck schliesst sie ein).
+BEISPIEL_FINGERABDRUCK = {2: "b2ac5cb70c220142ec4130ccb3a6467ef909f6c8a47f2c4947032318d6a72b07"}
 
 
 def _beispiel_fingerabdruck() -> str:
@@ -897,7 +898,8 @@ def _beispiel_fingerabdruck() -> str:
     def _roh(o):
         return dataclasses.asdict(o) if dataclasses.is_dataclass(o) else str(o)
 
-    daten = [pb.trip_segmente(), pb.ausblick_tage(), pb.orte_ergebnis(orte), str(pb.ZONE), str(pb.TAG)]
+    daten = [pb.trip_segmente(), pb.ausblick_tage(), pb.orte_ergebnis(orte), str(pb.ZONE), str(pb.TAG),
+             pb.nacht_zeitreihe()]  # #3373: VERSION 2 traegt die Nacht
     return hashlib.sha256(json.dumps(daten, default=_roh, sort_keys=True).encode()).hexdigest()
 
 

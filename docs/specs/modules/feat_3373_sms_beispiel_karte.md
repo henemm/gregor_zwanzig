@@ -24,7 +24,7 @@ Das SMS-Beispiel der Trip-Karte „Was steht wo“ muss zeichengleich mit der SM
 - **File:** `src/services/placements_view_service.py`
 - **Identifier:** `_trip_muster`, `_trip_sms_rumpf`, `_trip_sms_werte`, `_trip_sms_fehlt`
 
-> **Schicht-Hinweis:** Alles Python-Core (`src/services/`, `src/app/`). Kein Go- und kein Frontend-Umbau. Der Sperrgrund `kein_kuerzel` samt DE/EN-Text im Katalog `wetter.json` und die Anzeige gesperrter Haken existieren bereits (#3122), es entstehen keine neuen Nutzertexte.
+> **Schicht-Hinweis:** Python-Core (`src/services/`, `src/app/`) plus eine kleine Frontend-Anzeigeänderung: die Einstell-Tabelle zeigt das Beispiel einer gesperrten SMS-Zelle (heute nur bei Zustand `on`), sonst stünde der Tagesbereich `D…` der Zeile „Temperatur“ nirgends sichtbar (Adversary-Befund F001). Kein Go-Umbau. Der Sperrgrund `kein_kuerzel` samt DE/EN-Text im Katalog `wetter.json` und die Anzeige gesperrter Haken existieren bereits (#3122), es entstehen keine neuen Nutzertexte.
 >
 > **Trip/Ortsvergleich:** Orte-Karte und Orte-Beispiel bleiben unverändert. Die Änderung betrifft nur den Trip-Zweig; der Orte-Zweig nutzt weder Etappenkopf noch Nacht.
 >
@@ -94,7 +94,7 @@ Nachzug bei Bedarf (feste Beispielwerte): Golden `tests/fixtures/ein_vokabular_3
   - Test: Orakel `_trip_versand_sms` baut über `trip_anreicherung_bauen`-Logik (nummerierte Etappe, Nacht, Gewitter); Vergleich Zeichen für Zeichen, Länge und Menge der „passt nicht mehr“-Zeilen.
 
 - **AC-5:** Given die Karte eines Trips mit Metrik „Temperatur“ und Kind-Zeilen (Nachttiefst, Tagestief, Tageshöchst) sowie „Gefühlte Temperatur“ / When die Tabelle abgerufen wird / Then ist die SMS-Zelle der Zeile „Temperatur“ gesperrt (`locked`, Grund `kein_kuerzel`), jedes Token der SMS steht in höchstens einer Zeile der Karte (die Zeile Nachttiefst zeigt `N`, die Zeile „Temperatur“ zeigt nur die Token der Kinder ohne eigenes Beispiel, also den Tagesbereich `D…`, und kein `N`), und die SMS-Zelle der Eltern-Zeile „Gefühlte Temperatur“ bleibt schaltbar.
-  - Test: Endpunkt-Antwort prüfen: Zellzustand und Grund der Eltern-Zeile, Token-Anzahl je Zeile, `wind_chill`-Zelle nicht gesperrt.
+  - Test: Endpunkt-Antwort prüfen: Zellzustand und Grund der Eltern-Zeile, Token-Anzahl je Zeile, `wind_chill`-Zelle nicht gesperrt. Zusätzlich Komponententest der Einstell-Tabelle: gesperrte SMS-Zelle mit Beispiel zeigt den Beispielwert.
 
 - **AC-6:** Given bestehende Trips, auch mit gespeichertem `temperature.sms = on` / When SMS, E-Mail und Telegram über den Versandweg erzeugt werden und die Orte-Karte abgerufen wird / Then sind alle drei Versandtexte byte-gleich zu vor der Änderung, das gespeicherte `temperature.sms = on` ändert den Versand nicht, und die Orte-Karte ist unverändert.
   - Test: Versandtexte aus festem Datensatz gegen vorab festgehaltene Referenz; Gewitter-Ableitung des Schedulers liefert nach der Herauslösung gleiche Ergebnisse; Orte-Antwort gegen Golden.
@@ -132,3 +132,4 @@ Nachzug bei Bedarf (feste Beispielwerte): Golden `tests/fixtures/ein_vokabular_3
 
 - 2026-11-25: Initial spec created (Issue #3373, Epic #3122)
 - 2026-11-25: AC-5 präzisiert (RED-Befund): Tagesbereich `D…` bleibt an der Zeile „Temperatur“, weil die Tages-Kinder seit #3283 B2 kein eigenes Beispiel zeigen; doppelt war nur `N`.
+- 2026-11-25: Frontend-Anzeige ergänzt (Adversary F001): Beispielwert einer gesperrten SMS-Zelle wird angezeigt, Komponententest zu AC-5.

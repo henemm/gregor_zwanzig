@@ -127,7 +127,8 @@ def test_sperren_deckungsgleich_mit_den_alten_listen():
     """Gesperrt im Stundenverlauf == HOURLY_EXCLUDED_METRIC_IDS; gesperrte
     E-Mail-Stelle der Trip-Mail == NO_HOURLY_COLUMN_METRIC_IDS; gesperrter
     Ausblick == Metriken ohne darstellbare Tagesauswertung; SMS: jede waehlbare
-    Metrik hat ein Kuerzel, also keine Sperre."""
+    Metrik hat ein Kuerzel, also keine Sperre -- ausser der Trip-Eltern-Zeile
+    Temperatur ohne eigenes Trip-Symbol (#3373)."""
     from output.renderers.compare_hourly_metric_ids import HOURLY_EXCLUDED_METRIC_IDS
     from output.renderers.compare_outlook_metric_ids import derived_aggregations
     from output.renderers.email.helpers import NO_HOURLY_COLUMN_METRIC_IDS
@@ -138,7 +139,10 @@ def test_sperren_deckungsgleich_mit_den_alten_listen():
         assert stunde == set(HOURLY_EXCLUDED_METRIC_IDS)
         ausblick = {m for m in ALLE_IDS if k.stellen_sperre(m, "outlook", surface)}
         assert ausblick == {m for m in ALLE_IDS if not derived_aggregations(m)}
-        assert {m for m in ALLE_IDS if k.stellen_sperre(m, "sms", surface)} == set()
+        # #3373: Trip-SMS sperrt die Eltern-Metrik ohne eigenes Trip-Symbol
+        # (Temperatur; ihre Werte tragen die Kind-Zeilen ``N``/``D…``).
+        sms_gesperrt = {"temperature"} if surface == "trip" else set()
+        assert {m for m in ALLE_IDS if k.stellen_sperre(m, "sms", surface)} == sms_gesperrt
         assert {m for m in ALLE_IDS if k.stellen_sperre(m, "telegram", surface)} == set()
     assert {m for m in ALLE_IDS if k.stellen_sperre(m, "email", "trip")} == set(
         NO_HOURLY_COLUMN_METRIC_IDS)

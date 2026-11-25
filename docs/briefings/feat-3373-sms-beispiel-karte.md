@@ -1,7 +1,7 @@
 ---
 spec_file: docs/specs/modules/feat_3373_sms_beispiel_karte.md
-spec_sha256: f3a645c8b5d3a76b678a160d74a7af342542d7aa9eefb3adec1c0224516fcddb
-spec_frozen_sha256: 21d273b22ae57e639406e17770070547971d46efa012a529b042043ba4e407f8
+spec_sha256: 68ae8169b9f59cc414b9cb958a503394ded1cd13bca44e9a2f8432e0c6754238
+spec_frozen_sha256: c986426694e77ea0c72accd0e3562bfd1af1eabb546b8f9460b5ef258955a606
 ---
 
 # PO-Briefing: feat-3373-sms-beispiel-karte
@@ -12,20 +12,20 @@ spec_frozen_sha256: 21d273b22ae57e639406e17770070547971d46efa012a529b042043ba4e4
 
 ## Was gebaut wird
 
-Das SMS-Beispiel in „Was steht wo“ zeigt exakt die echte Trip-SMS, und die Zeile Temperatur hat keine doppelten Werte mehr.
+Das SMS-Beispiel in „Was steht wo“ zeigt für Trips Zeichen für Zeichen die echte SMS, ohne doppelte Temperatur-Angaben.
 
 ## Definition of Done
 
-Die Karte zeigt Kopf E1, Nachtwert, Spitzen und Gewitter-Folgetag wie die versandte SMS; der SMS-Haken bei Temperatur ist gesperrt.
+In der Karte eines Prüf-Trips beginnt das Beispiel mit E1, zeigt Nacht und Gewitter-Folgetag, und der Temperatur-Haken ist gesperrt.
 
 ## Wie geprüft wird
 
-Automatische Tests vergleichen Beispiel und echte SMS Zeichen für Zeichen, auch mit zwei Nutzern; echte Wetterlagen bildet das feste Beispiel nicht ab.
+Tests vergleichen Beispiel und echte SMS zeichengleich bei vier Trips und zwei Nutzern; unverändert bleibt der Versand, nicht geprüft wird echtes Wetter.
 
 ## Kritische Anmerkungen
 
-- Zusatz: E-Mail- und Telegram-Beispiel zeigen künftig ebenfalls die Nacht; nicht verlangt, aber getestet, Versand bleibt unverändert.
-- Haken bei Temperatur wird gesperrt statt durchgereicht; vom Ticket erlaubt. Gespeicherte Haken bleiben, wirken aber nicht.
+- Beim Temperatur-Haken wurde „sperren“ gewählt, nicht „durchreichen“; beides war im Ticket erlaubt, sichtbar ändert sich die Bedienung.
+- E-Mail- und Telegram-Beispiel zeigen künftig ebenfalls die Nacht; das hat niemand verlangt, folgt aber aus dem gemeinsamen Beispiel.
 
 ## Freigabe-Frage
 

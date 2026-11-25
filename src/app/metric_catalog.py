@@ -1354,7 +1354,20 @@ def stellen_sperre(metric_id: object, stelle: object, surface: object) -> Option
         return "kein_tageswert"
     if stelle == "sms" and not _hat_sms_kuerzel(metric_id):
         return "kein_kuerzel"
+    if stelle == "sms" and surface == "trip" and _eltern_ohne_trip_kuerzel(metric_id):
+        return "kein_kuerzel"
     return None
+
+
+def _eltern_ohne_trip_kuerzel(metric_id: str) -> bool:
+    """Eltern-Metrik ohne eigenes Symbol der Trip-SMS (``temperature``): ihre
+    Werte tragen die Kinder-Zeilen (``N``, ``D…``); ein Haken an der Eltern-
+    Zeile haette keine Wirkung (#3373). ``wind_chill`` (``TF``) bleibt."""
+    from app.loader import _DERIVED_METRIC_RULES
+
+    if SMS_SYMBOL_BY_METRIC.get(metric_id) or SMS_MULTI_SYMBOLS_BY_METRIC.get(metric_id):
+        return False
+    return any(elter == metric_id for _kind, elter, _agg in _DERIVED_METRIC_RULES)
 
 
 def aggregation_label_de(aggregation: object) -> str:
