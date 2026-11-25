@@ -181,3 +181,10 @@ Dieser Durchlauf liefert **nur S1** (AC-1, AC-2, AC-3, AC-14, Python-Zähler weg
 - **In /50 zu entfernen:** `tests/tdd/test_ampel_abweichungszaehler.py` ganz; in `test_ampel_modell_und_aufloesung.py` `test_abweichungszahl_zaehlt_grenzen_gewitter_und_alarmstufe` und der Import; in `test_feat_3222_windrichtung_kern.py` `test_abweichungszahl_modus_und_sektoren`, `test_sektoren_vergleich_als_menge_bei_gleichem_modus` und der Import. Fixtures bleiben (Frontend liest sie bis S4). Ist `_vorlage_der_ampel` danach ohne Aufrufer, entfällt es mit.
 - **Bekannt:** Die Fälle `windrichtung_modus_abweichend` und `windrichtung_sektoren_hinzugefuegt` stehen in der Referenz mit 0 (heutiges Verhalten, Known Limitation, gehört zu #3230); das `expected: 1` der alten Fixture galt der Python-Zahl.
 - **Live:** `frontend/e2e/rework-2988-zaehler.spec.ts` (nicht ausgeführt, läuft in `/e2e-verify`).
+
+## Hinweise aus der Gegenprüfung S1 (2026-11-25)
+
+- **S3 (F004):** `aboAmpelVon` setzt vollständige Zeilen und vollständiges `thunder` im Stand voraus. Die vom Endpunkt gereichte Ampel muss beides tragen (Test in S3).
+- **S4 (F005):** `zaehleAbweichungenGegen` hat keinen Produktaufrufer mehr. Mit dem Löschen entfällt der Wächter für den Mengenvergleich der Sektoren (`ampelModell.test.ts`); er gehört dann zu #3230. Die Metatexte in `ampel_deviation_cases.json` (`_issue`) und `ampel_windrichtung_cases.json` (`_abweichung`) nennen noch entfernte Python-Funktionen.
+- **F007 (Bestand):** `mitEigenerVorlage` ist für `enabled === true` und `nurAusgebbar` ohne Wächter; in S3 mit absichern.
+- **Offen beobachten:** `test_einstellung_gleich_mail_validatoren.py` lief im breiten Lauf zweimal ins 30-s-Zeitlimit (wechselnder Test), allein immer grün.
