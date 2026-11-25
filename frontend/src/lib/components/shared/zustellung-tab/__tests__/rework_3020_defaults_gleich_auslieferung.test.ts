@@ -17,6 +17,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { standAusPreset, standAusTrip, KANAELE, type ZustellungStand } from '../zustellungModell.ts';
+import { zustellungNutzlast } from '../zustellungSpeicherung.ts';
 import { toHHMMSS } from '../../../../utils/time.ts';
 import {
 	buildCreateTripPayload,
@@ -36,6 +37,28 @@ function pruefeBriefingFelder(stand: ZustellungStand, quelle: Rec, wo: string): 
 	assert.equal(quelle.morning_time, toHHMMSS(stand.morgenZeit), `${wo}: morning_time`);
 	assert.equal(quelle.evening_time, toHHMMSS(stand.abendZeit), `${wo}: evening_time`);
 	for (const k of KANAELE) assert.equal(quelle[`send_${k}`], stand.briefing[k], `${wo}: send_${k}`);
+}
+
+/** Adversary F003: Cooldown und Stille-Stunden sind beim Anlegen nicht im POST, die Auslieferung nimmt
+ *  dann ihren eigenen Standard. Der Vergleich „Stand aus dem POST“ ist hier symmetrisch (beide Seiten lesen
+ *  denselben Rueckfall aus zustellungModell.ts) und faengt eine Aenderung dieses Rueckfalls nicht. Deshalb
+ *  feste Sollwerte der Auslieferung:
+ *  - Cooldown ohne Feld: 120 Minuten (`_DEFAULT_COOLDOWN_MINUTES = 120` in src/services/compare_alert.py und
+ *    compare_radar_alert.py, `or 120` in src/services/radar_alert_service.py).
+ *  - Stille-Stunden ohne Felder: keine Ruhezeit (Schalter aus); schaltet der Nutzer sie ein, ohne die Zeiten
+ *    anzufassen, liefert der Reiter die angezeigte Vorbelegung 22:00 bis 06:00 aus. */
+const AUSLIEFERUNG_COOLDOWN_MINUTEN = 120;
+const STILLE_VORBELEGUNG = { von: '22:00', bis: '06:00' };
+
+function pruefeAlarmFelder(context: 'route' | 'vergleich', stand: ZustellungStand, post: Rec, wo: string): void {
+	const cooldown = typeof post.alert_cooldown_minutes === 'number' ? post.alert_cooldown_minutes : AUSLIEFERUNG_COOLDOWN_MINUTEN;
+	assert.equal(stand.cooldown, cooldown, `${wo}: der Reiter zeigt einen anderen Cooldown als die Auslieferung`);
+	const stilleGeliefert = !!post.alert_quiet_from && !!post.alert_quiet_to;
+	assert.equal(stand.stilleAn, stilleGeliefert, `${wo}: Stille-Schalter weicht von der Auslieferung ab`);
+	assert.deepEqual({ von: stand.stilleVon, bis: stand.stilleBis }, STILLE_VORBELEGUNG, `${wo}: Vorbelegung der Stille-Stunden`);
+	const eingeschaltet = zustellungNutzlast(context, stand, { ...stand, stilleAn: true }).alarme as Rec;
+	assert.equal(eingeschaltet.alert_quiet_from, STILLE_VORBELEGUNG.von, `${wo}: eingeschaltet ausgeliefertes alert_quiet_from`);
+	assert.equal(eingeschaltet.alert_quiet_to, STILLE_VORBELEGUNG.bis, `${wo}: eingeschaltet ausgeliefertes alert_quiet_to`);
 }
 
 describe('Rework #3020 AC-14 (route): Reiter-Standard beim neuen Trip = Anlege-POST', () => {
@@ -59,6 +82,7 @@ describe('Rework #3020 AC-14 (route): Reiter-Standard beim neuen Trip = Anlege-P
 		const rc = post.report_config as Rec;
 		assert.ok(rc, 'der POST traegt report_config');
 		pruefeBriefingFelder(angezeigt, rc, 'Trip');
+		pruefeAlarmFelder('route', angezeigt, post, 'Trip');
 		assert.deepEqual(post.alert_channels, angezeigt.alarme, 'Alarm-Kanaele');
 		assert.deepEqual(standAusTrip(post as unknown as Trip), angezeigt, 'Stand aus dem POST = angezeigter Stand');
 	});
@@ -83,6 +107,7 @@ describe('Rework #3020 AC-14 (vergleich): Reiter-Standard beim neuen Ortsverglei
 		const post = baueVergleichAnlegeRumpf(wiz);
 
 		pruefeBriefingFelder(angezeigt, post, 'Vergleich');
+		pruefeAlarmFelder('vergleich', angezeigt, post, 'Vergleich');
 		assert.deepEqual(post.alert_channels, angezeigt.alarme, 'Alarm-Kanaele');
 		assert.deepEqual(standAusPreset(post as unknown as ComparePreset), angezeigt, 'Stand aus dem POST = angezeigter Stand');
 	});

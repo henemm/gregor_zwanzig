@@ -51,6 +51,30 @@ Gegenprobe (vorübergehende Korrektur, zurückgesetzt, sha256 OK): in `_vitest_t
 | F10a | AC-17 Ausblick (`wetter-tab/__tests__/rework_3020_ausblick_warnungswerte_nutzlast.test.ts`) | `wasStehtWoStand.ts` `mitAusblick`: Filter `berichte[b]` → `b === 'evening'` | beide Ausblick-Tests rot |
 | F10b | AC-17 Warnungswerte (dieselbe Datei) | `alarmeDeliveryPayload.ts`: `{ metric_alert_levels: … }` → `{ show_outlook: true, metric_alert_levels: … }` | Warnungswerte-Test rot |
 
+## Nachtrag Fix-Loop (Adversary AMBIGUOUS: F001, F003, F004)
+
+Verfahren wie oben: Sicherung nach `/tmp/claude-1000/-home-hem-gregor-zwanzig/f54b53b5-b98a-45c6-9fc2-f81d68bd3405/scratchpad/mut2/`, sha256 vorher, Mutation als eindeutige String-Ersetzung (Edit-Werkzeug), Testlauf, Rückschreiben aus der Kopie, `sha256sum -c` OK für alle vier Dateien (`saveStatusStore.svelte.ts` 1e60829d…, `compareHubPersistenz.ts` 5c98fcd1…, `zustellungModell.ts` fb48b2fd…, `zustellungSpeicherung.ts` 8f4c0b9c…); `git status` ohne geänderte Produktionsdatei.
+
+| # | Test (Datei) | Mutation | Ergebnis |
+|---|---|---|---|
+| F11a | F001 (`shared/__tests__/rework_3020_vergleich_parallele_schreiber.test.ts`) | `saveStatusStore.svelte.ts` `schedule`: `if (this._pendingFn && this._pendingOwner !== owner) {` → `if (false && this._pendingFn && …) {` (fremder Slot wird verdrängt) | beide Reihenfolge-Tests rot |
+| F11b | F001 (dieselbe Datei) | `compareHubPersistenz.ts` `createPutQueue`: `const run = tail.then(fn);` → `const run = fn();` (keine Schlange) | „fremder Hub-Schreiber läuft“ rot (zuerst ohne diesen Fall grün geblieben: der Controller reiht die eigenen Vorgänge schon nacheinander; Fall deshalb ergänzt) |
+| F11c | F001 (dieselbe Datei) | `zustellungSpeicherung.ts`: `await (opt.enqueueHubWrite ? opt.enqueueHubWrite(lauf) : lauf());` → `await lauf();` | „Wetter, dann Zustellung“ und „fremder Hub-Schreiber“ rot |
+| F12a | F003 AC-14 (`zustellung-tab/__tests__/rework_3020_defaults_gleich_auslieferung.test.ts`) | `zustellungModell.ts` `cooldownVon`: Rückfall `COOLDOWN_STANDARD` → `0` | route und vergleich rot |
+| F12b | F003 AC-14 (dieselbe Datei) | `zustellungModell.ts`: `const STILLE_VON_STANDARD = '22:00';` → `'21:00'` | route und vergleich rot |
+| F13 | F004 AC-13 (`zustellung-tab/__tests__/rework_3020_premium_sms_schaltbar.test.ts`) | `zustellungModell.ts` `premiumStatus`: `if (p.premium_sms_reply_state === 'stale') {` → `if (false && …) {` (Rückfall „nie gemeldet“) | „verfallene Rückadresse (stale)“ rot, beide Kontexte |
+
+### Wiederholung F11a–c nach Merge von origin/main (fdb1ddaac, enthält #3379 / 4ba927c14)
+
+Nach dem Merge waren alle vier F001-Fälle rot, auch die Vorbedingung. Ursache war die veraltete Testverdrahtung, kein Produktfehler: #3379 ändert die Signatur von `standAusAbo(context, abo, aufgeloest, …)`. Ampel und Vorlagen-ID kommen jetzt fertig aus der Server-Auflösung; vorher stand an dieser Stelle `vorlagen`. Der Test übergab weiter `vorlagen`, dadurch war der Wetter-Stand ohne Ampel. Der Test hydriert jetzt wie f003 mit `aufgeloestVon(seite)` (echtes Python). Danach sind alle Zusicherungen unverändert 4/4 grün, also geht keine Änderung verloren.
+Sicherung `…/scratchpad/mut3/`, sha256 vorher = nachher (`sha256sum -c` OK): saveStatusStore 1e60829d…, compareHubPersistenz 5c98fcd1…, zustellungSpeicherung 8f4c0b9c….
+
+| # | Mutation | Ergebnis |
+|---|---|---|
+| F11a | `schedule`: fremder Slot wird verdrängt | 3 von 4 rot (beide Reihenfolgen, fremder Hub-Schreiber) |
+| F11b | `createPutQueue`: `const run = fn();` | „fremder Hub-Schreiber läuft“ rot |
+| F11c | `zustellungSpeicherung.ts` ohne `enqueueHubWrite` | 2 von 4 rot |
+
 ## Ohne Mutation rot (echter Befund, nicht behoben)
 
 | Test | Befund |

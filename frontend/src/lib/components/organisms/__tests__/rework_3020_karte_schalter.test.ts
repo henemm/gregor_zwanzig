@@ -1,6 +1,6 @@
 // Rework #3020 R1, AC-11 und AC-15: Schalter der Karte „Was steht wo“ beim Trip.
-//   AC-11: ein noch nicht gespeicherter neuer Trip (Anlegen) hat keinen Nachtblock-Schalter
-//          (Ersatz fuer trip_night_block_schalter_verdrahtung.test.ts, „Schalter nur Trip/bestehend“).
+//   AC-11: neu gefasst -- „Schalter nur Trip/bestehend“ (trip_night_block_schalter_verdrahtung.test.ts)
+//          ist durch #3305 abgeloest; die Karte zeigt den Schalter auch im Anlegen.
 //   AC-15: der Haken „Großwetterlage“ folgt `show_stability`, nie `show_outlook`
 //          (Ersatz fuer mail_inhalt_haken_grosswetterlage_3237.test.ts).
 //
@@ -70,17 +70,21 @@ function trip(blocks: J = {}, stored = true): J {
 	};
 }
 
-describe('Rework #3020 AC-11: kein Nachtblock-Schalter beim noch nicht gespeicherten neuen Trip', () => {
+// AC-11 neu gefasst (Spec 1.2): das Verhalten des Alt-Editors („kein Schalter beim Anlegen“) ist durch #3305
+// abgeloest. Die Karte zeigt den Nachtblock-Schalter auch im Anlegen; dass der Wert mit dem Anlegen gemeldet
+// wird und kein Teilfeld-PUT entsteht, belegt
+// was_steht_wo_karte_anlegen_3305.test.ts::Schalter (Nacht-Block): gemeldet mit felder und felderStart, kein Teilfeld-PUT.
+describe('Rework #3020 AC-11: Nachtblock-Schalter beim bestehenden und beim neuen Trip (#3305)', () => {
 	test('Gegenprobe bestehender Trip: der Nachtblock-Schalter ist da', async () => {
 		locale.set('de');
 		const h = await karte(trip(), {});
 		assert.equal(tags(h, 'was-steht-wo-show_night_block').length, 1, 'Messaufbau: bestehender Trip zeigt den Schalter');
 	});
-	test('Anlegen (createMode): die Karte zeigt keinen Nachtblock-Schalter', async () => {
+	test('Anlegen (createMode): die Karte zeigt den Nachtblock-Schalter genau einmal (#3305)', async () => {
 		locale.set('de');
 		const h = await karte(trip({}, false), { createMode: true, entwurf: () => ({}) });
 		assert.ok(tags(h, 'was-steht-wo-show_stability').length === 1, 'Messaufbau: Karte im Anlegen bereit gerendert');
-		assert.equal(tags(h, 'was-steht-wo-show_night_block').length, 0, 'im Anlegen darf es den Nachtblock-Schalter nicht geben');
+		assert.equal(tags(h, 'was-steht-wo-show_night_block').length, 1, 'im Anlegen steht der Nachtblock-Schalter (#3305)');
 	});
 });
 

@@ -1,6 +1,7 @@
 // Rework #3020 R1, AC-8 bis AC-10: Nachtblock-Schalter der Karte „Was steht wo“ beim Trip.
 // Ersatz fuer den mit #3357 geloeschten trip_night_block_schalter_verdrahtung.test.ts, am heutigen
-// Kartenmodell (`wasStehtWoSpeicherung.ts`). AC-11 (kein Schalter im Anlegen) steht in
+// Kartenmodell (`wasStehtWoSpeicherung.ts`). AC-11 (Schalter im Anlegen, abgeloest durch #3305) belegt
+// organisms/__tests__/was_steht_wo_karte_anlegen_3305.test.ts, die Anzeige im Anlegen
 // organisms/__tests__/rework_3020_karte_schalter.test.ts; der Server-Teil von AC-9 in
 // internal/store/trip_night_block_altstandard_test.go.
 //

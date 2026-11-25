@@ -1,5 +1,5 @@
 {
- "_hinweis": "#3047 Paket D: Faelle Editor-Standard = Mail-Standard. Eingaben und Soll in editor_standard.json; Python-Seite tests/tdd/test_einstellung_gleich_mail_editor_standard.py, Frontend-Seite frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts (node:test, Testname = erstes Argument von test/rotErwartet). N1/N2 sind neue Befunde dieses Pakets (nicht im Issue-Wortlaut). #3276: die Frontend-Faelle orte_stundenverlauf/orte_ausblick entfallen -- der Ortsvergleich hat dafuer keinen eigenen Editor mehr (Einstellung nur in der Tabelle 'Was steht wo'). #3297/#3020: mit dem Alt-Editor (WeatherMetricsTab, channelMetricLayouts, kanalStilStart-Leser) entfallen die Faelle E-P12-TL3-ORTE-KURZSTIL, E-R8-F3-* (telegram_schnittlinie_wahr.test.ts), E-R8-T1-SMS-LADEN-A/B (lade_kanal_layouts_aus_trip.test.ts) und E-R8-F3N-ORTE-*/E-R8-F3N-TRIP-STUNDENTABELLE (telegram_kanalgrenze_je_kontext.test.ts) -- ihre Testdateien prueften nur den geloeschten Editor (Zuordnung: docs/artifacts/feat-3297-trip-pfad-ohne-altfelder/geloeschte-tests.md); die Versand-Faelle E-R8-F3N-VERSAND-* bleiben.",
+ "_hinweis": "#3047 Paket D: Faelle Editor-Standard = Mail-Standard. Eingaben und Soll in editor_standard.json; Python-Seite tests/tdd/test_einstellung_gleich_mail_editor_standard.py, Frontend-Seite frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts (node:test, Testname = erstes Argument von test/rotErwartet). N1/N2 sind neue Befunde dieses Pakets (nicht im Issue-Wortlaut). #3276: die Frontend-Faelle orte_stundenverlauf/orte_ausblick entfallen -- der Ortsvergleich hat dafuer keinen eigenen Editor mehr (Einstellung nur in der Tabelle 'Was steht wo'). #3297/#3020: mit dem Alt-Editor (WeatherMetricsTab, channelMetricLayouts, kanalStilStart-Leser) entfallen die Faelle E-P12-TL3-ORTE-KURZSTIL, E-R8-F3-* (telegram_schnittlinie_wahr.test.ts), E-R8-T1-SMS-LADEN-A/B (lade_kanal_layouts_aus_trip.test.ts) und E-R8-F3N-ORTE-*/E-R8-F3N-TRIP-STUNDENTABELLE (telegram_kanalgrenze_je_kontext.test.ts) -- ihre Testdateien prueften nur den geloeschten Editor (Zuordnung: docs/artifacts/feat-3297-trip-pfad-ohne-altfelder/geloeschte-tests.md); die Versand-Faelle E-R8-F3N-VERSAND-* bleiben. #3020 R1b: die Frontend-Datei editor_standard_gleich_mail.test.ts gibt es nicht mehr; die D-*-frontend-Faelle verweisen mit Dateiangabe auf die Karte 'Was steht wo' bzw. den Reiter (ac26_/p5c_/was_steht_wo_karte), Faelle mit Altfeld-Zustand (channel_layouts, outlook_metrics, channel_active_metrics) stehen auf ausnahme (ADR-0124), Nur-ein-Bericht auf ausnahme (#3065). E-3020-TRIP-TG-NUR-TAGESWERT belegt die Telegram-Schnittlinie (ADR-0124 Nr. 3).",
  "dimensionen": {},
  "faelle": [
   {
@@ -21,7 +21,7 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "standard",
-   "test": "frontend_seite_trip_tabellen_standard",
+   "test": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::trip_nie_eingestellt_zeigt_register_standard",
    "ac": "AC-13",
    "befund": "",
    "status": "gruen",
@@ -47,13 +47,13 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "standard",
-   "test": "frontend_seite_trip_tabellen_altbestand",
+   "test": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::anzeige_gleich_ausgabe_a_nie_eingestellt_ohne_metrics",
    "ac": "AC-13",
    "befund": "N2",
    "status": "gruen",
    "seite": "frontend",
    "zustand": "altbestand_ohne_metrics",
-   "verweis": "frontend/src/lib/components/trip-detail/metricsEditor.ts:416-417 (autoAssign nach METRIC_PRIORITY statt trip_default_rank)"
+   "verweis": "#3020 R1b: Alt-Editor (metricsEditor autoAssign) entfallen; Beleg: Reiter laedt display_config ohne metrics und zeigt die Auswahl der Ausgabe"
   },
   {
    "id": "D-trip_tabellen-gespeichert_folge-python",
@@ -74,12 +74,13 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "reihenfolge",
-   "test": "frontend_seite_trip_tabellen_gespeichert",
+   "test": "frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::Zeilen in der Folge der Antwort mit Namen aus der Antwort",
    "ac": "AC-13",
    "befund": "",
    "status": "gruen",
    "seite": "frontend",
-   "zustand": "gespeichert_folge"
+   "zustand": "gespeichert_folge",
+   "verweis": "#3020 R1b: die Karte zeigt die Folge der Tabellen-Antwort (Python, wie die Mail; ADR-0124 Nr. 3 eine Reihenfolge)"
   },
   {
    "id": "D-trip_tabellen-gespeichert_folge_array_ungleich_order-python",
@@ -100,12 +101,13 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "reihenfolge",
-   "test": "frontend_seite_trip_tabellen_gespeichert",
+   "test": "frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts::Reiter Wetter: beide PUTs ohne Altschluessel, Bestand sonst erhalten",
    "ac": "AC-13",
    "befund": "F4",
-   "status": "gruen",
+   "status": "ausnahme",
    "seite": "frontend",
-   "zustand": "gespeichert_folge_array_ungleich_order"
+   "zustand": "gespeichert_folge_array_ungleich_order",
+   "verweis": "ADR-0124 Nr. 3 (eine Reihenfolge fuer alle Stellen, keine Kanal-Liste mit order-Feld); Altfeld channel_layouts entfallen mit #3297/#3351 (#3020 R1b)"
   },
   {
    "id": "D-trip_tabellen-gespeichert_ausserhalb_grundauswahl-python",
@@ -126,12 +128,13 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "grundauswahl",
-   "test": "frontend_seite_trip_tabellen_gespeichert",
+   "test": "frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts::Reiter Wetter: beide PUTs ohne Altschluessel, Bestand sonst erhalten",
    "ac": "AC-13",
    "befund": "",
-   "status": "gruen",
+   "status": "ausnahme",
    "seite": "frontend",
-   "zustand": "gespeichert_ausserhalb_grundauswahl"
+   "zustand": "gespeichert_ausserhalb_grundauswahl",
+   "verweis": "ADR-0124 Nr. 1 und Nr. 3 (Grundauswahl genau einmal, keine Kanal-Liste); Altfeld channel_layouts entfallen mit #3297/#3351 (#3020 R1b)"
   },
   {
    "id": "D-trip_ausblick-nie_eingestellt-python",
@@ -153,12 +156,13 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "standard",
-   "test": "frontend_seite_trip_ausblick_standard",
+   "test": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::anzeige_gleich_ausgabe_a_trend_nie_eingestellt",
    "ac": "AC-13, AC-4",
    "befund": "",
    "status": "gruen",
    "seite": "frontend",
-   "zustand": "nie_eingestellt"
+   "zustand": "nie_eingestellt",
+   "verweis": "#3020 R1b: der Ausblick steht allein in der Karte (Tabellen-Antwort), ADR-0124 Nr. 4; nie eingestellt zeigt, was die Ausgabe tut"
   },
   {
    "id": "D-trip_ausblick-gespeichert_folge-python",
@@ -179,12 +183,13 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "reihenfolge",
-   "test": "frontend_seite_trip_ausblick_gespeichert",
+   "test": "frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts::Reiter Wetter: beide PUTs ohne Altschluessel, Bestand sonst erhalten",
    "ac": "AC-13, AC-4",
    "befund": "",
-   "status": "gruen",
+   "status": "ausnahme",
    "seite": "frontend",
-   "zustand": "gespeichert_folge"
+   "zustand": "gespeichert_folge",
+   "verweis": "ADR-0124 Nr. 4 (Ausblick ohne eigene Liste, folgt der E-Mail); Altfeld outlook_metrics entfallen mit #3297/#3351 (#3020 R1b)"
   },
   {
    "id": "D-trip_ausblick-gespeichert_ausserhalb_grundauswahl-python",
@@ -205,12 +210,13 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "grundauswahl",
-   "test": "frontend_seite_trip_ausblick_gespeichert",
+   "test": "frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts::Reiter Wetter: beide PUTs ohne Altschluessel, Bestand sonst erhalten",
    "ac": "AC-13, AC-4",
    "befund": "",
-   "status": "gruen",
+   "status": "ausnahme",
    "seite": "frontend",
-   "zustand": "gespeichert_ausserhalb_grundauswahl"
+   "zustand": "gespeichert_ausserhalb_grundauswahl",
+   "verweis": "ADR-0124 Nr. 4 (Ausblick ohne eigene Liste, folgt der E-Mail); Altfeld outlook_metrics entfallen mit #3297/#3351 (#3020 R1b)"
   },
   {
    "id": "D-orte_vergleichstabelle-nie_eingestellt-python",
@@ -231,7 +237,7 @@
    "kontext": "orte",
    "format": "editor",
    "pruefung": "standard",
-   "test": "frontend_seite_orte_vergleichstabelle_standard",
+   "test": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::orte_nie_eingestellt_zeigt_alle_zeilen_und_gesperrtes",
    "ac": "AC-13",
    "befund": "",
    "status": "gruen",
@@ -257,12 +263,13 @@
    "kontext": "orte",
    "format": "editor",
    "pruefung": "reihenfolge",
-   "test": "frontend_seite_orte_vergleichstabelle_gespeichert",
+   "test": "frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::Zeilen in der Folge der Antwort mit Namen aus der Antwort",
    "ac": "AC-13",
    "befund": "",
    "status": "gruen",
    "seite": "frontend",
-   "zustand": "gespeichert_folge"
+   "zustand": "gespeichert_folge",
+   "verweis": "#3020 R1b: geteilte Karte (ADR-0097) zeigt die Folge der Tabellen-Antwort; der Zeilen-Zweig ist kontextfrei, der Test laeuft mit context route"
   },
   {
    "id": "D-orte_vergleichstabelle-gespeichert_kanal_liste-python",
@@ -283,12 +290,13 @@
    "kontext": "orte",
    "format": "editor",
    "pruefung": "grundauswahl",
-   "test": "frontend_seite_orte_vergleichstabelle_gespeichert",
+   "test": "frontend/src/lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts::Kanal-Auswahl geändert → der Rumpf trägt nur Eigenfelder, keinen Altschluessel (#3276)",
    "ac": "AC-13",
    "befund": "",
-   "status": "gruen",
+   "status": "ausnahme",
    "seite": "frontend",
-   "zustand": "gespeichert_kanal_liste"
+   "zustand": "gespeichert_kanal_liste",
+   "verweis": "ADR-0124 Nr. 3 (keine Liste je Kanal); Altfeld channel_active_metrics entfallen mit #3276/#3298/#3351 (#3020 R1b)"
   },
   {
    "id": "D-orte_stundenverlauf-nie_eingestellt-python",
@@ -413,13 +421,13 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "reihenfolge",
-   "test": "frontend_seite_trip_vorlage_reihenfolge",
+   "test": "frontend/src/lib/components/shared/wetter-tab/__tests__/p5c_ableitung_hub_orte_ausgabe.test.ts::anlegen_alpen-trekking_anzeige_gleich_mail",
    "ac": "AC-16",
    "befund": "T4",
    "status": "gruen",
    "seite": "frontend",
    "zustand": "vorlage",
-   "verweis": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte:732 -> metricsEditor.ts:272-289 (autoAssign sortiert nach METRIC_PRIORITY)"
+   "verweis": "#3020 R1b: Alt-Editor (applyPreset) entfallen; Beleg: Anzeige aus Vorlage in Folge gleich Mail-Spalten (Server-Seite TestF3047_NeuerTripAusVorlageBehaeltVorlagenFolge)"
   },
   {
    "id": "D-trip_vorlage-reihenfolge-go",
@@ -518,7 +526,7 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "grundauswahl",
-   "test": "frontend_seite_trip_ausblick_bewusst_leer_alle_aus",
+   "test": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::anzeige_gleich_ausgabe_a_bewusst_leer",
    "ac": "AC-13, AC-4",
    "befund": "#3047 J1",
    "status": "gruen",
@@ -544,12 +552,13 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "grundauswahl",
-   "test": "frontend_seite_trip_tabellen_gespeichert",
+   "test": "frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts::Reiter Wetter: beide PUTs ohne Altschluessel, Bestand sonst erhalten",
    "ac": "AC-10",
    "befund": "#3047 N1",
-   "status": "gruen",
+   "status": "ausnahme",
    "seite": "frontend",
-   "zustand": "gespeichert_totalschnitt"
+   "zustand": "gespeichert_totalschnitt",
+   "verweis": "ADR-0124 Nr. 3 (keine Liste je Kanal, also kein Totalschnitt Kanal/Grundauswahl); Altfeld channel_layouts entfallen mit #3297/#3351 (#3020 R1b)"
   },
   {
    "id": "D-trip_tabellen-totalschnitt_aus_wirkt-frontend",
@@ -557,10 +566,11 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "grundauswahl",
-   "test": "frontend_seite_trip_kanal_totalschnitt_aus_wirkt",
+   "test": "frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts::Reiter Wetter: beide PUTs ohne Altschluessel, Bestand sonst erhalten",
    "ac": "AC-10",
    "befund": "#3047 N1",
-   "status": "gruen",
+   "status": "ausnahme",
+   "verweis": "ADR-0124 Nr. 3 (keine Liste je Kanal, also kein Totalschnitt Kanal/Grundauswahl); Altfeld channel_layouts entfallen mit #3297/#3351 (#3020 R1b)",
    "seite": "frontend",
    "zustand": "totalschnitt_aus_wirkt"
   },
@@ -583,10 +593,11 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "grundauswahl",
-   "test": "frontend_seite_trip_ausblick_gespeichert",
+   "test": "frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts::Reiter Wetter: beide PUTs ohne Altschluessel, Bestand sonst erhalten",
    "ac": "AC-10",
    "befund": "#3047 N1",
-   "status": "gruen",
+   "status": "ausnahme",
+   "verweis": "ADR-0124 Nr. 4 (Ausblick ohne eigene Liste, also kein Totalschnitt); Altfeld outlook_metrics entfallen mit #3297/#3351 (#3020 R1b)",
    "seite": "frontend",
    "zustand": "gespeichert_totalschnitt"
   },
@@ -609,10 +620,11 @@
    "kontext": "orte",
    "format": "editor",
    "pruefung": "grundauswahl",
-   "test": "frontend_seite_orte_vergleichstabelle_gespeichert",
+   "test": "frontend/src/lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts::Kanal-Auswahl geändert → der Rumpf trägt nur Eigenfelder, keinen Altschluessel (#3276)",
    "ac": "AC-10",
    "befund": "#3047 N1",
-   "status": "gruen",
+   "status": "ausnahme",
+   "verweis": "ADR-0124 Nr. 3 (keine Liste je Kanal, also kein Totalschnitt); Altfeld channel_active_metrics entfallen mit #3276/#3298/#3351 (#3020 R1b)",
    "seite": "frontend",
    "zustand": "gespeichert_kanal_totalschnitt"
   },
@@ -622,10 +634,11 @@
    "kontext": "orte",
    "format": "editor",
    "pruefung": "grundauswahl",
-   "test": "frontend_seite_orte_kanal_totalschnitt_aus_wirkt",
+   "test": "frontend/src/lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts::Kanal-Auswahl geändert → der Rumpf trägt nur Eigenfelder, keinen Altschluessel (#3276)",
    "ac": "AC-10",
    "befund": "#3047 N1",
-   "status": "gruen",
+   "status": "ausnahme",
+   "verweis": "ADR-0124 Nr. 3 (keine Liste je Kanal, also kein Totalschnitt); Altfeld channel_active_metrics entfallen mit #3276/#3298/#3351 (#3020 R1b)",
    "seite": "frontend",
    "zustand": "totalschnitt_aus_wirkt"
   },
@@ -674,7 +687,7 @@
    "kontext": "orte",
    "format": "editor",
    "pruefung": "grundauswahl",
-   "test": "frontend_seite_orte_vergleichstabelle_grundauswahl_bewusst_leer",
+   "test": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::anzeige_gleich_ausgabe_a_bewusst_leer",
    "ac": "AC-10",
    "befund": "#3047 N2",
    "status": "gruen",
@@ -700,12 +713,13 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "grundauswahl",
-   "test": "frontend_seite_hinweis_grundauswahl_leer_trip",
+   "test": "frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::leere Grundauswahl: sachlicher Leertext statt Tabelle",
    "ac": "AC-10",
    "befund": "#3047 N2",
    "status": "gruen",
    "seite": "frontend",
-   "zustand": "hinweis_grundauswahl_leer"
+   "zustand": "hinweis_grundauswahl_leer",
+   "verweis": "#3020 R1b: GrundauswahlLeerHinweis (Waise, #3366) ersetzt durch den Leertext der geteilten Karte (ADR-0097); der Zweig ist kontextfrei, der Test laeuft mit context vergleich"
   },
   {
    "id": "D-orte_vergleichstabelle-hinweis_grundauswahl_leer-frontend",
@@ -713,7 +727,7 @@
    "kontext": "orte",
    "format": "editor",
    "pruefung": "grundauswahl",
-   "test": "frontend_seite_hinweis_grundauswahl_leer_orte",
+   "test": "frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::leere Grundauswahl: sachlicher Leertext statt Tabelle",
    "ac": "AC-10",
    "befund": "#3047 N2",
    "status": "gruen",
@@ -726,13 +740,13 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "altbestand",
-   "test": "n3_semantik_wie_mail",
+   "test": "internal/store/trip_display_config_felderhalt_test.go::TestRework3020_SpeichernOhneAenderungErhaeltMetrikFlags_ZweiNutzer",
    "ac": "AC-11",
    "befund": "#3047 N3",
-   "status": "gruen",
-   "seite": "frontend",
+   "status": "ausnahme",
+   "seite": "go",
    "zustand": "nur_ein_bericht_semantik",
-   "verweis": "#3065 (Phase 2: Bericht-Flags im Editor)"
+   "verweis": "#3065 (Uebergangshilfe Nur-ein-Bericht bis Phase 2, geschlossen); Prod-Messung 25.11.2026: 0 Metriken nur in einem Bericht. Beleg: Bericht-Flags bleiben beim Speichern erhalten und wirken in der Mail weiter (#3020 R1b)"
   },
   {
    "id": "D-trip_tabellen-nur_ein_bericht_kennzeichnung-frontend",
@@ -740,13 +754,13 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "altbestand",
-   "test": "n3_editor_kennzeichnet_je_zeile",
+   "test": "internal/store/trip_display_config_felderhalt_test.go::TestRework3020_SpeichernOhneAenderungErhaeltMetrikFlags_ZweiNutzer",
    "ac": "AC-11",
    "befund": "#3047 N3",
-   "status": "gruen",
-   "seite": "frontend",
+   "status": "ausnahme",
+   "seite": "go",
    "zustand": "nur_ein_bericht_kennzeichnung",
-   "verweis": "#3065 (Phase 2: Bericht-Flags im Editor)"
+   "verweis": "#3065 (Uebergangshilfe Nur-ein-Bericht bis Phase 2, geschlossen); Prod-Messung 25.11.2026: 0 Metriken nur in einem Bericht; Kennzeichnung entfaellt bewusst (#3020 R1b)"
   },
   {
    "id": "D-trip_tabellen-nur_ein_bericht_editorstand-frontend",
@@ -754,13 +768,13 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "altbestand",
-   "test": "n3_kennzeichnung_folgt_dem_editorstand",
+   "test": "internal/store/trip_display_config_felderhalt_test.go::TestRework3020_SpeichernOhneAenderungErhaeltMetrikFlags_ZweiNutzer",
    "ac": "AC-11",
    "befund": "#3047 N3",
-   "status": "gruen",
-   "seite": "frontend",
+   "status": "ausnahme",
+   "seite": "go",
    "zustand": "nur_ein_bericht_editorstand",
-   "verweis": "#3065 (Phase 2: Bericht-Flags im Editor)"
+   "verweis": "#3065 (Uebergangshilfe Nur-ein-Bericht bis Phase 2, geschlossen); Prod-Messung 25.11.2026: 0 Metriken nur in einem Bericht; Kennzeichnung entfaellt bewusst (#3020 R1b)"
   },
   {
    "id": "D-trip_tabellen-bericht_flags_bewahrt-frontend",
@@ -768,13 +782,13 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "altbestand",
-   "test": "n3_speichern_bewahrt_bericht_flags",
+   "test": "internal/store/trip_display_config_felderhalt_test.go::TestRework3020_SpeichernOhneAenderungErhaeltMetrikFlags_ZweiNutzer",
    "ac": "AC-11",
    "befund": "#3047 N3",
-   "status": "gruen",
-   "seite": "frontend",
+   "status": "ausnahme",
+   "seite": "go",
    "zustand": "bericht_flags_bewahrt",
-   "verweis": "#3065 (Phase 2: Bericht-Flags im Editor)"
+   "verweis": "#3065 (Uebergangshilfe Nur-ein-Bericht bis Phase 2, geschlossen); Prod-Messung 25.11.2026. Beleg (Server, zwei Nutzer): Speichern ohne Aenderung erhaelt morning_enabled/evening_enabled (#3020 AC-12)"
   },
   {
    "id": "D-trip_ausblick-grundauswahl_ohne_ausblick-python",
@@ -795,12 +809,13 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "grundauswahl",
-   "test": "frontend_seite_trip_ausblick_grundauswahl_ohne_ausblick",
+   "test": "frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::gesperrt mit Grundtext je reason, nicht in der E-Mail, ab",
    "ac": "AC-10",
    "befund": "#3047 N2",
    "status": "gruen",
    "seite": "frontend",
-   "zustand": "grundauswahl_ohne_ausblick"
+   "zustand": "grundauswahl_ohne_ausblick",
+   "verweis": "#3020 R1b: in der Karte ist die Ausblick-Zelle einer Metrik ohne Tageswert gesperrt (temperature_night: kein Tageswert)"
   },
   {
    "id": "R7-editor-trip-nie_eingestellt-anzeige",
@@ -1857,6 +1872,18 @@
    "status": "gruen",
    "runde": 8,
    "paket": "r8fe"
+  },
+  {
+   "id": "E-3020-TRIP-TG-NUR-TAGESWERT",
+   "liste": "telegram",
+   "kontext": "trip",
+   "format": "editor",
+   "pruefung": "anzeige",
+   "test": "frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::Trip: „nur Tageswert“, „passt nicht mehr“, Zeile mit max_length und Hinweissatz für Trip",
+   "ac": "AC-4 (#3020)",
+   "befund": "F3",
+   "status": "gruen",
+   "verweis": "ADR-0124 Nr. 3: beim Trip zeigt die Telegram-Spalte der Karte ab der achten Metrik „nur Tageswert“ (Telegram-Schnittlinie, ersetzt E-R8-F3-* mit der Alt-LTCutLine); Browser-Fall #3375"
   }
  ]
 }

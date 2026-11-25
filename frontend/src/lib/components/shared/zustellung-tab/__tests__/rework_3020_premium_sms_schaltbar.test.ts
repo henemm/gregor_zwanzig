@@ -17,6 +17,7 @@ import { register } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { locale } from '../../../../i18n/index.ts';
+import { de } from '../../../../i18n/messages/de/index.ts';
 import { kanalStatus, standAusPreset, standAusTrip, type Kontext, type ZustellungStand } from '../zustellungModell.ts';
 import { zustellungNutzlast } from '../zustellungSpeicherung.ts';
 import { presetVoll, profilAllesVerbunden, profilMit, tripVoll, type Json } from './zustellungTabDaten.ts';
@@ -65,6 +66,25 @@ for (const context of ['route', 'vergleich'] as const) {
 				assert.ok(zeile.includes('zustellung-kanal-premium_sms-alarm-gesperrt'), 'Alarm-Zelle nicht gesperrt');
 			});
 		}
+
+		// Adversary F004: eine verfallene Rueckadresse (`stale`) kann ein fremdes Geraet erreichen (AC-20 #3202).
+		// Gesperrt ist sie auch ueber den Rueckfall „nie gemeldet“; deshalb zusaetzlich der eigene Status
+		// „Rueckadresse verfallen“ mit Warnton und eigenem Sperrgrund -- faellt der Zweig weg, wird das rot.
+		test('verfallene Rueckadresse (stale): Kaestchen und Alarm gesperrt, Status „verfallen“ mit Warnton', async () => {
+			locale.set('de');
+			const profil = profilMit({ premium_sms_reply_state: 'stale' });
+			const { zeile, briefing } = await premiumZeile(STAND[context](), profil);
+			assert.ok(zeile, 'die Zeile bleibt sichtbar');
+			assert.ok(/\sdisabled\b/.test(briefing) || /aria-disabled="true"/.test(briefing), `Kaestchen nicht gesperrt: ${briefing}`);
+			assert.ok(zeile.includes('zustellung-kanal-premium_sms-alarm-gesperrt'), 'Alarm-Zelle nicht gesperrt');
+			const st = kanalStatus(profil).premium_sms;
+			assert.equal(st.briefingGesperrt, true);
+			assert.equal(st.alarmGesperrt, true);
+			assert.equal(st.ton, 'warn', 'verfallen ist eine Warnung, nicht „nicht verbunden“');
+			assert.equal(st.statusText, de['zustellung.premium.status_verfallen']);
+			assert.equal(st.grund, de['zustellung.premium.verfallen_hinweis']);
+			assert.ok(zeile.includes(de['zustellung.premium.status_verfallen']), 'Status „verfallen“ fehlt in der Zeile');
+		});
 
 		test('Schalten wirkt: Briefing- und Alarm-Premium-SMS landen in der Nutzlast des Kontexts', () => {
 			const vorher = STAND[context]();
