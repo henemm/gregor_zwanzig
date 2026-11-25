@@ -92,20 +92,13 @@ export function hydrierterWs(preset: ComparePreset): Record<string, unknown> {
 	const dc = (preset.display_config as Record<string, unknown>) ?? {};
 	return {
 		activeMetricKeys: [...((dc.active_metrics as string[] | undefined) ?? [])],
-		channelActiveMetricKeys: {
-			email: null,
-			telegram: null,
-			sms: null,
-			...((dc.channel_active_metrics as Record<string, string[] | null>) ?? {})
-		},
+		// Issue #3298: die Kanal-Overrides werden nicht mehr aus dem Altschluessel gelesen.
+		channelActiveMetricKeys: { email: null, telegram: null, sms: null },
 		officialAlertsEnabled: preset.official_alerts_enabled ?? true,
 		dayWindowStartHour: preset.day_window_start_hour ?? 4,
 		dayWindowEndHour: preset.day_window_end_hour ?? 19,
-		hourlyMetricKeys: (dc.hourly_metrics as string[] | null | undefined) ?? null,
-		hourlyEnabled: preset.hourly_enabled ?? true,
-		outlookMetricKeys: (dc.outlook_metrics as string[] | null | undefined) ?? null,
-		outlookMetricFormats: (dc.outlook_metric_formats as Record<string, boolean> | undefined) ?? null,
-		outlookEnabled: preset.outlook_enabled ?? true
+		// Issue #3298: Stundenverlauf-/Ausblick-Auswahl und Ausblick-Schalter entfallen.
+		hourlyEnabled: preset.hourly_enabled ?? true
 	};
 }
 
@@ -133,25 +126,10 @@ export function wetterMetrikenBedienung(ws: Record<string, unknown>) {
 			ws.dayWindowStartHour = start;
 			ws.dayWindowEndHour = end;
 		},
-		hourlyDragEnd(order: string[]): void {
-			ws.hourlyMetricKeys = [...order];
-		},
-		// Issue #3276: Stundenverlauf/Ausblick-Listen sendet der Speicherer nicht mehr; seine
-		// verbliebenen eigenen Felder sind die beiden Schalter.
+		// Issue #3276/#3298: Stundenverlauf/Ausblick-Listen und der Ausblick-Schalter sind
+		// Altfelder; das einzige verbliebene eigene Feld ist der Stundenverlauf-Schalter.
 		hourlyEnabledToggle(): void {
 			ws.hourlyEnabled = !((ws.hourlyEnabled as boolean | undefined) ?? true);
-		},
-		outlookEnabledToggle(): void {
-			ws.outlookEnabled = !((ws.outlookEnabled as boolean | undefined) ?? true);
-		},
-		outlookSelect(order: string[]): void {
-			ws.outlookMetricKeys = [...order];
-		},
-		outlookFormatToggle(metric: string, roh: boolean): void {
-			ws.outlookMetricFormats = {
-				...((ws.outlookMetricFormats as Record<string, boolean>) ?? {}),
-				[metric]: roh
-			};
 		}
 	};
 }

@@ -70,17 +70,15 @@ function aufbau() {
 describe('AC-2: eine Geste löst historisch BEIDE Wrapper aus — beide Domänen überleben EINEN PUT', () => {
 	// #2794 S3a Teil 3 (F006): Metrikauswahl, Amtliche Warnungen und Tagesfenster gehoeren dem
 	// Reiter Wetter. Issue #3276: Kanal-Auswahl, Stundenverlauf- und Ausblick-Listen/-Formate sind
-	// Altschluessel und werden nicht mehr gesendet. Die Kollision wird mit den beiden verbliebenen
-	// eigenen Feldern gemessen (Stundenverlauf-Schalter, Ausblick-Schalter); Listen-Aenderungen
-	// derselben Geste duerfen NICHT im Rumpf auftauchen.
-	test('Stundenverlauf-Schalter UND Ausblick-Schalter im selben Tick → EIN PUT, Body trägt BEIDE Änderungen', async () => {
+	// Altschluessel und werden nicht mehr gesendet. Issue #3298: auch der Ausblick-Schalter
+	// entfaellt; die Kollision wird mit dem verbliebenen eigenen Feld (Stundenverlauf-Schalter)
+	// und einer Kanal-Aenderung derselben Geste gemessen, die NICHT im Rumpf auftauchen darf.
+	test('Stundenverlauf-Schalter und Kanal-Aenderung im selben Tick → EIN PUT, nur der Schalter reist', async () => {
 		const { ws, ctl, speicherung, bedienung } = aufbau();
 
-		ws.channelActiveMetricKeys = { email: ['wind_max_kmh'], telegram: null, sms: null };
 		bedienung.hourlyEnabledToggle();
 		speicherung.aenderungMelden();
-		bedienung.hourlyDragEnd(['temp_max_c', 'wind_max_kmh', 'gust_max_kmh']);
-		bedienung.outlookEnabledToggle();
+		ws.channelActiveMetricKeys = { email: ['wind_max_kmh'], telegram: null, sms: null };
 		speicherung.aenderungMelden();
 
 		await ctl.flush();
@@ -88,34 +86,17 @@ describe('AC-2: eine Geste löst historisch BEIDE Wrapper aus — beide Domänen
 		assert.equal(puts().length, 1, 'eine Geste im gemeinsamen Wrapper darf nur EINEN PUT auslösen');
 		const body = server.storedBody(PRESET_ID) as Record<string, unknown>;
 		assert.equal(body.hourly_enabled, false, 'die zuerst gemeldete Änderung darf nicht überschrieben werden');
-		assert.equal(body.outlook_enabled, false, 'die zweite Änderung muss im selben PUT stehen');
-		assert.equal(body.display_config, undefined, '#3276: Kanal-/Listen-Aenderungen reisen nicht mit');
-	});
-
-	test('umgekehrte Reihenfolge (Ausblick zuerst, dann Stundenverlauf) → EIN PUT, Body trägt BEIDE Änderungen', async () => {
-		const { ctl, speicherung, bedienung } = aufbau();
-
-		bedienung.outlookEnabledToggle();
-		speicherung.aenderungMelden();
-		bedienung.hourlyEnabledToggle();
-		speicherung.aenderungMelden();
-
-		await ctl.flush();
-
-		assert.equal(puts().length, 1);
-		const body = server.storedBody(PRESET_ID) as Record<string, unknown>;
-		assert.equal(body.outlook_enabled, false, 'die zuerst gemeldete Ausblick-Änderung ging verloren');
-		assert.equal(body.hourly_enabled, false, 'die zuletzt gemeldete Änderung muss ebenfalls im selben PUT stehen');
+		assert.ok(!('outlook_enabled' in body), '#3298: kein Ausblick-Schalter im Rumpf');
+		assert.equal(body.display_config, undefined, '#3276: Kanal-Aenderungen reisen nicht mit');
 	});
 
 	test('drei Meldungen derselben Geste vor dem ersten Flush → EIN PUT trägt den Endstand', async () => {
-		const { ctl, speicherung, bedienung } = aufbau();
+		const { ws, ctl, speicherung, bedienung } = aufbau();
 
 		bedienung.hourlyEnabledToggle();
 		speicherung.aenderungMelden();
-		bedienung.outlookFormatToggle('temp_max_c', false);
+		ws.channelActiveMetricKeys = { email: null, telegram: ['temp_max_c'], sms: null };
 		speicherung.aenderungMelden();
-		bedienung.outlookEnabledToggle();
 		speicherung.aenderungMelden();
 
 		await ctl.flush();
@@ -123,7 +104,6 @@ describe('AC-2: eine Geste löst historisch BEIDE Wrapper aus — beide Domänen
 		assert.equal(puts().length, 1, 'drei Meldungen derselben Geste — trotzdem nur ein PUT');
 		const body = server.storedBody(PRESET_ID) as Record<string, unknown>;
 		assert.equal(body.hourly_enabled, false);
-		assert.equal(body.outlook_enabled, false);
-		assert.equal(body.display_config, undefined, '#3276: outlook_metric_formats ist Altschluessel');
+		assert.equal(body.display_config, undefined, '#3276: Kanal-Aenderungen sind Altschluessel');
 	});
 });

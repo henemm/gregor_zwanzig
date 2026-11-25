@@ -36,10 +36,7 @@ const SOLL: Record<string, unknown> = {
 	activeMetricKeys: null,
 	channelActiveMetricKeys: { email: null, telegram: null, sms: null },
 	corridors: [],
-	hourlyMetricKeys: null,
-	outlookMetricKeys: null,
-	outlookMetricFormats: null,
-	hourlyMetricFormats: null, // #3097: Roh/Einfach je Stundenverlauf-Groesse
+	// #3298: Stundenverlauf-/Ausblick-Auswahlfelder und Ausblick-Schalter entfallen (Altfelder).
 	sendEmail: true,
 	sendTelegram: false,
 	sendSms: false,
@@ -47,7 +44,6 @@ const SOLL: Record<string, unknown> = {
 	officialAlertsEnabled: true,
 	radarAlertEnabled: false,
 	hourlyEnabled: true,
-	outlookEnabled: true,
 	officialAlertTriggersEnabled: true,
 	officialWarningsEnabled: true, // #3047 Runde 7 (PO 2026-11-16, Nachtrag Runde 7): loest #1258 AC-4 ab
 	metricAlertLevels: {},
@@ -68,7 +64,18 @@ const SOLL: Record<string, unknown> = {
 const SOLL_UNDEFINIERT = ['channels', 'alertCooldownMinutes', 'alertQuietFrom', 'alertQuietTo'];
 
 /** Tote Felder der Klasse — gehören nicht in den Feldsatz. */
-const TOT = ['saveStatus', 'saveError', 'metricsManuallyEdited', 'weekday'];
+const TOT = [
+	'saveStatus',
+	'saveError',
+	'metricsManuallyEdited',
+	'weekday',
+	// #3298: Altfelder des Wizards
+	'outlookEnabled',
+	'hourlyMetricKeys',
+	'outlookMetricKeys',
+	'outlookMetricFormats',
+	'hourlyMetricFormats'
+];
 
 describe('Vertrag 1: compareFeldsatzStandard() — Startwerte feldweise', () => {
 	for (const [feld, soll] of Object.entries(SOLL)) {

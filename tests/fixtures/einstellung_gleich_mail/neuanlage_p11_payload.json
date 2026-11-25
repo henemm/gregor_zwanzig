@@ -46,7 +46,6 @@
     "official_alerts_enabled": true,
     "radar_alert_enabled": false,
     "hourly_enabled": true,
-    "outlook_enabled": true,
     "official_alert_triggers_enabled": true,
     "send_email": true,
     "send_telegram": false,

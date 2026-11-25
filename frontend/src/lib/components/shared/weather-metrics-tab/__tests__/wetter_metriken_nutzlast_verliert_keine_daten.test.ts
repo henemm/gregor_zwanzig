@@ -78,7 +78,6 @@ const WETTER_METRIKEN_FELDER_DC = new Set<string>([]);
 const WETTER_METRIKEN_FELDER_TOP = new Set([
 	'official_alerts_enabled',
 	'hourly_enabled',
-	'outlook_enabled',
 	'day_window_start_hour',
 	'day_window_end_hour'
 ]);
@@ -152,22 +151,22 @@ describe('AC-12 (Kern, seit #2375 Teilfeld): baueWetterMetrikenNutzlast — nur 
 // Issue #3276 (AC-2): die drei Rueckfall-Tests („current.<feld> == null → PUT traegt den Bestand")
 // pruefen jetzt das Gegenteil: der Rumpf traegt die Altschluessel gar nicht mehr, weder als
 // Bestand noch als null — der Go-Merge laesst den Bestand unberuehrt (siehe Orchestrierung unten).
-describe('AC-12 (Rueckfall, #3276): Altfelder == null oder gesetzt — der PUT traegt keinen Altschluessel', () => {
-	for (const feld of ['hourlyMetricKeys', 'outlookMetricKeys', 'outlookMetricFormats'] as const) {
-		test(`${feld} == null im Snapshot → kein display_config im PUT (weder Bestand noch null)`, () => {
-			const preset = reicherVergleich();
-			const ws = hydrierterWs(preset);
-			ws[feld] = null;
-			ws.outlookEnabled = false;
+// Issue #3298: die camelCase-Altfelder des Zustands sind entfallen; geprueft bleibt, dass der
+// Rumpf bei einem Bestand MIT Altschluesseln keinen davon traegt (auch kein `outlook_enabled`).
+describe('AC-12 (Rueckfall, #3276/#3298): Bestand mit Altfeldern — der PUT traegt keinen Altschluessel', () => {
+	test('Stundenverlauf-Schalter geaendert → kein display_config, kein outlook_enabled im PUT', () => {
+		const preset = reicherVergleich();
+		const ws = hydrierterWs(preset);
+		ws.hourlyEnabled = false;
 
-			const { body } = baueWetterMetrikenNutzlast(preset, wetterMetrikenSnapshotAus(ws));
+		const { body } = baueWetterMetrikenNutzlast(preset, wetterMetrikenSnapshotAus(ws));
 
-			for (const k of ['hourly_metrics', 'outlook_metrics', 'outlook_metric_formats', 'hourly_metric_formats', 'channel_active_metrics']) {
-				assert.ok(!(k in dc(body)), `${k} im Zustellungs-PUT`);
-			}
-			assert.equal((body as unknown as Record<string, unknown>).outlook_enabled, false);
-		});
-	}
+		for (const k of ['hourly_metrics', 'outlook_metrics', 'outlook_metric_formats', 'hourly_metric_formats', 'channel_active_metrics']) {
+			assert.ok(!(k in dc(body)), `${k} im Zustellungs-PUT`);
+		}
+		assert.ok(!('outlook_enabled' in (body as unknown as Record<string, unknown>)), 'outlook_enabled im Zustellungs-PUT');
+		assert.equal((body as unknown as Record<string, unknown>).hourly_enabled, false);
+	});
 });
 
 describe('AC-12 (Rueckfall via Orchestrierung): erstelleWetterMetrikenVergleichSpeicherung schreibt den echten Bestand, nicht null', () => {
@@ -183,13 +182,10 @@ describe('AC-12 (Rueckfall via Orchestrierung): erstelleWetterMetrikenVergleichS
 
 	afterEach(() => server.restore());
 
-	test('alle drei Rueckfall-Felder == null im wiz → echter PUT-Body traegt den Preset-Bestand statt null', async () => {
+	test('Zustand ohne Altfelder (#3298) → nach dem echten PUT steht der Preset-Bestand, nicht null', async () => {
 		const preset = reicherVergleich();
 		let basis = preset;
 		const ws = hydrierterWs(basis);
-		ws.hourlyMetricKeys = null;
-		ws.outlookMetricKeys = null;
-		ws.outlookMetricFormats = null;
 		const ctl = createController(PRESET_ID);
 		const queue = createPutQueue();
 		const speicherung = erstelleWetterMetrikenVergleichSpeicherung({

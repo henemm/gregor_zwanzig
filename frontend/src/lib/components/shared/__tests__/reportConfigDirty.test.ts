@@ -78,8 +78,6 @@ describe('AC-1/AC-3: reine Mount-Kanonisierung (Format + Default-Ergänzung) ist
 			send_email: true,
 			send_telegram: false,
 			send_sms: false,
-			multi_day_trend_morning: false,
-			multi_day_trend_evening: false,
 			show_compact_summary: true,
 			wind_exposition_min_elevation_m: null,
 			show_stage_stats: true,

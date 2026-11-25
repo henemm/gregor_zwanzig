@@ -116,8 +116,8 @@ describe('AC-3 (Mechanismus): erst NACH bestandenem Gate erzeugt — die spät e
 		const ws = hydrierterWs(preset);
 		// Zustand VOR der zweiten (Layout-)Hydration: wie beim Mount, bevor
 		// hydrateLayoutTab() fertig ist — Platzhalter statt Server-Stand.
-		ws.hourlyMetricKeys = null;
-		ws.outlookMetricKeys = null;
+		// #3298: einziges Layout-Feld ist der Stundenverlauf-Schalter (Feldsatz-Vorgabe true).
+		ws.hourlyEnabled = true;
 		let hydrationsStand = { wetterMetrikenHydrated: true, layoutHydrated: false };
 
 		let basis = preset;
@@ -127,8 +127,7 @@ describe('AC-3 (Mechanismus): erst NACH bestandenem Gate erzeugt — die spät e
 		// Die Layout-Hydration trifft NACH dem ersten Hydrations-Status ein —
 		// korrekt implementiert wird die Orchestrierung ERST danach erzeugt
 		// (Design-Entscheidung 4, untrack()-Konstruktion).
-		ws.hourlyMetricKeys = ['wind_max_kmh', 'temp_max_c'];
-		ws.outlookMetricKeys = ['temp_max_c'];
+		ws.hourlyEnabled = preset.hourly_enabled ?? true;
 		hydrationsStand = { wetterMetrikenHydrated: true, layoutHydrated: true };
 		assert.equal(wetterMetrikenHydrationAbgeschlossen(hydrationsStand), true, 'Vorbedingung: Gate jetzt erfüllt');
 

@@ -1,0 +1,39 @@
+# #3298 GREEN — Stand 2026-11-25T14:42 UTC (Worktree jiggly-tickling-biscuit)
+
+## RED-Tests (benannt)
+npm test -- src/lib/altfeld_namen_sperre.test.ts src/lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts
+# tests 31
+# pass 31
+# fail 0
+
+## npm test (gesamte node-test-Suite)
+Lauf 2:
+# tests 11159
+# pass 11155
+# fail 1
+# skipped 2
+# todo 1
+Einziger Fehlschlag: ac2_endbilanz_deckt_alle_47_ab.test.ts (die Spec-Endbilanz
+docs/specs/modules/rework_2276_s6h_ac2_endbilanz.md trug noch die alten Zeilennummern der
+HERKUNFT-Ratsche). Spec nachgezogen, Nachlauf:
+npm test -- src/lib/components/shared/__tests__/ac2_endbilanz_deckt_alle_47_ab.test.ts src/lib/components/shared/__tests__/context_herkunft_zweige_eingefroren.test.ts
+# pass 23
+# fail 0
+=> Gesamtsuite: # pass 11156 / # fail 0
+todo: pill_toene_kontrast „warn|flaeche (hell)" — Altbefund, als TODO markiert, unveraendert.
+
+## npm run build
+exit 0
+
+## npx svelte-check --tsconfig ./tsconfig.json --output machine
+COMPLETED 2278 FILES 32 ERRORS 72 WARNINGS 51 FILES_WITH_PROBLEMS
+(CI-Baseline .github/workflows/ci.yml: 34 Errors / 132 Warnings — eingehalten)
+
+## Python (Frontend-/Fixture-Bezug), uv run pytest <dateien> -o addopts="" -q
+tests/tdd/test_3047_p11_neuanlage_warnungen.py tests/tdd/test_3277_altfelder_entfernen.py
+tests/tdd/test_alert_rules_model.py tests/tdd/test_bug590_signal_removal_telegram_start.py
+tests/tdd/test_compare_alert_metric_gating.py tests/tdd/test_pendant_gate_bekannte_paare.py
+tests/tdd/test_pendant_gate.py tests/test_altfeld_namen_sperre.py
+220 passed
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py
+35 passed

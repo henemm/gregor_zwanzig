@@ -45,7 +45,6 @@
 	// vergleich-Kontext) — seit #1743 ueber WetterMetrikenVersandPanel (gelöscht, #3297) eingebettet.
 	import {
 		hydrateWeatherMetricsFromPreset,
-		hydrateChannelActiveMetricsFromPreset,
 		hydrateDayWindowFromPreset,
 		hydrateLayoutFieldsFromPreset,
 		wetterMetrikenHydrationAbgeschlossen
@@ -514,7 +513,6 @@
 	let wetterMetrikenHydrated = $state(false);
 	let wetterMetrikenHydrating = false;
 	let layoutHydrated = $state(false);
-	let layoutHydrating = false;
 	const wetterMetrikenLayoutHydrationBereit = $derived(
 		wetterMetrikenHydrationAbgeschlossen({ wetterMetrikenHydrated, layoutHydrated })
 	);
@@ -528,13 +526,8 @@
 		// eingestellt") — sonst ist eine gespeicherte Vollauswahl im Ausblick
 		// vom Altbestand nicht zu unterscheiden. Leser materialisieren selbst.
 		wizardState.activeMetricKeys = hydrateWeatherMetricsFromPreset(currentPreset, catalog);
-		// Issue #1703 Scheibe 8: Kanal-Overrides aus DEMSELBEN geladenen Katalog —
-		// ohne sie zeigte jeder Kanal-Reiter nach dem Neuladen wieder die
-		// Grundauswahl (AC-S8-4/AC-S8-6/AC-S8-11).
-		wizardState.channelActiveMetricKeys = hydrateChannelActiveMetricsFromPreset(
-			currentPreset,
-			catalog
-		);
+		// Issue #3298: die Kanal-Overrides werden nicht mehr aus dem Altschluessel
+		// gelesen (Backend liefert ihn nicht mehr, ADR-0124).
 		// D2-Fix-Loop 2 (AC-6): officialAlertsEnabled beim Erst-Oeffnen
 		// mit-hydrieren (analog hydrateAlarmFieldsFromPreset) — sonst zeigt der
 		// Toggle bei einem Deep-Link ?tab=wetter-metriken den Klassen-Default
@@ -569,26 +562,16 @@
 	// im Dirty-Check-Grundzustand die Rohform (Scheindiff + Ruecksetzen auf die
 	// Rohform, Adversary-Befund F001 aus #1373). Die Anfrage ist geteilt
 	// zwischengespeichert (compareMetricCatalogLoader) — kein zweiter Abruf.
-	async function hydrateLayoutTab(): Promise<void> {
-		const catalog = await loadCompareSelectionEntries().catch(() => []);
-		const hydrated = hydrateLayoutFieldsFromPreset(currentPreset, catalog);
-		wizardState.hourlyMetricKeys = hydrated.hourlyMetricKeys;
-		wizardState.hourlyEnabled = hydrated.hourlyEnabled;
-		wizardState.outlookMetricKeys = hydrated.outlookMetricKeys;
-		// Issue #2049: Roh/Einfach je Ausblick-Groesse, aus derselben Hydration.
-		wizardState.outlookMetricFormats = hydrated.outlookMetricFormats ?? null;
-		wizardState.outlookEnabled = hydrated.outlookEnabled;
-		// Issue #3097: Roh/Einfach je Stundenverlauf-Groesse, aus derselben Hydration.
-		wizardState.hourlyMetricFormats = hydrated.hourlyMetricFormats ?? null;
-		layoutHydrated = true;
-	}
-
+	// Issue #3298: nur noch `hourlyEnabled` (Ausblick folgt `placements.outlook_reports`);
+	// ohne Ausblick-Auswahl braucht diese Hydration den Katalog nicht mehr.
+	// #3298 Fix: die Hydration laeuft jetzt SYNCHRON im Effekt, ohne `layoutHydrating`-Sperre. Mit
+	// der alten Sperre (aufgehoben erst im Microtask) setzte der Preset-Sync-Effekt weiter unten
+	// `layoutHydrated` im selben Durchlauf wieder auf false, der Re-Run traf die noch stehende
+	// Sperre, und der Reiter blieb fuer immer in der Hydrations-Sperre (Tabelle nie gerendert).
 	$effect(() => {
-		if ((activeTab !== 'wetter' && activeTab !== 'zustellung') || layoutHydrated || layoutHydrating) return;
-		layoutHydrating = true;
-		void hydrateLayoutTab().finally(() => {
-			layoutHydrating = false;
-		});
+		if ((activeTab !== 'wetter' && activeTab !== 'zustellung') || layoutHydrated) return;
+		wizardState.hourlyEnabled = hydrateLayoutFieldsFromPreset(currentPreset).hourlyEnabled;
+		layoutHydrated = true;
 	});
 
 	// Issue #1360 (Scheibe S1a von Epic #1372): CHANNEL_COLS/channels/

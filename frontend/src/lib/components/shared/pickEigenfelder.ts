@@ -72,11 +72,9 @@ export const WETTER_REPORT_KEYS = [
 /** §2.2 — `display_config`-Schluessel des Reiters Wetter-Metriken. */
 export const WETTER_DISPLAY_KEYS = [
 	'metrics',
-	'channel_layouts',
 	'preset_name',
 	'telegram_kurzform',
-	'outlook_metrics',
-	'outlook_metric_formats',
+	// Issue #3298: die Altschluessel (Kanal-Layouts, Ausblick-Spalten/-Formate) entfallen.
 	// Issue #1721: Schalter "Nacht-Stundentabelle in der Mail zeigen" (nur Trip).
 	'show_night_block',
 	// Issue #2792 S1a: Profil-Ampel, gesetzt beim Anwenden einer Vorlage.

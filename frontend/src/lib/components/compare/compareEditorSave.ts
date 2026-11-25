@@ -46,10 +46,8 @@ export interface CompareEditorEdits {
 	// `hourlyMetricKeys`, `outlookMetricKeys`, `outlookMetricFormats`,
 	// `hourlyMetricFormats` sind entfallen. Der Ortsvergleich schreibt die
 	// Altschluessel nicht mehr; die Tabelle „Was steht wo" (`placements`) ist
-	// die einzige Quelle (ADR-0124).
-	// Issue #1361/#1368: 3-Tages-Ausblick-Sektion ein/aus (Top-Level, analog
-	// hourlyEnabled). Optional → rückwärtskompatibel.
-	outlookEnabled?: boolean;
+	// die einzige Quelle (ADR-0124). Issue #3298: auch der Ausblick-Schalter
+	// entfaellt (`placements.outlook_reports` ersetzt ihn, ADR-0124 Nr. 6).
 	// Issue #1040: amtliche Warnungen ein/aus. Optional → rückwärtskompatibel.
 	officialAlertsEnabled?: boolean;
 	// Issue #1041 Slice 2: Radar-Alarm ein/aus (Default AUS). Optional → rückwärtskompatibel.
@@ -183,8 +181,6 @@ export function buildComparePresetSavePayload(
 			: {}),
 		// Issue #1107: analoges Round-Trip-Prinzip für hourly_enabled.
 		...(edits.hourlyEnabled !== undefined ? { hourly_enabled: edits.hourlyEnabled } : {}),
-		// Issue #1361/#1368: analoges Round-Trip-Prinzip für outlook_enabled.
-		...(edits.outlookEnabled !== undefined ? { outlook_enabled: edits.outlookEnabled } : {}),
 		// Issue #1170: analoges Round-Trip-Prinzip für die Alarm-Konfiguration.
 		...(edits.alertCooldownMinutes !== undefined
 			? { alert_cooldown_minutes: edits.alertCooldownMinutes }
@@ -316,10 +312,6 @@ export interface NewComparePresetFields {
 	officialAlertsEnabled: boolean;
 	radarAlertEnabled: boolean;
 	hourlyEnabled: boolean;
-	// Issue #1361/#1368: 3-Tages-Ausblick-Schalter, analog hourlyEnabled.
-	// Optional, damit bestehende Aufrufer/Tests ohne das Feld unveraendert
-	// funktionieren (der Wizard setzt es immer).
-	outlookEnabled?: boolean;
 	officialAlertTriggersEnabled: boolean;
 	// #3333 (AC-4): Briefing-Kanal E-Mail; der Anlege-Editor setzt ihn immer (baueVergleichAnlegeRumpf).
 	sendEmail?: boolean;
@@ -393,9 +385,6 @@ export function buildNewComparePresetPayload(fields: NewComparePresetFields): Re
 		official_alerts_enabled: fields.officialAlertsEnabled, // Issue #1040
 		radar_alert_enabled: fields.radarAlertEnabled, // Issue #1041 Slice 2
 		hourly_enabled: fields.hourlyEnabled, // Issue #1107
-		// Issue #1361/#1368: nur senden, wenn die Bedienflaeche einen Wert
-		// geliefert hat (undefined = Aufrufer kennt das Feld nicht).
-		...(fields.outlookEnabled !== undefined ? { outlook_enabled: fields.outlookEnabled } : {}),
 		// Issue #1216 Slice 2b: Amtliche-Warnungen-Alarm-Trigger + Kanal-Opt-in.
 		official_alert_triggers_enabled: fields.officialAlertTriggersEnabled,
 		...(fields.sendEmail !== undefined ? { send_email: fields.sendEmail } : {}), // #3333 AC-4
@@ -495,14 +484,7 @@ export interface CompareFeldsatz {
 	channelActiveMetricKeys: CompareChannelActiveMetrics;
 	// Issue #1231 Slice 4: Korridore (CorridorEditor context="vergleich").
 	corridors: Corridor[];
-	// Issue #1106/#1366 F001: `null` = „nie eingestellt", `[]` = bewusst leer.
-	hourlyMetricKeys: string[] | null;
-	// Issue #1361/#1368: Spaltenauswahl des 3-Tages-Ausblicks, Semantik wie oben.
-	outlookMetricKeys: string[] | null;
-	// Issue #2049: Roh/Einfach je Ausblick-Groesse; `null` = „nie eingestellt".
-	outlookMetricFormats: Record<string, boolean> | null;
-	// Issue #3097: Roh/Einfach je Stundenverlauf-Groesse; `null` = „nie eingestellt".
-	hourlyMetricFormats: Record<string, boolean> | null;
+	// Issue #3298: die Stundenverlauf-/Ausblick-Auswahlfelder entfallen (ADR-0124, „Was steht wo").
 	// Issue #443: Versand-Felder.
 	sendEmail: boolean;
 	sendTelegram: boolean;
@@ -515,7 +497,6 @@ export interface CompareFeldsatz {
 	officialAlertsEnabled: boolean; // Issue #1040
 	radarAlertEnabled: boolean; // Issue #1041 Slice 2
 	hourlyEnabled: boolean; // Issue #1107
-	outlookEnabled: boolean; // Issue #1361/#1368
 	officialAlertTriggersEnabled: boolean; // Issue #1216 Slice 2b
 	officialWarningsEnabled: boolean; // Issue #1258
 	metricAlertLevels: Record<string, string>; // Issue #1170
@@ -550,10 +531,6 @@ export function compareFeldsatzStandard(): CompareFeldsatz {
 		activeMetricKeys: null,
 		channelActiveMetricKeys: { email: null, telegram: null, sms: null },
 		corridors: [],
-		hourlyMetricKeys: null,
-		outlookMetricKeys: null,
-		outlookMetricFormats: null,
-		hourlyMetricFormats: null,
 		sendEmail: true,
 		sendTelegram: false,
 		sendSms: false,
@@ -562,7 +539,6 @@ export function compareFeldsatzStandard(): CompareFeldsatz {
 		officialAlertsEnabled: true,
 		radarAlertEnabled: false,
 		hourlyEnabled: true,
-		outlookEnabled: true,
 		officialAlertTriggersEnabled: true,
 		// #3047 Runde 7 (PO 2026-11-16, loest #1258 AC-4 ab): Briefing UND Alarm an.
 		officialWarningsEnabled: true,
@@ -601,7 +577,6 @@ export function baueVergleichAnlegeRumpf(
 		officialAlertsEnabled: wiz.officialAlertsEnabled, // Issue #1040
 		radarAlertEnabled: wiz.radarAlertEnabled, // Issue #1041 Slice 2
 		hourlyEnabled: wiz.hourlyEnabled, // Issue #1107
-		outlookEnabled: wiz.outlookEnabled, // Issue #1361/#1368
 		officialAlertTriggersEnabled: wiz.officialAlertTriggersEnabled, // Issue #1216 Slice 2b
 		sendEmail: wiz.sendEmail, // #3333 (AC-4): immer, der Reiter Zustellung kann E-Mail abwaehlen
 		sendTelegram: wiz.sendTelegram,

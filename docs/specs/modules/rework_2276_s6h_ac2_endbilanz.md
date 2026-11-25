@@ -124,9 +124,9 @@ Diese Scheibe:
 
 | Datei:Zeile | Warum es (noch) eine HERKUNFT-Verzweigung ist | Warum sie bleibt |
 |---|---|---|
-| `versandVergleichSpeicherung.ts:237` | Erzeugungs-Prädikat: nur aktiv, wenn `context === 'vergleich'` | Gate für einen strukturell anderen Persistenz-Endpoint (Compare-Preset) |
-| `wetter-tab/wertebereicheVergleichSpeicherung.ts:204` | dito für Wertebereiche | dito |
-| `weather-metrics-tab/weatherMetricsCompareSave.ts:439` | dito für Wetter-Metriken (#3276: −53 durch entfernte Altschlüssel, Fix-Loop F005: −79 durch entfernten `flushPendingWeatherMetricsSave`; #2794 Teil 3 F006: um 5 Zeilen verschoben; #3061/#3047 J5: null-Hydrierer zusammengeführt, netto unverschoben; #3097: +15 durch `hourlyMetricFormats`; Weiche unverändert) | dito **und** zugleich die von S4 AC-13 geforderte Hydration-Barriere — AC-13 hat Vorrang (siehe AC-3) |
+| `versandVergleichSpeicherung.ts:236` | Erzeugungs-Prädikat: nur aktiv, wenn `context === 'vergleich'` | Gate für einen strukturell anderen Persistenz-Endpoint (Compare-Preset) |
+| `wetter-tab/wertebereicheVergleichSpeicherung.ts:203` | dito für Wertebereiche | dito |
+| `weather-metrics-tab/weatherMetricsCompareSave.ts:364` | dito für Wetter-Metriken (#3298: −75 durch entfernte Lese-Naht, Layout-Altfelder und Ausblick-Schalter; #3276: −53 durch entfernte Altschlüssel, Fix-Loop F005: −79 durch entfernten `flushPendingWeatherMetricsSave`; #2794 Teil 3 F006: um 5 Zeilen verschoben; #3061/#3047 J5: null-Hydrierer zusammengeführt, netto unverschoben; #3097: +15 durch `hourlyMetricFormats`; Weiche unverändert) | dito **und** zugleich die von S4 AC-13 geforderte Hydration-Barriere — AC-13 hat Vorrang (siehe AC-3) |
 
 **Summe:** 7 FACHLICH + 3 DARSTELLUNG + 3 HERKUNFT = **13**, deckungsgleich
 mit `EINGEFROREN_SOLL_ANZAHL` (Summenzeile in #2727 korrigiert — sie nannte 14 / 46;

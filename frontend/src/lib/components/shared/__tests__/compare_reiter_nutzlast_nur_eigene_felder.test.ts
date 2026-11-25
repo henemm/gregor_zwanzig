@@ -129,11 +129,13 @@ describe('Test 2 / AC-8: Leerauswahl und Löschen stehen explizit im Rumpf', () 
 	// #2794 S3a Teil 3 (F006): die Metrikauswahl gehoert dem Reiter Wetter und steht hier nicht im Rumpf.
 	// Issue #3276 (Spec: nie leer senden): vorher „je [] im Rumpf" — `hourly_metrics`/`outlook_metrics`
 	// sind Altschluessel und werden weder gefuellt noch als [] gesendet (Go-Merge wuerde den Bestand
-	// ersetzen). Der Rumpf traegt nur die Schalter, kein display_config.
-	test('wetterMetriken: Stundenverlauf/Ausblick leer ⇒ KEIN [] im Rumpf, nur die Schalter (#3276)', async () => {
+	// ersetzen). Issue #3298: auch `outlook_enabled` entfaellt; der Rumpf traegt nur den
+	// Stundenverlauf-Schalter, kein display_config.
+	test('wetterMetriken: Leeren ⇒ KEIN [] im Rumpf, nur der Stundenverlauf-Schalter (#3276/#3298)', async () => {
 		const { body } = await speichereEinmal('wetterMetriken', 'leeren');
 		assert.equal(body.display_config, undefined, 'display_config (Altschluessel als []) im Rumpf');
-		assert.equal(body.outlook_enabled, false);
+		assert.ok(!('outlook_enabled' in body), 'outlook_enabled im Rumpf');
+		assert.equal(body.hourly_enabled, false);
 		pruefeSchluesselsatz('wetterMetriken', body);
 	});
 

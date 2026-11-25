@@ -137,16 +137,14 @@ export function reiterAufbau(
 		speicherung,
 		basis: () => basis,
 		// #2794 S3a Teil 3 (F006): die Metrikauswahl gehoert dem Reiter Wetter.
-		// Issue #3276: Stundenverlauf/Ausblick-Listen sind Altschluessel; Geste dieses Reiters ist
-		// der Stundenverlauf-Schalter. Leeren = beide Listen leer (wird NICHT gesendet) plus
-		// Ausblick-Schalter aus (damit ueberhaupt ein PUT entsteht).
+		// Issue #3276/#3298: Stundenverlauf/Ausblick-Listen und der Ausblick-Schalter sind
+		// Altfelder; einzige Geste dieses Reiters ist der Stundenverlauf-Schalter. Leeren =
+		// Stundenverlauf aus (damit ueberhaupt ein PUT entsteht).
 		aendern() {
 			bedienung.hourlyEnabledToggle();
 		},
 		leeren() {
-			bedienung.hourlyDragEnd([]);
-			bedienung.outlookSelect([]);
-			bedienung.outlookEnabledToggle();
+			bedienung.hourlyEnabledToggle();
 		}
 	};
 }

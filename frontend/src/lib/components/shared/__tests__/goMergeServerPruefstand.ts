@@ -278,9 +278,9 @@ export const EIGENFELDER = {
 	// dem Reiter Wetter (WetterTab), nicht mehr dem Zustellungs-Speicherer von WeatherMetricsTab.
 	// Issue #3276 (Spec-AC-38): `channel_active_metrics`, `hourly_metrics`, `outlook_metrics`,
 	// `outlook_metric_formats` sind Altschluessel — der Zustellungs-Speicherer sendet kein
-	// display_config mehr, nur noch die beiden Schalter.
+	// display_config mehr. Issue #3298: auch der Ausblick-Schalter entfaellt (ADR-0124 Nr. 6).
 	wetterMetriken: {
-		top: ['hourly_enabled', 'outlook_enabled'],
+		top: ['hourly_enabled'],
 		display: null
 	}
 } as const;

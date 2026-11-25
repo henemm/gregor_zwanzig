@@ -221,7 +221,7 @@ describe('#3061 Speichern und Trip bleiben unveraendert', () => {
 		const s: Record<string, unknown> = {};
 		await wetterHydrierer(s, ALTBESTAND());
 		alarmHydrierer(s, ALTBESTAND());
-		const layout = hydrateLayoutFieldsFromPreset(ALTBESTAND(), KATALOG);
+		const layout = hydrateLayoutFieldsFromPreset(ALTBESTAND());
 		Object.assign(s, layout);
 		// Baseline wie im Hub: Stand nach BEIDEN Hydrationen.
 		const vorher = wetterMetrikenSnapshotAus(s);
@@ -230,7 +230,7 @@ describe('#3061 Speichern und Trip bleiben unveraendert', () => {
 		const nachher = wetterMetrikenSnapshotAus(s);
 		assert.equal(flushPendingWetterMetrikenSave(ALTBESTAND(), nachher, vorher), null, 'Scheindifferenz nach reinem Oeffnen');
 		// Auch eine spaetere Speicherung (andere Geste) schreibt kein active_metrics.
-		const mitGeste = { ...nachher, outlookEnabled: !nachher.outlookEnabled };
+		const mitGeste = { ...nachher, hourlyEnabled: !nachher.hourlyEnabled }; // #3298: einziger eigener Schalter
 		const nutzlast = flushPendingWetterMetrikenSave(ALTBESTAND(), mitGeste, vorher);
 		assert.ok(nutzlast, 'Messaufbau: echte Geste muss eine Nutzlast liefern');
 		const dc = (nutzlast!.body.display_config ?? {}) as Record<string, unknown>;
