@@ -44,20 +44,21 @@ function stageDates(trip: Trip): string[] {
  *   1. Route   — done wenn stages.length >= 1
  *   2. Etappen — done wenn ≥1 Stage mit gesetztem `date`
  *   3. Wetter  — done wenn display_config.metrics?.length > 0
- *   4. Layout  — done wenn display_config.preset_name oder channel_layouts gesetzt
+ *   4. Layout  — done wenn display_config.placements.rows nicht leer
  *   5. Reports — done wenn morning_enabled || evening_enabled
  *
  * F001-Fix (Adversary): Wetter-Metriken liegen in display_config.metrics,
- * nicht in report_config.metrics. layout_mode existiert nicht — stattdessen
- * display_config.preset_name / channel_layouts als Proxy für "Layout konfiguriert".
+ * nicht in report_config.metrics.
+ * #3297 (ADR-0124 Nr. 5): „Layout konfiguriert“ liest allein die Tabelle
+ * „Was steht wo“ (`placements.rows`); Vorlagenname und Altfelder zählen nicht.
  */
 export function setupStepTrip(trip: Trip): SetupStep[] {
 	const stages = trip.stages ?? [];
 	const dc = trip.display_config ?? {};
 	const dcMetrics = Array.isArray(dc.metrics) ? dc.metrics : [];
 	const hasMetrics = dcMetrics.length > 0;
-	const hasLayout =
-		dc.preset_name != null || dc.channel_layouts != null || dc.channel_layouts_per_report != null;
+	const rows = dc.placements?.rows;
+	const hasLayout = Array.isArray(rows) && rows.length > 0;
 
 	// Issue #2422 S3 (N2): dieselbe Slot-Regel wie der Versand.
 	const morning = reportSlotAktiv(trip.report_config, 'morning');

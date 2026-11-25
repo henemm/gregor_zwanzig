@@ -115,7 +115,6 @@ const GO_TRIP_FELDER = new Set([
 	'official_alerts_enabled',
 	'official_alert_triggers_enabled',
 	'official_warnings',
-	'radar_alert_enabled', // Issue #2800 (trip.go, Dreizustand)
 	'alert_channels',
 	'alert_channel_thresholds',
 	'alert_metric_channels'

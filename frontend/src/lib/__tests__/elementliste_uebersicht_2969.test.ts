@@ -114,7 +114,10 @@ const ALT_ANZAHL_3251 = 2756;
 const ALT_ANZAHL = ALT_ANZAHL_3251 + 184 - 180 + 174;
 // #3276: 6 Einträge „Stundenverlauf“ (was-steht-wo, orte) ändern nur i18n_key vergleich.stundenverlauf.titel →
 // wetter.wsw.bloecke.stundenverlauf (alter Schlüssel mit der Compare-Stundenverlauf-Steuerung entfernt; EN gleich).
-const ALT_SHA = '77d90fe757eded7a4d08af48b7e17687e60da63c0dbe6d3b01ff35913bbcc7cf';
+// #3297/#3020: 12 Einträge (was-steht-wo, trip/orte) ändern nur i18n_key layout.ausblick.titel →
+// wetter.wsw.bloecke.ausblick bzw. layout.mail_inhalt.ausfuehrlich/kompakt → wetter.wsw.kanal.ausfuehrlich/kompakt
+// (alte Schlüssel mit OutlookLayoutControls/MailInhaltCard entfernt; DE/EN gleich).
+const ALT_SHA = 'd0b10d3cd7512bc0d8bac2c37d3cbc14211ae666d38dbc01e09445af728e3f50';
 const MOCKUP_HASH = 'sha256:fbb04f549d974116e70c0e89facac657cf5ab13a31e267eb00882ad7e6496ec6';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {

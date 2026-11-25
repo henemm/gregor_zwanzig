@@ -137,9 +137,7 @@ describe('AC-4: shared/ ohne Compare*-Komponenten (Struktur)', () => {
 		assert.deepEqual(dateien, [], 'shared/ enthaelt noch Compare*-Komponenten');
 	});
 
-	test('OutlookLayoutControls liegt in shared/', () => {
-		assert.ok(existsSync(path.join(COMPONENTS, 'shared/OutlookLayoutControls.svelte')), 'shared/OutlookLayoutControls.svelte fehlt (RED)');
-	});
+	// #3297/#3020: OutlookLayoutControls ist geloescht (Ausblick nur noch in „Was steht wo“).
 
 	// Issue #3276: CompareHourlyLayoutControls.svelte ist geloescht (Stundenverlauf des
 	// Ortsvergleichs nur noch in „Was steht wo"); die Lage-Pruefung entfaellt.

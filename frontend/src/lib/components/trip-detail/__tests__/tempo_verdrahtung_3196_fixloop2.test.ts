@@ -33,7 +33,6 @@ const { STANDARD_TEMPO, wechsleFortbewegung } = await import('../../../utils/nai
 const TRIP_TABS = path.join(T.TD, 'TripTabs.svelte');
 const TEMPO_INHALT = path.join(T.KOMP, 'organisms', 'tempo-karte', 'TempoKarteInhalt.svelte');
 const EDITOR = path.join(T.KOMP, 'trip-new', 'TripNewEditor.svelte');
-const WMT = path.join(T.KOMP, 'shared', 'WeatherMetricsTab.svelte');
 
 const variante = async (datei: string, ersetzungen: [string, string][]) =>
 	(await import(`${pathToFileURL(datei).href}?f8variante=${Buffer.from(JSON.stringify(ersetzungen)).toString('base64url')}`)).default;
@@ -199,34 +198,4 @@ describe('F003b/c (AC-7): die gewaehlte Fortbewegung reist im Anlege-POST', () =
 	});
 });
 
-// ── F006 (AC-7): Fortbewegung → Vorlage (Effekt in WeatherMetricsTab) ────────
-
-async function vorlageFuer(trip: Knoten): Promise<string[]> {
-	const gewaehlt: string[] = [];
-	const { ast, quelle, u } = await umgebungFuer(WMT, {
-		createMode: true,
-		trip,
-		isDirty: false,
-		templates: [{ id: 'alpen-trekking' }, { id: 'radtour' }, { id: 'skitouren' }, { id: 'allgemein' }],
-		applyPreset: (id: string) => gewaehlt.push(id)
-	});
-	const effekte = effekteVon(ast, quelle, u, 'FORTBEWEGUNG_TO_TEMPLATE');
-	assert.equal(effekte.length, 1, 'Messaufbau: Vorlagen-Effekt nicht gefunden');
-	effekte[0]();
-	return gewaehlt;
-}
-
-describe('F006 (AC-7): Vorlagen-Vorbelegung richtet sich nach der Fortbewegung', () => {
-	for (const [f, vorlage] of [['fuss', 'alpen-trekking'], ['rad', 'radtour'], ['mtb', 'radtour'], ['ski', 'skitouren']] as const) {
-		test(`${f} ⇒ ${vorlage}`, async () => {
-			const tempo = wechsleFortbewegung(STANDARD_TEMPO, f);
-			assert.deepEqual(await vorlageFuer({ tempo }), [vorlage]);
-		});
-	}
-
-	test('Kette Anlegen: Wahl MTB in der Karte ⇒ stubTrip ⇒ Vorlage radtour', async () => {
-		const ed = await editor();
-		await waehleImEditor(ed, 0, 'mtb');
-		assert.deepEqual(await vorlageFuer(ed.stubNeu()), ['radtour']);
-	});
-});
+// #3297/#3020: F006 mass den Vorlagen-Effekt (FORTBEWEGUNG_TO_TEMPLATE) in WeatherMetricsTab — Datei geloescht.

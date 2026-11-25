@@ -1,8 +1,7 @@
 // Epic #471 — Organisms-Schicht: kanonische Re-Export-Barrel.
 //
 // Eine Quelle fuer alle Organisms:
-//   import { TripHeader, OutputLayoutEditor,
-//            WeatherMetricsTab }
+//   import { TripHeader, OutputLayoutEditor }
 //     from '$lib/components/organisms';
 //
 // Barrel-Pattern: physische .svelte-Dateien verbleiben in ihren Feature-Ordnern.
@@ -13,9 +12,6 @@
 
 export { default as TripHeader } from '../trip-detail/TripHeader.svelte';
 export { default as OutputLayoutEditor } from '../shared/OutputLayoutEditor.svelte';
-
-// Issue #520 — trip-detail Organisms aufnehmen
-export { default as WeatherMetricsTab }   from '../shared/WeatherMetricsTab.svelte';
 
 // Issue #578 — Block C: neue Home-Organisms + Metrics-Organisms
 // Issue #1277 — Geteiltes Listen-Tabellen-Organism (Trips + Orts-Vergleiche)

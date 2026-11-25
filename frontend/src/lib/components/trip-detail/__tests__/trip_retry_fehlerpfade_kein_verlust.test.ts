@@ -52,6 +52,9 @@ const puts = () => server.calls.filter((c) => c.method === 'PUT');
 const stand = () => server.stand(P.TRIP_ID);
 const dc = () => stand().display_config as Record<string, unknown>;
 const levels = () => dc().metric_alert_levels as Record<string, unknown>;
+/** #3297/#3020: zweiter Reiter B ist der Etappen-Reiter (vorher der geloeschte Versand-Reiter
+ *  trip-detail/BriefingScheduleTab) — eigener Speichervorgang mit eigenem Top-Level-Feld. */
+const ETAPPEN_B = [{ id: 'T1', name: 'Umbenannt', date: '2026-10-10', waypoints: [] }];
 
 async function konfliktInA(a: P.Aufbau, stufe = 'sensibel') {
 	const alarme = await P.alarmeReiter(a);
@@ -168,8 +171,8 @@ describe('F101 (Regel 2): was der Nutzer zuletzt sah und gespeichert hat, gewinn
 		server.foreignWrite(P.TRIP_ID, { name: 'Fremder Name' });
 		const a = P.neuerAufbau();
 		const alarme = await konfliktInA(a);
-		const b = await P.zustellungReiter(a);
-		b.aendern({ morgenZeit: '08:00' });
+		const b = await P.etappenReiter(a);
+		b.speichern(ETAPPEN_B);
 		await P.fertig(a.ctl);
 		fehler = (m) => m === 'PUT';
 		await a.ctl.retryConflict();
@@ -177,10 +180,10 @@ describe('F101 (Regel 2): was der Nutzer zuletzt sah und gespeichert hat, gewinn
 
 		alarme.empfindlichkeitAendern('wind', 'maessig');
 		await P.fertig(a.ctl);
-		assert.equal(a.ctl.state, 'conflict', 'Versand (B) ist weiter offen');
+		assert.equal(a.ctl.state, 'conflict', 'B (Etappen) ist weiter offen');
 		await a.ctl.retryConflict();
 		assert.equal(levels().wind, 'maessig', 'A: die neuere Eingabe gewinnt');
-		assert.equal((stand().report_config as Record<string, unknown>).morning_time, '08:00:00', 'B wird gesendet');
+		assert.deepEqual(stand().stages, ETAPPEN_B, 'B wird gesendet');
 	});
 });
 
@@ -198,8 +201,8 @@ describe('F104: Retry-Fehlerpfad und Abschluss-Signal', () => {
 		server.foreignWrite(P.TRIP_ID, { name: 'Fremder Name' });
 		const a = P.neuerAufbau();
 		await konfliktInA(a);
-		const b = await P.zustellungReiter(a);
-		b.aendern({ morgenZeit: '08:00' });
+		const b = await P.etappenReiter(a);
+		b.speichern(ETAPPEN_B);
 		await P.fertig(a.ctl);
 		const phasen: string[] = [];
 		(a.ctl as unknown as { onAdopt: unknown }).onAdopt = (_t: unknown, phase: string) => phasen.push(phase);
@@ -215,8 +218,8 @@ describe('F004: scheitert der Retry-GET, bleibt die Liste vollstaendig', () => {
 		server.foreignWrite(P.TRIP_ID, { name: 'Fremder Name' });
 		const a = P.neuerAufbau();
 		await konfliktInA(a);
-		const b = await P.zustellungReiter(a);
-		b.aendern({ morgenZeit: '08:00' });
+		const b = await P.etappenReiter(a);
+		b.speichern(ETAPPEN_B);
 		await P.fertig(a.ctl);
 
 		fehler = (m) => m === 'GET';
@@ -229,7 +232,7 @@ describe('F004: scheitert der Retry-GET, bleibt die Liste vollstaendig', () => {
 		await a.ctl.retryConflict();
 		assert.equal(a.ctl.state, 'idle');
 		assert.equal(levels().wind, 'sensibel', 'A ging nicht verloren');
-		assert.equal((stand().report_config as Record<string, unknown>).morning_time, '08:00:00', 'B ging nicht verloren');
+		assert.deepEqual(stand().stages, ETAPPEN_B, 'B ging nicht verloren');
 		assert.equal(stand().name, 'Fremder Name');
 	});
 
@@ -237,18 +240,18 @@ describe('F004: scheitert der Retry-GET, bleibt die Liste vollstaendig', () => {
 		const a = P.neuerAufbau();
 		server.foreignWrite(P.TRIP_ID, { name: 'Fremder Name' });
 		await konfliktInA(a);
-		const b = await P.zustellungReiter(a);
-		b.aendern({ morgenZeit: '08:00' });
+		const b = await P.etappenReiter(a);
+		b.speichern(ETAPPEN_B);
 		await P.fertig(a.ctl);
 
 		fehler = (m, _p, init) => m === 'PUT' && String(init?.body).includes('metric_alert_levels');
 		await a.ctl.retryConflict();
-		assert.equal((stand().report_config as Record<string, unknown>).morning_time, '08:00:00', 'B ging beim ersten Retry durch');
+		assert.deepEqual(stand().stages, ETAPPEN_B, 'B ging beim ersten Retry durch');
 		assert.equal(a.ctl.state, 'conflict', 'A scheiterte (500) ⇒ weiter „Nochmal speichern"');
 		fehler = null;
 		await a.ctl.retryConflict();
 		assert.equal(levels().wind, 'sensibel', 'der gescheiterte Eintrag (A) wurde erneut gesendet');
-		assert.equal((stand().report_config as Record<string, unknown>).morning_time, '08:00:00');
+		assert.deepEqual(stand().stages, ETAPPEN_B);
 	});
 });
 
@@ -338,27 +341,8 @@ describe('M27: Pausieren — trip und Stempel nie nur eines von beiden', () => {
 	});
 });
 
-describe('F006 / M23: nie eingestellte Wetter-Felder werden weggelassen, nicht als null gesendet', () => {
-	test('outlook_metrics === null ⇒ kein outlook_metrics-Schluessel in irgendeinem PUT-Rumpf', async () => {
-		// #3020 S1: lebende Schreiber (Reiter Wetter, Karte „Was steht wo“) mit einem Seitenstand ohne Ausblick-Wahl.
-		const trip = P.vollerTrip();
-		Object.assign(trip.display_config as object, { outlook_metrics: null, outlook_metric_formats: null });
-		const a = P.neuerAufbau(trip);
-		(await P.wetterReiter(a)).abwaehlen('wind');
-		await P.fertig(a.ctl);
-		(await P.karteWasStehtWo(a)).schalten('show_night_block', false);
-		await P.fertig(a.ctl);
-		const geschrieben = puts();
-		assert.equal(geschrieben.length, 3, 'Messaufbau: /weather-config, Trip-PUT und Schalter-PUT');
-		for (const p of geschrieben) {
-			const body = (p.anfrage ?? {}) as Record<string, unknown>;
-			const d = (p.path.includes('/weather-config') ? body : (body.display_config ?? {})) as Record<string, unknown>;
-			assert.equal('outlook_metrics' in d, false, `PUT ${p.path}: outlook_metrics darf nicht gesendet werden`);
-			assert.equal('outlook_metric_formats' in d, false, `PUT ${p.path}: outlook_metric_formats darf nicht gesendet werden`);
-		}
-		assert.deepEqual(dc().outlook_metrics, ['temp_max_c'], 'Bestand unveraendert');
-	});
-});
+// #3297/#3020: F006/M23 (outlook_metrics im Alt-Reiter Wetter-Metriken) und F501 (veralteter
+// Alt-Reiter Wetter-Metriken) prueften shared/WeatherMetricsTab (geloescht, nirgends gemountet).
 
 describe('F301a (Fix-Loop 4): ein GESCHEITERTER Retry laesst keinen Save mit veraltetem Reiterstand durch', () => {
 	test('PX3: Fremd alert_cooldown_minutes=99, Retry 500, Speichern im weiter offenen Alarme-Reiter => 412, Server bleibt 99, Konflikt-Anzeige bleibt', async () => {
@@ -393,8 +377,8 @@ describe('F301a (Fix-Loop 4): ein GESCHEITERTER Retry laesst keinen Save mit ver
 		server.foreignWrite(P.TRIP_ID, { alert_cooldown_minutes: 99, name: 'Fremder Name' });
 		const a = P.neuerAufbau();
 		const alarme = await konfliktInA(a);
-		const versand = await P.zustellungReiter(a);
-		versand.aendern({ morgenZeit: '08:00' });
+		const versand = await P.etappenReiter(a);
+		versand.speichern(ETAPPEN_B);
 		await P.fertig(a.ctl);
 
 		let n = 0;
@@ -415,36 +399,9 @@ describe('F301a (Fix-Loop 4): ein GESCHEITERTER Retry laesst keinen Save mit ver
 		assert.equal(stand().name, 'Fremder Name');
 		assert.equal(levels().wind, 'sensibel');
 		assert.equal(levels().precipitation, 'ruhig');
-		assert.equal((stand().report_config as Record<string, unknown>).morning_time, '08:00:00');
+		assert.deepEqual(stand().stages, ETAPPEN_B);
 	});
 
-	test('F501 Teil-Erfolg: ein NIE gespeicherter, veralteter Reiter bekommt danach 412 — Fremdaenderung bleibt, Eingabe nicht still geschrieben', async () => {
-		server.foreignWrite(P.TRIP_ID, { name: 'Fremder Name', report_config: { day_window_end_hour: 21 } });
-		const a = P.neuerAufbau();
-		await P.tripSeite(a, server);
-		const wm = await P.wetterReiter(a); // veralteter Reiter, bisher nie gespeichert
-		const alarme = await P.alarmeReiter(a);
-		alarme.empfindlichkeitAendern('wind', 'sensibel');
-		await P.fertig(a.ctl);
-		assert.equal(a.ctl.state, 'conflict', 'Vorbedingung: Konflikt');
-		const versand = await P.zustellungReiter(a);
-		versand.aendern({ morgenZeit: '08:00' });
-		await P.fertig(a.ctl);
-
-		let n = 0;
-		fehler = (m) => m === 'PUT' && ++n === 2; // erster Wiederholungs-PUT ok, zweiter 500
-		await a.ctl.retryConflict();
-		fehler = null;
-		assert.equal(a.ctl.state, 'conflict');
-		assert.equal(istKonflikt(P.TRIP_ID), true);
-
-		const rc = () => stand().report_config as Record<string, unknown>;
-		wm.aendern({ tagesfenster: { start: 6, end: 18 } });
-		await P.fertig(a.ctl);
-		assert.equal(rc().day_window_end_hour, 21, 'Fremdaenderung darf nicht still ueberschrieben werden');
-		assert.notEqual(rc().day_window_start_hour, 6, 'die Eingabe des veralteten Reiters wurde abgelehnt, nicht still geschrieben');
-		assert.equal(a.ctl.state, 'conflict');
-	});
 
 	test('F502 Konflikt OHNE Stempel, Retry scheitert: Folge-Save traegt If-Match und bekommt 412, Server unveraendert', async () => {
 		const a = P.neuerAufbau();

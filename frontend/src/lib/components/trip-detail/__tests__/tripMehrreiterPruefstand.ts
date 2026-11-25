@@ -26,15 +26,10 @@ import { parse } from 'svelte/compiler';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { api } from '../../../api.ts';
 import { SaveStatus } from '../../../stores/saveStatusStore.svelte.ts';
-import type { ZustellungStand } from '../../shared/zustellung-tab/zustellungModell.ts';
 import {
 	umgebungFuer,
 	effekteVon,
-	findeKomponenten,
-	ohneTypen,
-	werte,
 	type Knoten
 } from '../../shared/__tests__/svelteInstanzPruefstand.ts';
 
@@ -44,10 +39,6 @@ const KOMPONENTEN = join(FRONTEND, 'src/lib/components');
 
 export const DATEI = {
 	alarme: join(KOMPONENTEN, 'shared/AlarmeTab.svelte'),
-	// #3020 S1: lebende Reiter; die Alt-Reiter stehen bis S3 in tripMehrreiterAltbausteine.ts.
-	wetter: join(KOMPONENTEN, 'organisms/wetter-tab/WetterTabInhalt.svelte'),
-	karte: join(KOMPONENTEN, 'organisms/wetter-tab/WasStehtWoKarte.svelte'),
-	zustellung: join(KOMPONENTEN, 'shared/zustellung-tab/ZustellungTab.svelte'),
 	kopf: join(KOMPONENTEN, 'trip-detail/TripHeader.svelte'),
 	tabs: join(KOMPONENTEN, 'trip-detail/TripTabs.svelte'),
 	etappen: join(KOMPONENTEN, 'edit/EditStagesPanelNew.svelte'),
@@ -190,9 +181,6 @@ export const REPORT_VERSAND = [
 	'evening_enabled',
 	'morning_time',
 	'evening_time',
-	'multi_day_trend_morning',
-	'multi_day_trend_evening',
-	'multi_day_trend_reports',
 	'send_email',
 	'send_telegram',
 	'send_sms',
@@ -206,29 +194,11 @@ export const REPORT_WETTER_METRIKEN = [
 	'wind_exposition_min_elevation_m',
 	'show_stage_stats',
 	'show_metrics_summary',
-	'show_outlook',
 	'email_format',
 	'show_yesterday_comparison',
 	'day_window_start_hour',
 	'day_window_end_hour'
 ] as const;
-
-/** #3020 S1: `report_config`-Schluessel des lebenden Reiters Zustellung (Teil `versand`). */
-export const REPORT_ZUSTELLUNG = [
-	'enabled', 'morning_enabled', 'evening_enabled', 'morning_time', 'evening_time',
-	'send_email', 'send_telegram', 'send_sms', 'send_premium_sms'
-] as const;
-
-/** #3020 S1: Schalter der Karte „Was steht wo“ unter `report_config` mit einem Wert ungleich `vollerTrip()`
- *  (`show_stability` ist seit #3036 ihr Eigenfeld). */
-export const KARTE_REPORT: Record<string, unknown> = {
-	show_compact_summary: false,
-	show_stage_stats: false,
-	show_yesterday_comparison: true,
-	show_stability: false,
-	email_format: 'compact',
-	telegram_style: 'kurzform'
-};
 
 /** Spec §2.2 — display_config-Schluessel der Wetter-Metriken (`/weather-config`). */
 export const DISPLAY_WETTER_METRIKEN = [
@@ -302,7 +272,7 @@ function propNamen(datei: string): string[] {
 	return namen;
 }
 
-export async function bauen(datei: string, saat: Knoten): Promise<Instanz> {
+async function bauen(datei: string, saat: Knoten): Promise<Instanz> {
 	registriereHooks();
 	const voll: Knoten = {};
 	for (const n of propNamen(datei)) voll[n] = undefined;
@@ -324,7 +294,7 @@ export function neuerAufbau(trip: Record<string, unknown> = vollerTrip(), ctl?: 
 	return { trip, ctl: ctl ?? erstelleController(id), updates: [] };
 }
 
-export function gemeinsam(a: Aufbau): Knoten {
+function gemeinsam(a: Aufbau): Knoten {
 	return {
 		trip: a.trip,
 		saveController: a.ctl,
@@ -379,175 +349,8 @@ export async function alarmeReiter(a: Aufbau): Promise<{
 	};
 }
 
-/** Was der Instanz-Pruefstand nicht aus dem Quelltext bindet (`svelte`-Importe); `api` ist das ECHTE Modul. */
-export const LAUFZEIT = { api, untrack: (fn: () => unknown) => fn(), onMount: () => {} };
-
-/** Antworten der drei Lese-Endpunkte des Reiters Wetter (der Ersatz-Server fuehrt nur Abos). */
-const WETTER_DATEN: Record<string, unknown> = {
-	'/api/metrics': {
-		temperature: [{ id: 'temperature', label: 'Temperatur', unit: '°C', category: 'temperature', default_enabled: true }],
-		wind: [
-			{ id: 'wind', label: 'Wind', unit: 'km/h', category: 'wind', default_enabled: true },
-			{ id: 'gust', label: 'Böen', unit: 'km/h', category: 'wind', default_enabled: true }
-		]
-	},
-	'/api/templates': [
-		{ id: 'allgemein', label: 'Allgemein', ampel: { template: 'allgemein', metrics: { temperature: { enabled: true }, wind: { enabled: true } } } },
-		{ id: 'skitour', label: 'Skitour', ampel: { template: 'skitour', metrics: { wind: { enabled: true }, gust: { enabled: true } } } }
-	],
-	'/api/metric-presets': []
-};
-
-/** Beantwortet die Lese-Endpunkte `daten` waehrend `lauf`; alles andere geht an den Ersatz-Server. */
-export async function mitAntworten<T>(daten: Record<string, unknown>, lauf: () => Promise<T>): Promise<T> {
-	const basis = globalThis.fetch;
-	(globalThis as { fetch: unknown }).fetch = async (input: unknown, init?: RequestInit) =>
-		String(input) in daten
-			? new Response(JSON.stringify(daten[String(input)]), { status: 200, headers: { 'Content-Type': 'application/json' } })
-			: basis(input as never, init);
-	try {
-		return await lauf();
-	} finally {
-		(globalThis as { fetch: unknown }).fetch = basis;
-	}
-}
-
-/** Antwort des Lese-Endpunkts der Tabelle „Was steht wo“ zu einem Abo-Stand (`stored` = Tabelle gespeichert). */
-export function tabellenAntwort(kind: 'route' | 'vergleich', dc: Knoten, ids: string[], blocks: Knoten = {}): Knoten {
-	const zeilen = ids.map((metric_id) => ({ metric_id }));
-	const placements = dc.placements ?? { version: 1, rows: zeilen, outlook_reports: ['evening'] };
-	return {
-		kind,
-		stored: dc.placements !== undefined,
-		placements: JSON.parse(JSON.stringify(placements)),
-		rows: (placements.rows as Knoten[]).map((z) => ({ metric_id: z.metric_id, cells: {} })),
-		outlook_reports: placements.outlook_reports ?? [],
-		blocks
-	};
-}
-
-/** Wert eines Attributs der Einbettung, ausgewertet in der Umgebung des Eltern-Skripts. */
-function einbettungsWert(a: Knoten, quelle: string, u: Knoten): unknown {
-	const tag = Array.isArray(a.value) ? a.value.find((x: Knoten) => x.type === 'ExpressionTag') : a.value;
-	if (tag?.type === 'ExpressionTag') return werte(ohneTypen(quelle, tag.expression), u);
-	return werte(String(a.name), u);
-}
-
-/** #3020 S1 (Adversary F1): die Karte „Was steht wo“ so im Reiter Wetter binden, wie dessen Markup sie einbettet
- *  (echte Attribut-Ausdruecke, echtes `bind:this`), echt geladen. `lesen` beantwortet nur das GET der Tabelle. */
-export async function karteImReiter(wt: Instanz, lesen: () => Knoten): Promise<Instanz> {
-	const e = findeKomponenten(wt.ast, 'WasStehtWoKarte')[0];
-	if (!e) throw new Error('Messaufbau: Einbettung der Karte fehlt im Reiter Wetter');
-	const props: Knoten = {};
-	for (const a of e.attributes as Knoten[]) if (a.type === 'Attribute') props[a.name] = einbettungsWert(a, wt.quelle, wt.u);
-	const karte = await bauen(DATEI.karte, {
-		...LAUFZEIT,
-		api: { ...api, get: async (pfad: string) => (pfad.includes('/placements') ? lesen() : api.get(pfad)) },
-		...props
-	});
-	await (karte.u.laden as () => Promise<void>)();
-	if (karte.u.phase !== 'bereit') throw new Error('Messaufbau: Karte im Reiter Wetter hat nicht geladen');
-	const bindung = (e.attributes as Knoten[]).find((a) => a.type === 'BindDirective' && a.name === 'this');
-	if (bindung) wt.u[wt.quelle.slice(bindung.expression.start, bindung.expression.end)] = karte.u;
-	return karte;
-}
-
-/** Reiter Wetter (`WetterTabInhalt`, route) mit gebundener Karte „Was steht wo“ wie im Hub: echtes Laden, echte
- *  Handler, echter Speicherer (`wetterTabSpeicherung`: /weather-config, danach Trip-PUT). Ist am Trip eine Tabelle
- *  gespeichert (`display_config.placements`), traegt /weather-config sie mit; sonst fehlt der Schluessel. */
-export async function wetterReiter(a: Aufbau, lesen?: () => Knoten): Promise<{
-	inst: Instanz;
-	karte: Instanz;
-	/** „−“ / „+“ einer Metrik (Grundauswahl). */
-	abwaehlen(id: string): void;
-	hinzufuegen(id: string): void;
-	/** Systemvorlage uebernehmen. */
-	vorlage(id: string): void;
-	/** Tagesfenster, Warnungen, Radar: Teil des Bearbeitungsstands (Karten des Reiters). */
-	aendern(teil: Record<string, unknown>): void;
-}> {
-	const inst = await bauen(DATEI.wetter, { ...gemeinsam(a), ...LAUFZEIT, context: 'route', createMode: false });
-	await mitAntworten(WETTER_DATEN, () => (inst.u.laden as () => Promise<void>)());
-	if (inst.u.phase !== 'bereit') throw new Error('Messaufbau: Reiter Wetter hat nicht geladen');
-	const u = inst.u;
-	const dc = (a.trip.display_config ?? {}) as Knoten;
-	const rc = (a.trip.report_config ?? {}) as Knoten;
-	const karte = await karteImReiter(
-		inst,
-		lesen ?? (() => tabellenAntwort('route', dc, [...(u.stand.auswahl as string[])], { ...rc, show_night_block: dc.show_night_block }))
-	);
-	return {
-		inst,
-		karte,
-		abwaehlen: (id) => u.entfernen(id),
-		hinzufuegen: (id) => u.hinzufuegen(id),
-		vorlage: (id) => u.vorlageSetzen(u.Z.mitVorlage(u.stand, id, u.daten.vorlagen, 'route', {})),
-		aendern: (teil) => u.aendern({ ...u.stand, ...teil })
-	};
-}
-
-/** Karte „Was steht wo“ (route) allein: Schalter (`feld`, Teilfeld-PUT auf den Trip) und Tabelle
- *  (`placements`). Antwort des Lese-Endpunkts aus dem Trip gebildet wie im Python-Kern (`blocks`). */
-export async function karteWasStehtWo(a: Aufbau): Promise<{
-	inst: Instanz;
-	schalten(feld: string, wert: unknown): void;
-	haken(metrik: string, stelle: string, an: boolean): void;
-	format(metrik: string, stelle: string, form: 'raw' | 'simplified'): void;
-	ausblick(bericht: 'morning' | 'evening', an: boolean): void;
-}> {
-	const rc = (a.trip.report_config ?? {}) as Record<string, unknown>;
-	const dc = (a.trip.display_config ?? {}) as Record<string, unknown>;
-	const zeilen = ((dc.metrics ?? []) as Array<{ metric_id: string }>).map((m) => ({ metric_id: m.metric_id }));
-	const antwort = {
-		kind: 'route',
-		stored: true,
-		placements: { version: 1, rows: zeilen, outlook_reports: ['evening'] },
-		rows: zeilen.map((z) => ({ ...z, cells: {} })),
-		outlook_reports: ['evening'],
-		blocks: { ...rc, show_night_block: dc.show_night_block }
-	};
-	// Nur das Lesen der Tabelle (fuehrt der Ersatz-Server nicht) liefert den Stand; Schreiben laeuft ueber `api`.
-	const lesen = async (pfad: string): Promise<unknown> =>
-		pfad.includes('/placements') ? { ...antwort, placements: JSON.parse(JSON.stringify(inst.u.lokal)) } : api.get(pfad);
-	const inst = await bauen(DATEI.karte, {
-		...LAUFZEIT,
-		api: { ...api, get: lesen },
-		context: 'route',
-		id: a.trip.id,
-		saveController: a.ctl,
-		onUebernahme: gemeinsam(a).onTripUpdate,
-		antwort,
-		lokal: JSON.parse(JSON.stringify(antwort.placements)),
-		phase: 'bereit'
-	});
-	const u = inst.u;
-	/** `$derived` wertet der Pruefstand nur einmal aus: vor jeder Geste wie im Baustein neu bestimmen. */
-	const geste = (fn: () => void) => {
-		u.aktFelder = u.felder ?? u.felderAusAntwort(antwort);
-		u.ausblickBerichte = u.lokal.outlook_reports;
-		fn();
-	};
-	return {
-		inst,
-		schalten: (feld, wert) => geste(() => u.feld(feld, wert)),
-		haken: (metrik, stelle, an) => geste(() => u.haken({ metrik, stelle, an })),
-		format: (metrik, stelle, form) => geste(() => u.format({ metrik, stelle, format: form })),
-		ausblick: (bericht, an) => geste(() => u.ausblick(bericht, an))
-	};
-}
-
-/** Reiter Zustellung (`ZustellungTab`, route): Briefing-Zeiten und Kanaele (Teil `versand`), Alarm-Kanaele,
- *  Stille Stunden (Teil `alarme`) ueber den EINEN Speicherer (`zustellungSpeicherung`). */
-export async function zustellungReiter(a: Aufbau): Promise<{
-	inst: Instanz;
-	/** Eine Geste der Organismen: neuer Formularstand an `aendern` des Reiters. */
-	aendern(teil: Partial<ZustellungStand>): void;
-}> {
-	const inst = await bauen(DATEI.zustellung, { ...LAUFZEIT, context: 'route', panel: gemeinsam(a) });
-	const u = inst.u;
-	if (!u.speicherung) throw new Error('Messaufbau: ZustellungTab.speicherung nicht herleitbar');
-	return { inst, aendern: (teil) => u.aendern({ ...u.stand, ...teil }) };
-}
+// #3297/#3020: `wetterMetrikenReiter` (shared/WeatherMetricsTab) und `versandReiter`
+// (trip-detail/BriefingScheduleTab) entfallen mit den geloeschten Alt-Reitern.
 
 // #2794 S3a Teil-PR 4a (AC-31): `wertebereicheReiter` (CorridorEditor/CorridorEditorMobile)
 // entfaellt mit der Oberflaeche.

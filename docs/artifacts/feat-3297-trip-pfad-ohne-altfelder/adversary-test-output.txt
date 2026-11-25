@@ -1,0 +1,88 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.6.0 -- /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit
+configfile: pyproject.toml
+plugins: xdist-3.8.0, timeout-2.4.0, anyio-4.14.2, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collecting ... collected 62 items
+
+tests/tdd/test_pendant_gate_bekannte_paare.py::test_jede_datei_der_ausnahmeliste_existiert_im_repo PASSED [  1%]
+tests/tdd/test_pendant_gate_bekannte_paare.py::test_ausnahmeliste_ist_teilmenge_der_eingefrorenen_paare PASSED [  3%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_abdeckungsmatrix_auswahl_und_reihenfolge PASSED [  4%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_kanal_abdeckung_runde7 PASSED [  6%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_testverweise_auffindbar PASSED [  8%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_paarweise_ueberdeckung PASSED [  9%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_fertig_kein_rot_erwartet PASSED [ 11%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_template_literal_titel_alle_gefunden PASSED [ 12%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_ausnahmen_und_offene_features_tragen_verweis PASSED [ 14%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_schema_der_fallliste PASSED [ 16%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_zaehlung_ausgeben PASSED [ 17%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_vollstaendige_liste_ist_gruen PASSED [ 19%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_fehlende_teildatei_scheitert_klar PASSED [ 20%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_fehlende_telegram_teildatei_scheitert_klar PASSED [ 22%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_fehlende_premium_teildatei_scheitert_klar PASSED [ 24%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_geloeschter_fall_wird_benannt PASSED [ 25%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_ausnahme_zaehlt_als_abgedeckt PASSED [ 27%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_unbekannte_testfunktion_wird_gemeldet PASSED [ 29%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_testverweis_auch_bei_ausnahme_und_offen_feature PASSED [ 30%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_frontend_rot_erwartet_und_template_titel PASSED [ 32%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_paarluecke_und_ausschluss PASSED [ 33%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_rot_erwartet_und_fehlender_verweis PASSED [ 35%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_go_testfunktion PASSED [ 37%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_schema_verstoesse PASSED [ 38%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_kanal_abdeckung_runde7 PASSED [ 40%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_runde7_verweise_pfad_param_go_datei_template PASSED [ 41%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_zusammengesetztes_format PASSED [ 43%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_bestand_entspricht_der_ausnahmeliste PASSED [ 45%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_jede_art_findet_im_bestand_mindestens_eine_stelle PASSED [ 46%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_liste_waechst_nicht_gegenueber_main PASSED [ 48%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_bekannte_fundstellen_der_bestandsaufnahme_werden_erkannt PASSED [ 50%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_renderer_mit_zweiter_liste_oder_schwelle_meldet_genau_seine_art["""Renderer."""\n\nZWEITE = ("wind", "gust")\n-3-ID_SAMMLUNG] PASSED [ 51%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_renderer_mit_zweiter_liste_oder_schwelle_meldet_genau_seine_art[def zelle(wind_kmh):\n    if wind_kmh > 40:\n        return "stark"\n    return ""\n-2-SCHWELLE] PASSED [ 53%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_renderer_mit_zweiter_liste_oder_schwelle_meldet_genau_seine_art[def zelle(wind_kmh):\n    if 40 < wind_kmh:\n        return "stark"\n    return ""\n-2-SCHWELLE] PASSED [ 54%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_renderer_mit_zweiter_liste_oder_schwelle_meldet_genau_seine_art[def zelle(wind_kmh):\n    if wind_kmh >= 40.0:\n        return "stark"\n    return ""\n-2-SCHWELLE] PASSED [ 56%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_renderer_mit_zweiter_liste_oder_schwelle_meldet_genau_seine_art[def zelle(metric_id):\n    if metric_id == "precipitation":\n        return 1\n-2-ID_VERZWEIGUNG] PASSED [ 58%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_neuer_verstoss_im_renderer_macht_die_ratsche_rot PASSED [ 59%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_zusaetzlicher_fund_in_gelisteter_datei_nennt_alle_stellen PASSED [ 61%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_frontend_liste_mit_zwei_kennungen_meldet_datei_und_zeile PASSED [ 62%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_go_map_mit_zwei_kennungen_meldet_datei_und_zeile PASSED [ 64%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_frontend_schwelle_auf_messwert_meldet_datei_und_zeile[if (wind_kmh > 40) { x = 1; }] PASSED [ 66%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_frontend_schwelle_auf_messwert_meldet_datei_und_zeile[if (40 < wind_kmh) { x = 1; }] PASSED [ 67%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_frontend_schwelle_auf_messwert_meldet_datei_und_zeile[if (row.gust_kmh >= -5.5) { x = 1; }] PASSED [ 69%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_frontend_schwelle_auf_messwert_meldet_datei_und_zeile[if (row?.precip_mm <= 2) { x = 1; }] PASSED [ 70%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_svelte_schwelle_im_markup_wird_erkannt PASSED [ 72%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_go_schwelle_auf_messwert_meldet_datei_und_zeile[\tif windKmh > 40 {\n\t\treturn\n\t}] PASSED [ 74%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_go_schwelle_auf_messwert_meldet_datei_und_zeile[\tif 40 < s.GustKmh {\n\t\treturn\n\t}] PASSED [ 75%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_go_schwelle_auf_messwert_meldet_datei_und_zeile[\tif temp <= -5 {\n\t\treturn\n\t}] PASSED [ 77%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_validator_mit_produktimport_meldet_den_import PASSED [ 79%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_validator_mit_handgeschriebener_erwartung_meldet_nichts PASSED [ 80%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_validator_import_zaehlt_nur_metrik_wissen PASSED [ 82%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_erlaubte_orte_werden_nicht_gescannt PASSED [ 83%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_abgebaute_stelle_ohne_verkleinerte_liste_macht_rot PASSED [ 85%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_erhoehte_anzahl_in_der_liste_macht_rot PASSED [ 87%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_erhoehter_hoechststand_macht_rot PASSED [ 88%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_neue_datei_mit_erhoehtem_hoechststand_bleibt_rot PASSED [ 90%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_harmlose_dateien_melden_nichts PASSED [ 91%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_harmlose_vergleiche_in_ts_und_go_melden_nichts PASSED [ 93%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_regel_e_hoechststand_ueber_main_macht_rot PASSED [ 95%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_regel_e_hoehere_anzahl_als_main_macht_rot PASSED [ 96%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_regel_e_neuer_eintrag_ohne_main_pendant_bleibt_erlaubt PASSED [ 98%]
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_regel_e_ohne_git_liefert_grund_statt_stillem_gruen PASSED [100%]
+
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 62 passed, 2 warnings in 21.55s ========================

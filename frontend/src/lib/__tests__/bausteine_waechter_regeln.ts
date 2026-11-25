@@ -580,15 +580,10 @@ const BESTAND: string[] = [
 	'lib/components/shared/BriefingHistory.svelte',
 	'lib/components/shared/ChannelToggle.svelte',
 	'lib/components/shared/EditorStickyFooter.svelte',
-	'lib/components/shared/MailInhaltCard.svelte',
 	'lib/components/shared/OfflineSperre.svelte',
-	'lib/components/shared/OutlookLayoutControls.svelte',
 	'lib/components/shared/OutputLayoutEditor.svelte',
 	'lib/components/shared/StandardwerteSpeichernKnopf.svelte',
 	'lib/components/shared/TelegramKurzstilToggle.svelte',
-	'lib/components/shared/VersandTab.svelte',
-	'lib/components/shared/WeatherMetricsTab.svelte',
-	'lib/components/shared/WetterMetrikenVersandPanel.svelte',
 	'lib/components/shared/anlege-rahmen/AnlegeFortschritt.svelte',
 	'lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte',
 	'lib/components/shared/anlege-rahmen/AnlegeReiter.svelte',
@@ -613,11 +608,9 @@ const BESTAND: string[] = [
 	'lib/components/shared/weather-metrics-tab/ThresholdMetricRow.svelte',
 	'lib/components/shared/weather-metrics-tab/WeatherV2Grundauswahl.svelte',
 	'lib/components/shared/weather-metrics-tab/WeatherV2PresetBar.svelte',
-	'lib/components/shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte',
 	'lib/components/shared/zustellung-tab/ZustellungTab.svelte',
 	'lib/components/trip-detail/AboutOutputLayout.svelte',
 	'lib/components/trip-detail/ActiveMetricRow.svelte',
-	'lib/components/trip-detail/BriefingScheduleTab.svelte',
 	'lib/components/trip-detail/BucketSection.svelte',
 	'lib/components/trip-detail/BucketSectionOff.svelte',
 	'lib/components/trip-detail/ChannelDot.svelte',
@@ -730,7 +723,7 @@ const BESTAND: string[] = [
 // MetricGroup, HorizonChip entfernt).
 // #3047 Runde 7 (p11): AlarmeScheduleTab.svelte entfernt (→ 197).
 // #3190: SavePresetDialog.svelte nach SEITEN_SCOPE (Inline-Karte aus Bausteinen) (→ 196).
-const BESTAND_OBERGRENZE = 195; // #3276: CompareHourlyLayoutControls.svelte geloescht
+const BESTAND_OBERGRENZE = 188; // #3297/#3020: sieben Alt-Editor-Bausteine geloescht (vorher 195, #3276)
 
 /** Token-Verstöße je Baustein-Datei (Ist-Stand 2026-11-10, ADR-0112). Darf nur sinken. */
 const AUSNAHMEN: Ausnahmen = {

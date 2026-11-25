@@ -19,7 +19,7 @@ import assert from 'node:assert/strict';
 import { api } from '../../../api.ts';
 import { clearEtagRegistry } from '../../../etagRegistry.ts';
 import { createFakeTripServer, type FakeTripServer } from '../../../__tests__/fakeTripServer.ts';
-import * as P from './tripMehrreiterAltbausteine.ts';
+import * as P from './tripMehrreiterPruefstand.ts';
 
 let server: FakeTripServer;
 
@@ -48,71 +48,9 @@ function tripMitNachtBlock(wert: boolean | undefined): Record<string, unknown> {
 	return { ...t, display_config: dc };
 }
 
-describe('AC-3: Schalter aus -> false geht als bewusster Wert durch', () => {
-	test('Nutzer legt den Schalter auf aus: /weather-config traegt show_night_block=false', async () => {
-		await start(tripMitNachtBlock(true));
-		const a = P.neuerAufbau(tripMitNachtBlock(true));
-		const wm = await P.wetterMetrikenReiter(a);
-		wm.inst.u.showNightBlock = false;
-		wm.metrikenSpeichern();
-		await P.fertig(a.ctl);
-
-		assert.equal(weatherConfigBody().show_night_block, false, '/weather-config muss show_night_block=false senden');
-	});
-});
-
-describe('AC-3: echte Geste am Schalter (Alt-Trip ohne Feld)', () => {
-	test('onToggleNightBlock setzt Geste + Sende-Merker: /weather-config traegt show_night_block=false', async () => {
-		await start(tripMitNachtBlock(undefined));
-		const a = P.neuerAufbau(tripMitNachtBlock(undefined));
-		const wm = await P.wetterMetrikenReiter(a);
-		// Die Geste selbst muss userTouched setzen (weatherSaveGate) — nicht der Pruefstand.
-		wm.inst.u.userTouched = false;
-		const handler = wm.inst.u.onToggleNightBlock as ((e: unknown) => void) | undefined;
-		assert.equal(typeof handler, 'function', 'Messaufbau: onToggleNightBlock nicht herleitbar');
-		handler!({ target: { checked: false } });
-		await P.fertig(a.ctl);
-
-		assert.equal(
-			weatherConfigBody().show_night_block,
-			false,
-			'die Geste auf einem Alt-Trip muss show_night_block=false senden'
-		);
-	});
-});
-
-describe('AC-2: Alt-Trip ohne Feld bekommt beim Speichern keinen neuen Wert', () => {
-	test('Alt-Trip: Schalter steht auf an (Standard true)', async () => {
-		await start(tripMitNachtBlock(undefined));
-		const a = P.neuerAufbau(tripMitNachtBlock(undefined));
-		const wm = await P.wetterMetrikenReiter(a);
-		assert.equal(wm.inst.u.showNightBlock, true, 'ohne gespeichertes Feld gilt "an" (wie loader.py)');
-	});
-
-	test('Alt-Trip: andere Metrik speichern sendet show_night_block NICHT', async () => {
-		await start(tripMitNachtBlock(undefined));
-		const a = P.neuerAufbau(tripMitNachtBlock(undefined));
-		const wm = await P.wetterMetrikenReiter(a);
-		assert.equal(wm.inst.u.showNightBlock, true, 'Vorbedingung: Schalter-Variable existiert (Standard an)');
-		wm.metrikenSpeichern();
-		await P.fertig(a.ctl);
-
-		assert.ok(
-			!('show_night_block' in weatherConfigBody()),
-			'ohne gespeicherten Wert und ohne Nutzergeste darf der Schluessel nicht gesendet werden'
-		);
-	});
-
-	test('Trip mit gespeichertem Wert: der Wert wird beim Speichern mitgegeben', async () => {
-		await start(tripMitNachtBlock(true));
-		const a = P.neuerAufbau(tripMitNachtBlock(true));
-		const wm = await P.wetterMetrikenReiter(a);
-		wm.metrikenSpeichern();
-		await P.fertig(a.ctl);
-
-		assert.equal(weatherConfigBody().show_night_block, true);
-	});
-});
+// #3297/#3020: die Faelle AC-2/AC-3 (Schalter im Alt-Reiter Wetter-Metriken) und „Versand-Reiter sendet
+// show_night_block nie“ prueften shared/WeatherMetricsTab bzw. trip-detail/BriefingScheduleTab (geloescht).
+// Den Schalter schaltet heute die Karte „Was steht wo“ (wasStehtWoSpeicherung.felderNutzlast).
 
 describe('AC-6: nur der Wetter-Metriken-Reiter ist Eigentuemer des Feldes', () => {
 	test('Alarme-Reiter sendet show_night_block nie', async () => {
@@ -129,16 +67,4 @@ describe('AC-6: nur der Wetter-Metriken-Reiter ist Eigentuemer des Feldes', () =
 		}
 	});
 
-	test('Versand-Reiter sendet show_night_block nie', async () => {
-		await start(tripMitNachtBlock(false));
-		const a = P.neuerAufbau(tripMitNachtBlock(false));
-		const v = await P.versandReiter(a);
-		v.aendern({ morning_time: '06:30' });
-		await P.fertig(a.ctl);
-
-		for (const p of puts()) {
-			const dc = ((p.anfrage as Record<string, unknown>).display_config ?? {}) as Record<string, unknown>;
-			assert.ok(!('show_night_block' in dc), 'Versand darf show_night_block nie senden');
-		}
-	});
 });

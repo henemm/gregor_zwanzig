@@ -132,7 +132,6 @@ export type TripSpeicherEingabe = {
 	aufgeloest: Ampel;
 	auswahl: string[];
 	displayConfig: { metrics?: TripMetrik[] } & Record<string, unknown>;
-	reportConfig: Record<string, unknown> | null | undefined;
 	warnFelder: WarnFelder | null | undefined;
 	warnungenAn: boolean;
 	/** #2800: Radar-Regen-Schalter des Trips (`radar_alert_enabled`). */
@@ -153,8 +152,9 @@ export function tripSpeicherPayload(e: TripSpeicherEingabe) {
 			official_alerts_enabled: warn.official_alerts_enabled,
 			official_warnings: warn.official_warnings,
 			radar_alert_enabled: e.radarAn,
+			// #3297: nur das Tagesfenster (Eigentum des Reiters). Go mischt `report_config` feldweise
+			// (config_merge.go), uebrige Bestandsfelder bleiben stehen; Altschluessel reisen nicht mehr mit.
 			report_config: {
-				...klon(e.reportConfig ?? {}),
 				day_window_start_hour: e.tagesfenster.start,
 				day_window_end_hour: e.tagesfenster.end
 			}

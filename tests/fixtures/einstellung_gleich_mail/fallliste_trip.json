@@ -1,4 +1,5 @@
 {
+  "_hinweis": "#3297/#3020: Fall trip-ac10--neu_in_bearbeitetem_layout--html entfaellt -- channelMetricLayouts.ts und sein Test neue_metrik_in_allen_listen.test.ts sind mit dem Alt-Editor geloescht; Trip-Reiter schreiben keine channel_layouts mehr (Einwahl wirkt ueber placements).",
   "dimensionen": {
     "auswahl_muster": [
       "teilmenge",
@@ -1824,19 +1825,6 @@
       "ac": "AC-10",
       "befund": "",
       "status": "gruen"
-    },
-    {
-      "id": "trip-ac10--neu_in_bearbeitetem_layout--html",
-      "liste": "trip_stundentabelle",
-      "kontext": "trip",
-      "format": "html",
-      "pruefung": "grundauswahl",
-      "test": "neue_metrik_in_allen_listen.test.ts::Einwahl haengt die Metrik in jeder bearbeiteten Kanal-Liste hinten an, Folge bleibt",
-      "ac": "AC-10",
-      "befund": "T3",
-      "status": "gruen",
-      "seite": "frontend",
-      "verweis": "#3047 T3 (frontend channelMetricLayouts.ts:97-124 toggleGlobalMetric schreibt eine global eingeschaltete Metrik nicht in bestehende Kanal-Overrides; im rohen JSON fehlt sie, ADR-0050 + #2422-Orakel werten Fehlen als Abwahl -> Nachweis nur am Speicherpfad/Vitest)"
     },
     {
       "id": "trip-ac11--altbestand_golden--html",

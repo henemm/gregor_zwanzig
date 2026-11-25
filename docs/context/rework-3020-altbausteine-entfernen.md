@@ -43,6 +43,61 @@ Issue #3020 (Epic #3122/#2795): Die alte Wetter-/Zustellungs-Oberfläche (`Weath
 
 ## Analysis
 
+> Stand 25.11. auf c8329fea4 (nach #3357). Ersetzt „Analysis (überholt)“ bis „TDD RED“ weiter unten; dort nur noch als Vorlage für Testhelfer, Testtabelle und Mutationen nachsehen. S1-Stand vollständig: `8b9749601` (Vorfahr dieses Branches, zusätzlich Branch `sicherung-3020-s1`).
+
+### Type
+Rückbau, zweiter Teil (Feature-Pfad, kein Bug). Keine sichtbare Änderung.
+
+### Was #3357 erledigt hat, was bleibt
+12 der 54 Dateien sind gelöscht (Panel, WeatherMetricsTab, BriefingScheduleTab, VersandTab, MailInhaltCard, OutlookLayoutControls, WeatherV2Reihenfolge, channelMetricLayouts, weatherMetricsSavePayload, weatherMetricsTabSections, kuerzelLegende, kuerzelMarken). Der Baum hier ist `origin/main` plus unsere Doku.
+
+1. **Restbestand: 42 Dateien, 4 454 Zeilen, alle ohne produktiven Importeur** (Liste A 26/2 598, Liste B 16/1 856). Gemessen mit `erreichbarkeit_v2.py` → `tot_nach_3357.txt`. Korrektur am Skript: die alte Fassung wertet den Beispiel-Import im Kopfkommentar von `organisms/index.ts` als Kante und hielt auf diesem Stand OutputLayoutEditor, OutboxCard, AlertsCard, PresetRail, MetricOffShelf und Nachbarn für lebend. Barrel-Zeilen: diese fünf in `organisms/index.ts`, TablePreview in `trip-detail/index.ts`.
+2. **Tests dazu:** 79 Testdateien nennen einen der 42 Namen, 24 importieren einen direkt (Regex, `restbestand_tests.txt`), 15 E2E-Dateien nennen einen. Wie viele nach der Löschung rot werden, ist auf diesem Stand NICHT gemessen; erster Schritt der Lösch-Scheibe ist die Probe-Löschung.
+3. **Entfallene Prüfungen aus #3357:** 60 `*.test.ts` gelöscht, dazu 145 Fälle in weiterlaufenden Testdateien entfallen (Namensvergleich 539d16963 gegen main, `testnamen_diff.txt`; umbenannte Fälle zählen mit, 125 davon standen in S1 noch, ein Teil prüfte nur Alt-Quelltext).
+   - Von den 60 laut `rework_3020_testtabelle.md`: 3 „löschen“. Von den 57 „umstellen“ haben **23 einen Vermerk „neu in S3/S4“** (Ersatzbeleg erst zu schreiben), **16 nennen einen Beleg, der auf main nicht existiert** (u. a. `wetter_tab_karte_mitspeichern_3020`, `feld_erhalt_ohne_ausnahme`, `trip_python_skip_next_ohne_412`, `s3a2794_speicher_owner_waechter`), 6 davon beides; die übrigen **24 nennen nur vorhandene Dateien**. Zusammen 33 Zeilen mit Lücke.
+   - Die 24 sind nur nach Dateiname geprüft. Einige Belegdateien hat #3357 gekürzt (`trip_reiter_roundtrip_jedes_feld` 26→13 Fälle, `trip_reiter_nutzlast_nur_eigene_felder` 12→8). R1 klärt je Zeile, ob der genannte Fall noch steht.
+   - Vorrang (Datenverlust, Zwei-Nutzer): skip_next-Schutz (in S1 vier `todo` wegen #3355), If-Match/keepalive-Flush an Zustellung, `show_night_block` „aus bleibt aus“, Feld-Erhalt samt `sms_threshold`, Roundtrip je Feld, Retry-/412-Fälle, zwei Nutzer beim Laden, Kanal-Vorgaben gleich Auslieferung (Telegram, SMS, Premium-SMS), Reiter Wetter und Zustellung an einem Controller. Danach: Telegram-Grenze Orte (Katalog 23–34), Klebeschicht-Ladetests, Übriges.
+4. **Katalog „Einstellung = Mail“:** aus `fallliste_editor.json` sind 15 Fälle gestrichen, alle mit Status grün (SMS-LADEN-A/B, zwölf F3/F3N-Fälle Trip/Orte, P12-TL3-ORTE-KURZSTIL). Je Fall: lebenden Beleg wieder eintragen oder Streichung begründen. Verweisänderungen verbliebener Fälle, auch in `fallliste_trip` und `fallliste_orte`, sind nicht ausgewertet.
+5. **`test_einstellung_gleich_mail_fallliste.py`:** `assert praefixe` ist durch „Template-Titel in den verwiesenen Dateien“ ersetzt. Laut Kommentar im Test ist `praefixe` heute leer, die Teilmengen-Prüfung läuft also leer, weil die Editor-Dateien weg sind. Nur am Diff gelesen. In R1 auf die neuen Testdateien richten.
+6. **Vorlage folgt der Fortbewegung (#3196 AC-7):** im lebenden Reiter Wetter (`shared/wetter-tab`, `organisms/wetter-tab`) liefert die Suche nach `tempo` keinen Treffer; die einzige bekannte Zuordnung stand in `WeatherMetricsTab`. Nicht im Browser gemessen. AC-7 ist freigegeben, also keine PO-Frage, sondern ein Bug; nicht Teil dieses Rückbaus.
+7. **Grenzen:** Liste C (24 Dateien) bleibt, ebenso drei neu als tot gemeldete Dateien (`mobile/Drawer`, `CompareStatusRow`, `ScoreToggle`).
+
+### Affected Files (with changes)
+| File | Change Type | Description |
+|------|-------------|-------------|
+| 42 Dateien (`tot_nach_3357.txt` ∩ Listen A/B) | DELETE | R2 |
+| `organisms/index.ts`, `trip-detail/index.ts` | MODIFY | 6 Barrel-Zeilen |
+| Tests aus S1 (`wetter_tab_karte_mitspeichern_3020`, `trip_python_skip_next_ohne_412`, `feld_erhalt_ohne_ausnahme`, Nutzlast/Roundtrip) | CREATE/MODIFY | R1, aus `8b9749601` portieren, nicht blind kopieren (Helfer haben sich geändert) |
+| neue Belege laut Testtabelle „neu in S3/S4“ | CREATE | R1 |
+| `rework_3020_testtabelle.md`, Wächter und Probe (`rework_3020_*`) | MODIFY/CREATE | auf Restbestand umstellen; R2-F2 (Ersatzbeleg muss Testdatei sein), R2-F3 (Anzahl festhalten) mitnehmen, R2-F1 (Attribute in `WetterTabInhalt` unbewacht) prüfen |
+| `fallliste_editor.json`, `test_einstellung_gleich_mail_fallliste.py` | MODIFY | Befund 4 und 5 |
+| i18n-Kataloge DE/EN, `bausteine_waechter_regeln.ts`, `ein_katalog_ausnahmen.json`, svelte-check-Baseline, `pendant_gate.py` | MODIFY | R2, Ratschen senken, nie lockern; Bedarf erst nach der Probe bekannt |
+
+### Scope Assessment
+- R1: 0 Produktionszeilen, geschätzt 20–30 Testdateien. R2: rund −4 450 Produktionszeilen, Testanteil erst nach der Probe bekannt.
+- Risk Level: MEDIUM (Löschen niedrig; Schutzlücke in Tests hoch, bis R1 fertig ist).
+
+### Technical Approach
+Zwei Scheiben, je eigener PR, je grün und einzeln auslieferbar, EINE Spec (bisherige Spec neu fassen; Scheibenschnitt 19/26/9 und AC-3/4/6/11/12 beziehen sich auf den alten Stand):
+1. **R1 Schutz wiederherstellen** (Vorrangliste Befund 3, dazu 4 und 5). Jede Zusicherung mit Mutationsprobe am lebenden Code. Fälle zu #3355 bleiben `todo` mit Verweis.
+2. **R2 Restbestand löschen:** Probe-Löschung → Testtabelle je rotem Test → löschen → verwaiste Katalogschlüssel und Ratschen mitziehen.
+
+R1 zuerst: die Schutzlücke besteht heute schon auf main, und das Löschen macht sie nicht kleiner.
+
+**Abgrenzung:** `compareHourlyMetricDefs.ts` und `hourlyFriendlyMap.ts` löscht R2 (Nachweis für #3301); #3298 übernimmt Typen und Sperre. Vor R2 erneut prüfen, ob #3298 läuft. Worktree `delegated-humming-dijkstra` ist gesperrt, Inhalt nicht geprüft.
+
+**Achtung:** die Spec #3297 (Z. 164) schließt beim Abschluss auch #3020. Per Kommentar in #3020 und #3297 widersprochen.
+
+Abweichung von `/20-analyse`: keine Explore-/Plan-Teilagenten; Restbestand und Testlücken sind gemessen, der Scheibenschnitt ist nicht von einem zweiten Agenten geprüft. Das holt der spec-validator nach.
+
+### Dependencies
+Upstream: #3357 auf main (Live-Stand hier nicht geprüft). Daneben: #3355, #3298, #3301. Downstream: #3351 (Datenlauf).
+
+### Open Questions
+Keine an den PO.
+
+## Analysis (überholt, Stand vor #3357)
+
 ### Type
 Rückbau (Feature-Pfad, kein Bug). Keine sichtbare Änderung.
 

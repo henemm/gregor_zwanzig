@@ -85,7 +85,7 @@ const MS_SEL: Record<
 				evening_enabled: false,
 				morning_time: '06:00:00',
 				evening_time: '18:00:00',
-				show_outlook: false,
+				show_stage_stats: false,
 				email_format: 'compact'
 			}
 		},

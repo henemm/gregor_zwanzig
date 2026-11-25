@@ -205,8 +205,8 @@ const NEU_IN_F8 = [
 	'layout.ausgabe.sms_liste', 'layout.ausgabe.entfernen', 'layout.ausgabe.preset_auswahl',
 	'layout.ausgabe.spalten_eyebrow', 'layout.ausgabe.spalten', 'layout.ausgabe.spalten_hinweis',
 	'layout.ausgabe.detail_eyebrow', 'layout.ausgabe.detail_werte', 'layout.ausgabe.detail_hinweis',
-	'layout.ausblick.titel', 'layout.ausblick.nur_email', 'layout.mail_inhalt.titel', 'layout.mail_inhalt.format',
-	'layout.mail_inhalt.ausfuehrlich', 'layout.mail_inhalt.kompakt', 'layout.mail_inhalt.kompakt_hinweis',
+	// #3297/#3020: layout.ausblick.* und layout.mail_inhalt.titel/format/ausfuehrlich/kompakt/kompakt_hinweis
+	// entfallen mit OutlookLayoutControls/MailInhaltCard (geloescht).
 	'layout.mail_inhalt.etappen_kennzahlen', 'layout.mail_inhalt.etappen_kennzahlen_text',
 	'layout.mail_inhalt.quick_take', 'layout.mail_inhalt.quick_take_text',
 	'layout.mail_inhalt.metriken_ueberblick', 'layout.mail_inhalt.metriken_ueberblick_text',

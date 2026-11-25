@@ -1,6 +1,6 @@
 // Issue #3190 (Epic #2913) — geteilte Bedienlogik der Karte „Als eigene Vorlage speichern“.
 // Genutzt von SavePresetDialog (Karte), VorlageKarte (Reiter Wetter, Trip und Orts-Vergleich) und
-// WeatherMetricsTab (Alt-Editor), damit beide Auslöser gleich umschalten und den Fokus gleich zurückgeben.
+// WeatherMetricsTab (gelöscht, #3297) (Alt-Editor), damit beide Auslöser gleich umschalten und den Fokus gleich zurückgeben.
 // Liegt bewusst außerhalb lib/components: reine Logik, kein Baustein (ADR-0112, Regel (a)).
 // Spec: docs/specs/modules/feat_3190_vorlage_dialog_inline.md (AC-6, AC-7, AC-8, AC-10)
 

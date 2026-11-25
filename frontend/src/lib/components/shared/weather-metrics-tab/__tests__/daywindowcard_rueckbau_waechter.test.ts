@@ -49,33 +49,8 @@ function dateien(dir: string, out: string[] = []): string[] {
 	return out;
 }
 
-// ---------------------------------------------------------------------------
-// AC-2 — Verhalten: gerendertes Markup in beiden Kontexten, Bereich 'alles'
-// ---------------------------------------------------------------------------
-describe('AC-2: WeatherMetricsTab zeigt in keinem Kontext einen Tagesfenster-Abschnitt', () => {
-	test('abschnittsliste_enthaelt_kein_tagesfenster__route_und_vergleich_alle_bereiche', async () => {
-		const { weatherMetricsTabSections } = await import(pathToFileURL(join(WMT, 'weatherMetricsTabSections.ts')).href);
-		for (const ctx of ['route', 'vergleich']) {
-			for (const bereich of ['alles', 'zustellung', 'wetter']) {
-				const s: string[] = weatherMetricsTabSections(ctx, bereich);
-				assert.ok(!s.includes('tagesfenster'), `AC-2: Abschnittsliste ${ctx}/${bereich} enthaelt noch 'tagesfenster': ${s.join(', ')}`);
-			}
-		}
-	});
-
-	// Pruefstand erst hier laden: er registriert die SSR-Hooks und rendert den echten Tab.
-	for (const ctx of ['route', 'vergleich'] as const) {
-		test(`ssr_markup_ohne_tagesfenster_und_ohne_dwc__${ctx}`, async () => {
-			const p = await import(pathToFileURL(join(HERE, 'f5Altbausteine.ts')).href);
-			const html: string = ctx === 'route' ? p.routeRendern({}, 'rueckbau-2931') : p.vergleichRendern({});
-			// Gegenprobe: der Tab wurde wirklich gerendert (sonst waere "nichts drin" trivial).
-			assert.ok(html.length > 1000, `AC-2: ${ctx}-Render ist verdaechtig kurz (${html.length} Zeichen)`);
-			assert.ok(!html.includes('weather-metrics-tagesfenster'), `AC-2: ${ctx}-Markup enthaelt noch data-testid="weather-metrics-tagesfenster"`);
-			const dwc = html.match(/dwc-[\w-]*/g) ?? [];
-			assert.deepEqual(dwc, [], `AC-2: ${ctx}-Markup enthaelt noch DayWindowCard-Markup: ${[...new Set(dwc)].join(', ')}`);
-		});
-	}
-});
+// #3297/#3020: AC-2 und AC-3 prueften shared/WeatherMetricsTab bzw. weatherMetricsTabSections (geloescht);
+// AC-1 (DayWindowCard bleibt geloescht) gilt weiter.
 
 // ---------------------------------------------------------------------------
 // AC-1 — doc-compliance-test: Baustein + Test geloescht, niemand laedt sie
@@ -110,28 +85,6 @@ describe('AC-1: DayWindowCard samt eigenem Test ist geloescht', () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// AC-3 — doc-compliance-test: tote Prop raus, Wertprops + Handler bleiben
-// ---------------------------------------------------------------------------
-describe('AC-3: Prop onDayWindowChange entfernt, Tagesfenster-Wertprops bleiben', () => {
-	const code = readFileSync(join(SHARED, 'WeatherMetricsTab.svelte'), 'utf-8');
-	const props = code.match(/interface\s+Props\s*\{([\s\S]*?)\n\t\}/)?.[1] ?? '';
-
-	test('props_interface_gefunden', () => {
-		assert.ok(props.length > 0, 'AC-3: interface Props in WeatherMetricsTab.svelte nicht gefunden');
-	});
-
-	test('keine_prop_onDayWindowChange_und_kein_aufruf', () => {
-		const zeilen = code.split('\n').filter((z) => !istKommentar(z) && /\bonDayWindowChange\b/.test(z));
-		assert.deepEqual(zeilen.map((z) => z.trim()), [], 'AC-3: onDayWindowChange (Prop, Destrukturierung oder $effect-Aufruf) ist noch vorhanden');
-	});
-
-	for (const name of ['dayWindowStartHour', 'dayWindowEndHour', 'onDayWindowStartHourChange', 'onDayWindowEndHourChange']) {
-		test(`prop_bleibt__${name}`, () => {
-			assert.match(props, new RegExp(`\\b${name}\\?\\s*:`), `AC-3: Prop ${name} fehlt im Props-Interface (darf NICHT mit entfernt werden)`);
-		});
-	}
-});
 
 // ---------------------------------------------------------------------------
 // AC-5 — doc-compliance-test: Bausteine-Ratsche

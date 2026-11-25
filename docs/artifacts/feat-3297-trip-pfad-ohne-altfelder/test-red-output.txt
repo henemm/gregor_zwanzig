@@ -1,0 +1,977 @@
+# TDD RED #3297/#3020 — 2026-11-25
+# node --test (benannte Dateien): 50 Tests, 24 rot, 26 gruen (Regressionsschutz bzw. unveraenderte Bestandstests)
+# E2E frontend/e2e/feat-3297-trip-ohne-altfelder.spec.ts: 4 Tests (AW-1..AW-4), lokal nur --list + tsc geprueft (Staging-Lauf in /e2e-verify)
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts src/lib/issue_568_home_redesign.test.ts src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts
+
+TAP version 13
+# Subtest: \#3297/\#3020 AC-7: toter Alt-Editor gelöscht, keine Importe, Vergleich-Hilfen erhalten
+    # Subtest: gelöscht: lib/components/shared/WeatherMetricsTab.svelte
+    not ok 1 - gelöscht: lib/components/shared/WeatherMetricsTab.svelte
+      ---
+      duration_ms: 2.538973
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:77:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/shared/WeatherMetricsTab.svelte existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:78:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: gelöscht: lib/components/shared/WetterMetrikenVersandPanel.svelte
+    not ok 2 - gelöscht: lib/components/shared/WetterMetrikenVersandPanel.svelte
+      ---
+      duration_ms: 0.21012
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:77:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/shared/WetterMetrikenVersandPanel.svelte existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:78:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: gelöscht: lib/components/trip-detail/BriefingScheduleTab.svelte
+    not ok 3 - gelöscht: lib/components/trip-detail/BriefingScheduleTab.svelte
+      ---
+      duration_ms: 0.19226
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:77:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/trip-detail/BriefingScheduleTab.svelte existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:78:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht: lib/components/shared/VersandTab.svelte
+    not ok 4 - gelöscht: lib/components/shared/VersandTab.svelte
+      ---
+      duration_ms: 0.13211
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:77:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/shared/VersandTab.svelte existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:78:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht: lib/components/shared/MailInhaltCard.svelte
+    not ok 5 - gelöscht: lib/components/shared/MailInhaltCard.svelte
+      ---
+      duration_ms: 0.17686
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:77:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/shared/MailInhaltCard.svelte existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:78:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht: lib/components/shared/OutlookLayoutControls.svelte
+    not ok 6 - gelöscht: lib/components/shared/OutlookLayoutControls.svelte
+      ---
+      duration_ms: 0.120899
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:77:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/shared/OutlookLayoutControls.svelte existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:78:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht: lib/components/shared/weather-metrics-tab/channelMetricLayouts.ts
+    not ok 7 - gelöscht: lib/components/shared/weather-metrics-tab/channelMetricLayouts.ts
+      ---
+      duration_ms: 0.135719
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:77:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/shared/weather-metrics-tab/channelMetricLayouts.ts existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:78:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht: lib/components/shared/weather-metrics-tab/weatherMetricsSavePayload.ts
+    not ok 8 - gelöscht: lib/components/shared/weather-metrics-tab/weatherMetricsSavePayload.ts
+      ---
+      duration_ms: 0.188601
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:77:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/shared/weather-metrics-tab/weatherMetricsSavePayload.ts existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:78:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht: lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts
+    not ok 9 - gelöscht: lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts
+      ---
+      duration_ms: 0.339161
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:77:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:78:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: keine Produktionsdatei importiert eine gelöschte Datei (statisch, Barrel-Export, dynamisch)
+    not ok 10 - keine Produktionsdatei importiert eine gelöschte Datei (statisch, Barrel-Export, dynamisch)
+      ---
+      duration_ms: 48.402737
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:82:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Produktions-Importe der gelöschten Dateien
+        + actual - expected
+        
+        + [
+        +   'lib/components/organisms/index.ts -> WeatherMetricsTab',
+        +   'lib/components/shared/OutlookLayoutControls.svelte -> channelMetricLayouts',
+        +   'lib/components/shared/WeatherMetricsTab.svelte -> channelMetricLayouts',
+        +   'lib/components/shared/WeatherMetricsTab.svelte -> weatherMetricsSavePayload',
+        +   'lib/components/shared/WeatherMetricsTab.svelte -> MailInhaltCard',
+        +   'lib/components/shared/WeatherMetricsTab.svelte -> weatherMetricsTabSections',
+        +   'lib/components/shared/WeatherMetricsTab.svelte -> OutlookLayoutControls',
+        +   'lib/components/shared/WetterMetrikenVersandPanel.svelte -> WeatherMetricsTab',
+        +   'lib/components/shared/WetterMetrikenVersandPanel.svelte -> VersandTab',
+        +   'lib/components/shared/WetterMetrikenVersandPanel.svelte -> BriefingScheduleTab',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsSavePayload.ts -> channelMetricLayouts',
+        +   'lib/components/trip-detail/BriefingScheduleTab.svelte -> VersandTab',
+        +   'lib/components/trip-detail/index.ts -> WeatherMetricsTab'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'lib/components/organisms/index.ts -> WeatherMetricsTab'
+        1: 'lib/components/shared/OutlookLayoutControls.svelte -> channelMetricLayouts'
+        2: 'lib/components/shared/WeatherMetricsTab.svelte -> channelMetricLayouts'
+        3: 'lib/components/shared/WeatherMetricsTab.svelte -> weatherMetricsSavePayload'
+        4: 'lib/components/shared/WeatherMetricsTab.svelte -> MailInhaltCard'
+        5: 'lib/components/shared/WeatherMetricsTab.svelte -> weatherMetricsTabSections'
+        6: 'lib/components/shared/WeatherMetricsTab.svelte -> OutlookLayoutControls'
+        7: 'lib/components/shared/WetterMetrikenVersandPanel.svelte -> WeatherMetricsTab'
+        8: 'lib/components/shared/WetterMetrikenVersandPanel.svelte -> VersandTab'
+        9: 'lib/components/shared/WetterMetrikenVersandPanel.svelte -> BriefingScheduleTab'
+        10: 'lib/components/shared/weather-metrics-tab/weatherMetricsSavePayload.ts -> channelMetricLayouts'
+        11: 'lib/components/trip-detail/BriefingScheduleTab.svelte -> VersandTab'
+        12: 'lib/components/trip-detail/index.ts -> WeatherMetricsTab'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:91:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts
+    ok 11 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts
+      ---
+      duration_ms: 0.155439
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareMetricSelection.ts
+    ok 12 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareMetricSelection.ts
+      ---
+      duration_ms: 1.261042
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareMetricOrder.ts
+    ok 13 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareMetricOrder.ts
+      ---
+      duration_ms: 0.160391
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareChannelMetricLayouts.ts
+    ok 14 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareChannelMetricLayouts.ts
+      ---
+      duration_ms: 0.067931
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts
+    ok 15 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts
+      ---
+      duration_ms: 0.05285
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte
+    ok 16 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte
+      ---
+      duration_ms: 0.051579
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/wetter-tab/wasStehtWoSpeicherung.ts
+    ok 17 - erhalten (Regressionsschutz, heute grün): lib/components/shared/wetter-tab/wasStehtWoSpeicherung.ts
+      ---
+      duration_ms: 0.044841
+      type: 'test'
+      ...
+    1..17
+not ok 1 - \#3297/\#3020 AC-7: toter Alt-Editor gelöscht, keine Importe, Vergleich-Hilfen erhalten
+  ---
+  duration_ms: 55.389955
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:75:1'
+  failureType: 'subtestsFailed'
+  error: '10 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3297 AC-8: show_outlook und multi_day_trend_reports aus dem Frontend-Produktionscode
+    # Subtest: keine Produktionsdatei unter frontend/src nennt einen der beiden Schlüssel
+    not ok 1 - keine Produktionsdatei unter frontend/src nennt einen der beiden Schlüssel
+      ---
+      duration_ms: 41.78017
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:102:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Treffer auf show_outlook/multi_day_trend_reports
+        + actual - expected
+        
+        + [
+        +   'lib/components/shared/MailInhaltCard.svelte:31',
+        +   'lib/components/shared/MailInhaltCard.svelte:56',
+        +   'lib/components/shared/MailInhaltCard.svelte:79',
+        +   'lib/components/shared/MailInhaltCard.svelte:133',
+        +   'lib/components/shared/OutlookLayoutControls.svelte:69',
+        +   'lib/components/shared/OutlookLayoutControls.svelte:248',
+        +   'lib/components/shared/VersandTab.svelte:207',
+        +   'lib/components/shared/VersandTab.svelte:211',
+        +   'lib/components/shared/WeatherMetricsTab.svelte:1834',
+        +   'lib/components/shared/mailInhaltKonstanten.ts:19',
+        +   'lib/components/shared/mailInhaltKonstanten.ts:21',
+        +   'lib/components/shared/mailInhaltZustand.ts:9',
+        +   'lib/components/shared/mailInhaltZustand.ts:31',
+        +   'lib/components/shared/pickEigenfelder.ts:55',
+        +   'lib/components/shared/pickEigenfelder.ts:69',
+        +   'lib/components/shared/versand-tab/reportConfigPayload.ts:54',
+        +   'lib/components/shared/versand-tab/reportConfigPayload.ts:61',
+        +   'lib/components/shared/versand-tab/reportConfigPayload.ts:89',
+        +   'lib/components/shared/versand-tab/reportConfigPayload.ts:98',
+        +   'lib/components/shared/versand-tab/reportConfigPayload.ts:103',
+        +   'lib/components/shared/versand-tab/reportConfigPayload.ts:118',
+        +   'lib/components/shared/zustellung-tab/kanalStilSpeicherung.ts:22',
+        +   'lib/components/shared/zustellung-tab/kanalStilSpeicherung.ts:29',
+        +   'lib/components/shared/zustellung-tab/kanalStilSpeicherung.ts:43',
+        +   'lib/components/trip-new/tripNewLogic.ts:393',
+        +   'lib/components/trip-new/tripNewLogic.ts:411',
+        +   'lib/types.ts:286',
+        +   'lib/types.ts:296'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'lib/components/shared/MailInhaltCard.svelte:31'
+        1: 'lib/components/shared/MailInhaltCard.svelte:56'
+        2: 'lib/components/shared/MailInhaltCard.svelte:79'
+        3: 'lib/components/shared/MailInhaltCard.svelte:133'
+        4: 'lib/components/shared/OutlookLayoutControls.svelte:69'
+        5: 'lib/components/shared/OutlookLayoutControls.svelte:248'
+        6: 'lib/components/shared/VersandTab.svelte:207'
+        7: 'lib/components/shared/VersandTab.svelte:211'
+        8: 'lib/components/shared/WeatherMetricsTab.svelte:1834'
+        9: 'lib/components/shared/mailInhaltKonstanten.ts:19'
+        10: 'lib/components/shared/mailInhaltKonstanten.ts:21'
+        11: 'lib/components/shared/mailInhaltZustand.ts:9'
+        12: 'lib/components/shared/mailInhaltZustand.ts:31'
+        13: 'lib/components/shared/pickEigenfelder.ts:55'
+        14: 'lib/components/shared/pickEigenfelder.ts:69'
+        15: 'lib/components/shared/versand-tab/reportConfigPayload.ts:54'
+        16: 'lib/components/shared/versand-tab/reportConfigPayload.ts:61'
+        17: 'lib/components/shared/versand-tab/reportConfigPayload.ts:89'
+        18: 'lib/components/shared/versand-tab/reportConfigPayload.ts:98'
+        19: 'lib/components/shared/versand-tab/reportConfigPayload.ts:103'
+        20: 'lib/components/shared/versand-tab/reportConfigPayload.ts:118'
+        21: 'lib/components/shared/zustellung-tab/kanalStilSpeicherung.ts:22'
+        22: 'lib/components/shared/zustellung-tab/kanalStilSpeicherung.ts:29'
+        23: 'lib/components/shared/zustellung-tab/kanalStilSpeicherung.ts:43'
+        24: 'lib/components/trip-new/tripNewLogic.ts:393'
+        25: 'lib/components/trip-new/tripNewLogic.ts:411'
+        26: 'lib/types.ts:286'
+        27: 'lib/types.ts:296'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:111:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    1..1
+not ok 2 - \#3297 AC-8: show_outlook und multi_day_trend_reports aus dem Frontend-Produktionscode
+  ---
+  duration_ms: 41.879559
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:101:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3297 AC-1: Trip-Anlage (POST) ohne Altschluessel
+    # Subtest: Anlege-Rumpf (Speicherweg wie TripNewEditor.buildAndSave) traegt keinen Altschluessel
+    not ok 1 - Anlege-Rumpf (Speicherweg wie TripNewEditor.buildAndSave) traegt keinen Altschluessel
+      ---
+      duration_ms: 5.145766
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:99:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        POST /api/trips enthaelt Altschluessel
+        + actual - expected
+        
+        + [
+        +   'report_config.multi_day_trend_reports',
+        +   'report_config.show_outlook'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'report_config.multi_day_trend_reports'
+        1: 'report_config.show_outlook'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:101:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: mit bedientem Reiter Zustellung (mitZustellung) bleibt der Rumpf frei von Altschluesseln
+    not ok 2 - mit bedientem Reiter Zustellung (mitZustellung) bleibt der Rumpf frei von Altschluesseln
+      ---
+      duration_ms: 1.162151
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:104:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        POST /api/trips enthaelt Altschluessel
+        + actual - expected
+        
+        + [
+        +   'report_config.multi_day_trend_reports',
+        +   'report_config.show_outlook'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'report_config.multi_day_trend_reports'
+        1: 'report_config.show_outlook'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:109:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Versand-Standard belegt den Ausblick nicht mehr vor (kein multi_day_trend_reports, auch nicht leer)
+    not ok 3 - Versand-Standard belegt den Ausblick nicht mehr vor (kein multi_day_trend_reports, auch nicht leer)
+      ---
+      duration_ms: 0.480341
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:113:2'
+      failureType: 'testCodeFailure'
+      error: 'Vorbelegung multi_day_trend_reports noch im Versand-Standard'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:115:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 3 - \#3297 AC-1: Trip-Anlage (POST) ohne Altschluessel
+  ---
+  duration_ms: 7.76235
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:98:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3297 AC-2: Anlage „Mit Standardwerten“ ohne Altschluessel, placements aus der Karte
+    # Subtest: Standardwerte-Rumpf ohne Altschluessel, Tabelle der Karte steht in display_config.placements
+    not ok 1 - Standardwerte-Rumpf ohne Altschluessel, Tabelle der Karte steht in display_config.placements
+      ---
+      duration_ms: 0.884921
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:121:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        POST (Standardwerte) enthaelt Altschluessel
+        + actual - expected
+        
+        + [
+        +   'report_config.multi_day_trend_reports',
+        +   'report_config.show_outlook'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'report_config.multi_day_trend_reports'
+        1: 'report_config.show_outlook'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:123:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Standardwerte ergaenzen weiterhin die Mail-Inhalt-Felder (ohne show_outlook)
+    not ok 2 - Standardwerte ergaenzen weiterhin die Mail-Inhalt-Felder (ohne show_outlook)
+      ---
+      duration_ms: 0.462731
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:129:2'
+      failureType: 'testCodeFailure'
+      error: 'show_outlook noch in den Standardwerten'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:131:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 4 - \#3297 AC-2: Anlage „Mit Standardwerten“ ohne Altschluessel, placements aus der Karte
+  ---
+  duration_ms: 1.504693
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:120:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3297 AC-3: Reiter-PUTs ohne Altschluessel, Bestand bleibt (Go-Merge)
+    # Subtest: Reiter Wetter: beide PUTs ohne Altschluessel, Bestand sonst erhalten
+    not ok 1 - Reiter Wetter: beide PUTs ohne Altschluessel, Bestand sonst erhalten
+      ---
+      duration_ms: 326.570599
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:193:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        PUT /api/trips enthaelt Altschluessel (Bestand durchgereicht)
+        + actual - expected
+        
+        + [
+        +   'report_config.show_outlook',
+        +   'report_config.multi_day_trend_reports'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'report_config.show_outlook'
+        1: 'report_config.multi_day_trend_reports'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:199:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Reiter Zustellung (Regressionsschutz, heute gruen): PUT ohne Altschluessel, Bestand bleibt
+    ok 2 - Reiter Zustellung (Regressionsschutz, heute gruen): PUT ohne Altschluessel, Bestand bleibt
+      ---
+      duration_ms: 2.189002
+      type: 'test'
+      ...
+    # Subtest: Reiter Alarme (Regressionsschutz, heute gruen): PUT ohne Altschluessel, Bestand bleibt
+    ok 3 - Reiter Alarme (Regressionsschutz, heute gruen): PUT ohne Altschluessel, Bestand bleibt
+      ---
+      duration_ms: 0.628881
+      type: 'test'
+      ...
+    # Subtest: Karte „Was steht wo“, Schalter Kurzstil (Regressionsschutz, heute gruen): nur telegram_style
+    ok 4 - Karte „Was steht wo“, Schalter Kurzstil (Regressionsschutz, heute gruen): nur telegram_style
+      ---
+      duration_ms: 0.721791
+      type: 'test'
+      ...
+    1..4
+not ok 5 - \#3297 AC-3: Reiter-PUTs ohne Altschluessel, Bestand bleibt (Go-Merge)
+  ---
+  duration_ms: 330.449023
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:192:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3297 AC-4: Kanal-Stil-Nutzlast nur mit telegram_style
+    # Subtest: ohne Vorher-Stand: Body traegt nur telegram_style, keine Trend-Felder
+    not ok 1 - ohne Vorher-Stand: Body traegt nur telegram_style, keine Trend-Felder
+      ---
+      duration_ms: 0.697931
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:242:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          {
+            report_config: {
+        +     multi_day_trend_evening: undefined,
+        +     multi_day_trend_morning: undefined,
+        +     multi_day_trend_reports: [],
+              telegram_style: 'kurzform'
+            }
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        report_config:
+          telegram_style: 'kurzform'
+      actual:
+        report_config:
+          telegram_style: 'kurzform'
+          multi_day_trend_reports:
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:244:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: mit Vorher-Stand (Stilwechsel): nur telegram_style
+    ok 2 - mit Vorher-Stand (Stilwechsel): nur telegram_style
+      ---
+      duration_ms: 0.1801
+      type: 'test'
+      ...
+    # Subtest: kanalStilStart (ohne Produktions-Aufrufer, las multi_day_trend_reports) ist nicht mehr exportiert
+    not ok 3 - kanalStilStart (ohne Produktions-Aufrufer, las multi_day_trend_reports) ist nicht mehr exportiert
+      ---
+      duration_ms: 0.24819
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:252:2'
+      failureType: 'testCodeFailure'
+      error: 'kanalStilStart ist noch exportiert'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:253:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 6 - \#3297 AC-4: Kanal-Stil-Nutzlast nur mit telegram_style
+  ---
+  duration_ms: 1.240991
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:241:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3297 AC-6: DisplayConfig kennt placements, hasLayout wertet es aus
+    # Subtest: typisierter Trip mit placements (rows + outlook_reports) gilt als „Layout je Kanal“ erledigt
+    not ok 1 - typisierter Trip mit placements (rows + outlook_reports) gilt als „Layout je Kanal“ erledigt
+      ---
+      duration_ms: 0.666071
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:260:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        placements.rows werden fuer „Layout“ nicht ausgewertet
+        
+        false !== true
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:267:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..1
+not ok 7 - \#3297 AC-6: DisplayConfig kennt placements, hasLayout wertet es aus
+  ---
+  duration_ms: 0.759381
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts:259:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#568 dayProgress: Tag 3 von 12 → 25 %
+ok 8 - \#568 dayProgress: Tag 3 von 12 → 25 %
+  ---
+  duration_ms: 0.884831
+  type: 'test'
+  ...
+# Subtest: \#568 dayProgress: erster Tag (1 von 1) → 100 %
+ok 9 - \#568 dayProgress: erster Tag (1 von 1) → 100 %
+  ---
+  duration_ms: 0.109291
+  type: 'test'
+  ...
+# Subtest: \#568 dayProgress: 0 von 0 → 0 % (kein Division-by-zero)
+ok 10 - \#568 dayProgress: 0 von 0 → 0 % (kein Division-by-zero)
+  ---
+  duration_ms: 0.08404
+  type: 'test'
+  ...
+# Subtest: \#568 setupStepTrip: leerer Trip → Schritte 1-4 offen, Reports nach Slot-Regel
+ok 11 - \#568 setupStepTrip: leerer Trip → Schritte 1-4 offen, Reports nach Slot-Regel
+  ---
+  duration_ms: 0.4043
+  type: 'test'
+  ...
+# Subtest: \#568 setupStepTrip: Trip mit 1 Stage ohne Datum → nur Schritt 1 done
+ok 12 - \#568 setupStepTrip: Trip mit 1 Stage ohne Datum → nur Schritt 1 done
+  ---
+  duration_ms: 0.23893
+  type: 'test'
+  ...
+# Subtest: \#568 setupStepTrip: vollständiger Trip → alle 5 Schritte done
+ok 13 - \#568 setupStepTrip: vollständiger Trip → alle 5 Schritte done
+  ---
+  duration_ms: 0.153049
+  type: 'test'
+  ...
+# Subtest: \#3297 AC-5 setupStepTrip „Layout je Kanal“: nicht leere placements.rows (Bestandstrip) → erledigt
+not ok 14 - \#3297 AC-5 setupStepTrip „Layout je Kanal“: nicht leere placements.rows (Bestandstrip) → erledigt
+  ---
+  duration_ms: 0.657472
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/issue_568_home_redesign.test.ts:96:2'
+  failureType: 'testCodeFailure'
+  error: |-
+    Layout-Schritt bei „nicht leere placements.rows (Bestandstrip)“
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/issue_568_home_redesign.test.ts:98:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: \#3297 AC-5 setupStepTrip „Layout je Kanal“: nur channel_layouts (Altfeld) → offen
+not ok 15 - \#3297 AC-5 setupStepTrip „Layout je Kanal“: nur channel_layouts (Altfeld) → offen
+  ---
+  duration_ms: 0.21096
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/issue_568_home_redesign.test.ts:96:2'
+  failureType: 'testCodeFailure'
+  error: |-
+    Layout-Schritt bei „nur channel_layouts (Altfeld)“
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/issue_568_home_redesign.test.ts:98:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: \#3297 AC-5 setupStepTrip „Layout je Kanal“: nur preset_name (Vorlagenname) → offen
+not ok 16 - \#3297 AC-5 setupStepTrip „Layout je Kanal“: nur preset_name (Vorlagenname) → offen
+  ---
+  duration_ms: 0.243401
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/issue_568_home_redesign.test.ts:96:2'
+  failureType: 'testCodeFailure'
+  error: |-
+    Layout-Schritt bei „nur preset_name (Vorlagenname)“
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/issue_568_home_redesign.test.ts:98:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: \#3297 AC-5 setupStepTrip „Layout je Kanal“: leere placements.rows → offen
+ok 17 - \#3297 AC-5 setupStepTrip „Layout je Kanal“: leere placements.rows → offen
+  ---
+  duration_ms: 0.29115
+  type: 'test'
+  ...
+# Subtest: \#3297 AC-5 setupStepTrip: vollständiger Trip mit Tabelle → alle 5 Schritte done
+not ok 18 - \#3297 AC-5 setupStepTrip: vollständiger Trip mit Tabelle → alle 5 Schritte done
+  ---
+  duration_ms: 0.22094
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/issue_568_home_redesign.test.ts:104:1'
+  failureType: 'testCodeFailure'
+  error: 'Vollständiger Trip mit Tabelle: alle Schritte done'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/issue_568_home_redesign.test.ts:113:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: \#568 setupStepCompare: leerer Vergleich → alle 5 Schritte offen (außer Step 1)
+ok 19 - \#568 setupStepCompare: leerer Vergleich → alle 5 Schritte offen (außer Step 1)
+  ---
+  duration_ms: 0.167082
+  type: 'test'
+  ...
+# Subtest: \#568 setupStepCompare: 2 location_ids → Orte-Schritt done
+ok 20 - \#568 setupStepCompare: 2 location_ids → Orte-Schritt done
+  ---
+  duration_ms: 0.099351
+  type: 'test'
+  ...
+# Subtest: \#1351 F006 setupStepCompare: ausgewählte active_metrics → Layout-Schritt done
+ok 21 - \#1351 F006 setupStepCompare: ausgewählte active_metrics → Layout-Schritt done
+  ---
+  duration_ms: 0.13129
+  type: 'test'
+  ...
+# Subtest: \#1351 F006 setupStepCompare: frischer, unkonfigurierter Vergleich → Layout-Schritt offen
+ok 22 - \#1351 F006 setupStepCompare: frischer, unkonfigurierter Vergleich → Layout-Schritt offen
+  ---
+  duration_ms: 0.097101
+  type: 'test'
+  ...
+# Subtest: \#568 nextPlannedTrip: gibt ersten Trip mit zukünftigem Startdatum zurück
+ok 23 - \#568 nextPlannedTrip: gibt ersten Trip mit zukünftigem Startdatum zurück
+  ---
+  duration_ms: 0.49112
+  type: 'test'
+  ...
+# Subtest: \#568 nextPlannedTrip: gibt null zurück wenn kein zukünftiger Trip
+ok 24 - \#568 nextPlannedTrip: gibt null zurück wenn kein zukünftiger Trip
+  ---
+  duration_ms: 0.081549
+  type: 'test'
+  ...
+# Subtest: \#568 firstIncompleteCompare: Vergleich ohne Versand → nicht vollständig
+ok 25 - \#568 firstIncompleteCompare: Vergleich ohne Versand → nicht vollständig
+  ---
+  duration_ms: 0.134129
+  type: 'test'
+  ...
+# Subtest: \#568 firstIncompleteCompare: vollständiger Vergleich → null
+ok 26 - \#568 firstIncompleteCompare: vollständiger Vergleich → null
+  ---
+  duration_ms: 0.130571
+  type: 'test'
+  ...
+1..26
+# tests 50
+# suites 7
+# pass 26
+# fail 24
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 702.697568

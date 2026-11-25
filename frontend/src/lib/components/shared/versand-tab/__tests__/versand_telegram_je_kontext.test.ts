@@ -9,8 +9,7 @@
 
 import { test, describe, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { locale, PROFILE } from './f6VersandSsr.ts';
-import { kanaeleRendern } from './f6Altbausteine.ts';
+import { locale, kanaeleRendern, PROFILE } from './f6VersandSsr.ts';
 
 const sichtbar = (h: string) => h.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ');
 

@@ -34,7 +34,6 @@ import { baueWetterMetrikenNutzlast } from '../shared/weather-metrics-tab/weathe
 import { baueVersandNutzlast } from '../shared/versandVergleichSpeicherung.ts';
 import { baueAlarmNutzlast } from '../shared/alarmeVergleichSpeicherung.ts';
 import { baueWertebereichNutzlast } from '../shared/wetter-tab/wertebereicheVergleichSpeicherung.ts';
-import { weatherMetricsTabSections } from '../shared/weather-metrics-tab/weatherMetricsTabSections.ts';
 import type { ComparePreset } from '../../types.ts';
 
 const ALTSCHLUESSEL = [
@@ -213,19 +212,9 @@ describe('#3276 AC-2: Speichern (PUT) ohne Altschluessel, Bestand bleibt', () =>
 	});
 });
 
-describe('#3276 AC-3/AC-6: keine alte Bedienflaeche Stundenverlauf/Ausblick im Vergleich', () => {
-	test('Vergleich: weder im Bereich Zustellung noch in der Gesamtsicht', () => {
-		for (const bereich of ['zustellung', 'alles'] as const) {
-			const s = weatherMetricsTabSections('vergleich', bereich);
-			assert.ok(!s.includes('stundenverlauf'), `stundenverlauf noch da (${bereich}): ${s.join(',')}`);
-			assert.ok(!s.includes('ausblick'), `ausblick noch da (${bereich}): ${s.join(',')}`);
-		}
-	});
-
-	test('Trip unveraendert: Ausblick bleibt im Bereich Zustellung (Rueckbau Trip ist #3297)', () => {
-		assert.ok(weatherMetricsTabSections('route', 'zustellung').includes('ausblick'));
-	});
-});
+// #3297/#3020: der Block „AC-3/AC-6: keine alte Bedienflaeche Stundenverlauf/Ausblick“ pruefte
+// weatherMetricsTabSections.ts; die Datei ist samt WeatherMetricsTab geloescht (die Bedienflaeche
+// existiert in keinem Kontext mehr, Nachweis trip_pfad_altfeld_loeschnachweis_3297.test.ts).
 
 describe('#3276 F002: Rumpf des Anlege-Editors (CompareNewEditor) ohne Altschluessel', () => {
 	// Feldsatz, wie ihn der Anlege-Editor haelt, mit befuellten Alt-Feldern.

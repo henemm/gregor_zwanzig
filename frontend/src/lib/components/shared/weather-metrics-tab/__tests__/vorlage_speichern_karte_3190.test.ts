@@ -19,10 +19,8 @@ const FRONTEND = path.resolve(HERE, '../../../../../..');
 register(pathToFileURL(path.join(FRONTEND, 'test-svelte-ssr-hooks.mjs')).href, pathToFileURL(FRONTEND + '/').href);
 const { render } = await import('svelte/server');
 const K = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/utils/vorlageSpeichernKarte.ts')).href);
-// #3020 S1: Alt-Bausteine (fallen mit S3). Fehlen sie, scheitern nur ihre Faelle.
-const alt = async (datei: string) => await import(pathToFileURL(path.resolve(HERE, datei)).href).catch(() => ({}));
-const PresetBar = (await alt('../WeatherV2PresetBar.svelte')).default;
-const { routeRendern } = await alt('f5Altbausteine.ts');
+const PresetBar = (await import(pathToFileURL(path.resolve(HERE, '../WeatherV2PresetBar.svelte')).href)).default;
+// #3297/#3020: die zwei Faelle „WeatherMetricsTab verdrahtet Ausloeser und Karte“ entfallen (Datei geloescht).
 
 /** Attrappe eines fokussierbaren Elements: zählt die focus()-Aufrufe. */
 function knopf() {
@@ -112,18 +110,4 @@ describe('#3190 F001/AC-10: Auslöser im Alt-Editor (WeatherV2PresetBar)', () =>
 			assert.equal(attr(t, 'aria-controls'), 'karte-1');
 		});
 	}
-	test('WeatherMetricsTab verdrahtet Auslöser und Karte: aria-controls = id der Karte, aria-expanded=true', () => {
-		const h = routeRendern({ showSavePresetDialog: true, pendingPreset: 'wandern' });
-		const t = tag(h, 'weather-preset-save-link');
-		assert.ok(t, `Auslöser fehlt (Profil geändert?): ${h.slice(0, 200)}`);
-		assert.equal(attr(t, 'aria-expanded'), 'true');
-		const id = attr(tag(h, 'save-preset-dialog'), 'id');
-		assert.ok(id, 'Karte ohne id');
-		assert.equal(attr(t, 'aria-controls'), id);
-	});
-	test('WeatherMetricsTab Karte zu: aria-expanded=false', () => {
-		const t = tag(routeRendern({ pendingPreset: 'wandern' }), 'weather-preset-save-link');
-		assert.ok(t, 'Auslöser fehlt');
-		assert.equal(attr(t, 'aria-expanded'), 'false');
-	});
 });
