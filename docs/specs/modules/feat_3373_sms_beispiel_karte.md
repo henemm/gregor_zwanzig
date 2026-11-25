@@ -122,6 +122,7 @@ Nachzug bei Bedarf (feste Beispielwerte): Golden `tests/fixtures/ein_vokabular_3
 
 - Feste Beispielwerte in Golden- und E2E-Prüfungen verschieben sich durch Nacht und Gewitter im Datensatz und müssen nachgezogen werden; „passt nicht mehr“ kann für andere Metriken umschlagen, das ist gewollt (Beispiel = Versand).
 - Das Beispiel nutzt weiterhin einen festen Datensatz ohne Wetterabruf; es bildet echte Wetterlagen nicht nach.
+- AC-3, Fall ohne Folgetag-Gewitter: Der feste Datensatz enthält immer ein Folgetag-Gewitter, die Karte zeigt daher stets `TH+` mit Stufe. Ohne Gewitter schreibt derselbe Renderer `TH+:-` (Entwarnung, `sms_format.md`); dieser Fall ist im Renderer bewacht (`tests/tdd/test_th_plus_follows_thunder_metric_and_gap.py`), nicht über die Karte.
 
 ## Architektur-Entscheidung (ADR)
 
