@@ -1,0 +1,68 @@
+{
+  "verified_commit": "4b095ade2a1d74749b9c6248920e45bc85715793",
+  "findings": [
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/ID?tab=wetter|zustellung (Staging 4b095ade2)",
+      "evidence": "Trip-Detail Wetter (Was steht wo / What goes where sichtbar) und Zustellung, de+en: rendert vollstaendig, 0 Konsolenfehler, keine rohen Katalogschluessel; Screenshots docs/artifacts/rework-3366-waisen-loeschen/",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/compare/ID?tab=wetter|zustellung|orte",
+      "evidence": "Vergleich Wetter/Zustellung/Orte, de+en, 0 Konsolenfehler, keine Katalogschluessel",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/new, /compare/new, /trips/ID",
+      "evidence": "Trip anlegen, Vergleich anlegen, Trip-Uebersicht, de+en, 0 Konsolenfehler, keine Katalogschluessel",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "AC-1..6,8",
+      "status": "SKIPPED",
+      "url": "https://staging.gregor20.henemm.com:AC-1..6,8",
+      "evidence": "SKIPPED - out-of-scope: Waechter, Loeschnachweis und Zahlenratschen ohne UI-Flaeche, in CI-Tests belegt",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    }
+  ],
+  "verified_at": "2026-11-25T23:56:43.706406+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: AC-7 gruen (de+en, 16 Seitenaufrufe), AC-1..6,8 ohne UI-Flaeche",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "feat-3298-altfeld-typen-sperre": {
+      "verdict": "VERIFIED: AC-7 gruen (de+en, 16 Seitenaufrufe), AC-1..6,8 ohne UI-Flaeche",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-25T23:56:43.706406+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
