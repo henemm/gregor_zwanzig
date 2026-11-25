@@ -73,7 +73,8 @@ test('#568 setupStepTrip: vollständiger Trip → alle 5 Schritte done', () => {
 		stages: [{ id: 's1', name: 'D1', date: '2026-07-01', waypoints: [] }],
 		display_config: {
 			metrics: [{ metric_id: 'wind_speed', enabled: true, use_friendly_format: false }],
-			preset_name: 'Sommer-Trekking'
+			// #3297 (AC-5): „Layout“ zählt allein die Tabelle `placements.rows` (vorher preset_name).
+			placements: { rows: [{ metric_id: 'wind_max_kmh', places: { email: ['tabelle'] } }] }
 		},
 		report_config: {
 			morning_enabled: true,

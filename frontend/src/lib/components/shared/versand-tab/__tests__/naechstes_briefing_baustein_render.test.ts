@@ -32,7 +32,6 @@ register(pathToFileURL(path.join(FRONTEND, 'test-svelte-ssr-hooks.mjs')).href, p
 const { render } = await import('svelte/server');
 const imp = async (rel: string) => (await import(pathToFileURL(path.join(FRONTEND, rel)).href)).default;
 const VTNextBriefing = await imp('src/lib/components/shared/versand-tab/VTNextBriefing.svelte');
-const VersandTab = await imp('src/lib/components/shared/VersandTab.svelte');
 
 const TESTID = 'data-testid="vt-next-briefing"';
 
@@ -105,25 +104,4 @@ describe('AC-19: Ladezustand / Fehler — kein Absturz, keine erfundene Zeit', (
 	}
 });
 
-describe('AC-22/AC-17: der geteilte VersandTab bettet den Baustein in beiden Kontexten genau einmal ein', () => {
-	const tabs: Record<string, () => string> = {
-		route: () => ohneKommentare(render(VersandTab, { props: { context: 'route', reportConfig: undefined } }).body),
-		vergleich: () => ohneKommentare(render(VersandTab, { props: { context: 'vergleich', sendEmail: true } }).body)
-	};
-	for (const [context, html] of Object.entries(tabs)) {
-		test(`VersandTab context=${context}: genau eine Zeile vt-next-briefing, ohne geladenen Wert keine Zeit`, () => {
-			const out = html();
-			assert.equal(out.split(TESTID).length - 1, 1, 'vt-next-briefing muss genau einmal vorkommen');
-			const el = text(elementMit(out, TESTID));
-			assert.ok(el.includes('Nächstes Briefing'), el);
-			assert.doesNotMatch(el, /\d{1,2}:\d{2}/, `SSR ohne Backend-Wert zeigt eine Zeit: ${el}`);
-		});
-	}
-
-	test('bestehende Versand-testids bleiben erhalten (Stichprobe)', () => {
-		const out = tabs.route();
-		for (const id of ['channel-email', 'channel-telegram', 'channel-sms']) {
-			assert.ok(out.includes(`data-testid="${id}"`), `testid ${id} fehlt`);
-		}
-	});
-});
+// #3297/#3020: Faelle gegen shared/VersandTab bzw. MailInhaltCard (Quelltext/Render) entfallen — Dateien geloescht.

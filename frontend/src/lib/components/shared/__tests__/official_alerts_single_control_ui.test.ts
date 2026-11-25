@@ -71,18 +71,4 @@ describe('D2 AC-1: Alarm-Tab hat nur noch den Auslöser-Schalter', () => {
 	});
 });
 
-describe('D2 AC-3: Inhalt-Heimaten tragen das geschärfte Label', () => {
-	// Issue #1360: die Pruefung auf CompareInhaltSection ist GELOESCHT — die Datei
-	// ist entfallen (nachweislich nirgends importiert, Spec
-	// compare_layout_tab_dissolution Punkt 7). Der Vergleich-Kontext bezieht das
-	// Label seit #1273/S3 aus dem geteilten WeatherMetricsTab (Test unten).
-
-	test('WeatherMetricsTab (Trip-Inhalt) zeigt „Amtliche Warnungen im Bericht"', () => {
-		const src = read(WEATHER_METRICS_TAB);
-		assert.ok(
-			src.includes(CONTENT_LABEL),
-			`WeatherMetricsTab muss das Label „${CONTENT_LABEL}" tragen (Unterscheidung ` +
-				'zum Alarm-Auslöser).'
-		);
-	});
-});
+// #3297/#3020: Fall gegen WeatherMetricsTab.svelte entfaellt (Datei geloescht).

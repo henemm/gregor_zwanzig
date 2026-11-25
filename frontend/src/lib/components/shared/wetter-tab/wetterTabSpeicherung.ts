@@ -73,7 +73,6 @@ export function tripNutzlast(o: SpeicherOptionen) {
 		aufgeloest: basis.aufgeloest,
 		auswahl: s.auswahl,
 		displayConfig: (abo.display_config ?? {}) as Parameters<typeof tripSpeicherPayload>[0]['displayConfig'],
-		reportConfig: abo.report_config ?? {},
 		warnFelder: abo as WarnFelder,
 		warnungenAn: s.warnungenAn,
 		radarAn: s.radarAn,

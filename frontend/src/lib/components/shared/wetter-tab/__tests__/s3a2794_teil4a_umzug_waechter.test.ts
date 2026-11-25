@@ -106,7 +106,6 @@ describe('AC-31 entfernte Oberflaechen sind weg, Zustellungs-Bausteine bleiben',
 		'shared/AlarmeTab.svelte',
 		'shared/alarme-tab',
 		// trip-detail/AlarmeScheduleTab.svelte: toter Container, entfernt (#3047 Runde 7, p11).
-		'shared/WeatherMetricsTab.svelte',
 		'shared/weather-metrics-tab',
 		'shared/layout-tab',
 		'alerts-tab',

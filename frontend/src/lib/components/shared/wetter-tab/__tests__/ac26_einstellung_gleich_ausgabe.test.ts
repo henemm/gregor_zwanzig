@@ -31,7 +31,10 @@ import { aktiveMetriken, altSchluesselAusKatalog, ausgebbarTeilen, eigenschaften
 import { loadCompareSelectionEntries } from '../compareMetricCatalogLoader.ts';
 import * as Z from '../wetterZustand.ts';
 import { tripNutzlast, vergleichNutzlast } from '../wetterTabSpeicherung.ts';
-import { kanalStilNutzlast, kanalStilStart } from '../../zustellung-tab/kanalStilSpeicherung.ts';
+import { kanalStilNutzlast, type KanalStilStand } from '../../zustellung-tab/kanalStilSpeicherung.ts';
+
+/** #3297: gespeicherter Kurzstil des Trips (vorher `kanalStilStart`, ohne Produktions-Aufrufer entfernt). */
+const stilAus = (abo: Abo): KanalStilStand => ({ stil: (abo.report_config as Record<string, unknown> | undefined)?.telegram_style === 'kurzform' ? 'kurzform' : 'rich' });
 import { ladeMailZustand } from '../../mailInhaltZustand.ts';
 import { baueReportConfigPayload, ladeReportZustand } from '../../versand-tab/reportConfigPayload.ts';
 import { umgebungFuer } from '../../__tests__/svelteInstanzPruefstand.ts';
@@ -153,8 +156,8 @@ function tripNachWetterGeste(abo: Abo): Abo {
 
 /** Uebergangsblock Zustellung: Telegram-Kurzstil umschalten. */
 function tripNachKurzstil(abo: Abo): Abo {
-	const start = kanalStilStart('route', abo as never);
-	const n = kanalStilNutzlast('route', { ...start, stil: start.stil === 'rich' ? 'kurzform' : 'rich' }, start) as { report_config: Record<string, unknown> };
+	const start = stilAus(abo);
+	const n = kanalStilNutzlast('route', { stil: start.stil === 'rich' ? 'kurzform' : 'rich' }, start) as { report_config: Record<string, unknown> };
 	return { ...abo, report_config: ebene1(abo.report_config, n.report_config) };
 }
 
@@ -364,13 +367,13 @@ describe('E2: Speichern erhaelt die Ausblick-Liste (Altfeld, ohne Wirkung auf di
 describe('E2: Kurzstil umschalten sendet nur den Stil (fremder Trend-Stand bleibt)', () => {
 	test('kurzstil_ueberschreibt_spaeter_gespeicherten_trend_nicht', () => {
 		const geladen = trip('t', TRIPS.a_trend_nie_eingestellt);
-		const start = kanalStilStart('route', geladen as never);
+		const start = stilAus(geladen);
 		// Nach dem Laden speichert ein anderer Schreiber (z. B. zweiter Tab) „Ausblick nur morgens“.
 		const zwischen = {
 			...geladen,
 			display_config: ebene1(geladen.display_config, { placements: { version: 1, outlook_reports: ['morning'] } })
 		};
-		const n = kanalStilNutzlast('route', { ...start, stil: 'kurzform' }, start) as { report_config: Record<string, unknown> };
+		const n = kanalStilNutzlast('route', { stil: 'kurzform' }, start) as { report_config: Record<string, unknown> };
 		assert.deepEqual(n.report_config, { telegram_style: 'kurzform' }, 'Kurzstil-Speichern sendet mehr als den Stil');
 		const danach = { ...zwischen, report_config: ebene1(zwischen.report_config, n.report_config), id: undefined };
 		const a = pythonAusgabe({ trip: { zwischen: { ...zwischen, id: undefined }, danach } });

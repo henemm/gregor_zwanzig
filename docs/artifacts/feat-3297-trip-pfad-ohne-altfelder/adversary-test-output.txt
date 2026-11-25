@@ -1,0 +1,359 @@
+TAP version 13
+# Subtest: \#3297/\#3020 AC-7: toter Alt-Editor gelöscht, keine Importe, Vergleich-Hilfen erhalten
+    # Subtest: gelöscht: lib/components/shared/WeatherMetricsTab.svelte
+    ok 1 - gelöscht: lib/components/shared/WeatherMetricsTab.svelte
+      ---
+      duration_ms: 1.378503
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/WetterMetrikenVersandPanel.svelte
+    ok 2 - gelöscht: lib/components/shared/WetterMetrikenVersandPanel.svelte
+      ---
+      duration_ms: 1.221741
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/trip-detail/BriefingScheduleTab.svelte
+    ok 3 - gelöscht: lib/components/trip-detail/BriefingScheduleTab.svelte
+      ---
+      duration_ms: 0.10208
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/VersandTab.svelte
+    ok 4 - gelöscht: lib/components/shared/VersandTab.svelte
+      ---
+      duration_ms: 0.134609
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/MailInhaltCard.svelte
+    ok 5 - gelöscht: lib/components/shared/MailInhaltCard.svelte
+      ---
+      duration_ms: 3.110575
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/OutlookLayoutControls.svelte
+    ok 6 - gelöscht: lib/components/shared/OutlookLayoutControls.svelte
+      ---
+      duration_ms: 0.0999
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/weather-metrics-tab/channelMetricLayouts.ts
+    ok 7 - gelöscht: lib/components/shared/weather-metrics-tab/channelMetricLayouts.ts
+      ---
+      duration_ms: 0.14044
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/weather-metrics-tab/weatherMetricsSavePayload.ts
+    ok 8 - gelöscht: lib/components/shared/weather-metrics-tab/weatherMetricsSavePayload.ts
+      ---
+      duration_ms: 0.12836
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts
+    ok 9 - gelöscht: lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts
+      ---
+      duration_ms: 0.163739
+      type: 'test'
+      ...
+    # Subtest: keine Produktionsdatei importiert eine gelöschte Datei (statisch, Barrel-Export, dynamisch)
+    ok 10 - keine Produktionsdatei importiert eine gelöschte Datei (statisch, Barrel-Export, dynamisch)
+      ---
+      duration_ms: 52.925188
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts
+    ok 11 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts
+      ---
+      duration_ms: 0.155979
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareMetricSelection.ts
+    ok 12 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareMetricSelection.ts
+      ---
+      duration_ms: 0.06053
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareMetricOrder.ts
+    ok 13 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareMetricOrder.ts
+      ---
+      duration_ms: 0.04458
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareChannelMetricLayouts.ts
+    ok 14 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareChannelMetricLayouts.ts
+      ---
+      duration_ms: 0.041991
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts
+    ok 15 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts
+      ---
+      duration_ms: 0.04056
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte
+    ok 16 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte
+      ---
+      duration_ms: 0.04467
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/wetter-tab/wasStehtWoSpeicherung.ts
+    ok 17 - erhalten (Regressionsschutz, heute grün): lib/components/shared/wetter-tab/wasStehtWoSpeicherung.ts
+      ---
+      duration_ms: 0.040469
+      type: 'test'
+      ...
+    1..17
+ok 1 - \#3297/\#3020 AC-7: toter Alt-Editor gelöscht, keine Importe, Vergleich-Hilfen erhalten
+  ---
+  duration_ms: 60.954011
+  type: 'suite'
+  ...
+# Subtest: \#3297 AC-8: show_outlook und multi_day_trend_reports aus dem Frontend-Produktionscode
+    # Subtest: keine Produktionsdatei unter frontend/src nennt einen der beiden Schlüssel
+    ok 1 - keine Produktionsdatei unter frontend/src nennt einen der beiden Schlüssel
+      ---
+      duration_ms: 42.678703
+      type: 'test'
+      ...
+    1..1
+ok 2 - \#3297 AC-8: show_outlook und multi_day_trend_reports aus dem Frontend-Produktionscode
+  ---
+  duration_ms: 42.768544
+  type: 'suite'
+  ...
+# Subtest: \#3297 AC-1: Trip-Anlage (POST) ohne Altschluessel
+    # Subtest: Anlege-Rumpf (Speicherweg wie TripNewEditor.buildAndSave) traegt keinen Altschluessel
+    ok 1 - Anlege-Rumpf (Speicherweg wie TripNewEditor.buildAndSave) traegt keinen Altschluessel
+      ---
+      duration_ms: 3.520325
+      type: 'test'
+      ...
+    # Subtest: mit bedientem Reiter Zustellung (mitZustellung) bleibt der Rumpf frei von Altschluesseln
+    ok 2 - mit bedientem Reiter Zustellung (mitZustellung) bleibt der Rumpf frei von Altschluesseln
+      ---
+      duration_ms: 0.726711
+      type: 'test'
+      ...
+    # Subtest: Versand-Standard belegt den Ausblick nicht mehr vor (kein multi_day_trend_reports, auch nicht leer)
+    ok 3 - Versand-Standard belegt den Ausblick nicht mehr vor (kein multi_day_trend_reports, auch nicht leer)
+      ---
+      duration_ms: 0.464502
+      type: 'test'
+      ...
+    1..3
+ok 3 - \#3297 AC-1: Trip-Anlage (POST) ohne Altschluessel
+  ---
+  duration_ms: 5.524048
+  type: 'suite'
+  ...
+# Subtest: \#3297 AC-2: Anlage „Mit Standardwerten“ ohne Altschluessel, placements aus der Karte
+    # Subtest: Standardwerte-Rumpf ohne Altschluessel, Tabelle der Karte steht in display_config.placements
+    ok 1 - Standardwerte-Rumpf ohne Altschluessel, Tabelle der Karte steht in display_config.placements
+      ---
+      duration_ms: 0.635261
+      type: 'test'
+      ...
+    # Subtest: Standardwerte ergaenzen weiterhin die Mail-Inhalt-Felder (ohne show_outlook)
+    ok 2 - Standardwerte ergaenzen weiterhin die Mail-Inhalt-Felder (ohne show_outlook)
+      ---
+      duration_ms: 0.33763
+      type: 'test'
+      ...
+    1..2
+ok 4 - \#3297 AC-2: Anlage „Mit Standardwerten“ ohne Altschluessel, placements aus der Karte
+  ---
+  duration_ms: 1.127412
+  type: 'suite'
+  ...
+# Subtest: \#3297 AC-3: Reiter-PUTs ohne Altschluessel, Bestand bleibt (Go-Merge)
+    # Subtest: Reiter Wetter: beide PUTs ohne Altschluessel, Bestand sonst erhalten
+    ok 1 - Reiter Wetter: beide PUTs ohne Altschluessel, Bestand sonst erhalten
+      ---
+      duration_ms: 330.02185
+      type: 'test'
+      ...
+    # Subtest: Reiter Zustellung (Regressionsschutz, heute gruen): PUT ohne Altschluessel, Bestand bleibt
+    ok 2 - Reiter Zustellung (Regressionsschutz, heute gruen): PUT ohne Altschluessel, Bestand bleibt
+      ---
+      duration_ms: 3.527966
+      type: 'test'
+      ...
+    # Subtest: Reiter Alarme (Regressionsschutz, heute gruen): PUT ohne Altschluessel, Bestand bleibt
+    ok 3 - Reiter Alarme (Regressionsschutz, heute gruen): PUT ohne Altschluessel, Bestand bleibt
+      ---
+      duration_ms: 2.007272
+      type: 'test'
+      ...
+    # Subtest: Karte „Was steht wo“, Schalter Kurzstil (Regressionsschutz, heute gruen): nur telegram_style
+    ok 4 - Karte „Was steht wo“, Schalter Kurzstil (Regressionsschutz, heute gruen): nur telegram_style
+      ---
+      duration_ms: 1.408632
+      type: 'test'
+      ...
+    1..4
+ok 5 - \#3297 AC-3: Reiter-PUTs ohne Altschluessel, Bestand bleibt (Go-Merge)
+  ---
+  duration_ms: 337.522161
+  type: 'suite'
+  ...
+# Subtest: \#3297 AC-4: Kanal-Stil-Nutzlast nur mit telegram_style
+    # Subtest: ohne Vorher-Stand: Body traegt nur telegram_style, keine Trend-Felder
+    ok 1 - ohne Vorher-Stand: Body traegt nur telegram_style, keine Trend-Felder
+      ---
+      duration_ms: 0.794011
+      type: 'test'
+      ...
+    # Subtest: mit Vorher-Stand (Stilwechsel): nur telegram_style
+    ok 2 - mit Vorher-Stand (Stilwechsel): nur telegram_style
+      ---
+      duration_ms: 0.491911
+      type: 'test'
+      ...
+    # Subtest: kanalStilStart (ohne Produktions-Aufrufer, las multi_day_trend_reports) ist nicht mehr exportiert
+    ok 3 - kanalStilStart (ohne Produktions-Aufrufer, las multi_day_trend_reports) ist nicht mehr exportiert
+      ---
+      duration_ms: 0.502381
+      type: 'test'
+      ...
+    1..3
+ok 6 - \#3297 AC-4: Kanal-Stil-Nutzlast nur mit telegram_style
+  ---
+  duration_ms: 2.007713
+  type: 'suite'
+  ...
+# Subtest: \#3297 AC-6: DisplayConfig kennt placements, hasLayout wertet es aus
+    # Subtest: typisierter Trip mit placements (rows + outlook_reports) gilt als „Layout je Kanal“ erledigt
+    ok 1 - typisierter Trip mit placements (rows + outlook_reports) gilt als „Layout je Kanal“ erledigt
+      ---
+      duration_ms: 0.76023
+      type: 'test'
+      ...
+    1..1
+ok 7 - \#3297 AC-6: DisplayConfig kennt placements, hasLayout wertet es aus
+  ---
+  duration_ms: 0.885652
+  type: 'suite'
+  ...
+# Subtest: \#568 dayProgress: Tag 3 von 12 → 25 %
+ok 8 - \#568 dayProgress: Tag 3 von 12 → 25 %
+  ---
+  duration_ms: 0.969661
+  type: 'test'
+  ...
+# Subtest: \#568 dayProgress: erster Tag (1 von 1) → 100 %
+ok 9 - \#568 dayProgress: erster Tag (1 von 1) → 100 %
+  ---
+  duration_ms: 0.12564
+  type: 'test'
+  ...
+# Subtest: \#568 dayProgress: 0 von 0 → 0 % (kein Division-by-zero)
+ok 10 - \#568 dayProgress: 0 von 0 → 0 % (kein Division-by-zero)
+  ---
+  duration_ms: 0.08772
+  type: 'test'
+  ...
+# Subtest: \#568 setupStepTrip: leerer Trip → Schritte 1-4 offen, Reports nach Slot-Regel
+ok 11 - \#568 setupStepTrip: leerer Trip → Schritte 1-4 offen, Reports nach Slot-Regel
+  ---
+  duration_ms: 0.355881
+  type: 'test'
+  ...
+# Subtest: \#568 setupStepTrip: Trip mit 1 Stage ohne Datum → nur Schritt 1 done
+ok 12 - \#568 setupStepTrip: Trip mit 1 Stage ohne Datum → nur Schritt 1 done
+  ---
+  duration_ms: 0.210031
+  type: 'test'
+  ...
+# Subtest: \#568 setupStepTrip: vollständiger Trip → alle 5 Schritte done
+ok 13 - \#568 setupStepTrip: vollständiger Trip → alle 5 Schritte done
+  ---
+  duration_ms: 0.164309
+  type: 'test'
+  ...
+# Subtest: \#3297 AC-5 setupStepTrip „Layout je Kanal“: nicht leere placements.rows (Bestandstrip) → erledigt
+ok 14 - \#3297 AC-5 setupStepTrip „Layout je Kanal“: nicht leere placements.rows (Bestandstrip) → erledigt
+  ---
+  duration_ms: 0.164539
+  type: 'test'
+  ...
+# Subtest: \#3297 AC-5 setupStepTrip „Layout je Kanal“: nur channel_layouts (Altfeld) → offen
+ok 15 - \#3297 AC-5 setupStepTrip „Layout je Kanal“: nur channel_layouts (Altfeld) → offen
+  ---
+  duration_ms: 0.07976
+  type: 'test'
+  ...
+# Subtest: \#3297 AC-5 setupStepTrip „Layout je Kanal“: nur preset_name (Vorlagenname) → offen
+ok 16 - \#3297 AC-5 setupStepTrip „Layout je Kanal“: nur preset_name (Vorlagenname) → offen
+  ---
+  duration_ms: 0.2012
+  type: 'test'
+  ...
+# Subtest: \#3297 AC-5 setupStepTrip „Layout je Kanal“: leere placements.rows → offen
+ok 17 - \#3297 AC-5 setupStepTrip „Layout je Kanal“: leere placements.rows → offen
+  ---
+  duration_ms: 0.270331
+  type: 'test'
+  ...
+# Subtest: \#3297 AC-5 setupStepTrip: vollständiger Trip mit Tabelle → alle 5 Schritte done
+ok 18 - \#3297 AC-5 setupStepTrip: vollständiger Trip mit Tabelle → alle 5 Schritte done
+  ---
+  duration_ms: 0.158981
+  type: 'test'
+  ...
+# Subtest: \#568 setupStepCompare: leerer Vergleich → alle 5 Schritte offen (außer Step 1)
+ok 19 - \#568 setupStepCompare: leerer Vergleich → alle 5 Schritte offen (außer Step 1)
+  ---
+  duration_ms: 0.153299
+  type: 'test'
+  ...
+# Subtest: \#568 setupStepCompare: 2 location_ids → Orte-Schritt done
+ok 20 - \#568 setupStepCompare: 2 location_ids → Orte-Schritt done
+  ---
+  duration_ms: 0.09522
+  type: 'test'
+  ...
+# Subtest: \#1351 F006 setupStepCompare: ausgewählte active_metrics → Layout-Schritt done
+ok 21 - \#1351 F006 setupStepCompare: ausgewählte active_metrics → Layout-Schritt done
+  ---
+  duration_ms: 0.10256
+  type: 'test'
+  ...
+# Subtest: \#1351 F006 setupStepCompare: frischer, unkonfigurierter Vergleich → Layout-Schritt offen
+ok 22 - \#1351 F006 setupStepCompare: frischer, unkonfigurierter Vergleich → Layout-Schritt offen
+  ---
+  duration_ms: 0.08108
+  type: 'test'
+  ...
+# Subtest: \#568 nextPlannedTrip: gibt ersten Trip mit zukünftigem Startdatum zurück
+ok 23 - \#568 nextPlannedTrip: gibt ersten Trip mit zukünftigem Startdatum zurück
+  ---
+  duration_ms: 0.459581
+  type: 'test'
+  ...
+# Subtest: \#568 nextPlannedTrip: gibt null zurück wenn kein zukünftiger Trip
+ok 24 - \#568 nextPlannedTrip: gibt null zurück wenn kein zukünftiger Trip
+  ---
+  duration_ms: 0.08193
+  type: 'test'
+  ...
+# Subtest: \#568 firstIncompleteCompare: Vergleich ohne Versand → nicht vollständig
+ok 25 - \#568 firstIncompleteCompare: Vergleich ohne Versand → nicht vollständig
+  ---
+  duration_ms: 0.13459
+  type: 'test'
+  ...
+# Subtest: \#568 firstIncompleteCompare: vollständiger Vergleich → null
+ok 26 - \#568 firstIncompleteCompare: vollständiger Vergleich → null
+  ---
+  duration_ms: 0.11366
+  type: 'test'
+  ...
+1..26
+# tests 50
+# suites 7
+# pass 50
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 725.824657

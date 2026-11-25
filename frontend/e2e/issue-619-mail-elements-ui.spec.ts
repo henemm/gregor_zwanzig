@@ -23,8 +23,8 @@
 // #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 14, AC-30): die Karte „E-Mail-Inhalt“ ist aus
 // dem Übergangsblock des Reiters Zustellung entfernt. Etappen-Kennzahlen, Vortag-Vergleich, E-Mail-Format und
 // der 3-Tages-Ausblick (je Briefing, `outlook_reports`) stehen genau einmal in der Karte „Was steht wo“ im
-// Reiter Wetter; die Fälle unten laufen dort. Der alte Schalter `show_outlook` hat keine Bedienung mehr — das
-// Feld bleibt gespeichert (Read-Modify-Write), AC-3 prüft genau das.
+// Reiter Wetter; die Fälle unten laufen dort. #3297: der Altschlüssel des alten Ausblick-Schalters wird nicht
+// mehr gesät und nicht mehr geprüft.
 
 import { test, expect } from '@playwright/test';
 import { login } from './helpers.js';
@@ -106,7 +106,6 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 			morning_time: '07:00',
 			evening_time: '18:00',
 			show_stage_stats: true,
-			show_outlook: true,
 			show_yesterday_comparison: false
 		});
 		try {
@@ -223,8 +222,7 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 	});
 
 	// ── AC-3: Ausblick umschalten + speichern + persistiert ────────────────────
-	// #3154: der Ausblick wird je Briefing in der Karte geschaltet (`outlook_reports` der Tabelle); das
-	// Altfeld `show_outlook` hat keine Bedienung mehr und bleibt beim Speichern unverändert erhalten.
+	// #3154: der Ausblick wird je Briefing in der Karte geschaltet (`outlook_reports` der Tabelle).
 	test('AC-3: Ausblick-Schalter ändern, speichern, persistiert', async ({
 		page,
 		request
@@ -233,8 +231,7 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 		await createTrip(request, id, {
 			enabled: true,
 			morning_time: '07:00',
-			evening_time: '18:00',
-			show_outlook: true
+			evening_time: '18:00'
 		});
 		try {
 			const karte = await openKarte(page, id);
@@ -246,12 +243,11 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 			await abend.click();
 			await tabelle;
 
-			// Reload via API: persistiert; das Altfeld show_outlook bleibt unberührt.
+			// Reload via API: persistiert.
 			const after = await request.get(`/api/trips/${id}`);
 			expect(after.ok()).toBe(true);
 			const trip = await after.json();
 			expect((trip.display_config.placements.outlook_reports as string[]).includes('evening')).toBe(!vorher);
-			expect(trip.report_config.show_outlook).toBe(true);
 			await page.reload();
 			await expect((await openKarte(page, id)).getByTestId('was-steht-wo-ausblick-evening')).toHaveAttribute('aria-checked', vorher ? 'false' : 'true');
 		} finally {

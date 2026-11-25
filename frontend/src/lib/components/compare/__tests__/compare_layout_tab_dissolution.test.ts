@@ -46,7 +46,6 @@ async function geteilt() {
 		resolveCompareTab: (v: string): string => resolveTab('vergleich', v).tab
 	};
 }
-import { weatherMetricsTabSections } from '../../shared/weather-metrics-tab/weatherMetricsTabSections.ts';
 import {
 	tailUnlocked,
 	tailDone,
@@ -79,7 +78,6 @@ const HUB = join(here, '..', 'CompareTabs.svelte');
 const HUB_UEBERSICHT = join(here, '..', '..', 'shared', 'hub-uebersicht', 'HubUebersicht.svelte');
 const HUB_MODELL = join(here, '..', '..', 'shared', 'hub-uebersicht', 'hubUebersichtModell.ts');
 const NEW_EDITOR = join(here, '..', '..', 'compare-new', 'CompareNewEditor.svelte');
-const METRICS_TAB = join(here, '..', '..', 'shared', 'WeatherMetricsTab.svelte');
 
 const ZUSTELLUNG_TAB = join(here, '..', '..', 'shared', 'zustellung-tab', 'ZustellungTab.svelte');
 // #3036: Uebergangsblock aufgeloest — der Abschnitt am Ende ist der Beispiel-Alarm.
@@ -245,17 +243,8 @@ describe('Stundenverlauf-Steuerung: Heimat allein „Was steht wo“ (#3276)', (
 	// 'stundenverlauf', Komponente CompareHourlyLayoutControls) ist ersatzlos entfernt; die
 	// Einstellung lebt allein in „Was steht wo". Vorher: Abschnitt zwischen Layout je Kanal und
 	// Amtlichen Warnungen, genau EINE Instanz in WeatherMetricsTab. Jetzt: beides abwesend.
-	test("#3276: weder Vergleich noch Trip fuehren den Abschnitt 'stundenverlauf'", () => {
-		for (const ctx of ['vergleich', 'route'] as const) {
-			const sections = weatherMetricsTabSections(ctx);
-			assert.ok(!sections.includes('stundenverlauf'), `${ctx}: ${sections.join(', ')}`);
-		}
-		assert.ok(weatherMetricsTabSections('vergleich').includes('layout_kanal'));
-	});
+	// #3297/#3020: Faelle gegen WeatherMetricsTab bzw. weatherMetricsTabSections entfallen — Dateien geloescht.
 
-	test('#3276: WeatherMetricsTab mountet keine CompareHourlyLayoutControls mehr', () => {
-		assert.equal(findComponents(ast(METRICS_TAB), 'CompareHourlyLayoutControls').length, 0);
-	});
 
 	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md §3): der Stundenverlauf war ein Zustellungs-Block.
 	// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 14): im Hub bedient ihn allein die Karte

@@ -20,7 +20,6 @@ import { execFileSync } from 'node:child_process';
 
 import { REPO } from '../../wetter-tab/__tests__/wetterTabDaten.ts';
 import { standAusPreset, standAusTrip } from '../zustellungModell.ts';
-import { kanalStilStart } from '../kanalStilSpeicherung.ts';
 import type { ComparePreset, Trip } from '../../../../types.ts';
 
 type Abo = Record<string, unknown>;
@@ -111,9 +110,8 @@ describe('p12 Orte: Reiter Zustellung zeigt, was Versand und Alarm tun', () => {
 		test(`tl2_stille_gleich_alarm_${id}`, () => {
 			assert.equal(standAusPreset(ort(id)).stilleAn, AUS.orte[id].stille);
 		});
-		test(`tl3_kurzstil_gleich_telegram_${id}`, () => {
-			assert.equal(kanalStilStart('vergleich', undefined, ort(id)).stil, AUS.orte[id].stil);
-		});
+		// #3297: TL3 (kanalStilStart) entfaellt — der Leser hatte keinen Produktions-Aufrufer mehr; den
+		// Kurzstil liest die Karte „Was steht wo“ aus der Server-Antwort (felderAusAntwort).
 	}
 
 	test('messaufbau_faelle_decken_beide_werte', () => {

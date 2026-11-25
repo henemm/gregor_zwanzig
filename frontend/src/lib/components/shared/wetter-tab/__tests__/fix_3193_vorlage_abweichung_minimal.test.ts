@@ -254,7 +254,9 @@ for (const context of ['route', 'vergleich'] as const) {
 				return k;
 			};
 			assert.deepEqual(ohneAmpel(nachher.voll), ohneAmpel(vorher));
-			if (context === 'route') assert.equal(nachher.voll.tripFelder.report_config.send_evening, true);
+			// #3297: Teilfeld — der Trip-Rumpf traegt in report_config nur das Tagesfenster; Fremdfelder
+			// (send_evening) bleiben per Go-Merge stehen und werden nicht mitgesendet.
+			if (context === 'route') assert.equal('send_evening' in nachher.voll.tripFelder.report_config, false);
 			else assert.equal(nachher.voll.day_window_start_hour, 6);
 		});
 	});

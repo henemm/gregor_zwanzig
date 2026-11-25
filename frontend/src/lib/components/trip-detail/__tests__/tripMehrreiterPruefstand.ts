@@ -39,8 +39,6 @@ const KOMPONENTEN = join(FRONTEND, 'src/lib/components');
 
 export const DATEI = {
 	alarme: join(KOMPONENTEN, 'shared/AlarmeTab.svelte'),
-	wetterMetriken: join(KOMPONENTEN, 'shared/WeatherMetricsTab.svelte'),
-	versand: join(KOMPONENTEN, 'trip-detail/BriefingScheduleTab.svelte'),
 	kopf: join(KOMPONENTEN, 'trip-detail/TripHeader.svelte'),
 	tabs: join(KOMPONENTEN, 'trip-detail/TripTabs.svelte'),
 	etappen: join(KOMPONENTEN, 'edit/EditStagesPanelNew.svelte'),
@@ -183,9 +181,6 @@ export const REPORT_VERSAND = [
 	'evening_enabled',
 	'morning_time',
 	'evening_time',
-	'multi_day_trend_morning',
-	'multi_day_trend_evening',
-	'multi_day_trend_reports',
 	'send_email',
 	'send_telegram',
 	'send_sms',
@@ -199,7 +194,6 @@ export const REPORT_WETTER_METRIKEN = [
 	'wind_exposition_min_elevation_m',
 	'show_stage_stats',
 	'show_metrics_summary',
-	'show_outlook',
 	'email_format',
 	'show_yesterday_comparison',
 	'day_window_start_hour',
@@ -355,51 +349,8 @@ export async function alarmeReiter(a: Aufbau): Promise<{
 	};
 }
 
-/** Wetter-Metriken-Reiter (route). `userTouched` = die Nutzergeste, ohne die der
- *  Reiter nie schreibt (`weatherSaveGate`). */
-export async function wetterMetrikenReiter(a: Aufbau): Promise<{
-	inst: Instanz;
-	/** Metrik-Katalog-Geste: loest `scheduleAutoSave()` (/weather-config + Trip-PUT) aus. */
-	metrikenSpeichern(): void;
-	/** Nur Inhalt/Tagesfenster (`report_config`): `scheduleReportConfigOnlySave()`. */
-	reportConfigSpeichern(aenderung: Record<string, unknown>): void;
-}> {
-	const inst = await bauen(DATEI.wetterMetriken, {
-		...gemeinsam(a),
-		context: 'route',
-		createMode: false,
-		catalogLoaded: true,
-		untrack: (fn: () => unknown) => fn()
-	});
-	inst.u.userTouched = true;
-	return {
-		inst,
-		metrikenSpeichern() {
-			(inst.u.scheduleAutoSave as () => void)();
-		},
-		reportConfigSpeichern(aenderung) {
-			inst.u.reportConfig = { ...(inst.u.reportConfig as Record<string, unknown>), ...aenderung };
-			(inst.u.scheduleReportConfigOnlySave as () => void)();
-		}
-	};
-}
-
-/** Versand-Reiter (BriefingScheduleTab): Speichern haengt an einem `$effect`. */
-export async function versandReiter(a: Aufbau): Promise<{
-	inst: Instanz;
-	/** Eine Aenderung an `report_config` (z. B. Versandzeit) und der Speicher-Effekt. */
-	aendern(aenderung: Record<string, unknown>): void;
-}> {
-	const inst = await bauen(DATEI.versand, gemeinsam(a));
-	inst.u.userTouched = true;
-	return {
-		inst,
-		aendern(aenderung) {
-			inst.u.reportConfig = { ...(inst.u.reportConfig as Record<string, unknown>), ...aenderung };
-			for (const e of effekteVon(inst.ast, inst.quelle, inst.u, '_lastReportConfig')) e();
-		}
-	};
-}
+// #3297/#3020: `wetterMetrikenReiter` (shared/WeatherMetricsTab) und `versandReiter`
+// (trip-detail/BriefingScheduleTab) entfallen mit den geloeschten Alt-Reitern.
 
 // #2794 S3a Teil-PR 4a (AC-31): `wertebereicheReiter` (CorridorEditor/CorridorEditorMobile)
 // entfaellt mit der Oberflaeche.

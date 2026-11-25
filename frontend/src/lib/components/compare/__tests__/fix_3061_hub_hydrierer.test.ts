@@ -46,12 +46,10 @@ const HIER = dirname(fileURLToPath(import.meta.url));
 const FRONTEND = resolve(HIER, '../../../../..');
 const HUB = join(HIER, '..', 'CompareTabs.svelte');
 const SHARED = resolve(HIER, '../../shared');
-const TAB = join(SHARED, 'WeatherMetricsTab.svelte');
 const FIXTURE = resolve(FRONTEND, '..', 'tests', 'fixtures', 'einstellung_gleich_mail', 'editor_standard.json');
 
 register(pathToFileURL(join(FRONTEND, 'test-svelte-ssr-hooks.mjs')).href, pathToFileURL(FRONTEND + '/').href);
 const { render } = await import('svelte/server');
-const OutlookLayoutControls = (await import(pathToFileURL(join(SHARED, 'OutlookLayoutControls.svelte')).href)).default;
 const AlarmeTab = (await import(pathToFileURL(join(SHARED, 'AlarmeTab.svelte')).href)).default;
 const { locale } = await import(pathToFileURL(join(FRONTEND, 'src/lib/i18n/index.ts')).href);
 locale.set('de');
@@ -64,9 +62,6 @@ const KATALOG = toCompareSelectionEntries(DATEN.kataloge.orte_api_compare_metric
 const ALARM_KATALOG = KATALOG.map((e) => (e.metric === 'gust_max_kmh' ? { ...e, alertMetric: 'wind_gust' } : e));
 const DEFAULT_SPALTEN =['temperature', 'precipitation', 'rain_probability', 'wind', 'gust', 'thunder'];
 
-const TAB_QUELLE = readFileSync(TAB, 'utf-8');
-const TAB_AST = parse(TAB_QUELLE, { modern: true }) as unknown as Knoten;
-const EINBETTUNGEN = findeKomponenten(TAB_AST, 'OutlookLayoutControls');
 
 function preset(displayConfig: Record<string, unknown>): ComparePreset {
 	return {
@@ -244,15 +239,5 @@ describe('#3061 Speichern und Trip bleiben unveraendert', () => {
 		assert.equal('outlook_metrics' in dc, false, `Nutzlast schreibt outlook_metrics: ${JSON.stringify(dc.outlook_metrics)}`);
 	});
 
-	test('AC-5: Trip-Einbettung reicht weiter buckets.primary, nie null als Altbestand-Signal', () => {
-		// #3276: die Vergleichs-Einbettung ist entfernt, es bleibt die des Trips.
-		assert.equal(EINBETTUNGEN.length, 1, 'Messaufbau: genau eine Ausblick-Einbettung (Trip) erwartet');
-		const trip = attributAusdruck(EINBETTUNGEN[0], TAB_QUELLE, 'grundauswahl');
-		assert.equal(trip, 'buckets.primary', `Trip-Grundauswahl ist ${trip} statt buckets.primary`);
-		const liste = ['temperature', 'wind'];
-		assert.deepEqual(
-			werte(trip!, { buckets: { primary: liste }, activeMetricKeys: null, materializedActiveMetricKeys: COMPARE_METRIC_KEYS }),
-			liste
-		);
-	});
+	// #3297/#3020: AC-5 (Trip-Einbettung von OutlookLayoutControls in WeatherMetricsTab) entfaellt — beide Dateien geloescht.
 });

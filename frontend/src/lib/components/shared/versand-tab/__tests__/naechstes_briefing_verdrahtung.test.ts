@@ -30,7 +30,6 @@ process.env.TZ = 'America/Los_Angeles';
 const HIER = dirname(fileURLToPath(import.meta.url));
 const FRONTEND = resolve(HIER, '../../../../../..');
 const basis = pathToFileURL(FRONTEND + '/').href;
-const VERSAND_TAB = join(HIER, '..', '..', 'VersandTab.svelte');
 const BAUSTEIN = join(HIER, '..', 'VTNextBriefing.svelte');
 const VERGLEICH_HUB = join(HIER, '..', '..', '..', 'compare', 'CompareTabs.svelte');
 const TRIP_KARTE = join(HIER, '..', '..', '..', 'trip-detail', 'HubOverview.svelte');
@@ -104,63 +103,7 @@ async function abrufUndAnzeige(q: { context: string; id?: string }, antwort: unk
 
 const ANTWORT = { trips: { 't-1969': NB('08:00') }, compare: { 'cp-1969': NB('07:00') } };
 
-describe('(a) VersandTab → VTNextBriefing: Quelle je Kontext', () => {
-	async function einbettungen(saat: Record<string, unknown>) {
-		const { ast, quelle, u } = await umgebungFuer(
-			VERSAND_TAB,
-			{ trip: undefined, preset: undefined, saveController: undefined, ...saat },
-			{ jsAlsTs: true }
-		);
-		const e = findeKomponenten(ast, 'VTNextBriefing');
-		assert.equal(e.length, 2, 'je Zweig genau eine Einbettung erwartet');
-		return { e, quelle, u };
-	}
-
-	test('Vergleich: fragt preset_id ab und zeigt .compare[id]', async () => {
-		const { e, quelle, u } = await einbettungen({
-			context: 'vergleich',
-			preset: vollerVergleich('cp-1969'),
-			saveController: { savedAt: GESPEICHERT }
-		});
-		const q = await bausteinQuelle(propsVon(e[1], quelle, u));
-		assert.equal(q.context, 'vergleich');
-		assert.equal(q.id, 'cp-1969');
-		assert.equal(q.neuLaden, GESPEICHERT, 'Neuladen muss am Speicher-Zeitstempel hängen');
-		const { pfade, zeile } = await abrufUndAnzeige(q, ANTWORT);
-		assert.deepEqual(pfade, ['/api/next-briefings?preset_id=cp-1969']);
-		assert.ok(zeile.includes('Nächstes Briefing') && zeile.includes('Do 22.10. 07:00 (CEST)'), zeile);
-	});
-
-	test('Trip: fragt trip_id ab und zeigt .trips[id]', async () => {
-		const { e, quelle, u } = await einbettungen({ context: 'route', trip: TRIP, saveController: { savedAt: GESPEICHERT } });
-		const q = await bausteinQuelle(propsVon(e[0], quelle, u));
-		assert.equal(q.context, 'route');
-		assert.equal(q.id, 't-1969');
-		assert.equal(q.neuLaden, GESPEICHERT);
-		const { pfade, zeile } = await abrufUndAnzeige(q, ANTWORT);
-		assert.deepEqual(pfade, ['/api/next-briefings?trip_id=t-1969']);
-		assert.ok(zeile.includes('Do 22.10. 08:00 (CEST)'), zeile);
-	});
-
-	test('neues savedAt ⇒ neue Quelle; ungespeicherte Zeitplan-Eingaben ändern die Quelle nicht', async () => {
-		const basisSaat = { context: 'vergleich', preset: vollerVergleich('cp-1969') };
-		const quelleBei = async (saat: Record<string, unknown>) => {
-			const { e, quelle, u } = await einbettungen(saat);
-			return bausteinQuelle(propsVon(e[1], quelle, u));
-		};
-		const a = await quelleBei({ ...basisSaat, saveController: { savedAt: GESPEICHERT }, morningTime: '07:00' });
-		const b = await quelleBei({ ...basisSaat, saveController: { savedAt: GESPEICHERT }, morningTime: '09:00' });
-		const c = await quelleBei({ ...basisSaat, saveController: { savedAt: new Date('2026-10-22T06:00:00Z') }, morningTime: '09:00' });
-		assert.deepEqual(a, b, 'eine ungespeicherte Eingabe darf die Lade-Quelle nicht verändern');
-		assert.notEqual(a.neuLaden, c.neuLaden, 'Speichern muss die Lade-Quelle verändern (Neuladen)');
-	});
-
-	test('Anlege-Seite (Trip ohne saveController): keine id ⇒ kein Abruf', async () => {
-		const { e, quelle, u } = await einbettungen({ context: 'route', trip: TRIP });
-		const q = await bausteinQuelle(propsVon(e[0], quelle, u));
-		assert.equal(q.id, undefined);
-	});
-});
+// #3297/#3020: Faelle gegen shared/VersandTab bzw. MailInhaltCard (Quelltext/Render) entfallen — Dateien geloescht.
 
 // Issue #2682: die Hub-Stat „Nächster Versand" steht im geteilten Übersichts-Baustein
 // (shared/hub-uebersicht/HubUebersicht.svelte); CompareTabs reicht `saveController` durch.

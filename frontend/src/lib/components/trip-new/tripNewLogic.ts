@@ -390,26 +390,23 @@ export function mitZustellung(
 // (morning/evening_time, *_enabled, send_*) entstehen deshalb beim POST, nicht
 // per Mount-Effekt. Gesetzte Werte gewinnen (`ladeReportZustand` liest den Blob),
 // unbekannte Bestandsfelder bleiben erhalten. Rein: die Eingabe bleibt unveraendert.
-// #3155 (Spec feat_3155 Nr. 4/9): Anlage -- fehlt `multi_day_trend_reports`,
-// belegt der Baustein den 3-Tages-Ausblick nach der Regel vor (allein Morgen an
-// -> ['morning'], sonst ['evening']); ein vorhandener Wert gewinnt.
+// #3297: kein Vorbelegen des 3-Tages-Ausblicks mehr -- er steht allein in der
+// Tabelle (`placements.outlook_reports`, ADR-0124 Nr. 6).
 export function ergaenzeVersandStandard(rc: ReportConfig | undefined): ReportConfig {
 	const basis = { ...((rc ?? {}) as Record<string, unknown>) };
 	return baueReportConfigPayload({
 		snapshot: basis,
 		live: basis,
-		zustand: ladeReportZustand(basis),
-		ausblickVorbelegung: true
+		zustand: ladeReportZustand(basis)
 	}) as ReportConfig;
 }
 
 // ── „Mit Standardwerten speichern" (Issue #2521 S3, AC-6) ───────────────────
 // Ergaenzt report_config um die Felder, die sonst erst Versand-Reiter und
 // Mail-Inhalt-Karte beim Oeffnen schreiben — mit DENSELBEN reinen Bausteinen
-// und in derselben Reihenfolge (erst VersandTab, dann MailInhaltCard auf dem
+// und in derselben Reihenfolge (erst VersandTab (gelöscht, #3297), dann MailInhaltCard (gelöscht, #3297) auf dem
 // lebenden Blob). Gesetzte Werte gewinnen (Lade-Funktionen lesen den Blob),
-// unbekannte Bestandsfelder bleiben erhalten; `multi_day_trend_reports` ist
-// wie beim Durchklicken vorbelegt (#3155). Rein: die Eingabe wird nicht veraendert.
+// unbekannte Bestandsfelder bleiben erhalten. Rein: die Eingabe wird nicht veraendert.
 export function ergaenzeStandardwerteReportConfig(rc: ReportConfig | undefined): ReportConfig {
 	const basis = { ...((rc ?? {}) as Record<string, unknown>) };
 	const nachVersand = ergaenzeVersandStandard(rc) as Record<string, unknown>;

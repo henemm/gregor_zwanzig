@@ -252,24 +252,4 @@ function istAngehakt(html: string, testid: string): boolean {
 	return /\bchecked(=""|(?=[\s/>]))/.test(tag);
 }
 
-describe('AC-24 Naht 3 — Versand-Reiter setzt die Haekchen beim ERZEUGEN nach der Regel (SSR)', () => {
-	for (const f of FAELLE) {
-		test(`VersandTab(route) — ${f.name}`, async () => {
-			const { render } = await import('svelte/server');
-			const VersandTab = (
-				await import(pathToFileURL(path.join(FRONTEND, 'src/lib/components/shared/VersandTab.svelte')).href)
-			).default;
-			const html = render(VersandTab, { props: { context: 'route', reportConfig: rcOf(f) } }).body;
-			assert.equal(
-				istAngehakt(html, 'morning-master-switch'),
-				f.slot_morning,
-				`VersandTab "Morgen aktiv" fuer ${JSON.stringify(f.report_config)}: erwartet ${f.slot_morning}`
-			);
-			assert.equal(
-				istAngehakt(html, 'evening-master-switch'),
-				f.slot_evening,
-				`VersandTab "Abend aktiv" fuer ${JSON.stringify(f.report_config)}: erwartet ${f.slot_evening}`
-			);
-		});
-	}
-});
+// #3297/#3020: Naht 3 (SSR-Render von shared/VersandTab) entfaellt — Datei geloescht; die Regel bewachen Naht 1/2 und AC-24 (ladeReportZustand).

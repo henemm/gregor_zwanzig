@@ -24,7 +24,6 @@ register(
 const { render } = await import('svelte/server');
 const imp = async (rel: string) => (await import(pathToFileURL(path.join(FRONTEND, rel)).href)).default;
 const VTBriefingChannels = await imp('src/lib/components/shared/versand-tab/VTBriefingChannels.svelte');
-const VersandTab = await imp('src/lib/components/shared/VersandTab.svelte');
 
 const KURZ = 'folgt der SMS-Auswahl';
 // #3047 R8 (AC-24): Trip „Layout · N Spalten“, Orts-Vergleich „alle Zeilen …“.
@@ -54,22 +53,7 @@ describe('#2455 AC-3: VTBriefingChannels reicht den Stil in die Unterzeile', () 
 	}
 });
 
-describe('#2455 F002: VersandTab-Vergleich zeigt den Kurzform-Status (nur lesend)', () => {
-	function vergleich(stil?: 'rich' | 'kurzform'): string {
-		return render(VersandTab, {
-			props: { context: 'vergleich', sendTelegram: true, vergleichTelegramStyle: stil }
-		}).body;
-	}
-	test('kurzform -> Unterzeile verweist auf SMS-Auswahl, KEIN zweiter Schalter', () => {
-		const html = vergleich('kurzform');
-		assert.ok(html.includes(KURZ));
-		assert.ok(!html.includes('Telegram im SMS-Kurzstil'), 'Schalter bleibt im Alarme-Reiter');
-	});
-	test('rich bzw. ohne Angabe -> Layout · N Spalten', () => {
-		assert.match(vergleich('rich'), RICH);
-		assert.match(vergleich(), RICH);
-	});
-});
+// #3297/#3020: Faelle gegen shared/VersandTab bzw. MailInhaltCard (Quelltext/Render) entfallen — Dateien geloescht.
 
 describe('#2455 F003: Hinweisfarbe des Schalters', () => {
 	test('.tks-sub nutzt --g-ink-3, nie --g-ink-4', () => {

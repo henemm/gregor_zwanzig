@@ -47,7 +47,7 @@
 	let gespeichert = $state<string | null>(null);
 	// #3190: Speichern-Karte als Umschalter (aria-expanded/aria-controls); Fokus kehrt nach dem Schließen
 	// auf den Auslöser zurück (gemerkt beim Klick, das Btn-Atom reicht keine Referenz durch). Logik geteilt
-	// mit dem Alt-Editor (WeatherMetricsTab): $lib/utils/vorlageSpeichernKarte.ts.
+	// mit dem Alt-Editor (WeatherMetricsTab (gelöscht, #3297)): $lib/utils/vorlageSpeichernKarte.ts.
 	const kartenId = $props.id();
 	const ausloeser = speicherKarteAusloeser();
 

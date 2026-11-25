@@ -311,28 +311,7 @@ const REZEPTE: Rezept[] = [
 		})
 	},
 	// #2794 S3a Teil-PR 4a: die drei CorridorEditor-Rezepte entfallen mit dem Korridor-Editor.
-	{
-		name: 'WeatherMetricsTab (vergleich)',
-		datei: 'shared/WeatherMetricsTab.svelte',
-		kontext: 'vergleich',
-		reiter: 'wetter-metriken',
-		begriffe: [],
-		props: async () => ({
-			context: 'vergleich',
-			...(await propsAus('compare/wetterMetrikenPropsAus', 'wetterMetrikenPropsAus', neuerFeldsatz()))
-		})
-	},
-	{
-		name: 'VersandTab (vergleich)',
-		datei: 'shared/VersandTab.svelte',
-		kontext: 'vergleich',
-		reiter: 'versand',
-		begriffe: [],
-		props: async () => ({
-			context: 'vergleich',
-			...(await propsAus('compare/versandPropsAus', 'versandPropsAus', neuerFeldsatz()))
-		})
-	}
+	// #3297/#3020: die Rezepte WeatherMetricsTab und VersandTab entfallen — beide Dateien geloescht.
 ];
 
 describe('AC-1/AC-2/AC-3: Organismus MIT showInfobox rendert die Infobox (auch im Lade-Zustand)', () => {

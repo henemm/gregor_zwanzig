@@ -1,0 +1,27 @@
+#3297 / #3020 — GREEN-Nachweis (Phase 6, Worktree jiggly-tickling-biscuit), 2026-11-25
+
+1) RED-Tests der Spec (benannte Dateien), cd frontend && npm test -- <Dateien>
+   src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts
+   src/lib/issue_568_home_redesign.test.ts
+   src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts
+   # tests 50
+   # pass 50
+   # fail 0
+
+2) Ganze Kern-Schicht Frontend, cd frontend && npm test (node --test)
+   Lauf 5:  # tests 11167 / # pass 11163 / # fail 1 / # skipped 2 / # todo 1
+   Der eine Fehlschlag: elementliste_uebersicht_2969.test.ts AC-3 (eingefrorener Hash der
+   Elementliste; 12 Einträge zeigen nach dem Katalog-Rückbau auf die gleichlautenden Schlüssel
+   wetter.wsw.*). Hash nachgezogen mit Begründung (Präzedenz #3276), Datei danach:
+   # pass 5 / # fail 0  →  Kern-Schicht 0 Fehlschläge.
+
+3) npx svelte-check --tsconfig ./tsconfig.json --output machine
+   COMPLETED 2279 FILES 32 ERRORS 72 WARNINGS  (CI-Baseline 34 / 132 → unter Baseline)
+
+4) npm run build  → exit 0
+
+5) npx playwright test --list e2e/feat-3297-trip-ohne-altfelder.spec.ts
+   Total: 5 tests in 2 files (setup + AW-1..AW-4)
+
+6) Python unverändert; Datenprüfung uv run pytest tests/test_3007_besitzerliste.py → 5 passed
+   (Elementliste geändert).

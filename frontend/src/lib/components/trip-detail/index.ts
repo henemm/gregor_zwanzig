@@ -3,8 +3,6 @@ export { default as WaypointsPanel } from './WaypointsPanel.svelte';
 export { default as FullProfile } from './FullProfile.svelte';
 export { default as StageList } from './StageList.svelte';
 export { default as StageDetailRow } from './StageDetailRow.svelte';
-// Issue #1311 (C1, Fix-Loop 1 / F002): nach shared/ verschoben (Teilung Trip+Vergleich).
-export { default as WeatherMetricsTab } from '../shared/WeatherMetricsTab.svelte';
 export { default as TablePreview } from './TablePreview.svelte';
 export { default as SavePresetDialog } from '../shared/weather-metrics-tab/SavePresetDialog.svelte';
 export { default as DetailCard } from './DetailCard.svelte';

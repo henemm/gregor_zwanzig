@@ -180,9 +180,10 @@ describe('AC-1: Trip-Hub englisch, Namen unveraendert', () => {
 
 	test('Fehler ohne Server-Text: Flag/Schluessel wird beim Rendern aufgeloest (nicht eingefroren)', () => {
 		const { de, en } = deDannEn(() => sichtbar(P.fehlerFlagsRendern()));
-		for (const s of ['Speichern fehlgeschlagen', 'Fehler beim Speichern', 'Versand-Historie konnte nicht geladen werden.', 'Aktion fehlgeschlagen, bitte später erneut versuchen.', 'Fehler beim Senden']) hat(de, s);
-		for (const s of ['Saving failed', 'Error while saving', 'Delivery history could not be loaded.', 'Action failed, please try again later.', 'Error while sending']) hat(en, s);
-		for (const s of ['Speichern fehlgeschlagen', 'Fehler beim Speichern', 'Aktion fehlgeschlagen']) hatNicht(en, s);
+		// #3297/#3020: der Fall „Fehler beim Speichern" kam aus trip-detail/BriefingScheduleTab (geloescht).
+		for (const s of ['Speichern fehlgeschlagen', 'Versand-Historie konnte nicht geladen werden.', 'Aktion fehlgeschlagen, bitte später erneut versuchen.', 'Fehler beim Senden']) hat(de, s);
+		for (const s of ['Saving failed', 'Delivery history could not be loaded.', 'Action failed, please try again later.', 'Error while sending']) hat(en, s);
+		for (const s of ['Speichern fehlgeschlagen', 'Aktion fehlgeschlagen']) hatNicht(en, s);
 		// Wirkort je Baustein: die Meldung steht am Feld des Kopfes (nicht nur irgendwo im Render).
 		const kopf = deDannEn(() => P.fehlerFlagsRendern().split('\n')[0]);
 		assert.match(kopf.de, /data-testid="trip-name-save-error"[^>]*>Speichern fehlgeschlagen</);
@@ -266,7 +267,7 @@ describe('AC-4: Metrik-Namen ueber metricLabel, col_label unveraendert', () => {
 		assert.ok(!/class="(label|off-name|col-name|metric-name)[^"]*">Böen</.test(en), 'voller Name noch deutsch');
 		// Fixture: Preset „Wandern" (Name = Daten), Zeitplan-Speicherstand mit Server-Text „Gespeichert.".
 		// #2881: „Gespeichert" (Etappen-Editor, ohne ✓) ist wortgleich der Anfang dieses Server-Texts.
-		assert.deepEqual(deutscheReste(sEn, [...DATEN, 'trip.aktivitaet.wandern', 'trip.gespeichert_punkt', 'trip.etappen_editor.gespeichert']), []);
+		assert.deepEqual(deutscheReste(sEn, [...DATEN, 'trip.aktivitaet.wandern', 'trip.etappen_editor.gespeichert']), []);
 	});
 	test('Uebersicht: Namensliste englisch, col_label der Fixture steht nirgends verfaelscht', () => {
 		const { en } = deDannEn(() => sichtbar(P.uebersichtRendern()));

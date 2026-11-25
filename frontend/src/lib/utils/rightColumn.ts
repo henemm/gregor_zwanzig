@@ -39,7 +39,7 @@ export function getPresetLabel(trip: Trip): string {
 
 /**
  * Issue #173 — Liefert den aktiv ausgewaehlten Preset-Template-Key fuer die
- * PresetRow-Liste in `WeatherMetricsTab`. Single Source of Truth: das
+ * PresetRow-Liste in `WeatherMetricsTab (gelöscht, #3297)`. Single Source of Truth: das
  * persistierte `display_config.preset_name` (Issue #206).
  *
  * - String mit Inhalt -> Template-Key (z.B. "skitouren")

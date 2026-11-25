@@ -210,7 +210,9 @@ describe('AC-37/AC-38: Trip-Payload (metrics[] + ampel + Warnungen + Tagesfenste
 		const { p, u } = await tripFall((a) => a, false, false);
 		// radar_alert_enabled prüft seit #2800 der eigene Test darunter (feat_2794 AC-21 abgelöst durch #2800).
 		assert.deepEqual(Object.keys(p.tripFelder).filter((k) => k !== 'radar_alert_enabled').sort(), ['official_alerts_enabled', 'official_warnings', 'report_config']);
-		assert.deepEqual(p.tripFelder.report_config, { ...TRIP_RC, day_window_start_hour: 6, day_window_end_hour: 20 }, 'report_config: Zustellungs-Felder veraendert oder Tagesfenster fehlt');
+		// #3297: Teilfeld — der Reiter sendet in report_config nur sein Tagesfenster; Go mischt feldweise,
+		// die Zustellungs-Felder bleiben stehen (und Altschluessel reisen nicht mit).
+		assert.deepEqual(p.tripFelder.report_config, { day_window_start_hour: 6, day_window_end_hour: 20 }, 'report_config: fremde Felder gesendet oder Tagesfenster fehlt');
 		assert.deepEqual(
 			{ official_alerts_enabled: p.tripFelder.official_alerts_enabled, official_warnings: p.tripFelder.official_warnings },
 			u.w.amtlicheWarnungenFelder(false, { official_alerts_enabled: true, official_warnings: { enabled: false, sources: ['dwd'] } })
@@ -340,7 +342,8 @@ describe('AC-11/AC-12: Vorlagenwechsel ersetzt Auswahl, Grenzen, Alarmstufen —
 		assert.equal(p.weatherConfig.ampel.thunder, undefined);
 		const an = (p.weatherConfig.metrics as Json[]).filter((x) => x.enabled).map((x) => x.metric_id);
 		assert.deepEqual(sortiert(an), enabledIds(u.vorlagen.wandern), 'Auswahl nicht aus der neuen Vorlage');
-		assert.deepEqual(p.tripFelder.report_config, TRIP_RC, 'Zustellung (report_config) veraendert');
+		// #3297: Teilfeld — nur das Tagesfenster, keine Zustellungs-Felder im Rumpf.
+		assert.deepEqual(p.tripFelder.report_config, { day_window_start_hour: 4, day_window_end_hour: 19 }, 'Zustellung (report_config) mitgesendet');
 		for (const k of ['stages', 'name', 'location_ids']) assert.equal(k in p.tripFelder || k in p.weatherConfig, false, `${k} im Payload`);
 		assert.deepEqual(p.weatherConfig.channel_layouts ?? TRIP_DC.channel_layouts, TRIP_DC.channel_layouts);
 	});

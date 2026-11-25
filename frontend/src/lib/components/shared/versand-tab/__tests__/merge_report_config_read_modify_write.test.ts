@@ -38,8 +38,6 @@ import { mergeReportConfig } from '../mergeReportConfig.ts';
 import { baueReportConfigPayload, ladeReportZustand } from '../reportConfigPayload.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const versandTabCode = readFileSync(join(HERE, '..', '..', 'VersandTab.svelte'), 'utf-8');
-const mailInhaltCode = readFileSync(join(HERE, '..', '..', 'MailInhaltCard.svelte'), 'utf-8');
 
 /** Ein Write-Back-Lauf von VersandTab (Kanaele + Zeitplan gehoeren ihm immer).
  *  Argumentform 1:1 wie in VersandTab.svelte. */
@@ -169,42 +167,7 @@ describe('mergeReportConfig — Read-Modify-Write statt Replace', () => {
 });
 
 describe('/trips/new — zwei Schreiber auf demselben report_config (AC-3, AC-6)', () => {
-	test('Mail-Format ueberlebt einen nachfolgenden Kanal-Klick in VersandTab', () => {
-		// Reproduktion des gemeldeten Verlustpfads (F001), Nutzersicht:
-		// 1. Mail-Format auf "Kompakt" stellen, 2. danach Premium-SMS anhaken,
-		// 3. speichern -> beides muss im Blob stehen.
-		const mailSnapshot = { change_threshold_wind: 9 };
-		const versandSnapshot = { change_threshold_wind: 9 };
-
-		// Schritt 1: Mail-Inhalt-Karte schreibt email_format = compact.
-		const nachMailKlick = mailInhaltRun(
-			mailSnapshot,
-			{ change_threshold_wind: 9 },
-			{ email_format: 'compact', show_outlook: false },
-			{ send_email: true, send_premium_sms: false },
-			{ morning_time: '07:00:00' }
-		);
-		assert.equal(nachMailKlick.email_format, 'compact');
-
-		// Schritt 2: VersandTab schreibt Premium-SMS zurueck — sein eigener
-		// Schnappschuss ist zu diesem Zeitpunkt veraltet (kennt email_format nicht).
-		const nachKanalKlick = versandTabRun(versandSnapshot, nachMailKlick, {
-			send_email: true,
-			send_telegram: false,
-			send_sms: false,
-			send_premium_sms: true,
-			morning_time: '07:00:00'
-		});
-
-		assert.equal(
-			nachKanalKlick.email_format,
-			'compact',
-			'email_format darf durch den Kanal-Klick nicht verloren gehen (AC-6)'
-		);
-		assert.equal(nachKanalKlick.show_outlook, false, 'Inhaltsbaustein bleibt erhalten (AC-6)');
-		assert.equal(nachKanalKlick.send_premium_sms, true, 'Premium-SMS ist gesetzt (AC-3)');
-		assert.equal(nachKanalKlick.change_threshold_wind, 9, 'unbekanntes Bestandsfeld bleibt');
-	});
+	// #3297/#3020: Faelle gegen shared/VersandTab bzw. MailInhaltCard (Quelltext/Render) entfallen — Dateien geloescht.
 
 	test('Premium-SMS ueberlebt einen nachfolgenden Klick in der Mail-Inhalt-Karte', () => {
 		// Die Gegenrichtung — dieselbe Fehlerklasse, andere Reihenfolge.
@@ -234,50 +197,6 @@ describe('/trips/new — zwei Schreiber auf demselben report_config (AC-3, AC-6)
 // wird, dass beide Schreiber den Helfer mit den RICHTIGEN Argumenten fuettern —
 // ein korrekter Helfer, der den Mount-Schnappschuss als `live` bekommt, waere
 // exakt der Fehler F001 in neuem Gewand.
-describe('Verdrahtung: beide Schreiber uebergeben den lebenden Blob', () => {
-	test('VersandTab.svelte liest reportConfig live (untrack), nicht den Schnappschuss', () => {
-		const call = versandTabCode.match(/baueReportConfigPayload\(\{[\s\S]*?\n\t\t\}\)/);
-		assert.ok(call, 'VersandTab.svelte ruft baueReportConfigPayload nicht auf');
-		assert.match(
-			call[0],
-			/live:\s*untrack\(\(\)\s*=>\s*reportConfig\)/,
-			'VersandTab uebergibt keinen Live-Read von reportConfig als `live` — mit dem ' +
-				'veralteten onMount-Schnappschuss loescht der naechste Write-Back die ' +
-				'Mail-Inhalt-Einstellungen des Nachbarn (F001)'
-		);
-	});
-
-	test('MailInhaltCard.svelte liest reportConfig live (untrack)', () => {
-		const call = mailInhaltCode.match(/baueReportConfigPayload\(\{[\s\S]*?\n\t\t\}\)/);
-		assert.ok(call, 'MailInhaltCard.svelte ruft baueReportConfigPayload nicht auf');
-		assert.match(
-			call[0],
-			/live:\s*untrack\(\(\)\s*=>\s*reportConfig\)/,
-			'MailInhaltCard uebergibt keinen Live-Read von reportConfig als `live` ' +
-				'— Kanal-/Zeitplanwerte des Nachbarn gingen sonst verloren (F001)'
-		);
-	});
-
-	test('MailInhaltCard setzt showSchedule und showChannels literal auf false', () => {
-		const call = mailInhaltCode.match(/baueReportConfigPayload\(\{[\s\S]*?\n\t\t\}\)/);
-		assert.ok(call, 'MailInhaltCard.svelte ruft baueReportConfigPayload nicht auf');
-		// Seit #2277 S5 hat der Baustein keine Props showSchedule/showChannels mehr:
-		// er zeigt weder Zeitplan noch Kanaele, also sind beide LITERAL false. Ein
-		// `true` waere der zweite Schreibpfad auf fremde Felder (Mutation M2).
-		assert.match(
-			call[0],
-			/\bshowSchedule:\s*false\b/,
-			'showSchedule ist nicht literal false — Zeitplan-Felder wuerden geschrieben, ' +
-				'obwohl der Baustein keinen Zeitplan zeigt'
-		);
-		assert.match(
-			call[0],
-			/\bshowChannels:\s*false\b/,
-			'showChannels ist nicht literal false — Kanal-Felder wuerden geschrieben, ' +
-				'obwohl der Baustein keine Kanaele zeigt (Mutation M2)'
-		);
-	});
-});
 
 // ── Finding F003: die Disjunktheit der Feldgruppen ──────────────────────────
 //
@@ -339,17 +258,11 @@ function mergeCall(code: string, label: string): string {
 // beide Komponenten seit S3 tatsaechlich aufrufen (Argumentform wie dort):
 // der LEBENDE Blob gewinnt gegen den veralteten Mount-Schnappschuss.
 describe('baueReportConfigPayload — lebender Blob schlaegt veralteten Schnappschuss (F001)', () => {
-	test('VersandTab-Pfad: Mail-Inhalt-Aenderung des Nachbarn bleibt erhalten', () => {
-		const snapshot = { email_format: 'full', send_email: true };
-		const live = { email_format: 'compact', send_email: true };
-		const nach = baueReportConfigPayload({ snapshot, live, zustand: ladeReportZustand(snapshot) });
-		assert.equal(nach.email_format, 'compact', 'veralteter Schnappschuss ueberschreibt den Nachbarn');
-	});
 
 	test('Edit-Pfad ohne Zeitplan/Kanaele: Premium-SMS des Nachbarn bleibt gesetzt', () => {
 		const snapshot = { send_premium_sms: false, morning_time: '07:00:00' };
 		const live = { send_premium_sms: true, morning_time: '09:00:00' };
-		const zustand = ladeReportZustand(snapshot, { multi_day_trend_evening: true });
+		const zustand = ladeReportZustand(snapshot);
 		delete zustand.telegram_style;
 		const nach = baueReportConfigPayload({
 			snapshot,
@@ -377,38 +290,8 @@ function bedingteGruppe(flag: 'showSchedule' | 'showChannels'): string[] {
 }
 
 describe('F003: unbedingte und bedingte Feldgruppen bleiben disjunkt', () => {
-	test('der Schluessel-Extraktor findet die Gruppen wirklich (Positivkontrolle)', () => {
-		// Ohne diese Kontrolle waeren die Disjunktheits-Tests unten auch dann
-		// gruen, wenn der Extraktor nichts findet — eine leere Menge ist mit
-		// jeder anderen disjunkt.
-		const call = mergeCall(mailInhaltCode, 'MailInhaltCard.svelte');
-		const eigene = groupKeys(call, 'eigene');
-		assert.ok(eigene.includes('email_format'), `eigene-Gruppe nicht erkannt: ${eigene.join(',')}`);
-		const schedule = bedingteGruppe('showSchedule');
-		const channels = bedingteGruppe('showChannels');
-		assert.ok(schedule.includes('morning_time'), `schedule-Gruppe nicht erkannt: ${schedule.join(',')}`);
-		assert.ok(channels.includes('send_email'), `channels-Gruppe nicht erkannt: ${channels.join(',')}`);
-	});
 
-	test('MailInhaltCard: kein Feld steht gleichzeitig in eigene und einer bedingten Gruppe', () => {
-		const call = mergeCall(mailInhaltCode, 'MailInhaltCard.svelte');
-		const eigene = new Set(groupKeys(call, 'eigene'));
-		for (const flag of ['showSchedule', 'showChannels'] as const) {
-			const doppelt = bedingteGruppe(flag).filter((k) => eigene.has(k));
-			assert.deepEqual(
-				doppelt,
-				[],
-				`Feld(er) ${doppelt.join(', ')} stehen in eigene UND in der ${flag}-Gruppe. eigene wird ` +
-					`immer geschrieben — damit landet das Feld auch dann im Blob, wenn diese Instanz die ` +
-					`zugehoerigen Bedienelemente gar nicht zeigt, und ueberschreibt den Nachbarn (F001/F003).`
-			);
-		}
-	});
 
-	test('MailInhaltCard schreibt kein telegram_style (Schalter gehoert VersandTab)', () => {
-		const call = mergeCall(mailInhaltCode, 'MailInhaltCard.svelte');
-		assert.ok(!/telegram_style/.test(call), 'MailInhaltCard reicht telegram_style in den Payload (#1738 FL4)');
-	});
 
 	test('Baustein: ohne telegram_style im Zustand bleibt der Wert des Nachbarn stehen', () => {
 		// Der MailInhaltCard-Pfad reicht keinen telegram_style durch; der

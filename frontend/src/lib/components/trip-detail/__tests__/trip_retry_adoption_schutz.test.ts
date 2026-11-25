@@ -39,7 +39,9 @@ afterEach(() => server.restore());
 const stand = () => server.stand(P.TRIP_ID);
 
 describe('F203: Eingabe waehrend der Wiederholung ⇒ kein Neuaufbau ueber die Eingabe', () => {
-	test("Nutzer tippt im Versand-Reiter, waehrend 'Nochmal speichern' laeuft ⇒ kein 'wiederholt', beide Eingaben landen auf dem Server", async () => {
+	// #3297/#3020: der zweite Reiter war der Versand-Reiter (trip-detail/BriefingScheduleTab, geloescht);
+	// jetzt der live gemountete Etappen-Reiter (eigener Speichervorgang, Top-Level `stages`).
+	test("Nutzer aendert im Etappen-Reiter, waehrend 'Nochmal speichern' laeuft ⇒ kein 'wiederholt', beide Eingaben landen auf dem Server", async () => {
 		server.foreignWrite(P.TRIP_ID, { name: 'Fremder Name' });
 		const a = P.neuerAufbau();
 		const seite = await P.tripSeite(a, server);
@@ -47,12 +49,13 @@ describe('F203: Eingabe waehrend der Wiederholung ⇒ kein Neuaufbau ueber die E
 		alarme.empfindlichkeitAendern('wind', 'sensibel');
 		await P.fertig(a.ctl);
 		assert.equal(a.ctl.state, 'conflict', 'Vorbedingung: 412');
-		const versand = await P.versandReiter(P.neuerAufbau(seite.trip(), a.ctl));
+		const etappen = await P.etappenReiter(P.neuerAufbau(seite.trip(), a.ctl));
+		const neueEtappen = [{ id: 'T1', name: 'Umbenannt', date: '2026-10-10', waypoints: [] }];
 
 		langsamePuts = true;
 		const retry = a.ctl.retryConflict();
 		await new Promise((r) => setTimeout(r, 20)); // der Wiederholungs-PUT ist unterwegs
-		versand.aendern({ morning_time: '08:00:00' }); // Nutzer tippt: ausstehender Speichervorgang
+		etappen.speichern(neueEtappen); // Nutzer aendert: ausstehender Speichervorgang
 		await retry;
 		langsamePuts = false;
 
@@ -60,10 +63,9 @@ describe('F203: Eingabe waehrend der Wiederholung ⇒ kein Neuaufbau ueber die E
 		assert.equal(seite.inst.u.uebernommeneFassung, 0, 'KEIN Neuaufbau der Reiter ueber die ausstehende Eingabe');
 
 		await P.fertig(a.ctl);
-		const rc = stand().report_config as Record<string, unknown>;
 		const dc = stand().display_config as Record<string, unknown>;
 		assert.equal((dc.metric_alert_levels as Record<string, unknown>).wind, 'sensibel', 'die Eingabe aus der Wiederholung steht auf dem Server');
-		assert.equal(rc.morning_time, '08:00:00', 'und die waehrenddessen getippte auch');
+		assert.deepEqual(stand().stages, neueEtappen, 'und die waehrenddessen gemachte auch');
 		assert.equal(a.ctl.state, 'idle');
 	});
 

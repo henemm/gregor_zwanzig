@@ -54,7 +54,8 @@ describe('F004/AC-21: Tagesfenster-Lesequelle je Kontext', () => {
 		const n = tripNutzlast({ client: null as never, stand: () => stand, vorlagen: () => v, abo: () => TRIP });
 		assert.equal(n.tripFelder.report_config.day_window_start_hour, 7, 'Speichern ueberschreibt das Trip-Fenster (Start)');
 		assert.equal(n.tripFelder.report_config.day_window_end_hour, 18, 'Speichern ueberschreibt das Trip-Fenster (Ende)');
-		assert.equal((n.tripFelder.report_config as Record<string, unknown>).send_email, true, 'uebrige report_config-Felder bleiben');
+		// #3297: Teilfeld — uebrige report_config-Felder werden nicht mitgesendet (Go mischt feldweise, sie bleiben).
+		assert.equal('send_email' in (n.tripFelder.report_config as Record<string, unknown>), false, 'fremdes report_config-Feld mitgesendet');
 	});
 
 	test('Orts-Briefing: Oeffnen und Speichern behalten das top-level-Fenster', () => {

@@ -2,7 +2,6 @@
 // Vergleich-Kontext sichtbar sein (Spec: compare_metric_order.md, AC-1/AC-9).
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { weatherMetricsTabSections } from '../weather-metrics-tab/weatherMetricsTabSections.ts';
 import {
 	toggleCompareMetricKey,
 	materializeActiveMetricKeys,
@@ -10,50 +9,7 @@ import {
 } from '../weather-metrics-tab/compareMetricOrder.ts';
 import { COMPARE_METRIC_KEYS } from '../wetter-tab/corridorEditorState.ts';
 
-describe('Issue #1359 Scheibe 1: Reihenfolge-Abschnitt im Vergleich', () => {
-	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md §3): der Abschnitt heisst jetzt 'layout_kanal'.
-	test('AC-1: vergleich zeigt den geteilten Reihenfolge-Abschnitt (layout_kanal)', () => {
-		const sections = weatherMetricsTabSections('vergleich');
-		assert.ok(
-			sections.includes('layout_kanal'),
-			`AC-1 FAIL: "layout_kanal" fehlt im vergleich-Kontext — Ist: ${JSON.stringify(sections)}`
-		);
-	});
-
-	test('AC-1: sms_schwellen/report_config bleiben route-exklusiv', () => {
-		const sections = weatherMetricsTabSections('vergleich');
-		for (const s of ['sms_schwellen', 'report_config']) {
-			assert.ok(
-				!sections.includes(s),
-				`AC-1 FAIL: "${s}" hat im Vergleich keine Mail-Wirkung (Attrappen-Verbot) — Ist: ${JSON.stringify(sections)}`
-			);
-		}
-	});
-
-	test('AC-9: route-Kontext (Regressionsschutz Trip, tagesfenster seit #2931 entfernt)', () => {
-		const sections = weatherMetricsTabSections('route');
-		assert.deepEqual(sections, [
-			'grundauswahl',
-			'layout_kanal', // #2794 S3a: vormals 'reihenfolge'
-			'sms_schwellen',
-			// Issue #1728 Scheibe 2 (2026-08-15): 'auswertungen' ist ENTFERNT,
-			// nicht mehr Teil der Liste — der Bedienabschnitt "05 — Auswertungen"
-			// entfaellt ersatzlos (Spec § DEC-9/AC-8).
-			'report_config',
-			// #2794 S3a: der Nacht-Block (#1721) ist ein eigener Abschnitt, damit ihn der
-			// Darstellungsfilter dem Reiter Zustellung zuordnen kann.
-			'nachtblock',
-			// Issue #1720 S1: 'ausblick' kommt DAZU — der Trip bekommt die
-			// Spaltenauswahl der 3-Tages-Vorschau (dasselbe geteilte Bauteil wie
-			// der Ortsvergleich). Diese Erwartung fror das Fehlen des Abschnitts
-			// fest; sie dreht sich um, weil `display_config.outlook_metrics` jetzt
-			// auch im Trip echte Mail-Wirkung hat (HTML- und Klartext-Ausblick).
-			// Spec: docs/specs/modules/feat_1720_s1_trip_ausblick_metriken.md
-			'ausblick',
-			'official_alerts'
-		]);
-	});
-});
+// #3297/#3020: Abschnittsfaelle von weatherMetricsTabSections entfallen — Datei geloescht.
 
 // AC-2: abwaehlen + wieder anwaehlen darf die Reihenfolge der UEBRIGEN
 // Metriken nicht anruehren. Vorher baute `toggleCompareMetric` die Liste ueber

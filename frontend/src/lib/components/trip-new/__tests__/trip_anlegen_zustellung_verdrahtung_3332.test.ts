@@ -172,7 +172,7 @@ describe('#3332 Referenz-Fixture (Messaufbau)', () => {
 			fs.writeFileSync(FIXTURE, JSON.stringify(await heutigerRumpf(), null, 2) + '\n', 'utf-8');
 		}
 		const ref = referenz();
-		for (const f of ['morning_enabled', 'morning_time', 'evening_enabled', 'evening_time', 'send_email', 'multi_day_trend_reports', 'email_format', 'show_stability'])
+		for (const f of ['morning_enabled', 'morning_time', 'evening_enabled', 'evening_time', 'send_email', 'telegram_style', 'email_format', 'show_stability'])
 			assert.ok(f in ref.report_config, `Fixture ohne report_config.${f}`);
 		assert.equal(ref.alert_channels.email, true);
 	});
@@ -266,7 +266,7 @@ describe('#3332 Test 2 (AC-2, AC-3, AC-5): Bedienung im Reiter -> genau der eine
 		assert.equal(rc.send_telegram, true, 'AC-2: Briefing-Kanal Telegram (nicht der Alarm-Kanal)');
 		assert.equal(rc.send_sms, true, 'AC-2: Briefing-Kanal SMS (nicht der Alarm-Kanal)');
 		assert.equal(rc.send_premium_sms, false, 'AC-2: Briefing-Kanal Premium-SMS (nicht der Alarm-Kanal)');
-		assert.deepEqual(rc.multi_day_trend_reports, ['morning'], '3-Tages-Ausblick folgt den eingestellten Briefings (nur Morgen an, #3155)');
+		assert.equal('multi_day_trend_reports' in rc, false, '#3297: Altschluessel im POST (Ausblick-Vorbelegung entfaellt)');
 		assert.equal(rc.day_window_start_hour, 4, 'Read-Modify-Write: Tagesfenster des Reiters Wetter verloren');
 		assert.equal(rc.day_window_end_hour, 19);
 		assert.equal(p.alert_channels.email, false, 'AC-3: Alarm-Kanal E-Mail (nicht der Briefing-Kanal)');

@@ -7,7 +7,7 @@
 	// und speichern nicht selbst: jede Aenderung geht als neuer Stand an den EINEN Speicherer
 	// (zustellungSpeicherung.ts, Owner 'versand' und 'alarme', AC-33). Das Profil wird hier EINMAL
 	// geladen und an die Kanal-Tabelle gereicht (AC-36).
-	// Abgeloest: WetterMetrikenVersandPanel mit Versand-Abschnitt und der Alarm-Baustein im Reiter
+	// Abgeloest: WetterMetrikenVersandPanel (gelöscht, #3297) mit Versand-Abschnitt und der Alarm-Baustein im Reiter
 	// (Kanaele je Wettergroesse, amtliche Warnungen, „Alarm ab“, zweite Kanalauswahl, AC-27/AC-31).
 	// Issue #3154 (#3122 B3b, Spec Teil B Nr. 14): Telegram-Kurzstil, Mehrtages-Trend und die
 	// Metrik-Oberflaeche des Uebergangsblocks sind entfernt — sie bedient die Karte „Was steht wo“.
