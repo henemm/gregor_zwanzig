@@ -436,7 +436,7 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 		const F8 = [
 			// #3366: LayoutTab, LTCapNote, LTChannelPicker, LTCutLine als Waisen geloescht.
 			// #2794 S3a Teil-PR 4a: CorridorEditor/CorridorEditorMobile entfernt (Oberflaeche weg).
-			'lib/components/shared/OutputLayoutEditor.svelte',
+			// #3020 R2: OutputLayoutEditor.svelte geloescht.
 			'routes/gpx-upload/+page.svelte'
 		];
 		const deckt = (a: string, p: string) => (a.endsWith('/') ? p.startsWith(a) : p === a);

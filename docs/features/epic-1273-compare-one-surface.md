@@ -31,7 +31,7 @@ Der heutige Ortsvergleich hat zwei Bearbeiten-Flächen: den Detail-Hub `CompareT
 | **#616** | Trip-IA-Referenzmuster: Detail-Hub wird einzige Fläche, alte Edit-Route wird Redirect, Pro-Tab-/Auto-Save bleibt erhalten. Exaktes Vorbild für #1273. Spec: `docs/specs/_archive/modules/issue_616_trip_editor_tabs.md`. |
 | **#1269** | „Speicher-Anzeige-Lüge" (Trip + Compare) — am 2026-07-16 geschlossen, direkte Voraussetzung für S1: liefert `markPristine()` für No-Op-Commits, ohne die S1 dieselbe Lüge (falscher „Fehler"-Zustand bei No-Op) reproduziert hätte. |
 | **#1268** | Verworfene Zeitfenster-/Horizont-Felder in `CompareInhaltSection.svelte` (Layout-Tab-Inhalt) — abgeschlossen, live; derselbe Compare-Bereich, an dem #1273 in späteren Slices ebenfalls rührt. |
-| **#1272** | Sortierung vereinheitlicht in `OutputLayoutEditor.svelte` — abgeschlossen, live; geteilter Baustein bleibt bei der Migration unangetastet nutzbar. |
+| **#1272** | Sortierung vereinheitlicht in `OutputLayoutEditor.svelte` — abgeschlossen; der Baustein ist inzwischen gelöscht (#3020 R2, ohne Verwender). |
 | **Epic #677** | Historie des heutigen `CompareEditor.svelte` (Wizard → Tab-Editor, Slices 1–5). Slice 6 dort („CompareWizard-Deletion, Full Tab-Editor-Umstieg") wird durch #1273 nicht fortgeführt, sondern durch die hier beschriebene Konsolidierung abgelöst. (`epic-677-compare-editor.md` gelöscht 2026-07-21, siehe Git-Historie.) |
 
 ---

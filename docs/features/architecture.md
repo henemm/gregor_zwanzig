@@ -880,7 +880,7 @@ frontend/
 │   │   │   │   └── index.ts       # Barrel (TripHeader re-exported in organisms/)
 │   │   │   ├── compare/           # Vergleichs-Screen (CompareTabs, CompareDetail, CompareMatrix, …)
 │   │   │   ├── shared/            # Geteilte Tab-Organismen route|vergleich (WeatherMetricsTab,
-│   │   │   │                      #   layout-tab/, versand-tab/, alarme-tab/, OutputLayoutEditor,
+│   │   │   │                      #   layout-tab/, versand-tab/, alarme-tab/,
 │   │   │   │                      #   subscription-header/ = Hub-Kopf-Inhalt, #2284;
 │   │   │   │                      #   hub-kopf/ = geteilter Hub-Kopf-Rahmen, #2837)
 │   │   │   ├── preview/           # Email/SMS preview renderers
@@ -921,7 +921,7 @@ Frontend components follow Atomic Design principles with 3 explicit layers:
 |-------|----------|---------|----------|------|
 | **Atoms** | `components/atoms/` | Base UI primitives | Button, Label, Badge, Icon | #371 |
 | **Molecules** | `components/molecules/` | Combinations of atoms | FieldGroup, StatCard, Tabs | #372 |
-| **Organisms** | `components/organisms/` | Complex page sections | TripHeader, OutputLayoutEditor, ListTable, HomeHero* | #471 |
+| **Organisms** | `components/organisms/` | Complex page sections | TripHeader, ListTable, WetterTabInhalt | #471 |
 
 **Import Rules:**
 - **Atoms** may import from `ui/` (shadcn + gregor primitives)
@@ -930,12 +930,12 @@ Frontend components follow Atomic Design principles with 3 explicit layers:
 - **Routes** should prefer importing from `organisms/` and `molecules/`, using `atoms/` only for rare custom layouts
 
 **Organism Barrel** (`components/organisms/index.ts`):
-Re-exportiert die Organisms (aktuell 19, u. a. `TripHeader`,
-`OutputLayoutEditor`, `WeatherMetricsTab`, `ListTable*`, `SubscriptionCard`,
-`OutboxCard`, `AlertsCard`, `PresetRail`). Die Datei selbst ist die Wahrheit —
-Exporte hier nicht duplizieren.
+Re-exportiert die Organisms (aktuell 14, u. a. `TripHeader`, `ListTable*`,
+`ListActionsMenu`, `WetterTabInhalt` samt Wetter-Reiter-Karten). Die Datei selbst ist
+die Wahrheit — Exporte hier nicht duplizieren. `OutputLayoutEditor`, `OutboxCard`,
+`AlertsCard`, `PresetRail` und `MetricOffShelf` sind mit #3020 R2 gelöscht.
 
-Consumers import via: `import { TripHeader, OutputLayoutEditor } from '$lib/components/organisms'`
+Consumers import via: `import { TripHeader, ListTable } from '$lib/components/organisms'`
 
 See `docs/design-system/COMPONENTS.md` for the canonical component catalog.
 

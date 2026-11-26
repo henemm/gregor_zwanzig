@@ -1,7 +1,7 @@
 // Epic #471 — Organisms-Schicht: kanonische Re-Export-Barrel.
 //
 // Eine Quelle fuer alle Organisms:
-//   import { TripHeader, OutputLayoutEditor }
+//   import { TripHeader, ListTable }
 //     from '$lib/components/organisms';
 //
 // Barrel-Pattern: physische .svelte-Dateien verbleiben in ihren Feature-Ordnern.
@@ -11,7 +11,6 @@
 //       docs/specs/modules/issue_520_organisms_barrel_completeness.md
 
 export { default as TripHeader } from '../trip-detail/TripHeader.svelte';
-export { default as OutputLayoutEditor } from '../shared/OutputLayoutEditor.svelte';
 
 // Issue #578 — Block C: neue Home-Organisms + Metrics-Organisms
 // Issue #1277 — Geteiltes Listen-Tabellen-Organism (Trips + Orts-Vergleiche)
@@ -19,11 +18,6 @@ export { default as ListTable }                from './ListTable.svelte';
 export { default as ListTableRow }             from './ListTableRow.svelte';
 export { default as ListActionsMenu }          from './ListActionsMenu.svelte';
 export { default as ListNameCell }             from './ListNameCell.svelte';
-
-export { default as OutboxCard }               from './OutboxCard.svelte';
-export { default as AlertsCard }               from './AlertsCard.svelte';
-export { default as PresetRail }               from './PresetRail.svelte';
-export { default as MetricOffShelf }           from './MetricOffShelf.svelte';
 
 // Issue #2913 — Wetter-Reiter (Trip + Orts-Briefing, context="route"|"vergleich"), Logik bleibt in shared/wetter-tab/*.ts
 // Teil 2 (K-1): die Seite ist shared/WetterTab.svelte (Regel (a)); Zustand/Laden/Speichern im Organismus WetterTabInhalt.

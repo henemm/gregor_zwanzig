@@ -45,9 +45,8 @@ export const { CONTENT_MODULE_DESCRIPTIONS } = await imp(path.join(SHARED, 'mail
 
 // #3366: der Layout-Reiter (LayoutTab, LTCapNote, LTChannelPicker, LTCutLine) war ohne
 // Produktionsaufrufer und ist geloescht; seine Render-Faelle samt Golden entfallen.
-// Die Funktionen aus ltChannels.ts (lebt) bleiben in der Funktionstabelle; der geteilte
-// Ausgabe-Layout-Editor (OutputLayoutEditor, Restbestand von #3020 R2) rendert f8Altbausteine.ts,
-// damit dieser Pruefstand (GPX-Seite, Funktionstabelle) ohne ihn laedt (#3020 R1, Probe-Loeschung).
+// Die Funktionen aus ltChannels.ts (lebt) bleiben in der Funktionstabelle. Der geteilte
+// Ausgabe-Layout-Editor (OutputLayoutEditor) ist mit #3020 R2 geloescht, seine Render-Faelle entfallen.
 
 // GPX-Seite: Vorschau/Speichern erscheinen erst nach dem Hochladen (Klick).
 const GPX_ZUSTAND: [string, string][] = [
@@ -60,7 +59,6 @@ const GpxSeite = await variante(GPX_SEITE, GPX_ZUSTAND);
 const g = globalThis as unknown as Record<string, unknown>;
 const ohneKommentare = (html: string) => html.replace(/<!--[\s\S]*?-->/g, '');
 export const html = (k: unknown, props: Record<string, unknown> = {}) => ohneKommentare(render(k as never, { props } as never).body);
-export const komp = async (datei: string) => (await imp(datei)).default;
 
 // ── Korridor-Logik (Daten fuer die Speicher-Nutzlast, AC-4) ─────────────────
 

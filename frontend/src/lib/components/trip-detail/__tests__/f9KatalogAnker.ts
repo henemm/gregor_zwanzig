@@ -149,39 +149,10 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['trip.fehler_speichern', 'Fehler beim Speichern', 'Error while saving'],
 	['trip.neuer_name', 'Neuer Name:', 'New name:'],
 
-	// ── trip.layout.* — Ausgabe-Layout-Bausteine (BucketSection*, ActiveMetricRow, …) ──
-	['trip.layout.leer', 'Keine Einträge — Metriken aus „Nicht im Briefing" hinzufügen.', 'No entries — add metrics from “Not in the briefing”.'],
-	['trip.layout.telegram_vor', '✂ ab hier bei', '✂ from here'],
-	['trip.layout.telegram_nach', 'abgeschnitten (max <max> Spalten)', 'cuts off (max <max> columns)'],
+	// ── trip.layout.* — Reihenfolge-Beschriftung (CompareTabs) ──
+	// #3020 R2: die uebrigen trip.layout.* (31 mit trip.vorschau.*) entfielen mit BucketSection*,
+	// ActiveMetricRow, ChannelLimitMarkers, PresetRow und TablePreview.
 	['trip.layout.reihenfolge_aria', '<titel>, Reihenfolge', '<titel>, order'],
-	['trip.layout.nicht_im_briefing', 'Nicht im Briefing', 'Not in the briefing'],
-	['trip.layout.weitere_metriken.one', '<count> weitere Metriken', '<count> more metric'],
-	['trip.layout.weitere_metriken.other', '<count> weitere Metriken', '<count> more metrics'],
-	['trip.layout.nicht_ausgegeben', '· nicht ausgegeben', '· not output'],
-	['trip.layout.einklappen', '▴ Einklappen', '▴ Collapse'],
-	['trip.layout.aufklappen', '▾ Aufklappen', '▾ Expand'],
-	['trip.layout.plus_spalte', '+ Spalte', '+ Column'],
-	['trip.layout.plus_detail', '+ Detail', '+ Detail'],
-	['trip.layout.kuerzel', 'Kürzel', 'Code'],
-	['trip.layout.roh_oder_einfach', 'Roh oder Einfach', 'Raw or simple'],
-	['trip.layout.nur_rohwert', 'nur Rohwert', 'raw value only'],
-	['trip.layout.zu_detail', '→ Detail', '→ Detail'],
-	['trip.layout.zu_spalte', '↑ Spalte', '↑ Column'],
-	['trip.layout.limit', 'Limit', 'Limit'],
-	['trip.layout.kanal_max_spalten', '<kanal>: max <max> Spalten', '<kanal>: max <max> columns'],
-	['trip.layout.preset_metriken.one', '<count> Metriken', '<count> metric'],
-	['trip.layout.preset_metriken.other', '<count> Metriken', '<count> metrics'],
-	['trip.layout.standard', 'Standard', 'Default'],
-	['trip.vorschau.titel', 'Tabellen-Vorschau', 'Table preview'],
-	['trip.vorschau.hinweis', 'Beispiel-Daten · zeigt nur aktivierte Spalten pro Tag', 'Sample data · shows only enabled columns per day'],
-	['trip.vorschau.heute', 'HEUTE', 'TODAY'],
-	['trip.vorschau.morgen', 'MORGEN', 'TOMORROW'],
-	['trip.vorschau.uebermorgen', 'ÜBERMORGEN', 'DAY AFTER TOMORROW'],
-	['trip.vorschau.metriken.one', '<tag> — <count> METRIKEN', '<tag> — <count> METRIC'],
-	['trip.vorschau.metriken.other', '<tag> — <count> METRIKEN', '<tag> — <count> METRICS'],
-	['trip.vorschau.keine', 'Keine Metriken für diesen Horizont aktiviert.', 'No metrics enabled for this horizon.'],
-	['trip.vorschau.zeit', 'Zeit', 'Time'],
-	['trip.vorschau.einfach', '·einfach', '·simple'],
 	// #3383 S1: trip.kanaele.* (13) und trip.about.* (19) entfielen mit WeatherV2Kanaele/AboutOutputLayout.
 
 	// ── trip.wegpunkt.* — Wegpunkt-Editor (waypoints/*) ───────────────────────

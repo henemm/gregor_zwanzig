@@ -54,9 +54,8 @@ const AUSNAHMEN: Record<string, number> = {
 	'lib/components/shared/hub-uebersicht/HubUebersicht.svelte': 1,
 	'lib/components/mobile/StageCardM.svelte': 1,
 	'lib/components/mobile/Sheet.svelte': 1,
-	'lib/components/molecules/BriefingTimelineRow.svelte': 1,
-	'lib/components/organisms/MetricOffShelf.svelte': 2,
-	'lib/components/organisms/PresetRail.svelte': 1
+	'lib/components/molecules/BriefingTimelineRow.svelte': 1
+	// #3020 R2: organisms/MetricOffShelf (2) und organisms/PresetRail (1) mit den Dateien geloescht.
 };
 
 /** Zählt gemeldete Zeilen eines Quelltexts (reine Funktion, auch für die Gegenproben). */

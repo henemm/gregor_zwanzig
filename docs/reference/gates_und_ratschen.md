@@ -729,6 +729,8 @@ Konfiguration in `frontend/src/lib/__tests__/bausteine_waechter_regeln.ts` (Svel
   Arbitrary-Werte mit Hex/Maß.
 - **Neuzählung Fix-Loop 1:** `AUSNAHMEN` Summe 396 → 398 (nur `organisms/PresetRail.svelte` 19 → 21),
   weiterhin 39 Dateien.
+- **#3020 R2:** Restbestand gelöscht; `AUSNAHMEN` ohne `organisms/{AlertsCard,MetricOffShelf,OutboxCard,PresetRail}`
+  (die Dateien bestehen nicht mehr), `BESTAND_OBERGRENZE` 162 → 155.
 
 *Regel-Budget: Prüfdatum 2027-02-08, siehe Tabelle unten. Ersetzt das seit ADR-0111 außer Dienst gestellte
 Design-Gate. Löschbedingung: kein nachweisbarer Fang bis dahin → Rückbau. Spec:

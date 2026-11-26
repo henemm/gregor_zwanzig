@@ -38,11 +38,5 @@ def test_no_g_surface_alt_token():
 # AC-3 (MetricCheckbox nutzt --g-paper) entfaellt mit #2794 S3a Teil-PR 4a (AC-31):
 # die Metrik-Checkbox ist als Oberflaeche entfernt. Der undefinierte Token bleibt
 # ueber test_no_undefined_g_surface_token fuer alle uebrigen Dateien bewacht.
+# AC-4 (PresetRow color-mix) entfaellt mit #3020 R2: trip-detail/PresetRow.svelte ist geloescht.
 
-
-def test_preset_row_color_mix_uses_surface0():
-    """AC-4: PresetRow color-mix nutzt --g-surface-0, kein Hex-Fallback."""
-    path = FRONTEND_LIB / "components" / "trip-detail" / "PresetRow.svelte"
-    content = path.read_text(encoding="utf-8")
-    assert "var(--g-surface-0)" in content, "PresetRow: --g-surface-0 nicht gefunden"
-    assert "var(--g-surface, #fff)" not in content, "PresetRow: undefinierter --g-surface noch vorhanden"

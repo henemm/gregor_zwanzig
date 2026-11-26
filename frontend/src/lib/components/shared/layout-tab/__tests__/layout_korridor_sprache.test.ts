@@ -1,5 +1,5 @@
 // Issue #2657 (i18n F8, Epic #2644) — AC-1, AC-2, AC-3, AC-4, AC-6: Layout-Reiter,
-// Korridor-Editor (Wertebereiche, Desktop und mobil), Ausgabe-Layout, Ausblick,
+// Korridor-Editor (Wertebereiche, Desktop und mobil), Ausblick,
 // Mail-Inhalt und GPX-Seite sprechen die Sprache des angemeldeten Nutzers. Echte
 // SSR-Renders (svelte/server, Pruefstand f8Pruefstand.ts):
 //   * AC-6: Deutsch ist byte-gleich zur Ausgabe VOR der Umstellung
@@ -51,9 +51,6 @@ register(pathToFileURL(path.join(FRONTEND, 'test-env-dynamic-private-stub-hooks.
 register(pathToFileURL(path.join(FRONTEND, 'src/routes/admin/__tests__/server-load-resolve.hooks.mjs')).href, base);
 const layoutLoad = (await import(pathToFileURL(path.join(FRONTEND, 'src/routes/+layout.server.ts')).href)).load;
 
-// #3020: der Ausgabe-Layout-Editor (Restbestand, faellt mit R2) nur in seinen eigenen Faellen laden.
-const { ausgabeLayoutRendern } = await import('./f8Altbausteine.ts');
-
 before(() => {
 	// Die de-Golden sind der Ist-Stand VOR der Umstellung und werden nie neu geschrieben;
 	// nur die en-Ansicht (Review-Hilfe, nicht verglichen) wird aktualisiert.
@@ -77,29 +74,6 @@ function deDannEn<T>(f: () => T): { de: T; en: T } {
 	const en = f();
 	return { de, en };
 }
-
-/**
- * Deutsche Festteile (>= 4 Buchstaben) der Paket-Schluessel, die im englischen Text
- * stehen. `layout.profil_metrik.*` rendert keine dieser Flaechen (Anlege-Assistent);
- * dieselben Woerter kommen als API-Metriknamen (F5) vor und zaehlen nicht.
- */
-function deutscheReste(text: string, ausnahmen: string[] = []): string[] {
-	const reste: string[] = [];
-	for (const [k, de, en] of F8_ANKER) {
-		if (de === en || k.startsWith('layout.profil_metrik.') || ausnahmen.some((a) => k === a || (a.endsWith('.') && k.startsWith(a)))) continue;
-		const enTeile = new Set(en.split(/<[a-z0-9_]+>/).map((s) => s.trim()));
-		for (const teil of de.split(/<[a-z0-9_]+>/).map((s) => s.trim())) {
-			if ((teil.match(/[A-Za-zÄÖÜäöüß]/g) ?? []).length < 4 || enTeile.has(teil)) continue;
-			if (text.includes(teil)) reste.push(`${k}: ${teil}`);
-		}
-	}
-	return reste;
-}
-/** Fremdbausteine mit eigenem Deutsch (andere Pakete), deren Woerter Ankerteile treffen. */
-const FREMD_REIHENFOLGE = ['layout.ausgabe.reihenfolge']; // WeatherV2Reihenfolge (F5) titelt selbst „Reihenfolge"
-/** Der Fixture-Katalog traegt API-Metriknamen (Böen, Niederschlag; F5), die zugleich
- *  Trip-Korridor-Zeilennamen sind — im Ausgabe-Layout keine Paket-Texte. */
-const API_METRIKNAMEN = ['layout.korridor_zeile.'];
 
 describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)', () => {
 	const FAELLE = htmlFaelle();
@@ -126,33 +100,10 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 	});
 });
 
-describe('AC-1: Ausgabe-Layout englisch, Mail-Inhalt je Sprache', () => {
+describe('AC-1: Mail-Inhalt je Sprache', () => {
 	// #3366: Kanal-Umschalter, Kappungs-Hinweis und Schnittlinie gehoerten zum geloeschten
-	// Layout-Reiter; der geteilte Ausgabe-Layout-Editor (OutputLayoutEditor) bleibt geprueft.
-	test('Ausgabe-Layout: erst de, dann ohne Neuladen en (E-Mail, Telegram, SMS)', () => {
-		const rendern = () => (['email', 'telegram', 'sms'] as const).map((k) => ausgabeLayoutRendern(k)).join('\n');
-		const { de, en } = deDannEn(() => sichtbar(rendern()));
-		for (const s of ['Reihenfolge', 'Spalten', 'Detail-Werte', 'Preset-Auswahl']) hat(de, s);
-		for (const s of ['Order', 'Columns', 'Detail values', 'Preset selection', 'In the briefing as a column', 'In the briefing as a detail', 'One table column per metric. Order = left to right.', 'Shown as a compact line directly below the table.', 'SMS · priority list', 'Characters', 'SMS has at most 140 characters. Order: top = more important. Anything that no longer fits the budget is left out automatically.'])
-			hat(en, s);
-		assert.deepEqual(deutscheReste(en, API_METRIKNAMEN), []);
-	});
-	test('aria-Beschriftungen des Ausgabe-Layouts englisch', () => {
-		const { de, en } = deDannEn(() => ausgabeLayoutRendern('sms'));
-		hat(de, 'aria-label="SMS-Metriken, Reihenfolge"');
-		hat(en, 'aria-label="SMS metrics, order"');
-		const email = deDannEn(() => ausgabeLayoutRendern('email'));
-		hat(email.en, 'aria-label="Columns, order"'); // „, Reihenfolge" haengt BucketSection an (seit F9 #2658 sprachfaehig)
-		hat(email.de, 'aria-label="Spalten, Reihenfolge"');
-		hatNicht(email.en, 'aria-label="Spalten, Reihenfolge"');
-	});
-	test('Leer- und Ohne-Detail-Zustand englisch', () => {
-		const { en } = deDannEn(() => [ausgabeLayoutRendern('sms', 'leer'), ausgabeLayoutRendern('email', 'ohne_detail')].join('\n'));
-		const text = sichtbar(en);
-		for (const s of ['No metrics — add some from “Not in the briefing”.', 'Columns']) hat(text, s);
-		hatNicht(text, 'Detail values'); // hideDetailBucket
-		assert.deepEqual(deutscheReste(text, [...FREMD_REIHENFOLGE, ...API_METRIKNAMEN]), []);
-	});
+	// Layout-Reiter. #3020 R2: der Ausgabe-Layout-Editor (OutputLayoutEditor) ist ebenfalls
+	// geloescht, seine Render-Faelle und die Schluessel layout.ausgabe.* entfallen.
 	test('Mail-Inhalt: Bausteintexte der Konstantenliste je Sprache', () => {
 		const { de, en } = deDannEn(() =>
 			Object.fromEntries(Object.keys(CONTENT_MODULE_DESCRIPTIONS).map((k) => [k, { ...CONTENT_MODULE_DESCRIPTIONS[k] }]))
@@ -272,7 +223,6 @@ describe('AC-4: zwei Nutzer, zwei Sprachen, gleiche Wertebereiche, gleiche Speic
 		return {
 			lang,
 			fremd,
-			layout: sichtbar(ausgabeLayoutRendern('email')), // #3366: Ausgabe-Layout statt geloeschtem Layout-Reiter
 			seite: sichtbar(gpxRendern()), // #3020 R1: zweite lebende Flaeche (GPX-Seite) in der Sprache des Nutzers
 			// #2794 S3a Teil-PR 4a: die Korridor-Ansicht (CorridorEditor) ist entfernt; die
 			// Zeilennamen der Logik folgen weiter der Sprache, die Nutzlast bleibt sprachfrei.
@@ -290,8 +240,6 @@ describe('AC-4: zwei Nutzer, zwei Sprachen, gleiche Wertebereiche, gleiche Speic
 		assert.equal(b.lang, 'de');
 		assert.equal(a.fremd, null, 'A liest den Trip von B');
 		assert.equal(b.fremd, null, 'B liest den Trip von A');
-		hat(a.layout, 'Detail values');
-		hat(b.layout, 'Detail-Werte');
 		hat(a.seite, 'Upload a GPX file to create a stage and a trip from it.');
 		hat(b.seite, 'Lade eine GPX-Datei hoch, um daraus eine Etappe und einen Trip zu erstellen.');
 		assert.ok(a.zeilenNamen.includes('Wind gusts'), `A (en): ${a.zeilenNamen.join(', ')}`);
