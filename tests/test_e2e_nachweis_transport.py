@@ -24,6 +24,7 @@ Nachweise). Nachweise entstehen ueber den echten Erzeuger
 from __future__ import annotations
 
 import json
+import re
 import os
 import shutil
 import subprocess
@@ -542,3 +543,86 @@ def test_ac9_e2e_verify_ausserhalb_laeuft_per_ssh_im_staging_checkout():
     assert "gregor_zwanzig_staging" in sec, sec
     assert "--write-verdict" in sec, sec
     assert "e2e-verified" in sec or "Note" in sec, sec
+
+
+# --- #3423: Abnahme vom iMac nur ueber den festen Pruefzugang ------------------
+# Spec docs/specs/modules/e2e_verify_imac_pruefzugang.md (AC-1 bis AC-8).
+
+PLAYBOOK = REPO_ROOT / "docs" / "reference" / "operations_playbook.md"
+_PRUEF_BEFEHLE = ("rev gregor-staging", "staging-deploy", "spec-run", "mail-pruefen", "write-verdict")
+
+
+def _codezeilen(sec: str) -> list[str]:
+    """Zeilen innerhalb von ```-Bloecken (ohne die Zaeune), links bereinigt."""
+    out, drin = [], False
+    for line in sec.splitlines():
+        if line.lstrip().startswith("```"):
+            drin = not drin
+            continue
+        if drin:
+            out.append(line.strip())
+    return out
+
+
+def _ssh_codezeilen(sec: str) -> list[str]:
+    return [z for z in _codezeilen(sec) if z.startswith("ssh ")]
+
+
+def test_3423_ac1_jeder_abnahmeschritt_hat_seinen_pruefbefehl():
+    """# doc-compliance-test — AC-1: alle fuenf Pruefbefehle als ssh-Aufruf."""
+    sec = _abschnitt_ausserhalb(CMD_E2E.read_text(encoding="utf-8"))
+    ssh = "\n".join(_ssh_codezeilen(sec))
+    for befehl in _PRUEF_BEFEHLE:
+        assert f"ssh henemm-pruefen {befehl}" in ssh or f'ssh henemm-pruefen "{befehl}' in ssh, (
+            f"Pruefbefehl {befehl!r} fehlt als ssh-henemm-pruefen-Aufruf:\n{ssh}")
+
+
+def test_3423_ac2_nur_pruefzugang_keine_freie_ssh_form():
+    """# doc-compliance-test — AC-2: jede ssh-Codezeile nutzt den Pruefzugang."""
+    sec = _abschnitt_ausserhalb(CMD_E2E.read_text(encoding="utf-8"))
+    ssh = _ssh_codezeilen(sec)
+    assert ssh, "keine ssh-Aufrufe im Abschnitt"
+    for z in ssh:
+        assert z.startswith("ssh henemm-pruefen "), f"freie ssh-Form: {z}"
+    for z in _codezeilen(sec):
+        assert "ssh henemm '" not in z and 'ssh henemm "' not in z, z
+
+
+def test_3423_ac3_ssh_zeilen_ohne_sperrbedingung_des_hooks():
+    """# doc-compliance-test — AC-3: kein .claude/-Pfad, keine Schreib-Umleitung;
+    Findings nur als Eingabe per '<'."""
+    sec = _abschnitt_ausserhalb(CMD_E2E.read_text(encoding="utf-8"))
+    for z in _ssh_codezeilen(sec):
+        assert ".claude/" not in z, z
+        assert ">" not in z, f"Schreib-Umleitung in ssh-Zeile: {z}"
+        assert "mktemp" not in z and "cat " not in z, z
+    verdict = [z for z in _ssh_codezeilen(sec) if "write-verdict" in z]
+    assert verdict, "write-verdict-Aufruf fehlt"
+    for z in verdict:
+        assert re.search(r"write-verdict (VERIFIED|BROKEN|AMBIGUOUS) '", z), (
+            f"Verdict-Wort und Begruendung muessen getrennte Argumente sein: {z}")
+        assert re.search(r"<\s*\S*findings\S*\.json\s*$", z), f"Findings nicht per '<': {z}"
+        assert "--langs" in z, z
+
+
+def test_3423_ac4_ac5_ac6_einchecken_grenzen_cloud_und_note():
+    """# doc-compliance-test — AC-4/5/6."""
+    sec = _abschnitt_ausserhalb(CMD_E2E.read_text(encoding="utf-8"))
+    low = sec.lower()
+    assert "selben pr" in low and "eincheck" in low, "Einchecken im selben PR fehlt"
+    assert "--lang en" in sec and "umgebungsvariable" in low, "spec-run-Grenze fehlt"
+    for grenze in ("staging_befehl_pruefen.py", "Telegram", "Premium-SMS", "e2e_browser_test.py"):
+        assert grenze in sec, f"Grenze {grenze!r} fehlt"
+    assert "server-sitzung" in low, "Verweis auf Server-Sitzung fehlt"
+    assert "cloud" in low and "keinen prüfzugang" in low, "Cloud-Hinweis fehlt"
+    assert "refs/notes/e2e-verified" in sec and "git notes --ref e2e-verified" in sec
+
+
+def test_3423_ac7_playbook_nennt_den_pruefzugang():
+    """# doc-compliance-test — AC-7: Absatz 'Rueckmeldung an die Sitzung'."""
+    text = PLAYBOOK.read_text(encoding="utf-8")
+    start = text.find("**Rückmeldung an die Sitzung.**")
+    assert start != -1, "Absatz fehlt"
+    absatz = text[start:text.find("\n\n", start)]
+    assert "ssh henemm-pruefen" in absatz, absatz
+    assert "per `ssh henemm`" not in absatz, absatz
