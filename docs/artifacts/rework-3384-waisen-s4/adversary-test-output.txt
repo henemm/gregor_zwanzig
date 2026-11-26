@@ -1,0 +1,19 @@
+# Adversary-Testlauf rework-3384-waisen-s4
+## node --test, 23 benannte Dateien
+  duration_ms: 24.551378
+  type: 'suite'
+  ...
+1..109
+# tests 883
+# suites 87
+# pass 883
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 17127.227144
+883 passed, 0 failed
+## npm run build: Exit 0
+## pytest -o addopts=''
+96 passed, 2 warnings in 21.69s
+## playwright --list Hauptlauf-Auswahl: Total: 802 tests in 85 files; Gate 757, Abstand 45 wie vorher (805/760)

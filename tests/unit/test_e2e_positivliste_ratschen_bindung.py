@@ -98,13 +98,13 @@ def test_positivliste_enthaelt_mandantentrennungs_spec(spec):
 S4_NEU = ("e2e/hub-anlegen-ablauf.spec.ts", "e2e/hub-liste-seitenrahmen.spec.ts")
 S4_RAUS = ("e2e/compare-detail-edit-entry.spec.ts", "e2e/compare-editor-slice1.spec.ts",
            "e2e/compare-legacy-fields-survive-save.spec.ts")
-S4_BLEIBT = ("e2e/issue-1093-unit.spec.ts",)
+GELOESCHT_3384 = ("e2e/issue-1093-unit.spec.ts",)
 
 
-@pytest.mark.parametrize("spec", S4_NEU + S4_BLEIBT)
-def test_s4_positivliste_enthaelt_die_neuen_und_bleibenden_specs(spec):
+@pytest.mark.parametrize("spec", S4_NEU)
+def test_s4_positivliste_enthaelt_die_neuen_specs(spec):
     """#2347 S4 AC-17: die kind-parametrisierten Anlege-/Listen-Specs stehen auf der
-    Positivliste (sonst bewacht sie die CI-Ampel nicht), `issue-1093-unit` bleibt.
+    Positivliste (sonst bewacht sie die CI-Ampel nicht).
 
     GIVEN die Positivliste im Worktree-Stand (Pfadregel #1409)
     WHEN sie gelesen wird
@@ -113,6 +113,22 @@ def test_s4_positivliste_enthaelt_die_neuen_und_bleibenden_specs(spec):
     assert (REPO / PLAYWRIGHT_CWD / spec).is_file(), f"Spec-Datei fehlt: {spec}"
     gelistet = _liste_zeilen(POSITIVLISTE.read_text(encoding="utf-8"))
     assert spec in gelistet, f"{spec} fehlt auf der Positivliste ({len(gelistet)} Eintraege)"
+
+
+@pytest.mark.parametrize("spec", GELOESCHT_3384)
+def test_3384_issue_1093_unit_ist_geloescht_und_nicht_gelistet(spec):
+    """#3384 AC-7: `issue-1093-unit` importierte nur die Waise `layoutPreviewRows.ts`
+    und ist mit S4 geloescht (analog `S4_RAUS`).
+
+    GIVEN die Positivliste und `frontend/e2e` im Worktree-Stand
+    WHEN beide gelesen werden
+    THEN existiert die Datei nicht mehr und steht nicht auf der Positivliste --
+         ein stehen gelassener Name liesse den `e2e`-Job an der Existenzpruefung
+         scheitern, eine stehen gelassene Datei liefe ungelistet und unbewacht.
+    """
+    assert not (REPO / PLAYWRIGHT_CWD / spec).exists(), f"{spec} existiert noch (mit #3384 geloescht)"
+    gelistet = _liste_zeilen(POSITIVLISTE.read_text(encoding="utf-8"))
+    assert spec not in gelistet, f"{spec} steht noch auf der Positivliste (mit #3384 geloescht)"
 
 
 @pytest.mark.parametrize("spec", S4_RAUS)

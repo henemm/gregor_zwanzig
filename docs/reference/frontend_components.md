@@ -1,6 +1,6 @@
 # Frontend Components Reference
 
-**Updated:** 2026-11-18 (Issue #3007 — Zweitzeilen-Regel und Pausentag-/Gehzeit-Fälle der Etappen-Listenzeile ergänzt); 2026-11-17 (Issue #3007 — Listenzeile-Baustein `molecules/Listenzeile` für die Reiter Etappen und Orte, `CompareLocationRow` gelöscht); 2026-11-17 (Issue #3006 — Bereichskopf-Baustein `molecules/Bereichskopf` ersetzt `ZustellungKopf` und `wt-kopf`); 2026-09-27 (Issue #2277 Scheibe S2a — `/trips/new` bekommt den Reiter „Wertebereiche", geteilter `CorridorEditor` mit `createMode`; Anlege-Editoren-Abschnitt zusätzlich korrigiert: kein Auto-Save, sondern EIN finaler `POST`); 2026-09-21 (Issue #1895 — Alert-Rules-Editor kennt nur noch den Änderungs-Modus; `ModeCard` gelöscht, Modus-Toggle und Absolut-Feld aus `AlertRuleRow` entfernt); 2026-09-19 (Mobile-Shell S2 — `TopAppBar`, `topAppBarStore` und Hamburger-Drawer entfernt; Konto-Kreis + `KontoSheet`, `PageHeader back`, `EditorStickyFooter`, Safe-Area oben); 2026-08-03 (Issue #1196 S1 — Wordmark-Props + 10 real existierende Komponenten ergänzt: MapCanvas, WaypointPin, ProfileEditor, StageCard, WaypointCard, PauseStageView, AlertRulesEditor, AlertRuleRow, ModeCard, LocationPreviewMap); 2026-07-21 (Doku-Audit #1341 — Wizard-Sektionen und Datei-Inventar entfernt, Anlege-Editoren dokumentiert); 2026-05-25 (Issue #316 — briefing-history/ + trip-new/ Kategorien ergänzt, verwaiste Cockpit-Molekül-Referenz entfernt); 2026-07-15 (Issue #1256 Scheibe S8d — TopAppBar per-page fill pattern via `topAppBar.svelte.ts`, additive `title`/`backHref` props); 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31; 2026-07-19 (Epic #1301 Scheibe F2b — `CompareEditor.svelte` gelöscht, TopAppBar-Referenzimplementierung entsprechend aktualisiert)  
+**Updated:** 2026-11-26 (Issue #3384 — Waisen-Scheibe S4: Einträge der Wegpunkt-Pin-Marke und der Ortsvergleich-Kartenvorschau entfernt, Bausteine gelöscht); 2026-11-18 (Issue #3007 — Zweitzeilen-Regel und Pausentag-/Gehzeit-Fälle der Etappen-Listenzeile ergänzt); 2026-11-17 (Issue #3007 — Listenzeile-Baustein `molecules/Listenzeile` für die Reiter Etappen und Orte, `CompareLocationRow` gelöscht); 2026-11-17 (Issue #3006 — Bereichskopf-Baustein `molecules/Bereichskopf` ersetzt `ZustellungKopf` und `wt-kopf`); 2026-09-27 (Issue #2277 Scheibe S2a — `/trips/new` bekommt den Reiter „Wertebereiche", geteilter `CorridorEditor` mit `createMode`; Anlege-Editoren-Abschnitt zusätzlich korrigiert: kein Auto-Save, sondern EIN finaler `POST`); 2026-09-21 (Issue #1895 — Alert-Rules-Editor kennt nur noch den Änderungs-Modus; `ModeCard` gelöscht, Modus-Toggle und Absolut-Feld aus `AlertRuleRow` entfernt); 2026-09-19 (Mobile-Shell S2 — `TopAppBar`, `topAppBarStore` und Hamburger-Drawer entfernt; Konto-Kreis + `KontoSheet`, `PageHeader back`, `EditorStickyFooter`, Safe-Area oben); 2026-08-03 (Issue #1196 S1 — Wordmark-Props + 10 real existierende Komponenten ergänzt: MapCanvas, WaypointPin, ProfileEditor, StageCard, WaypointCard, PauseStageView, AlertRulesEditor, AlertRuleRow, ModeCard, LocationPreviewMap); 2026-07-21 (Doku-Audit #1341 — Wizard-Sektionen und Datei-Inventar entfernt, Anlege-Editoren dokumentiert); 2026-05-25 (Issue #316 — briefing-history/ + trip-new/ Kategorien ergänzt, verwaiste Cockpit-Molekül-Referenz entfernt); 2026-07-15 (Issue #1256 Scheibe S8d — TopAppBar per-page fill pattern via `topAppBar.svelte.ts`, additive `title`/`backHref` props); 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31; 2026-07-19 (Epic #1301 Scheibe F2b — `CompareEditor.svelte` gelöscht, TopAppBar-Referenzimplementierung entsprechend aktualisiert)  
 **Version:** 1.13
 
 ## Overview
@@ -786,8 +786,6 @@ von Trip-Editor und Trip-Detail-Ansicht:
   `onWaypointActivate(waypointId)`, optionaler `onMapClick(lat, lon)` zum
   Einfügen neuer Wegpunkte, `fillHeight` für den mobilen Vollbild-Container
   (Issue #963).
-- **`WaypointPin.svelte`** — SVG-Pin-Marker (Kreis + Nummer + Spitze) für
-  Karte und Höhenprofil; Props `index`, `active`, `onclick`, `size`.
 - **`ProfileEditor.svelte`** — SVG-Höhenprofil (360×140) mit klickbaren Pins;
   analog `ProfileChart.svelte`, erweitert um Gridlines + `onWaypointActivate`.
 - **`StageCard.svelte`** — kompakte Etappen-Karte (Mini-Höhenprofil, Distanz)
@@ -807,9 +805,9 @@ die Metrik-Defaults/Schwellen-Helfer. Alarme bedient der geteilte `AlarmeTab`.
 
 ## Compare Components (`compare/`)
 
-- **`LocationPreviewMap.svelte`** — Mini-Karten-Vorschau (Topo-Hintergrund +
-  zentrierter Pin) für einen Ort im Ortsvergleich-Anlege-Fluss; Props `lat`,
-  `lon`.
+Die früher hier geführte Kartenvorschau ist mit #3384 (Waisen-Scheibe S4) als
+Baustein ohne Aufrufer gelöscht, ebenso die übrigen Waisen aus `compare/`,
+`edit/`, `mobile/` und `utils/`.
 
 ## Account Components (`account/`)
 

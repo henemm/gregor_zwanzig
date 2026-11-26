@@ -1,7 +1,7 @@
 // Issue #2400 Fix-Loop 2 (AC-14): Karten im Dunklen Design.
 //
-// 1. Rahmen: die gerenderten Karten-Bausteine (Trip-Karte MapCanvas, Ortsvergleich-Vorschau
-//    LocationPreviewMap — ein Muster, #1170) tragen die Rahmen-Klasse; deren Randfarbe wird aus
+// 1. Rahmen: der gerenderte Karten-Baustein (Trip-Karte MapCanvas; die Ortsvergleich-Vorschau ist
+//    mit #3384 S4 als Waise gelöscht) trägt die Rahmen-Klasse; deren Randfarbe wird aus
 //    der echten Kaskade von app.css aufgeloest und muss im Dunklen >= 3:1 gegen paper, card und
 //    surface-2 liegen (WCAG 1.4.11). Hell bleibt der Rahmen wie bisher (--g-ink-faint zu 20 %).
 // 2. Leaflet-Bedienelemente: Kaskade aus node_modules/leaflet/dist/leaflet.css (ungeschichtet,
@@ -162,7 +162,7 @@ function farbteil(wert: string): string {
 // ─── 1. Kartenrahmen ──────────────────────────────────────────────────────────
 
 const MapCanvas = (await import(pathToFileURL(path.join(FRONTEND, 'src/lib/components/trip-detail/waypoints/MapCanvas.svelte')).href)).default;
-const LocationPreviewMap = (await import(pathToFileURL(path.join(FRONTEND, 'src/lib/components/compare/LocationPreviewMap.svelte')).href)).default;
+// #3384 S4: Ortsvergleich-Vorschau (LocationPreviewMap) mit der Waise gelöscht.
 
 function wurzelKlassen(html: string): string[] {
 	const m = html.match(/<div\b[^>]*\bclass="([^"]*)"/);
@@ -172,8 +172,7 @@ function wurzelKlassen(html: string): string[] {
 
 const KARTEN = {
 	'Trip-Karte (MapCanvas)': () =>
-		render(MapCanvas, { props: { stage: { id: 's1', name: 'E1', date: '2026-07-01', waypoints: [] }, activeWaypointId: null, onWaypointActivate: () => {} } }).body,
-	'Ortsvergleich-Vorschau (LocationPreviewMap)': () => render(LocationPreviewMap, { props: { lat: 47.1, lon: 11.2 } }).body
+		render(MapCanvas, { props: { stage: { id: 's1', name: 'E1', date: '2026-07-01', waypoints: [] }, activeWaypointId: null, onWaypointActivate: () => {} } }).body
 };
 
 describe('AC-14: Kartenrahmen im Dunklen >= 3:1, hell unveraendert, ein Muster (#1170)', () => {

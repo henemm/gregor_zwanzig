@@ -23,9 +23,6 @@
 
 import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { versandPropsAus } from '../../compare/versandPropsAus.ts';
-import { alarmePropsAus } from '../../compare/alarmePropsAus.ts';
-import { neuerFeldsatz } from './compareFeldsatzPruefstand.ts';
 import { buendelAus, fetchMitschnitt, vergleichEditor, zustellungsGeste } from './compareNeuEditorPruefstand.ts';
 
 // #2795 S3b Teilschritt 1b: im Hub ersetzt der neue Reiter Zustellung (EIN Speicherer fuer
@@ -41,47 +38,9 @@ afterEach(() => {
 	netz.abbauen();
 });
 
-describe('AC-14: Cooldown/Ruhezeit — Versand und Alarme zeigen denselben Wert', () => {
-	test('Ausgangslage: beide Reiter zeigen den Standard „nicht gesetzt"', () => {
-		const f = neuerFeldsatz();
-		assert.equal(versandPropsAus(f).alertCooldownMinutes, undefined);
-		assert.equal(alarmePropsAus(f).cooldownMinutes, undefined);
-		assert.equal(alarmePropsAus(f).quietFrom, undefined);
-	});
-
-	test('Versand → Alarme: Cooldown und Ruhezeit über die Versand-Senke sind im Alarme-Reiter sichtbar', () => {
-		const f = neuerFeldsatz();
-		const versand = versandPropsAus(f);
-		versand.onVersandFeldSetzen('alertCooldownMinutes', 90);
-		versand.onVersandFeldSetzen('alertQuietFrom', '22:00');
-		versand.onVersandFeldSetzen('alertQuietTo', '06:30');
-		const alarme = alarmePropsAus(f);
-		assert.equal(alarme.cooldownMinutes, 90);
-		assert.equal(alarme.quietFrom, '22:00');
-		assert.equal(alarme.quietTo, '06:30');
-	});
-
-	test('Alarme → Versand: Gesten im Alarme-Reiter sind im Versand-Reiter sichtbar', () => {
-		const f = neuerFeldsatz();
-		const alarme = alarmePropsAus(f);
-		alarme.onCooldownChange(45);
-		alarme.onQuietHoursChange('23:00', '05:00');
-		const versand = versandPropsAus(f);
-		assert.equal(versand.alertCooldownMinutes, 45);
-		assert.equal(versand.alertQuietFrom, '23:00');
-		assert.equal(versand.alertQuietTo, '05:00');
-	});
-
-	test('Hin und zurück: die letzte Änderung gewinnt in BEIDEN Reitern (kein Auseinanderlaufen)', () => {
-		const f = neuerFeldsatz();
-		versandPropsAus(f).onVersandFeldSetzen('alertCooldownMinutes', 30);
-		alarmePropsAus(f).onCooldownChange(120);
-		assert.equal(versandPropsAus(f).alertCooldownMinutes, 120);
-		assert.equal(alarmePropsAus(f).cooldownMinutes, 120);
-		alarmePropsAus(f).onCooldownChange(undefined);
-		assert.equal(versandPropsAus(f).alertCooldownMinutes, undefined, 'Löschen im Alarme-Reiter kommt im Versand nicht an');
-	});
-});
+// #3384 S4: Block „AC-14: Cooldown/Ruhezeit — Versand und Alarme zeigen denselben Wert“ (Adapter-Ebene
+// über versandPropsAus) mit der Waise versandPropsAus.ts gelöscht; die Zusicherung „ein Feldsatz für
+// beide Reiter“ misst der Block unten am echten Editor.
 
 describe('AC-14 (Wirkort Anlegen, #3333): Reiter Zustellung und Reiter Alarme teilen DENSELBEN Feldsatz', () => {
 	test('Cooldown und Stille Stunden aus dem Reiter Zustellung kommen im Buendel des Reiters Alarme und im POST an', async () => {

@@ -54,7 +54,6 @@ const AUSNAHMEN: Record<string, number> = {
 	'lib/components/shared/versand-tab/VTSchedulePlan.svelte': 1,
 	'lib/components/shared/hub-uebersicht/HubUebersicht.svelte': 1,
 	'lib/components/mobile/StageCardM.svelte': 1,
-	'lib/components/mobile/DrawerGroup.svelte': 1,
 	'lib/components/mobile/Sheet.svelte': 1,
 	'lib/components/molecules/BriefingTimelineRow.svelte': 1,
 	'lib/components/organisms/MetricOffShelf.svelte': 2,
