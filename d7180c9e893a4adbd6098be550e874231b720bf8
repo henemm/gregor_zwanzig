@@ -1,7 +1,43 @@
 {
   "verified_commit": "d7180c9e893a4adbd6098be550e874231b720bf8",
-  "findings": [],
-  "verified_at": "2026-11-26T12:22:21.986967+00:00",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "staging_mail_pruefen --typ beide (de)",
+      "evidence": "Trip- und Compare-Mail echt zugestellt, Validatoren Exit 0, Wegwerf-Nutzer geloescht",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "AC-1-en",
+      "status": "PASS",
+      "url": "staging_mail_pruefen --typ beide --lang en",
+      "evidence": "Trip- und Compare-Mail (Nutzer en) zugestellt, Validatoren Exit 0",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "Alarm-Pfade",
+      "status": "PASS",
+      "url": "send_gate_test_mails official/radar de+en",
+      "evidence": "official_alert und radar_alert Validator je Sprache Exit 0",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "Windrichtung",
+      "status": "PASS",
+      "url": "send_gate_test_mails briefing/compare de+en",
+      "evidence": "briefing_mail_validator und email_spec_validator mit --windrichtung je Sprache Exit 0",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "Altfelder-API",
+      "status": "PASS",
+      "url": "/api/trips, /api/compare/presets",
+      "evidence": "Trip (Nutzer en) und Ortsvergleich gespeichert, GET und Liste ohne show_outlook, multi_day_trend_reports, outlook_enabled; aufgeraeumt. Hinweis: Go reicht report_config unveraendert durch, mitgeschickte Altschluessel kommen als Echo zurueck (Bestandsverhalten).",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    }
+  ],
+  "verified_at": "2026-11-26T12:22:40.625268+00:00",
   "environment": "staging",
   "staging_verdict": "VERIFIED: 4/4 UI-ACs gruen (6 Struktur-ACs out-of-scope)",
   "scope": "frontend-only",
@@ -25,7 +61,7 @@
         "de",
         "en"
       ],
-      "at": "2026-11-26T12:22:21.986967+00:00",
+      "at": "2026-11-26T12:22:40.625268+00:00",
       "frontend_pages_checked": [
         "/",
         "/trips",
