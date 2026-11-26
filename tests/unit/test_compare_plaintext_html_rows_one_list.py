@@ -33,7 +33,7 @@ from tests.helpers.compare_order import (
 )
 from tests.unit.test_compare_metric_order import _result
 
-_CV2_KEYS_OHNE_WARN = [m["key"] for m in CV2_ZEILEN if m["key"] != "warn"]
+_CV2_SCHLUESSEL_OHNE_WARN = [m["key"] for m in CV2_ZEILEN if m["key"] != "warn"]
 
 
 def _beide_fassungen(enabled_metrics):
@@ -126,10 +126,10 @@ def test_auswahl_luecke_zaehlt_gleich():
 def test_format_zuordnung_deckt_cv2_schluessel():
     from output.renderers.comparison import _PLAIN_FMT
 
-    assert len(_CV2_KEYS_OHNE_WARN) >= 20
-    assert set(_PLAIN_FMT) == set(_CV2_KEYS_OHNE_WARN), (
-        f"nur in _PLAIN_FMT: {sorted(set(_PLAIN_FMT) - set(_CV2_KEYS_OHNE_WARN))}\n"
-        f"nur in CV2:        {sorted(set(_CV2_KEYS_OHNE_WARN) - set(_PLAIN_FMT))}"
+    assert len(_CV2_SCHLUESSEL_OHNE_WARN) >= 20
+    assert set(_PLAIN_FMT) == set(_CV2_SCHLUESSEL_OHNE_WARN), (
+        f"nur in _PLAIN_FMT: {sorted(set(_PLAIN_FMT) - set(_CV2_SCHLUESSEL_OHNE_WARN))}\n"
+        f"nur in CV2:        {sorted(set(_CV2_SCHLUESSEL_OHNE_WARN) - set(_PLAIN_FMT))}"
     )
     assert "warn" not in _PLAIN_FMT
 
@@ -188,21 +188,21 @@ def test_abgeleitete_sichten_unveraendert():
     from output.renderers import comparison
     from output.renderers.email import compare_html
 
-    keys = [row[0] for row in comparison._PLAIN_ROWS]
-    assert keys == _CV2_KEYS_OHNE_WARN
-    for key, label_key, _fmt in comparison._PLAIN_ROWS:
-        assert label_key == f"vergleich.zeile.{key}"
+    zeilen_ids = [row[0] for row in comparison._PLAIN_ROWS]
+    assert zeilen_ids == _CV2_SCHLUESSEL_OHNE_WARN
+    for key, label_schluessel, _fmt in comparison._PLAIN_ROWS:
+        assert label_schluessel == f"vergleich.zeile.{key}"
 
-    assert list(comparison._PLAIN_ROWS_BY_ID) == keys
+    assert list(comparison._PLAIN_ROWS_BY_ID) == zeilen_ids
     assert all(comparison._PLAIN_ROWS_BY_ID[r[0]] is r for r in comparison._PLAIN_ROWS)
 
-    assert comparison._NIE_EINGESTELLT_IDS == tuple(_CV2_KEYS_OHNE_WARN)
+    assert comparison._NIE_EINGESTELLT_IDS == tuple(_CV2_SCHLUESSEL_OHNE_WARN)
     assert len(comparison._NIE_EINGESTELLT_IDS) >= 20
 
     fmt = {row[0]: row[2] for row in comparison._PLAIN_ROWS}
     assert fmt["thunder_max"] is compare_html._fmt_thunder
     assert fmt["precip_type"] is compare_html._fmt_precip_type
-    assert set(_FORMAT_SNAPSHOT) | {"thunder_max", "precip_type"} == set(keys)
+    assert set(_FORMAT_SNAPSHOT) | {"thunder_max", "precip_type"} == set(zeilen_ids)
     for key, (wert, erwartet) in _FORMAT_SNAPSHOT.items():
         assert fmt[key](wert) == erwartet, f"{key}: {fmt[key](wert)!r} != {erwartet!r}"
 
