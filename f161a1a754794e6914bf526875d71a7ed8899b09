@@ -1,0 +1,59 @@
+{
+  "verified_commit": "f161a1a754794e6914bf526875d71a7ed8899b09",
+  "findings": [
+    {
+      "ac": "AC-5 DE show_stability=true",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com (Kern 127.0.0.1:8001, Trip-Briefing-Einzelversand)",
+      "evidence": "Betreff [TEST] [GZM 260738-9d94a1cba] Etappe 1: X - Morgen (X-GZ-Lang de): HTML und Plain enthalten 'Wetterlage: WECHSELHAFT - Die Lage ist im Uebergang. Prognosen ab Tag 3 mit Vorsicht behandeln'. Standardlauf staging_mail_pruefen.py --typ trip (Tag GZM 260734-0b860d07, Default show_stability=true) Validator Exit 0. Hinweis: Block erscheint nur, wenn die Etappe ueber UTC-Mitternacht reicht (Nachtetappe 21:00-03:00); Validator-Exit 1 dort nur wegen Nachtstunden ausserhalb 06-22.",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5 DE show_stability=false",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com",
+      "evidence": "Identischer Trip (nur report_config.show_stability=false), Betreff [TEST] [GZM 260738-9d94a1cbb] Etappe 1: X - Morgen: kein 'Wetterlage:'-Text in HTML und Plain (0 Treffer).",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5 EN show_stability=true",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com",
+      "evidence": "Nutzer en, Betreff [TEST] [GZM 260738-7e69263ea] Etappe 1: X - Morning (X-GZ-Lang en): HTML und Plain enthalten 'Weather pattern: CHANGEABLE - The pattern is in transition. Treat forecasts from day 3 on with caution'. Standardlauf --lang en (Tag GZM 260735-959ac066) Validator Exit 0.",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5 EN show_stability=false",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com",
+      "evidence": "Nutzer en, identischer Trip mit show_stability=false, Betreff [TEST] [GZM 260738-40bacfcbb] Etappe 1: X - Morning: kein 'Weather pattern:'-Text (0 Treffer).",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5 Staging-Log",
+      "status": "PASS",
+      "url": "journalctl -u gregor-python-staging",
+      "evidence": "Seit 2026-11-26 07:34:00 UTC bis 07:38 (gesamter Lauf): Zeilen mit ensemble-api.open-meteo.com = 0, 'Ensemble fetch failed' = 0. openmeteo_calls.jsonl zeigt 5+ Ensemble-Abrufe mit HTTP 200 (source ensemble). Weiterhin gesperrt nur warnungen.zamg.at und static.avalanche.report (Warn-Feeds, AC-2 gewollt). Service-Start 07:33:19 auf f161a1a75.",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-26T07:39:06.542740+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Grosswetterlage auf Staging an/aus DE+EN, keine Ensemble-Sperre im Log",
+  "scope": "backend",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Grosswetterlage auf Staging an/aus DE+EN, keine Ensemble-Sperre im Log",
+      "scope": "backend",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-26T07:39:06.542740+00:00"
+    }
+  }
+}
