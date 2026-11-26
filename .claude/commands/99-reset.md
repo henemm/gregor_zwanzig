@@ -6,7 +6,9 @@ disable-model-invocation: true
 
 # Reset Workflow
 
-Reset the workflow state to start fresh.
+Schließt den aktiven Workflow ab und archiviert ihn.
+
+Hintergrund (Begründungen, Sonderfälle): `docs/befehle/99-reset.md` im Plugin-Ordner — nur bei Bedarf lesen.
 
 ## Setup
 
@@ -19,89 +21,45 @@ WF="python3 ${_H}/workflow.py"
 _S="${_H%/core/hooks}/scripts"; [ "$_H" = ".claude/hooks" ] && _S=".claude/scripts"
 ```
 
-## When to Use
-
-| Situation | Action |
-|-----------|--------|
-| Workflow completed successfully | `/99-reset` |
-| Need to abort current workflow | `/99-reset` |
-| Starting a completely new task | `/99-reset` |
-
 ## Wiedereinstieg via Issue-Nummer (nach `/clear`)
 
-**Wurde dieser Befehl als `/99-reset #<N>` aufgerufen?** Dann löse den Workflow ZUERST von der Platte auf. Dieser Befehl archiviert den **aktiven** Workflow — steht der falsche aktiv, trifft es fremde Arbeit:
+**Aufruf als `/99-reset #<N>`?** ZUERST Workflow auflösen und aktivieren — steht der falsche aktiv, trifft es fremde Arbeit:
 
 ```bash
 $WF find 42   # die übergebene Nummer
-```
-
-**PFLICHT direkt danach** — Workflow wirklich aktivieren (nicht nur die Zeile oben lesen). Ein reines `export OPENSPEC_ACTIVE_WORKFLOW=...` reicht NICHT: Shell-State überlebt keinen Bash-Tool-Aufruf, und in Worktree-Sessions ignoriert `resolve_active_workflow()` die Env-Var ohnehin (Issue #58):
-
-```bash
 $WF switch <NAME-aus-obigem-Output>
 $WF status
 ```
 
-Das `status`-Kommando ist der eigentliche Wiedereinstiegs-Check: Es zeigt die Quelle (`[file]`) und bestätigt Phase/Spec/Verdict. **Fasse dem User in 2 Sätzen zusammen, wo der Workflow steht** — steht er vor `phase8_complete`, nenne den offenen Pflicht-Schritt und frage nach, bevor du abschließt.
-
-**Ohne Argument** wird der aktive Workflow abgeschlossen.
-
-## What Happens
-
-Completes and archives the current workflow, or removes it if in early phases. Workflows ohne Bau (PO-Entscheidung „nichts bauen" oder keine Spec) werden per `abandon` archiviert.
+**Fasse dem User in 2 Sätzen zusammen, wo der Workflow steht** — vor `phase8_complete` den offenen Pflicht-Schritt nennen und nachfragen, bevor du abschließt. Ohne Argument gilt der aktive Workflow.
 
 ## Execute Reset
 
 **Erst prüfen, ob überhaupt gebaut wurde** (`$WF status`):
 
-- Hat der Workflow das Feld `no_build_reason` (PO-Entscheidung „nichts bauen", gesetzt per `workflow.py no-build --reason "..."`) **oder** wurde nie eine `spec_file` geschrieben, dann **nicht** `finish`, sondern:
+- Hat der Workflow das Feld `no_build_reason` (PO-Entscheidung „nichts bauen", per `workflow.py no-build --reason "..."`) **oder** wurde nie eine `spec_file` geschrieben, dann **nicht** `finish`, sondern:
 
   ```bash
   $WF abandon --reason "<Begründung>"
   ```
 
   Begründung für `workflow.py abandon --reason` = Inhalt von `no_build_reason`; fehlt das Feld, den PO nach dem Grund fragen.
-- Nur bei geschriebener Spec und abgeschlossener Arbeit gilt `finish` (unten).
+- Nur bei geschriebener Spec und abgeschlossener Arbeit:
 
 ```bash
-# Complete and archive the current workflow
 $WF finish
-
-# Or start fresh with a new workflow
-$WF start "new-feature"
 ```
 
-## Next Steps
-
-After reset, start a new workflow:
-
-```
-/10-context               → Gather context first
-/20-analyse [feature/bug] → Start analysis
-```
-
----
-
-*Use reset for clean starts. Don't carry state from abandoned work.*
+Danach neu starten mit `/10-context` bzw. `/20-analyse [feature/bug]`.
 
 ## Versions-Marker (Pflicht)
 
-Beende deine letzte Nachricht in diesem Befehl mit diesen Zeilen, in dieser Reihenfolge:
+Letzte Nachricht endet so (Gründe: `docs/befehle/fusszeile.md`):
 
 ❗ Du: `/<befehl> #<N>` — <ein Halbsatz, warum>
 ℹ️ Status: Workflow `<name>` · Phase `<x>` von 8
-⚙ /99-reset · agent-os-openspec 4.20.0
+⚙ /99-reset · agent-os-openspec 4.28.0
 
-Die erste Zeile sagt, wer am Zug ist — GENAU EINMAL, nur hier in der Fußzeile, nie zusätzlich als Vokabular mitten im Fließtext davor — und steht in genau einer von drei Formen (es gibt keine vierte):
+Erste Zeile genau einmal, in einer Form: `✅ Erledigt: <was>. …` (abgeschlossen), `⏳ Läuft noch: <worauf gewartet wird>. …` (vorher `workflow.py waiting "…"`, danach `--clear`) oder `❗ Du: …` (PO ist dran, auch wenn du nur auf ihn wartest; dringend `‼️`). Genaue Zeile: `workflow.py endstate`.
 
-- `✅ Erledigt: <was>. Du kannst /clear ausführen und das nächste Issue starten.` — nur wenn der Workflow wirklich abgeschlossen ist.
-- `⏳ Läuft noch: <worauf gewartet wird>. Du musst nichts tun, ich melde mich.` — du wartest auf CI, einen Hintergrund-Agenten oder einen Server.
-- `❗ Du: …` (`❗ Du: <Schritt> — <warum>`), wenn der PO den Schritt tippen oder eine Entscheidung treffen muss (bei Dringendem `‼️` statt `❗`). Das gilt AUCH, wenn du selbst gerade nichts mehr zu tun hast und nur auf den nächsten Befehl des PO wartest — das ist immer ❗, nie ⏳.
-
-Beendest du einen Turn, während du auf CI, Agent oder Server wartest, setze vorher `workflow.py waiting "<worauf>"` und gib die ⏳-Zeile aus; ist das Ergebnis da, `workflow.py waiting --clear`. Die passende Zeile liefert `workflow.py endstate [#<N>]` als `FOOTER=…` — gib sie wörtlich aus. So muss der PO nie raten, ob etwas von ihm erwartet wird.
-
-Schritt und Phase geben den Stand AM ENDE dieser Nachricht wieder. Quelle ist der Hinweis `[agent-os-openspec] AKTIVER WORKFLOW …`, den der Hook bei jeder Nachricht mitliefert (dort heißt der Schritt „Nächster Pflicht-Schritt“) — aber nur, solange du die Phase in dieser Nachricht nicht selbst gewechselt hast. Hast du per `workflow.py phase <x>` (oder `complete`) gewechselt, beschreibt der Hinweis den Stand von Turn-Beginn; maßgeblich ist dann der neue Stand, den `workflow.py status` zeigt. Fehlt der Hinweis (kein Workflow oder `phase8_complete`), entfällt die Statuszeile; die erste Zeile kommt dann aus `workflow.py endstate #<N>` und entfällt nur ohne Workflow. Die Marker-Zeilen entfallen NIE wegen eines Phasenwechsels; die ⚙-Zeile bleibt immer die letzte Zeile.
-
-Solange die Phase kleiner als 8 ist, ist dieser Schritt **Pflicht**: nie „bei Bedarf“, „optional“ oder „wenn du magst“ — und nie „fertig“, „abgeschlossen“ oder „erledigt“ für den Workflow als Ganzes (das gilt erst ab `phase8_complete`; eine einzelne Phase darfst du abgeschlossen nennen). In frei formulierten Arbeitsstandsmeldungen steht der Pflicht-Schritt vor jeder `/clear`- oder Kosten-Empfehlung, und die Nachricht endet nie mit einer solchen Empfehlung. (Die wörtlich vorgegebenen Übergabe-Blöcke oben bleiben unverändert — dort gehören `/clear` und Folgebefehl zusammen.)
-
-In diesen Zeilen ersetzt du `<name>`, `<x>` und `/<befehl> #<N>` durch die Werte aus dem Hook-Hinweis — Platzhalter bleiben nie stehen. Die ⚙-Zeile übernimmst du wörtlich und unverändert. Alle Zeilen stehen je genau einmal in der Nachricht, **nach** dem Übergabe-Block — auch nach dessen abschließendem `---` —, und die ⚙-Zeile ist immer die allerletzte Zeile der Nachricht, auch wenn die übrigen Zeilen entfallen.
+Schritt/Phase = Stand AM ENDE dieser Nachricht: Hook-Hinweis („Nächster Pflicht-Schritt“), nach eigenem Phasenwechsel `workflow.py status`; ohne Hinweis keine Statuszeile. Vor `phase8_complete` ist der Schritt Pflicht (nie bei Bedarf/optional), Workflow nie fertig/abgeschlossen/erledigt. In frei formulierten Arbeitsstandsmeldungen steht er vor `/clear`- oder Kosten-Empfehlung (Übergabe-Blöcke oben bleiben unverändert). Platzhalter ersetzen; nach dem Übergabe-Block, ⚙-Zeile wörtlich zuletzt, auch wenn die übrigen Zeilen entfallen.
