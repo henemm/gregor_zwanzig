@@ -1,0 +1,1435 @@
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/__tests__/waisen_waechter.test.ts src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts
+
+TAP version 13
+# Subtest: \#3297/\#3020 AC-7: toter Alt-Editor gelöscht, keine Importe, Vergleich-Hilfen erhalten
+    # Subtest: gelöscht: lib/components/shared/WeatherMetricsTab.svelte
+    ok 1 - gelöscht: lib/components/shared/WeatherMetricsTab.svelte
+      ---
+      duration_ms: 0.70942
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/WetterMetrikenVersandPanel.svelte
+    ok 2 - gelöscht: lib/components/shared/WetterMetrikenVersandPanel.svelte
+      ---
+      duration_ms: 0.15513
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/trip-detail/BriefingScheduleTab.svelte
+    ok 3 - gelöscht: lib/components/trip-detail/BriefingScheduleTab.svelte
+      ---
+      duration_ms: 0.07716
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/VersandTab.svelte
+    ok 4 - gelöscht: lib/components/shared/VersandTab.svelte
+      ---
+      duration_ms: 0.103149
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/MailInhaltCard.svelte
+    ok 5 - gelöscht: lib/components/shared/MailInhaltCard.svelte
+      ---
+      duration_ms: 0.061921
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/OutlookLayoutControls.svelte
+    ok 6 - gelöscht: lib/components/shared/OutlookLayoutControls.svelte
+      ---
+      duration_ms: 0.07608
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/weather-metrics-tab/channelMetricLayouts.ts
+    ok 7 - gelöscht: lib/components/shared/weather-metrics-tab/channelMetricLayouts.ts
+      ---
+      duration_ms: 0.061899
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/weather-metrics-tab/weatherMetricsSavePayload.ts
+    ok 8 - gelöscht: lib/components/shared/weather-metrics-tab/weatherMetricsSavePayload.ts
+      ---
+      duration_ms: 0.167351
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts
+    ok 9 - gelöscht: lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts
+      ---
+      duration_ms: 0.16716
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts
+    ok 10 - gelöscht: lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts
+      ---
+      duration_ms: 0.270261
+      type: 'test'
+      ...
+    # Subtest: keine Produktionsdatei importiert eine gelöschte Datei (statisch, Barrel-Export, dynamisch)
+    ok 11 - keine Produktionsdatei importiert eine gelöschte Datei (statisch, Barrel-Export, dynamisch)
+      ---
+      duration_ms: 39.068685
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareMetricSelection.ts
+    ok 12 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareMetricSelection.ts
+      ---
+      duration_ms: 0.132671
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareMetricOrder.ts
+    ok 13 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareMetricOrder.ts
+      ---
+      duration_ms: 0.06705
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareChannelMetricLayouts.ts
+    ok 14 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareChannelMetricLayouts.ts
+      ---
+      duration_ms: 0.046118
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts
+    ok 15 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts
+      ---
+      duration_ms: 0.04176
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte
+    ok 16 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte
+      ---
+      duration_ms: 0.038009
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/wetter-tab/wasStehtWoSpeicherung.ts
+    ok 17 - erhalten (Regressionsschutz, heute grün): lib/components/shared/wetter-tab/wasStehtWoSpeicherung.ts
+      ---
+      duration_ms: 0.03614
+      type: 'test'
+      ...
+    1..17
+ok 1 - \#3297/\#3020 AC-7: toter Alt-Editor gelöscht, keine Importe, Vergleich-Hilfen erhalten
+  ---
+  duration_ms: 42.514557
+  type: 'suite'
+  ...
+# Subtest: \#3366 AC-5: layout-tab-Waisen und Barrels gelöscht, keine Importe, ltChannels und lib/index erhalten
+    # Subtest: gelöscht: lib/components/shared/layout-tab/LTCapNote.svelte
+    ok 1 - gelöscht: lib/components/shared/layout-tab/LTCapNote.svelte
+      ---
+      duration_ms: 0.18837
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/layout-tab/LTChannelPicker.svelte
+    ok 2 - gelöscht: lib/components/shared/layout-tab/LTChannelPicker.svelte
+      ---
+      duration_ms: 0.046691
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/layout-tab/LTCutLine.svelte
+    ok 3 - gelöscht: lib/components/shared/layout-tab/LTCutLine.svelte
+      ---
+      duration_ms: 0.04067
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/layout-tab/LayoutTab.svelte
+    ok 4 - gelöscht: lib/components/shared/layout-tab/LayoutTab.svelte
+      ---
+      duration_ms: 0.03897
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/layout-tab/channelLayoutsDirty.ts
+    ok 5 - gelöscht: lib/components/shared/layout-tab/channelLayoutsDirty.ts
+      ---
+      duration_ms: 0.03878
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/layout-tab/ltIdealRange.ts
+    ok 6 - gelöscht: lib/components/shared/layout-tab/ltIdealRange.ts
+      ---
+      duration_ms: 0.03349
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/email-preview/index.ts
+    ok 7 - gelöscht: lib/components/email-preview/index.ts
+      ---
+      duration_ms: 0.05644
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/dot/index.ts
+    ok 8 - gelöscht: lib/components/ui/dot/index.ts
+      ---
+      duration_ms: 0.05799
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/elev-sparkline/index.ts
+    ok 9 - gelöscht: lib/components/ui/elev-sparkline/index.ts
+      ---
+      duration_ms: 0.04053
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/eyebrow/index.ts
+    ok 10 - gelöscht: lib/components/ui/eyebrow/index.ts
+      ---
+      duration_ms: 0.035299
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/input/index.ts
+    ok 11 - gelöscht: lib/components/ui/input/index.ts
+      ---
+      duration_ms: 0.03537
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/pill/index.ts
+    ok 12 - gelöscht: lib/components/ui/pill/index.ts
+      ---
+      duration_ms: 0.03411
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/segmented/index.ts
+    ok 13 - gelöscht: lib/components/ui/segmented/index.ts
+      ---
+      duration_ms: 0.033081
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/topo/index.ts
+    ok 14 - gelöscht: lib/components/ui/topo/index.ts
+      ---
+      duration_ms: 0.03362
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/wicon/index.ts
+    ok 15 - gelöscht: lib/components/ui/wicon/index.ts
+      ---
+      duration_ms: 0.03305
+      type: 'test'
+      ...
+    # Subtest: keine Produktionsdatei importiert eine in \#3366 gelöschte Datei (statisch, Barrel-Export, dynamisch)
+    ok 16 - keine Produktionsdatei importiert eine in \#3366 gelöschte Datei (statisch, Barrel-Export, dynamisch)
+      ---
+      duration_ms: 43.782669
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/layout-tab/ltChannels.ts
+    ok 17 - erhalten (Regressionsschutz, heute grün): lib/components/shared/layout-tab/ltChannels.ts
+      ---
+      duration_ms: 0.14966
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/index.ts
+    ok 18 - erhalten (Regressionsschutz, heute grün): lib/index.ts
+      ---
+      duration_ms: 0.08744
+      type: 'test'
+      ...
+    1..18
+ok 2 - \#3366 AC-5: layout-tab-Waisen und Barrels gelöscht, keine Importe, ltChannels und lib/index erhalten
+  ---
+  duration_ms: 45.111
+  type: 'suite'
+  ...
+# Subtest: \#3383 AC-1/AC-2/AC-8: Waisen S1 gelöscht, keine Importe, lebende Nachbarn erhalten
+    # Subtest: Löschliste \#3383 hat genau 14 Einträge ohne Doppelte
+    ok 1 - Löschliste \#3383 hat genau 14 Einträge ohne Doppelte
+      ---
+      duration_ms: 0.28648
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/molecules/GrundauswahlLeerHinweis.svelte
+    ok 2 - gelöscht (\#3383): lib/components/molecules/GrundauswahlLeerHinweis.svelte
+      ---
+      duration_ms: 0.14678
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/reportConfigDirty.ts
+    ok 3 - gelöscht (\#3383): lib/components/shared/reportConfigDirty.ts
+      ---
+      duration_ms: 0.0862
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/AggregationMetricRow.svelte
+    ok 4 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/AggregationMetricRow.svelte
+      ---
+      duration_ms: 0.08652
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/MultiSymbolMetricRow.svelte
+    ok 5 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/MultiSymbolMetricRow.svelte
+      ---
+      duration_ms: 0.080679
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/ThresholdMetricRow.svelte
+    ok 6 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/ThresholdMetricRow.svelte
+      ---
+      duration_ms: 0.11617
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/WeatherV2Grundauswahl.svelte
+    ok 7 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/WeatherV2Grundauswahl.svelte
+      ---
+      duration_ms: 0.078751
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/WeatherV2PresetBar.svelte
+    ok 8 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/WeatherV2PresetBar.svelte
+      ---
+      duration_ms: 0.07271
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/compareAggregationGrouping.ts
+    ok 9 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/compareAggregationGrouping.ts
+      ---
+      duration_ms: 0.07628
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/nurEinBericht.ts
+    ok 10 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/nurEinBericht.ts
+      ---
+      duration_ms: 0.08284
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts
+    ok 11 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts
+      ---
+      duration_ms: 0.08547
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/wertebereicheAnzeige.ts
+    ok 12 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/wertebereicheAnzeige.ts
+      ---
+      duration_ms: 0.09388
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/trip-detail/AboutOutputLayout.svelte
+    ok 13 - gelöscht (\#3383): lib/components/trip-detail/AboutOutputLayout.svelte
+      ---
+      duration_ms: 0.097401
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/trip-detail/WeatherV2Kanaele.svelte
+    ok 14 - gelöscht (\#3383): lib/components/trip-detail/WeatherV2Kanaele.svelte
+      ---
+      duration_ms: 0.073819
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/trip-detail/weatherSaveGate.ts
+    ok 15 - gelöscht (\#3383): lib/components/trip-detail/weatherSaveGate.ts
+      ---
+      duration_ms: 0.071371
+      type: 'test'
+      ...
+    # Subtest: keine Produktionsdatei importiert eine in \#3383 gelöschte Datei (aufgelöster Modulpfad)
+    ok 16 - keine Produktionsdatei importiert eine in \#3383 gelöschte Datei (aufgelöster Modulpfad)
+      ---
+      duration_ms: 35.794892
+      type: 'test'
+      ...
+    # Subtest: keine Produktionsdatei importiert einen Basisnamen der \#3383-Löschliste
+    ok 17 - keine Produktionsdatei importiert einen Basisnamen der \#3383-Löschliste
+      ---
+      duration_ms: 26.994563
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts
+    ok 18 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts
+      ---
+      duration_ms: 0.16994
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/trip-detail/metricsEditor.ts
+    ok 19 - erhalten (Regressionsschutz, heute grün): lib/components/trip-detail/metricsEditor.ts
+      ---
+      duration_ms: 0.06769
+      type: 'test'
+      ...
+    1..19
+ok 3 - \#3383 AC-1/AC-2/AC-8: Waisen S1 gelöscht, keine Importe, lebende Nachbarn erhalten
+  ---
+  duration_ms: 65.116398
+  type: 'suite'
+  ...
+# Subtest: \#3384 AC-1: Waisen S4 gelöscht, keine Importe, EinstellTabelle erhalten
+    # Subtest: Löschliste \#3384 hat genau 19 Einträge ohne Doppelte
+    ok 1 - Löschliste \#3384 hat genau 19 Einträge ohne Doppelte
+      ---
+      duration_ms: 0.317201
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/compare/AddReportCard.svelte
+    not ok 2 - gelöscht (\#3384): lib/components/compare/AddReportCard.svelte
+      ---
+      duration_ms: 0.70343
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:277:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/compare/AddReportCard.svelte existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:278:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/compare/CreateGroupDialog.svelte
+    not ok 3 - gelöscht (\#3384): lib/components/compare/CreateGroupDialog.svelte
+      ---
+      duration_ms: 0.246729
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:277:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/compare/CreateGroupDialog.svelte existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:278:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/compare/LocationPreviewMap.svelte
+    not ok 4 - gelöscht (\#3384): lib/components/compare/LocationPreviewMap.svelte
+      ---
+      duration_ms: 0.125771
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:277:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/compare/LocationPreviewMap.svelte existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:278:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/compare/layoutPreviewRows.ts
+    not ok 5 - gelöscht (\#3384): lib/components/compare/layoutPreviewRows.ts
+      ---
+      duration_ms: 0.09999
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:277:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/compare/layoutPreviewRows.ts existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:278:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/compare/versandPropsAus.ts
+    not ok 6 - gelöscht (\#3384): lib/components/compare/versandPropsAus.ts
+      ---
+      duration_ms: 0.1228
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:277:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/compare/versandPropsAus.ts existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:278:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/compare/wetterMetrikenPropsAus.ts
+    not ok 7 - gelöscht (\#3384): lib/components/compare/wetterMetrikenPropsAus.ts
+      ---
+      duration_ms: 0.102721
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:277:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/compare/wetterMetrikenPropsAus.ts existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:278:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/edit/EditRouteSection.svelte
+    not ok 8 - gelöscht (\#3384): lib/components/edit/EditRouteSection.svelte
+      ---
+      duration_ms: 0.08912
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:277:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/edit/EditRouteSection.svelte existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:278:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/edit/EditWeatherSection.svelte
+    not ok 9 - gelöscht (\#3384): lib/components/edit/EditWeatherSection.svelte
+      ---
+      duration_ms: 0.0857
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:277:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/edit/EditWeatherSection.svelte existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:278:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/edit/WeatherSummaryCard.svelte
+    not ok 10 - gelöscht (\#3384): lib/components/edit/WeatherSummaryCard.svelte
+      ---
+      duration_ms: 0.25673
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:277:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/edit/WeatherSummaryCard.svelte existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:278:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/edit/weatherSummary.ts
+    not ok 11 - gelöscht (\#3384): lib/components/edit/weatherSummary.ts
+      ---
+      duration_ms: 0.130099
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:277:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/edit/weatherSummary.ts existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:278:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/mobile/DrawerGroup.svelte
+    not ok 12 - gelöscht (\#3384): lib/components/mobile/DrawerGroup.svelte
+      ---
+      duration_ms: 0.101031
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:277:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/mobile/DrawerGroup.svelte existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:278:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/mobile/DrawerItem.svelte
+    not ok 13 - gelöscht (\#3384): lib/components/mobile/DrawerItem.svelte
+      ---
+      duration_ms: 0.155951
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:277:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/mobile/DrawerItem.svelte existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:278:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/mobile/NavIcon.svelte
+    not ok 14 - gelöscht (\#3384): lib/components/mobile/NavIcon.svelte
+      ---
+      duration_ms: 0.10072
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:277:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/mobile/NavIcon.svelte existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:278:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/trip-detail/waypoints/WaypointPin.svelte
+    not ok 15 - gelöscht (\#3384): lib/components/trip-detail/waypoints/WaypointPin.svelte
+      ---
+      duration_ms: 0.092581
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:277:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/trip-detail/waypoints/WaypointPin.svelte existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:278:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3384): lib/utils/alertMetricCatalogIds.ts
+    not ok 16 - gelöscht (\#3384): lib/utils/alertMetricCatalogIds.ts
+      ---
+      duration_ms: 0.080769
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:277:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/utils/alertMetricCatalogIds.ts existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:278:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3384): lib/utils/horizonHelpers.ts
+    not ok 17 - gelöscht (\#3384): lib/utils/horizonHelpers.ts
+      ---
+      duration_ms: 0.10915
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:277:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/utils/horizonHelpers.ts existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:278:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3384): lib/utils/naturalSort.ts
+    not ok 18 - gelöscht (\#3384): lib/utils/naturalSort.ts
+      ---
+      duration_ms: 0.08322
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:277:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/utils/naturalSort.ts existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:278:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3384): lib/utils/rightColumn.ts
+    not ok 19 - gelöscht (\#3384): lib/utils/rightColumn.ts
+      ---
+      duration_ms: 0.082499
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:277:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/utils/rightColumn.ts existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:278:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3384): lib/utils/weatherEmoji.ts
+    not ok 20 - gelöscht (\#3384): lib/utils/weatherEmoji.ts
+      ---
+      duration_ms: 0.11217
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:277:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/utils/weatherEmoji.ts existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:278:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3384): ../e2e/issue-1093-unit.spec.ts
+    not ok 21 - gelöscht (\#3384): ../e2e/issue-1093-unit.spec.ts
+      ---
+      duration_ms: 0.082001
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:277:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        ../e2e/issue-1093-unit.spec.ts existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:278:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3384): ../e2e/playwright.1093.unit.config.ts
+    not ok 22 - gelöscht (\#3384): ../e2e/playwright.1093.unit.config.ts
+      ---
+      duration_ms: 0.085511
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:277:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        ../e2e/playwright.1093.unit.config.ts existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:278:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: keine Produktionsdatei importiert eine in \#3384 gelöschte Datei (aufgelöster Modulpfad)
+    not ok 23 - keine Produktionsdatei importiert eine in \#3384 gelöschte Datei (aufgelöster Modulpfad)
+      ---
+      duration_ms: 29.879068
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:282:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Produktions-Importe der in #3384 gelöschten Dateien
+        + actual - expected
+        
+        + [
+        +   'lib/components/edit/EditRouteSection.svelte -> lib/utils/naturalSort.ts',
+        +   'lib/components/edit/EditWeatherSection.svelte -> lib/components/edit/WeatherSummaryCard.svelte',
+        +   'lib/components/edit/WeatherSummaryCard.svelte -> lib/components/edit/weatherSummary.ts'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'lib/components/edit/EditRouteSection.svelte -> lib/utils/naturalSort.ts'
+        1: 'lib/components/edit/EditWeatherSection.svelte -> lib/components/edit/WeatherSummaryCard.svelte'
+        2: 'lib/components/edit/WeatherSummaryCard.svelte -> lib/components/edit/weatherSummary.ts'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:294:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: keine Produktionsdatei importiert einen Basisnamen der \#3384-Löschliste
+    not ok 24 - keine Produktionsdatei importiert einen Basisnamen der \#3384-Löschliste
+      ---
+      duration_ms: 26.763663
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:297:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Produktions-Importe der Basisnamen aus #3384
+        + actual - expected
+        
+        + [
+        +   'lib/components/edit/EditRouteSection.svelte -> naturalSort',
+        +   'lib/components/edit/EditWeatherSection.svelte -> WeatherSummaryCard',
+        +   'lib/components/edit/WeatherSummaryCard.svelte -> weatherSummary'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'lib/components/edit/EditRouteSection.svelte -> naturalSort'
+        1: 'lib/components/edit/EditWeatherSection.svelte -> WeatherSummaryCard'
+        2: 'lib/components/edit/WeatherSummaryCard.svelte -> weatherSummary'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:305:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/molecules/EinstellTabelle.svelte
+    ok 25 - erhalten (Regressionsschutz, heute grün): lib/components/molecules/EinstellTabelle.svelte
+      ---
+      duration_ms: 0.14683
+      type: 'test'
+      ...
+    1..25
+not ok 4 - \#3384 AC-1: Waisen S4 gelöscht, keine Importe, EinstellTabelle erhalten
+  ---
+  duration_ms: 60.796564
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:270:1'
+  failureType: 'subtestsFailed'
+  error: '23 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3384 AC-5 (F004): Wortscan auf das gelöschte Bauteil über frontend/src
+    # Subtest: die Ausnahmedatei existiert (sonst wäre die Ausnahme verwaist)
+    ok 1 - die Ausnahmedatei existiert (sonst wäre die Ausnahme verwaist)
+      ---
+      duration_ms: 0.135561
+      type: 'test'
+      ...
+    # Subtest: kein Treffer außerhalb der einen Ausnahmedatei
+    not ok 2 - kein Treffer außerhalb der einen Ausnahmedatei
+      ---
+      duration_ms: 69.752972
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:340:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Verweise auf das gelöschte Bauteil
+        + actual - expected
+        
+        + [
+        +   'lib/__tests__/bausteine_waechter_regeln.ts:716',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/thunderThresholdLevels.test.ts:155',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/thunderThresholdLevels.test.ts:274',
+        +   'lib/components/shared/wetter-tab/compareMetricCatalogLoader.ts:205'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'lib/__tests__/bausteine_waechter_regeln.ts:716'
+        1: 'lib/components/shared/weather-metrics-tab/__tests__/thunderThresholdLevels.test.ts:155'
+        2: 'lib/components/shared/weather-metrics-tab/__tests__/thunderThresholdLevels.test.ts:274'
+        3: 'lib/components/shared/wetter-tab/compareMetricCatalogLoader.ts:205'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:350:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 5 - \#3384 AC-5 (F004): Wortscan auf das gelöschte Bauteil über frontend/src
+  ---
+  duration_ms: 70.045681
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:335:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3297 AC-8: show_outlook und multi_day_trend_reports aus dem Frontend-Produktionscode
+    # Subtest: keine Produktionsdatei unter frontend/src nennt einen der beiden Schlüssel
+    ok 1 - keine Produktionsdatei unter frontend/src nennt einen der beiden Schlüssel
+      ---
+      duration_ms: 37.657343
+      type: 'test'
+      ...
+    1..1
+ok 6 - \#3297 AC-8: show_outlook und multi_day_trend_reports aus dem Frontend-Produktionscode
+  ---
+  duration_ms: 37.770503
+  type: 'suite'
+  ...
+# Subtest: \#3366 AC-1/AC-8, \#3383 AC-3, \#3384 AC-2/AC-3: Waisen-Wächter gegen den echten Baum
+    # Subtest: Waisenmenge (ohne AUSNAHMEN) ist genau BEKANNTE_WAISEN ohne Gruppen S1 und S4 und hält OBERGRENZE_WAISEN 7
+    not ok 1 - Waisenmenge (ohne AUSNAHMEN) ist genau BEKANNTE_WAISEN ohne Gruppen S1 und S4 und hält OBERGRENZE_WAISEN 7
+      ---
+      duration_ms: 51.058136
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/waisen_waechter.test.ts:197:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/compare/AddReportCard.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/components/compare/CreateGroupDialog.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/components/compare/LocationPreviewMap.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/components/compare/layoutPreviewRows.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/components/compare/versandPropsAus.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/components/compare/wetterMetrikenPropsAus.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/components/edit/EditRouteSection.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/components/edit/EditWeatherSection.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/components/edit/WeatherSummaryCard.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/components/edit/weatherSummary.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/components/mobile/DrawerGroup.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/components/mobile/DrawerItem.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/components/mobile/NavIcon.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/components/trip-detail/waypoints/WaypointPin.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/utils/alertMetricCatalogIds.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/utils/horizonHelpers.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/utils/naturalSort.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/utils/rightColumn.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/utils/weatherEmoji.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        + actual - expected
+        
+        + [
+        +   'lib/components/compare/AddReportCard.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/components/compare/CreateGroupDialog.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/components/compare/LocationPreviewMap.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/components/compare/layoutPreviewRows.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/components/compare/versandPropsAus.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/components/compare/wetterMetrikenPropsAus.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/components/edit/EditRouteSection.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/components/edit/EditWeatherSection.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/components/edit/WeatherSummaryCard.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/components/edit/weatherSummary.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/components/mobile/DrawerGroup.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/components/mobile/DrawerItem.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/components/mobile/NavIcon.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/components/trip-detail/waypoints/WaypointPin.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/utils/alertMetricCatalogIds.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/utils/horizonHelpers.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/utils/naturalSort.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/utils/rightColumn.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/utils/weatherEmoji.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'lib/components/compare/AddReportCard.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        1: 'lib/components/compare/CreateGroupDialog.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        2: 'lib/components/compare/LocationPreviewMap.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        3: 'lib/components/compare/layoutPreviewRows.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        4: 'lib/components/compare/versandPropsAus.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        5: 'lib/components/compare/wetterMetrikenPropsAus.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        6: 'lib/components/edit/EditRouteSection.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        7: 'lib/components/edit/EditWeatherSection.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        8: 'lib/components/edit/WeatherSummaryCard.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        9: 'lib/components/edit/weatherSummary.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        10: 'lib/components/mobile/DrawerGroup.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        11: 'lib/components/mobile/DrawerItem.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        12: 'lib/components/mobile/NavIcon.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        13: 'lib/components/trip-detail/waypoints/WaypointPin.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        14: 'lib/utils/alertMetricCatalogIds.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        15: 'lib/utils/horizonHelpers.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        16: 'lib/utils/naturalSort.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        17: 'lib/utils/rightColumn.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        18: 'lib/utils/weatherEmoji.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/waisen_waechter.test.ts:199:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: \#3384 AC-3 (F001): OBERGRENZE_WAISEN ist das Literal 7 und gleicht exakt der Listenlänge
+    ok 2 - \#3384 AC-3 (F001): OBERGRENZE_WAISEN ist das Literal 7 und gleicht exakt der Listenlänge
+      ---
+      duration_ms: 0.210729
+      type: 'test'
+      ...
+    1..2
+not ok 7 - \#3366 AC-1/AC-8, \#3383 AC-3, \#3384 AC-2/AC-3: Waisen-Wächter gegen den echten Baum
+  ---
+  duration_ms: 52.195955
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/waisen_waechter.test.ts:196:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3366 AC-2/AC-3/AC-4: Selbstnachweis am erfundenen Mini-Baum
+    # Subtest: Kern: erfundene Waise und nur-von-Test erreichte Datei sind Waisen; Barrel, dynamisch und hooks erreichbar
+    ok 1 - Kern: erfundene Waise und nur-von-Test erreichte Datei sind Waisen; Barrel, dynamisch und hooks erreichbar
+      ---
+      duration_ms: 3.288753
+      type: 'test'
+      ...
+    # Subtest: AC-2: nicht gelistete Waise macht rot und nennt den Pfad
+    ok 2 - AC-2: nicht gelistete Waise macht rot und nennt den Pfad
+      ---
+      duration_ms: 2.145812
+      type: 'test'
+      ...
+    # Subtest: AC-2: Eintrag in die Liste ohne Erhöhen der Obergrenze bleibt rot
+    ok 3 - AC-2: Eintrag in die Liste ohne Erhöhen der Obergrenze bleibt rot
+      ---
+      duration_ms: 2.465913
+      type: 'test'
+      ...
+    # Subtest: AC-3: gelisteter, aber erreichbarer und gelisteter, nicht vorhandener Eintrag melden "aus der Liste streichen"
+    ok 4 - AC-3: gelisteter, aber erreichbarer und gelisteter, nicht vorhandener Eintrag melden "aus der Liste streichen"
+      ---
+      duration_ms: 2.030733
+      type: 'test'
+      ...
+    1..4
+ok 8 - \#3366 AC-2/AC-3/AC-4: Selbstnachweis am erfundenen Mini-Baum
+  ---
+  duration_ms: 10.383469
+  type: 'suite'
+  ...
+# Subtest: \#3383 AC-4: Selbstnachweis F001 am erfundenen Mini-Baum
+    # Subtest: exakte Mini-Baum-Liste mit den F001-Dateien
+    ok 1 - exakte Mini-Baum-Liste mit den F001-Dateien
+      ---
+      duration_ms: 3.865794
+      type: 'test'
+      ...
+    # Subtest: (a) dynamischer Import macht die Zieldatei erreichbar
+    ok 2 - (a) dynamischer Import macht die Zieldatei erreichbar
+      ---
+      duration_ms: 3.709503
+      type: 'test'
+      ...
+    # Subtest: (b) import.meta.glob macht die passenden Dateien erreichbar, nicht passende bleiben Waise
+    ok 3 - (b) import.meta.glob macht die passenden Dateien erreichbar, nicht passende bleiben Waise
+      ---
+      duration_ms: 3.550684
+      type: 'test'
+      ...
+    # Subtest: (c) new URL('…', import.meta.url) gilt als Verweis
+    ok 4 - (c) new URL('…', import.meta.url) gilt als Verweis
+      ---
+      duration_ms: 3.720864
+      type: 'test'
+      ...
+    # Subtest: (d) nur von Testdateien unter routes/ importiert gilt als Waise
+    ok 5 - (d) nur von Testdateien unter routes/ importiert gilt als Waise
+      ---
+      duration_ms: 3.891213
+      type: 'test'
+      ...
+    # Subtest: (e) Array-Form von import.meta.glob wird laut rot statt still übergangen
+    ok 6 - (e) Array-Form von import.meta.glob wird laut rot statt still übergangen
+      ---
+      duration_ms: 2.382661
+      type: 'test'
+      ...
+    1..6
+ok 9 - \#3383 AC-4: Selbstnachweis F001 am erfundenen Mini-Baum
+  ---
+  duration_ms: 21.57791
+  type: 'suite'
+  ...
+# Subtest: \#3384 AC-3: Selbstnachweis F001 (Obergrenze exakt an Listenlänge gebunden)
+    # Subtest: Obergrenze größer als die Liste macht rot und nennt beide Zahlen
+    not ok 1 - Obergrenze größer als die Liste macht rot und nennt beide Zahlen
+      ---
+      duration_ms: 2.091612
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/waisen_waechter.test.ts:377:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/waisen_waechter.test.ts:381:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: Obergrenze gleich der Listenlänge bleibt grün
+    ok 2 - Obergrenze gleich der Listenlänge bleibt grün
+      ---
+      duration_ms: 1.788772
+      type: 'test'
+      ...
+    1..2
+not ok 10 - \#3384 AC-3: Selbstnachweis F001 (Obergrenze exakt an Listenlänge gebunden)
+  ---
+  duration_ms: 4.001364
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/waisen_waechter.test.ts:376:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3384 AC-4: Selbstnachweis F002, Array-Form mit Typparameter
+    # Subtest: import.meta.glob<T>([…]) wird laut rot statt still übergangen
+    not ok 1 - import.meta.glob<T>([…]) wird laut rot statt still übergangen
+      ---
+      duration_ms: 2.500373
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/waisen_waechter.test.ts:396:2'
+      failureType: 'testCodeFailure'
+      error: 'Missing expected exception.'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      operator: 'throws'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/waisen_waechter.test.ts:397:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    1..1
+not ok 11 - \#3384 AC-4: Selbstnachweis F002, Array-Form mit Typparameter
+  ---
+  duration_ms: 2.576491
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/waisen_waechter.test.ts:395:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3384 AC-4: Selbstnachweis F002, String-Form mit Typparameter
+    # Subtest: exakte Mini-Baum-Liste mit import.meta.glob<T>('./x/*.ts')
+    not ok 1 - exakte Mini-Baum-Liste mit import.meta.glob<T>('./x/*.ts')
+      ---
+      duration_ms: 2.087072
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/waisen_waechter.test.ts:405:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          [
+            'lib/erfundeneWaise.ts',
+            'lib/index.ts',
+            'lib/nurTest.ts',
+        +   'lib/tglob/x/a.ts',
+        +   'lib/tglob/x/b.ts',
+            'lib/tglob/x/nicht.svelte'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'lib/erfundeneWaise.ts'
+        1: 'lib/index.ts'
+        2: 'lib/nurTest.ts'
+        3: 'lib/tglob/x/nicht.svelte'
+      actual:
+        0: 'lib/erfundeneWaise.ts'
+        1: 'lib/index.ts'
+        2: 'lib/nurTest.ts'
+        3: 'lib/tglob/x/a.ts'
+        4: 'lib/tglob/x/b.ts'
+        5: 'lib/tglob/x/nicht.svelte'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/waisen_waechter.test.ts:407:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: import.meta.glob<T>('./x/*.ts') macht die passenden Dateien erreichbar
+    not ok 2 - import.meta.glob<T>('./x/*.ts') macht die passenden Dateien erreichbar
+      ---
+      duration_ms: 1.928142
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/waisen_waechter.test.ts:410:2'
+      failureType: 'testCodeFailure'
+      error: 'lib/tglob/x/a.ts gilt trotz glob<T> als Waise'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/waisen_waechter.test.ts:412:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 12 - \#3384 AC-4: Selbstnachweis F002, String-Form mit Typparameter
+  ---
+  duration_ms: 4.103735
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/waisen_waechter.test.ts:404:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..12
+# tests 99
+# suites 12
+# pass 70
+# fail 29
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 544.175731
+....F.............                                                       [100%]
+=================================== FAILURES ===================================
+_ test_3384_issue_1093_unit_ist_geloescht_und_nicht_gelistet[e2e/issue-1093-unit.spec.ts] _
+tests/unit/test_e2e_positivliste_ratschen_bindung.py:129: in test_3384_issue_1093_unit_ist_geloescht_und_nicht_gelistet
+    assert not (REPO / PLAYWRIGHT_CWD / spec).exists(), f"{spec} existiert noch (mit #3384 geloescht)"
+E   AssertionError: e2e/issue-1093-unit.spec.ts existiert noch (mit #3384 geloescht)
+E   assert not True
+E    +  where True = exists()
+E    +    where exists = ((PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit') / 'frontend') / 'e2e/issue-1093-unit.spec.ts').exists
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_3384_issue_1093_unit_ist_geloescht_und_nicht_gelistet[e2e/issue-1093-unit.spec.ts]

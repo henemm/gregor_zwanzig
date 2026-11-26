@@ -10,25 +10,20 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { register } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FRONTEND = path.resolve(HERE, '../../../../../..');
-register(pathToFileURL(path.join(FRONTEND, 'test-svelte-ssr-hooks.mjs')).href, pathToFileURL(FRONTEND + '/').href);
-const { render } = await import('svelte/server');
 const K = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/utils/vorlageSpeichernKarte.ts')).href);
-const PresetBar = (await import(pathToFileURL(path.resolve(HERE, '../WeatherV2PresetBar.svelte')).href)).default;
 // #3297/#3020: die zwei Faelle „WeatherMetricsTab verdrahtet Ausloeser und Karte“ entfallen (Datei geloescht).
+// #3383 S1: der Block „Auslöser im Alt-Editor (WeatherV2PresetBar)" entfiel mit der Waise WeatherV2PresetBar.svelte.
 
 /** Attrappe eines fokussierbaren Elements: zählt die focus()-Aufrufe. */
 function knopf() {
 	const k = { fokus: 0, focus() { k.fokus += 1; } };
 	return k;
 }
-const tag = (h: string, testid: string) => h.match(new RegExp(`<[a-z0-9]+\\b[^>]*\\sdata-testid="${testid}"[^>]*>`))?.[0] ?? '';
-const attr = (t: string, name: string) => t.match(new RegExp(`\\s${name}="([^"]*)"`))?.[1] ?? null;
 
 describe('#3190 F003/AC-6: Escape in der Karte', () => {
 	test('Escape schließt, solange nicht gespeichert wird', () => {
@@ -89,25 +84,4 @@ describe('#3190 F001/AC-1/AC-6/AC-10: Auslöser schaltet um und bekommt den Foku
 		a.zurueck();
 		assert.equal(k.fokus, 1);
 	});
-});
-
-describe('#3190 F001/AC-10: Auslöser im Alt-Editor (WeatherV2PresetBar)', () => {
-	const props = (saveOpen: boolean) => ({
-		selectedTemplate: 'x',
-		dirty: true,
-		templates: [],
-		userPresets: [],
-		onSelectPreset: () => {},
-		onOpenSaveDialog: () => {},
-		saveOpen,
-		saveCardId: 'karte-1'
-	});
-	for (const offen of [true, false]) {
-		test(`Karte ${offen ? 'offen' : 'zu'}: aria-expanded=${offen}, aria-controls zeigt auf die Karte`, () => {
-			const t = tag(render(PresetBar, { props: props(offen) }).body, 'weather-preset-save-link');
-			assert.ok(t, 'Auslöser fehlt');
-			assert.equal(attr(t, 'aria-expanded'), String(offen));
-			assert.equal(attr(t, 'aria-controls'), 'karte-1');
-		});
-	}
 });

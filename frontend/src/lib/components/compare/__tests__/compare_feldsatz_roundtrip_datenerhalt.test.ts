@@ -3,8 +3,8 @@
 //
 // Round-Trip: ein Ortsvergleich, in dem JEDES Feld belegt ist (`vollerVergleich`), wird im Hub
 // geöffnet; der Hub hält seinen Feldsatz lokal (`compareFeldsatzStandard()`, hydriert aus dem
-// Preset wie CompareTabs:408–419). Der Nutzer ändert EINEN Wert im Versand-Abschnitt über den
-// Rückruf des Hub-Adapters (`versandPropsAus(feldsatz).onMorningTimeChange`), gespeichert wird über
+// Preset wie CompareTabs:408–419). Der Nutzer ändert EINEN Wert im Versand-Abschnitt (Schreiben ins
+// Feld `feldsatz.morningTime`; der Hub-Adapter `versandPropsAus` ist mit #3384 S4 gelöscht), gespeichert wird über
 // den UNVERÄNDERTEN Speicherweg (`erstelleVersandVergleichSpeicherung`, Hub-Queue, echtes `$lib/api`).
 // Erwartung: der gespeicherte Datensatz trägt die Änderung, ALLE übrigen Felder sind unverändert —
 // es entsteht kein weiterer Schreibweg und kein Voll-Replace (Read-Modify-Write mit Merge).
@@ -27,7 +27,6 @@ import { api } from '../../../api.ts';
 import { clearEtagRegistry } from '../../../etagRegistry.ts';
 import type { ComparePreset } from '../../../types.ts';
 import { createPutQueue } from '../compareHubPersistenz.ts';
-import { versandPropsAus } from '../versandPropsAus.ts';
 import { alarmePropsAus } from '../alarmePropsAus.ts';
 import {
 	erstelleVersandVergleichSpeicherung,
@@ -71,7 +70,7 @@ describe('AC-19: einen Reiter ändern — alle übrigen Felder des Presets bleib
 	test('Morgen-Uhrzeit im Versand ändern ⇒ nur morning_time ändert sich, der Rest ist bitgleich', async () => {
 		const vorher = server.stand(ID);
 		const { feldsatz, ctl, speicherung } = hubMitFeldsatz();
-		versandPropsAus(feldsatz).onMorningTimeChange('07:15');
+		feldsatz.morningTime = '07:15';
 		speicherung.aenderungMelden();
 		await ctl.flush();
 
@@ -86,7 +85,7 @@ describe('AC-19: einen Reiter ändern — alle übrigen Felder des Presets bleib
 
 	test('der PUT-Körper ist ein Teilfeld-Patch, kein Voll-Replace (keine fremden Reiter im Körper)', async () => {
 		const { feldsatz, ctl, speicherung } = hubMitFeldsatz();
-		versandPropsAus(feldsatz).onMorningTimeChange('07:15');
+		feldsatz.morningTime = '07:15';
 		speicherung.aenderungMelden();
 		await ctl.flush();
 		const koerper = server.putRuempfe()[0] ?? {};
@@ -98,7 +97,7 @@ describe('AC-19: einen Reiter ändern — alle übrigen Felder des Presets bleib
 	test('der geteilte Cooldown (Versand ↔ Alarme) reist mit dem hydrierten Wert, nicht mit einem Platzhalter', async () => {
 		const { feldsatz, ctl, speicherung } = hubMitFeldsatz();
 		assert.equal(alarmePropsAus(feldsatz).cooldownMinutes, 45, 'Vorbedingung: Cooldown aus dem Preset hydriert');
-		versandPropsAus(feldsatz).onMorningTimeChange('07:15');
+		feldsatz.morningTime = '07:15';
 		speicherung.aenderungMelden();
 		await ctl.flush();
 		assert.equal(server.stand(ID).alert_cooldown_minutes, 45, 'Cooldown wurde beim Versand-PUT verfälscht');

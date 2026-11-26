@@ -9,7 +9,7 @@
 // Issue #2727 (Epic #2345, DoD-1; Spec feat_2727_compare_wizardstate_abloesen.md AC-15/AC-22): der
 // Hub haelt seinen Feldsatz lokal als `$state(compareFeldsatzStandard())` — der Pruefstand wertet
 // diese Deklaration SELBST aus (frueher wurde ein leeres Objekt gesaet, weil die Klasse nicht
-// bindbar war). Der Feldsatz wird ueber das Argument von `versandPropsAus(…)` im Markup gefunden,
+// bindbar war). Der Feldsatz wird an seiner Deklaration im Instanz-Skript gefunden (siehe hubFeldsatz),
 // nicht ueber einen Variablennamen. Neu: Fall „Daten kommen spaet" (erst Standard lesen, dann
 // hydrieren; ein vorher gesetzter Nutzerwert in einem nicht hydrierten Feld bleibt).
 // Heute rot (nur die Faelle mit Feldsatz): der Hub instanziiert noch die Klasse (VERTRAG FEHLT).
@@ -34,7 +34,6 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { umgebungFuer, effekteVon, type Knoten } from '../../shared/__tests__/svelteInstanzPruefstand.ts';
 import { vollerVergleich } from '../../shared/__tests__/goMergeServerPruefstand.ts';
 import { hydrateVersandFieldsFromPreset } from '../../shared/versandVergleichSpeicherung.ts';
-import { versandPropsAus } from '../versandPropsAus.ts';
 import { alarmePropsAus } from '../alarmePropsAus.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
@@ -134,15 +133,15 @@ describe('#1743 AC-9 / #2794: Versand-Hydration haengt am Reiter zustellung', ()
 		const { u, ast, quelle } = await hubOeffnen('zustellung');
 		const feldsatz = hubFeldsatz(ast, u);
 		// Vor der Hydration: der Reiter ist nicht leer, er zeigt die Anlege-Standardwerte.
-		const vorher = versandPropsAus(feldsatz);
-		assert.equal(vorher.morningTime, '07:00');
-		assert.equal(vorher.morningEnabled, true);
-		assert.equal(vorher.eveningEnabled, false);
+		// #3384 S4: der Hub-Adapter versandPropsAus ist gelöscht; gelesen wird der Feldsatz selbst.
+		assert.equal(feldsatz.morningTime, '07:00');
+		assert.equal(feldsatz.morningEnabled, true);
+		assert.equal(feldsatz.eveningEnabled, false);
 		// Nutzer schaltet im Alarme-Reiter den Radar-Alarm an (Feld, das die Versand-Hydration nicht anfasst).
 		alarmePropsAus(feldsatz).onRadarAlertChange(true);
 		// Jetzt kommen die Daten: der Versand-Hydrations-Effekt laeuft.
 		for (const e of effekteVon(ast, quelle, u, 'hydrateVersandFieldsFromPreset')) e();
-		const nachher = versandPropsAus(feldsatz);
+		const nachher = feldsatz;
 		assert.equal(nachher.morningTime, '05:45', 'Versand-Reiter zeigt nach der Hydration nicht den gespeicherten Wert');
 		assert.equal(nachher.eveningEnabled, true);
 		assert.equal(nachher.eveningTime, '19:15');

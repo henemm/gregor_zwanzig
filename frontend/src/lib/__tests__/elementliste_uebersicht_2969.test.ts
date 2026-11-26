@@ -117,7 +117,14 @@ const ALT_ANZAHL = ALT_ANZAHL_3251 + 184 - 180 + 174;
 // #3297/#3020: 12 Einträge (was-steht-wo, trip/orte) ändern nur i18n_key layout.ausblick.titel →
 // wetter.wsw.bloecke.ausblick bzw. layout.mail_inhalt.ausfuehrlich/kompakt → wetter.wsw.kanal.ausfuehrlich/kompakt
 // (alte Schlüssel mit OutlookLayoutControls/MailInhaltCard entfernt; DE/EN gleich).
-const ALT_SHA = 'd0b10d3cd7512bc0d8bac2c37d3cbc14211ae666d38dbc01e09445af728e3f50';
+// #3383 S1 (26.11.; vorher d0b10d3c…af728e3f50): Liste mit dem Generator neu erzeugt, Mockup-Hash und Anzahl
+// gleich, keine ID entfallen, Reihenfolge gleich (Diff je ID geprüft). Nur i18n_key ändert sich, weil Schlüssel
+// der gelöschten Waisen entfielen: 28 Einträge wertebereiche.symbolzeile.* → null (metriken/was-steht-wo, EN
+// unverändert aus daten/metrik_namen.json), 8 trip.about.kanal → zustellung.spalte.kanal (DE/EN gleich), 4
+// „Eigene“ wertebereiche.preset.eigene → wetter.vorlage.eigene (EN „Custom“ → „Your own“, der Wortlaut der App).
+// Dazu 20 „Telegram“ wetter.wsw.spalte.telegram → level.zeile.telegram (DE/EN gleich): Altstand ohne S1-Bezug,
+// der Schlüssel level.zeile.telegram (funktionen.json, #3319) sortiert davor und fehlte in der vorigen Erzeugung.
+const ALT_SHA = '1a6ffdba5ecb7bd462f28080d8a44c7e251558837139ad36534d90283de02666';
 const MOCKUP_HASH = 'sha256:fbb04f549d974116e70c0e89facac657cf5ab13a31e267eb00882ad7e6496ec6';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {

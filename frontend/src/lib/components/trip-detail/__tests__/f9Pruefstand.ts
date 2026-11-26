@@ -128,14 +128,9 @@ const K = {
 	WaypointCard: await komp(wp('WaypointCard.svelte')),
 	PauseStageView: await komp(wp('PauseStageView.svelte')),
 	ProfileEditor: await komp(wp('ProfileEditor.svelte')),
-	WaypointPin: await komp(wp('WaypointPin.svelte')),
+	// #3384 S4: WaypointPin, WeatherSummaryCard und EditRouteSection mit den Waisen gelöscht.
 	StageDateField: await komp(ed('StageDateField.svelte')),
 	StageTimeField: await komp(ed('StageTimeField.svelte')),
-	WeatherSummaryCard: await komp(ed('WeatherSummaryCard.svelte')),
-	EditRouteSectionOffen: await variante(ed('EditRouteSection.svelte'), [
-		['let pendingFiles = $state<File[]>([]);', "let pendingFiles = $state<File[]>([{ name: 'a.gpx' }, { name: 'b.gpx' }]);"],
-		['let bulkStartDate = $state(today());', "let bulkStartDate = $state('2026-07-01');"]
-	]),
 	EmailPreviewHeader: await komp(path.join(KOMP, 'email-preview', 'EmailPreviewHeader.svelte')),
 	SubscriptionHeader: await komp(path.join(KOMP, 'shared', 'subscription-header', 'SubscriptionHeader.svelte')),
 	SubscriptionHeaderOffen: await variante(path.join(KOMP, 'shared', 'subscription-header', 'SubscriptionHeader.svelte'), [
@@ -225,7 +220,6 @@ export function wegpunkteRendern(): string {
 		html(K.PauseStageView, { stage: pause, prevStage: null, nextStage: null }),
 		html(K.ProfileEditor, { stage: ETAPPEN[0], activeWaypointId: 'w1', onWaypointActivate: nix }),
 		html(K.ProfileEditor, { stage: { ...ETAPPEN[0], waypoints: [ETAPPEN[0].waypoints[0]] }, activeWaypointId: null, onWaypointActivate: nix }),
-		html(K.WaypointPin, { index: 3, onclick: nix }),
 		html(K.WaypointsPanelFehler, { trip: tripLaufend() })
 	].join('\n');
 }
@@ -237,9 +231,6 @@ export function editFelderRendern(): string {
 		html(K.StageDateField, { value: '2026-07-07', isFirst: true, variant: 'inline' }),
 		html(K.StageDateField, { value: '' }),
 		html(K.StageTimeField, { value: '06:30' }),
-		html(K.WeatherSummaryCard, { displayConfig: { metrics: [{ metric_id: 'a', enabled: true, bucket: 'primary' }, { metric_id: 'b', enabled: true, bucket: 'secondary' }] }, tripId: 'gd-gr20' }),
-		html(K.WeatherSummaryCard, { displayConfig: { preset_name: 'Wandern', metrics: [] }, tripId: 'gd-gr20' }),
-		html(K.EditRouteSectionOffen, { tripName: 'GR20', stages: ETAPPEN.slice(0, 2), mode: 'create' }),
 		html(K.EmailPreviewHeader, { trip: tripLaufend(), stage: ETAPPEN[0], reportType: 'morning', reportDate: '01.07.2026' }),
 		html(K.EmailPreviewHeader, { trip: tripLaufend({ shortcode: undefined }), stage: null, reportType: 'evening', reportDate: '01.07.2026' })
 	].join('\n');

@@ -719,7 +719,7 @@
    "status": "gruen",
    "seite": "frontend",
    "zustand": "hinweis_grundauswahl_leer",
-   "verweis": "#3020 R1b: GrundauswahlLeerHinweis (Waise, Loeschung mit #3383) ersetzt durch den Leertext der geteilten Karte (ADR-0097); der Zweig ist kontextfrei, der Test laeuft mit context vergleich"
+   "verweis": "#3020 R1b: GrundauswahlLeerHinweis (Waise, mit #3383 geloescht) ersetzt durch den Leertext der geteilten Karte (ADR-0097); der Zweig ist kontextfrei, der Test laeuft mit context vergleich"
   },
   {
    "id": "D-orte_vergleichstabelle-hinweis_grundauswahl_leer-frontend",

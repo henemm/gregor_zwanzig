@@ -171,7 +171,7 @@ describe('AC-1: Trip-Hub englisch, Namen unveraendert', () => {
 		const { en } = deDannEn(() => P.wegpunkteRendern());
 		const s = sichtbar(en);
 		for (const t of ['+ Rest day', 'STAGES · DRAG TO SORT · + REST DAY BETWEEN', '2 GPX · 1 rest day', '+ Stage', 'Rest day', '⌂ Rest day · Carrozzu', 'Hut', 'Waypoint', 'Rename', 'Move', 'Delete', 'Location: Ortu di u Piobbu', 'Next: Bocca Piccaia', 'No location set', 'Save']) hat(s, t);
-		for (const t of ['aria-label="Remove stage"', 'aria-label="Rename waypoint"', 'aria-label="Move waypoint"', 'aria-label="Delete waypoint"', 'aria-label="Elevation profile with 2 waypoints"', 'aria-label="Elevation profile with 1 waypoint"', 'aria-label="Waypoint Calenzana"', 'aria-label="Waypoint 3"']) hat(en, t);
+		for (const t of ['aria-label="Remove stage"', 'aria-label="Rename waypoint"', 'aria-label="Move waypoint"', 'aria-label="Delete waypoint"', 'aria-label="Elevation profile with 2 waypoints"', 'aria-label="Elevation profile with 1 waypoint"', 'aria-label="Waypoint Calenzana"']) hat(en, t); // #3384 S4: 'Waypoint 3' (WaypointPin) gelöscht
 		// WaypointsPanel traegt im Golden-Zustand einen Server-Fehlertext (Daten), s. f9Pruefstand.
 		assert.deepEqual(deutscheReste(s, [...DATEN, 'aktionen.speichern', 'aktionen.speichern_fehlgeschlagen']), []);
 	});
@@ -268,9 +268,10 @@ describe('AC-4: Metrik-Namen ueber metricLabel, col_label unveraendert', () => {
 		const { de, en } = deDannEn(() => A.layoutRendern());
 		const sEn = sichtbar(en);
 		hat(sichtbar(de), 'Böen');
-		for (const s of ['Wind gusts', 'Temperature', 'Bewölkung', 'Code', 'Raw', 'Simple', 'raw value only', '→ Detail', '↑ Column', 'Limit', 'Telegram 9/7', '✂ from here Telegram cuts off (max 7 columns)', 'No entries — add metrics from “Not in the briefing”.', 'Not in the briefing', '3 more metrics', '1 more metric', '· not output', '▴ Collapse', '▾ Expand', '+ Column', '+ Detail', '6 metrics', '1 metric', 'Default', 'Table preview', 'TODAY — 2 METRICS', 'TOMORROW — 0 METRICS', 'No metrics enabled for this horizon.', 'Time', '·simple', 'all columns · no limit', 'no grid · 140 characters', 'SMS not configured —', 'set up in your account', 'Daily max for remaining metrics', '3 metrics do not fit in the table — append as a compact daily summary', 'briefing schedule', 'Temperature', 'Wind', 'Atmosphere'])
+		for (const s of ['Wind gusts', 'Temperature', 'Bewölkung', 'Code', 'Raw', 'Simple', 'raw value only', '→ Detail', '↑ Column', 'Limit', 'Telegram 9/7', '✂ from here Telegram cuts off (max 7 columns)', 'No entries — add metrics from “Not in the briefing”.', 'Not in the briefing', '3 more metrics', '1 more metric', '· not output', '▴ Collapse', '▾ Expand', '+ Column', '+ Detail', '6 metrics', '1 metric', 'Default', 'Table preview', 'TODAY — 2 METRICS', 'TOMORROW — 0 METRICS', 'No metrics enabled for this horizon.', 'Time', '·simple', 'Temperature', 'Wind', 'Atmosphere'])
 			hat(sEn, s);
-		for (const s of ['title="Telegram: max 7 columns"', 'aria-label="Raw or simple"', 'aria-label="Enable Email"']) hat(en, s);
+		// #3383 S1: die Kanal-Texte (trip.kanaele.*, „Enable Email") entfielen mit der Waise WeatherV2Kanaele.
+		for (const s of ['title="Telegram: max 7 columns"', 'aria-label="Raw or simple"']) hat(en, s);
 		// Voller Name englisch; die Kurzform (Fallback `label.slice(0, 5)`) bleibt wie jede Kurzform (ADR-0042).
 		assert.ok(!/class="(label|off-name|col-name|metric-name)[^"]*">Böen</.test(en), 'voller Name noch deutsch');
 		// Fixture: Preset „Wandern" (Name = Daten), Zeitplan-Speicherstand mit Server-Text „Gespeichert.".

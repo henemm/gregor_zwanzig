@@ -207,7 +207,7 @@ _SVELTE_FILES = [
     # steps/Step2Stages.svelte, steps/Step4Briefings.svelte, steps/WaypointRow.svelte)
     # wurde geloescht und durch den Tab-Editor (#622) abgeloest -- alle 5 stalen
     # Eintraege entfernt, uebrige Dateien werden weiter geprueft.
-    "frontend/src/lib/components/edit/EditRouteSection.svelte",
+    # #3384 S4: edit/EditRouteSection.svelte als Waise geloescht, Eintrag entfernt.
     "frontend/src/lib/components/trip-detail/FullProfile.svelte",
     "frontend/src/lib/components/trip-detail/waypoints/WaypointCard.svelte",
 ]
@@ -215,7 +215,7 @@ _SVELTE_FILES = [
 
 class TestAC3NoAsciiUmlauts:
     """
-    AC-3: 3 Svelte-Dateien dürfen keine ASCII-Umlaut-Ersetzungen in
+    AC-3: 2 Svelte-Dateien (#3384: vorher 3) dürfen keine ASCII-Umlaut-Ersetzungen in
     user-sichtbaren Strings enthalten.
     """
 

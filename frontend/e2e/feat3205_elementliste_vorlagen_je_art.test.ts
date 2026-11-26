@@ -8,7 +8,7 @@
 // Mockup und ist per Prüfsumme an den aktuellen Mockup-Stand gebunden. Was hier steht, zeigt das Mockup.
 //
 // Sollwert „eigene Trip-Vorlage“ kommt aus dem Mockup-Prüfkonto (Kontodaten, kein Katalogtext): der Name,
-// den die Trip-Vorlagenauswahl unter der Beschriftung „Eigene“ (Katalog wertebereiche.preset.eigene) führt.
+// den die Trip-Vorlagenauswahl unter der Beschriftung „Eigene“ (Katalog wetter.vorlage.eigene; bis #3383 wertebereiche.preset.eigene) führt.
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
@@ -47,7 +47,7 @@ describe('#3205 AC-2: Trip-Vorlagenauswahl führt die eigene Trip-Vorlage weiter
 		test(`Trip, Zustand ${zustand}: „${EIGENE_TRIP_VORLAGE}“ steht unter „Eigene“`, () => {
 			const liste = auswahl('trip', zustand);
 			assert.ok(liste.length > 0, `Trip-Vorlagenauswahl (Zustand ${zustand}) fehlt in der Elementliste`);
-			const eigene = liste.findIndex((e) => e.rolle === 'beschriftung' && e.i18n_key === 'wertebereiche.preset.eigene');
+			const eigene = liste.findIndex((e) => e.rolle === 'beschriftung' && e.i18n_key === 'wetter.vorlage.eigene');
 			assert.ok(eigene >= 0, `Beschriftung „Eigene“ fehlt in der Trip-Auswahl (Zustand ${zustand})`);
 			const name = liste.slice(eigene + 1).find((e) => e.rolle === 'knopf' && e.text_de === EIGENE_TRIP_VORLAGE);
 			assert.ok(name, `„${EIGENE_TRIP_VORLAGE}“ fehlt in der Trip-Auswahl (Zustand ${zustand})`);

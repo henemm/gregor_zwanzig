@@ -1,0 +1,16 @@
+Fallzahl frontend/e2e/issue-1093-unit.spec.ts vor der Löschung (#3384, Spec AC-7)
+Datum: 2026-11-26
+Stand: Branch rework-3384-waisen-s4, HEAD f21ba181a (Datei noch vorhanden)
+
+Befehl (aus frontend/): npx playwright test --list --project=tests e2e/issue-1093-unit.spec.ts
+  [setup] › global.setup.ts:10:1 › authenticate and seed test data
+  [tests] › issue-1093-unit.spec.ts:11:1 › Bug #1093: echte UUID-pickedIds ergeben gefüllte, nicht-leere rows
+  [tests] › issue-1093-unit.spec.ts:18:1 › Zeilenzahl = min(pickedIds.length, dummies.length), nie leer
+  [tests] › issue-1093-unit.spec.ts:28:1 › Kein Regress: leere Auswahl zeigt alle Dummys
+  Total: 4 tests in 2 files  (davon 1 Setup-Fall aus global.setup.ts, nicht Teil der Spec)
+
+Gegenprobe (eigene Config): npx playwright test --list -c e2e/playwright.1093.unit.config.ts
+  Total: 3 tests in 1 file
+
+Fallzahl der Spec im Projekt "tests": 3
+E2E_MIN_EXECUTED_HAUPT: 760 - 3 = 757

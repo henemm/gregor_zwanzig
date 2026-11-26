@@ -10,48 +10,21 @@
 
 import { test, describe, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeHorizonSummary } from '../horizonHelpers.ts';
+// #3384 S4: Fälle computeHorizonSummary (horizonHelpers.ts) und getPresetLabel (rightColumn.ts)
+// mit den Waisen gelöscht.
 import { riskToPill } from '../stageRisk.ts';
 import { setupStepTrip, setupStepCompare } from '../cockpitHelpers568.ts';
-import { getPresetLabel } from '../rightColumn.ts';
 import { profileSignature } from '../profileSignature.ts';
 import { locale, trFor } from '../../i18n/index.ts';
 import type { ComparePreset, Trip } from '../../types.ts';
 
 afterEach(() => locale.set('de'));
 
-const h = (today: boolean, tomorrow: boolean, day_after: boolean) => ({
-	metric_id: `m-${today}${tomorrow}${day_after}`,
-	horizons: { today, tomorrow, day_after }
-});
-const HORIZONTE = [h(true, true, true), h(true, true, false), h(true, false, false), h(false, true, true), h(false, false, true)];
-const tripMitProfil = (profile: string) => ({ id: 't', name: 'T', stages: [], aggregation: { profile } }) as unknown as Trip;
 const TRIP = { id: 't1', name: 'T', stages: [] } as unknown as Trip;
 const PRESET = { id: 'c1', name: 'C', location_ids: [] } as unknown as ComparePreset;
 const labels = (steps: { label: string }[]) => steps.map((s) => s.label);
 
 describe('F001: Hilfstexte folgen der Sprache zum Aufrufzeitpunkt (de -> en ohne Neuladen)', () => {
-	test('computeHorizonSummary', () => {
-		locale.set('de');
-		assert.equal(
-			computeHorizonSummary(HORIZONTE),
-			'1 alle drei Tage · 1 nur heute + morgen · 1 nur heute · 1 nur morgen + übermorgen · 1 sonstige Kombinationen'
-		);
-		locale.set('en');
-		const p = { anzahl: 1 };
-		assert.equal(
-			computeHorizonSummary(HORIZONTE),
-			[
-				trFor('en', 'bausteine.horizont.alle_drei', p),
-				trFor('en', 'bausteine.horizont.nur_heute_morgen', p),
-				trFor('en', 'bausteine.horizont.nur_heute', p),
-				trFor('en', 'bausteine.horizont.nur_morgen_uebermorgen', p),
-				trFor('en', 'bausteine.horizont.sonstige', p)
-			].join(' · ')
-		);
-		assert.doesNotMatch(computeHorizonSummary(HORIZONTE), /[äöü]|heute|morgen|sonstige/);
-	});
-
 	test('stageRisk: riskToPill', () => {
 		locale.set('de');
 		assert.deepEqual(['red', 'yellow', 'green'].map((r) => riskToPill(r as 'red').label), ['Risiko', 'Achten', 'OK']);
@@ -74,23 +47,6 @@ describe('F001: Hilfstexte folgen der Sprache zum Aufrufzeitpunkt (de -> en ohne
 		assert.deepEqual(labels(setupStepCompare(PRESET)), ['vergleich', 'orte', 'wetter', 'layout', 'versand'].map(en));
 		assert.notDeepEqual(labels(setupStepTrip(TRIP)), ['Route', 'Etappen', 'Wetter', 'Layout je Kanal', 'Reports']);
 		assert.notDeepEqual(labels(setupStepCompare(PRESET)), ['Vergleich', 'Orte', 'Wetter', 'Layout je Kanal', 'Versand']);
-	});
-
-	test('rightColumn: Profil-Standard-Beschriftungen', () => {
-		const faelle = [
-			['wintersport', 'Wintersport-Standard', 'bausteine.profil.standard_wintersport'],
-			['wandern', 'Wandern-Standard', 'bausteine.profil.standard_wandern'],
-			['summer_trekking', 'Sommer-Trekking-Standard', 'bausteine.profil.standard_summer_trekking'],
-			['allgemein', 'Standard-Metriken', 'bausteine.profil.standard_metriken'],
-			['unbekannt', 'Standard-Metriken', 'bausteine.profil.standard_metriken']
-		] as const;
-		locale.set('de');
-		for (const [profil, golden] of faelle) assert.equal(getPresetLabel(tripMitProfil(profil)), golden, profil);
-		locale.set('en');
-		for (const [profil, golden, key] of faelle) {
-			assert.equal(getPresetLabel(tripMitProfil(profil)), trFor('en', key), profil);
-			assert.notEqual(getPresetLabel(tripMitProfil(profil)), golden, profil);
-		}
 	});
 
 	test('profileSignature: Eyebrow', () => {

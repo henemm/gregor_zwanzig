@@ -98,13 +98,13 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 		// #3276: 'Erscheint nur in der E-Mail.' stand nur in den entfernten Flaechen Stundenverlauf/Ausblick.
 		// #3333: 'Stundenverlauf' stand nur noch in der Wetter-Metriken-Infobox des Alt-Panels im Orte-Anlegen (entfallen, AC-12).
 		const alle = [...Object.keys(FAELLE).map((f) => `${f}.de.html`), 'funktionen.de.txt'].map((f) => readFileSync(path.join(P.GOLDEN_DIR, f), 'utf-8')).join('');
-		for (const s of ['Läuft automatisch', 'Läuft autom.', 'Verglichene Orte', 'Ort hinzufügen', 'Nächster Versand', 'Zuletzt raus', '3 Kandidaten', 'Bearbeiten →', 'Orts-Vergleiche', 'Laufzeit überschritten', 'Setup abschließen', 'Neuer Ort', 'Erkannt · Vorschau', 'min. 2 erforderlich', 'viel — Empfehlung 3–5', 'Eckdaten', 'noch 1 Ort nötig', 'noch 2 Orte nötig', 'erst Vergleich benennen', 'Gesperrt — erst Vergleich benennen', 'Keine weiteren gespeicherten Orte verfügbar.', 'Status-Änderung fehlgeschlagen', 'Täglich 7–9 Uhr', 'vor 1 Woche', 'vor 2 Wochen', 'Neuer Auto-Report'])
+		for (const s of ['Läuft automatisch', 'Läuft autom.', 'Verglichene Orte', 'Ort hinzufügen', 'Nächster Versand', 'Zuletzt raus', '3 Kandidaten', 'Bearbeiten →', 'Orts-Vergleiche', 'Laufzeit überschritten', 'Setup abschließen', 'Neuer Ort', 'Erkannt · Vorschau', 'min. 2 erforderlich', 'viel — Empfehlung 3–5', 'Eckdaten', 'noch 1 Ort nötig', 'noch 2 Orte nötig', 'erst Vergleich benennen', 'Gesperrt — erst Vergleich benennen', 'Keine weiteren gespeicherten Orte verfügbar.', 'Status-Änderung fehlgeschlagen', 'Täglich 7–9 Uhr', 'vor 1 Woche', 'vor 2 Wochen'])
 			assert.ok(alle.includes(s), s);
 	});
 	test('Messaufbau: jeder deutsche Anker-Text (Festteile) steht im Golden oder in der Funktionstabelle', () => {
 		const alle = leerraum([...Object.keys(FAELLE).map((f) => `${f}.de.html`), 'funktionen.de.txt'].map((f) => readFileSync(path.join(P.GOLDEN_DIR, f), 'utf-8')).join(' ')).replace(/&amp;/g, '&');
 		// Nicht im golden-de-Zustand erreichbar (nur Fehler-/Grenzfaelle), im Bestand je Datei nachgewiesen.
-		const UNERREICHT = new Set(['vergleich.relativ.diese_woche', 'vergleich.hub.archivieren_fehler', 'vergleich.hub.reaktivieren_fehler', 'vergleich.hub.delete_fehler', 'vergleich.hub.delete_titel', 'listen.dialog.unwiderruflich', 'vergleich.hub.nicht_gefunden', 'vergleich.orte.format_unbekannt', 'vergleich.orte.fehler_hinzufuegen', 'vergleich.gruppe.neu', 'vergleich.gruppe.beispiel', 'vergleich.gruppe.standard_profil', 'vergleich.gruppe.kein_profil', 'vergleich.gruppe.legt_an', 'vergleich.gruppe.fehler', 'vergleich.neu.bereit_titel', 'vergleich.neu.bereit_zeile.one', 'vergleich.neu.bereit_zeile.other', 'vergleich.neu.bereit_text', 'vergleich.neu.alarme_zum_aktivieren_punkt', 'vergleich.neu.tab_gesperrt', 'vergleich.neu.ort_waehlen', 'vergleich.neu.kopie', 'vergleich.relativ.wochen.one', 'vergleich.orte.manuell', 'vergleich.orte.breitengrad', 'vergleich.orte.laengengrad', 'vergleich.orte.hinzufuegen', 'vergleich.hub.test_gesendet', 'aktionen.kopf.aktivieren', 'vergleich.orte.viel_kurz',
+		const UNERREICHT = new Set(['vergleich.relativ.diese_woche', 'vergleich.hub.archivieren_fehler', 'vergleich.hub.reaktivieren_fehler', 'vergleich.hub.delete_fehler', 'vergleich.hub.delete_titel', 'listen.dialog.unwiderruflich', 'vergleich.hub.nicht_gefunden', 'vergleich.orte.format_unbekannt', 'vergleich.orte.fehler_hinzufuegen', 'vergleich.gruppe.kein_profil','vergleich.neu.bereit_titel', 'vergleich.neu.bereit_zeile.one', 'vergleich.neu.bereit_zeile.other', 'vergleich.neu.bereit_text', 'vergleich.neu.alarme_zum_aktivieren_punkt', 'vergleich.neu.tab_gesperrt', 'vergleich.neu.ort_waehlen', 'vergleich.neu.kopie', 'vergleich.relativ.wochen.one', 'vergleich.orte.manuell', 'vergleich.orte.breitengrad', 'vergleich.orte.laengengrad', 'vergleich.orte.hinzufuegen', 'vergleich.hub.test_gesendet', 'aktionen.kopf.aktivieren', 'vergleich.orte.viel_kurz',
 			// #2794 Fix-Loop B4: die Karte „Wetter" zählt erst mit im Browser geladenen Vorlagen;
 			// im SSR-Golden steht „—". Die Zahl prüft shared/__tests__/s3a2794_teil4b_befunde.test.ts.
 			'vergleich.hub.wertebereiche_kurz.one', 'vergleich.hub.wertebereiche_kurz.other',
@@ -223,8 +223,9 @@ describe('AC-2: Compare-Helfer in Deutsch und Englisch (Eingabe -> Ausgabe)', ()
 	test('Status-Pille und Aktivierungs-Karte je Sprache', () => {
 		const { de, en: e } = deDannEn(() => sichtbar(P.bausteineRendern()) + ' ' + JSON.stringify(['active', 'paused', 'draft'].map((s) => P.persistenz.hubActivationBanner(s))));
 		// #2837 S1b: die Status-Pille ist das geteilte StatusSchild (Texte aus trip.status.*, vormals listen.status.*).
-		for (const s of ['Aktiv', 'Pausiert', 'Entwurf', 'Neuer Auto-Report', 'Aktivieren', 'Pausieren']) hat(de, s);
-		for (const s of ['Active', 'Paused', 'Draft', 'New auto report', 'Activate', '"Pause"', 'Runs automatically — with no end date until you pause it.']) hat(e, s);
+		// #3384 S4: „Neuer Auto-Report“ (AddReportCard) mit der Waise gelöscht.
+		for (const s of ['Aktiv', 'Pausiert', 'Entwurf', 'Aktivieren', 'Pausieren']) hat(de, s);
+		for (const s of ['Active', 'Paused', 'Draft', 'Activate', '"Pause"', 'Runs automatically — with no end date until you pause it.']) hat(e, s);
 		for (const s of ['aktiv"', 'pausiert', 'Aktivieren', 'Pausieren']) hatNicht(e, s);
 	});
 });

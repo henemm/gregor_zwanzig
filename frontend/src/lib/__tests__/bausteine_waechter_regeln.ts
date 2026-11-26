@@ -539,26 +539,18 @@ const BESTAND: string[] = [
 	'lib/components/alerts-tab/AlertPreviewCard.svelte',
 	'lib/components/alerts-tab/AlertQuietHoursCard.svelte',
 	'lib/components/compare-new/CompareNewEditor.svelte',
-	'lib/components/compare/AddReportCard.svelte',
 	'lib/components/compare/CompareDetail.svelte',
 	'lib/components/compare/CompareTabs.svelte',
-	'lib/components/compare/CreateGroupDialog.svelte',
 	'lib/components/compare/LocationNewModal.svelte',
-	'lib/components/compare/LocationPreviewMap.svelte',
 	'lib/components/compare/steps/Step2Orte.svelte',
 	'lib/components/edit/AccordionSection.svelte',
-	'lib/components/edit/EditRouteSection.svelte',
 	'lib/components/edit/EditStagesPanelNew.svelte',
 	'lib/components/edit/EditStagesSection.svelte',
-	'lib/components/edit/EditWeatherSection.svelte',
 	'lib/components/edit/StageDateField.svelte',
 	'lib/components/edit/StageTimeField.svelte',
-	'lib/components/edit/WeatherSummaryCard.svelte',
 	'lib/components/email-preview/EmailPreviewHeader.svelte',
 	'lib/components/mobile/BottomNav.svelte',
 	'lib/components/mobile/Drawer.svelte',
-	'lib/components/mobile/DrawerGroup.svelte',
-	'lib/components/mobile/DrawerItem.svelte',
 	'lib/components/mobile/IconBtn.svelte',
 	'lib/components/mobile/MBtn.svelte',
 	'lib/components/mobile/MField.svelte',
@@ -568,7 +560,6 @@ const BESTAND: string[] = [
 	'lib/components/mobile/MTab.svelte',
 	'lib/components/mobile/MTabBar.svelte',
 	'lib/components/mobile/MobileShell.svelte',
-	'lib/components/mobile/NavIcon.svelte',
 	'lib/components/mobile/ScreenScroll.svelte',
 	'lib/components/mobile/Sheet.svelte',
 	'lib/components/mobile/StageCardM.svelte',
@@ -599,13 +590,7 @@ const BESTAND: string[] = [
 	'lib/components/shared/versand-tab/VTLaufzeitVergleich.svelte',
 	'lib/components/shared/versand-tab/VTNextBriefing.svelte',
 	'lib/components/shared/versand-tab/VTSchedulePlan.svelte',
-	'lib/components/shared/weather-metrics-tab/AggregationMetricRow.svelte',
-	'lib/components/shared/weather-metrics-tab/MultiSymbolMetricRow.svelte',
-	'lib/components/shared/weather-metrics-tab/ThresholdMetricRow.svelte',
-	'lib/components/shared/weather-metrics-tab/WeatherV2Grundauswahl.svelte',
-	'lib/components/shared/weather-metrics-tab/WeatherV2PresetBar.svelte',
 	'lib/components/shared/zustellung-tab/ZustellungTab.svelte',
-	'lib/components/trip-detail/AboutOutputLayout.svelte',
 	'lib/components/trip-detail/ActiveMetricRow.svelte',
 	'lib/components/trip-detail/BucketSection.svelte',
 	'lib/components/trip-detail/BucketSectionOff.svelte',
@@ -623,14 +608,12 @@ const BESTAND: string[] = [
 	'lib/components/trip-detail/TripStageRow.svelte',
 	'lib/components/trip-detail/TripTabs.svelte',
 	'lib/components/trip-detail/WaypointsPanel.svelte',
-	'lib/components/trip-detail/WeatherV2Kanaele.svelte',
 	'lib/components/trip-detail/waypoints/EtappenStrip.svelte',
 	'lib/components/trip-detail/waypoints/MapCanvas.svelte',
 	'lib/components/trip-detail/waypoints/PauseStageView.svelte',
 	'lib/components/trip-detail/waypoints/ProfileEditor.svelte',
 	'lib/components/trip-detail/waypoints/StageCard.svelte',
 	'lib/components/trip-detail/waypoints/WaypointCard.svelte',
-	'lib/components/trip-detail/waypoints/WaypointPin.svelte',
 	'lib/components/trip-new/TripNewEditor.svelte',
 	'lib/components/ui/SaveIndicator.svelte',
 	'lib/components/ui/SprachUmschalter.svelte',
@@ -720,7 +703,11 @@ const BESTAND: string[] = [
 // #3047 Runde 7 (p11): AlarmeScheduleTab.svelte entfernt (→ 197).
 // #3190: SavePresetDialog.svelte nach SEITEN_SCOPE (Inline-Karte aus Bausteinen) (→ 196).
 // #3366: Layout-Reiter LTCapNote, LTChannelPicker, LTCutLine, LayoutTab geloescht (Waisen) (188 → 184).
-const BESTAND_OBERGRENZE = 184; // #3297/#3020: sieben Alt-Editor-Bausteine geloescht (vorher 195, #3276)
+// #3383 S1: sieben Waisen-Bausteine geloescht (Liste im Lösch-Nachweis
+// trip_pfad_altfeld_loeschnachweis_3297.test.ts, GELOESCHT_3383) (184 → 177).
+// #3384 S4: zehn Waisen-Bausteine aus compare/, edit/, mobile/ und WaypointPin geloescht
+// (Liste GELOESCHT_3384 im selben Lösch-Nachweis) (177 → 167).
+const BESTAND_OBERGRENZE = 167; // #3297/#3020: sieben Alt-Editor-Bausteine geloescht (vorher 195, #3276)
 
 /** Token-Verstöße je Baustein-Datei (Ist-Stand 2026-11-10, ADR-0112). Darf nur sinken. */
 const AUSNAHMEN: Ausnahmen = {

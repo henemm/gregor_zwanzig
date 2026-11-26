@@ -132,18 +132,12 @@ export const F10_ANKER: [schluessel: string, de: string, en: string][] = [
 	['vergleich.ort.brille_frage', 'Welche Metriken sind für genau diese Koordinaten standardmäßig relevant?', 'Which metrics are relevant by default for exactly these coordinates?'],
 	['vergleich.ort.kandidat_vormerken', '☐ Nach Speichern als Compare-Kandidat vormerken', '☐ Mark as comparison candidate after saving'],
 	['vergleich.ort.speichern', 'Ort speichern', 'Save location'],
-	['vergleich.ort.kartenvorschau', 'Kartenvorschau', 'Map preview'],
 
-	// ── vergleich.gruppe.* — Neue Gruppe (CreateGroupDialog) ──
-	['vergleich.gruppe.neu', 'Neue Gruppe', 'New group'],
-	['vergleich.gruppe.beispiel', 'z.B. Zillertal', 'e.g. Zillertal'],
-	['vergleich.gruppe.standard_profil', 'Standard-Profil (optional)', 'Default profile (optional)'],
+	// ── vergleich.gruppe.* — Profil-Auswahl (LocationForm); #3384 S4: die übrigen Schlüssel
+	// (CreateGroupDialog) und vergleich.ort.kartenvorschau sind mit den Waisen gelöscht ──
 	['vergleich.gruppe.kein_profil', '— Kein Profil —', '— No profile —'],
-	['vergleich.gruppe.legt_an', 'Anlegen…', 'Creating…'],
-	['vergleich.gruppe.fehler', 'Gruppe konnte nicht angelegt werden', 'Group could not be created'],
 
-	// ── vergleich.neu.* — Anlegen (CompareNewEditor, AddReportCard, Vorlage) ──
-	['vergleich.neu.auto_report', 'Neuer Auto-Report', 'New auto report'],
+	// ── vergleich.neu.* — Anlegen (CompareNewEditor, Vorlage); #3384 S4: auto_report (AddReportCard) gelöscht ──
 	['vergleich.neu.neuer_vergleich', 'Neuer Vergleich', 'New comparison'],
 	['vergleich.neu.bereit_titel', 'Bereit zum Aktivieren', 'Ready to activate'],
 	['vergleich.neu.bereit_zeile.one', '„<name>" · <count> Orte', '“<name>” · <count> location'],

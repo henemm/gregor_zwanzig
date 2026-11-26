@@ -202,7 +202,7 @@ export function loadCompareSelectionEntries(): Promise<CompareSelectionEntry[]> 
 }
 
 // ════════════════════════════════════════════════════════════════════════
-// Issue #1911: Gewitter-Schwellenliste (ThresholdMetricRow) abgeleitet aus
+// Issue #1911: Gewitter-Schwellenliste (Stufen-Auswahl) abgeleitet aus
 // dem Katalog-Feld `ordinalLabels` statt hart codiert in WeatherMetricsTab.svelte.
 // ════════════════════════════════════════════════════════════════════════
 

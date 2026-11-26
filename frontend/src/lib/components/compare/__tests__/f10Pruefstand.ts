@@ -135,8 +135,6 @@ const K = {
 	HubUebersichtMobil: await variante(path.join(KOMP, 'shared/hub-uebersicht/HubUebersicht.svelte'), [['let isMobileViewport = $state(false);', 'let isMobileViewport = $state(true);']]),
 	// #2837 S1b: CompareStatusPill ist im geteilten StatusSchild aufgegangen.
 	StatusSchild: await komp(path.join(KOMP, 'shared/status-schild/StatusSchild.svelte')),
-	AddReportCard: await komp(cmp('AddReportCard.svelte')),
-	LocationPreviewMap: await komp(cmp('LocationPreviewMap.svelte')),
 	LocationNewModal: await komp(cmp('LocationNewModal.svelte')),
 	LocationNewModalErkannt: await variante(cmp('LocationNewModal.svelte'), [
 		['let resolvedPreview: ResolveResult | null = $state(null);', "let resolvedPreview: ResolveResult | null = $state({ lat: 47.0789, lon: 11.6856, elevation_m: 3250, timezone: 'Europe/Vienna', region: 'Tirol', source_type: 'komoot' });"],
@@ -229,13 +227,9 @@ export function hubSeiteRendern(): string {
 // Issue #3276: der Fall „Stundenverlauf" (CompareHourlyLayoutControls) entfaellt mit dem
 // Bauteil; Stundenverlauf wird im Ortsvergleich nur noch in „Was steht wo" eingestellt.
 
-/** Kleinbausteine: Status-Pille, Neuer Auto-Report, Kartenvorschau. */
+/** Kleinbausteine: Status-Pille (#3384 S4: Neuer Auto-Report und Kartenvorschau mit den Waisen gelöscht). */
 export function bausteineRendern(): string {
-	return [
-		...(['active', 'paused', 'draft'] as const).map((status) => html(K.StatusSchild, { status })),
-		html(K.AddReportCard, { onclick: () => {} }),
-		html(K.LocationPreviewMap, { lat: 47.0789, lon: 11.6856 })
-	].join('\n');
+	return [...(['active', 'paused', 'draft'] as const).map((status) => html(K.StatusSchild, { status }))].join('\n');
 }
 
 /** Neuer Ort (Modal): leer und mit erkannter Vorschau beim Speichern. */

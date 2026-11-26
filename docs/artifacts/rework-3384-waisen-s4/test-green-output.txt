@@ -1,0 +1,54 @@
+#3384 Waisen-Scheibe S4 — TDD GREEN
+Datum: 2026-11-26, Branch rework-3384-waisen-s4 (Basis RED 84e7a4203)
+
+1) Frontend-Suite komplett (aus frontend/): npm test
+# tests 11636
+# suites 2124
+# pass 11633
+# fail 0
+# cancelled 0
+# skipped 2
+# todo 1
+(einziges "not ok" ist der bestehende TODO-Fall "warn|flaeche (hell)", kein Fehlschlag)
+
+2) Gezielt (aus frontend/): npm test -- waisen_waechter, trip_pfad_altfeld_loeschnachweis_3297,
+   bausteine_waechter, ink4_waechter, vergleich_hub_sprache, trip_hub_sprache, trip_anlegen_sprache,
+   src/lib/i18n/__tests__/*.test.ts (katalog_schluessel_haben_verwender, paritaet_de_en,
+   deutsch_unveraendert, reaktivitaet_waechter, keine_hartkodierten_nutzertexte u. a.)
+# pass 1002
+# fail 0
+
+3) Build (aus frontend/): npm run build -> Exit 0
+
+4) svelte-check (aus frontend/): npx svelte-kit sync && npx svelte-check --tsconfig ./tsconfig.json --output machine
+   vorher:  COMPLETED 2268 FILES 32 ERRORS 72 WARNINGS 51 FILES_WITH_PROBLEMS
+   nachher: COMPLETED 2241 FILES 32 ERRORS 71 WARNINGS 50 FILES_WITH_PROBLEMS
+   (Fehler 32 -> 32, Warnungen 72 -> 71; nicht gestiegen)
+
+5) Python benannt:
+   uv run pytest tests/integration/test_trip_alert_stage_name.py tests/tdd/test_issue_316_docs_cleanup.py \
+     tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py tests/unit/test_e2e_positivliste_ratschen_bindung.py \
+     tests/unit/test_2243_playwright_loeschscheibe.py tests/tdd/test_einstellung_gleich_mail_fallliste.py -o addopts=""
+   121 passed, 2 warnings
+   uv run pytest tests/test_3007_besitzerliste.py tests/unit/test_e2e_ci_gate.py -o addopts=""
+   14 passed, 2 warnings
+
+Messwerte nach dem Löschen:
+- Waisen-Wächter: genau die 19 S4-Pfade vor der Löschung als neue Waisen gemeldet (WaypointPin bestätigt);
+  danach Waisenmenge = BEKANNTE_WAISEN (7, nur S3), OBERGRENZE_WAISEN 7.
+- BESTAND (bausteine_waechter_regeln): 10 Einträge entfernt (AddReportCard, CreateGroupDialog,
+  LocationPreviewMap, EditRouteSection, EditWeatherSection, WeatherSummaryCard, DrawerGroup, DrawerItem,
+  NavIcon, WaypointPin), BESTAND_OBERGRENZE 177 -> 167 (Analyse nannte 12, gemessen 10).
+- ink4: Eintrag mobile/DrawerGroup.svelte (1) entfernt.
+- ein_katalog: per `uv run python -m tests.helpers.katalog_verarbeitung_scan --schreibe-ausnahmen`
+  alertMetricCatalogIds (FRONTEND_LISTE 2) und weatherEmoji (FRONTEND_SCHWELLE 6) entfallen;
+  hoechststand (JSON) und HOECHSTSTAND (Python) 430 -> 422.
+- Katalogschlüssel ohne Verwender (gemessen mit katalog_schluessel_haben_verwender): 35, in de und en
+  identisch entfernt (bausteine.horizont.* 5, bausteine.profil.standard_* 4, trip.route.* 13,
+  trip.wetter.* 6, vergleich.gruppe.* 5, vergleich.neu.auto_report, vergleich.ort.kartenvorschau).
+- reaktivitaet_waechter / keine_hartkodierten: verzeichnisbasiert, keine Zahl zu senken (grün).
+- Positivliste 85 Einträge; E2E_MIN_SPECS 85, E2E_MIN_EXECUTED_HAUPT 757 (760 - 3, Fallzahl vorab
+  gemessen, siehe issue-1093-unit-fallzahl.txt).
+- Goldens f9/f10 per GZ_GOLDEN_SCHREIBEN=de|en neu: nur reine Löschzeilen in
+  f9 wegpunkte (1), edit_felder (3), f10 bausteine (2), je de und en; übrige Goldens unverändert.
+- Elementliste per scripts/elementliste_aus_mockup.ts neu erzeugt: unverändert.

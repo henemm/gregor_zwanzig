@@ -152,7 +152,7 @@ describe('#1911 AC-1/AC-2 (KRITISCH): deriveThunderThresholdLevels(Live-Katalog)
 		);
 	});
 
-	test('Bestandswert 1.0 bleibt "leicht", 2.0 bleibt "mittel" (Reverse-Mapping wie ThresholdMetricRow.svelte:28)', async () => {
+	test('Bestandswert 1.0 bleibt "leicht", 2.0 bleibt "mittel" (Reverse-Mapping float -> id der Stufen-Auswahl)', async () => {
 		const derive = await loadDerive();
 		const levels = derive(['kein', 'leicht', 'mittel', 'hoch']);
 		const activeLabelFor = (float: number) => levels.find((l) => l.float === float)?.label;
@@ -271,7 +271,7 @@ describe('#1911 Adversary-Runde-2 F005 (MEDIUM): das id-Feld ist konsistent zu f
 
 		// Mutation M10: `id` gegen `float`/`label` vertauscht/verschoben bliebe
 		// unentdeckt, solange nur `.label`/`.float` isoliert geprueft werden --
-		// ThresholdMetricRow.svelte:28 loest den aktiven Button ueber
+		// die Stufen-Auswahl loest den aktiven Button ueber
 		// `levels.find(l => l.float === currentFloat)?.id` auf. Ein
 		// Bestandstrip mit float=3.0 muss ueber diesen Weg auf id "hoch" landen.
 		levels.forEach((l) => {

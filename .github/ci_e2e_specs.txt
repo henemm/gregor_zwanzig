@@ -459,7 +459,7 @@
 # compare-detail-edit-entry (-> hub-list-menu LM-11/LM-12), compare-editor-slice1
 # (-> AN-1..AN-4) und compare-legacy-fields-survive-save (-> hub-kopf-bearbeiten
 # KB-11); alle drei Dateien geloescht, Zuordnung: Spec feat_2347_s4_paritaets_e2e.md.
-# issue-1093-unit bleibt (Nebenbefund #1199). Ergaenzt in bereits gelisteten
+# issue-1093-unit mit #3384 geloescht. Ergaenzt in bereits gelisteten
 # Dateien: LM-1b/LM-10b/LM-11/LM-12/LM-13, KA-10/KA-11, HT-11/HT-12, KB-11,
 # AW-3c/AW-5b, XU-3 (je kind). Teil D (Ersatzfaelle fuer in Teil A geloeschte
 # Aussagen, je kind): AW-5c in hub-alarme-wertprops (jetzt 16 Faelle), SC-1b in
@@ -480,7 +480,9 @@
 #             Fallzahl per `npx playwright test --list` (Positivliste ohne bug-703,
 #             71 Dateien): `Total: 599 tests in 72 files` (Teil A), nach Teil D
 #             `Total: 607 tests in 72 files`, nach Teil E `Total: 609 tests in
-#             72 files` (inkl. global.setup).
+#             72 files` (inkl. global.setup). #3384: issue-1093-unit (3 Faelle)
+#             geloescht, seither 85 Dateien auf der Liste (84 ohne bug-703) und
+#             3 Faelle weniger im Hauptlauf (E2E_MIN_EXECUTED_HAUPT 760 -> 757).
 #   Filter C: kein `page.screenshot({path: ...})` in den Dateien.
 #
 # Hinzufuegen = Platz im `e2e`-Lauf (neuer Filter-B-Beleg noetig). Entfernen
@@ -524,7 +526,6 @@ e2e/hub-wertebereiche-wertprops.spec.ts
 e2e/hub-wetter-metriken-speichert-selbst.spec.ts
 e2e/issue-1059-trip-resume-error-feedback.spec.ts
 e2e/issue-1071-tier-change-request.spec.ts
-e2e/issue-1093-unit.spec.ts
 e2e/issue-1117-official-alerts-content-tab.spec.ts
 e2e/issue-269-mobile-trip-tabs.spec.ts
 e2e/issue-293-wordmark.spec.ts
