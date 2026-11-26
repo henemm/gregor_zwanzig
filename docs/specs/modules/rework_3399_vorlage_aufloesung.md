@@ -24,7 +24,7 @@ Sichtbar ändert sich wenig: Der Vorlagenname erscheint erst nach der Server-Ant
 ## Source
 
 - **File:** `frontend/src/lib/components/shared/wetter-tab/vorlagenIdLader.ts` (neu), `frontend/src/lib/components/alerts-tab/alarmAbAnzeige.ts`, `frontend/src/lib/components/shared/wetter-tab/vorlageName.ts`
-- **Identifier:** `vorlageIdFuer`, `PROFIL_ZU_VORLAGE` (entfallen in S4), `aboVorlagenName`, `feldsatzAusVorlage`, `ladeVorlagenIds` (neu)
+- **Identifier:** `vorlageIdFuer`, `PROFIL_ZU_VORLAGE` (entfallen in S4), `aboVorlagenName` (entfällt in S3b), `vorlagenNameAusId` (neu, S3a), `feldsatzAusVorlage`, `ladeVorlagenIds` (neu)
 
 > **Schicht-Hinweis:** Reine Frontend-Änderung (`frontend/src/...`, SvelteKit). Python-Core (`src/app/ampel.py`, `resolve_entwurf`) und Go-Durchreichung (`POST /api/ampel/aufloesung`) existieren seit #2988 und bleiben unverändert.
 
@@ -53,6 +53,8 @@ Sichtbar ändert sich wenig: Der Vorlagenname erscheint erst nach der Server-Ant
 | `GET /api/templates` | endpoint | bleibt für die Vorlagen-Ampeln („Alarm ab"-Vorgabe) |
 | `shared/wetter-tab/ampelAufloesung.ts` (`loeseAmpelnAuf`, `eintragAusAbo`) | module | Client der Auflösung, Pakete à 32 |
 | `shared/hub-uebersicht/tripAufloesung.ts` | module | Vorbild: Ticket, Cache je Eintrag, scheitert nie |
+| `shared/wetter-tab/vorlagenIdLader.ts` (`erstelleVorlagenIdLader`, S1) | module | gebündelter, gecachter Lader `Abo → vorlage_id` |
+| `shared/alarme-tab/aboVorlageId.svelte.ts` (`erstelleAboVorlageId`, S1) | module | Runen-Verdrahtung Abo → Lader → ID, von Alarme-Reiter und Hub genutzt |
 | `alerts-tab/alarmAbAnzeige.ts` (`ladeVorlagenAmpeln`, `STANDARD_VORLAGE`, `alarmAbAus`) | module | bleiben |
 | `shared/wetter-tab/__tests__/wetterTabDaten.ts` | test helper | ruft echtes `resolve_entwurf` per Subprozess (Zeilen 107-130) |
 | ADR-0127 | adr | Entscheidungsgrundlage |
@@ -61,7 +63,7 @@ Sichtbar ändert sich wenig: Der Vorlagenname erscheint erst nach der Server-Ant
 
 **Lader (S1):** `vorlagenIdLader.ts` nimmt Abos entgegen, bildet je Abo den Schlüssel `JSON.stringify(eintragAusAbo(abo))`, schickt alle noch nicht gecachten Einträge in einem gebündelten Aufruf von `loeseAmpelnAuf` und liefert je Abo `{ zustand: 'laedt' | 'geladen' | 'fehler', vorlageId: string | null }`. Modulweiter Cache je Schlüssel, Ticket gegen veraltete Antworten, wirft nie. Es wird nur `vorlage_id` verwendet; die aufgelöste Ampel enthält Abo-Abweichungen und taugt nicht als „Alarm ab"-Vorgabe, diese kommt weiter aus der Vorlagen-Ampel (`/api/templates`).
 
-**Anzeige:** `aboVorlagenName(lang, vorlageId | null)` liefert den Anzeigenamen der ID oder „—". Listen (Trip-Liste, Vergleichsliste) laden alle sichtbaren Zeilen in einem Aufruf (Pakete à 32 durch `loeseAmpelnAuf`).
+**Anzeige:** `vorlagenNameAusId(lang, vorlageId | null)` liefert den Anzeigenamen der ID oder „—". Listen (Trip-Liste, Vergleichsliste) laden alle sichtbaren Zeilen in einem Aufruf (Pakete à 32 durch `loeseAmpelnAuf`).
 
 **Kopie beim Anlegen (S2):** Die Quelle wird serverseitig in `routes/compare/new/+page.server.ts` aufgelöst (dort wird die Quelle schon geladen), das Ergebnis `vorlageId` geht als Seitendaten an den Editor und von dort als Argument an `feldsatzAusVorlage(preset, locations, vorlageId)`. Der bestehende Startwert-Mechanismus (`untrack`) bleibt, der Editor startet erst nach der Auflösung. Scheitert die Auflösung (Netzfehler, 4xx/5xx), startet der Editor ohne Vorlagen-ID: Name, Orte, Versand, Alarme, Tagesfenster und Layout der Quelle werden wie bisher übernommen, nur die Vorlage bleibt auf der Anlege-Voreinstellung (wie bei einem Neuanlegen ohne Quelle). Keine Fehlerseite, kein geratener Wert aus der Rangfolge.
 
@@ -87,20 +89,20 @@ Sichtbar ändert sich wenig: Der Vorlagenname erscheint erst nach der Server-Ant
 | `frontend/src/routes/compare/new/+page.svelte` | MODIFY | reicht `data.vorlageId` durch |
 | Tests | MODIFY | `compareNewVorlage.test.ts`, `anlegen_ohne_profil_3198.test.ts:220-255`, `feat3298_vergleich_ohne_altfelder.test.ts:292-295`, `compare_new_editor_postet_einmal.test.ts:148`; Kern mit echtem `resolve_entwurf` (`aufloesungPost`); Live `frontend/e2e/rework-3399-kopie.spec.ts` |
 
-**S3a – Name und Hub-Übersicht (ca. 90 LoC).**
+**S3a – Name und Hub-Übersicht (ca. 30 LoC).**
 
 | File | Change Type | Description |
 |------|-------------|-------------|
-| `frontend/src/lib/components/shared/wetter-tab/vorlageName.ts` | MODIFY | `aboVorlagenName(lang, vorlageId \| null)` |
-| `frontend/src/lib/components/shared/hub-uebersicht/hubUebersichtModell.ts` | MODIFY | `wertebereicheKarte` nimmt `vorlageId` |
-| `frontend/src/lib/components/shared/hub-uebersicht/HubUebersicht.svelte` | MODIFY | lädt per Lader |
-| Tests | MODIFY | `hub_uebersicht_vorlagenrang_2988.test.ts`, `compare_hub_fidelity.test.ts:86-90`, `vergleich_hub_sprache.test.ts:294`, `feat3298_vergleich_ohne_altfelder.test.ts:259` |
+| `frontend/src/lib/components/shared/wetter-tab/vorlageName.ts` | MODIFY | neu `vorlagenNameAusId(lang, vorlageId \| null)`: Katalogname der ID, `null` ⇒ „—"; `aboVorlagenName` bleibt bis S3b für Abo-Karte und Vergleichsliste |
+| `frontend/src/lib/components/shared/hub-uebersicht/hubUebersichtModell.ts` | MODIFY | `deriveVergleichKennzahlen(…, vorlageId?)` (letzter, optionaler Parameter), `wertebereicheKarte` nimmt `vorlageId`, Titel per `vorlagenNameAusId` |
+| `frontend/src/lib/components/shared/hub-uebersicht/HubUebersicht.svelte` | MODIFY | lädt die ID per `erstelleAboVorlageId` (S1-Verdrahtung, nur mit `preset`, Trip ohne Abruf) |
+| Tests | MODIFY | `hub_uebersicht_vorlagenrang_2988.test.ts` (AC-2, AC-9 mit echtem `resolve_entwurf`), `hub_uebersicht_verdrahtung_laufzeit.test.ts` (POST, Fehler ⇒ „—", Trip ohne POST), `vorlage_statt_profil_2796.test.ts:51`, `compare_hub_fidelity.test.ts:86-90`, ggf. `vergleich_hub_sprache.test.ts:294`, `feat3298_vergleich_ohne_altfelder.test.ts:259` |
 
 **S3b – Abo-Karte und Listen (ca. 130 LoC).**
 
 | File | Change Type | Description |
 |------|-------------|-------------|
-| `frontend/src/lib/components/organisms/SubscriptionCard.svelte` | MODIFY | Name/ID als Prop statt eigener Rangfolge |
+| `frontend/src/lib/components/organisms/SubscriptionCard.svelte` | MODIFY | Name/ID als Prop statt eigener Rangfolge; Aufrufer von `aboVorlagenName` auf `vorlagenNameAusId` umgestellt, `aboVorlagenName` gelöscht |
 | `frontend/src/lib/components/shared/hub-kopf/HubKopf.svelte` | MODIFY | lädt per Lader |
 | `frontend/src/routes/_home/SubscriptionKachel.svelte` | MODIFY | lädt per Lader |
 | `frontend/src/routes/trips/+page.svelte`, `frontend/src/routes/compare/+page.svelte` | MODIFY | Listen laden gebündelt; Vergleichsliste-Spalte „Vorlage" |
@@ -189,3 +191,4 @@ Sichtbar ändert sich wenig: Der Vorlagenname erscheint erst nach der Server-Ant
 
 - 2026-11-26: Initial spec created (Phase 3), Grundlage `docs/context/rework-3399-vorlage-aufloesung.md`.
 - 2026-11-26: S1 live (PR #3407). S2 präzisiert: Auflösungs-Helfer `vorlageIdDerQuelle` in `compareNewVorlage.ts` (keine zusätzliche Datei), Testliste ergänzt; Kontext `docs/context/rework-3399-s2-kopie.md`.
+- 2026-11-26: S2 live (PR #3409). S3a präzisiert: neue Funktion `vorlagenNameAusId` statt Signaturwechsel von `aboVorlagenName` (die S3b-Aufrufer Abo-Karte und Vergleichsliste bleiben bis S3b lauffähig, S3b löscht `aboVorlagenName`); Hub nutzt die S1-Verdrahtung `erstelleAboVorlageId`; Kontext `docs/context/rework-3399-s3a-hub-name.md`.
