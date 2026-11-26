@@ -1,0 +1,82 @@
+{
+  "verified_commit": "7933a8587f685ddcc2b362205728cc22694ec159",
+  "findings": [
+    {
+      "ac": "#3361 AC-1 Trip+Orte DE+EN",
+      "status": "VERIFIED",
+      "url": "https://staging.gregor20.henemm.com/trips/new",
+      "evidence": "Staging 7933a85: Anlege-POST placements.rows=11 (Trip) bzw. 23 (Orte), outlook_reports fehlt im POST; Ansicht Trip [morning], Orte [evening]; DE und EN je gruen; zweiter Nutzer GET Ansicht und Abo 404 in beide Richtungen. 4 von 4 Playwright-Tests gruen.",
+      "workflow": "fix-3361-ausblick-anlegen"
+    },
+    {
+      "ac": "#3361 AC-3 Trip+Orte DE",
+      "status": "VERIFIED",
+      "url": "https://staging.gregor20.henemm.com/compare/new",
+      "evidence": "Eigene Ausblick-Wahl bleibt: POST outlook_reports=[morning,evening], Ansicht gleich (Trip und Orte).",
+      "workflow": "fix-3361-ausblick-anlegen"
+    },
+    {
+      "ac": "#3361 AC-5 Trip+Orte DE+EN",
+      "status": "VERIFIED",
+      "url": "https://staging.gregor20.henemm.com/trips/new",
+      "evidence": "Vorbelegung vor dem Anlegen: Trip evening=an, Orte morning=an, DE und EN gleich.",
+      "workflow": "fix-3361-ausblick-anlegen"
+    },
+    {
+      "ac": "#2990 AC-1/AC-4 Vergleich-Liste DE+EN",
+      "status": "VERIFIED",
+      "url": "https://staging.gregor20.henemm.com/compare",
+      "evidence": "Preset mit allen vier Flags: Liste zeigt Email, Telegram, SMS, Premium-SMS in dieser Reihenfolge; Preset ohne Flags: nur Email, kein Telegram/SMS/Premium-SMS. DE und EN identisch.",
+      "workflow": "fix-3361-ausblick-anlegen"
+    },
+    {
+      "ac": "#2990 AC-3 Vergleich-Liste und Detail-Hub DE+EN",
+      "status": "VERIFIED",
+      "url": "https://staging.gregor20.henemm.com/compare",
+      "evidence": "Preset send_email=false + Telegram an: Liste nur Telegram, Detail-Hub nur Telegram, kein Email. DE und EN identisch.",
+      "workflow": "fix-3361-ausblick-anlegen"
+    },
+    {
+      "ac": "#2990 AC-2 Trip/Vergleich Paritaet DE+EN",
+      "status": "VERIFIED",
+      "url": "https://staging.gregor20.henemm.com/",
+      "evidence": "Trip mit gleichen Flags: Startseiten-Kachel und Trip-Detail-Hub zeigen Email, Telegram, SMS, Premium-SMS; Trip mit send_email=false + Telegram: nur Telegram (Kachel und Hub). Vergleich-Hub gleiche Flags: dieselben vier Kanaele. DE und EN identisch. Testobjekte angelegt und geloescht (je 404 nachher). Nicht per UI messbar: AC-5/AC-7 und Hero ohne aktiven Slot (AC-6; Test-Trip wird nie Hero), durch Kern-Tests abgedeckt.",
+      "workflow": "fix-3361-ausblick-anlegen"
+    }
+  ],
+  "verified_at": "2026-11-26T16:19:29.136283+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Staging 7933a85 \u2013 #3361 und #2990 DE/EN",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "fix-3361-ausblick-anlegen": {
+      "verdict": "VERIFIED: Staging 7933a85 \u2013 #3361 und #2990 DE/EN",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-26T16:19:29.136283+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
