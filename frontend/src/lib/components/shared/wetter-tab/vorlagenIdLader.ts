@@ -14,6 +14,26 @@ export type VorlageIdZustand = { zustand: 'laedt' | 'geladen' | 'fehler'; vorlag
 export type AboArg = { display_config?: object | null; profil?: unknown } | null | undefined;
 
 const cache = new Map<string, string>();
+// Laufende Anfragen je Eintrag (modulweit): weitere Verbraucher bzw. Effekt-Neulaeufe warten darauf,
+// statt erneut anzufragen (Staging-Befund S3a: drei identische POSTs je Seitenaufruf).
+const laufend = new Map<string, Promise<string>>();
+
+/** Startet EINE gebuendelte Anfrage fuer `neu`; Erfolg landet im Cache, Fehler nicht. */
+function starte(client: AufloesungClient, neu: string[], eintraege: ReturnType<typeof eintragAusAbo>[]): void {
+	const anfrage = loeseAmpelnAuf(client, eintraege);
+	neu.forEach((s, i) => {
+		const p = anfrage.then((ergebnisse) => {
+			const id = ergebnisse[i].vorlage_id;
+			cache.set(s, id);
+			return id;
+		});
+		laufend.set(s, p);
+		const aufraeumen = () => {
+			if (laufend.get(s) === p) laufend.delete(s);
+		};
+		p.then(aufraeumen, aufraeumen);
+	});
+}
 
 export function erstelleVorlagenIdLader(
 	client: AufloesungClient,
@@ -34,10 +54,11 @@ export function erstelleVorlagenIdLader(
 			const meins = ++ticket;
 			melde(stand(false));
 			if (offen.length === 0) return;
+			const neu = offen.filter((s) => !laufend.has(s));
+			if (neu.length > 0) starte(client, neu, neu.map((s) => eintraege[schluessel.indexOf(s)]));
 			try {
-				const ergebnisse = await loeseAmpelnAuf(client, offen.map((s) => eintraege[schluessel.indexOf(s)]));
+				await Promise.all(offen.map((s) => laufend.get(s)));
 				if (meins !== ticket) return;
-				offen.forEach((s, i) => cache.set(s, ergebnisse[i].vorlage_id));
 				melde(stand(false));
 			} catch {
 				if (meins === ticket) melde(stand(true));
