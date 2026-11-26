@@ -19,13 +19,22 @@ def get_compare_metrics(lang: Optional[str] = Query(None, description="de|en, so
     Read-only, kein user_id-Bezug (statischer Katalog, analog /api/metrics).
     Die Strangler-Migration ist mit #1350 Teil 3 abgeschlossen: das Frontend
     konsumiert diesen Endpoint produktiv ueber
-    `frontend/src/lib/components/shared/corridor-editor/compareMetricCatalogLoader.ts`
+    `frontend/src/lib/components/shared/wetter-tab/compareMetricCatalogLoader.ts`
     (`fetchCompareMetricCatalogOnce()`); der Backend-Katalog ist damit die
     Quelle, nicht mehr compareMetricDefs.ts.
-    """
-    from output.renderers.compare_metric_catalog import get_compare_metric_catalog
 
-    return {"metrics": get_compare_metric_catalog(lang="en" if lang == "en" else "de")}
+    #2989: ``default_order`` ist die Mail-Standardfolge (CV2-Zeilen ohne
+    ``warn``) der waehlbaren Schluessel; die Frontend-Kopie entfaellt.
+    ``metrics`` bleibt in Inhalt und Reihenfolge unveraendert.
+    """
+    from output.renderers.compare_metric_catalog import (
+        default_order, get_compare_metric_catalog,
+    )
+
+    return {
+        "metrics": get_compare_metric_catalog(lang="en" if lang == "en" else "de"),
+        "default_order": default_order(),
+    }
 
 
 def _pruefe_eingaben(user_id: str, forecast_hours: int, start: int, ende: int,

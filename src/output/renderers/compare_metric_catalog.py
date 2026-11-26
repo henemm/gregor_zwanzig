@@ -447,3 +447,41 @@ def get_compare_metric_catalog(
             ),
         })
     return result
+
+
+def default_order(
+    zeilen: list[dict] | None = None, katalog: list[dict] | None = None,
+) -> list[str]:
+    """Mail-Standardfolge der waehlbaren Vergleichs-Schluessel (#2989).
+
+    Abgeleitet aus ``CV2_ZEILEN`` (ohne ``warn``), je Zeile ueber
+    ``key_for(metric_id, aggregation)``; das Frontend liest „nie eingestellt =
+    alle Groessen in Mail-Folge" nur noch von hier. Weicht die Menge von den
+    waehlbaren Katalog-Schluesseln ab (fehlend, zusaetzlich, doppelt, nicht
+    aufloesbar), bricht die Ableitung mit ``ValueError`` ab (fail-fast wie
+    ``_sort_by_cv2_order``). ``zeilen``/``katalog`` injizieren Testkopien."""
+    if zeilen is None:
+        # Lokal importiert: compare_html ist ein schwerer Renderer-Import (Zyklus-Schutz).
+        from output.renderers.email.compare_html import CV2_ZEILEN
+        zeilen = CV2_ZEILEN
+    if katalog is None:
+        katalog = get_compare_metric_catalog()
+    folge: list[str] = []
+    for zeile in zeilen:
+        if zeile.get("key") == "warn":
+            continue
+        key = key_for(zeile.get("metric_id"), zeile.get("aggregation"))
+        if key is None:
+            raise ValueError(
+                f"CV2-Zeile {zeile.get('key')!r} ({zeile.get('metric_id')!r}/"  # i18n-log
+                f"{zeile.get('aggregation')!r}) hat keinen Katalog-Schluessel"
+            )
+        folge.append(key)
+    erwartet = {e["key"] for e in katalog}
+    fehlend, zusaetzlich = erwartet - set(folge), set(folge) - erwartet
+    if fehlend or zusaetzlich or len(folge) != len(set(folge)):
+        raise ValueError(
+            "default_order weicht von den waehlbaren Katalog-Schluesseln ab: "  # i18n-log
+            f"fehlend {sorted(fehlend)}, zusaetzlich {sorted(zusaetzlich)}, Folge {folge}"
+        )
+    return folge

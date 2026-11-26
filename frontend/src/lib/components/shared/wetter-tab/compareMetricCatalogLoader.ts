@@ -16,6 +16,7 @@ import { locale, trFor, type Lang, type MessageKey } from '../../../i18n/index.t
 import { metricLabel, type MetricLabelFields } from '../../../i18n/metricLabel.ts';
 import { de } from '../../../i18n/messages/de/index.ts';
 import type { CompareMetricCatalogEntry, CompareMetricCatalogResponse } from '$lib/types';
+import { getCompareDefaultOrder, setCompareDefaultOrder } from './compareDefaultOrder.ts';
 import {
 	_COMPARE_DEFAULTS,
 	ROUTE_CORRIDOR_CATALOG_IDS,
@@ -36,7 +37,7 @@ import {
 // FREEZING_RAIN) ohne Zahlenskala, wind_direction_deg ist zyklisch (0-360°,
 // "von 350° bis 10°" ist mit einem Von/Bis-Paar nicht ausdrueckbar). Beide
 // bleiben normale Wettergroessen im Reiter Wetter-Metriken —
-// COMPARE_METRIC_KEYS (corridorEditorState.ts) und der Katalog-Endpoint sind
+// die Standardfolge (`default_order`, #2989) und der Katalog-Endpoint sind
 // unveraendert. Die Entfernung sitzt bewusst NUR hier (einziger Ort, an dem
 // Katalog-Eintraege zu Editor-Definitionen werden).
 const _COMPARE_RANGE_UNSUPPORTED = new Set(['precip_type_dominant', 'wind_direction_deg']);
@@ -94,12 +95,22 @@ export function buildCompareMetricDefs(response: CompareMetricCatalogResponse): 
 // den Eintrag dieser Sprache.
 const cachedResponses = new Map<Lang, Promise<CompareMetricCatalogResponse>>();
 
+// Issue #2989: Mail-Standardfolge der Vergleichs-Schluessel (`default_order` der
+// Katalog-Antwort), befuellt im geteilten Fetch-Chain. Der Speicher liegt im
+// abhaengigkeitsfreien compareDefaultOrder.ts (reine Ableitungen lesen dort, ohne
+// den API-Client zu laden); der Getter wird hier re-exportiert.
+export { getCompareDefaultOrder };
+
 function fetchCompareMetricCatalogOnce(): Promise<CompareMetricCatalogResponse> {
 	const lang: Lang = get(locale) === 'en' ? 'en' : 'de';
 	let cached = cachedResponses.get(lang);
 	if (!cached) {
 		cached = api
 			.get<CompareMetricCatalogResponse>(`/api/compare/metrics?lang=${lang}`)
+			.then((r) => {
+				if (Array.isArray(r?.default_order)) setCompareDefaultOrder(r.default_order);
+				return r;
+			})
 			.catch((e: unknown) => {
 				cachedResponses.delete(lang);
 				throw e;

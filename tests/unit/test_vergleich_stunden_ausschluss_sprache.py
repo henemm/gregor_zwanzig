@@ -82,7 +82,7 @@ def test_ac2_katalog_englisch_und_sonst_identisch():
 def test_ac2_endpunkt_liefert_englisch(client):
     antwort = client.get("/api/compare/metrics", params={"lang": "en"})
     assert antwort.status_code == 200
-    assert antwort.json() == {"metrics": get_compare_metric_catalog(lang="en")}
+    assert antwort.json()["metrics"] == get_compare_metric_catalog(lang="en")
     assert _gruende(antwort.json()["metrics"])["sunshine"].startswith("Hourly")
 
 
@@ -90,5 +90,5 @@ def test_ac2_endpunkt_liefert_englisch(client):
 def test_ac3_endpunkt_ohne_oder_mit_unbekannter_sprache_deutsch(client, params):
     antwort = client.get("/api/compare/metrics", params=params)
     assert antwort.status_code == 200
-    assert antwort.json() == {"metrics": get_compare_metric_catalog()}
+    assert antwort.json()["metrics"] == get_compare_metric_catalog()
     assert _gruende(antwort.json()["metrics"])["sunshine"] == _SONNE_DE

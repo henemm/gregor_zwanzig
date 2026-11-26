@@ -51,8 +51,9 @@ export function live(): { metrics: Record<string, Json[]>; templates: Json[] } {
 const PY_VERGLEICHS_KATALOG = [
 	'import sys, json',
 	"sys.path.insert(0, 'src'); sys.path.insert(0, '.')",
-	'from output.renderers.compare_metric_catalog import get_compare_metric_catalog',
-	"print(json.dumps({'metrics': get_compare_metric_catalog(lang='de')}, ensure_ascii=False))"
+	// #2989: die echte Endpoint-Antwort (traegt neben `metrics` die Standardfolge `default_order`).
+	'from api.routers.compare import get_compare_metrics',
+	"print(json.dumps(get_compare_metrics(lang='de'), ensure_ascii=False))"
 ].join('\n');
 
 let vergleichsCache: Json | null = null;

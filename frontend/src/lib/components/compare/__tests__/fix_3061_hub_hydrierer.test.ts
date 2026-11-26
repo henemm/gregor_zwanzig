@@ -29,7 +29,8 @@ import { toCompareSelectionEntries } from '../../shared/weather-metrics-tab/comp
 import { materializeActiveMetricKeys } from '../../shared/weather-metrics-tab/compareMetricOrder.ts';
 import { hydrateLayoutFieldsFromPreset } from '../../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
 import { deriveActiveAlertMetricsFromCatalog } from '../../shared/alarme-tab/activeAlertMetricsFromCatalog.ts';
-import { COMPARE_METRIC_KEYS } from '../../shared/wetter-tab/corridorEditorState.ts';
+import { getCompareDefaultOrder, loadCompareMetricCatalog } from '../../shared/wetter-tab/compareMetricCatalogLoader.ts';
+import { endpointFetch } from '../../shared/wetter-tab/__tests__/compareDefaultOrder2989Daten.ts';
 import {
 	attributAusdruck,
 	findeKomponenten,
@@ -49,6 +50,17 @@ const { render } = await import('svelte/server');
 const AlarmeTab = (await import(pathToFileURL(join(SHARED, 'AlarmeTab.svelte')).href)).default;
 const { locale } = await import(pathToFileURL(join(FRONTEND, 'src/lib/i18n/index.ts')).href);
 locale.set('de');
+
+// #2989: die Vorgabemenge „nie eingestellt" ist die Standardfolge `default_order` der
+// Katalog-Antwort, befuellt ueber den echten Lader (fetch-Stub an der Netzgrenze).
+const zurueck = endpointFetch();
+try {
+	await loadCompareMetricCatalog();
+} finally {
+	zurueck();
+}
+const STANDARD = getCompareDefaultOrder() ?? [];
+assert.ok(STANDARD.length > 0, 'Messaufbau: Standardfolge nicht geladen');
 
 const DATEN = JSON.parse(readFileSync(FIXTURE, 'utf-8'));
 const KATALOG = toCompareSelectionEntries(DATEN.kataloge.orte_api_compare_metrics);
@@ -71,7 +83,7 @@ function preset(displayConfig: Record<string, unknown>): ComparePreset {
 	} as unknown as ComparePreset;
 }
 const ALTBESTAND = () => preset({});
-const VOLLAUSWAHL = () => preset({ active_metrics: [...COMPARE_METRIC_KEYS] });
+const VOLLAUSWAHL = () => preset({ active_metrics: [...STANDARD] });
 
 /** Wetter-Metriken-Hydrierer des Hubs (CompareTabs.svelte), auf `wizardState`. */
 async function wetterHydrierer(wizardState: Record<string, unknown>, p: ComparePreset): Promise<void> {
@@ -114,8 +126,8 @@ describe('#3061 Hub-Hydrierer behalten „nie eingestellt"', () => {
 		alarmHydrierer(a, VOLLAUSWAHL());
 		const w: Record<string, unknown> = {};
 		await wetterHydrierer(w, VOLLAUSWAHL());
-		assert.deepEqual(a.activeMetricKeys, COMPARE_METRIC_KEYS);
-		assert.deepEqual(w.activeMetricKeys, COMPARE_METRIC_KEYS);
+		assert.deepEqual(a.activeMetricKeys, STANDARD);
+		assert.deepEqual(w.activeMetricKeys, STANDARD);
 	});
 });
 

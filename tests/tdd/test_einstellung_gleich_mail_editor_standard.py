@@ -425,7 +425,10 @@ def _live_trip_katalog() -> dict[str, list[dict]]:
 def _live_orte_katalog() -> dict[str, list[dict]]:
     from api.routers.compare import get_compare_metrics
 
-    return get_compare_metrics(lang=None)
+    # #2989: ``default_order`` ist eine Schluesselliste, keine Eintragsgruppe;
+    # sie bewacht tests/tdd/test_2989_compare_default_order.py (CV2-Folge + Menge).
+    antwort = get_compare_metrics(lang=None)
+    return {k: v for k, v in antwort.items() if k != "default_order"}
 
 
 _DRIFT_HINWEIS = ("eingefrorene Kataloge in tests/fixtures/einstellung_gleich_mail/"

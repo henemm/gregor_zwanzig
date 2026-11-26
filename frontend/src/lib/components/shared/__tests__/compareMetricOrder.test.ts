@@ -1,13 +1,28 @@
 // RED (Issue #1359, Scheibe 1) — der Reihenfolge-Abschnitt muss auch im
 // Vergleich-Kontext sichtbar sein (Spec: compare_metric_order.md, AC-1/AC-9).
-import { test, describe } from 'node:test';
+import { test, describe, before } from 'node:test';
 import assert from 'node:assert/strict';
 import {
 	toggleCompareMetricKey,
 	materializeActiveMetricKeys,
 	toggleCompareMetricKeyFromState
 } from '../weather-metrics-tab/compareMetricOrder.ts';
-import { COMPARE_METRIC_KEYS } from '../wetter-tab/corridorEditorState.ts';
+import { getCompareDefaultOrder, loadCompareMetricCatalog } from '../wetter-tab/compareMetricCatalogLoader.ts';
+import { endpointFetch } from '../wetter-tab/__tests__/compareDefaultOrder2989Daten.ts';
+
+// #2989: die Vorgabemenge ist die Standardfolge `default_order` der Katalog-Antwort,
+// befuellt ueber den echten Lader (fetch-Stub an der Netzgrenze, echte Endpoint-Antwort).
+let STANDARD: string[] = [];
+before(async () => {
+	const zurueck = endpointFetch();
+	try {
+		await loadCompareMetricCatalog();
+	} finally {
+		zurueck();
+	}
+	STANDARD = getCompareDefaultOrder() ?? [];
+	assert.ok(STANDARD.length > 0, 'Standardfolge nicht geladen');
+});
 
 // #3297/#3020: Abschnittsfaelle von weatherMetricsTabSections entfallen — Datei geloescht.
 
@@ -48,14 +63,14 @@ describe('Issue #1359 Scheibe 1: An-/Abwaehlen erhaelt die Reihenfolge (AC-2)', 
 // gefangen (Adversary-Dialog Runde 2).
 describe('toggleCompareMetricKeyFromState — echter Bedienpfad (Issue #1366 F002)', () => {
 	test('Bestandsvergleich ohne gespeicherte Auswahl (null), eine Groesse abwaehlen -> Vorgabemenge minus eine', () => {
-		const [first] = COMPARE_METRIC_KEYS;
+		const [first] = STANDARD;
 		const result = toggleCompareMetricKeyFromState(null, first);
 		assert.deepEqual(
 			result,
-			COMPARE_METRIC_KEYS.filter((k) => k !== first),
+			STANDARD.filter((k) => k !== first),
 			'F002-Regression: eine einzelne Abwahl aus "nie eingestellt" darf nicht in eine leere Liste kippen'
 		);
-		assert.equal(result.length, COMPARE_METRIC_KEYS.length - 1);
+		assert.equal(result.length, STANDARD.length - 1);
 	});
 
 	test('bewusste Leerauswahl ([]), eine Groesse anhaken -> genau diese eine', () => {
@@ -64,7 +79,7 @@ describe('toggleCompareMetricKeyFromState — echter Bedienpfad (Issue #1366 F00
 	});
 
 	test('materializeActiveMetricKeys: null -> Vorgabemenge, [] bleibt leer', () => {
-		assert.deepEqual(materializeActiveMetricKeys(null), COMPARE_METRIC_KEYS);
+		assert.deepEqual(materializeActiveMetricKeys(null), STANDARD);
 		assert.deepEqual(materializeActiveMetricKeys([]), []);
 	});
 });

@@ -13,15 +13,15 @@
 // „nie eingestellt" (`null`) von „bewusst leer" (`[]`) -- EINZIGE Quelle der
 // Wahrheit fuer Anzeige UND Umschalt-Handler in WeatherMetricsTab.svelte.
 
-import { COMPARE_METRIC_KEYS } from '../wetter-tab/corridorEditorState.ts';
+import { getCompareDefaultOrder } from '../wetter-tab/compareDefaultOrder.ts';
 
 /**
- * `null` (nie eingestellt) -> Vorgabemenge (COMPARE_METRIC_KEYS, dieselbe
- * Liste wie die Legacy-Default-Ableitung in weatherMetricsCompareSave.ts).
+ * `null` (nie eingestellt) -> frische Kopie der Standardfolge aus dem Katalog
+ * (`default_order`, #2989); noch nicht geladen -> `[]` (nur Anzeige).
  * `[]` (bewusste Leerauswahl) bleibt unveraendert leer.
  */
 export function materializeActiveMetricKeys(keys: string[] | null): string[] {
-	return keys === null ? COMPARE_METRIC_KEYS : keys;
+	return keys === null ? (getCompareDefaultOrder() ?? []) : keys;
 }
 
 // Issue #1361/#1368: die Groessen, die der 3-Tages-Ausblick fest zeigt
