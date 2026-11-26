@@ -361,25 +361,58 @@ erbracht: Ursache (Netz, Push-Recht) beheben und den Befehl wiederholen.
 
 Die Staging-Werkzeuge brauchen Server-Ressourcen (Staging-`.env`, Kern auf
 `127.0.0.1:8001`, Staging-Checkout, Test-Postfach). Außerhalb des Servers laufen die
-Schritte 1, 3a–3c, 4 und 5 deshalb per ssh im Staging-Checkout
+Abnahmeschritte deshalb ausschließlich über den festen Prüfzugang `ssh henemm-pruefen`
+(henemm-infra#487, Befehlsformen: `henemm-infra/docs/imac-pruefzugang.md`). Der Server
+nimmt darüber nur eine feste Liste von Prüfbefehlen an; sie arbeiten im Staging-Checkout
 `~/gregor_zwanzig_staging`, der nach dem Staging-Deploy auf genau dem zu prüfenden Commit
-steht. Vorher prüfen, dass er auf dem Ziel-Commit steht:
+steht. Freie `ssh henemm '…'`-Befehle sind in der Abnahme nicht vorgesehen: jeder braucht
+ein Okay des PO, und der Nachweis-Schritt wird vom Zustandsdatei-Schutz gesperrt
+(#3402, #3415).
+
+### Schritt → Prüfbefehl
+
+**Schritt 1 (Staging-Aktualität):** Commit des Staging-Checkouts mit dem eigenen
+Ziel-Commit vergleichen. Steht Staging nicht darauf, den Deploy anstoßen und danach erneut
+`rev` prüfen. Der Smoke läuft weiter per `curl` gegen `https://staging.gregor20.henemm.com`
+wie in Schritt 1.
 
 ```bash
-ssh henemm 'cd ~/gregor_zwanzig_staging && git rev-parse HEAD'   # == eigener Ziel-Commit?
-ssh henemm 'cd ~/gregor_zwanzig_staging && python3 .claude/tools/staging_mail_pruefen.py --typ beide'
+ssh henemm-pruefen rev gregor-staging
+ssh henemm-pruefen staging-deploy
+ssh henemm-pruefen rev gregor-staging
 ```
 
-Den Nachweis schreibt `--write-verdict` ebenfalls dort (Findings-Datei per ssh-Heredoc in
-ein `mktemp -d`-Verzeichnis auf dem Server legen):
+**Schritt 3a (Playwright gegen Staging):** eingecheckte Abnahme-Config und -Spec aus
+`frontend/` des Staging-Checkouts, je Sprache ein Lauf (`abnahme` steht für den Namen
+der eigenen Abnahme-Dateien).
 
 ```bash
-ssh henemm 'cd ~/gregor_zwanzig_staging && D=$(mktemp -d) && cat > "$D/f.json" && \
-  python3 .claude/hooks/staging_gate.py --write-verdict "VERIFIED: <Begründung>" \
-    --findings-json "$D/f.json" --langs de,en; rc=$?; rm -rf "$D"; exit $rc' < findings.json
+ssh henemm-pruefen spec-run playwright.abnahme.staging.config.ts e2e/abnahme.staging.spec.ts
+ssh henemm-pruefen spec-run playwright.abnahme.staging.config.ts e2e/abnahme.staging.spec.ts --lang en
 ```
 
-Der Ablageort der Datei ist egal: maßgeblich ist die veröffentlichte Git-Note
+**Schritt 3b (Mail):** Reihenfolge fest `<typ> [de|en] [morning|evening]`, mit `<typ>` =
+`trip`, `compare` oder `beide`. Den Report-Typ `morning|evening` nimmt der Prüfzugang nur
+nach einer Sprache an (`mail-pruefen trip evening` wird abgelehnt, richtig ist
+`mail-pruefen trip de evening`).
+
+```bash
+ssh henemm-pruefen mail-pruefen beide
+ssh henemm-pruefen mail-pruefen trip en evening
+```
+
+**Schritt 5 (Nachweis):** die Findings-Datei (JSON-Array, höchstens 1 MB) lokal anlegen,
+z. B. im Sitzungs-Scratchpad, und als Eingabe übergeben. Verdict-Wort und Begründung sind
+getrennte Argumente, die Begründung ist ein Argument mit höchstens 500 Zeichen; optional
+`--scope frontend-only|backend|full-stack|docs-only`. Der Prüfzugang ruft dort
+`staging_gate.py --write-verdict` auf, der den Nachweis schreibt und die Git-Note
+veröffentlicht.
+
+```bash
+ssh henemm-pruefen "write-verdict VERIFIED 'AC-1 bis AC-3 auf Staging gemessen' --langs de,en" < findings.json
+```
+
+Der Ablageort der Nachweis-Datei ist egal: maßgeblich ist die veröffentlichte Git-Note
 `e2e-verified` auf `origin`, die der Prod-Server vor seinem Gate holt. Kontrolle von der
 Sitzung aus:
 
@@ -388,9 +421,30 @@ git fetch origin '+refs/notes/e2e-verified:refs/notes/e2e-verified'
 git notes --ref e2e-verified show <ziel-sha>
 ```
 
+### Abnahme-Dateien einchecken
+
+`spec-run` führt nur Dateien aus, die im Staging-Checkout git-verfolgt und unverändert
+sind. Eine eigene Abnahme-Config (`frontend/playwright.*.staging.config.ts`) und
+Abnahme-Spec (`frontend/e2e/*.spec.ts`) deshalb im selben PR wie die Änderung einchecken;
+nach Merge und Staging-Deploy liegen sie im Checkout. Ad-hoc-Dateien in `/tmp` oder im
+Staging-Checkout gehen nicht, und `frontend/` im Staging-Checkout muss sauber sein (keine
+geänderten oder untracked Dateien). `spec-run` reicht keine Umgebungsvariablen durch
+(z. B. `ABNAHME_KONTEXTE`), einzige Zusatzoption ist `--lang en`; die Spec muss mit ihren
+Standardwerten laufen.
+
+### Grenzen
+
+Nicht über den Prüfzugang gehen: Befehl per Mail-Eingang (`staging_befehl_pruefen.py`),
+Telegram-Live (Schritt 3c), Premium-SMS-Empfang, Staging-API-Seeds,
+`e2e_browser_test.py` und die Zusatzflags von `mail-pruefen` (`--format`, `--timeout`,
+`--ohne-cleanup`). Diese Schritte macht eine Server-Sitzung. Cloud-Sitzungen haben
+keinen Prüfzugang (der Schlüssel ist an den iMac gebunden); dort übernimmt eine Server-
+oder iMac-Sitzung die Abnahme.
+
 Die Sitzung misst weiterhin selbst („wer attestiert, misst selbst“): sie startet die
-Werkzeuge per ssh und liest deren Ergebnis; keine Test-Postfach-Zugangsdaten auf dem
-eigenen Rechner. Danach weiter mit `/70-deploy` (Abschnitt „außerhalb des Servers“).
+Prüfbefehle per `ssh henemm-pruefen` und liest deren Ergebnis; keine Test-Postfach-
+Zugangsdaten auf dem eigenen Rechner. Danach weiter mit `/70-deploy` (Abschnitt
+„außerhalb des Servers“).
 
 ## VERBOTEN
 
