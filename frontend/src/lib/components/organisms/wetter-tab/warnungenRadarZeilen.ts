@@ -5,7 +5,18 @@
 // Kein Svelte-/Browser-Import, lauffähig unter node --experimental-strip-types.
 
 /** #2800: Katalogschlüssel für `{orte}` im Radar-Hinweis — Trip „deine Etappe", Orts-Briefing „deine Orte". */
-export type RadarZiel = 'wetter.radar.deine_orte' | 'wetter.radar.deine_etappe';
+export type RadarZiel = 'wetter.radar.deine_orte' | 'wetter.radar.deine_etappe' | 'wetter.radar.dein_ort';
+
+/** #3430: Ziel je Kontext; im Orts-Briefing mit genau einem Ort „deinen Ort“ (ADR-0124 Nr. 10). */
+const RADAR_ZIEL: Record<'route' | 'vergleich', (ortAnzahl: number | undefined) => RadarZiel> = {
+	route: () => 'wetter.radar.deine_etappe',
+	vergleich: (n) => (n === 1 ? 'wetter.radar.dein_ort' : 'wetter.radar.deine_orte')
+};
+
+/** #3430: reine Auswahl des Radar-Ziels — Trip immer „deine Etappe", Orte bei genau einem Ort „deinen Ort", sonst „deine Orte". */
+export function radarZiel(kontext: 'route' | 'vergleich', ortAnzahl: number | undefined): RadarZiel {
+	return RADAR_ZIEL[kontext](ortAnzahl);
+}
 
 export interface SchalterZeile {
 	testid: 'wetter-warnungen-schalter' | 'wetter-radar-schalter';

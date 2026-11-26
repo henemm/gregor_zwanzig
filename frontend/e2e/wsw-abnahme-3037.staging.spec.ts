@@ -44,7 +44,7 @@ const KIND: Record<Ctx, HubKind> = { trip: 'route', orte: 'vergleich', ort1: 've
 /** Orte-Metriken wie im Mockup (Vorbild was-steht-wo-bildabgleich.staging.spec.ts). */
 const ORTE_METRIKEN = ['temp_max_c', 'temp_min_c', 'wind_max_kmh', 'gust_max_kmh', 'precip_sum_mm', 'sunny_hours_h', 'cloud_avg_pct', 'humidity_avg_pct'];
 /** AC-2: Mehrzahl-Formulierungen, die bei genau einem Ort nicht erscheinen dürfen. */
-const VERBOTEN_EIN_ORT = ['alle Orte', '1 Orte', 'all locations', '1 locations'];
+const VERBOTEN_EIN_ORT = ['alle Orte', '1 Orte', 'all locations', '1 locations', 'deine Orte', 'your locations'];
 /** Titel im Mockup-Kopf (#head) je Kontext (mockup-hub-fassung4.html, const CTX) — Nachweis, dass der Kontext aktiv ist. */
 const MOCKUP_TITEL: Record<Ctx, string> = { trip: 'GR221 Mallorca', orte: 'Münsterland', ort1: 'Tecklenburg' };
 

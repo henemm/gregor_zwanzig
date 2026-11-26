@@ -49,6 +49,8 @@ const BASIS = git(['merge-base', 'HEAD', 'origin/main'])?.trim() || null;
 const NEU_FREIGEGEBEN = new Set([
 	// #2800 (Spec feat_2800_trip_radar_alarm.md AC-6): Radar-Hinweis im Trip „deine Etappe" / „your stage".
 	'wetter.radar.deine_etappe',
+	// #3430 (Spec docs/specs/fast/fix-3430-radar-ein-ort.md): Radar-Hinweis bei genau einem Ort.
+	'wetter.radar.dein_ort',
 	// #3122 B3b (Spec feat_3122_was_steht_wo.md Teil B Nr. 10 bis 12): Texte der Karte „Was steht wo“.
 	'wetter.wsw.titel',
 	'wetter.wsw.text_route',

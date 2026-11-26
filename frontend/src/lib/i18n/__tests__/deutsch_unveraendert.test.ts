@@ -589,6 +589,8 @@ const NEU_IN_FOLGEPAKETEN = [
 	'wetter.radar.deine_orte',
 	// #2800 (S8): Radar-Hinweis im Trip.
 	'wetter.radar.deine_etappe',
+	// #3430: Radar-Hinweis bei genau einem Ort („deinen Ort“).
+	'wetter.radar.dein_ort',
 	'wetter.anpassen.titel',
 	'wetter.anpassen.tagesfenster',
 	'wetter.anpassen.von',
