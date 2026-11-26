@@ -7,7 +7,7 @@
 // kanalStilStart) gegen die ECHTEN Python-Entscheider desselben gespeicherten Abos:
 //   TL1 Abend-Briefing Orte      -> compare_slot_scheduler.resolve_preset_slots
 //   TL2 Stille Stunden           -> DeviationAlertEngine.is_quiet_hours (Trip nach load_trip_from_dict, Orte roh)
-//   TL3 Orte-Telegram-Kurzstil   -> compare_alert_channels.effective_compare_telegram_style
+//   TL3 Orte-Telegram-Kurzstil   -> Endpoint der Karte (`blocks`) gegen compare_alert_channels.effective_compare_telegram_style
 //   TL7 Trip-Briefing per E-Mail -> TripReportSchedulerService._resolve_channel_flags (nach load_trip_from_dict)
 // Orts-Abos im Go-Ladeformat (Slot-Migration erledigt: `morning_time` gesetzt). Zwei Nutzer (a_/b_)
 // mit verschiedenen Konfigurationen.
@@ -20,13 +20,17 @@ import { execFileSync } from 'node:child_process';
 
 import { REPO } from '../../wetter-tab/__tests__/wetterTabDaten.ts';
 import { standAusPreset, standAusTrip } from '../zustellungModell.ts';
+import { felderAusAntwort } from '../../wetter-tab/wasStehtWoSpeicherung.ts';
 import type { ComparePreset, Trip } from '../../../../types.ts';
 
 type Abo = Record<string, unknown>;
+/** Antwort-Blöcke des Endpoints und der Stil, mit dem der Versand dieses Nutzers ausliefert. */
+type Stil = { blocks: Record<string, unknown>; stil: string };
 
 const PY = `
-import sys, json
+import sys, json, os, tempfile
 from datetime import datetime, timezone
+from pathlib import Path
 from zoneinfo import ZoneInfo
 sys.path.insert(0, 'src'); sys.path.insert(0, '.')
 from app.loader import load_trip_from_dict
@@ -50,6 +54,31 @@ for kid, roh in K["orte"].items():
     aus["orte"][kid] = {"morgen": s.morning_enabled, "abend": s.evening_enabled,
                         "stil": effective_compare_telegram_style(p),
                         "stille": stille(p.get("alert_quiet_from"), p.get("alert_quiet_to"))}
+# TL3 (#3020 R1): Kurzstil aus der Antwort des Endpoints der Karte, je Nutzer aus dem eigenen Bestand. Der jeweils
+# andere Nutzer hat ein Abo GLEICHER Kennung mit dem gegenteiligen Stil.
+from app.loader import compare_preset_to_dict, load_compare_presets
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from api.routers import placements
+app = FastAPI(); app.include_router(placements.router)
+with tempfile.TemporaryDirectory() as wurzel:
+    os.environ["GZ_DATA_DIR"] = wurzel
+    for kid, roh in K["orte"].items():
+        eigen = "p12-" + kid[0]
+        for nutzer in ("p12-a", "p12-b"):
+            dc = dict(roh.get("display_config") or {})
+            if nutzer != eigen:
+                dc["telegram_style"] = "rich" if dc.get("telegram_style") == "kurzform" else "kurzform"
+            ziel = Path(wurzel) / "users" / nutzer / "briefings" / (kid + ".json")
+            ziel.parent.mkdir(parents=True, exist_ok=True)
+            ziel.write_text(json.dumps({"id": kid, "name": kid, "kind": "vergleich", "location_ids": [], **roh, "display_config": dc}))
+    client = TestClient(app)
+    for kid in K["orte"]:
+        for rolle, nutzer in (("eigen", "p12-" + kid[0]), ("fremd", "p12-b" if kid[0] == "a" else "p12-a")):
+            r = client.get("/api/briefings/" + kid + "/placements", params={"kind": "vergleich", "user_id": nutzer})
+            assert r.status_code == 200, r.text
+            gespeichert = next(compare_preset_to_dict(x) for x in load_compare_presets(user_id=nutzer) if x.id == kid)
+            aus["orte"][kid][rolle] = {"blocks": r.json()["blocks"], "stil": effective_compare_telegram_style(gespeichert)}
 print(json.dumps(aus))
 `;
 
@@ -73,7 +102,7 @@ const ORTE: Record<string, Abo> = {
 	b_stille_paar: { morning_time: '07:00:00', display_config: {}, alert_quiet_from: '21:00', alert_quiet_to: '05:30' }
 };
 
-const AUS: { trip: Record<string, { email: boolean; stille: boolean }>; orte: Record<string, { morgen: boolean; abend: boolean; stil: string; stille: boolean }> } =
+const AUS: { trip: Record<string, { email: boolean; stille: boolean }>; orte: Record<string, { morgen: boolean; abend: boolean; stil: string; stille: boolean; eigen: Stil; fremd: Stil }> } =
 	JSON.parse(
 		execFileSync('uv', ['run', 'python3', '-c', PY], {
 			cwd: REPO,
@@ -110,8 +139,15 @@ describe('p12 Orte: Reiter Zustellung zeigt, was Versand und Alarm tun', () => {
 		test(`tl2_stille_gleich_alarm_${id}`, () => {
 			assert.equal(standAusPreset(ort(id)).stilleAn, AUS.orte[id].stille);
 		});
-		// #3297: TL3 (kanalStilStart) entfaellt — der Leser hatte keinen Produktions-Aufrufer mehr; den
-		// Kurzstil liest die Karte „Was steht wo“ aus der Server-Antwort (felderAusAntwort).
+		// #3297: den Kurzstil liest die Karte „Was steht wo“ aus der Server-Antwort (felderAusAntwort); #3020 R1 (E100):
+		// was sie zeigt, ist, was der Versand DIESES Nutzers ausliefert (auch bei gleicher Kennung zweier Nutzer).
+		test(`tl3_kurzstil_gleich_telegram_${id}`, () => {
+			const { eigen, fremd, stil } = AUS.orte[id];
+			assert.equal(felderAusAntwort(eigen as never).telegram_style, stil);
+			assert.equal(eigen.stil, stil, 'Messaufbau: gespeichertes Abo gleich Vorgabe');
+			assert.equal(felderAusAntwort(fremd as never).telegram_style, fremd.stil, 'zweiter Nutzer');
+			assert.notEqual(fremd.stil, stil, 'Messaufbau: die Nutzer unterscheiden sich');
+		});
 	}
 
 	test('messaufbau_faelle_decken_beide_werte', () => {

@@ -23,8 +23,22 @@ const TABELLE = join(REPO, 'docs/specs/modules/rework_3020_testtabelle.md');
 
 /** Zeilen der Testtabelle in R1 (R2-F3). */
 const ZEILEN_R1 = 60 + 145 + 15;
-/** Fälle, die bis zur Reparatur von #3355 ausstehen (AC-3); sinkt nur mit dem Bugfix. */
-const AUSSTEHEND_3355 = 4;
+/**
+ * Fälle, die bis zur Reparatur von #3355 ausstehen (AC-3); sinkt nur mit dem Bugfix. Von 4 auf 0: 71c27e117 (#3297) hat die
+ * Vollkopie im Reiter Wetter behoben, die vier Fälle laufen ohne `todo` grün (Gegenprobe V1: Vollkopie wieder drin, alle vier rot).
+ */
+const AUSSTEHEND_3355 = 0;
+/** `todo`-Fälle einer Testdatei, die auf #3355 verweist. */
+const todos3355 = (q: string): string[] => (q.includes('#3355') ? [...q.matchAll(/\btodo:\s*[A-Z_'"`]/g)].map((m) => m[0]) : []);
+/** Dürfen vor R2 schon fehlen: auf main gelöscht durch #3301 (02f684e86), #3298 (9bf9c2dbf) und #3366 (PR #3386,
+ *  Layout-Reiter samt Hilfsdateien). Nur die Existenzprüfung entfällt, die Menge der 42 bleibt. */
+const VORAB_GELOESCHT = [
+	'compare/compareHourlyMetricDefs.ts',
+	'compare/hourlyFriendlyMap.ts',
+	...['LTCapNote.svelte', 'LTChannelPicker.svelte', 'LTCutLine.svelte', 'LayoutTab.svelte', 'channelLayoutsDirty.ts', 'ltIdealRange.ts'].map(
+		(n) => `shared/layout-tab/${n}`
+	)
+];
 
 const quelltexte = [SRC, join(SRC, '..', 'e2e')].flatMap((d) =>
 	(readdirSync(d, { recursive: true }) as string[])
@@ -59,6 +73,15 @@ const zeilen = (): Zeile[] =>
 		.map(([, id, e, g, b, m]) => ({ id, entscheid: e.trim(), grund: g.trim(), beleg: b.trim(), mutation: m.trim() }));
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/** Titelvorlage ohne festen Textanteil (`${key}`) passte ausgefüllt auf jeden Namen; sie zählt nur wörtlich zitiert. */
+const ohneFestenText = (vorlage: string) => !/[\p{L}\p{N}]/u.test(vorlage.replace(/\$\{[^}]*\}/g, ''));
+function titelImQuelltext(q: string, titel: string): boolean {
+	return [...q.matchAll(/\b(?:test|it)(?:\.\w+)?\(\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)"|`([^`]*)`)/g)].some(([, a, b, c]) =>
+		c === undefined
+			? (a ?? b).replace(/\\(.)/g, '$1') === titel
+			: c === titel || (!ohneFestenText(c) && new RegExp(`^${c.split(/\$\{[^}]*\}/).map(escape).join('.+')}$`).test(titel))
+	);
+}
 /** Steht ein Test mit diesem Namen in der Datei (wörtlich oder als ausgefüllte Template-Vorlage)? */
 function hatTest(pfad: string, titel: string): boolean {
 	const abs = join(REPO, pfad);
@@ -66,11 +89,7 @@ function hatTest(pfad: string, titel: string): boolean {
 	const q = lies(abs);
 	if (pfad.endsWith('.py')) return new RegExp(`def ${escape(titel)}\\s*\\(`).test(q);
 	if (pfad.endsWith('.go')) return new RegExp(`func ${escape(titel)}\\s*\\(`).test(q);
-	return [...q.matchAll(/\b(?:test|it)(?:\.\w+)?\(\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)"|`([^`]*)`)/g)].some(([, a, b, c]) =>
-		c === undefined
-			? (a ?? b).replace(/\\(.)/g, '$1') === titel
-			: c === titel || new RegExp(`^${c.split(/\$\{[^}]*\}/).map(escape).join('.+')}$`).test(titel)
-	);
+	return titelImQuelltext(q, titel);
 }
 const belege = (z: Zeile) => [...z.beleg.matchAll(/`([^`]+?)::([^`]+)`/g)].map(([, pfad, titel]) => ({ pfad, titel }));
 
@@ -97,6 +116,17 @@ describe('Umfang (Vakuum-Schutz)', () => {
 		assert.ok(hatTest(diese, 'restbestand_42_ohne_dopplung'));
 		assert.ok(!hatTest(diese, 'diesen_test_gibt_es_nicht'));
 		assert.ok(!hatTest('frontend/src/lib', 'restbestand_42_ohne_dopplung'), 'Verzeichnis ist kein Beleg');
+	});
+	test('testnamen_erkennung_vorlage_ohne_festen_text_ist_kein_treffer', () => {
+		const quelle = (vorlage: string) => `for (const key of X) test(\`${vorlage}\`, () => {});`;
+		for (const leer of ['${key}', '${a}${b}', '${a} – ${b}: ${c}']) {
+			assert.ok(!titelImQuelltext(quelle(leer), 'diesen_test_gibt_es_nicht'), leer);
+			assert.ok(!titelImQuelltext(quelle(leer), 'a – b: c'), leer);
+			assert.ok(titelImQuelltext(quelle(leer), leer), `${leer}: wörtlich zitierte Vorlage zählt`);
+		}
+		assert.ok(titelImQuelltext(quelle('kanal ${key} bleibt'), 'kanal sms bleibt'), 'Vorlage mit festem Text zählt');
+		assert.ok(titelImQuelltext(quelle('kanal ${key} bleibt'), 'kanal ${key} bleibt'));
+		assert.ok(!titelImQuelltext(quelle('kanal ${key} bleibt'), 'kanal sms entfällt'));
 	});
 });
 
@@ -138,13 +168,19 @@ describe('AC-6 (R1): je gelöschter Testdatei, entfallenem Fall und Katalogfall 
 });
 
 describe('AC-3 (R1): ausstehende Fälle zu #3355 sind sichtbar und gezählt', () => {
+	// Bei Sollzahl 0 wäre eine blinde Zählung grün: die Erkennung und die Dateimenge werden deshalb eigens geprüft.
+	test('zaehlung_findet_jeden_todo_mit_verweis', () => {
+		const fall = (wert: string) => `test('x', { todo: ${wert} }, async () => {});`;
+		assert.equal(todos3355(`// Bug #3355\n${fall('BEFUND')}\n${fall("'Bug offen'")}`).length, 2);
+		assert.deepEqual(todos3355(fall('BEFUND')), [], 'ohne Verweis zählt der Fall nicht');
+		const verweise = quelltexte.filter((f) => /\.test\.ts$/.test(f) && readFileSync(f, 'utf-8').includes('#3355')).map((f) => basename(f));
+		for (const n of ['trip_python_skip_next_ohne_412.test.ts', 'trip_reiter_nutzlast_nur_eigene_felder.test.ts'])
+			assert.ok(verweise.includes(n), `${n}: Regressionsverweis #3355 fehlt`);
+	});
 	test('anzahl_im_code_und_in_der_tabelle', () => {
 		const treffer = quelltexte
 			.filter((f) => /\.test\.ts$/.test(f))
-			.flatMap((f) => {
-				const q = readFileSync(f, 'utf-8');
-				return q.includes('#3355') ? [...q.matchAll(/\btodo:\s*[A-Z_'"`]/g)].map(() => relative(REPO, f)) : [];
-			});
+			.flatMap((f) => todos3355(readFileSync(f, 'utf-8')).map(() => relative(REPO, f)));
 		assert.equal(treffer.length, AUSSTEHEND_3355, `AC-3: ausstehende Fälle mit Verweis auf #3355: ${JSON.stringify(treffer)}`);
 		assert.match(tabellentext(), new RegExp(`Ausstehend zu #3355: ${AUSSTEHEND_3355}\\b`), 'AC-3: Anzahl fehlt in der Testtabelle');
 	});
@@ -153,10 +189,17 @@ describe('AC-3 (R1): ausstehende Fälle zu #3355 sind sichtbar und gezählt', ()
 describe(`AC-7 (R2): Restbestand, STAND ${STAND}`, () => {
 	for (const { p, abs } of ALLE) {
 		test(`restbestand__${p}`, () => {
+			if (STAND < 2 && VORAB_GELOESCHT.includes(p)) return;
 			if (STAND < 2) assert.ok(existsSync(abs), `${p} ist gelöscht: STAND im selben PR auf 2 erhöhen`);
 			else assert.ok(!existsSync(abs), `AC-7: ${p} existiert noch`);
 		});
 	}
+	test('vorab_geloescht_nur_wirklich_geloeschte_scope_dateien', () => {
+		for (const p of VORAB_GELOESCHT) {
+			assert.ok(RESTBESTAND.includes(p), `${p} steht nicht im Umfang`);
+			assert.ok(!existsSync(join(KOMP, p)), `${p} existiert noch: Ausnahme aus VORAB_GELOESCHT streichen`);
+		}
+	});
 	test('kein_quelltext_importiert_eine_geloeschte_datei', () => {
 		if (STAND < 2) return;
 		const treffer = quelltexte.flatMap((f) =>

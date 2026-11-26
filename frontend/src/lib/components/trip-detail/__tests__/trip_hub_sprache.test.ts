@@ -35,10 +35,13 @@ const layoutLoad = (await import(pathToFileURL(path.join(P.FRONTEND, 'src/routes
 const tripLoad = (await import(pathToFileURL(path.join(P.FRONTEND, 'src/routes/trips/[id]/+page.server.ts')).href)).load;
 const { baueTripSpeicherung } = await import(pathToFileURL(path.join(P.KOMP, 'shared/tripSpeicherung.ts')).href);
 
-before(() => {
+// #3020: Alt-Bausteine nur in ihren eigenen Faellen laden (fallen mit R2).
+const alt = () => import('./f9Altbausteine.ts');
+
+before(async () => {
 	// Die de-Golden sind der Ist-Stand VOR der Umstellung und werden nie neu geschrieben;
 	// nur die en-Ansicht (Review-Hilfe, nicht verglichen) wird aktualisiert.
-	if (process.env.GZ_GOLDEN_SCHREIBEN === 'en') P.schreibeGolden('en');
+	if (process.env.GZ_GOLDEN_SCHREIBEN === 'en') P.schreibeGolden('en', { ...P.htmlFaelle(), ...(await alt()).altFaelle() });
 });
 afterEach(() => locale.set('de'));
 
@@ -82,15 +85,19 @@ const DATEN = ['trip.wegpunkt.typ.', 'trip.etappe', 'trip.anlegen.name_beispiel'
 
 describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)', () => {
 	const FAELLE = P.htmlFaelle();
-	for (const fall of Object.keys(FAELLE)) {
-		test(`${fall}.de.html`, () => {
-			const golden = readFileSync(path.join(P.GOLDEN_DIR, `${fall}.de.html`), 'utf-8');
-			const { de } = deDannEn(() => FAELLE[fall]());
-			locale.set('de');
-			assert.equal(leerraum(FAELLE[fall]() + '\n'), leerraum(golden));
-			assert.equal(leerraum(de + '\n'), leerraum(golden));
-		});
-	}
+	const pruefeGolden = (fall: string, rendern: () => string) => {
+		const golden = readFileSync(path.join(P.GOLDEN_DIR, `${fall}.de.html`), 'utf-8');
+		const { de } = deDannEn(rendern);
+		locale.set('de');
+		assert.equal(leerraum(rendern() + '\n'), leerraum(golden));
+		assert.equal(leerraum(de + '\n'), leerraum(golden));
+	};
+	for (const fall of Object.keys(FAELLE)) test(`${fall}.de.html`, () => pruefeGolden(fall, FAELLE[fall]));
+	test('layout_bausteine.de.html', async () => pruefeGolden('layout_bausteine', (await alt()).layoutRendern));
+	test('Messaufbau: Golden der Alt-Bausteine enthaelt ihre deutschen Texte (faellt mit #3020 R2)', () => {
+		const golden = readFileSync(path.join(P.GOLDEN_DIR, 'layout_bausteine.de.html'), 'utf-8');
+		for (const s of ['✂ ab hier bei', '▾ Aufklappen']) assert.ok(golden.includes(s), s);
+	});
 	test('funktionen.de.txt: Aktionsliste, Reiter, Anlege-Kette, Etappen-Datum unveraendert (byte-gleich)', () => {
 		const golden = readFileSync(path.join(P.GOLDEN_DIR, 'funktionen.de.txt'), 'utf-8');
 		locale.set('en');
@@ -101,7 +108,7 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 	test('Messaufbau: Golden enthaelt die deutschen Texte der Bausteine', () => {
 		const alle = Object.keys(FAELLE).map((f) => readFileSync(path.join(P.GOLDEN_DIR, `${f}.de.html`), 'utf-8')).join('');
 		// #2980 AC-19: 'Tag 2'/'START IN' (Kennzahlenzeile #416) stehen nicht mehr im Golden.
-		for (const s of ['Briefing gesendet!', 'Weitere Aktionen', '1 Größe unbekannt', '2 Größen unbekannt', 'Lückenlos neu datiert', 'Neuer Trip','Gesperrt — erst Trip-Name + Startdatum', 'Fertig', 'Archiviert', 'Versand-Historie', 'von Hand', '✂ ab hier bei', '▾ Aufklappen', 'Speichern fehlgeschlagen', 'Gespeichert', 'Karte &amp; Höhenprofil', 'Fehler beim Senden', 'Name bearbeiten', 'Tour-Detail', 'Trip-Start', '01.07.'])
+		for (const s of ['Briefing gesendet!', 'Weitere Aktionen', '1 Größe unbekannt', '2 Größen unbekannt', 'Lückenlos neu datiert', 'Neuer Trip','Gesperrt — erst Trip-Name + Startdatum', 'Fertig', 'Archiviert', 'Versand-Historie', 'von Hand', 'Speichern fehlgeschlagen', 'Gespeichert', 'Karte &amp; Höhenprofil', 'Fehler beim Senden', 'Name bearbeiten', 'Tour-Detail', 'Trip-Start', '01.07.'])
 			assert.ok(alle.includes(s), s);
 	});
 });
@@ -256,8 +263,9 @@ describe('AC-2: Aktionsliste Trip == Ortsvergleich, Texte aus aktionen.*', () =>
 });
 
 describe('AC-4: Metrik-Namen ueber metricLabel, col_label unveraendert', () => {
-	test('Ausgabe-Layout-Bausteine und Tabellen-Vorschau: label_en bzw. deutsch ohne label_en', () => {
-		const { de, en } = deDannEn(() => P.layoutRendern());
+	test('Ausgabe-Layout-Bausteine und Tabellen-Vorschau: label_en bzw. deutsch ohne label_en', async () => {
+		const A = await alt();
+		const { de, en } = deDannEn(() => A.layoutRendern());
 		const sEn = sichtbar(en);
 		hat(sichtbar(de), 'Böen');
 		for (const s of ['Wind gusts', 'Temperature', 'Bewölkung', 'Code', 'Raw', 'Simple', 'raw value only', '→ Detail', '↑ Column', 'Limit', 'Telegram 9/7', '✂ from here Telegram cuts off (max 7 columns)', 'No entries — add metrics from “Not in the briefing”.', 'Not in the briefing', '3 more metrics', '1 more metric', '· not output', '▴ Collapse', '▾ Expand', '+ Column', '+ Detail', '6 metrics', '1 metric', 'Default', 'Table preview', 'TODAY — 2 METRICS', 'TOMORROW — 0 METRICS', 'No metrics enabled for this horizon.', 'Time', '·simple', 'all columns · no limit', 'no grid · 140 characters', 'SMS not configured —', 'set up in your account', 'Daily max for remaining metrics', '3 metrics do not fit in the table — append as a compact daily summary', 'briefing schedule', 'Temperature', 'Wind', 'Atmosphere'])

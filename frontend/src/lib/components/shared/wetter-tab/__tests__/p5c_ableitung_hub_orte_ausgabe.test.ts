@@ -129,6 +129,17 @@ describe('p5c-1 Anlegen aus Vorlage: Kind-Groessen wie Python abgeleitet, Ausgab
 		assert.deepEqual(AUS.trip.minus.mail, soll);
 		assert.deepEqual(minusKind.auswahl, soll);
 	});
+	// #3020 R1 (G34, #2454 AC-2 spiegelbildlich): „−“ am Elter nimmt die mitgelaufenen Kinder mit; ein einzeln
+	// umgezogenes Kind (hier: vor dem Elter einzeln dazugenommen) bleibt in Auswahl und Mail.
+	test('minus_elter_nimmt_mitgelaufene_kinder_mit', { todo: 'Fehler #3363: „−“ an Temperatur lässt die abgeleiteten Größen stehen' }, () => {
+		const einzeln = { ...lesen(BESTAND_A), auswahl: ['temperature_night', 'wind'] };
+		const mitElter = Z.mitMetrik(einzeln, 'temperature', 'route');
+		assert.deepEqual(mitElter.auswahl, ['temperature_night', 'wind', 'temperature', 'temperature_day_low', 'temperature_day_high'], 'Messaufbau');
+		const ohne = Z.ohneMetrik(mitElter, 'temperature');
+		assert.deepEqual(ohne.auswahl, ['temperature_night', 'wind']);
+		const { mail } = pythonAusgabe({ trip: { ohne: tripSpeichern(BESTAND_A, ohne) } }).trip.ohne;
+		assert.deepEqual(menge(mail), ['temperature_night', 'wind']);
+	});
 	test('messaufbau_vorlagen_ohne_kinder', () => {
 		assert.ok(!KINDER.some((k) => VORLAGEN.allgemein.metrics?.[k]?.enabled === true), '„allgemein“ fuehrt Kinder');
 		assert.ok(AUS.trip.allgemein__vorher.mail.includes('temperature_day_low'), 'vor p5a ohne abgeleitetes Tagestief');

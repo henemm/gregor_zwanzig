@@ -46,8 +46,8 @@ export const { CONTENT_MODULE_DESCRIPTIONS } = await imp(path.join(SHARED, 'mail
 // #3366: der Layout-Reiter (LayoutTab, LTCapNote, LTChannelPicker, LTCutLine) war ohne
 // Produktionsaufrufer und ist geloescht; seine Render-Faelle samt Golden entfallen.
 // Die Funktionen aus ltChannels.ts (lebt) bleiben in der Funktionstabelle; der geteilte
-// Ausgabe-Layout-Editor (OutputLayoutEditor, lebt) wird direkt gerendert.
-const OutputLayoutEditor = (await imp(path.join(SHARED, 'OutputLayoutEditor.svelte'))).default;
+// Ausgabe-Layout-Editor (OutputLayoutEditor, Restbestand von #3020 R2) rendert f8Altbausteine.ts,
+// damit dieser Pruefstand (GPX-Seite, Funktionstabelle) ohne ihn laedt (#3020 R1, Probe-Loeschung).
 
 // GPX-Seite: Vorschau/Speichern erscheinen erst nach dem Hochladen (Klick).
 const GPX_ZUSTAND: [string, string][] = [
@@ -59,33 +59,8 @@ const GpxSeite = await variante(GPX_SEITE, GPX_ZUSTAND);
 
 const g = globalThis as unknown as Record<string, unknown>;
 const ohneKommentare = (html: string) => html.replace(/<!--[\s\S]*?-->/g, '');
-const html = (k: unknown, props: Record<string, unknown> = {}) => ohneKommentare(render(k as never, { props } as never).body);
-
-// ── Ausgabe-Layout-Editor ────────────────────────────────────────────────────
-
-/** Metrik-Katalog wie GET /api/metrics (Labels sind API-Daten, nicht Paket-Texte). */
-const KATALOG = {
-	temperature: [{ id: 'temperature', label: 'Temperatur', unit: '°C', category: 'temperature', default_enabled: true, col_label: 'Temp' }],
-	wind: [
-		{ id: 'wind', label: 'Wind', unit: 'km/h', category: 'wind', default_enabled: true, col_label: 'Wind' },
-		{ id: 'gust', label: 'Böen', unit: 'km/h', category: 'wind', default_enabled: true, col_label: 'Gust' }
-	],
-	precipitation: [{ id: 'precipitation', label: 'Niederschlag', unit: 'mm', category: 'precipitation', default_enabled: true, col_label: 'Rain' }]
-};
-const BUCKETS = { primary: ['temperature', 'wind', 'gust'], secondary: ['precipitation'], off: [] as string[] };
-const LEER = { primary: [] as string[], secondary: [] as string[], off: ['temperature'] };
-
-/** Ausgabe-Layout-Editor fuer einen Kanal (Props wie im frueheren Layout-Reiter-Pruefstand). */
-export function ausgabeLayoutRendern(channel: 'email' | 'telegram' | 'sms', variante: 'voll' | 'leer' | 'ohne_detail' = 'voll'): string {
-	return html(OutputLayoutEditor, {
-		catalog: KATALOG,
-		buckets: variante === 'leer' ? LEER : BUCKETS,
-		friendlyMap: {},
-		channel,
-		templates: [{ id: 'wandern', label: 'Wandern', metrics: ['temperature', 'wind'] }],
-		hideDetailBucket: variante === 'ohne_detail'
-	});
-}
+export const html = (k: unknown, props: Record<string, unknown> = {}) => ohneKommentare(render(k as never, { props } as never).body);
+export const komp = async (datei: string) => (await imp(datei)).default;
 
 // ── Korridor-Logik (Daten fuer die Speicher-Nutzlast, AC-4) ─────────────────
 

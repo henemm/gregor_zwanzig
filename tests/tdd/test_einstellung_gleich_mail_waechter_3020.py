@@ -137,13 +137,26 @@ def test_ac16_nur_faelle_mit_fehlendem_ziel_werden_rot(tmp_path):
 # ---------------------------------------------------------------------------
 
 
+def _dateien_mit_reiner_platzhalter_vorlage() -> list[Path]:
+    """Vitest-Dateien im echten Baum mit mindestens einer Titelvorlage ohne festen Text (``${key}``)."""
+    return [d for d in sorted(w.REPO_ROOT.glob(w.VITEST_GLOB))
+            if any(not w._hat_festen_text(v) for v in w._VITEST_TEMPLATE_GANZ.findall(d.read_text(encoding="utf-8")))]
+
+
 def test_ac3_alte_verweise_der_26_faelle_erkennt_der_waechter_als_fehlend():
-    """Beweis, dass der Waechter die Faelle erkennt: dieselben Verweise wie vor der Korrektur,
-    gegen den echten Testbaum geprueft, ergeben je Fall einen Fehler."""
-    faelle = [_editor_fall(fid, titel) for fid, titel in ALTE_VERWEISE_OHNE_TEST.items()]
-    fehler = w.pruefe_testverweise({"fallliste_editor.json": {"faelle": faelle}}, w.REPO_ROOT)
-    nicht_erkannt = [fid for fid in ALTE_VERWEISE_OHNE_TEST if not any(f"'{fid}'" in f for f in fehler)]
-    assert nicht_erkannt == [], f"Waechter meldet diese Faelle trotz fehlendem Test gruen: {nicht_erkannt}"
+    """Beweis, dass der Falsch-Gruen-Mechanismus abgestellt ist: die 26 nackten Alt-Titel werden
+    in keiner Datei mit reiner Platzhalter-Vorlage gefunden.
+
+    Abgleich #3020 R1 (Aenderung an diesem Test von #3382): bis R1 sollten die Titel im ganzen
+    Baum fehlen. Seit R1 sind sie dort woertlich belegt -- ``editor_standard_gleich_ausgabe_3020.test.ts``
+    (``frontend_seite_*``) und ``was_steht_wo_karte.test.ts`` (``n3_*`` als todo #3364) --, ein
+    Treffer im ganzen Baum ist also kein Falsch-Gruen mehr. Geprueft wird weiter genau der
+    Mechanismus: eine Vorlage wie ``${key}`` darf keinen dieser Titel belegen."""
+    dateien = _dateien_mit_reiner_platzhalter_vorlage()
+    assert dateien, "keine Datei mit reiner Platzhalter-Vorlage im Baum -- der Test liefe leer"
+    falsch_gefunden = [fid for fid, titel in ALTE_VERWEISE_OHNE_TEST.items()
+                       if w._vitest_titel_gefunden(titel, dateien)]
+    assert falsch_gefunden == [], f"Platzhalter-Vorlage belegt diese Faelle falsch: {falsch_gefunden}"
 
 
 def test_ac3_katalog_verweist_jeden_der_26_faelle_ehrlich():

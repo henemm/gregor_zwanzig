@@ -169,6 +169,24 @@ describe('AC-16: Sperrgruende und Konto-Verb je Lage', () => {
 		assert.equal(e.briefingGesperrt, true);
 	});
 
+	// #3020 R1 (Befund B7, #1510 AC-4): unbestätigte Adresse ⇒ Briefing-Kanal E-Mail nicht bedienbar, im Trip wie in
+	// Orten; der Versand weist sie ab. Nutzer B (bestätigt) als Gegenprobe, Nutzer A unbestätigt.
+	for (const context of ['route', 'vergleich'] as const) {
+		test(`email_unbestaetigt_briefing_nicht_bedienbar (${context})`, { todo: 'Fehler #3365: unbestätigte Adresse ist als Briefing-Kanal bedienbar' }, async () => {
+			const m = await zustellungModell();
+			const basis = context === 'route' ? m.standAusTrip(tripVoll()) : m.standAusPreset(presetVoll());
+			const stand = { ...basis, briefing: { email: true, telegram: true, sms: false, premium_sms: false } };
+			const B = m.kanalStatus(profilMit({ mail_to: 'b@example.com', email_verified: true }));
+			const A = m.kanalStatus(profilMit({ mail_to: 'a@example.com', email_verified: false }));
+			assert.equal(B.email.briefingGesperrt, false, 'Messaufbau: bestätigte Adresse ist bedienbar');
+			assert.equal(m.zaehler(stand, B).briefing, 2, 'Messaufbau: E-Mail und Telegram zählen');
+			assert.equal(A.email.briefingGesperrt, true, 'Briefing-Schalter E-Mail muss gesperrt sein');
+			assert.ok(A.email.grund, 'die Sperre nennt einen Grund');
+			assert.equal(m.zaehler(stand, A).briefing, 1, 'ein gesperrter Kanal zählt nicht als Briefing-Kanal');
+			assert.equal(A.telegram.briefingGesperrt, false, 'andere Kanäle bleiben bedienbar');
+		});
+	}
+
 	test('ac16_sms_tarif_zu_niedrig', async () => {
 		const m = await zustellungModell();
 		const s = m.kanalStatus(profilMit({ tier: 'free', sms_allowed: false })).sms;
@@ -222,6 +240,22 @@ describe('AC-19/AC-20/AC-21: Premium-SMS (sicherheitsrelevant)', () => {
 		const stand = await standMit({ premium_sms: true }, { premium_sms: true });
 		assert.deepEqual(m.zaehler(stand, st), { briefing: 0, alarme: 0 }, 'verfallene Premium-SMS zaehlt nicht');
 		assert.deepEqual(m.dringlichkeitZelle('premium_sms', stand, st), { art: 'strich' });
+	});
+
+	// #3020 R1 (E070): nur Premium-SMS an und verbunden ist ein vollwertiger Kanal, in Trip und Orte.
+	test('zaehler_nur_premium_sms_verbunden_zaehlt_und_keine_warnbox', async () => {
+		const m = await zustellungModell();
+		const st = m.kanalStatus(profilAllesVerbunden());
+		const nurPremium = { email: false, telegram: false, sms: false, premium_sms: true };
+		const orte = { ...m.standAusPreset(presetVoll()), briefing: { ...nurPremium }, alarme: { ...nurPremium } };
+		for (const stand of [await standMit({ premium_sms: true }, { premium_sms: true }), orte]) {
+			const z = m.zaehler(stand, st);
+			assert.deepEqual(z, { briefing: 1, alarme: 1 }, 'verbundene Premium-SMS zaehlt als Kanal');
+			assert.deepEqual(m.warnboxen(z), { briefing: null, alarme: null }, 'keine Warnbox „Kein Kanal“');
+			assert.equal(m.tabellenKopf(z), 'Briefings über 1 Kanal · Alarme über 1 Kanal');
+		}
+		const z = m.zaehler(await standMit({ premium_sms: true }, { email: true }), st);
+		assert.deepEqual(z, { briefing: 1, alarme: 1 }, 'Briefing und Alarme zaehlen getrennt');
 	});
 
 	test('ac20_nie_gemeldet_ebenfalls_gesperrt', async () => {
