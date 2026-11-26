@@ -84,10 +84,9 @@ const istTeilfolge = (teil: Paar[], ganz: Paar[]) => {
 function anzeigeGleichAusgabe(s: OrakelStand): void {
 	for (const stelle of STELLEN) {
 		const listen = (['morning', 'evening'] as const).map((rt) => s.listen[rt][stelle]);
-		// Der Ausblick entfällt ganz in einem Briefing ohne Ausblick (outlook_reports). Eine Größe nur im anderen
-		// Briefing (Bericht-Flags, cloud_low in Golden C) zeigt die Karte dort trotzdem angehakt: #3364, hier ausgenommen.
-		const mitAusblick = new Set((s.antwort.outlook_reports as string[]).flatMap((rt) => STELLEN.flatMap((x) => ids(s.listen[rt][x]))));
-		const soll = anzeige(s.antwort, stelle).filter(([m]) => stelle !== 'outlook' || mitAusblick.has(m));
+		// Der Ausblick entfällt ganz in einem Briefing ohne Ausblick (outlook_reports); die Karte hakt den Ausblick
+		// nur an, wenn ein Ausblick-Briefing die Größe führt (#3364, cloud_low nur morgens in Golden C).
+		const soll = anzeige(s.antwort, stelle);
 		for (const l of listen) assert.ok(istTeilfolge(l, soll), `${stelle}: ausgelieferte Liste ${ids(l)} steht nicht so in der Karte ${ids(soll)}`);
 		assert.deepEqual([...new Set(listen.flatMap(ids))].sort(), ids(soll).sort(), `${stelle}: Karte zeigt eine andere Menge als die Ausgabe`);
 	}
