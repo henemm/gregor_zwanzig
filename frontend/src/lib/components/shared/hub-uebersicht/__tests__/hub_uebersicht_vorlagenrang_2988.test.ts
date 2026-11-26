@@ -8,7 +8,7 @@
 //
 //   cd frontend && npm test -- src/lib/components/shared/hub-uebersicht/__tests__/hub_uebersicht_vorlagenrang_2988.test.ts
 
-import { test, describe } from 'node:test';
+import { test, describe, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
@@ -115,4 +115,69 @@ describe('F001 (#2988): Rangfolge in „Wetter-Alarm aktiv“', () => {
 			assert.equal(m.tripWetterAlarmAktiv(t, aufgeloestVon(t), EIG), aktiv(vorlage, X));
 		});
 	}
+});
+
+// #3399 S3a (AC-2, AC-9): die Karte „Wetter" des Ortsvergleichs zeigt den Namen der Vorlage, die der
+// SERVER aufloest (`vorlage_id` aus echtem `resolve_entwurf`), nicht die Frontend-Rangfolge. Ohne ID
+// (laedt/Fehler) steht „—", nie „Allgemein"/„General".
+const { locale }: Json = await import(pathToFileURL(join(FRONTEND, 'src', 'lib', 'i18n', 'index.ts')).href);
+const vn: Json = await import(pathToFileURL(join(HIER, '..', '..', 'wetter-tab', 'vorlageName.ts')).href);
+afterEach(() => locale.set('de'));
+
+function preset3399(dc: Json, profil?: string): Json {
+	return { id: 'cp-3399', name: 'Tirol', location_ids: ['a', 'b', 'c'], schedule: 'daily', ...(profil ? { profil } : {}), display_config: dc };
+}
+const titel3399 = (p: Json, vorlageId?: string | null): string =>
+	m.deriveVergleichKennzahlen(p, 'active', null, [], VORLAGEN, undefined, vorlageId).wertebereicheKarte.titel;
+
+describe('#3399 S3a AC-2: Karte „Wetter" = Name der Server-Vorlage', () => {
+	const FAELLE: [string, Json][] = [
+		['ampel.template skitouren, profil wandern', preset3399({ ampel: { template: 'skitouren' } }, 'wandern')],
+		['preset_name wintersport', preset3399({ preset_name: 'wintersport' })],
+		['nur profil summer_trekking', preset3399({}, 'summer_trekking')]
+	];
+	for (const [name, p] of FAELLE) {
+		test(`${name}: DE und EN zeigen den Katalognamen der Python-ID`, () => {
+			const id = aufgeloestVon(p).vorlage_id;
+			assert.notEqual(id, 'allgemein', 'Messaufbau: Python waehlt eine spezifische Vorlage');
+			for (const lang of ['de', 'en'] as const) {
+				locale.set(lang);
+				const erwartet = vn.vorlageAnzeigename(lang, id, undefined);
+				assert.notEqual(erwartet, id, 'Messaufbau: Katalogname statt roher ID');
+				assert.equal(titel3399(p, id), erwartet, lang);
+			}
+		});
+	}
+	test('ID null oder weggelassen ⇒ „—", nie „Allgemein"/„General"', () => {
+		const p = preset3399({ ampel: { template: 'skitouren' } }, 'wandern');
+		for (const lang of ['de', 'en'] as const) {
+			locale.set(lang);
+			assert.equal(titel3399(p, null), '—', `${lang}: null`);
+			assert.equal(titel3399(p), '—', `${lang}: weggelassen`);
+		}
+	});
+});
+
+describe('#3399 S3a AC-9: preset_name gilt im Hub wie in Python', () => {
+	test('preset_name wintersport, profil wandern, ohne ampel.template ⇒ Name der Python-Vorlage', () => {
+		const p = preset3399({ preset_name: 'wintersport' }, 'wandern');
+		const id = aufgeloestVon(p).vorlage_id;
+		assert.equal(id, 'wintersport', 'Messaufbau: Python nimmt preset_name vor profil');
+		for (const lang of ['de', 'en'] as const) {
+			locale.set(lang);
+			assert.equal(titel3399(p, id), vn.vorlageAnzeigename(lang, 'wintersport', undefined));
+			// Die alte Rangfolge haette das Profil genommen: der Titel waere ein anderer.
+			assert.notEqual(titel3399(p, id), vn.aboVorlagenName(lang, p, VORLAGEN), `${lang}: Alt-Rangfolge nimmt noch das Profil`);
+		}
+	});
+});
+
+describe('#3399 S3a: vorlagenNameAusId', () => {
+	test('bekannte ID ⇒ Katalogname (DE/EN), null ⇒ „—"', () => {
+		assert.equal(typeof vn.vorlagenNameAusId, 'function', 'vorlagenNameAusId fehlt in vorlageName.ts');
+		for (const lang of ['de', 'en'] as const) {
+			for (const id of Object.keys(VORLAGEN)) assert.equal(vn.vorlagenNameAusId(lang, id), vn.vorlageAnzeigename(lang, id, undefined), `${lang}/${id}`);
+			assert.equal(vn.vorlagenNameAusId(lang, null), '—', lang);
+		}
+	});
 });

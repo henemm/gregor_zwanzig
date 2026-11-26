@@ -25,7 +25,7 @@ import {
 // vergleich.hub.*); der Baustein liest `$locale` und rechnet beim Sprachwechsel neu.
 import { get } from 'svelte/store';
 import { locale, tr, trn, type MessageKey } from '../../../i18n/index.ts';
-import { aboVorlagenName } from '../wetter-tab/vorlageName.ts';
+import { vorlagenNameAusId } from '../wetter-tab/vorlageName.ts';
 import type { Aufgeloest } from '../wetter-tab/ampelAufloesung.ts';
 import {
 	alarmZaehler,
@@ -306,15 +306,20 @@ function orteKarte(aufgeloesteOrte: Array<{ rank: number; loc?: { name: string }
  *  Katalog greift die Ampel dort nie (#2988 S4), daher keine Auflösung.
  *  Vorlagen oder Katalog nicht geladen (fehlt/null/leer) ⇒ „—" statt einer erfundenen Zahl. Liest nur. */
 const OHNE_AMPEL: Ampel = {};
-function wertebereicheKarte(preset: ComparePreset, vorlagen: VorlagenAmpeln | null | undefined, alt: AltSchluessel | null | undefined): Karte {
+function wertebereicheKarte(
+	preset: ComparePreset,
+	vorlagen: VorlagenAmpeln | null | undefined,
+	alt: AltSchluessel | null | undefined,
+	vorlageId: string | null
+): Karte {
 	const dc = preset.display_config as Parameters<typeof auswahlLesen>[1];
 	const katalog = new Set(vergleichsKatalogIds(alt ?? {}));
 	const geladen = !!vorlagen && Object.keys(vorlagen).length > 0 && katalog.size > 0;
 	const anzahl = geladen ? ausgebbarTeilen('vergleich', auswahlLesen('vergleich', dc, OHNE_AMPEL, alt ?? {}), katalog).zeilen.length : null;
 	return {
 		eyebrow: tr('aktionen.reiter.wetter'),
-		// #2796 S4a (ADR-0108 P3): Name der aufgeloesten Vorlage statt des Profils.
-		titel: aboVorlagenName(get(locale), preset, vorlagen),
+		// #3399 S3a (AC-2, AC-9): Name der vom Server aufgeloesten Vorlage; ohne ID „—".
+		titel: vorlagenNameAusId(get(locale), vorlageId),
 		beschreibungKurz: anzahl === null ? '—' : trn('vergleich.hub.wertebereiche_kurz', anzahl),
 		beschreibungLang: anzahl === null ? '—' : trn('vergleich.hub.wertebereiche_lang', anzahl),
 		sprungziel: { tab: 'wetter' }
@@ -327,7 +332,8 @@ export function deriveVergleichKennzahlen(
 	briefing: NextBriefing | null | undefined,
 	aufgeloesteOrte: Array<{ rank: number; loc?: { id: string; name: string } }>,
 	vorlagen?: VorlagenAmpeln | null,
-	alt?: AltSchluessel | null
+	alt?: AltSchluessel | null,
+	vorlageId?: string | null
 ): HubUebersichtModell {
 	const zeiten = presetBriefingTimesLabel(preset);
 	const naechster = formatNextBriefing(briefing, 'vergleich');
@@ -350,6 +356,6 @@ export function deriveVergleichKennzahlen(
 		rasterTestid: 'compare-detail-monitoring-mobile',
 		stapelTestid: 'compare-detail-summary-mobile',
 		orteKarte: orteKarte(aufgeloesteOrte),
-		wertebereicheKarte: wertebereicheKarte(preset, vorlagen, alt)
+		wertebereicheKarte: wertebereicheKarte(preset, vorlagen, alt, vorlageId ?? null)
 	};
 }

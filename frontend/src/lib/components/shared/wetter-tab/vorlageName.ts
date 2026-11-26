@@ -46,3 +46,11 @@ export function aboVorlagenName(
 	const ampel = (abo.display_config?.ampel ?? null) as Parameters<typeof vorlageIdFuer>[0];
 	return vorlageAnzeigename(lang, vorlageIdFuer(ampel, undefined, abo.profil, bekannt), undefined);
 }
+
+/**
+ * Issue #3399 S3a: Anzeigename der vom SERVER aufgeloesten Vorlage (`vorlage_id` aus
+ * `POST /api/ampel/aufloesung`). Ohne ID (Antwort steht aus, Fehler) „—", nie „Allgemein".
+ */
+export function vorlagenNameAusId(lang: Lang | undefined, vorlageId: string | null): string {
+	return vorlageId ? vorlageAnzeigename(lang, vorlageId, undefined) : '—';
+}

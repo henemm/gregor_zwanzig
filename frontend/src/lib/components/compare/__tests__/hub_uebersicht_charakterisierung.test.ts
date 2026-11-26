@@ -51,6 +51,10 @@
 // <div class="bereichskopf" data-abschnitt="abschnittskopf"> (Titel „Übersicht“, Erklärsatz) als erstes
 // Kind der Spalte; der übrige Inhalt bleibt unveraendert.
 //
+// Issue #3399 S3a (Spec rework_3399_vorlage_aufloesung, AC-2): im Golden gezielt ersetzt — der Titel der
+// Karte „Wetter" ist im SSR „—" statt „Wandern" (die Vorlagen-ID kommt erst im Browser per
+// POST /api/ampel/aufloesung). Den Namen prueft hub_uebersicht_verdrahtung_laufzeit.test.ts.
+//
 // MOBIL: `isMobileViewport` setzt CompareTabs erst im Browser per matchMedia
 // (onMount). Im SSR (svelte/server) laeuft kein onMount — gerendert wird nur der
 // Desktop-Zweig. Bewusst KEINE Produktaenderung, um Mobil zu erzwingen. Der

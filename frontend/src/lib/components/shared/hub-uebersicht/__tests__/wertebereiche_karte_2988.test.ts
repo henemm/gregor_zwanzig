@@ -1,5 +1,7 @@
 // #2988 S4 (AC-17): die Karte „Wetter" der Vergleichs-Übersicht zählt nach dem Umbau dieselben Metriken
 // wie vorher und fragt dafür die Auflösung (POST /api/ampel/aufloesung) nie an.
+// #3399 S3a: den Titel (Vorlagenname) holt der Hub seither per POST /api/ampel/aufloesung; die ZAHL
+// haengt weiter nicht daran (der Fall unten beantwortet den POST mit 404).
 // Spec: docs/specs/modules/rework_2988_ampel_ableitung.md (AC-17, „S4 – Übersichten":
 // `wertebereicheKarte` liest `auswahlLesen` direkt, bei geladenem Katalog greift die Ampel dort nie).
 //
@@ -38,6 +40,7 @@ const am: Json = await import(pathToFileURL(join(SHARED, 'wetter-tab', 'ampelMod
 const lader: Json = await import(pathToFileURL(join(SHARED, 'wetter-tab', 'compareMetricCatalogLoader.ts')).href);
 const { erstelleBriefingHistoryLader }: Json = await import(pathToFileURL(join(SHARED, 'briefingHistoryLader.svelte.ts')).href);
 const { erstelleNaechstesBriefingLader }: Json = await import(pathToFileURL(join(SHARED, 'versand-tab', 'naechstesBriefingLader.svelte.ts')).href);
+const { erstelleAboVorlageId }: Json = await import(pathToFileURL(join(SHARED, 'alarme-tab', 'aboVorlageId.svelte.ts')).href);
 const { locale }: Json = await import(pathToFileURL(join(FRONTEND, 'src', 'lib', 'i18n', 'index.ts')).href);
 locale.set('de');
 
@@ -146,7 +149,9 @@ async function vergleichsUebersicht(preset: Json) {
 		{
 			context: 'vergleich', trip: undefined, preset, status: undefined, orte: [], saveController: undefined, onJump: undefined, children: undefined,
 			erstelleBriefingHistoryLader: inWurzel(erstelleBriefingHistoryLader),
-			erstelleNaechstesBriefingLader: inWurzel(erstelleNaechstesBriefingLader)
+			erstelleNaechstesBriefingLader: inWurzel(erstelleNaechstesBriefingLader),
+			// #3399 S3a: Vorlagen-ID fuer den Kartentitel (echte S1-Verdrahtung).
+			erstelleAboVorlageId: inWurzel(erstelleAboVorlageId)
 		},
 		{ jsAlsTs: true }
 	);
@@ -175,8 +180,10 @@ describe('AC-17 (#2988 S4): die Vergleichs-Übersicht fragt die Auflösung nie a
 			assert.equal(hu.karte().beschreibungKurz, '—', 'Messaufbau: vor dem Mount ist nichts geladen');
 			await hu.mounten();
 			assert.ok(aufrufe.includes('GET /api/templates'), `Messaufbau: Abrufe ${JSON.stringify(aufrufe)}`);
-			assert.deepEqual(aufrufe.filter((a) => a.includes('/api/ampel/aufloesung')), [], `Abrufe: ${JSON.stringify(aufrufe)}`);
-			assert.deepEqual(aufrufe.filter((a) => !a.startsWith('GET ')), [], `kein Schreib- oder POST-Aufruf: ${JSON.stringify(aufrufe)}`);
+			// #3399 S3a: der Hub fragt die Aufloesung jetzt fuer den Kartentitel (Vorlagenname) an —
+			// genau einmal, sonst kein Schreib-/POST-Aufruf. Die Zahl haengt nicht daran: der Ersatz-Server
+			// beantwortet den POST mit 404, die Zahl stimmt trotzdem mit der Referenz ueberein.
+			assert.deepEqual(aufrufe.filter((a) => !a.startsWith('GET ')), ['POST /api/ampel/aufloesung'], `Abrufe: ${JSON.stringify(aufrufe)}`);
 			assert.equal(hu.karte().beschreibungKurz, f.kurz);
 		});
 	}

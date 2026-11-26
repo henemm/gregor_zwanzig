@@ -26,6 +26,7 @@
 	import type { NextBriefing } from '../versand-tab/nextBriefingText.ts';
 	import { erstelleNaechstesBriefingLader } from '../versand-tab/naechstesBriefingLader.svelte.ts';
 	import { erstelleBriefingHistoryLader } from '../briefingHistoryLader.svelte.ts';
+	import { erstelleAboVorlageId } from '../alarme-tab/aboVorlageId.svelte.ts'; // #3399 S3a: Vorlagen-ID vom Server
 	import { deriveRouteKennzahlen, deriveVergleichKennzahlen, type Sprungziel } from './hubUebersichtModell.ts';
 	// Issue #2659 (i18n F10): das Modell liest den Katalog je Aufruf — `$locale` macht den
 	// Sprachwechsel ohne Neuladen sichtbar.
@@ -80,6 +81,10 @@
 		);
 	});
 
+	// #3399 S3a (AC-2, AC-9): Titel der Karte „Wetter" = Server-Vorlage (S1-Verdrahtung, Cache AC-6).
+	// Nur der Vergleich hat die Karte: ohne `preset` kein Abruf (`extern: null`).
+	const aboVorlage = erstelleAboVorlageId(() => ({ abo: preset, extern: preset ? undefined : null }), api);
+
 	const modell = $derived(
 		(void $locale, trip)
 			? deriveRouteKennzahlen(trip, deriveTripStatus(trip, new Date()), naechstesBriefing.wert, historie)
@@ -89,7 +94,8 @@
 					naechstesBriefing.wert,
 					orte ?? [],
 					vorlagen,
-					altSchluessel
+					altSchluessel,
+					aboVorlage.id
 				)
 	);
 	const mobileKennzahlen = $derived(modell.kennzahlen.filter((k) => k.mobil));

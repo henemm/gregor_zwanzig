@@ -130,7 +130,9 @@ describe('AC-1: Ortsvergleich-Hub englisch, Namen unveraendert, Aktionen wie im 
 		// kein Krümel „Hub“, keine Mobil-Eyebrow „Orts-Vergleich · Hub“.
 		for (const alt of ['ORTS-VERGLEICHE', 'Orts-Vergleich · Hub']) hatNicht(sichtbar(de), alt);
 		const s = sichtbar(e);
-		for (const t of ['Runs automatically', 'Runs auto.', 'Draft · not active', 'Next delivery', 'Last sent', 'Channels', 'Email · Telegram', 'Morning 07:00 · Evening 18:00', '3 candidates', '1 candidate', 'Edit →', 'Delivery', 'Not scheduled yet', 'Locations · Tirol', 'Comparison table · Morning briefing 07:00', 'End date passed', 'Finish setup', 'Send test ▾', 'Sending…', 'Status change failed. Please try again.', '3 locations', 'Winter sports', '27 Oct 2026', 'No delivery yet', 'Active', 'Paused'])
+		// #3399 S3a: der Vorlagenname der Karte „Wetter" kommt erst im Browser (POST /api/ampel/aufloesung),
+		// im SSR steht „—". Den englischen Namen prueft hub_uebersicht_vorlagenrang_2988.test.ts (echtes Python).
+		for (const t of ['Runs automatically', 'Runs auto.', 'Draft · not active', 'Next delivery', 'Last sent', 'Channels', 'Email · Telegram', 'Morning 07:00 · Evening 18:00', '3 candidates', '1 candidate', 'Edit →', 'Delivery', 'Not scheduled yet', 'Locations · Tirol', 'Comparison table · Morning briefing 07:00', 'End date passed', 'Finish setup', 'Send test ▾', 'Sending…', 'Status change failed. Please try again.', '3 locations', '27 Oct 2026', 'No delivery yet', 'Active', 'Paused'])
 			hat(s, t);
 		// #2980 AC-24 (ADR-0118): der Zurück-Pfeil („Back to overview") entfällt.
 		hat(e, 'aria-label="More actions"');

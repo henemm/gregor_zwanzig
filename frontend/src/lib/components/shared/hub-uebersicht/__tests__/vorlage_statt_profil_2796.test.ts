@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { live } from '../../wetter-tab/__tests__/wetterTabDaten.ts';
+import { live, aufgeloestVon } from '../../wetter-tab/__tests__/wetterTabDaten.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const FRONTEND = resolve(HIER, '..', '..', '..', '..', '..', '..');
@@ -46,9 +46,12 @@ const FAELLE: Array<[string, Json, string, string]> = [
 	['weder Profil noch Vorlage', preset(undefined, undefined), 'Allgemein', 'General']
 ];
 
+// #3399 S3a: die Karte nennt die vom SERVER aufgeloeste Vorlage — die ID kommt aus echtem Python
+// `resolve_entwurf` (`aufgeloestVon`), wie HubUebersicht.svelte sie per POST /api/ampel/aufloesung erhaelt.
 async function wetterTitel(p: Json, vorlagen: Json): Promise<string> {
 	const m = await lade(join(HIER, '..', 'hubUebersichtModell.ts'));
-	return m.deriveVergleichKennzahlen(p, 'active', null, [], vorlagen).wertebereicheKarte.titel;
+	const id = aufgeloestVon(p).vorlage_id;
+	return m.deriveVergleichKennzahlen(p, 'active', null, [], vorlagen, undefined, id).wertebereicheKarte.titel;
 }
 
 describe('#2796 AC-7: Karte „Wetter" = Name der aufgelösten Vorlage', () => {

@@ -88,6 +88,9 @@ const { briefingHistoryUrl } = await import(pathToFileURL(join(SHARED, 'briefing
 const { formatLastSent } = await import(pathToFileURL(join(COMPONENTS, 'compare', 'subscriptionHelpers.ts')).href);
 const { live, liveVergleichsKatalog } = await import(pathToFileURL(join(SHARED, 'wetter-tab', '__tests__', 'wetterTabDaten.ts')).href);
 const { vorlagenAusTemplates } = await import(pathToFileURL(join(SHARED, 'wetter-tab', 'ampelModell.ts')).href);
+const { erstelleAboVorlageId } = await import(pathToFileURL(join(SHARED, 'alarme-tab', 'aboVorlageId.svelte.ts')).href);
+const { aufgeloestVon, aufloesungPost } = await import(pathToFileURL(join(SHARED, 'wetter-tab', '__tests__', 'wetterTabDaten.ts')).href);
+const { vorlageAnzeigename } = await import(pathToFileURL(join(SHARED, 'wetter-tab', 'vorlageName.ts')).href);
 const BriefingHistory = (await import(pathToFileURL(BH).href)).default;
 
 // ── Netz: Fetch-Ersatz am Ausgang, Antworten wie die Go-Handler ──────────────
@@ -132,9 +135,16 @@ function netz(historie: Record<string, Eintrag[] | 'fehler'>, vorlagen: unknown[
 		urls,
 		historienAbrufe: () => urls.filter((u) => u.includes('/briefing-history')),
 		naechsteAbrufe: () => urls.filter((u) => u.startsWith('/api/next-briefings')),
-		/** Alles, was weder Historie noch „Nächster Versand" ist (Vorlagen-Abruf). */
+		/** Alles, was weder Historie noch „Nächster Versand" ist (Vorlagen-Abruf).
+		 *  #3399 S3a: der POST an die Vorlagen-Aufloesung hat eigene Faelle (netzMitAufloesung). */
 		uebrigeAbrufe: () =>
-			urls.filter((u) => !u.includes('/briefing-history') && !u.startsWith('/api/next-briefings') && !u.startsWith('/api/compare/metrics')),
+			urls.filter(
+				(u) =>
+					!u.includes('/briefing-history') &&
+					!u.startsWith('/api/next-briefings') &&
+					!u.startsWith('/api/compare/metrics') &&
+					u !== '/api/ampel/aufloesung'
+			),
 		/** Vergleichs-Katalog (#3047 p5c); der Lader haelt ihn je Sprache im Speicher. */
 		katalogAbrufe: () => urls.filter((u) => u.startsWith('/api/compare/metrics'))
 	};
@@ -165,7 +175,9 @@ function inWurzel(echt: (...a: any[]) => any) {
 
 const LADER_SAAT = {
 	erstelleBriefingHistoryLader: inWurzel(erstelleBriefingHistoryLader),
-	erstelleNaechstesBriefingLader: inWurzel(erstelleNaechstesBriefingLader)
+	erstelleNaechstesBriefingLader: inWurzel(erstelleNaechstesBriefingLader),
+	// #3399 S3a: die Vorlagen-ID der Karte „Wetter" kommt aus der Server-Aufloesung (S1-Verdrahtung).
+	erstelleAboVorlageId: inWurzel(erstelleAboVorlageId)
 };
 
 /** Die ECHTE Herleitung `name` (Initialisierer aus dem Quelltext) erneut gegen `u` auswerten. */
@@ -479,5 +491,77 @@ describe('#2794 teil4b F001 / AC-8, AC-10: HubUebersicht lädt die Vorlagen und 
 		await setzen();
 		const groessen = new Set((liveVergleichsKatalog().metrics as { metric_id: string }[]).map((e) => e.metric_id)).size;
 		assert.equal(wetterKarte(hu).beschreibungKurz, `${groessen} Metriken im Briefing`);
+	});
+});
+
+// ── #3399 S3a (AC-2, AC-9): Titel der Karte „Wetter" = Name der Server-Vorlage ──
+
+const PFAD_AUFLOESUNG = '/api/ampel/aufloesung';
+
+/** Wie `netz`, dazu POST /api/ampel/aufloesung: Antwort des ECHTEN Python (`aufloesungPost`) oder Fehlerstatus. */
+function netzMitAufloesung(antwort: 'python' | number) {
+	netz({}, VORLAGEN_ANTWORT);
+	const davor = globalThis.fetch;
+	const posts: Array<{ url: string; body: any }> = [];
+	const echt = aufloesungPost();
+	globalThis.fetch = (async (eingabe: unknown, init?: RequestInit) => {
+		const url = String(eingabe);
+		if (url === PFAD_AUFLOESUNG) {
+			posts.push({ url, body: JSON.parse(String(init?.body ?? 'null')) });
+			if (antwort === 'python') {
+				const erg = await echt(url, posts[posts.length - 1].body);
+				return new Response(JSON.stringify(erg), { status: 200, headers: { 'Content-Type': 'application/json' } });
+			}
+			return new Response(JSON.stringify({ error: 'boom' }), { status: antwort, headers: { 'Content-Type': 'application/json' } });
+		}
+		return davor(eingabe as RequestInfo, init);
+	}) as typeof fetch;
+	return { posts };
+}
+
+// Jeder Fall eigene Id/preset_name: der Lader-Cache ist modulweit je Eintrag.
+const presetAufl = (marke: string, dc: Knoten = {}, profil = 'wandern') => ({ ...PRESET, id: `cp-3399-${marke}`, profil, display_config: dc });
+
+describe('#3399 S3a AC-2/AC-9: HubUebersicht fragt die Server-Aufloesung und zeigt deren Vorlagenname', () => {
+	test('Vergleich ⇒ genau EIN POST mit dem Eintrag des Presets; Antwort-ID ⇒ Kartentitel = deren Name', async () => {
+		const s = netzMitAufloesung('python');
+		const p = presetAufl('ok', { preset_name: 'wintersport' }, 'wandern');
+		const hu = await hubUebersicht({ context: 'vergleich', preset: p, orte: [] });
+		mounten(hu);
+		await setzen();
+		assert.equal(s.posts.length, 1, 'POSTs: ' + JSON.stringify(s.posts));
+		const eintraege = s.posts[0].body.eintraege;
+		assert.equal(eintraege.length, 1);
+		assert.equal(eintraege[0].preset_name, 'wintersport', 'Eintrag traegt preset_name');
+		assert.equal(eintraege[0].profil, 'wandern');
+		const id = aufgeloestVon(p).vorlage_id;
+		assert.equal(id, 'wintersport', 'Messaufbau: Python nimmt preset_name vor profil');
+		const modell = neuAuswerten(hu.ast, hu.quelle, hu.u, 'modell') as any;
+		assert.equal(modell.wertebereicheKarte.titel, vorlageAnzeigename('de', id, undefined));
+	});
+
+	test('vor der Antwort „—" (laedt)', async () => {
+		netzMitAufloesung('python');
+		const hu = await hubUebersicht({ context: 'vergleich', preset: presetAufl('laedt', { preset_name: 'skitouren' }), orte: [] });
+		const modell = neuAuswerten(hu.ast, hu.quelle, hu.u, 'modell') as any;
+		assert.equal(modell.wertebereicheKarte.titel, '—');
+	});
+
+	test('Antwort 500 ⇒ Kartentitel „—", nie „Allgemein"', async () => {
+		const s = netzMitAufloesung(500);
+		const hu = await hubUebersicht({ context: 'vergleich', preset: presetAufl('fehler', { preset_name: 'radtour' }), orte: [] });
+		mounten(hu);
+		await setzen();
+		assert.equal(s.posts.length, 1, 'der Abruf lief');
+		const modell = neuAuswerten(hu.ast, hu.quelle, hu.u, 'modell') as any;
+		assert.equal(modell.wertebereicheKarte.titel, '—');
+	});
+
+	test('Trip ⇒ kein POST an die Aufloesung', async () => {
+		const s = netzMitAufloesung('python');
+		const hu = await hubUebersicht({ context: 'route', trip: { ...TRIP, id: 't-3399-trip' } });
+		mounten(hu);
+		await setzen();
+		assert.deepEqual(s.posts, [], 'Trip ruft die Aufloesung ab');
 	});
 });
