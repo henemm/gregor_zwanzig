@@ -30,6 +30,19 @@ describe('#3036 AC-1: Startwert der zwei Schalter aus blocks', () => {
 	}
 });
 
+describe('#3020 R1 (G10): Startwert bei gespeichertem null', () => {
+	// Der Renderer wertet None als aus (resolve_report_render_options), die Antwort reicht null durch
+	// (placements_view_service.py) — die Karte muss dasselbe zeigen (#3047 AC-26 E8).
+	const FELDER_NULL = ['show_stage_stats', 'show_yesterday_comparison', 'show_night_block', ...NEU] as const;
+	test('gespeichertes null gilt als aus, wie in der Mail', { todo: 'Fehler #3362: felderAusAntwort liest null als an' }, () => {
+		const f = felderAusAntwort({ blocks: { ...BLOCKS, ...Object.fromEntries(FELDER_NULL.map((k) => [k, null])) } } as J) as J;
+		assert.deepEqual(
+			Object.fromEntries(FELDER_NULL.map((k) => [k, f[k]])),
+			Object.fromEntries(FELDER_NULL.map((k) => [k, false]))
+		);
+	});
+});
+
 describe('#3036 AC-2: Umschalten speichert nur das geänderte Feld in report_config', () => {
 	for (const feld of NEU) {
 		test(`${feld} aus: Nutzlast { report_config: { ${feld}: false } }, sonst nichts`, () => {

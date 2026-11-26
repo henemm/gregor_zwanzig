@@ -72,6 +72,27 @@ for (const context of ['route', 'vergleich'] as const) {
 	});
 }
 
+// #3020 R1 (E071): die Briefing-Zeiten hängen nicht daran, welche Kanäle an sind (Premium-SMS ist ein Kanal wie jeder).
+const NUR_PREMIUM = { send_email: false, send_telegram: false, send_sms: false, send_premium_sms: true };
+describe('#3020 E071: nur Premium-SMS an, Briefing-Zeiten bleiben bedienbar', () => {
+	for (const context of ['route', 'vergleich'] as const) {
+		test(`nur Premium-SMS an: Briefing-Zeiten sichtbar (${context})`, async () => {
+			const ZustellungTab = await lade('shared/zustellung-tab/ZustellungTab.svelte');
+			const zeiten = { morning_enabled: true, morning_time: '06:45:00', evening_enabled: true, evening_time: '18:15:00' };
+			const props = context === 'route'
+				? { context, trip: { ...TRIP, report_config: { ...zeiten, ...NUR_PREMIUM } } }
+				: { context, preset: { ...PRESET, ...zeiten, ...NUR_PREMIUM } };
+			const h = renderKomponente(ZustellungTab, props).replace(/<!--[\s\S]*?-->/g, '');
+			assert.equal(anzahl(h, 'data-abschnitt="briefing-zeiten"'), 1, 'Abschnitt Briefing-Zeiten fehlt');
+			for (const [slot, zeit] of [['morgen', '06:45'], ['abend', '18:15']] as const) {
+				const gezeigt = sichtbarerText(innen(h, `zustellung-${slot}-zeit`)).replace(/\s/g, '');
+				assert.ok(gezeigt.includes(zeit), `${slot}: Uhrzeit ${zeit} nicht sichtbar („${gezeigt}“)`);
+				assert.equal(anzahl(h, `data-testid="zustellung-${slot}-schalter"`), 1, `${slot}: Schalter fehlt`);
+			}
+		});
+	}
+});
+
 describe('#3036 AC-7 Orte: Pausieren/Aktivieren als fester Abschnitt direkt unter dem Kopf', () => {
 	test('Hub (Snippet activation): Karte in zustellung-aktivierung, vor den Briefing-Zeiten, genau einmal', async () => {
 		const h = await reiter('vergleich', true);

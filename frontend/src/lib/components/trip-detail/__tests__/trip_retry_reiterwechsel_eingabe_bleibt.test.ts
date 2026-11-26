@@ -90,8 +90,50 @@ describe('F201 (Trip): Reiter verlassen und zurueckkehren nach einem Konflikt', 
 		assert.equal(angezeigt, 'sensibel');
 	});
 
-	// #3297/#3020: der Fall „Versand: zurueckgekehrter Reiter“ pruefte trip-detail/BriefingScheduleTab (geloescht);
-	// derselbe Mechanismus ist oben mit dem Alarme-Reiter abgedeckt.
+	// #3020 R1: lebende Reiter Zustellung und Wetter (frueher BriefingScheduleTab bzw. WeatherMetricsTab).
+	test('Zustellung: der zurueckgekehrte Reiter zeigt die erste Eingabe; zweite Aenderung ⇒ beide auf dem Server', async () => {
+		server.foreignWrite(P.TRIP_ID, { name: 'Fremder Name' });
+		const a = P.neuerAufbau();
+		const seite = await P.tripSeite(a, server);
+
+		const erster = await P.zustellungReiter(ausSeite(a, seite));
+		erster.aendern({ morgenZeit: '08:00' });
+		await P.fertig(a.ctl);
+		assert.equal(a.ctl.state, 'conflict', 'Vorbedingung: 412');
+
+		const zurueck = await P.zustellungReiter(ausSeite(a, seite));
+		assert.equal(zurueck.inst.u.stand.morgenZeit, '08:00', 'der neu gemountete Reiter Zustellung zeigt die ungesicherte Eingabe');
+		zurueck.aendern({ abendZeit: '20:00' });
+		await P.fertig(a.ctl);
+
+		await a.ctl.retryConflict();
+		assert.equal(a.ctl.state, 'idle');
+		assert.equal(stand().name, 'Fremder Name');
+		assert.equal(rc().morning_time, '08:00:00', 'die erste Eingabe ging nicht verloren');
+		assert.equal(rc().evening_time, '20:00:00', 'die zweite steht auch auf dem Server');
+	});
+
+	test('Wetter: der zurueckgekehrte Reiter zeigt die erste Eingabe; zweite Aenderung ⇒ beide auf dem Server', async () => {
+		server.foreignWrite(P.TRIP_ID, { name: 'Fremder Name' });
+		const a = P.neuerAufbau();
+		const seite = await P.tripSeite(a, server);
+
+		(await P.wetterReiter(ausSeite(a, seite))).abwaehlen('wind');
+		await P.fertig(a.ctl);
+		assert.equal(a.ctl.state, 'conflict', 'Vorbedingung: 412');
+
+		const zurueck = await P.wetterReiter(ausSeite(a, seite));
+		assert.ok(!zurueck.inst.u.stand.auswahl.includes('wind'), 'der neu gemountete Reiter Wetter zeigt die ungesicherte Abwahl');
+		zurueck.aendern({ tagesfenster: { start: 6, end: 20 } });
+		await P.fertig(a.ctl);
+
+		await a.ctl.retryConflict();
+		assert.equal(a.ctl.state, 'idle');
+		assert.equal(stand().name, 'Fremder Name');
+		const wind = (dc().metrics as Array<Record<string, unknown>>).find((m) => m.metric_id === 'wind');
+		assert.equal(wind?.enabled, false, 'die erste Eingabe ging nicht verloren');
+		assert.deepEqual([rc().day_window_start_hour, rc().day_window_end_hour], [6, 20], 'die zweite steht auch auf dem Server');
+	});
 
 	test("bei 'geholt' (Retry-GET) enthaelt der Seitenstand GET-Stand ⊕ ausstehende Eingaben (kein Stand ohne Eingabe)", async () => {
 		server.foreignWrite(P.TRIP_ID, { name: 'Fremder Name' });

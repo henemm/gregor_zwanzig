@@ -88,6 +88,27 @@ describe('W1 / AC-1: Fremdaenderung ueberlebt ein Speichern aus Reiter B nach de
 		assert.equal(a.ctl.state, 'conflict', 'AC-2: „Nochmal speichern" bleibt nach dem Speichern in Reiter B sichtbar');
 	});
 
+	// #3020 R1: B schreibt SELBST `metrics` — die Fremdaenderung ist am lebenden Reiter Wetter unmittelbar bedroht.
+	for (const [weg, schreiben] of [
+		['Wetter', async (a: P.Aufbau) => (await P.wetterReiter(a)).abwaehlen('wind')],
+		['Zustellung', async (a: P.Aufbau) => (await P.zustellungReiter(a)).aendern({ morgenZeit: '08:00' })]
+	] as const)
+		test(`B = ${weg}: Server-metrics bleibt die Fremdaenderung, B-PUT traegt If-Match und bekommt 412`, async () => {
+			const a = P.neuerAufbau();
+			await konfliktInReiterA(a);
+			const ifMatchA = puts()[0].ifMatch;
+			const vorher = server.stand(P.TRIP_ID);
+			await schreiben(a);
+			await P.fertig(a.ctl);
+
+			assert.deepEqual(metrikenAufServer(), FREMDE_METRIKEN);
+			assert.deepEqual(server.stand(P.TRIP_ID), vorher, 'B hat trotz Konflikt geschrieben');
+			const bPuts = puts().slice(1);
+			assert.ok(bPuts.length >= 1, 'Messaufbau: Reiter B muss mindestens einen PUT abgesetzt haben');
+			for (const p of bPuts) assert.deepEqual([p.ifMatch, p.status], [ifMatchA, 412], p.path);
+			assert.equal(a.ctl.state, 'conflict');
+		});
+
 	// #2794 S3a Teil-PR 4a (AC-31): „B = Wertebereiche" entfaellt — der CorridorEditor (Schreiber
 	// von `corridors`) ist entfernt; die Grenzen schreibt der Reiter Wetter.
 
@@ -121,6 +142,17 @@ describe('W1 / AC-1: Fremdaenderung ueberlebt ein Speichern aus Reiter B nach de
 });
 
 describe('Gegenprobe: ohne Konflikt schreibt Reiter B normal (der Test ist nicht vakuum-gruen)', () => {
+	test('frischer Stand: Reiter Wetter speichert, der Server-Stand aendert sich', async () => {
+		await api.get(P.TRIP_PFAD);
+		const a = P.neuerAufbau(P.vollerTrip());
+		(await P.wetterReiter(a)).abwaehlen('wind');
+		await P.fertig(a.ctl);
+		assert.deepEqual(puts().map((p) => p.status), [200, 200]);
+		const metriken = metrikenAufServer() as Array<{ metric_id: string; enabled: boolean }>;
+		assert.equal(metriken.find((m) => m.metric_id === 'wind')?.enabled, false);
+		assert.equal(a.ctl.state, 'idle');
+	});
+
 	test('frischer Stand: Tempo-Reiter speichert, der Server-Stand aendert sich', async () => {
 		// frischen Stand holen: Registry kennt den aktuellen ETag
 		await api.get(P.TRIP_PFAD);

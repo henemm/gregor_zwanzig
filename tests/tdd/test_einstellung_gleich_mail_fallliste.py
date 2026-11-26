@@ -197,11 +197,19 @@ def _template_muster(vorlage: str) -> re.Pattern | None:
     return re.compile(".+".join(re.escape(t) for t in teile))
 
 
+def _hat_festen_text(vorlage: str) -> bool:
+    """#3020 R1: ``${key}`` oder ``${a} – ${b}`` ohne Buchstaben/Ziffern ausserhalb der
+    Platzhalter passte ausgefuellt auf (fast) jeden Titel und belegt deshalb keinen."""
+    return bool(re.search(r"[^\W_]", _TEMPLATE_PLATZHALTER.sub("", vorlage)))
+
+
 def _vitest_titel_gefunden(titel: str, dateien: list[Path]) -> bool:
     """Wortgleicher Titel, fester Template-Praefix oder -- Runde 7 -- ein
     konkreter Titel, der ein Template-Literal mit festem Textanteil ausfuellt
     (``anzeige_${id}`` -> ``anzeige_a_nie_eingestellt``). Eine reine
-    Platzhalter-Vorlage zaehlt nie als Treffer (#3020 R1b)."""
+    Platzhalter-Vorlage zaehlt nie als Treffer (#3020 R1b); eine Vorlage ohne
+    Buchstaben/Ziffern ausserhalb der Platzhalter (``${a} – ${b}``) zaehlt nur
+    wortgleich (#3020 R1)."""
     titel_kurz = titel.strip()
     if not titel_kurz:
         return False
@@ -214,7 +222,8 @@ def _vitest_titel_gefunden(titel: str, dateien: list[Path]) -> bool:
         praefixe.discard("")
         if titel_kurz in praefixe:
             return True
-        vorlagen = (_template_muster(v) for v in _VITEST_TEMPLATE_GANZ.findall(quelle))
+        vorlagen = (_template_muster(v) for v in _VITEST_TEMPLATE_GANZ.findall(quelle)
+                    if _hat_festen_text(v))
         if any(m is not None and m.fullmatch(titel_kurz) for m in vorlagen):
             return True
     return False
@@ -222,6 +231,12 @@ def _vitest_titel_gefunden(titel: str, dateien: list[Path]) -> bool:
 
 def _ist_vitest_fall(fall: dict) -> bool:
     return fall.get("seite") == "frontend" or ".test.ts::" in str(fall.get("test", ""))
+
+
+def _verweis_teile(test: str) -> tuple[str, str]:
+    """``pfad/datei::Titel`` -> (Dateiname, Titel); ein ``/`` im Titel gehoert zum Titel."""
+    datei_teil, titel = test.split("::", 1)
+    return Path(datei_teil).name, titel
 
 
 def _pruefe_vitest_verweis(test: str, vitest_dateien: list[Path]) -> bool:
@@ -501,33 +516,56 @@ def test_fertig_kein_rot_erwartet(echte_falllisten):
     _melde(finde_rot_erwartet(_geladen(echte_falllisten)), "Faelle noch rot_erwartet")
 
 
+#: Heutige Editor-Testdateien des Pruefkatalogs (#3020 R1): Anzeige bzw. Bedienung gegen die Ausgabe.
+EDITOR_TESTDATEI = re.compile(r"gleich_mail|gleich_ausgabe|hub_orte_ausgabe")
+
+
 def test_template_literal_titel_alle_gefunden():
     """(b) Jeder Frontend-Fall, dessen Titel nur als Template-Literal im Test
-    steht (``test(`<Titel> ${z.id}`)``), wird ueber den festen Praefix gefunden
-    -- und jeder solche Praefix der Editor-Testdateien hat mindestens einen
-    Fall (sonst liefe ein Testblock ohne Eintrag in der Fallliste)."""
+    steht (``test(`<Titel> ${z.id}`)``), wird gefunden -- und jede Titelvorlage
+    der heutigen Editor-Testdateien hat mindestens einen Fall (sonst liefe ein
+    Testblock ohne Eintrag in der Fallliste)."""
     vitest_dateien = sorted(REPO_ROOT.glob(VITEST_GLOB))
-    praefixe = {p.strip() for d in vitest_dateien
-                if "gleich_mail" in d.name or "in_allen_listen" in d.name
-                for p in _VITEST_TEMPLATE_PRAEFIX.findall(d.read_text(encoding="utf-8"))}
-    # Ganz dynamischer Titel (``test(`${name} ...`)``) gehoert zum Helfer
-    # ``rotErwartet``; dessen Aufrufe werden als eigene Titel gefunden.
-    praefixe.discard("")
-    faelle = [f for _, f in _alle_faelle(lade_falllisten(FALLLISTEN_DIR)) if _ist_vitest_fall(f)]
-    # #3297/#3020: editor_standard_gleich_mail.test.ts und neue_metrik_in_allen_listen*.test.ts
-    # sind mit dem Alt-Editor geloescht, ``praefixe`` ist damit heute leer (die Teilmengen-
-    # Pruefung unten bleibt scharf, sobald dort wieder Template-Titel stehen). Die Muster-Probe
-    # laeuft deshalb an den Dateien, auf die die Fallliste per ``datei.test.ts::titel`` zeigt.
-    verwiesen = {Path(str(f["test"]).split(".test.ts::")[0] + ".test.ts").name
-                 for f in faelle if ".test.ts::" in str(f["test"])}
-    vorlagen = {v for d in vitest_dateien if d.name in verwiesen
+    vorlagen = {(d.name, v) for d in vitest_dateien if EDITOR_TESTDATEI.search(d.name)
                 for v in _VITEST_TEMPLATE_GANZ.findall(d.read_text(encoding="utf-8"))}
-    assert vorlagen, "keine Template-Literal-Titel gefunden -- Muster pruefen"
-    titel = {str(f["test"]).split(".test.ts::")[-1].strip() for f in faelle}
+    assert len(vorlagen) >= 10, f"keine Template-Titel in den Editor-Testdateien -- Muster pruefen: {vorlagen}"
+    faelle = [f for _, f in _alle_faelle(lade_falllisten(FALLLISTEN_DIR)) if _ist_vitest_fall(f)]
     fehlend = [f["id"] for f in faelle if f["status"] in STATUS_MIT_TEST
                and not _pruefe_vitest_verweis(str(f["test"]), vitest_dateien)]
     assert fehlend == [], f"Template-/Titel nicht gefunden: {fehlend}"
-    assert praefixe <= titel, f"Template-Titel ohne Fall: {sorted(praefixe - titel)}"
+    # Der Fall muss auf DIESE Datei zeigen: gleichlautende Titel anderswo zaehlen nicht.
+    verweise = {_verweis_teile(str(f["test"])) for f in faelle if "::" in str(f["test"])}
+    ohne_fall = sorted(f"{name}::{v}" for name, v in vorlagen
+                       if not any(d == name and _template_muster(v).fullmatch(titel.strip()) for d, titel in verweise))
+    assert ohne_fall == [], f"Template-Titel ohne Fall: {ohne_fall}"
+
+
+#: In #3357 gestrichene, gruene Faelle (#3020 AC-5). Nie kuerzen.
+GESTRICHEN_3357 = (
+    "E-P12-TL3-ORTE-KURZSTIL", "E-R8-F3-ORTE-REITER", "E-R8-F3-ORTE-TG-DE", "E-R8-F3-ORTE-TG-EN",
+    "E-R8-F3-TRIP-REITER", "E-R8-F3-TRIP-TG-DE", "E-R8-F3-TRIP-TG-EN", "E-R8-F3N-ORTE-EINE-DE",
+    "E-R8-F3N-ORTE-EINE-EN", "E-R8-F3N-ORTE-EMAILREITER", "E-R8-F3N-ORTE-HINWEIS-DE",
+    "E-R8-F3N-ORTE-HINWEIS-EN", "E-R8-F3N-TRIP-STUNDENTABELLE", "E-R8-T1-SMS-LADEN-A", "E-R8-T1-SMS-LADEN-B",
+)
+
+
+# doc-compliance-test: Katalog-Vollstaendigkeit, kein Verhaltensnachweis.
+@pytest.mark.parametrize("fall_id", GESTRICHEN_3357)
+def test_gestrichener_katalogfall_hat_lebenden_beleg_oder_begruendung(fall_id):
+    """#3020 AC-5: wieder eingetragen mit auffindbarem Test -- oder in der Testtabelle begruendet gestrichen."""
+    tabelle = (REPO_ROOT / "docs/specs/modules/rework_3020_testtabelle.md").read_text(encoding="utf-8")
+    zeile = re.search(rf"^\|\s*`{re.escape(fall_id)}`\s*\|([^|]*)\|([^|]*)\|", tabelle, re.MULTILINE)
+    assert zeile, f"{fall_id}: kein Entscheid in der Testtabelle"
+    entscheid, grund = zeile.group(1).strip(), zeile.group(2).strip()
+    treffer = [f for _, f in _alle_faelle(lade_falllisten(FALLLISTEN_DIR)) if f["id"] == fall_id]
+    if entscheid == "streichen":
+        assert not treffer, f"{fall_id}: gestrichen und zugleich im Katalog"
+        assert re.match(r"Ohne lebende Aussage: .{20,}", grund), f"{fall_id}: Streichung ohne Begruendung"
+        return
+    assert len(treffer) == 1, f"{fall_id}: nicht wieder im Katalog"
+    assert treffer[0]["status"] in STATUS_MIT_TEST
+    assert _pruefe_vitest_verweis(str(treffer[0]["test"]), sorted(REPO_ROOT.glob(VITEST_GLOB))), (
+        f"{fall_id}: Test nicht auffindbar: {treffer[0]['test']}")
 
 
 def test_ausnahmen_und_offene_features_tragen_verweis(echte_falllisten):
@@ -900,6 +938,34 @@ def test_selbsttest_runde7_verweise_pfad_param_go_datei_template(tmp_path):
     verzeichnis = _schreibe(tmp_path, daten)
     fehler = pruefe_testverweise(lade_falllisten(verzeichnis), tmp_path)
     assert len(fehler) == 4, fehler
+
+
+def test_selbsttest_vorlage_ohne_festen_text_ist_kein_treffer(tmp_path):
+    """#3020 R1: ``test(`${key}`)`` belegt keinen Fall; wortgleich zitiert zaehlt
+    die Vorlage, und eine Vorlage mit festem Text zaehlt ausgefuellt."""
+    daten = _syn_daten()
+    fall = daten["fallliste_editor.json"]["faelle"][0]
+    verzeichnis = _schreibe(tmp_path, daten)
+    datei = tmp_path / "frontend" / "src" / "lib" / "x" / "__tests__" / "leere_vorlage.test.ts"
+    for vorlage in ("${key}", "${a}${b}", "${a} – ${b}: ${c}"):
+        datei.write_text(f"test(`{vorlage}`, () => {{}});\n", encoding="utf-8")
+        for titel, erwartet in (("gibt es nicht", 1), ("a – b: c", 1), (vorlage, 0)):
+            fall["test"] = titel
+            verzeichnis = _schreibe(tmp_path, daten)
+            fehler = pruefe_testverweise(lade_falllisten(verzeichnis), tmp_path)
+            assert len(fehler) == erwartet, (vorlage, titel, fehler)
+    datei.write_text("test(`kanal ${key} bleibt`, () => {});\n", encoding="utf-8")
+    for titel, erwartet in (("kanal sms bleibt", 0), ("kanal sms entfaellt", 1)):
+        fall["test"] = titel
+        verzeichnis = _schreibe(tmp_path, daten)
+        assert len(pruefe_testverweise(lade_falllisten(verzeichnis), tmp_path)) == erwartet, titel
+
+
+def test_selbsttest_verweis_mit_schraegstrich_im_titel():
+    """#3020 R1: erst an ``::`` trennen, dann der Dateiname."""
+    assert _verweis_teile("a/b/x.test.ts::Umsortieren/Entfernen speichert") == (
+        "x.test.ts", "Umsortieren/Entfernen speichert")
+    assert _verweis_teile("x.test.ts::${a}/${b} :: c") == ("x.test.ts", "${a}/${b} :: c")
 
 
 def test_selbsttest_zusammengesetztes_format(tmp_path):

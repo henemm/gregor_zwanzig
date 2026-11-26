@@ -173,6 +173,25 @@ describe('Aufbau und Spalten je Kontext (AC-22)', () => {
 		assert.equal(text(k[3].innen), 'Stundenverlauf Std. nur E-Mail');
 		assert.match(text(h), /die drei Kanäle, der Stundenverlauf und der 3-Tages-Ausblick\. Stundenverlauf und Ausblick gibt es nur/);
 	});
+	// #3020 R1 (E025 bis E027, E030): die Regel „ein Kanal kann nur abwählen“ (#2438, ADR-0050) steht im Kartentext.
+	const ABWAHL_REGEL = {
+		de: ['Jede Zeile ist eine Metrik aus der Auswahl oben.', 'Hier wählst du nur ab.', 'Neue Metriken kommen oben über „+“ dazu.'],
+		en: ['Each row is a metric from the selection above.', 'Here you only deselect.', 'New metrics are added above via “+”.']
+	};
+	for (const context of ['route', 'vergleich'] as const) {
+		for (const sprache of ['de', 'en'] as const) {
+			test(`Kartentext nennt die Abwahl-Regel: Zeilen aus der Grundauswahl, hier nur abwählen (${context}, ${sprache})`, async () => {
+				locale.set(sprache);
+				try {
+					const h = await karte(context === 'route' ? trip() : orte(3), { context });
+					const t = text(eins(h, 'data-abschnitt="was-steht-wo"').innen);
+					for (const satz of ABWAHL_REGEL[sprache]) assert.ok(t.includes(satz), `Kartentext ohne „${satz}“`);
+				} finally {
+					locale.set('de');
+				}
+			});
+		}
+	}
 	test('Zeilen in der Folge der Antwort mit Namen aus der Antwort', async () => {
 		const h = await karte(trip(), { context: 'route' });
 		const zeilen = elemente(h, 'data-slot="et-zeile"');
@@ -338,6 +357,38 @@ describe('Blöcke und Einstellungen je Kanal (AC-29, AC-30, AC-37)', () => {
 		assert.equal(attr(eins(t, 'data-testid="was-steht-wo-ausblick-morning"').auf, 'aria-checked'), 'false');
 		assert.equal(attr(eins(t, 'data-testid="was-steht-wo-ausblick-evening"').auf, 'aria-checked'), 'true');
 	});
+	// #3020 R1 (E067, E068): jede Zeile der Trip-Karte zeigt Titel und Hinweis IHRES Katalogeintrags, in beiden Sprachen.
+	const ZEILEN_3020: { testid: string; titel: string; hinweis: string; name?: string }[] = [
+		...[['show_stage_stats', 'etappen'], ['show_yesterday_comparison', 'vortag'], ['show_night_block', 'nacht'], ['show_compact_summary', 'kurz'], ['show_stability', 'grosswetterlage']]
+			.map(([feld, k]) => ({ testid: `was-steht-wo-${feld}`, titel: `bloecke.${k}`, hinweis: `bloecke.${k}_hinweis` })),
+		{ testid: 'was-steht-wo-ausblick-morning', titel: 'bloecke.ausblick', hinweis: 'bloecke.ausblick_hinweis_route', name: 'bloecke.ausblick_morgen' },
+		{ testid: 'was-steht-wo-ausblick-evening', titel: 'bloecke.ausblick', hinweis: 'bloecke.ausblick_hinweis_route', name: 'bloecke.ausblick_abend' },
+		{ testid: 'was-steht-wo-email-format', titel: 'kanal.email_format', hinweis: 'kanal.email_format_hinweis' }
+	];
+	for (const sprache of ['de', 'en'] as const) {
+		test(`Trip: alle Blöcke, Ausblick und E-Mail-Format mit Titel und Hinweis aus dem Katalog (${sprache})`, async () => {
+			const katalog = async (l: 'de' | 'en') => (await import(pathToFileURL(path.join(FRONTEND, `src/lib/i18n/messages/${l}/index.ts`)).href))[l] as Record<string, string>;
+			const [de, en] = [await katalog('de'), await katalog('en')];
+			const wert = (k: string) => ({ de, en })[sprache][`wetter.wsw.${k}`];
+			locale.set(sprache);
+			try {
+				const h = await karte(trip(), { context: 'route' });
+				for (const z3 of ZEILEN_3020) {
+					const zeilen = elemente(h, 'data-slot="einstellungszeile"').filter((x) => x.innen.includes(`data-testid="${z3.testid}"`));
+					assert.equal(zeilen.length, 1, `${z3.testid}: genau eine Zeile`);
+					const soll = `${wert(z3.titel)} ${wert(z3.hinweis)}`;
+					assert.ok(text(zeilen[0].innen).startsWith(soll), `${z3.testid}: „${text(zeilen[0].innen)}“ beginnt nicht mit „${soll}“`);
+					assert.equal(attr(eins(zeilen[0].innen, `data-testid="${z3.testid}"`).auf, 'aria-label'), wert(z3.name ?? z3.titel), `${z3.testid}: aria-label`);
+					for (const k of [z3.titel, z3.hinweis, z3.name ?? z3.titel])
+						assert.notEqual(en[`wetter.wsw.${k}`], de[`wetter.wsw.${k}`], `${k}: englischer Text gleich dem deutschen`);
+				}
+				for (const [id, k] of [['full', 'ausfuehrlich'], ['compact', 'kompakt']])
+					assert.equal(text(eins(h, `data-testid="was-steht-wo-email-format-${id}"`).innen), wert(`kanal.${k}`));
+			} finally {
+				locale.set('de');
+			}
+		});
+	}
 	test('Fix-Loop T2: Kurzstil ohne verbundenes Telegram gesperrt; ein eingeschalteter Kurzstil bleibt abschaltbar (AC-28)', async () => {
 		const aus = await karte(trip(), { context: 'route' });
 		assert.equal(attr(eins(aus, 'data-testid="was-steht-wo-kurzstil"').auf, 'aria-disabled'), 'true');
@@ -529,5 +580,163 @@ describe('#3283 B7: Legende als Raster, Kürzel mono ohne Fettdruck (AC-9)', () 
 		// Eine Hülle je Eintrag darf das Raster nicht brechen.
 		const huelle = alle.find((x) => x.selektor === '.wsw-legende-eintrag');
 		if (huelle) assert.equal(huelle.decl.display, 'contents', 'Hülle je Eintrag bricht das Raster');
+	});
+});
+
+// ── #3020 R1: Namen des Ausblicks, Telegram-Grenze, Bericht-Flags an der Karte ──────────────────────────────
+describe('#3020 G02: der 3-Tages-Ausblick heißt überall gleich', () => {
+	const ALTE_NAMEN = [
+		'Mehrtages-Trend', '3-Tages-Vorschau', 'Nächste Etappen', 'Trend-Block', '3–7-Tage-Ausblick',
+		'Multi-day trend', '3-day preview', 'Next stages', 'Trend block', '3–7-day outlook'
+	];
+	test('Ausblick trägt überall den einen Namen, kein alter Name (DE und EN, Trip und Orte)', async () => {
+		for (const [sprache, name] of [['de', '3-Tages-Ausblick'], ['en', '3-day outlook']] as const) {
+			for (const [context, a] of [['route', trip()], ['vergleich', orte(3)]] as const) {
+				locale.set(sprache);
+				try {
+					const h = await karte(a, { context });
+					const kopf = kopfStellen(h).find((x) => attr(x.auf, 'data-stelle') === 'outlook')!;
+					assert.ok(text(kopf.innen).startsWith(`${name} `), `${sprache}/${context}: Spaltenkopf ${text(kopf.innen)}`);
+					const block = elemente(h, 'data-slot="einstellungszeile"').filter((x) => x.innen.includes('was-steht-wo-ausblick-morning'));
+					assert.equal(block.length, 1);
+					assert.ok(text(block[0].innen).startsWith(`${name} `), `${sprache}/${context}: Block ${text(block[0].innen)}`);
+					// Ganzes Markup: Text, title und aria-label.
+					for (const alt of ALTE_NAMEN) assert.ok(!h.toLowerCase().includes(alt.toLowerCase()), `${sprache}/${context}: alter Name „${alt}“`);
+				} finally {
+					locale.set('de');
+				}
+			}
+		}
+	});
+});
+
+describe('#3020 G49/G50: die Telegram-Spalte behauptet nur, was Telegram tut', () => {
+	// Folge ungleich Katalog- und Alphabetfolge.
+	const NEUN = ['uv_index', 'wind', 'thunder', 'gust', 'precipitation', 'cloud_total', 'humidity', 'dewpoint', 'visibility'];
+	const GRENZE = /zu breit|too wide|max\.? ?7|limit|[−-]2\b|nur Tageswert|daily value only|passt nicht mehr|no longer fits/i;
+	const orteAntwort = (ids: string[]): J => {
+		const a = orte(3, { sms_example: null });
+		a.rows = ids.map((id, i) => ({
+			metric_id: id, name: `Name ${id}`, position: i, parent: null,
+			cells: { email: z('on'), telegram: z('on', { format: 'raw', example: `Wert ${i}` }), sms: z('on'), hourly: z('on'), outlook: z('on') }
+		}));
+		return a;
+	};
+	const tripAntwort = (ids: string[], marken: (string | null)[]): J => {
+		const a = trip({ sms_example: null });
+		a.rows = ids.map((id, i) => ({
+			metric_id: id, name: `Name ${id}`, position: i, parent: null,
+			cells: { email: z('on'), telegram: z('on', { mark: marken[i] }), sms: z('on'), outlook: z('on') }
+		}));
+		return a;
+	};
+	const zeilen = (h: string) => elemente(h, 'data-slot="et-zeile"').map((x) => attr(x.auf, 'data-metrik'));
+	const marken = (h: string, metrik: string, stelle: string) => elemente(zelle(h, metrik, stelle).innen, 'data-slot="et-marke"').map((x) => text(x.innen));
+	async function inSprache(lang: 'de' | 'en', a: J, context: string): Promise<string> {
+		locale.set(lang);
+		try {
+			return await karte(a, { context });
+		} finally {
+			locale.set('de');
+		}
+	}
+
+	for (const lang of ['de', 'en'] as const) {
+		const orteOhneMarke = async (ids: string[]) => {
+			const h = await inSprache(lang, orteAntwort(ids), 'vergleich');
+			assert.deepEqual(zeilen(h), ids, 'jede Zeile der Antwort, in ihrer Folge');
+			for (const id of ids) {
+				assert.equal(attr(zelle(h, id, 'telegram').auf, 'data-zustand'), 'on');
+				assert.match(kaestchen(h, id, 'telegram'), /\schecked/);
+				assert.doesNotMatch(kaestchen(h, id, 'telegram'), /\sdisabled/);
+				assert.deepEqual(marken(h, id, 'telegram'), [], `${id}: Marke in der Telegram-Spalte`);
+			}
+			assert.doesNotMatch(text(eins(h, 'data-testid="was-steht-wo-tabelle"').innen), GRENZE);
+		};
+		test(`Orte, ${lang}: neun Metriken stehen alle in der Telegram-Spalte, ohne Marke und ohne Grenz-Text`, () => orteOhneMarke(NEUN));
+		test(`Orte, ${lang}: fünf Metriken, keine Marke in der Telegram-Spalte`, () => orteOhneMarke(NEUN.slice(0, 5)));
+	}
+
+	test('Orte: die E-Mail-Spalte trägt nie eine Telegram-Marke', async () => {
+		const a = orteAntwort(NEUN);
+		for (const r of a.rows.slice(7)) r.cells.telegram.mark = 'nur_tageswert';
+		const h = await inSprache('de', a, 'vergleich');
+		assert.deepEqual(marken(h, NEUN[8], 'telegram'), ['nur Tageswert'], 'Messaufbau: die Marke steht an der Telegram-Zelle');
+		for (const id of NEUN) for (const s of ['email', 'sms', 'hourly', 'outlook']) assert.deepEqual(marken(h, id, s), [], `${id}/${s}`);
+	});
+
+	for (const lang of ['de', 'en'] as const) {
+		test(`Trip, ${lang}: neun Metriken, „nur Tageswert“ genau an Platz 8 und 9, keine Zeile fehlt`, async () => {
+			const h = await inSprache(lang, tripAntwort(NEUN, NEUN.map((_, i) => (i > 6 ? 'nur_tageswert' : null))), 'route');
+			assert.deepEqual(zeilen(h), NEUN);
+			const marke = { de: 'nur Tageswert', en: 'daily value only' }[lang];
+			assert.deepEqual(NEUN.map((id) => marken(h, id, 'telegram')), NEUN.map((_, i) => (i > 6 ? [marke] : [])));
+			for (const id of NEUN) {
+				assert.match(kaestchen(h, id, 'telegram'), /\schecked/);
+				assert.doesNotMatch(kaestchen(h, id, 'telegram'), /\sdisabled/);
+				for (const s of ['email', 'sms', 'outlook']) assert.deepEqual(marken(h, id, s), [], `${id}/${s}`);
+			}
+		});
+	}
+});
+
+// #3047 N3 (Katalog 35 bis 37): Bericht-Flags. Altbestand: Temperatur nur morgens, Wind aus, aber morgens an, Böen
+// nur abends, Niederschlag beide Flags, Gewitter ohne Flags. Soll aus Python (resolve_channel_lists je Briefing-Typ).
+describe('#3020 G44: nur morgens / nur abends (Altbestand)', () => {
+	const BESTAND = [
+		{ metric_id: 'temperature', enabled: true, order: 0, bucket: 'primary', evening_enabled: false },
+		{ metric_id: 'wind', enabled: false, order: 0, morning_enabled: true },
+		{ metric_id: 'gust', enabled: true, order: 1, bucket: 'primary', morning_enabled: false },
+		{ metric_id: 'precipitation', enabled: true, order: 2, bucket: 'primary', morning_enabled: true, evening_enabled: true },
+		{ metric_id: 'thunder', enabled: true, order: 3, bucket: 'primary' }
+	];
+	const EIGENE = BESTAND.map((m) => m.metric_id);
+	const TODO = { todo: 'Fehler #3364: Reiter und Karte lesen die Bericht-Flags nicht' };
+	async function modelle() {
+		const wt = path.join(FRONTEND, 'src/lib/components/shared/wetter-tab');
+		const lade = (datei: string): Promise<J> => import(pathToFileURL(path.join(wt, datei)).href);
+		const [O, D, A, Z, S, G] = await Promise.all(['__tests__/placementsOrakel.ts', '__tests__/wetterTabDaten.ts', 'ampelModell.ts', 'wetterZustand.ts', 'wetterTabSpeicherung.ts', '__tests__/ausgabeOrakel.ts'].map(lade));
+		const vorlagen = A.vorlagenAusTemplates(D.live().templates);
+		const eig = A.eigenschaftenAusKatalog(D.live().metrics);
+		const abo = { id: 'n3', display_config: { metrics: BESTAND } };
+		const stand = (x: J) => Z.standAusAbo('route', x, D.aufgeloestVon(x), {}, { eig });
+		const speichere = (x: J, s: J) => ({ id: 'n3', display_config: G.ebene1(x.display_config, S.tripNutzlast({ client: null, stand: () => s, vorlagen: () => vorlagen, abo: () => x }).weatherConfig) });
+		const orakel = (x: J) => O.placementsOrakel([{ id: 'n3', nutzer: 'n3-a', kind: 'route', abo: x }])[0];
+		const eigene = (liste: [string, unknown][]) => liste.map(([m]) => m).filter((m) => EIGENE.includes(m)).sort();
+		return { abo, stand, speichere, orakel, eigene, Z };
+	}
+	const kennzeichen = (h: string, metrik: string) => text(eins(h, `data-metrik="${metrik}"`).innen).match(/nur morgens|nur abends|morning only|evening only/g) ?? [];
+
+	test('n3_semantik_wie_mail', TODO, async () => {
+		const m = await modelle();
+		const o = m.orakel(m.abo);
+		const berichte = [...new Set([...m.eigene(o.listen.morning.email), ...m.eigene(o.listen.evening.email)])].sort();
+		assert.deepEqual(berichte, [...EIGENE].sort(), 'Messaufbau: jede Größe steht in mindestens einem Briefing');
+		// (a) gewählt ist, was mindestens ein Briefing führt
+		assert.deepEqual(m.stand(m.abo).auswahl.filter((x: string) => EIGENE.includes(x)).sort(), berichte);
+		// (b) „−“ nimmt die Größe aus beiden Briefings
+		const ohne = m.orakel(m.speichere(m.abo, m.Z.ohneMetrik(m.stand(m.abo), 'precipitation')));
+		for (const rt of ['morning', 'evening']) assert.ok(!m.eigene(ohne.listen[rt].email).includes('precipitation'), `nach „−“ steht die Größe noch im Briefing ${rt}`);
+	});
+	test('n3_editor_kennzeichnet_je_zeile', TODO, async () => {
+		const m = await modelle();
+		const a = m.orakel(m.abo).antwort;
+		for (const [lang, morgens, abends] of [['de', 'nur morgens', 'nur abends'], ['en', 'morning only', 'evening only']] as const) {
+			locale.set(lang);
+			try {
+				const h = await karte(a, { context: 'route' });
+				assert.deepEqual(EIGENE.map((id) => kennzeichen(h, id)), [[morgens], [morgens], [abends], [], []], lang);
+			} finally {
+				locale.set('de');
+			}
+		}
+	});
+	test('n3_kennzeichnung_folgt_dem_editorstand', TODO, async () => {
+		const m = await modelle();
+		const vorher = await karte(m.orakel(m.abo).antwort, { context: 'route' });
+		assert.deepEqual(kennzeichen(vorher, 'temperature'), ['nur morgens']);
+		// Temperatur abgewählt: abends ohnehin aus, morgens folgt jetzt enabled:false — in keinem Briefing, keine Zeile.
+		const danach = m.orakel(m.speichere(m.abo, m.Z.ohneMetrik(m.stand(m.abo), 'temperature'))).antwort;
+		assert.equal(elemente(await karte(danach, { context: 'route' }), 'data-metrik="temperature"').length, 0);
 	});
 });
