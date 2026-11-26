@@ -11,7 +11,7 @@
 import type { Ampel, AmpelMetrik, AmpelSeite } from './ampelModell.ts';
 import { aktiveMetriken, gleicheSeite, mitAbgeleiteten, tripMetrikEintraege, vergleichsKatalogIds, vergleichsMetrikId, type AltSchluessel } from './ampelModell.ts';
 import { DERIVED_METRIC_RULES } from '../../trip-detail/metricsEditor.ts';
-import { COMPARE_METRIC_KEYS } from './corridorEditorState.ts';
+import { getCompareDefaultOrder } from './compareMetricCatalogLoader.ts';
 import { klon } from './klon.ts';
 import { amtlicheWarnungenFelder, type WarnFelder } from './amtlicheWarnungen.ts';
 
@@ -187,11 +187,11 @@ function nieEingestelltUnveraendert(e: VergleichSpeicherEingabe): boolean {
 
 /** Bisher ausgegebene Zeilen als Bestand (#3047 p5c): gespeicherte Liste, sonst — nie eingestellt —
  *  jede Zeile des Vergleichs-Katalogs (inkl. Varianten wie Temperatur-Minimum) in der Zeilenfolge der
- *  Mail ohne Liste (`COMPARE_METRIC_KEYS` = CV2-Folge). So entfernt eine Abwahl nur die Zeilen dieser
- *  Groesse, die uebrigen bleiben in ihrer Folge. */
-function bisherigeZeilen(e: VergleichSpeicherEingabe): (VergleichMetrik | string)[] {
+ *  Mail ohne Liste (Standardfolge `default_order` des Katalogs = CV2-Folge, #2989). So entfernt eine
+ *  Abwahl nur die Zeilen dieser Groesse, die uebrigen bleiben in ihrer Folge. */
+function bisherigeZeilen(e: VergleichSpeicherEingabe, folge: string[]): (VergleichMetrik | string)[] {
 	if (Array.isArray(e.displayConfig?.active_metrics)) return e.displayConfig.active_metrics;
-	const rang = (k: string) => (COMPARE_METRIC_KEYS.includes(k) ? COMPARE_METRIC_KEYS.indexOf(k) : COMPARE_METRIC_KEYS.length);
+	const rang = (k: string) => (folge.includes(k) ? folge.indexOf(k) : folge.length);
 	return Object.entries(e.altSchluessel ?? {})
 		.sort(([a], [b]) => rang(a) - rang(b))
 		.map(([, z]) => ({ ...z }));
@@ -202,13 +202,16 @@ function bisherigeZeilen(e: VergleichSpeicherEingabe): (VergleichMetrik | string
 export function vergleichSpeicherPayload(e: VergleichSpeicherEingabe) {
 	const warn = amtlicheWarnungenFelder(e.warnungenAn, e.warnFelder);
 	const { active_metrics: _bestand, ...rest } = klon(e.displayConfig ?? {});
+	const folge = getCompareDefaultOrder();
+	// #2989 AC-5: nie eingestellt + Standardfolge ungeladen ⇒ keine Liste schreiben (kein Nachladen).
+	const ohneListe = nieEingestelltUnveraendert(e) || (!Array.isArray(e.displayConfig?.active_metrics) && folge === null);
 	return {
 		display_config: {
 			...rest,
 			ampel: abweichungsMenge(e.vorlage, e.aufgeloest, e.auswahl),
-			...(nieEingestelltUnveraendert(e)
+			...(ohneListe
 				? {}
-				: { active_metrics: vergleichMetriken(bisherigeZeilen(e), e.auswahl, e.aggregationFuer, e.altSchluessel) })
+				: { active_metrics: vergleichMetriken(bisherigeZeilen(e, folge ?? []), e.auswahl, e.aggregationFuer, e.altSchluessel) })
 		},
 		official_alerts_enabled: warn.official_alerts_enabled,
 		official_warnings: warn.official_warnings,

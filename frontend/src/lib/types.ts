@@ -624,6 +624,8 @@ export interface CompareMetricCatalogEntry {
 
 export interface CompareMetricCatalogResponse {
 	metrics: CompareMetricCatalogEntry[];
+	/** #2989: Mail-Standardfolge der waehlbaren Schluessel (CV2_ZEILEN ohne `warn`). */
+	default_order?: string[];
 }
 
 export interface ForecastMeta {

@@ -40,8 +40,8 @@ type J = any; // eslint-disable-line @typescript-eslint/no-explicit-any
 const PY_KATALOG = [
 	'import sys, json',
 	"sys.path.insert(0, 'src'); sys.path.insert(0, '.')",
-	'from output.renderers.compare_metric_catalog import get_compare_metric_catalog',
-	"print(json.dumps({'metrics': get_compare_metric_catalog(lang='de')}, ensure_ascii=False))"
+	'from api.routers.compare import get_compare_metrics', // #2989: echte Endpoint-Antwort inkl. default_order
+	"print(json.dumps(get_compare_metrics(lang='de'), ensure_ascii=False))"
 ].join('\n');
 const KATALOG_ANTWORT = JSON.parse(execFileSync('uv', ['run', 'python3', '-c', PY_KATALOG], { cwd: REPO, encoding: 'utf-8' }).trim());
 const KATALOG = toCompareSelectionEntries(KATALOG_ANTWORT);

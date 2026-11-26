@@ -433,7 +433,7 @@ describe('saveGateDecision — F005', () => {
 describe('TEST_DEFS (buildCompareMetricDefs) — AC-3 confidence_pct-Ausschluss + alle Katalog-Keys', () => {
 	// Issue #1424 (AC-3): precip_type_dominant + wind_direction_deg taugen nicht
 	// als Von/Bis-Bereich und sind seither aus dem Angebot gefiltert — sie
-	// bleiben normale Wettergroessen (COMPARE_METRIC_KEYS), nur hier nicht mehr.
+	// bleiben normale Wettergroessen (Standardfolge `default_order`), nur hier nicht mehr.
 	test('enthaelt alle Endpoint-Katalog-Keys ausser den zwei AC-3-Ausnahmen, kein confidence_pct, nie leer (Vakuum-Schutz)', () => {
 		const ids = TEST_DEFS.map((m) => m.metric).sort();
 		const expected = CATALOG_FIXTURE.metrics

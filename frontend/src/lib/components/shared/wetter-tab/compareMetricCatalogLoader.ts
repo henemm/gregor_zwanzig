@@ -36,7 +36,7 @@ import {
 // FREEZING_RAIN) ohne Zahlenskala, wind_direction_deg ist zyklisch (0-360°,
 // "von 350° bis 10°" ist mit einem Von/Bis-Paar nicht ausdrueckbar). Beide
 // bleiben normale Wettergroessen im Reiter Wetter-Metriken —
-// COMPARE_METRIC_KEYS (corridorEditorState.ts) und der Katalog-Endpoint sind
+// die Standardfolge (`default_order`, #2989) und der Katalog-Endpoint sind
 // unveraendert. Die Entfernung sitzt bewusst NUR hier (einziger Ort, an dem
 // Katalog-Eintraege zu Editor-Definitionen werden).
 const _COMPARE_RANGE_UNSUPPORTED = new Set(['precip_type_dominant', 'wind_direction_deg']);
@@ -94,12 +94,26 @@ export function buildCompareMetricDefs(response: CompareMetricCatalogResponse): 
 // den Eintrag dieser Sprache.
 const cachedResponses = new Map<Lang, Promise<CompareMetricCatalogResponse>>();
 
+// Issue #2989: Mail-Standardfolge der Vergleichs-Schluessel (`default_order` der
+// Katalog-Antwort) — einzige Quelle fuer „nie eingestellt = alle Groessen". Modulweit,
+// sprachunabhaengig, befuellt im geteilten Fetch-Chain; `null` bis eine Antwort da ist.
+let defaultOrder: string[] | null = null;
+
+/** Standardfolge aus der ersten verarbeiteten Katalog-Antwort (Kopie), sonst `null`. */
+export function getCompareDefaultOrder(): string[] | null {
+	return defaultOrder ? [...defaultOrder] : null;
+}
+
 function fetchCompareMetricCatalogOnce(): Promise<CompareMetricCatalogResponse> {
 	const lang: Lang = get(locale) === 'en' ? 'en' : 'de';
 	let cached = cachedResponses.get(lang);
 	if (!cached) {
 		cached = api
 			.get<CompareMetricCatalogResponse>(`/api/compare/metrics?lang=${lang}`)
+			.then((r) => {
+				if (Array.isArray(r?.default_order)) defaultOrder = [...r.default_order];
+				return r;
+			})
 			.catch((e: unknown) => {
 				cachedResponses.delete(lang);
 				throw e;

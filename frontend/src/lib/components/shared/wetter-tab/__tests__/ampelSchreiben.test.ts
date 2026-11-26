@@ -25,9 +25,10 @@
 //
 //   cd frontend && npm test -- src/lib/components/shared/wetter-tab/__tests__/ampelSchreiben.test.ts
 
-import { test, describe } from 'node:test';
+import { test, describe, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { ampelModell, ampelSchreiben, amtlicheWarnungen, live, ohneOffene, pythonAufloesung, type Json } from './wetterTabDaten.ts';
+import { ampelModell, ampelSchreiben, amtlicheWarnungen, live, ohneOffene, pythonAufloesung, vergleichsKatalogFetch, type Json } from './wetterTabDaten.ts';
+import { getCompareDefaultOrder, loadCompareMetricCatalog } from '../compareMetricCatalogLoader.ts';
 
 async function umgebung(): Promise<{ m: Json; s: Json; w: Json; vorlagen: Json; eig: Json }> {
 	const m = await ampelModell();
@@ -275,6 +276,17 @@ async function vergleichFall(dc: Json, auswahlAenderung: (a: string[]) => string
 }
 
 describe('AC-37/AC-38/AC-39: Vergleichs-Payload (active_metrics + ampel + Radar + Tagesfenster top-level)', () => {
+	// #2989: „nie eingestellt" rangiert ueber die Standardfolge des Katalogs — geladen ueber den echten
+	// Lader (fetch-Stub an der Netzgrenze, echte Endpoint-Antwort); ungeladen schreibt der Payload keine Liste.
+	before(async () => {
+		const zurueck = vergleichsKatalogFetch();
+		try {
+			await loadCompareMetricCatalog();
+		} finally {
+			zurueck();
+		}
+		assert.ok(getCompareDefaultOrder(), 'Messaufbau: Standardfolge nicht geladen');
+	});
 	test('ac37_vergleich_active_metrics_bestehende_reihenfolge_entfernte_weg_neue_hinten', async () => {
 		const { p } = await vergleichFall(VGL_DC, (a) => [...a.filter((x) => x !== 'gust'), 'dewpoint']);
 		assert.deepEqual(p.display_config.active_metrics, [

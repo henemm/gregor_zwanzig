@@ -6,26 +6,42 @@
 // liefert `cape_max_jkg` ab #1585 nicht mehr aus — die zwei hartkodierten
 // Frontend-Fundstellen in corridorEditorState.ts muessen mitziehen, sonst
 // behandelt ein Alt-Vergleich mit `active_metrics=null` CAPE weiterhin als
-// aktiv (COMPARE_METRIC_KEYS ist genau die synchrone Fallback-Liste dafuer).
+// aktiv. Seit #2989 ist die Fallback-Liste die Standardfolge `default_order` der
+// Katalog-Antwort; sie wird hier ueber den echten Lader befuellt (fetch-Stub an
+// der Netzgrenze, echte Endpoint-Antwort).
 //
 // Ausfuehrung: cd frontend && npm test -- \
 //   src/lib/components/shared/corridor-editor/__tests__/corridorEditorCapeExclusion.test.ts
 
-import { test, describe } from 'node:test';
+import { test, describe, before } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { COMPARE_METRIC_KEYS, _COMPARE_DEFAULTS } from '../corridorEditorState.ts';
+import { _COMPARE_DEFAULTS } from '../corridorEditorState.ts';
+import { getCompareDefaultOrder, loadCompareMetricCatalog } from '../compareMetricCatalogLoader.ts';
+import { endpointFetch } from './compareDefaultOrder2989Daten.ts';
 
 const CAPE_KEY = 'cape_max_jkg';
+let standardfolge: string[] = [];
+
+before(async () => {
+	const zurueck = endpointFetch();
+	try {
+		await loadCompareMetricCatalog();
+	} finally {
+		zurueck();
+	}
+	standardfolge = getCompareDefaultOrder() ?? [];
+	assert.ok(standardfolge.length > 0, 'Standardfolge nicht geladen');
+});
 
 describe('AC-4 (Frontend): cape_max_jkg ist keine waehlbare Vergleichs-Groesse mehr', () => {
-	test('COMPARE_METRIC_KEYS fuehrt cape_max_jkg nicht mehr', () => {
+	test('die Standardfolge (default_order) fuehrt cape_max_jkg nicht', () => {
 		assert.equal(
-			COMPARE_METRIC_KEYS.includes(CAPE_KEY),
+			standardfolge.includes(CAPE_KEY),
 			false,
-			`AC-4 FAIL: COMPARE_METRIC_KEYS enthaelt noch ${CAPE_KEY} — ein Alt-Vergleich ` +
+			`AC-4 FAIL: die Standardfolge enthaelt noch ${CAPE_KEY} — ein Alt-Vergleich ` +
 				'ohne gespeicherte active_metrics wuerde CAPE weiterhin als aktive Metrik ' +
-				`fuehren. Liste: ${COMPARE_METRIC_KEYS.join(', ')}`
+				`fuehren. Liste: ${standardfolge.join(', ')}`
 		);
 	});
 
@@ -45,8 +61,8 @@ describe('AC-4 (Frontend): cape_max_jkg ist keine waehlbare Vergleichs-Groesse m
 		// entfernt wird ausschliesslich CAPE.
 		for (const key of ['freezing_level_m', 'thunder_level_max', 'temp_max_c']) {
 			assert.ok(
-				COMPARE_METRIC_KEYS.includes(key),
-				`AC-4 FAIL: ${key} ist mit CAPE zusammen aus COMPARE_METRIC_KEYS verschwunden`
+				standardfolge.includes(key),
+				`AC-4 FAIL: ${key} ist mit CAPE zusammen aus der Standardfolge verschwunden`
 			);
 		}
 		assert.ok(
