@@ -285,3 +285,7 @@ Runde B: BROKEN (34 Verfälschungen, alle gefangen; Protokoll und Läufe `s3-adv
 - Live und Selbsttest bestanden auf 4ba927c14; Staging 8/8 ACs (DE und EN). Das Issue bleibt bis S4 offen.
 - **S4 (AC-16 bis AC-18):** eigener RED-Schritt. Zu entfernen: `lokalAufgeloest` und Spiegel (`verschmelzen`, `vorlageIdVon`, `zaehleAbweichungen`, `eigeneVorlageAmpel`, `ampelFehler`); F002 als Known Limitation in die Spec; F005 aus S1 (Sektoren-Wächter zu #3230); Folge-Issue für übrige Nutzer von `vorlageIdFuer`; `f007_trip_leere_auswahl.test.ts` nutzt noch `verschmelzen`.
 - Neue Issues aus S3: #3378 (abgebrochenes Nachladen nach 412, Altbestand); unübersetzter Offline-Satz im Fehlerzustand in #1199.
+
+## Abstimmung mit #3020 (Stand 2026-11-26)
+
+Parallele Sitzung `gregor-zwanzig-3d` (Workflow `rework-3020-altbausteine-entfernen`) führt gerade PR #3382/#3386 zusammen. **Vor jeder S4-Änderung unter `frontend/src/lib/components/shared/wetter-tab/__tests__/` dort per SendMessage melden** und deren Freigabe abwarten. Deren R1-Dateien dort: `editor_standard_gleich_ausgabe_3020`, `eigene_vorlage_im_put_3020`, `aenderungsfaelle_an_der_tabelle_3020`, `trip_ladefehler_schreibt_nicht_3020`, `zwei_nutzer_beim_laden_3020`, `placementsOrakel.ts`, `p5c_ableitung_hub_orte_ausgabe`, `rework_3036_bloecke_speicherung`; sie nutzen `aufloesungPost`/`aufgeloestVon` aus `wetterTabDaten.ts` (in S4 nicht umbenennen/entfernen ohne Absprache). Nicht anfassen: layout-tab, trip-detail/__tests__, tests/fixtures/einstellung_gleich_mail, #3020/#3366-Nachläufe.
