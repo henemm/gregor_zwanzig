@@ -1,0 +1,89 @@
+{
+  "verified_commit": "727c035b3f9501a638e62b19bca74fdfc15a5b32",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/",
+      "evidence": "Staging 727c035: Abnahme-Lauf orte+ort1 x DE/EN x 1280/390 Ganzseitenbilder, 4 passed (docs/artifacts/abnahme-3037-was-steht-wo/e2e-verify/staging-lauf.txt)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "/",
+      "evidence": "Ein-Ort-Wegwerf-Abo: Bereich heisst Orte/Locations (DE/EN), keine Mehrzahl-Texte in Kopf, Reiter Wetter, Karte",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "/",
+      "evidence": "390 px EN Orte: fuenf Haken-Spalten in einer Zeile, kein seitliches Scrollen",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "/",
+      "evidence": "6 Mockup-Bilder Fassung 4, Kontext aktiv geprueft",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "/",
+      "evidence": "8 Soll/Ist-Bilder aus dem Staging-Lauf erzeugt (soll_ist_bild.py, Exit 0)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "/",
+      "evidence": "Zweitkonto sieht das Wegwerf-Abo nicht; Abo entfernt, Pruefkonto-Sprache DE",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "Scope",
+      "status": "PASS",
+      "url": "/api/health",
+      "evidence": "Keine Produktcode-Aenderung (Pruefwerkzeug, Tests, Doku); kein Mailpfad beruehrt, daher kein Mailversand",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-26T18:53:46.874274+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Abnahme-Lauf auf Staging 4 passed (Orte, ein Ort, DE/EN, 1280/390), Soll/Ist-Bilder erzeugt; kein Produktcode",
+  "scope": "full-stack",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Abnahme-Lauf auf Staging 4 passed (Orte, ein Ort, DE/EN, 1280/390), Soll/Ist-Bilder erzeugt; kein Produktcode",
+      "scope": "full-stack",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-26T18:53:46.874274+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
