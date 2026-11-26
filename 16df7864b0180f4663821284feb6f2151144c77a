@@ -1,0 +1,68 @@
+{
+  "verified_commit": "16df7864b0180f4663821284feb6f2151144c77a",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/compare/<wegwerf-ein-ort>/wetter",
+      "evidence": "Staging 16df786, Pr\u00fcfkonto, Wegwerf-Abo mit genau einem Ort, DE: Radar-Hinweis 'Alarm, wenn in der n\u00e4chsten Stunde Regen auf deinen Ort zukommt' (Ganzseitenbild staging-ort1-de-1280); wsw-abnahme-3037 ort1 mit erweiterter Verbotsliste ('deine Orte') gr\u00fcn",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "/compare/<wegwerf-ein-ort>/wetter",
+      "evidence": "EN: 'Alert when rain is coming towards your location within the next hour' (staging-ort1-en-1280); Verbotsliste 'your locations' gr\u00fcn",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "/compare/cp-cc798e8ca9d34a15/wetter",
+      "evidence": "Orte mit drei Orten, DE: '... Regen auf deine Orte zukommt' (staging-orte-de-1280); unbekannte Ortszahl per Einheitstest",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "Trip 'deine Etappe'/'your stage' per SSR-Einheitstest der echten Einbettung (fix3430 + feat2800), Trip-Zweig unver\u00e4ndert; nicht separat auf Staging gemessen",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-26T22:57:49.876183+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Radar-Hinweis bei einem Ort 'deinen Ort'/'your location' auf Staging gemessen, Mehrzahl bei drei Orten unver\u00e4ndert",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Radar-Hinweis bei einem Ort 'deinen Ort'/'your location' auf Staging gemessen, Mehrzahl bei drei Orten unver\u00e4ndert",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-26T22:57:49.876183+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
