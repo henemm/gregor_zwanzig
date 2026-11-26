@@ -135,9 +135,16 @@ function netz(historie: Record<string, Eintrag[] | 'fehler'>, vorlagen: unknown[
 		urls,
 		historienAbrufe: () => urls.filter((u) => u.includes('/briefing-history')),
 		naechsteAbrufe: () => urls.filter((u) => u.startsWith('/api/next-briefings')),
-		/** Alles, was weder Historie noch „Nächster Versand" ist (Vorlagen-Abruf). */
+		/** Alles, was weder Historie noch „Nächster Versand" ist (Vorlagen-Abruf).
+		 *  #3399 S3a: der POST an die Vorlagen-Aufloesung hat eigene Faelle (netzMitAufloesung). */
 		uebrigeAbrufe: () =>
-			urls.filter((u) => !u.includes('/briefing-history') && !u.startsWith('/api/next-briefings') && !u.startsWith('/api/compare/metrics')),
+			urls.filter(
+				(u) =>
+					!u.includes('/briefing-history') &&
+					!u.startsWith('/api/next-briefings') &&
+					!u.startsWith('/api/compare/metrics') &&
+					u !== '/api/ampel/aufloesung'
+			),
 		/** Vergleichs-Katalog (#3047 p5c); der Lader haelt ihn je Sprache im Speicher. */
 		katalogAbrufe: () => urls.filter((u) => u.startsWith('/api/compare/metrics'))
 	};

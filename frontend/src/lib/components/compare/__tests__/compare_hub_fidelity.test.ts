@@ -83,11 +83,13 @@ describe('AC-6: Wertebereiche-Karte Vorlagen-Name (jsx:163)', () => {
 	// #2796 S4a (ADR-0108 P3): die Karte nennt die aufgelöste Vorlage statt des Profils;
 	// das Verhalten (DE/EN, mit/ohne Vorlagenliste) bewacht
 	// shared/hub-uebersicht/__tests__/vorlage_statt_profil_2796.test.ts.
-	test('aboVorlagenName wird im Modell der Übersicht verwendet (#2796: vorher presetProfileLabel)', () => {
+	// #3399 S3a: Name der vom Server aufgeloesten Vorlage (vorlagenNameAusId), Verhalten in
+	// hub_uebersicht_vorlagenrang_2988.test.ts und hub_uebersicht_verdrahtung_laufzeit.test.ts.
+	test('vorlagenNameAusId wird im Modell der Übersicht verwendet (#3399 S3a: vorher aboVorlagenName)', () => {
 		assert.match(
 			modell(),
-			/aboVorlagenName\(/,
-			'AC-6 FAIL: hubUebersichtModell nutzt aboVorlagenName nicht — Karte zeigt nicht die Vorlage'
+			/vorlagenNameAusId\(/,
+			'AC-6 FAIL: hubUebersichtModell nutzt vorlagenNameAusId nicht — Karte zeigt nicht die Server-Vorlage'
 		);
 	});
 });
