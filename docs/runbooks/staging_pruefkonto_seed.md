@@ -110,5 +110,9 @@ Optionen: `--basis-url URL` (nur `https://staging.gregor20.henemm.com`), `--inte
   gehört er auf `manual`.
 - **Danach Abgleich DE und EN** (je ca. 8 Min., nicht parallel mit demselben Konto); die Berichte
   sind Grundlage der Neuklassifizierung der Besitzerliste (#3151).
+- **Region und Vorlage (#3419, Stand 2026-11-26):** Die Orte tragen die Region „Münsterland“. Der Seed-Trip
+  weicht von vorlage „Alpen-Trekking“ genau in der Bewölkung ab (`cloud_total`), weil das freigegebene Soll-Bild
+  diese Metrik im Trip nicht im Briefing führt; der Vorlagen-Picker des Soll-Bilds zeigt dafür „1 Abweichung“.
+  Ein zweiter Lauf ändert nichts.
 - Die Rückadresse der Premium-SMS wird bei Bedarf neu gelernt (Stempel = Laufzeit), damit sie
   „frisch“ bleibt; die Datumswerte im Mockup-Text sind Beispielwerte.
