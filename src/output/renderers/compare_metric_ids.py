@@ -57,21 +57,20 @@ FRONTEND_TO_RENDERER_METRIC_ID: dict[str, str] = {
 }
 
 
-# Issue #1278: Compare-Renderer-ID -> Trip-Metrik-ID (`dc.metrics[].metric_id`).
-# Dritte Uebersetzungsrichtung neben FRONTEND_TO_RENDERER_METRIC_ID: der
-# geteilte Fliesstext-Baustein (CompactSummaryFormatter) spricht das
-# TRIP-Vokabular. Nur Compare-Zeilen mit Trip-Pendant stehen hier -- was fehlt,
-# erscheint bewusst nicht im Zusammenfassungssatz (uv_max/visibility_min/
-# sunny_hours/snow_*: kein _format_*-Zweig im Baustein, s. Spec Known
-# Limitations). Reihenfolge = Satz-Reihenfolge des Bausteins.
-RENDERER_TO_TRIP_METRIC_ID: dict[str, str] = {
-    "temp_max": "temperature",
-    "cloud_avg": "cloud_total",
-    "precip_sum": "precipitation",
-    "pop_max": "rain_probability",
-    "wind_max": "wind",
-    "thunder_max": "thunder",
-}
+# Issue #1278/#2992: Vergleichs-Zeilen (Renderer-IDs) des Zusammenfassungssatzes,
+# Reihenfolge = Satz-Reihenfolge des geteilten Bausteins (CompactSummaryFormatter).
+# Nur Groessen mit _format_*-Zweig im Baustein -- uv_max/visibility_min/
+# sunny_hours/snow_* erscheinen bewusst nicht im Satz. Die Trip-Metrik-ID je
+# Zeile steht NICHT hier, sondern kommt aus dem Vergleichs-Katalog
+# (``renderer_to_trip_metric_id``).
+SUMMARY_SENTENCE_RENDERER_IDS: tuple[str, ...] = (
+    "temp_max",
+    "cloud_avg",
+    "precip_sum",
+    "pop_max",
+    "wind_max",
+    "thunder_max",
+)
 
 
 # Issue #1231, Slice 7: gleicher vergleich-Namensraum wie oben, aber Ziel
@@ -295,6 +294,23 @@ def katalog_paar(renderer_id: object) -> tuple[str, str] | None:
         if rid == renderer_id:
             return paar
     return None
+
+
+def renderer_to_trip_metric_id(
+    renderer_ids: tuple[str, ...] = SUMMARY_SENTENCE_RENDERER_IDS,
+) -> dict[str, str]:
+    """Renderer-ID -> Trip-Metrik-ID (``dc.metrics[].metric_id``) fuer den
+    Zusammenfassungssatz, abgeleitet aus dem Vergleichs-Katalog (Issue #2992,
+    Muster #3101) -- keine zweite getippte Tabelle. Reihenfolge = Eingabe.
+    Fehlt ein Katalog-Paar -> ``ValueError`` mit der Renderer-ID (kein stilles
+    Entfallen des Satzteils)."""
+    result: dict[str, str] = {}
+    for rid in renderer_ids:
+        paar = katalog_paar(rid)
+        if paar is None:
+            raise ValueError(f"Satz-Renderer-ID ohne Katalog-Paar: {rid}")  # i18n-log
+        result[rid] = paar[0]
+    return result
 
 
 #: Kanaele, die eine Stelle der Tabelle "Was steht wo" sind (#3156).

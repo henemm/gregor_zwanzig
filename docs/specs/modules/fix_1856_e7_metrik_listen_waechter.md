@@ -233,11 +233,12 @@ Schlüsselseite (Register-Kennung als dict-Schlüssel bzw. Element von
 `set`/`list`/`tuple`) — darunter `METRIC_PRIORITY` (s. o.),
 `SMS_MULTI_SYMBOLS_BY_METRIC` und `SMS_SYMBOL_BY_METRIC` (deren
 Eindeutigkeit zusätzlich über die erweiterte E3b-Ratsche geprüft wird, s.
-AC-1/AC-7) — und **6** auf der Werteseite, die sechs Übersetzungstabellen
+AC-1/AC-7) — und **5** auf der Werteseite, die Übersetzungstabellen
 aus der Kandidatenmessung (`FRONTEND_TO_HOURLY_METRIC_ID`,
-`_SUMMARY_KEY_TO_CATALOG_ID`, `RENDERER_TO_TRIP_METRIC_ID`,
-`_COL_KEY_TO_METRIC_ID`, `_FALLBACK_COL_KEY_TO_METRIC_ID`,
-`_AMPEL_KEY_TO_METRIC_ID`).
+`_SUMMARY_KEY_TO_CATALOG_ID`, `_COL_KEY_TO_METRIC_ID`,
+`_FALLBACK_COL_KEY_TO_METRIC_ID`, `_AMPEL_KEY_TO_METRIC_ID`). Die frühere
+Trip-ID-Tabelle `RENDERER_TO_TRIP_METRIC_ID` entfiel mit #2992 (Ableitung aus
+dem Vergleichs-Katalog, keine Registrierung mehr).
 
 ### Verworfene Alternativen
 

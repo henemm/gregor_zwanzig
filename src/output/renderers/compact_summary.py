@@ -698,22 +698,24 @@ def format_location_summary(
 
     - Titel = VOLLER Ortsname (keine Etappen-Kuerzung, AC-8).
     - Metrik-Quelle = ``enabled_metrics`` (Compare-Renderer-IDs), uebersetzt in
-      das Trip-Vokabular ueber ``RENDERER_TO_TRIP_METRIC_ID``. Nur Zeilen mit
-      Trip-Pendant landen im Satz (AC-5/AC-6).
+      das Trip-Vokabular ueber ``renderer_to_trip_metric_id()`` (Trip-ID aus
+      dem Vergleichs-Katalog, #2992). Nur Satz-Zeilen landen im Satz
+      (AC-5/AC-6); gefiltert wird auf der Renderer-ID, nicht der Trip-ID
+      (``temp_min`` teilt ``temperature`` mit ``temp_max``).
     - ``enabled_metrics=None`` ("nie ausgewaehlt") = alles zeigen (AC-17).
     - Aggregat = ``summarize_points()`` (kanonische Trip-Rechenregeln, AC-7/15).
     - Fehler-Ort / keine Stundendaten -> "" (Aufrufer reiht leere Bloecke nicht
       ein, Anti-Erosion/AC-9).
     """
     from app.models import MetricConfig
-    from output.renderers.compare_metric_ids import RENDERER_TO_TRIP_METRIC_ID
+    from output.renderers.compare_metric_ids import renderer_to_trip_metric_id
     from services.weather_metrics import summarize_points
 
     hourly = list(loc.hourly_data or [])
     if loc.error is not None or not hourly:
         return ""
     metric_ids = [
-        trip_id for renderer_id, trip_id in RENDERER_TO_TRIP_METRIC_ID.items()
+        trip_id for renderer_id, trip_id in renderer_to_trip_metric_id().items()
         if enabled_metrics is None or renderer_id in enabled_metrics
     ]
     if not metric_ids:

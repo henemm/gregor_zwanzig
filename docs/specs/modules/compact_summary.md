@@ -165,7 +165,7 @@ Feste Reihenfolge (nur aktivierte Metriken):
 | `trip_report.TripReportFormatter` | Class | Aufrufer `context="route"` — bindet Summary in die Trip-E-Mail ein |
 | `output/renderers/email/compare_html.py::render_compare_html()` | Function | Aufrufer `context="vergleich"` — bindet Summary in die Vergleichs-E-Mail (HTML) ein |
 | `output/renderers/comparison.py::render_comparison_text()` | Function | Aufrufer `context="vergleich"` — bindet Summary in die Vergleichs-E-Mail (Klartext) ein |
-| `output/renderers/compare_metric_ids.py::RENDERER_TO_TRIP_METRIC_ID` | Const | Uebersetzt Compare-Renderer-IDs (`enabled_metrics`) ins Trip-Vokabular (`dc.metrics[].metric_id`) — s. "Metrik-Vokabular-Uebersetzung" unten |
+| `output/renderers/compare_metric_ids.py::renderer_to_trip_metric_id()` | Function | Uebersetzt Compare-Renderer-IDs (`enabled_metrics`) ins Trip-Vokabular (`dc.metrics[].metric_id`), abgeleitet aus `COMPARE_METRIC_CATALOG` (#2992) — s. "Metrik-Vokabular-Uebersetzung" unten |
 | `app.user.LocationResult` | Dataclass | Eingabe von `format_location_summary()`; liefert `hourly_data`, `location.name`, `error` |
 | `app.user.SavedLocation.timezone` | Field | Optionale Zeitzone je Ort; fehlt sie, faellt der Vergleichs-Wrapper wie der Trip-Pfad auf UTC zurueck |
 
@@ -187,7 +187,7 @@ kontextneutraler Kern:  format_weather_summary(summary, hourly, title, dc, tz) -
   Aggregat: aggregate_stage() (Level-2)       Aggregat: summarize_points() (Level-1, #1285)
   Titel: Etappenname, GEKUERZT                Titel: voller Ortsname, NICHT gekuerzt
   Metrik-Quelle: dc.metrics (vom Aufrufer)    Metrik-Quelle: enabled_metrics, uebersetzt
-                                               via RENDERER_TO_TRIP_METRIC_ID
+                                               via renderer_to_trip_metric_id()
 ```
 
 **Regel (verbindlich):** `_shorten_stage_name()` (`compact_summary.py:387`,
@@ -217,8 +217,11 @@ Compare-Editor, `frontend/src/lib/components/compare/compareMetricDefs.ts`),
 `compare_html.py`) und **Trip-Metrik-ID** (`dc.metrics[].metric_id`, das
 Vokabular, das dieser Baustein selbst konsumiert). Die Uebersetzung von
 Renderer-ID nach Trip-ID lebt in
-`output/renderers/compare_metric_ids.py::RENDERER_TO_TRIP_METRIC_ID` — nur
-Zeilen mit Trip-Pendant landen im Zusammenfassungssatz eines Ortes:
+`output/renderers/compare_metric_ids.py::renderer_to_trip_metric_id()`
+(#2992). Sie leitet die Trip-ID ueber `katalog_paar()` aus
+`COMPARE_METRIC_CATALOG` ab; die sechs Renderer-IDs des Zusammenfassungssatzes
+in Satz-Reihenfolge stehen in `SUMMARY_SENTENCE_RENDERER_IDS`. Nur Zeilen mit
+Trip-Pendant landen im Zusammenfassungssatz eines Ortes:
 
 | Frontend-ID | Compare Renderer-ID | Trip Metrik-ID | Im Fließtext-Satz? |
 |---|---|---|---|
@@ -240,8 +243,9 @@ Zeilen mit Trip-Pendant landen im Zusammenfassungssatz eines Ortes:
 Wrapper "alles zeigen" — konsistent mit dem `None`-Verhalten der
 Uebersichts-Matrix (`resolve_enabled_metrics()`). Quelle dieser Tabelle:
 `docs/specs/modules/compare_location_summary.md` (Issue #1278/#1285,
-PO-freigegeben) — bei Aenderung an `RENDERER_TO_TRIP_METRIC_ID` gilt diese
-Datei hier als das aktuell zu pflegende Duplikat fuer beide Aufrufer.
+PO-freigegeben) — die Trip-IDs selbst kommen seit #2992 aus dem
+Vergleichs-Katalog; diese Tabelle ist die Lesehilfe dazu und ist bei
+Aenderungen am Katalog mitzuziehen.
 
 ### 1. CompactSummaryFormatter
 
@@ -463,6 +467,7 @@ TripReportSchedulerService._send_trip_report()
 
 ## Changelog
 
+- 2026-11-26: Issue #2992 — Renderer-ID -> Trip-ID-Zuordnung für den Vergleichs-Zusammenfassungssatz wird aus `COMPARE_METRIC_CATALOG` abgeleitet (`renderer_to_trip_metric_id()`, Satz-Reihenfolge in `SUMMARY_SENTENCE_RENDERER_IDS`) statt aus einer getippten Tabelle. Produktverhalten unverändert. Abschnitt 0b und Tabelle der Komponenten aktualisiert.
 - 2026-08-04: v1.4 — Fix #1355: `starts_later`-Zweig nennt jetzt das
   Regen-Adjektiv (`"trocken, {Adjektiv} ab {HH}:00"`) statt es unbedingt
   durch das neutrale "Regen" zu ersetzen. Betraf Muster-Tabelle (Niederschlag,
