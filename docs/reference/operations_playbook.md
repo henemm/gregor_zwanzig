@@ -320,8 +320,8 @@ unschädlich (`flock`, idempotent über `last_prod_deploy.json`). `GZ_SKIP_E2E_G
 **Rückmeldung an die Sitzung.** Außerhalb des Servers deployt `/70-deploy` nicht selbst,
 sondern fragt `gh api repos/henemm/gregor_zwanzig/commits/<sha>/status` nach `deploy/prod`:
 `success` = live und Selbsttest Exit 0 → Issue schließen; `failure` → Befund ans Issue, der
-Alarm kam bereits vom Server. `/e2e-verify` läuft dort per `ssh henemm` im Staging-Checkout
-`~/gregor_zwanzig_staging`.
+Alarm kam bereits vom Server. `/e2e-verify` läuft dort über den festen Prüfzugang
+`ssh henemm-pruefen` (henemm-infra#487) im Staging-Checkout `~/gregor_zwanzig_staging`.
 
 Wird ein Push nach `main` abgewiesen, ist das die Branch-Protection, kein Fehler. Ein PR ersetzt NICHT die Staging-Validierung — die Ampel bewacht Code-Gesundheit, Staging bewacht Verhalten.
 
