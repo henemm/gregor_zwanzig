@@ -356,7 +356,10 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     # Issue #3096: einzige Quelle der Stundenverlauf-Vorgabe; der Renderer
     # (compare_html) fuehrt keine eigene mehr und importiert sie nicht.
     (_R + "compare_hourly_metric_ids.py", "HOURLY_DEFAULT_METRIC_IDS", "element"),
-    (_R + "compare_metric_ids.py", "RENDERER_TO_TRIP_METRIC_ID", "wert"),
+    # Issue #2992: ``RENDERER_TO_TRIP_METRIC_ID`` entfiel -- die Trip-ID je
+    # Satz-Zeile wird aus dem Vergleichs-Katalog abgeleitet
+    # (``renderer_to_trip_metric_id``); ``SUMMARY_SENTENCE_RENDERER_IDS`` traegt
+    # Renderer-IDs, keine Register-Kennungen.
     # Issue #2049: `_FRIENDLY_CLOUD_IDS` entfiel mit #3260 S1b (Form aus dem
     # Katalog, ADR-0127).
     (_R + "email/compare_html.py", "_HOUR_FMT_OVERRIDES", "schluessel"),

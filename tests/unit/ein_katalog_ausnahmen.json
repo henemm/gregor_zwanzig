@@ -119,9 +119,6 @@
     "src/output/renderers/compare_hourly_metric_ids.py": {
       "ID_SAMMLUNG": 4
     },
-    "src/output/renderers/compare_metric_ids.py": {
-      "ID_SAMMLUNG": 1
-    },
     "src/output/renderers/compare_outlook_metric_ids.py": {
       "VERARBEITUNG_AUSSEN": 3
     },
@@ -225,5 +222,5 @@
       "VERARBEITUNG_AUSSEN": 1
     }
   },
-  "hoechststand": 416
+  "hoechststand": 415
 }
