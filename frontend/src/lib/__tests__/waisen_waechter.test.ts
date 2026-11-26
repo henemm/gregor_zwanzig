@@ -17,8 +17,10 @@
 // Die Liste darf nur schrumpfen: jede Löschscheibe streicht ihre Einträge und senkt die Konstante im
 // selben Commit. Ein neuer Eintrag geht nur, wenn jemand OBERGRENZE_WAISEN sichtbar erhöht.
 //
-// RED heute (vor der Löschung S2): die 6 layout-tab-Dateien und 9 Barrels existieren noch und stehen
-// bewusst nicht in BEKANNTE_WAISEN.
+// #3383 S1 (Spec docs/specs/modules/rework_3383_waisen_s1.md, AC-3/AC-4): Gruppe S1 gestrichen,
+// OBERGRENZE_WAISEN 26. RED vor der Löschung S1: die 14 S1-Dateien existieren noch und stehen bewusst
+// nicht mehr in BEKANNTE_WAISEN; Selbstnachweis (e) ist rot, bis die Wächterlogik die Array-Form von
+// import.meta.glob laut meldet.
 //
 // Ausführen (aus frontend/):
 //   npm test -- src/lib/__tests__/waisen_waechter.test.ts
@@ -59,21 +61,7 @@ export const BEKANNTE_WAISEN: string[] = [
 	'lib/utils/naturalSort.ts',
 	'lib/utils/rightColumn.ts',
 	'lib/utils/weatherEmoji.ts',
-	// S1 #3383: weather-metrics-tab, trip-detail, reportConfigDirty, GrundauswahlLeerHinweis
-	'lib/components/molecules/GrundauswahlLeerHinweis.svelte',
-	'lib/components/shared/reportConfigDirty.ts',
-	'lib/components/shared/weather-metrics-tab/AggregationMetricRow.svelte',
-	'lib/components/shared/weather-metrics-tab/MultiSymbolMetricRow.svelte',
-	'lib/components/shared/weather-metrics-tab/ThresholdMetricRow.svelte',
-	'lib/components/shared/weather-metrics-tab/WeatherV2Grundauswahl.svelte',
-	'lib/components/shared/weather-metrics-tab/WeatherV2PresetBar.svelte',
-	'lib/components/shared/weather-metrics-tab/compareAggregationGrouping.ts',
-	'lib/components/shared/weather-metrics-tab/nurEinBericht.ts',
-	'lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts',
-	'lib/components/shared/weather-metrics-tab/wertebereicheAnzeige.ts',
-	'lib/components/trip-detail/AboutOutputLayout.svelte',
-	'lib/components/trip-detail/WeatherV2Kanaele.svelte',
-	'lib/components/trip-detail/weatherSaveGate.ts',
+	// S1 #3383 gelöscht (14 Einträge, Lösch-Nachweis trip_pfad_altfeld_loeschnachweis_3297.test.ts)
 	// S3 #3385: versand-tab
 	'lib/components/shared/versand-tab/VTBriefingChannels.svelte',
 	'lib/components/shared/versand-tab/VTLaufzeitRoute.svelte',
@@ -84,8 +72,11 @@ export const BEKANNTE_WAISEN: string[] = [
 	'lib/components/shared/versand-tab/vtBriefingChannelsText.ts'
 ];
 
-/** Feste Obergrenze (Literal, Muster BESTAND_OBERGRENZE): 56 Waisen − 15 gelöscht (#3366 S2) − lib/index.ts. */
-export const OBERGRENZE_WAISEN = 40;
+/**
+ * Feste Obergrenze (Literal, Muster BESTAND_OBERGRENZE): 56 Waisen − 15 gelöscht (#3366 S2) − lib/index.ts = 40;
+ * − 14 gelöscht (#3383 S1) = 26 (19 S4 + 7 S3).
+ */
+export const OBERGRENZE_WAISEN = 26;
 
 const istTest = (rel: string) => /(^|\/)__tests__\//.test(rel) || /\.(test|spec)\.(ts|js|mjs)$/.test(rel);
 const ENDUNGEN = ['.svelte', '.ts', '.js', '.mjs', '.svelte.ts', '.svelte.js'];
@@ -211,21 +202,19 @@ export function pruefeRatsche(
 	return fehler;
 }
 
-describe('#3366 AC-1/AC-8: Waisen-Wächter gegen den echten Baum', () => {
-	test('Waisenmenge (ohne AUSNAHMEN) ist genau BEKANNTE_WAISEN und hält OBERGRENZE_WAISEN', () => {
+describe('#3366 AC-1/AC-8, #3383 AC-3: Waisen-Wächter gegen den echten Baum', () => {
+	test('Waisenmenge (ohne AUSNAHMEN) ist genau BEKANNTE_WAISEN ohne Gruppe S1 und hält OBERGRENZE_WAISEN 26', () => {
 		const fehler = pruefeRatsche(SRC, findeWaisen(SRC), BEKANNTE_WAISEN, AUSNAHMEN, OBERGRENZE_WAISEN);
 		assert.deepEqual(fehler, [], fehler.join('\n'));
 	});
-
-	test('outlookFriendlyCapability.ts ist bis S1 (#3383) bekannte Waise', () => {
-		const rel = 'lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts';
-		assert.ok(BEKANNTE_WAISEN.includes(rel));
-		assert.ok(findeWaisen(SRC).includes(rel), `${rel} gilt als erreichbar`);
-	});
 });
 
-/** Erfundener Mini-Baum (Selbstnachweis), liefert das src-Verzeichnis. */
-function miniBaum(): string {
+/**
+ * Erfundener Mini-Baum (Selbstnachweis), liefert das src-Verzeichnis.
+ * `f001`: zusätzliche Dateien für die Kantenarten aus Finding F001 (#3383 AC-4 a–d).
+ * `arrayGlob`: eine Route mit der nicht unterstützten Array-Form von `import.meta.glob` (#3383 AC-4 e).
+ */
+function miniBaum(opt: { f001?: boolean; arrayGlob?: boolean } = {}): string {
 	const wurzel = mkdtempSync(join(tmpdir(), 'waisen-waechter-'));
 	const src = join(wurzel, 'src');
 	const datei = (rel: string, inhalt: string) => {
@@ -243,7 +232,39 @@ function miniBaum(): string {
 	datei('lib/nurTest.ts', 'export const t = 1;\n');
 	datei('lib/__tests__/nurTest.test.ts', "import { t } from '../nurTest.js';\n");
 	datei('lib/index.ts', '// Konvention\n');
+	if (opt.f001) {
+		// (a) dynamischer Import, eigene Datei, ohne `export * from` dazwischen
+		datei('routes/dyn/+page.ts', "export const load = () => import('$lib/nurDynamisch.js');\n");
+		datei('lib/nurDynamisch.ts', 'export const n = 1;\n');
+		// (b) import.meta.glob (String-Form): passende Dateien erreichbar, nicht passende bleiben Waise
+		datei('routes/glob/+page.ts', "export const module = import.meta.glob('$lib/glob/*.ts');\n");
+		datei('lib/glob/a.ts', 'export const a = 1;\n');
+		datei('lib/glob/b.ts', 'export const b = 1;\n');
+		datei('lib/glob/nicht.svelte', '<p>passt nicht zum Muster</p>\n');
+		// (c) new URL('…', import.meta.url)
+		datei('routes/url/+page.ts', "export const u = new URL('../../lib/perUrl.ts', import.meta.url);\n");
+		datei('lib/perUrl.ts', 'export const p = 1;\n');
+		// (d) nur von Testdateien unter routes/ importiert
+		datei('routes/foo/__tests__/x.test.ts', "import { r } from '../../../lib/nurRoutesTest.js';\n");
+		datei('routes/foo/y.test.ts', "import { r2 } from '$lib/nurRoutesTest2';\n");
+		datei('lib/nurRoutesTest.ts', 'export const r = 1;\n');
+		datei('lib/nurRoutesTest2.ts', 'export const r2 = 1;\n');
+	}
+	if (opt.arrayGlob) {
+		datei('routes/arr/+page.ts', "export const module = import.meta.glob(['$lib/arr/*.ts']);\n");
+		datei('lib/arr/c.ts', 'export const c = 1;\n');
+	}
 	return src;
+}
+
+/** Mini-Baum bauen, Funktion ausführen, Baum sicher entfernen. */
+function mitMiniBaum<T>(opt: { f001?: boolean; arrayGlob?: boolean }, f: (src: string) => T): T {
+	const src = miniBaum(opt);
+	try {
+		return f(src);
+	} finally {
+		rmSync(dirname(src), { recursive: true, force: true });
+	}
 }
 
 describe('#3366 AC-2/AC-3/AC-4: Selbstnachweis am erfundenen Mini-Baum', () => {
@@ -290,5 +311,51 @@ describe('#3366 AC-2/AC-3/AC-4: Selbstnachweis am erfundenen Mini-Baum', () => {
 		} finally {
 			rmSync(dirname(src), { recursive: true, force: true });
 		}
+	});
+});
+
+// #3383 AC-4 (Finding F001 aus #3366): jede Kantenart und der Test-Ausschluss unter routes/ einzeln
+// bewiesen; die Array-Form von import.meta.glob ist nicht unterstützt und muss laut rot werden.
+describe('#3383 AC-4: Selbstnachweis F001 am erfundenen Mini-Baum', () => {
+	test('exakte Mini-Baum-Liste mit den F001-Dateien', () => {
+		const waisen = mitMiniBaum({ f001: true }, findeWaisen);
+		assert.deepEqual(waisen, [
+			'lib/erfundeneWaise.ts',
+			'lib/glob/nicht.svelte',
+			'lib/index.ts',
+			'lib/nurRoutesTest.ts',
+			'lib/nurRoutesTest2.ts',
+			'lib/nurTest.ts'
+		]);
+	});
+
+	test('(a) dynamischer Import macht die Zieldatei erreichbar', () => {
+		const waisen = mitMiniBaum({ f001: true }, findeWaisen);
+		assert.ok(!waisen.includes('lib/nurDynamisch.ts'), 'lib/nurDynamisch.ts gilt trotz import(…) als Waise');
+	});
+
+	test('(b) import.meta.glob macht die passenden Dateien erreichbar, nicht passende bleiben Waise', () => {
+		const waisen = mitMiniBaum({ f001: true }, findeWaisen);
+		assert.ok(!waisen.includes('lib/glob/a.ts'), 'lib/glob/a.ts gilt trotz glob als Waise');
+		assert.ok(!waisen.includes('lib/glob/b.ts'), 'lib/glob/b.ts gilt trotz glob als Waise');
+		assert.ok(waisen.includes('lib/glob/nicht.svelte'), 'Datei außerhalb des Glob-Musters gilt als erreichbar');
+	});
+
+	test("(c) new URL('…', import.meta.url) gilt als Verweis", () => {
+		const waisen = mitMiniBaum({ f001: true }, findeWaisen);
+		assert.ok(!waisen.includes('lib/perUrl.ts'), 'lib/perUrl.ts gilt trotz new URL(…, import.meta.url) als Waise');
+	});
+
+	test('(d) nur von Testdateien unter routes/ importiert gilt als Waise', () => {
+		const waisen = mitMiniBaum({ f001: true }, findeWaisen);
+		assert.ok(waisen.includes('lib/nurRoutesTest.ts'), 'routes/foo/__tests__/x.test.ts zählt als Wurzel oder Aufrufer');
+		assert.ok(waisen.includes('lib/nurRoutesTest2.ts'), 'routes/foo/y.test.ts zählt als Wurzel oder Aufrufer');
+	});
+
+	test('(e) Array-Form von import.meta.glob wird laut rot statt still übergangen', () => {
+		assert.throws(
+			() => mitMiniBaum({ arrayGlob: true }, findeWaisen),
+			/Array-Form von import\.meta\.glob nicht unterstützt — Wächterlogik ergänzen/
+		);
 	});
 });
