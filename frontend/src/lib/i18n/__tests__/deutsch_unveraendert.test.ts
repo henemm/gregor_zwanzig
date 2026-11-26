@@ -687,7 +687,9 @@ const NEU_IN_FOLGEPAKETEN = [
 	// (funktionen.*, level.*) — vollstaendig neu; Inhalt prueft funktionen_seite.test.ts.
 	'start.level.eyebrow', 'start.level.title', 'start.level.text', 'start.level.wechsel',
 	'start.level.details', 'start.level.mehr',
-	...Object.keys(FUNKTIONEN_DE)
+	...Object.keys(FUNKTIONEN_DE),
+	// #3364: Zeilenmarke der Karte „Was steht wo“ fuer Groessen, die nur ein Briefing fuehrt.
+	'wetter.wsw.nur_briefing.morning', 'wetter.wsw.nur_briefing.evening'
 ];
 
 test('AC-5: das Golden enthaelt die 112 Bestandsschluessel', () => {

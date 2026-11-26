@@ -343,6 +343,15 @@ export function tripMetrikEintraege(liste: unknown): TripMetrikEintrag[] {
 	return aus;
 }
 
+/** Bericht-Flags eines Trip-Eintrags (ADR-0050 Regel 3). */
+export const BERICHT_FLAGS = ['morning_enabled', 'evening_enabled'] as const;
+
+/** #3364: gefuehrt in mindestens einem Briefing — je Briefing wie Python
+ *  `_filter_metrics_by_report_type`: Flag, wenn gesetzt (true/false), sonst `enabled`. */
+export function imBriefing(e: TripMetrikEintrag): boolean {
+	return BERICHT_FLAGS.some((f) => (typeof e[f] === 'boolean' ? e[f] === true : e.enabled === true));
+}
+
 /** Python `_append_derived_metrics` (loader.py) auf gespeicherten Eintraegen (#3047 E7): fehlt ein
  *  Kind (Nacht-Tiefst, Tagestief/-hoch, Windchill-Kinder), uebernimmt es `enabled` (irgendein Elter an)
  *  sowie `bucket`/`order` des ersten Elter-Eintrags; ohne Elter wird nichts erfunden. */
@@ -432,7 +441,7 @@ const AUSWAHL_QUELLE: Record<Kontext, (dc: AuswahlQuelle | null | undefined, alt
 	route: (dc) => {
 		const liste = tripMetrikEintraege(dc?.metrics);
 		if (liste.length === 0) return null;
-		return [...new Set(mitAbgeleiteten(liste).filter((m) => m.enabled === true).map((m) => m.metric_id))];
+		return [...new Set(mitAbgeleiteten(liste).filter(imBriefing).map((m) => m.metric_id))];
 	},
 	vergleich: (dc, alt) => (Array.isArray(dc?.active_metrics) ? [...new Set(dc.active_metrics.map((m) => vergleichsMetrikId(m, alt)))] : null)
 };

@@ -691,7 +691,6 @@ describe('#3020 G44: nur morgens / nur abends (Altbestand)', () => {
 		{ metric_id: 'thunder', enabled: true, order: 3, bucket: 'primary' }
 	];
 	const EIGENE = BESTAND.map((m) => m.metric_id);
-	const TODO = { todo: 'Fehler #3364: Reiter und Karte lesen die Bericht-Flags nicht' };
 	async function modelle() {
 		const wt = path.join(FRONTEND, 'src/lib/components/shared/wetter-tab');
 		const lade = (datei: string): Promise<J> => import(pathToFileURL(path.join(wt, datei)).href);
@@ -707,7 +706,7 @@ describe('#3020 G44: nur morgens / nur abends (Altbestand)', () => {
 	}
 	const kennzeichen = (h: string, metrik: string) => text(eins(h, `data-metrik="${metrik}"`).innen).match(/nur morgens|nur abends|morning only|evening only/g) ?? [];
 
-	test('n3_semantik_wie_mail', TODO, async () => {
+	test('n3_semantik_wie_mail', async () => {
 		const m = await modelle();
 		const o = m.orakel(m.abo);
 		const berichte = [...new Set([...m.eigene(o.listen.morning.email), ...m.eigene(o.listen.evening.email)])].sort();
@@ -718,7 +717,7 @@ describe('#3020 G44: nur morgens / nur abends (Altbestand)', () => {
 		const ohne = m.orakel(m.speichere(m.abo, m.Z.ohneMetrik(m.stand(m.abo), 'precipitation')));
 		for (const rt of ['morning', 'evening']) assert.ok(!m.eigene(ohne.listen[rt].email).includes('precipitation'), `nach „−“ steht die Größe noch im Briefing ${rt}`);
 	});
-	test('n3_editor_kennzeichnet_je_zeile', TODO, async () => {
+	test('n3_editor_kennzeichnet_je_zeile', async () => {
 		const m = await modelle();
 		const a = m.orakel(m.abo).antwort;
 		for (const [lang, morgens, abends] of [['de', 'nur morgens', 'nur abends'], ['en', 'morning only', 'evening only']] as const) {
@@ -731,7 +730,7 @@ describe('#3020 G44: nur morgens / nur abends (Altbestand)', () => {
 			}
 		}
 	});
-	test('n3_kennzeichnung_folgt_dem_editorstand', TODO, async () => {
+	test('n3_kennzeichnung_folgt_dem_editorstand', async () => {
 		const m = await modelle();
 		const vorher = await karte(m.orakel(m.abo).antwort, { context: 'route' });
 		assert.deepEqual(kennzeichen(vorher, 'temperature'), ['nur morgens']);

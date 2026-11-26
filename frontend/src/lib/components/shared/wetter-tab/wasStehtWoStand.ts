@@ -45,6 +45,8 @@ export interface ApiZeile {
 	position: number;
 	parent: string | null;
 	cells: Record<string, ApiZelle>;
+	/** #3364: nur Trip — genau ein Briefing führt die Größe (Bericht-Flags); fehlt im Vergleich. */
+	briefing_only?: 'morning' | 'evening' | null;
 }
 export interface PlacementsAntwort {
 	kind: 'route' | 'vergleich';

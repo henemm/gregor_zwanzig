@@ -9,7 +9,7 @@
 // Kein Browser-/SvelteKit-Import, lauffaehig unter node --experimental-strip-types.
 
 import type { Ampel, AmpelMetrik, AmpelSeite } from './ampelModell.ts';
-import { aktiveMetriken, gleicheSeite, mitAbgeleiteten, tripMetrikEintraege, vergleichsKatalogIds, vergleichsMetrikId, type AltSchluessel } from './ampelModell.ts';
+import { aktiveMetriken, BERICHT_FLAGS, gleicheSeite, imBriefing, mitAbgeleiteten, tripMetrikEintraege, vergleichsKatalogIds, vergleichsMetrikId, type AltSchluessel } from './ampelModell.ts';
 import { DERIVED_METRIC_RULES } from '../../trip-detail/metricsEditor.ts';
 import { getCompareDefaultOrder } from './compareDefaultOrder.ts';
 import { klon } from './klon.ts';
@@ -68,11 +68,13 @@ function tripMetriken(bestand: unknown, auswahl: string[]): TripMetrik[] {
 	// #3047 E3: Altformat (Zeichenkette, ohne `enabled`) normalisiert, Eintraege ohne `metric_id` entfallen.
 	const roh = tripMetrikEintraege(bestand) as TripMetrik[];
 	const alt = mitAbgeleiteten(roh) as TripMetrik[];
-	const aktivImBestand = new Set(alt.filter((e) => e.enabled !== false).map((e) => e.metric_id));
+	// #3364: mit Bericht-Flags zaehlt, ob ein Briefing die Groesse fuehrt (wie beim Lesen).
+	const aktiv = (e: TripMetrik) => (mitFlag(e) ? imBriefing(e) : e.enabled !== false);
+	const aktivImBestand = new Set(alt.filter(aktiv).map((e) => e.metric_id));
 	const wiederAn = (id: string) => auswahl.includes(id) && !aktivImBestand.has(id);
 	// Abgeleitete Kinder werden nur gewaehlt geschrieben (mit Elter-Folge); abgewaehlt regelt kinderAusdruecklich.
 	const nurAbgeleitet = (e: TripMetrik) => !roh.includes(e) && !auswahl.includes(e.metric_id);
-	const liste: TripMetrik[] = alt.filter((e) => !wiederAn(e.metric_id) && !nurAbgeleitet(e)).map((e) => ({ ...klon(e), enabled: auswahl.includes(e.metric_id) }));
+	const liste: TripMetrik[] = alt.filter((e) => !wiederAn(e.metric_id) && !nurAbgeleitet(e)).map((e) => schreiben(e, auswahl.includes(e.metric_id)));
 	const mitFolge = roh.length === 0 || roh.some((e) => typeof e.order === 'number');
 	let naechste = Math.max(-1, ...liste.map((e) => (typeof e.order === 'number' ? e.order : -1))) + 1;
 	const hinten = (e: TripMetrik): TripMetrik => (mitFolge ? { ...e, bucket: 'primary', order: naechste++ } : e);
@@ -80,10 +82,26 @@ function tripMetriken(bestand: unknown, auswahl: string[]): TripMetrik[] {
 	for (const id of auswahl) {
 		if (da.has(id)) continue;
 		const bisher = alt.filter((e) => e.metric_id === id);
-		if (bisher.length) for (const e of bisher) liste.push(hinten({ ...klon(e), enabled: true }));
+		if (bisher.length) for (const e of bisher) liste.push(hinten(ohneFlags({ ...klon(e), enabled: true })));
 		else liste.push(hinten({ metric_id: id, enabled: true }));
 	}
 	return kinderAusdruecklich(liste);
+}
+
+/** #3364 Entscheidung 2/4: ein Eintrag mit Bericht-Flags, dessen Wahl sich nicht aendert, bleibt
+ *  unveraendert; eine Abwahl setzt `enabled:false` und entfernt die Flags. Ohne Flags wie bisher. */
+function schreiben(e: TripMetrik, an: boolean): TripMetrik {
+	if (!mitFlag(e)) return { ...klon(e), enabled: an };
+	if (an === imBriefing(e)) return klon(e);
+	return ohneFlags({ ...klon(e), enabled: an });
+}
+
+const mitFlag = (e: TripMetrik) => BERICHT_FLAGS.some((f) => f in e);
+
+/** Entfernt die Schluessel `morning_enabled`/`evening_enabled` (Ab- und Wiederanwahl, #3364). */
+function ohneFlags(e: TripMetrik): TripMetrik {
+	for (const f of BERICHT_FLAGS) delete e[f];
+	return e;
 }
 
 /** Ein Kind ohne eigenen Eintrag, dessen Elter an ist, leitete Python als gewaehlt ab: es steht

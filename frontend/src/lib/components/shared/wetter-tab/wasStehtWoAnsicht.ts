@@ -105,10 +105,17 @@ function zelleAus(stelle: string, z: ApiZelle, t: Uebersetzer): EinstellZelle {
 	};
 }
 
+/** #3364: Zeilenmarke „nur morgens“ / „nur abends“ aus `briefing_only` (nur Trip). */
+const NUR_BRIEFING: Record<string, MessageKey> = {
+	morning: 'wetter.wsw.nur_briefing.morning',
+	evening: 'wetter.wsw.nur_briefing.evening'
+};
+
 export function metrikenAus(a: PlacementsAntwort, t: Uebersetzer): EinstellMetrik[] {
 	return a.rows.map((r) => ({
 		id: r.metric_id,
 		name: r.name,
+		zeilenmarke: r.briefing_only && NUR_BRIEFING[r.briefing_only] ? t(NUR_BRIEFING[r.briefing_only]) : undefined,
 		zellen: Object.fromEntries(Object.entries(r.cells).map(([stelle, z]) => [stelle, zelleAus(stelle, z, t)]))
 	}));
 }
