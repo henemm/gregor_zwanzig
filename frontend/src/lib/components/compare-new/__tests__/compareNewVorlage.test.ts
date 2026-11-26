@@ -31,10 +31,11 @@ import { tailUnlocked } from '../../shared/anlegeLockEngine.ts';
 import { buildNewComparePresetPayload } from '../../compare/compareEditorSave.ts';
 import * as vorlageModul from '../compareNewVorlage.ts';
 import { neuerFeldsatz } from '../../shared/__tests__/compareFeldsatzPruefstand.ts';
+import { aufgeloestVon } from '../../shared/wetter-tab/__tests__/wetterTabDaten.ts';
 
 type Feldsatz = Record<string, any>;
 
-function feldsatzAusVorlage(preset: ComparePreset, locations: Location[]): Feldsatz {
+function feldsatzAusVorlage(preset: ComparePreset, locations: Location[], vorlageId: string | null = null): Feldsatz {
 	const fn = (vorlageModul as Record<string, unknown>).feldsatzAusVorlage;
 	if (typeof fn !== 'function') {
 		throw new Error(
@@ -42,7 +43,7 @@ function feldsatzAusVorlage(preset: ComparePreset, locations: Location[]): Felds
 				'`feldsatzAusVorlage(preset, locations)`.'
 		);
 	}
-	return (fn as (p: ComparePreset, l: Location[]) => Feldsatz)(preset, locations);
+	return (fn as (p: ComparePreset, l: Location[], id: string | null) => Feldsatz)(preset, locations, vorlageId);
 }
 
 const loc = (id: string): Location => ({ id, name: id }) as unknown as Location;
@@ -102,9 +103,12 @@ function vorlage(over: Partial<ComparePreset> = {}): ComparePreset {
 }
 
 /** Was der Editor beim Start haelt: Standard-Feldsatz, darueber der Vorlagen-Feldsatz. */
-function belegt(preset: ComparePreset, locations: Location[] = ORTE): Feldsatz {
-	return { ...neuerFeldsatz(), ...feldsatzAusVorlage(preset, locations) };
+function belegt(preset: ComparePreset, locations: Location[] = ORTE, vorlageId: string | null = null): Feldsatz {
+	return { ...neuerFeldsatz(), ...feldsatzAusVorlage(preset, locations, vorlageId) };
 }
+/** #3399 S2: wie die Seite — Vorlagen-ID der Quelle aus dem ECHTEN resolve_entwurf (Python). */
+const mitServerVorlage = (preset: ComparePreset): Feldsatz =>
+	belegt(preset, ORTE, aufgeloestVon(preset as never).vorlage_id);
 
 // ── AC-1: jedes Feld vorbelegt (je Feld ein Fall) ────────────────────────────
 
@@ -114,16 +118,16 @@ test('AC-1 Region wird uebernommen', () => {
 // #3198 (S4b-3, AC-5): das Profil steuert das Anlegen nicht mehr; uebernommen wird die
 // Vorlage der Quelle (ampel.template -> profil -> allgemein).
 test('AC-5 (#3198) Profil der Quelle wird nicht uebernommen, ihre Vorlage schon', () => {
-	const f = belegt(vorlage());
+	const f = mitServerVorlage(vorlage());
 	assert.equal(f.activityProfile, null);
 	assert.equal((f as Record<string, unknown>).vorlageId, 'wandern');
 });
 test('AC-5 (#3198) ampel.template der Quelle hat Vorrang vor dem Profil', () => {
-	const f = belegt(vorlage({ display_config: { region: 'Korsika', ampel: { template: 'wintersport' } } } as never));
+	const f = mitServerVorlage(vorlage({ display_config: { region: 'Korsika', ampel: { template: 'wintersport' } } } as never));
 	assert.equal((f as Record<string, unknown>).vorlageId, 'wintersport');
 });
 test('AC-5 (#3198) Quelle ohne Vorlage und Profil ⇒ „allgemein“', () => {
-	assert.equal((belegt(vorlage({ profil: undefined } as never)) as Record<string, unknown>).vorlageId, 'allgemein');
+	assert.equal((mitServerVorlage(vorlage({ profil: undefined } as never)) as Record<string, unknown>).vorlageId, 'allgemein');
 });
 test('AC-1 Orte (pickedIds) werden uebernommen', () => {
 	assert.deepEqual(belegt(vorlage()).pickedIds, ['a', 'b', 'c']);

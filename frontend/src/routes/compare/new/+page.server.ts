@@ -2,6 +2,7 @@ import type { PageServerLoad } from './$types.js';
 import type { ComparePreset, Location } from '$lib/types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
 import { kennungImPfad } from '$lib/server/apiPfad.js';
+import { vorlageIdDerQuelle } from '$lib/components/compare-new/compareNewVorlage.js';
 
 // Issue #440 — Compare-Wizard Create-Modus. Locations-Library fuer Step 2.
 // Issue #443 — Profil parallel laden (fail-soft) fuer Step 5 (Kanal-Hints).
@@ -38,9 +39,20 @@ export const load: PageServerLoad = async ({ cookies, url }) => {
 	const locations: Location[] = locsRes?.ok ? await locsRes.json() : [];
 	const profile = profileRes?.ok ? await profileRes.json() : null;
 
+	// Issue #3399 S2 (AC-5): Vorlage der Quelle vom Server aufloesen; Fehler => null, nie Fehlerseite.
+	const client = {
+		post: async <T>(path: string, body: unknown): Promise<T> => {
+			const r = await fetch(`${API()}${path}`, { method: 'POST', headers, body: JSON.stringify(body) });
+			if (!r.ok) throw new Error(`${path}: HTTP ${r.status}`); // i18n-log
+			return (await r.json()) as T;
+		}
+	};
+	const vorlageId = vorlage ? await vorlageIdDerQuelle(client, vorlage) : null;
+
 	return {
 		locations: Array.isArray(locations) ? locations : [],
 		profile,
-		vorlage
+		vorlage,
+		vorlageId
 	};
 };
