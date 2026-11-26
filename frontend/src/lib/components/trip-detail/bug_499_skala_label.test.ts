@@ -18,38 +18,12 @@ import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-const ACTIVE_METRIC_ROW  = join(here, 'ActiveMetricRow.svelte');
 const WEATHER_CONFIG_DLG = join(here, '..', 'WeatherConfigDialog.svelte');
 // Issue #1311 (C1, Fix-Loop 1): SavePresetDialog.svelte nach
 // shared/weather-metrics-tab/ verschoben (Teilung Trip+Vergleich).
 const SAVE_PRESET_DLG    = join(here, '..', 'shared', 'weather-metrics-tab', 'SavePresetDialog.svelte');
-const TABLE_PREVIEW      = join(here, 'TablePreview.svelte');
 
-// --- AC-1: Toggle in ActiveMetricRow ---
-
-test('AC-1: ActiveMetricRow zeigt Button-Label "Einfach" statt "Skala"', () => {
-	const src = quelleMitKatalog(readFileSync(ACTIVE_METRIC_ROW, 'utf-8'));
-	assert.ok(
-		src.includes('>Einfach<'),
-		'AC-1 RED: Button-Label muss ">Einfach<" enthalten'
-	);
-});
-
-test('AC-1: ActiveMetricRow enthält kein Button-Label "Skala" mehr', () => {
-	const src = quelleMitKatalog(readFileSync(ACTIVE_METRIC_ROW, 'utf-8'));
-	assert.ok(
-		!src.includes('>Skala<'),
-		'AC-1 RED: Button-Label ">Skala<" muss entfernt sein'
-	);
-});
-
-test('AC-1: ActiveMetricRow aria-label verwendet "Einfach" statt "Skala"', () => {
-	const src = quelleMitKatalog(readFileSync(ACTIVE_METRIC_ROW, 'utf-8'));
-	assert.ok(
-		src.includes('Roh oder Einfach'),
-		'AC-1 RED: aria-label muss "Roh oder Einfach" enthalten'
-	);
-});
+// --- AC-1 / AC-4: ActiveMetricRow und TablePreview sind mit #3020 R2 gelöscht (keine Prüflinge mehr).
 
 // --- AC-2: Issue #629 — scale/symbol-Dropdown durch Roh/Einfach-Toggle ersetzt ---
 // Das ursprüngliche #499-Label "Skala"→"Einfach" betraf das 4-Wert-Dropdown.
@@ -88,23 +62,5 @@ test('AC-3: SavePresetDialog enthält kein "als Skala" mehr', () => {
 	assert.ok(
 		!src.includes('als Skala'),
 		'AC-3 RED: SavePresetDialog darf "als Skala" nicht mehr enthalten'
-	);
-});
-
-// --- AC-4: Tabellen-Vorschau TablePreview ---
-
-test('AC-4: TablePreview zeigt Suffix "·einfach" statt "·skala"', () => {
-	const src = quelleMitKatalog(readFileSync(TABLE_PREVIEW, 'utf-8'));
-	assert.ok(
-		src.includes('·einfach'),
-		'AC-4 RED: TablePreview muss "·einfach" enthalten'
-	);
-});
-
-test('AC-4: TablePreview enthält kein "·skala" mehr', () => {
-	const src = quelleMitKatalog(readFileSync(TABLE_PREVIEW, 'utf-8'));
-	assert.ok(
-		!src.includes('·skala'),
-		'AC-4 RED: TablePreview darf "·skala" nicht mehr enthalten'
 	);
 });

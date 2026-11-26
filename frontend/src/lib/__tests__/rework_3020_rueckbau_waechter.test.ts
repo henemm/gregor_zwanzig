@@ -9,10 +9,10 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { RESTBESTAND, RESTBESTAND_ANZAHL, SPEC_ANZAHL, DURCH_WAISEN_ENTFERNT, BARREL, BLEIBT } from './rework_3020_umfang.ts';
+import { RESTBESTAND, RESTBESTAND_ANZAHL, SPEC_ANZAHL, DURCH_WAISEN_ENTFERNT, BARREL, BLEIBT, ROT_R2 } from './rework_3020_umfang.ts';
 import { GELOESCHT, ENTFALLEN, KATALOG } from './rework_3020_rote_liste.ts';
 
-const STAND = Number(process.env.GZ_3020_STAND ?? 1);
+const STAND = Number(process.env.GZ_3020_STAND ?? 2);
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const LIB = join(HERE, '..');
@@ -219,5 +219,35 @@ describe(`AC-7 (R2): Restbestand, STAND ${STAND}`, () => {
 	test('importerkennung_findet_lebende_kante', () => {
 		const ziel = join(KOMP, 'shared/layout-tab/ltChannels.ts');
 		assert.ok(quelltexte.some((f) => importziele(f).some((z) => trifft(z, ziel))));
+	});
+});
+
+// ── AC-8 (R2): je durch die Probe-Löschung roter Testdatei ein Entscheid in der Testtabelle ─────────────────────────
+// Zeilenform im Abschnitt „## R2“: | `pfad ab Wurzel` | löschen/kürzen/umstellen | Begründung (>= 20 Zeichen) |
+describe('AC-8 (R2): Testtabelle führt jede rote Testdatei der Probe-Löschung', () => {
+	const r2 = () => {
+		const t = tabellentext();
+		const i = t.indexOf('\n## R2');
+		if (i < 0) return [];
+		const ende = t.indexOf('\n## ', i + 4);
+		return (ende < 0 ? t.slice(i) : t.slice(i, ende))
+			.split('\n')
+			.map((z) => z.match(/^\|\s*`([^`]+)`\s*\|\s*(löschen|kürzen|umstellen)\s*\|([^|]*)\|\s*$/))
+			.filter((m): m is RegExpMatchArray => m !== null)
+			.map(([, pfad, entscheid, grund]) => ({ pfad, entscheid, grund: grund.trim() }));
+	};
+	test('r2_abschnitt_fuehrt_genau_die_roten_dateien', () => {
+		const pfade = r2().map((z) => z.pfad);
+		assert.deepEqual(ROT_R2.filter((p) => !pfade.includes(p)), [], 'AC-8: ohne Entscheid');
+		assert.deepEqual(pfade.filter((p) => !ROT_R2.includes(p)), [], 'AC-8: Zeile ohne Gegenstück');
+		assert.equal(pfade.length, ROT_R2.length, 'AC-8: Dopplung');
+	});
+	test('r2_jede_zeile_begruendet', () => {
+		const kurz = r2().filter((z) => z.grund.length < 20).map((z) => z.pfad);
+		assert.deepEqual(kurz, [], 'AC-8: Begründung fehlt');
+	});
+	test('r2_geloeschte_testdatei_existiert_nicht_mehr', () => {
+		const da = r2().filter((z) => z.entscheid === 'löschen' && !z.pfad.includes('::') && existsSync(join(REPO, z.pfad))).map((z) => z.pfad);
+		assert.deepEqual(da, [], 'AC-8: als „löschen“ geführt, existiert aber');
 	});
 });

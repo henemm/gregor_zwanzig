@@ -29,9 +29,14 @@ test.afterEach(async ({ page }) => {
 	await cleanupTracked(page.request);
 });
 
+// Sprachneutral: Trip-Reiter über data-testid (`trip-new-tab-<id>`), nicht über das übersetzte Label.
+function reiterSel(page: Page, kind: HubKind, id: string) {
+	return kind === 'route' ? page.locator(`.tn-desktop [data-testid="trip-new-tab-${id}"]`) : ANLEGE_SEL[kind].reiter(page, id);
+}
+
 async function schritt(page: Page, kind: HubKind, id: string): Promise<void> {
-	await ANLEGE_SEL[kind].reiter(page, id).click();
-	await expect.poll(async () => (await ANLEGE_SEL[kind].zustand(ANLEGE_SEL[kind].reiter(page, id))).aktiv, { timeout: 10_000 }).toBe(true);
+	await reiterSel(page, kind, id).click();
+	await expect.poll(async () => (await ANLEGE_SEL[kind].zustand(reiterSel(page, kind, id))).aktiv, { timeout: 10_000 }).toBe(true);
 }
 
 for (const kind of HUB_KINDS) {

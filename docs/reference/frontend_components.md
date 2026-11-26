@@ -34,8 +34,8 @@ frontend/src/lib/components/
 ├── compare-new/          # Progressiver Anlege-Editor /compare/new (CompareNewEditor, #1301 F2)
 ├── shared/               # Geteilte Tab-Organismen (context="route"|"vergleich"):
 │                         #   WeatherMetricsTab, layout-tab/, versand-tab/, alarme-tab/,
-│                         #   OutputLayoutEditor, wetter-tab/ (Logikmodule; Corridor-Editor-Oberfläche seit
-│                         #   #2794 S3a Teil-PR 4a entfernt), dnd/
+│                         #   wetter-tab/ (Logikmodule; Corridor-Editor-Oberfläche seit
+│                         #   #2794 S3a Teil-PR 4a entfernt), dnd/ (OutputLayoutEditor seit #3020 R2 gelöscht)
 ├── trip-detail/          # Trip-Detail-Ansicht + Wegpunkt-Editor
 ├── compare/              # Vergleichs-Screen (CompareTabs, CompareDetail, CompareMatrix, …)
 ├── edit/                 # Trip-Bearbeitungs-Sektionen

@@ -359,6 +359,40 @@ Nebenbefunde ohne Issue: B3 tote Speicherfunktionen (`erstelleVersandVergleichSp
 `erstelleWetterMetrikenVergleichSpeicherung`; ihre Tests sind hier kein Beleg); B4 `setUnsavedInput` ohne Aufrufer; B5 die 26
 Katalogfälle ohne Test (oben, behoben).
 
+## R2: rote Testdateien der Probe-Löschung (Entscheid je Datei)
+
+Messung: Probe-Löschung der 11 Restdateien und 6 Barrel-Zeilen am 2026-11-26 (Spec, Nachtrag R2), 13 Testdateien neu bzw.
+stärker rot, dazu ein Python-Fall. Entscheid: „löschen“ = Datei bzw. Fall entfällt, weil sie nur gelöschte Bausteine prüft;
+„kürzen“ = nur Fälle oder Listeneinträge gelöschter Bausteine entfallen, lebende Anteile bleiben, kein Wächter gelockert;
+„umstellen“ = Schalter auf die neue Scheibe gestellt, Mutationsprobe am lebenden Stand.
+
+| Datei bzw. Fall | Entscheid | Begründung |
+|---|---|---|
+| `frontend/src/lib/components/molecules/issue_578_molecules_organisms.test.ts` | kürzen | Block C (AC-16 bis AC-19) prüfte nur OutboxCard, AlertsCard, PresetRail, MetricOffShelf samt Barrel-Export; Molecule-Blöcke A, B und AC-20 bleiben |
+| `frontend/src/lib/components/shared/__tests__/OutputLayoutEditor.test.ts` | löschen | Alle vier Fälle lesen nur `shared/OutputLayoutEditor.svelte` (keine API-Importe, keine trip-Prop, SMS-Zweig); der Baustein hat keinen Verwender mehr |
+| `frontend/src/lib/components/trip-detail/bug_499_skala_label.test.ts` | kürzen | AC-1 (ActiveMetricRow) und AC-4 (TablePreview) entfallen mit den Bausteinen; AC-2 (WeatherConfigDialog) und AC-3 (SavePresetDialog) prüfen lebende Dialoge und bleiben |
+| `frontend/src/lib/components/shared/layout-tab/__tests__/layout_korridor_sprache.test.ts` | kürzen | Drei Ausgabe-Layout-Fälle und der Layout-Teil von AC-4 entfallen; `f8Altbausteine.ts` gelöscht, `f8KatalogAnker.ts` ohne `layout.ausgabe.*`; Mail-Inhalt, Korridor-Logik, Kappung, GPX-Seite und Zwei-Nutzer-Fall bleiben |
+| `frontend/src/lib/components/trip-detail/__tests__/trip_hub_sprache.test.ts` | kürzen | Golden `layout_bausteine` (DE/EN) samt Messaufbau und der AC-4-Fall der Ausgabe-Layout-Bausteine entfallen, `f9Altbausteine.ts` gelöscht; ReportLine bleibt über HubOverview im Golden der Übersicht geprüft |
+| `frontend/src/lib/components/__tests__/bausteine_sprache.test.ts` | kürzen | Renders von OutboxCard und PresetRail samt ihren DE/EN-Zusicherungen entfallen; BackLink, Dialoge, Menüs und SubscriptionCard bleiben unverändert geprüft |
+| `frontend/src/lib/i18n/__tests__/katalog_schluessel_haben_verwender.test.ts` | kürzen | Test unverändert; gekürzt wird der Katalog: 64 verwaiste Schlüssel je Sprache (DE und EN) entfernt, der Wächter bleibt ohne Ausnahme scharf |
+| `frontend/src/lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts` | kürzen | Eintrag `shared/OutputLayoutEditor.svelte` aus der F8-Dateiliste gestrichen; das Verbot, ihn je in die Allowlist aufzunehmen, bleibt stehen |
+| `frontend/src/lib/i18n/__tests__/reaktivitaet_waechter.test.ts` | kürzen | Eintrag `shared/OutputLayoutEditor.svelte` aus Bereich F8 gestrichen, Messaufbau gezählter Dateien 2 → 1 (GPX-Seite), Fundzahl 0 unverändert |
+| `frontend/src/lib/__tests__/bausteine_waechter.test.ts` | kürzen | In `bausteine_waechter_regeln.ts` 7 BESTAND-Einträge und 4 AUSNAHMEN-Einträge gelöschter Dateien gestrichen, `BESTAND_OBERGRENZE` 162 → 155 gesenkt |
+| `frontend/src/lib/__tests__/ink4_waechter.test.ts` | kürzen | AUSNAHMEN-Einträge `organisms/MetricOffShelf.svelte` (2) und `organisms/PresetRail.svelte` (1) mit den Dateien gestrichen, Scope unverändert |
+| `frontend/src/lib/__tests__/rework_3020_rueckbau_waechter.test.ts` | umstellen | `STAND` 1 → 2: verlangt jetzt, dass keine der 11 Dateien existiert, kein Import, keine Barrel-Zeile; Mutationsprobe R2a: `trip-detail/PresetRow.svelte` zurückgelegt → `restbestand__trip-detail/PresetRow.svelte` rot |
+| `frontend/src/lib/__tests__/rework_3020_probe_loeschung.test.ts` | löschen | Sein Prüfling (Restbestand verbergen) existiert nicht mehr; `rework_3020_probe_hooks.mjs` mit aufgelöst, die lebenden Helfer-Nutzer laufen jetzt in der normalen Suite ohne die Dateien |
+| `tests/tdd/test_issue_289_surface_tokens.py::test_preset_row_color_mix_uses_surface0` | löschen | Der Fall liest nur `trip-detail/PresetRow.svelte`; Token-Regeln AC-1 und AC-2 für alle übrigen Dateien bleiben im selben Modul |
+
+Folgeänderungen ohne eigenen roten Test der Probe (nur Einträge gelöschter Bausteine):
+`trip-detail/PresetRow.test.ts` gelöscht (prüfte nur Literal-Ausdrücke unter dem Namen PresetRow, ohne Import);
+`shared/__tests__/legacy_wizard_removed.test.ts` prüft als Über-Löschungs-Wächter statt `OutputLayoutEditor` die lebenden
+Exporte `TripHeader` und `WetterTabInhalt` (als echte export-Zeile); Anker `f5KatalogAnker.ts` (5), `f9KatalogAnker.ts` (31)
+und Pin-Liste `deutsch_unveraendert.test.ts` (28) nur um entfernte Schlüssel gekürzt; `tests/unit/ein_katalog_ausnahmen.json`
+ohne `BucketSectionOff` und `TablePreview` (mit dem Projektwerkzeug neu erzeugt, `hoechststand` und `HOECHSTSTAND` in
+`test_ein_katalog_eine_verarbeitung_ratsche.py` 421 → 416); Golden `tests/golden/f9_trip_flaechen/layout_bausteine.*` gelöscht. `docs/context/einstellungen_neu/elementliste.json`
+mit dem Generator neu erzeugt (24 Einträge „Temperatur“/„Wind“ `wertebereiche.kategorie.*` → `wetter.gruppe.*`, DE/EN
+gleich), eingefrorener Hash in `elementliste_uebersicht_2969.test.ts` nach dem Muster von #3383/#3385 nachgeführt.
+
 ## Mutationsproben
 
 Alle in Wegwerf-Kopien (String-Ersetzung, externe Sicherung, `cmp` gleich). „Rot“ = Zahl roter Fälle im jeweiligen Lauf; „–“ =

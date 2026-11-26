@@ -572,7 +572,6 @@ const BESTAND: string[] = [
 	'lib/components/shared/ChannelToggle.svelte',
 	'lib/components/shared/EditorStickyFooter.svelte',
 	'lib/components/shared/OfflineSperre.svelte',
-	'lib/components/shared/OutputLayoutEditor.svelte',
 	'lib/components/shared/StandardwerteSpeichernKnopf.svelte',
 	'lib/components/shared/TelegramKurzstilToggle.svelte',
 	'lib/components/shared/anlege-rahmen/AnlegeFortschritt.svelte',
@@ -586,19 +585,13 @@ const BESTAND: string[] = [
 	'lib/components/shared/status-schild/StatusSchild.svelte',
 	'lib/components/shared/subscription-header/SubscriptionHeader.svelte',
 	'lib/components/shared/zustellung-tab/ZustellungTab.svelte',
-	'lib/components/trip-detail/ActiveMetricRow.svelte',
-	'lib/components/trip-detail/BucketSection.svelte',
-	'lib/components/trip-detail/BucketSectionOff.svelte',
 	'lib/components/trip-detail/ChannelDot.svelte',
-	'lib/components/trip-detail/ChannelLimitMarkers.svelte',
 	'lib/components/trip-detail/DetailCard.svelte',
 	'lib/components/trip-detail/FullProfile.svelte',
 	'lib/components/trip-detail/HubOverview.svelte',
-	'lib/components/trip-detail/PresetRow.svelte',
 	'lib/components/trip-detail/ReportLine.svelte',
 	'lib/components/trip-detail/StageDetailRow.svelte',
 	'lib/components/trip-detail/StageList.svelte',
-	'lib/components/trip-detail/TablePreview.svelte',
 	'lib/components/trip-detail/TripHeader.svelte',
 	'lib/components/trip-detail/TripStageRow.svelte',
 	'lib/components/trip-detail/TripTabs.svelte',
@@ -704,7 +697,9 @@ const BESTAND: string[] = [
 // (Liste GELOESCHT_3384 im selben Lösch-Nachweis) (177 → 167).
 // #3385 S3: fünf Waisen-Bausteine aus shared/versand-tab/ geloescht (VTBriefingChannels,
 // VTLaufzeitRoute, VTLaufzeitVergleich, VTNextBriefing, VTSchedulePlan) (167 → 162).
-const BESTAND_OBERGRENZE = 162; // #3297/#3020: sieben Alt-Editor-Bausteine geloescht (vorher 195, #3276)
+// #3020 R2: Restbestand geloescht, davon in BESTAND OutputLayoutEditor, ActiveMetricRow, BucketSection,
+// BucketSectionOff, ChannelLimitMarkers, PresetRow, TablePreview (162 → 155).
+const BESTAND_OBERGRENZE = 155;
 
 /** Token-Verstöße je Baustein-Datei (Ist-Stand 2026-11-10, ADR-0112). Darf nur sinken. */
 const AUSNAHMEN: Ausnahmen = {
@@ -735,15 +730,10 @@ const AUSNAHMEN: Ausnahmen = {
 	'lib/components/molecules/SubscriptionKebab.svelte': { n: 6, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
 	'lib/components/molecules/ThresholdRow.svelte': { n: 3, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
 	'lib/components/molecules/UhrzeitFeld.svelte': { n: 10, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
-	'lib/components/organisms/AlertsCard.svelte': { n: 6, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
 	'lib/components/organisms/ListActionsMenu.svelte': { n: 11, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
 	'lib/components/organisms/ListNameCell.svelte': { n: 7, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
 	'lib/components/organisms/ListTable.svelte': { n: 5, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
 	'lib/components/organisms/ListTableRow.svelte': { n: 16, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
-	'lib/components/organisms/MetricOffShelf.svelte': { n: 16, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
-	'lib/components/organisms/OutboxCard.svelte': { n: 5, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
-	// Fix-Loop 1 (#2913): Neuzählung mit verschärfter Regel (b) 19 → 21.
-	'lib/components/organisms/PresetRail.svelte': { n: 21, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
 	'lib/components/organisms/SubscriptionCard.svelte': { n: 36, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' }
 };
 

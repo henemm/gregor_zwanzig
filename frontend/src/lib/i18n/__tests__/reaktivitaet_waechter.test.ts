@@ -52,7 +52,7 @@ const BEREICHE: Record<string, string[]> = {
 		// #3366: layout-tab/ enthaelt keine Komponente mehr (LayoutTab, LTCapNote,
 		// LTChannelPicker, LTCutLine als Waisen geloescht; ltChannels.ts ist kein .svelte).
 		// #2794 S3a Teil-PR 4a: corridor-editor/ (CorridorEditor, CorridorEditorMobile) entfernt.
-		'lib/components/shared/OutputLayoutEditor.svelte',
+		// #3020 R2: OutputLayoutEditor.svelte geloescht.
 		'routes/gpx-upload/'
 	],
 	'F9 #2658 Trip-Hub, Anlegen, Etappen-Editor, Vorschau-Rahmen': [
@@ -104,7 +104,7 @@ const AUSNAHMEN: { pfad: string; enthaelt: string; grund: string }[] = [
 		pfad: 'lib/components/compare-new/CompareNewEditor.svelte',
 		// Trifft NUR die eigene Deklaration `vorlagenFelder` (Fund-Text: erste 90 Zeichen,
 		// reaktivitaet_scan.ts `ausschnitt`); der `$state`-Startwert `wiz` bleibt voll gescannt.
-		enthaelt: 'vorlagenFelder = untrack(() => (vorlage ? feldsatzAusVorlage(vorlage, locations) : {}))',
+		enthaelt: 'vorlagenFelder = untrack(() => (vorlage ? feldsatzAusVorlage(vorlage, locations, vorlageId',
 		grund:
 			'Namensfeld: Vorschlagsname „<Name> (Kopie)“ (tr(\'vergleich.neu.kopie\')) ist der einmalige Startwert des Namensfelds beim Anlegen aus Vorlage und danach Nutzereingabe. Verhalten identisch zu main #2659, dort als Anweisung `vorlageInZustand` in routes/compare/new/+page.svelte. #2727 verlegt die Uebernahme in den Initialisierer (AC-7: einmalig, kein $effect).'
 	}
@@ -189,7 +189,8 @@ describe('Bestand: Sprachwechsel ohne Neuladen erreicht jede Anzeige', () => {
 			const q = (readFileSync(join(SRC, rel), 'utf8') as string).replace(/\(void \$locale, /g, '(');
 			gezaehlt += scanneKomponente(q, join(SRC, rel), SRC, rel).length;
 		}
-		assert.equal(dateien.length, 2, 'Messaufbau: OutputLayoutEditor und GPX-Seite werden gescannt');
+		// #3020 R2: OutputLayoutEditor geloescht (2 → 1), es bleibt die GPX-Seite.
+		assert.equal(dateien.length, 1, 'Messaufbau: GPX-Seite wird gescannt');
 		assert.equal(gezaehlt, 0);
 	});
 

@@ -1,5 +1,5 @@
 // Umfang des Rückbaus #3020, Spec 2.0 (docs/specs/modules/rework_3020_altbausteine_entfernen.md, R2).
-// Gemeinsame Quelle für Rückbau-Wächter und Probe-Löschung. Pfade relativ zu `frontend/src/lib/components/`.
+// Quelle für den Rückbau-Wächter (bis R2 auch für die Probe-Löschung). Pfade relativ zu `frontend/src/lib/components/`.
 
 const unter = (ordner: string, namen: string): string[] =>
 	namen
@@ -66,7 +66,8 @@ export const BLEIBT = [
 /**
  * Tests, die lebendes Verhalten prüfen und ohne den Restbestand grün sein müssen. Relativ zu `frontend/src/`.
  * `trip_python_skip_next_ohne_412` und `wetter_tab_karte_mitspeichern_3020` hat #3357 gelöscht bzw. nie übernommen:
- * R1 stellt sie wieder her (AC-2, AC-3, R2-F4).
+ * R1 stellt sie wieder her (AC-2, AC-3, R2-F4). Bis R2 liefen sie in der Probe-Löschung; seit R2 (Restbestand gelöscht,
+ * Probe aufgelöst) beweist die normale Suite dasselbe. Die Liste bleibt als Nachweis, welche Tests die Probe abdeckte.
  */
 export const LEBENDE_HELFER_NUTZER: string[] = [
 	'lib/__tests__/trip_nach_412_folgeschreiben_traegt_altes_if_match.test.ts',
@@ -89,4 +90,27 @@ export const LEBENDE_HELFER_NUTZER: string[] = [
 	...unter('lib/components/trip-new/__tests__', 'tempo_je_etappe_3197_anlegen_verdrahtung.test.ts trip_anlegen_sprache.test.ts'),
 	'routes/gpx-upload/__tests__/gpx_upload_sprache.test.ts',
 	'routes/trips/[id]/__tests__/trip_hub_loeschen.test.ts'
+];
+
+/**
+ * R2 (Nachtrag 2026-11-26): Testdateien, die die Probe-Löschung der 11 Restdateien rot gemacht hat (Differenz zur
+ * Baseline derselben Umgebung), plus ein Python-Fall. Pfade ab Repo-Wurzel; je Eintrag ein Entscheid in der Testtabelle (AC-8).
+ */
+export const ROT_R2: string[] = [
+	...[
+		'components/molecules/issue_578_molecules_organisms.test.ts',
+		'components/shared/__tests__/OutputLayoutEditor.test.ts',
+		'components/trip-detail/bug_499_skala_label.test.ts',
+		'components/shared/layout-tab/__tests__/layout_korridor_sprache.test.ts',
+		'components/trip-detail/__tests__/trip_hub_sprache.test.ts',
+		'components/__tests__/bausteine_sprache.test.ts',
+		'i18n/__tests__/katalog_schluessel_haben_verwender.test.ts',
+		'i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts',
+		'i18n/__tests__/reaktivitaet_waechter.test.ts',
+		'__tests__/bausteine_waechter.test.ts',
+		'__tests__/ink4_waechter.test.ts',
+		'__tests__/rework_3020_rueckbau_waechter.test.ts',
+		'__tests__/rework_3020_probe_loeschung.test.ts'
+	].map((p) => `frontend/src/lib/${p}`),
+	'tests/tdd/test_issue_289_surface_tokens.py::test_preset_row_color_mix_uses_surface0'
 ];

@@ -38,14 +38,8 @@
       "FRONTEND_LISTE": 3,
       "FRONTEND_VERZWEIGUNG": 1
     },
-    "frontend/src/lib/components/trip-detail/BucketSectionOff.svelte": {
-      "FRONTEND_LISTE": 1
-    },
     "frontend/src/lib/components/trip-detail/StageDetailRow.svelte": {
       "FRONTEND_SCHWELLE": 1
-    },
-    "frontend/src/lib/components/trip-detail/TablePreview.svelte": {
-      "FRONTEND_LISTE": 4
     },
     "frontend/src/lib/components/trip-detail/metricsEditor.ts": {
       "FRONTEND_LISTE": 10
@@ -231,5 +225,5 @@
       "VERARBEITUNG_AUSSEN": 1
     }
   },
-  "hoechststand": 421
+  "hoechststand": 416
 }

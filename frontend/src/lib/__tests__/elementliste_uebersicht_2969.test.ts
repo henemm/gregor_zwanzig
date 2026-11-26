@@ -128,7 +128,11 @@ const ALT_ANZAHL = ALT_ANZAHL_3251 + 184 - 180 + 174;
 // gleich, keine ID entfallen, Reihenfolge gleich. Nur i18n_key ändert sich, weil die versand.laufzeit.*-Schlüssel
 // der gelöschten Waisen entfielen: 20 Einträge „Laufzeit“/„Etappen öffnen →“/„Bis auf Weiteres“/„Bis Datum“
 // versand.laufzeit.* → zustellung.laufzeit.* (DE/EN gleich).
-const ALT_SHA = '2e9246ec7ccf617dc25c516e864ecb57417ec207d789948e1447d1a54d0e73ce';
+// #3020 R2 (26.11.; vorher 2e9246ec…0e73ce): Liste mit dem Generator neu erzeugt, Mockup-Hash und Anzahl gleich,
+// keine ID entfallen, Reihenfolge gleich. Nur i18n_key ändert sich, weil wertebereiche.kategorie.* mit
+// BucketSectionOff/MetricOffShelf entfiel: 24 Einträge „Temperatur“/„Wind“ (metriken/was-steht-wo, trip und orte)
+// wertebereiche.kategorie.temperature/wind → wetter.gruppe.temperature/wind (DE/EN gleich).
+const ALT_SHA = 'a532b75cd58bbc9ea6130d6629b7d8c0b351493401fc3ec09fd9e1d661084290';
 const MOCKUP_HASH = 'sha256:fbb04f549d974116e70c0e89facac657cf5ab13a31e267eb00882ad7e6496ec6';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {

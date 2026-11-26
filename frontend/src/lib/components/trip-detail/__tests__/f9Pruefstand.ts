@@ -10,7 +10,7 @@
 // = Ist-Stand VOR der Umstellung (nie neu schreiben); <fall>.en.html = Review-Hilfe:
 //   cd frontend && GZ_GOLDEN_SCHREIBEN=en npm test -- src/lib/components/trip-detail/__tests__/trip_hub_sprache.test.ts
 // Spec: docs/specs/modules/i18n_f9_trip_flaechen_2658.md
-// #3020: die Alt-Bausteine (Ausgabe-Layout) rendert f9Altbausteine.ts.
+// #3020 R2: die Alt-Bausteine des Ausgabe-Layouts sind geloescht, ihre Faelle entfallen.
 // Pfadregel #1409: alles relativ zu DIESER Datei.
 
 import { register } from 'node:module';

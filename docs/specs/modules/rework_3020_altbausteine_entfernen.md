@@ -2,9 +2,9 @@
 entity_id: rework_3020_altbausteine_entfernen
 type: refactor
 created: 2026-11-25
-updated: 2026-11-25
+updated: 2026-11-26
 status: draft
-version: "2.0"
+version: "2.1"
 workflow: rework-3020-altbausteine-entfernen
 tags: [rueckbau, wetter-tab, zustellung, epic-3122, epic-2795]
 ---
@@ -17,12 +17,12 @@ tags: [rueckbau, wetter-tab, zustellung, epic-3122, epic-2795]
 
 ## Purpose
 
-#3357 hat die alte Wetter-/Zustellungs-Oberfläche zum großen Teil gelöscht (12 von 54 Dateien, 60 Testdateien). Dabei sind Prüfungen weggefallen, deren Aussage am lebenden Code weiter gelten muss (Speichern ohne Datenverlust, Pause/Überspringen, Zwei-Nutzer-Trennung, Kanal-Vorgaben). Diese Spec stellt zuerst den Schutz wieder her (R1) und löscht dann den Restbestand von 42 toten Dateien (R2). Nutzer sehen in keiner Scheibe einen Unterschied. Die PO-Freigabe, dass Alt-Bausteine, `telegram_kurzform` und die SMS-Schwellen mit #3020 fallen, liegt vor (#3036, 2026-11-24).
+#3357 hat die alte Wetter-/Zustellungs-Oberfläche zum großen Teil gelöscht (12 von 54 Dateien, 60 Testdateien). Dabei sind Prüfungen weggefallen, deren Aussage am lebenden Code weiter gelten muss (Speichern ohne Datenverlust, Pause/Überspringen, Zwei-Nutzer-Trennung, Kanal-Vorgaben). Diese Spec stellt zuerst den Schutz wieder her (R1) und löscht dann den Restbestand toter Dateien (R2; ursprünglich 42, gemessen am 2026-11-26 noch 11, siehe Nachtrag). Nutzer sehen in keiner Scheibe einen Unterschied. Die PO-Freigabe, dass Alt-Bausteine, `telegram_kurzform` und die SMS-Schwellen mit #3020 fallen, liegt vor (#3036, 2026-11-24).
 
 ## Source
 
 - **File:** `frontend/src/lib/components/` (Restbestand laut Abschnitt Scope), Tests unter `frontend/src/lib/**/__tests__/`, `tests/fixtures/einstellung_gleich_mail/`
-- **Identifier:** 42 Dateien (4 454 Zeilen), 6 Barrel-Zeilen; 24 + 33 Zeilen der Testtabelle, 145 entfallene Testfälle, 15 gestrichene Katalogfälle
+- **Identifier:** ursprünglich 42 Dateien (4 454 Zeilen), 6 Barrel-Zeilen; in R2 verbleiben 11 Dateien und 6 Barrel-Zeilen (Nachtrag). 24 + 33 Zeilen der Testtabelle, 145 entfallene Testfälle, 15 gestrichene Katalogfälle
 
 Schicht: **Frontend** und Testunterbau, CI-Konfiguration. **Kein** Python-Produktions- und kein Go-Code.
 
@@ -34,7 +34,7 @@ Schicht: **Frontend** und Testunterbau, CI-Konfiguration. **Kein** Python-Produk
 ## Estimated Scope
 
 - **R1 Schutz wiederherstellen:** 0 Produktionszeilen; geschätzt 20 bis 30 Testdateien neu oder geändert, Testzeilen Schätzung +1 500 bis +3 000 (nicht gemessen).
-- **R2 Restbestand löschen:** Produktion −4 454 Zeilen in 42 Dateien, 6 Barrel-Zeilen, dazu Tests, Katalogschlüssel, Ratschen. Der Testanteil ist **nicht gemessen** (79 Testdateien nennen einen der Namen, 24 importieren einen, 15 E2E-Dateien nennen einen; Regex); die Probe-Löschung misst ihn.
+- **R2 Restbestand löschen (Stand Nachtrag 2026-11-26, gemessen):** 11 Produktionsdateien gelöscht, 6 Barrel-Zeilen, ca. 17 Test- und Listendateien angepasst (13 rote Testdateien, 1 Python-Fall, `ein_katalog_ausnahmen.json`, rote Liste, `fallliste_editor.json`), Katalogschlüssel, Ratschen, Doku. Fast nur Löschungen: Produktion −1 545 Zeilen (gemessen), Tests geschätzt −500 bis −900 Zeilen.
 - **Das Limit von 250 LoC / 4-5 Dateien wird in beiden Scheiben bewusst überschritten**; die Freigabe dieser Spec deckt das ab (R2 fast nur Löschungen, R1 nur Tests). Je Scheibe wird `loc_limit_override` gesetzt.
 - **Effort:** high, zwei Scheiben, je eigener PR.
 
@@ -47,7 +47,7 @@ Eine Spec, eine Freigabe, zwei Scheiben mit je eigenem PR. Jede Scheibe ist grü
 | Scheibe | Inhalt | Produktion gelöscht |
 |---|---|---|
 | R1 Schutz wiederherstellen | Prüfungen aus #3357 am lebenden Code wieder herstellen, Prüfkatalog, Testtabelle, Wächter | keine |
-| R2 Restbestand löschen | 42 Dateien, 6 Barrel-Zeilen, Testfolgen, Katalogschlüssel, Ratschen | 42 Dateien, 4 454 Zeilen |
+| R2 Restbestand löschen | verbliebene Dateien, 6 Barrel-Zeilen, Testfolgen, Katalogschlüssel, Ratschen | ursprünglich 42 Dateien / 4 454 Zeilen; gemessen noch 11 Dateien (Nachtrag) |
 
 ### R1: Umfang
 
@@ -66,9 +66,9 @@ Arbeitspakete:
 
 Regeln: Jede wiederhergestellte Zusicherung bekommt eine **Mutationsprobe am lebenden Code** (String-Ersetzung mit externer Sicherungskopie, nie `git checkout/stash/reset`). Fälle zu #3355 (Vollkopie `report_config` im Reiter Wetter) bleiben ausstehend markiert mit Verweis auf #3355; ihre Anzahl steht im Wächter und in der Testtabelle. Findet R1 einen echten Fehler im lebenden Code, entsteht ein eigenes Bug-Issue, der Fall steht ausstehend markiert mit Verweis, und er wird **nicht hier behoben**. Dazu gehören #1510 AC-4 (Briefing-Mail bei unbestätigter Adresse), die Fachkurzform je Größe in Orten und die Katalogfälle 35 bis 37 „nur morgens/abends“: R1 klärt sie, das Ergebnis steht in der Testtabelle.
 
-### R2: Umfang (42 Dateien)
+### R2: Umfang (ursprünglich 42 Dateien; gültiger Stand siehe Nachtrag)
 
-Pfade relativ zu `frontend/src/`. Menge = Schnittmenge aus `tot_nach_3357.txt` (Messung auf `c8329fea4`) mit den Listen A (26) und B (16) aus `umfangslisten.md`; `docs/artifacts/` ist gitignored, daher stehen die Pfade hier.
+Pfade relativ zu `frontend/src/`. Menge = Schnittmenge aus `tot_nach_3357.txt` (Messung auf `c8329fea4`) mit den Listen A (26) und B (16) aus `umfangslisten.md`; `docs/artifacts/` ist gitignored, daher stehen die Pfade hier. **Hinweis:** 31 dieser 42 Dateien sind inzwischen auf `main` gelöscht, es gilt der Nachtrag unten.
 
 - `lib/components/compare/` (5): `compareHourlyMetricDefs.ts`, `hourlyFriendlyMap.ts`, `layoutPreviewRows.ts`, `versandPropsAus.ts`, `wetterMetrikenPropsAus.ts`
 - `lib/components/molecules/` (1): `GrundauswahlLeerHinweis.svelte`
@@ -85,32 +85,73 @@ Dazu 6 Barrel-Zeilen: `lib/components/organisms/index.ts` (`OutputLayoutEditor`,
 
 **Nicht Umfang:** Liste C (24 Dateien, fachfremd), `mobile/Drawer.svelte`, `molecules/CompareStatusRow.svelte`, `molecules/ScoreToggle.svelte` (neu als tot gemeldet), #3358 (Vorlage folgt der Fortbewegung), #3355, #3351, Altfeld-Stellen in lebenden Dateien.
 
+### R2: Nachtrag 2026-11-26 (gemessener Restbestand)
+
+Quelle: `docs/context/rework-3020-r2-restbestand.md`, gemessen auf `origin/main` d7180c9e8. **Dieser Nachtrag ersetzt für R2 die Zahl 42 durch die gemessene Zahl 11; die ACs bleiben inhaltlich, nur ihre Zahlen werden angepasst.**
+
+**Schon gelöscht (31 von 42):** durch #3298 (9bf9c2dbf), #3301 (02f684e86), #3366 (PR #3386, `shared/layout-tab/*`), #3383/#3384/#3385 (Waisen S1 bis S4) und #3389 (tote Exporte, PR #3408). Ihre Löschung bewacht der Rückbau-Wächter über `VORAB_GELOESCHT` und die Waisen-Wächter (`trip_pfad_altfeld_loeschnachweis_3297.test.ts`). Dazu gehören u. a. `compare/compareHourlyMetricDefs.ts`, `compare/hourlyFriendlyMap.ts` und die 6 Dateien `shared/layout-tab/*`.
+
+**Restbestand (11 Dateien, alle ohne Produktions-Importeur außer Barrel und gegenseitig), Pfade unter `frontend/src/lib/components/`:**
+
+- `organisms/`: `AlertsCard.svelte`, `MetricOffShelf.svelte`, `OutboxCard.svelte`, `PresetRail.svelte`
+- `shared/`: `OutputLayoutEditor.svelte`
+- `trip-detail/`: `ActiveMetricRow.svelte`, `BucketSection.svelte`, `BucketSectionOff.svelte`, `ChannelLimitMarkers.svelte`, `PresetRow.svelte`, `TablePreview.svelte`
+
+Dazu die 6 Barrel-Zeilen (`organisms/index.ts` fünf, `trip-detail/index.ts` eine). Kein Python-/Go-Produktionscode; die Katalogschlüssel (i18n DE/EN) dieser Bausteine werden verwaist und fallen (AC-9).
+
+**Probe-Löschung (Wegwerf-Kopie, volle Frontend-Suite):** Baseline 118 rote Dateien (umgebungsbedingt), Probe 129; neu oder stärker rot genau 13 Dateien (rote Fälle Probe/Baseline), je mit Entscheid (AC-8). Die Entscheide gelten nur als Streichen oder Kürzen, nie als Lockern eines Wächters.
+
+| Testdatei | rot | Entscheid |
+|---|---|---|
+| `components/molecules/issue_578_molecules_organisms.test.ts` | 16/0 | Fälle für AlertsCard/OutboxCard/PresetRail/MetricOffShelf streichen (prüfen nur Alt-Bausteine) |
+| `components/shared/__tests__/OutputLayoutEditor.test.ts` | 4/0 | Datei löschen (prüft nur den gelöschten Baustein) |
+| `components/trip-detail/bug_499_skala_label.test.ts` | 5/0 | Fälle für ActiveMetricRow/TablePreview streichen, Datei löschen falls kein lebender Anteil bleibt |
+| `components/shared/layout-tab/__tests__/layout_korridor_sprache.test.ts` | 1/0 | OutputLayoutEditor-/BucketSection-Fall streichen; f8-Prüfstand um Alt-Bausteine kürzen |
+| `components/trip-detail/__tests__/trip_hub_sprache.test.ts` | 4/0 | f9-Prüfstand (`f9Altbausteine.ts`) um gelöschte Bausteine kürzen, Datei löschen falls kein lebender Anteil bleibt |
+| `components/__tests__/bausteine_sprache.test.ts` | 5/0 | Einträge OutboxCard/PresetRail streichen |
+| `i18n/__tests__/katalog_schluessel_haben_verwender.test.ts` | 2/0 | verwaiste DE/EN-Schlüssel entfernen (AC-9), Wächter nicht lockern |
+| `i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts` | 2/0 | Eintrag OutputLayoutEditor streichen |
+| `i18n/__tests__/reaktivitaet_waechter.test.ts` | 4/0 | Eintrag OutputLayoutEditor streichen |
+| `__tests__/bausteine_waechter.test.ts` | 2/0 | 7 BESTAND-Einträge und 4 AUSNAHMEN-Einträge streichen, `BESTAND_OBERGRENZE` 162 → 155 |
+| `__tests__/ink4_waechter.test.ts` | 1/0 | Einträge MetricOffShelf/PresetRail streichen |
+| `__tests__/rework_3020_rueckbau_waechter.test.ts` | 15/2 | `STAND` 1 → 2 (erwartet), `VORAB_GELOESCHT` bleibt |
+| `__tests__/rework_3020_probe_loeschung.test.ts` | 12/10 | nach der Löschung auflösen (sein Prüfling existiert nicht mehr); `rework_3020_probe_hooks.mjs` wird mit aufgelöst |
+
+Außerhalb der Frontend-Suite: `tests/tdd/test_issue_289_surface_tokens.py::test_preset_row_color_mix_uses_surface0` (liest `PresetRow.svelte`) wird gestrichen; `tests/unit/ein_katalog_ausnahmen.json`: die 2 Einträge `BucketSectionOff` und `TablePreview` werden gestrichen.
+
+**Ratschen:** `BESTAND_OBERGRENZE` 162 → 155 (7 BESTAND-Einträge), AUSNAHMEN 4 Einträge streichen. E2E: keine Änderung (die Namen stehen nur in Kommentaren der E2E-Specs), `E2E_MIN_SPECS` und `E2E_MIN_EXECUTED_HAUPT` bleiben unverändert (die Senkung 86 → 85 aus Version 2.0 entfällt, `issue-1093-unit.spec.ts` ist nicht mehr betroffen). svelte-check-Baseline wird nur gesenkt, falls CI weniger misst. `metricsEditor.ts` nennt `TablePreview` nur im Kommentar (keine Änderung).
+
+**Pflegepunkte aus #3385:** `rework_3020_rote_liste.ts` Einträge E070/E071/E080/E081/E086 bis E088 (ihre Testdateien sind bereits gelöscht) und `_hinweis` in `tests/fixtures/einstellung_gleich_mail/fallliste_editor.json` nachziehen.
+
+**Doku (AC-12):** `docs/reference/{frontend_components,api_contract,gates_und_ratschen,metric_output_matrix}.md`, `docs/features/architecture.md` und zusätzlich `docs/features/epic-1273-compare-one-surface.md` auf gelöschte Bausteine prüfen und als entfernt kennzeichnen.
+
+**Testtabelle:** `docs/specs/modules/rework_3020_testtabelle.md` bekommt den Abschnitt „R2“ mit genau diesen 13 Dateien plus dem Python-Fall, je Entscheid und Begründung (AC-8). Anmerkung zur Fassung 2.1: Der Abschnitt wird in der Umsetzung (Phase TDD) eingetragen; die Tabelle oben ist seine verbindliche Vorlage.
+
 ### Affected Files
 
 | File | Change Type | Scheibe | Description |
 |------|-------------|---------|-------------|
 | 20 bis 30 Testdateien unter `frontend/src/lib/**/__tests__/` (Namen legt die Testtabelle fest) | CREATE/MODIFY | R1 | wiederhergestellte Zusicherungen am lebenden Code |
-| `docs/specs/modules/rework_3020_testtabelle.md` | MODIFY | R1, R2 | heute noch im Schema S1 bis S4: auf R1/R2 umstellen; Zeilen auf Restbestand, Mutationsproben, Anzahlen |
-| `frontend/src/lib/__tests__/rework_3020_rueckbau_waechter.test.ts`, `rework_3020_rote_liste.ts`, `rework_3020_umfang.ts`, `rework_3020_probe_loeschung.test.ts`, `rework_3020_probe_hooks.mjs` | CREATE | R1 (wächst in R2) | Wächter und eingefrorene Liste |
-| `tests/fixtures/einstellung_gleich_mail/{fallliste_editor,fallliste_trip,fallliste_orte}.json` | MODIFY | R1 | 15 Fälle, Verweise |
+| `docs/specs/modules/rework_3020_testtabelle.md` | MODIFY | R1, R2 | heute noch im Schema S1 bis S4: auf R1/R2 umstellen; Zeilen auf Restbestand, Mutationsproben, Anzahlen; R2: Abschnitt mit 13 Dateien + Python-Fall |
+| `frontend/src/lib/__tests__/rework_3020_rueckbau_waechter.test.ts`, `rework_3020_rote_liste.ts`, `rework_3020_umfang.ts`, `rework_3020_probe_loeschung.test.ts`, `rework_3020_probe_hooks.mjs` | CREATE (R1) / MODIFY, DELETE (R2) | R1 (wächst in R2) | Wächter und eingefrorene Liste; R2: `STAND` 1 → 2, Probe-Test und Hooks aufgelöst, rote Liste nachgepflegt |
+| `tests/fixtures/einstellung_gleich_mail/{fallliste_editor,fallliste_trip,fallliste_orte}.json` | MODIFY | R1, R2 | R1: 15 Fälle, Verweise; R2: `_hinweis` in `fallliste_editor.json` |
 | `tests/tdd/test_einstellung_gleich_mail_fallliste.py` | MODIFY | R1 | `praefixe` nicht mehr leer |
-| 42 Dateien (siehe oben) | DELETE | R2 | Restbestand |
+| 11 Dateien (siehe Nachtrag) | DELETE | R2 | Restbestand (31 weitere der ursprünglich 42 sind schon gelöscht) |
 | `lib/components/organisms/index.ts`, `lib/components/trip-detail/index.ts` | MODIFY | R2 | 6 Barrel-Zeilen |
-| Testdateien laut Probe-Löschung (nicht gemessen) | DELETE/MODIFY | R2 | je rotem Test ein Entscheid |
-| `tests/tdd/test_issue_289_surface_tokens.py` (liest `PresetRow.svelte`), `tests/tdd/test_issue_692_telegram_disabled_unconfigured.py` (nennt `WeatherV2Kanaele`) | MODIFY/DELETE | R2 | Einzelentscheid in der Testtabelle; `test_issue_934_wizard_schedule.py` nennt keine der 42; ebenso Einzelentscheid für `tests/tdd/test_issue_1106_hourly_metrics_config.py` (nennt `compareHourlyMetricDefs.ts`) |
-| `frontend/e2e/issue-1093-unit.spec.ts`, `.github/ci_e2e_specs.txt`, `.github/workflows/ci.yml` | DELETE/MODIFY | R2 | Spec importiert `layoutPreviewRows.ts`; `E2E_MIN_SPECS` 86 → 85, `E2E_MIN_EXECUTED_HAUPT` 760 um die wirklich entfallenden Fälle |
-| `frontend/src/lib/__tests__/bausteine_waechter_regeln.ts` | MODIFY | R2 | `BESTAND_OBERGRENZE` (heute 188) um genau die Zahl der entfernten `BESTAND`-Einträge senken |
-| `tests/unit/ein_katalog_ausnahmen.json` | MODIFY | R2 | 5 Einträge (`WeatherV2Grundauswahl`, `outlookFriendlyCapability`, `wertebereicheAnzeige`, `BucketSectionOff`, `TablePreview`) |
-| `frontend/src/lib/components/shared/__tests__/context_herkunft_zweige_eingefroren.test.ts` | MODIFY | R2 | Einträge `VTBriefingChannels`, `VTSchedulePlan`, `vtBriefingChannelsText` streichen |
+| 13 Testdateien laut Nachtrag (Probe-Löschung gemessen) | DELETE/MODIFY | R2 | je rotem Test ein Entscheid |
+| `tests/tdd/test_issue_289_surface_tokens.py` | MODIFY | R2 | Fall `test_preset_row_color_mix_uses_surface0` streichen |
+| `frontend/src/lib/__tests__/bausteine_waechter_regeln.ts` | MODIFY | R2 | `BESTAND_OBERGRENZE` 162 → 155 |
+| `tests/unit/ein_katalog_ausnahmen.json` | MODIFY | R2 | 2 Einträge (`BucketSectionOff`, `TablePreview`) streichen |
 | `frontend/src/lib/i18n/messages/{de,en}/*.json` | MODIFY | R2 | verwaiste Schlüssel (Zahl in R2 neu messen) |
-| `.github/workflows/ci.yml` (svelte-check-Baseline 34 / 132) | MODIFY | R2 | nur senken |
-| `docs/reference/{frontend_components,api_contract,gates_und_ratschen,metric_output_matrix}.md`, `docs/features/architecture.md` | MODIFY | R2 | gelöschte Bausteine nicht als bestehend beschreiben |
+| `.github/workflows/ci.yml` (svelte-check-Baseline) | MODIFY | R2 | nur senken, falls CI weniger misst; E2E-Positivliste und `E2E_MIN_*` unverändert |
+| `docs/reference/{frontend_components,api_contract,gates_und_ratschen,metric_output_matrix}.md`, `docs/features/architecture.md`, `docs/features/epic-1273-compare-one-surface.md` | MODIFY | R2 | gelöschte Bausteine nicht als bestehend beschreiben |
 
 ## Dependencies
 
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `docs/context/rework-3020-altbausteine-entfernen.md` (Abschnitt Analysis) | Kontext | Messung auf `c8329fea4` |
+| `docs/context/rework-3020-r2-restbestand.md` | Kontext | Messung des Restbestands und der Probe-Löschung auf `d7180c9e8` (Nachtrag) |
 | `docs/artifacts/rework-3020-altbausteine-entfernen/` (gitignored) | Belege | `tot_nach_3357.txt`, `umfangslisten.md`, `restbestand_tests.txt`, `del_3357.txt`, `testnamen_diff.txt` |
 | `docs/specs/modules/feat_3297_trip_pfad_ohne_altfelder.md` | Spec | AC-7 (Löschliste) und AC-10 (Test-Zuordnung) von #3297 sind erfüllt; diese Spec übernimmt den Rest |
 | ADR-0112, ADR-0124 | ADR | Ratschen nur senken; eine Tabelle |
@@ -118,15 +159,15 @@ Dazu 6 Barrel-Zeilen: `lib/components/organisms/index.ts` (`OutputLayoutEditor`,
 | `tests/unit/test_e2e_positivliste_ratschen_bindung.py` | Wächter | bindet `E2E_MIN_SPECS`/`E2E_MIN_EXECUTED_HAUPT` |
 | `frontend/src/lib/i18n/__tests__/katalog_schluessel_haben_verwender.test.ts` | Wächter | tote Katalogschlüssel, bleibt ungelockert |
 | `npm run elementliste:abgleich` (`scripts/elementliste_abgleich.ts`) | Skript | Nachweis „keine sichtbare Änderung“ |
-| #3355, #3298, #3301, #3297, #3358, #3351 | Issues | #3355 offene Fälle; #3298 behält Typen und Text-Sperre; #3301 wird mit R2 geschlossen |
+| #3355, #3298, #3301, #3297, #3358, #3351, #3385, #3389 | Issues | #3355 offene Fälle; #3298 behält Typen und Text-Sperre; #3301 und #3298 sind bereits geschlossen (Nachweis-Kommentar an #3020); #3385 Pflegepunkte; #3389 tote Exporte |
 
 ## Implementation Details
 
 1. **R1 je Zeile entscheiden.** Für jede Zeile und jeden entfallenen Fall gilt: lebender Beleg vorhanden (Verweis nachziehen, Beleg muss eine Testdatei **mit Testname** sein) oder Zusicherung am lebenden Modul neu schreiben (Ablauf: Test rot gegen verfälschten lebenden Code, grün gegen echten) oder streichen mit Begründung „Ohne lebende Aussage:“, nur wenn die Aussage ausschließlich eine nicht mehr vorhandene Oberfläche betraf. Bei Zweifel schreiben, nicht streichen.
 2. **Lebende Module** für R1: `shared/wetter-tab/ampelSchreiben.ts`, `organisms/wetter-tab/WetterTabInhalt.svelte` und `WasStehtWoKarte.svelte`, `shared/zustellung-tab/zustellungSpeicherung.ts`, `kanalStilSpeicherung.ts`; die Helfer der Prüfstände (`f9Pruefstand`, `tripMehrreiterPruefstand` u. a.) bleiben, soweit sie lebenden Code laden.
 3. **Prüfkatalog.** Regel je Fall: wieder eintragen mit lebendem Beleg, sonst Streichung begründen. Die Zahl der Fälle sinkt höchstens um begründet gestrichene Fälle. Der Test `test_einstellung_gleich_mail_fallliste.py` wird nicht gelockert, nur die Prüfung der Testdateien wird scharf gestellt.
-4. **R2 Ablauf (Reihenfolge fest):** (1) Vor Beginn prüfen, ob eine andere Sitzung an #3298 oder #3301 arbeitet. (2) **Probe-Löschung in einer Wegwerf-Kopie, nie im Arbeitsbaum:** 42 Dateien und 6 Barrel-Zeilen entfernen, `vite build`, `svelte-check`, Frontend-Tests laufen lassen, rote Testdateien messen. (3) Testtabelle: je rotem Test ein Entscheid (löschen / umstellen / Ersatzbeleg) mit Begründung. (4) Rückbau-Wächter wird RED (Dateien existieren noch). (5) Löschen, Wächter grün. (6) Verwaiste Katalogschlüssel DE/EN und Ratschen mitziehen. `compareHourlyMetricDefs.ts` und `hourlyFriendlyMap.ts` fallen hier; danach wird #3301 mit Nachweis geschlossen und #3298 mit einem Kommentar versehen (Typen und Text-Sperre bleiben dort).
-5. **Ratschen.** `BESTAND_OBERGRENZE` um genau die Zahl der entfernten `BESTAND`-Einträge senken (26 der 42 Dateinamen kommen in der Datei vor; R2 prüft, ob alle in `BESTAND` stehen). `E2E_MIN_SPECS` 86 → 85, `E2E_MIN_EXECUTED_HAUPT` exakt nach CI-Messung, svelte-check-Baseline auf den in CI gemessenen Wert. Nie anheben. Keine Gate-Konfiguration (`openspec.yaml`) ändern.
+4. **R2 Ablauf (Reihenfolge fest):** (1) Vor Beginn prüfen, ob eine andere Sitzung an den Dateien des Restbestands arbeitet. (2) **Probe-Löschung in einer Wegwerf-Kopie, nie im Arbeitsbaum** (am 2026-11-26 für die 11 Dateien und 6 Barrel-Zeilen erfolgt, Ergebnis im Nachtrag; `vite build`, `svelte-check` und der Probe-Revert laufen in CI bzw. vor dem PR erneut). (3) Testtabelle: je rotem Test ein Entscheid (löschen / umstellen / Ersatzbeleg) mit Begründung. (4) Rückbau-Wächter wird RED: `STAND` 1 → 2 (Dateien existieren noch). (5) Löschen, Wächter grün. (6) Verwaiste Katalogschlüssel DE/EN und Ratschen mitziehen. #3301 und #3298 sind bereits geschlossen; es folgt nur ein Nachweis-Kommentar an #3020, kein erneutes Schließen.
+5. **Ratschen.** `BESTAND_OBERGRENZE` um genau die Zahl der entfernten `BESTAND`-Einträge senken (R2: 162 → 155, 7 Einträge), AUSNAHMEN 4 Einträge streichen. E2E-Ratschen `E2E_MIN_*` bleiben unverändert, svelte-check-Baseline nur senken, falls CI weniger misst. Nie anheben. Keine Gate-Konfiguration (`openspec.yaml`) ändern; kein Schritt dieser Spec braucht eine menschliche Sperren-Freigabe (override).
 6. **Katalogschlüssel.** In R2 neu messen; Schlüssel in der Scheibe entfernen, in der der letzte Verwender fällt; `katalog_schluessel_haben_verwender` bleibt ungelockert, Pin-Tests (`deutsch_unveraendert`) nur um entfernte Schlüssel kürzen. Neue Nutzertexte entstehen nicht.
 7. **Altdaten.** Keine Speicherstelle wird geändert. Gespeicherte Altfelder (`telegram_kurzform`, SMS-Schwellen, `channel_layouts` u. a.) bleiben im Bestand (Merge, nie Replace; ADR-0101, CLAUDE.md Daten-Schema-Pflicht); sie verlieren nur ihre tote Bedienoberfläche.
 8. **Abgrenzung zu #3297.** Dessen Löschliste ist durch #3357 erfüllt; #3297 und #3020 werden nicht zusammen geschlossen. #3020 schließt erst nach R2.
@@ -135,13 +176,13 @@ Dazu 6 Barrel-Zeilen: `lib/components/organisms/index.ts` (`OutputLayoutEditor`,
 
 - **Input:** Nutzer öffnet Trip-Hub, Orte-Hub, Trip-Anlegen oder Orte-Anlegen (DE/EN, Computer und Handy), speichert Wetter- und Zustellungs-Einstellungen.
 - **Output:** Identisch zu vorher; kein Element, Text oder Verhalten fällt weg oder kommt hinzu.
-- **Side effects:** R1 mehr und schärfere Tests; R2 42 Dateien weniger im Bundle, kleinere Test- und Katalogmenge, niedrigere Ratschen-Obergrenzen.
+- **Side effects:** R1 mehr und schärfere Tests; R2 11 Dateien weniger im Bundle, kleinere Test- und Katalogmenge, niedrigere Ratschen-Obergrenzen.
 
 ## Definition of Done
 
 - [ ] **R1:** AC-1 bis AC-6 und AC-11 erfüllt; 6 CI-Checks grün; Adversary-Prüfung ohne offenen Befund; jede wiederhergestellte Zusicherung mit Mutationsprobe in der Testtabelle; echte Fehler als eigene Issues; Staging-Rauchtest; live auf Produktion mit Selftest Exit 0.
-- [ ] **R2:** AC-1 und AC-7 bis AC-12 erfüllt; 42 Dateien gelöscht, Nie-löschen-Liste und Liste C unberührt; 6 CI-Checks grün; Adversary-Prüfung ohne offenen Befund; Staging-Rauchtest DE und EN (Computer und Handy); Elementlisten-Abgleich unverändert; live auf Produktion mit Selftest Exit 0.
-- [ ] Ratschen nur gesenkt, keine Änderung der Gate-Konfiguration. #3301 mit Nachweis geschlossen, #3298 kommentiert, #3020 erst nach R2 geschlossen, Doku nachgezogen.
+- [ ] **R2:** AC-1 und AC-7 bis AC-12 erfüllt; die 11 verbliebenen Dateien gelöscht, Nie-löschen-Liste und Liste C unberührt; 6 CI-Checks grün; Adversary-Prüfung ohne offenen Befund; Staging-Rauchtest DE und EN (Computer und Handy); Elementlisten-Abgleich unverändert; live auf Produktion mit Selftest Exit 0.
+- [ ] Ratschen nur gesenkt, keine Änderung der Gate-Konfiguration. #3301 und #3298 (schon geschlossen) mit Nachweis-Kommentar an #3020 belegt, #3020 erst nach R2 geschlossen, Doku nachgezogen.
 
 ## Test Plan
 
@@ -153,17 +194,17 @@ Dazu 6 Barrel-Zeilen: `lib/components/organisms/index.ts` (`OutputLayoutEditor`,
 - [ ] Test 4 (R1): GIVEN Kanal-Vorgaben der Bedienung (Telegram, SMS, Premium-SMS) WHEN der Standard angezeigt und ausgeliefert wird THEN sind beide gleich, in `route` und `vergleich`.
 - [ ] Test 5 (R1): GIVEN die 15 gestrichenen Katalogfälle WHEN `test_einstellung_gleich_mail_fallliste.py` läuft THEN ist jeder Fall mit lebendem Beleg eingetragen oder begründet gestrichen, und die `praefixe`-Prüfung läuft nicht leer.
 - [ ] Test 6 (R1): GIVEN die Testtabelle WHEN der Wächter läuft THEN hat jede der 60 gelöschten Testdateien (57 „umstellen“ = 33 + 24, dazu 3 „löschen“) und jeder der 145 Fälle einen Entscheid, die Zeilen- und die Ausstehend-Anzahl stimmen, jeder Ersatzbeleg ist eine existierende Testdatei mit Testname.
-- [ ] Test 7 (R2): GIVEN die 42 Dateien WHEN der Rückbau-Wächter vor der Löschung läuft THEN ist er rot (Dateien existieren), nach der Löschung grün (keine Datei, kein Import, kein Barrel-Eintrag, Nie-löschen-Liste vorhanden).
-- [ ] Test 8 (R2): GIVEN die Probe-Löschung WHEN die roten Testdateien gemessen sind THEN steht jede genau einmal mit Entscheid in der Testtabelle.
-- [ ] Test 9 (R2): GIVEN Ratschen und Katalog WHEN die Wächter laufen THEN sind `bausteine_waechter`, `test_e2e_positivliste_ratschen_bindung.py`, `katalog_schluessel_haben_verwender` und `context_herkunft_zweige_eingefroren` grün ohne Lockerung.
+- [ ] Test 7 (R2): GIVEN die 11 verbliebenen Dateien WHEN der Rückbau-Wächter mit `STAND` 2 vor der Löschung läuft THEN ist er rot (Dateien existieren), nach der Löschung grün (keine der 11 Dateien, kein Import, kein Barrel-Eintrag, `VORAB_GELOESCHT` und Nie-löschen-Liste vorhanden).
+- [ ] Test 8 (R2): GIVEN die Probe-Löschung WHEN die roten Testdateien gemessen sind THEN steht jede der 13 Dateien plus der Python-Fall genau einmal mit Entscheid in der Testtabelle (Abschnitt R2).
+- [ ] Test 9 (R2): GIVEN Ratschen und Katalog WHEN die Wächter laufen THEN sind `bausteine_waechter` (Obergrenze 155), `test_e2e_positivliste_ratschen_bindung.py`, `katalog_schluessel_haben_verwender` und `context_herkunft_zweige_eingefroren` grün ohne Lockerung.
 - [ ] Test 10 (je Scheibe): GIVEN der Elementlisten-Abgleich vor und nach der Scheibe WHEN beide verglichen werden THEN sind sie in DE und EN identisch; Staging-Rauchtest grün.
 - [ ] Test 11 (je Scheibe): GIVEN der PR WHEN CI und Diff-Prüfung laufen THEN 6 Checks grün, kein Python-/Go-Produktionscode im Diff, bei R2 baut der Probe-Revert (AC-11).
-- [ ] Test 12 (R2): GIVEN R2 ist ausgeliefert WHEN Issues und die fünf Doku-Dateien geprüft werden THEN stimmen Issue-Status, Kommentar an #3298 und Namenssuche (AC-12).
+- [ ] Test 12 (R2): GIVEN R2 ist ausgeliefert WHEN Issues und die sechs Doku-Dateien geprüft werden THEN stimmen Issue-Status, Nachweis-Kommentar an #3020 und Namenssuche (AC-12).
 
 ## Acceptance Criteria
 
 - **AC-1:** Given ein Nutzer mit Trips und Orte-Vergleichen / When er nach jeder Scheibe Trip-Hub, Orte-Hub, Trip-Anlegen und Orte-Anlegen in DE und EN auf Computer und Handy öffnet / Then sind Elemente, Texte und Bedienung unverändert (Scheibe R1 und R2)
-  - Test: `npm run elementliste:abgleich` vor und nach jeder Scheibe identisch (DE/EN); die E2E-Dateien der CI-Positivliste, die einen der Namen nennen, bleiben grün (außer `issue-1093-unit.spec.ts`, das in R2 fällt, weil es nur ein totes Modul prüft); Rauchtest auf Staging je Scheibe.
+  - Test: `npm run elementliste:abgleich` vor und nach jeder Scheibe identisch (DE/EN); die E2E-Dateien der CI-Positivliste, die einen der Namen nennen, bleiben grün und unverändert (die Namen stehen dort nur in Kommentaren; `E2E_MIN_*` unverändert); Rauchtest auf Staging je Scheibe.
 
 - **AC-2:** Given Bestandsdaten mit Altfeldern (`telegram_kurzform`, `sms_threshold`, `channel_layouts`, `show_night_block` u. a.) und ein zweiter Nutzer mit eigenen Daten / When ein Nutzer im Reiter Wetter oder Zustellung (Trip und Orte) ein Feld ändert und speichert, auch nach Fehlern, Wiederholung oder 412 / Then bleiben alle nicht geänderten Felder erhalten, „aus“ bleibt aus, und die Daten des zweiten Nutzers sind unberührt (Scheibe R1)
   - Test: Roundtrip je Feld, Feld-Erhalt, Retry-/412-Fälle, Laden mit zwei Nutzern in der Vorrangreihenfolge; je Zusicherung Mutationsprobe am lebenden Speicherweg macht den Test rot.
@@ -180,34 +221,34 @@ Dazu 6 Barrel-Zeilen: `lib/components/organisms/index.ts` (`OutputLayoutEditor`,
 - **AC-6:** Given die 60 in #3357 gelöschten Testdateien und die 145 entfallenen Fälle / When R1 ausgeliefert ist / Then steht für jede der 60 Dateien (57 „umstellen“ = 33 + 24, 3 „löschen“) und jeden Fall ein Entscheid in der Testtabelle, keine Zusicherung entfällt still, und echte Fehler im lebenden Code haben ein eigenes Issue (Scheibe R1)
   - Test: Rückbau-Wächter prüft beide Richtungen (Tabelle gegen rote Liste), Zeilenzahl und Zahl der ausstehenden Fälle festgehalten, jeder Ersatzbeleg ist Testdatei mit Testname.
 
-- **AC-7:** Given die 42 Dateien aus Scope / When R2 ausgeliefert ist / Then existiert keine von ihnen, kein Quelltext und kein Barrel importiert sie, und die Nie-löschen-Liste ist vorhanden (Scheibe R2)
-  - Test: Rückbau-Wächter rot vor, grün nach der Löschung; `svelte-check` und `vite build` ohne unaufgelöste Importe (Strukturwächter, kein Verhaltensnachweis).
+- **AC-7:** Given die 11 verbliebenen Dateien aus dem Nachtrag (die übrigen 31 der 42 sind bereits gelöscht und werden vom Wächter über `VORAB_GELOESCHT` bzw. die Waisen-Wächter bewacht) / When R2 ausgeliefert ist / Then existiert keine von ihnen, kein Quelltext und kein Barrel importiert sie, und die Nie-löschen-Liste ist vorhanden (Scheibe R2)
+  - Test: Rückbau-Wächter `rework_3020_rueckbau_waechter.test.ts` mit Schalter `STAND` 1 → 2: rot vor, grün nach der Löschung; `rework_3020_probe_loeschung.test.ts` wird nach der Löschung aufgelöst (sein Prüfling existiert nicht mehr, Entscheid in der Testtabelle); `svelte-check` und `vite build` ohne unaufgelöste Importe (Strukturwächter, kein Verhaltensnachweis).
 
 - **AC-8:** Given die Probe-Löschung in einer Wegwerf-Kopie / When die roten Testdateien gemessen sind / Then hat jede einen Entscheid (löschen, umstellen, Ersatzbeleg) mit Begründung in der Testtabelle, und kein Test wird ohne Entscheid gelöscht (Scheibe R2)
-  - Test: Abgleich Testtabelle gegen die Messung; bei „umstellen“ Mutationsprobe am lebenden Modul.
+  - Test: Abgleich der Testtabelle `rework_3020_testtabelle.md` gegen die Messung: Abschnitt R2 enthält genau die 13 roten Testdateien plus den Python-Fall `test_preset_row_color_mix_uses_surface0`, je mit Entscheid und Begründung; bei „umstellen“ Mutationsprobe am lebenden Modul.
 
 - **AC-9:** Given verwaiste Katalogschlüssel in DE und EN / When der letzte Verwender gelöscht ist / Then sind sie in beiden Sprachen entfernt, kein lebender Schlüssel fehlt (Scheibe R2)
   - Test: `katalog_schluessel_haben_verwender` ungelockert grün, Katalog-Parität DE/EN und `keine_hartkodierten_nutzertexte` grün; kein Schlüssel-Rohtext auf Staging in DE und EN.
 
-- **AC-10:** Given die Ratschen (`BESTAND_OBERGRENZE`, `context_herkunft_zweige_eingefroren`, `ein_katalog_ausnahmen.json`, `E2E_MIN_SPECS`, `E2E_MIN_EXECUTED_HAUPT`, svelte-check-Baseline) / When R2 ausgeliefert ist / Then sind sie nur gesenkt bzw. um gelöschte Einträge gekürzt, nie angehoben (Scheibe R2)
-  - Test: `test_e2e_positivliste_ratschen_bindung.py`, `bausteine_waechter.test.ts` grün; Diff der Ratschenwerte im PR (Positivliste 86 → 85).
+- **AC-10:** Given die Ratschen (`BESTAND_OBERGRENZE`, `context_herkunft_zweige_eingefroren`, `ein_katalog_ausnahmen.json`, `E2E_MIN_SPECS`, `E2E_MIN_EXECUTED_HAUPT`, svelte-check-Baseline) / When R2 ausgeliefert ist / Then sind sie nur gesenkt bzw. um gelöschte Einträge gekürzt, nie angehoben: `BESTAND_OBERGRENZE` 162 → 155, AUSNAHMEN 4 und `ein_katalog_ausnahmen.json` 2 Einträge gestrichen, `E2E_MIN_*` unverändert (Scheibe R2)
+  - Test: `test_e2e_positivliste_ratschen_bindung.py`, `bausteine_waechter.test.ts` grün; Diff der Ratschenwerte im PR (Obergrenze 162 → 155, Positivliste unverändert).
 
 - **AC-11:** Given jede Scheibe / When der PR geprüft wird / Then sind alle 6 CI-Checks (`test`, `lint`, `go-test`, `svelte-check`, `frontend-test`, `e2e`) grün, die Scheibe ist einzeln auslieferbar und per Revert zurückrollbar, und der Inhalt aller vier Kanäle bleibt unverändert (Scheibe R1 und R2)
   - Test: CI je PR grün, Selftest Exit 0 nach Auslieferung; Diff enthält keine Datei unter den Wurzelordnern `src/` (Python-Core), `api/`, `internal/`, `cmd/` (`frontend/src/` ist nicht gemeint); bei R2 baut ein Probe-Revert in einer Wegwerf-Kopie (`vite build` Exit 0).
 
-- **AC-12:** Given #3301, #3298, #3020 und die Doku / When R2 ausgeliefert ist / Then ist #3301 mit Nachweis geschlossen, #3298 kommentiert (Typen und Text-Sperre bleiben), #3020 geschlossen, und keine Doku-Datei (`frontend_components.md`, `api_contract.md`, `gates_und_ratschen.md`, `metric_output_matrix.md`, `docs/features/architecture.md`) beschreibt einen gelöschten Baustein als bestehend (Scheibe R2)
-  - Test: Issue-Status und Kommentar; Namenssuche der gelöschten Dateien in den fünf Dokumenten, jeder Treffer ist als entfernt oder historisch erkennbar (Strukturprüfung).
+- **AC-12:** Given #3301, #3298, #3020 und die Doku / When R2 ausgeliefert ist / Then sind #3301 und #3298 (schon geschlossen) mit Nachweis-Kommentar an #3020 belegt, ohne erneutes Schließen, #3020 geschlossen, und keine Doku-Datei (`frontend_components.md`, `api_contract.md`, `gates_und_ratschen.md`, `metric_output_matrix.md`, `docs/features/architecture.md`, `docs/features/epic-1273-compare-one-surface.md`) beschreibt einen gelöschten Baustein als bestehend (Scheibe R2)
+  - Test: Issue-Status und Nachweis-Kommentar an #3020; Namenssuche der gelöschten Dateien in den sechs Dokumenten, jeder Treffer ist als entfernt oder historisch erkennbar (Strukturprüfung).
 
 ## Known Limitations
 
-- **Testfolgen von R2 sind nicht gemessen.** 79 Testdateien nennen einen der 42 Namen, 24 importieren einen, 15 E2E-Dateien nennen einen (Regex, kein Parser); die Probe-Löschung misst die roten Tests. Zahlen zu R1 (20 bis 30 Testdateien) und zum Testanteil sind Schätzungen.
+- **Testfolgen von R2 sind seit dem Nachtrag gemessen** (13 rote Testdateien plus ein Python-Fall, Probe-Löschung 2026-11-26). Zahlen zu R1 (20 bis 30 Testdateien) sind Schätzungen.
 - Die 24 „nur vorhandene Dateien“-Zeilen der Testtabelle sind bisher nur nach Dateiname geprüft; R1 prüft den Fall.
-- Probe-Löschung läuft lokal auf Node 26 (CI Node 22), Python- und Playwright-Tests laufen dort nicht; der CI-Lauf je PR ist maßgeblich.
+- Probe-Löschung läuft lokal auf Node 26 (CI Node 22), Python- und Playwright-Tests laufen dort nicht; der CI-Lauf je PR ist maßgeblich. Die Baseline von 118 roten Dateien ist umgebungsbedingt; verglichen wird nur die Differenz.
 - Wächter und rote Liste müssen in R1 neu entstehen (aus `8b9749601` portiert), sie liegen auf `main` nicht mehr vor.
 - Offener Fehler #3355 (Vollkopie `report_config` im Reiter Wetter) wird nicht behoben; #3358 (Vorlage folgt der Fortbewegung) ebenso nicht.
-- LoC-Limit 250 in beiden Scheiben bewusst überschritten; keine Seiteneffekte außerhalb des Tickets, Liste C bleibt liegen. Vor R2 ist erneut zu prüfen, ob eine andere Sitzung an #3298 oder #3301 arbeitet.
+- LoC-Limit 250 in beiden Scheiben bewusst überschritten (R2 fast nur Löschungen); keine Seiteneffekte außerhalb des Tickets, Liste C bleibt liegen. Vor R2 ist erneut zu prüfen, ob eine andere Sitzung an den Dateien des Restbestands arbeitet.
 - AC-6, AC-7 und AC-12 sind bewusst Strukturwächter (Tests mit `# doc-compliance-test` gekennzeichnet), AC-8 bis AC-10 sind Abgleiche und Ratschen; keine davon ist ein Verhaltensnachweis. Verhalten belegen AC-1 bis AC-5.
-- Der Kommentar in `src/app/metric_catalog.py:1314` nennt `outlookFriendlyCapability.ts` und veraltet mit R2. Er bleibt stehen, weil kein Python-Produktionscode geändert wird; er wird als Nebenbefund an #3298 vermerkt.
+- Der Kommentar in `src/app/metric_catalog.py:1314` nennt `outlookFriendlyCapability.ts` und veraltet mit R2 (Datei ist schon gelöscht). Er bleibt stehen, weil kein Python-Produktionscode geändert wird; er wird als Nebenbefund an #3298 vermerkt.
 - `docs/artifacts/` ist gitignored; was für R1 und R2 gebraucht wird, steht in dieser Spec und der Testtabelle. Die Messlisten braucht nur die Umsetzung in diesem Worktree.
 
 ## Architektur-Entscheidung (ADR)
@@ -219,3 +260,4 @@ Dazu 6 Barrel-Zeilen: `lib/components/organisms/index.ts` (`OutputLayoutEditor`,
 
 - 2026-11-25: Initial spec created
 - 2026-11-25: Version 2.0, vollständig neu gefasst. #3357 (`c8329fea4`) hat 12 der 54 Dateien und 60 Testdateien gelöscht; die Scheiben S1 bis S4 (19/26/9) und AC-3/4/6/11/12 der Fassung 1.0 beziehen sich auf den überholten Stand. Neu: zwei Scheiben R1 (Schutz wiederherstellen) und R2 (Restbestand 42 Dateien löschen).
+- 2026-11-26: Version 2.1, Nachtrag für Scheibe R2. Gemessener Restbestand auf `d7180c9e8`: 31 der 42 Dateien sind durch #3298, #3301, #3366, #3383/#3384/#3385 und #3389 schon gelöscht, es verbleiben 11 Dateien und 6 Barrel-Zeilen. Probe-Löschung: 13 rote Testdateien plus Python-Fall mit Entscheid. Ratsche `BESTAND_OBERGRENZE` 162 → 155, AUSNAHMEN -4, `ein_katalog_ausnahmen.json` -2, E2E-Ratschen unverändert. AC-7 (11 Dateien, `STAND` 1 → 2), AC-8, AC-10 und AC-12 (#3301/#3298 schon geschlossen, nur Nachweis-Kommentar; zusätzlich `epic-1273-compare-one-surface.md`) an den gemessenen Stand angepasst; AC-1 und AC-9 inhaltlich unverändert. Pflegepunkte aus #3385 aufgenommen.

@@ -109,14 +109,16 @@
 		stateOverride?: CompareNewStateOverride;
 		// Issue #2277 S2c: /compare/new?from=<id> — Vorlage fuer die einmalige Vorbelegung.
 		vorlage?: ComparePreset | null;
+		// Issue #3399 S2: serverseitig aufgeloeste Vorlage der Quelle (null ⇒ Standard).
+		vorlageId?: string | null;
 	}
-	let { locations = [], groups, stateOverride, vorlage = null }: Props = $props();
+	let { locations = [], groups, stateOverride, vorlage = null, vorlageId = null }: Props = $props();
 	const seed: CompareNewStateOverride = untrack(() => stateOverride ?? {});
 
 	// Issue #2727 (Epic #2345, DoD-1): der Editor haelt seinen Feldsatz selbst
 	// (Muster TripNewEditor, kein Context). Startwerte: Standard < Vorlage
 	// (einmalig beim Start, bewusst KEIN $effect, #2277 S2c AC-10) < stateOverride.
-	const vorlagenFelder = untrack(() => (vorlage ? feldsatzAusVorlage(vorlage, locations) : {}));
+	const vorlagenFelder = untrack(() => (vorlage ? feldsatzAusVorlage(vorlage, locations, vorlageId) : {}));
 	const wiz = $state<CompareFeldsatz>({
 		...compareFeldsatzStandard(),
 		...vorlagenFelder,
