@@ -128,7 +128,6 @@ const K = {
 	ChannelLimitMarkers: await komp(td('ChannelLimitMarkers.svelte')),
 	PresetRow: await komp(td('PresetRow.svelte')),
 	TablePreview: await komp(td('TablePreview.svelte')),
-	WeatherV2Kanaele: await komp(td('WeatherV2Kanaele.svelte')),
 	TripTabs: await komp(td('TripTabs.svelte')),
 	WaypointsPanelFehler: await variante(td('WaypointsPanel.svelte'), [['let saveError = $state<string | null>(null);', "let saveError = $state<string | null>('Speichern fehlgeschlagen');"]]),
 	EtappenStripHover: await variante(wp('EtappenStrip.svelte'), [['let hoverGap = $state<number | null>(null);', 'let hoverGap = $state<number | null>(0);']]),
@@ -236,7 +235,7 @@ export function layoutRendern(): string {
 		html(K.PresetRow, { id: 'wandern', label: 'Wandern', metricCount: 6, isActive: true, onSelect: nix }),
 		html(K.PresetRow, { id: 'eins', label: 'Eins', metricCount: 1, isActive: false, onSelect: nix }),
 		html(K.TablePreview, { catalog: KATALOG, enabledMap: { temperature: true, gust: true }, friendlyMap: { gust: true }, horizonsMap: { gust: { today: true, tomorrow: false, day_after: false }, temperature: { today: true, tomorrow: false, day_after: false } }, categoryOrder: ['temperature', 'wind'], indicatorCapable: (id: string) => id === 'gust' }),
-		html(K.WeatherV2Kanaele, { channels: { email: true, telegram: true, sms: true }, primaryCount: 10, telegramKurzform: true, onChange: nix, onKurzformChange: nix, availability: { email: true, telegram: true, sms: false } }),
+		// #3383 S1: der Render von trip-detail/WeatherV2Kanaele entfaellt — die Waise ist geloescht.
 		...(['morning', 'evening', 'alert'] as const).map((kind) => html(K.ReportLine, { kind, time: '07:00', channels: ['email', 'telegram'], active: true, alert: kind === 'alert' }))
 		// #3297/#3020: der Render von trip-detail/BriefingScheduleTab entfaellt — die Datei ist geloescht.
 	].join('\n');

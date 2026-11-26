@@ -52,8 +52,8 @@ import assert from 'node:assert/strict';
 
 import { SaveStatus } from '../saveStatusStore.svelte.ts';
 import * as saveStatusStoreModule from '../saveStatusStore.svelte.ts';
-import { weatherSaveGate } from '../../components/trip-detail/weatherSaveGate.ts';
-import { reportConfigChangedByUser } from '../../components/shared/reportConfigDirty.ts';
+// #3383 S1: der Block „Fix-Loop 1" (Komposition reportConfigChangedByUser + weatherSaveGate)
+// entfiel mit den Waisen reportConfigDirty.ts und weatherSaveGate.ts (ohne Produktionsaufrufer).
 
 /** Instanz OHNE Konstruktor-Aufruf (keine `$state(...)`-Initialisierung
  *  nötig) — nur die auf `SaveStatus.prototype` echten Methoden werden
@@ -230,78 +230,6 @@ describe('Issue #1703 S8: ein folgenloser zweiter Commit darf einen gescheiterte
 				'für immer im Fehlerzustand hängen'
 		);
 		assert.equal(c.error, null, 'die alte Meldung darf nach dem Erfolg nicht wieder auftauchen');
-	});
-});
-
-describe('Fix-Loop 1 (Adversary F001, Issue #1269 (c)): Anzeige aus dem Inhalts-Diff, Schreiben aus der Geste', () => {
-	// Regressionsschutz für die BriefingScheduleTab.svelte-Verdrahtung (reine
-	// Svelte-Komponente, in node:test nicht instanziierbar — s. Kommentarblock
-	// oben) — hier als Komposition der ECHTEN, bereits einzeln getesteten
-	// Bausteine (reportConfigChangedByUser, weatherSaveGate, SaveStatus),
-	// exakt dieselbe Reihenfolge wie in der Komponente verdrahtet: erst der
-	// Inhalts-Diff, dann das Gesten-Gate.
-	test(
-		'echte inhaltliche Änderung + Gate "skip" (keine erfasste Geste) → setDirty() statt setSaved()/doSave() ' +
-			'— ehrliche "Nicht gespeichert"-Anzeige, kein stiller Verlust (AC-6/AC-7)',
-		() => {
-			const c = createTestInstance();
-			c.setSaved();
-			const t0 = c.savedAt;
-
-			const baseline = { morning_time: '07:00:00', evening_time: '18:00:00', send_email: true };
-			// Echte inhaltliche Änderung (keine reine Mount-Kanonisierung).
-			const current = { ...baseline, morning_time: '09:00:00' };
-			const changed = reportConfigChangedByUser(baseline, current);
-			assert.equal(changed, true, 'Vorbedingung: dies muss eine ECHTE Änderung sein');
-
-			// F003/F004-Klasse: die Gesten-Erfassung hat diese Änderung NICHT
-			// eingefangen (userTouched blieb false) — Spec: "nicht garantiert
-			// lückenlos". Der Schreibzugriff bleibt gegated (kein PUT), aber die
-			// Zustandsmaschine muss trotzdem sagen: "Nicht gespeichert".
-			const gateDecision = weatherSaveGate({ catalogLoaded: true, userTouched: false });
-
-			if (changed) {
-				if (gateDecision === 'save') {
-					c.setSaved();
-				} else {
-					c.setDirty();
-				}
-			}
-
-			assert.equal(gateDecision, 'skip', 'Vorbedingung: Gate muss hier "skip" liefern (keine Geste erfasst)');
-
-			assert.equal(
-				c.state,
-				'dirty',
-				'AC-7: eine echte Änderung, die das Gesten-Gate verpasst, darf NIE fälschlich "gespeichert" ' +
-					'anzeigen — genau das in der Spec unter "Ausdrücklich verworfen" verbotene Muster ' +
-					'(Anzeige an userTouched koppeln)'
-			);
-			assert.equal(
-				c.savedAt?.getTime(),
-				t0?.getTime(),
-				'kein neuer Speichervorgang fand statt — savedAt darf unverändert bleiben'
-			);
-		}
-	);
-
-	test('echte inhaltliche Änderung + Gate "save" (Geste erfasst) → schreibt (doSave-Pfad bleibt unverändert)', async () => {
-		const c = createTestInstance();
-		const baseline = { morning_time: '07:00:00' };
-		const current = { morning_time: '09:00:00' };
-		const changed = reportConfigChangedByUser(baseline, current);
-		const gateDecision = weatherSaveGate({ catalogLoaded: true, userTouched: true });
-		assert.equal(changed, true);
-		assert.equal(gateDecision, 'save');
-
-		if (changed && gateDecision === 'save') {
-			await c.doSave(async () => {
-				/* echter PUT in der Komponente, hier: echter doSave()-Pfad ohne Netzwerk */
-			});
-		}
-
-		assert.equal(c.state, 'idle');
-		assert.ok(c.savedAt instanceof Date, 'ein echter Speichervorgang muss savedAt setzen');
 	});
 });
 

@@ -9,8 +9,10 @@
 // Mockup und ist per Prüfsumme an den aktuellen Mockup-Stand gebunden. Was hier steht, zeigt das Mockup
 // also wirklich an (Gruppe, Reihenfolge, Zeilentexte, Zähler).
 //
-// Erwartete Werte kommen aus dem Textkatalog (Metrik-Namen wertebereiche.json, Nur-Anzeige-Texte
-// wetter.json), nicht aus einer Kopie: Mockup und App müssen dieselben Wörter zeigen.
+// Erwartete Werte kommen aus den Katalogen (Metrik-Namen aus dem Server-Katalog-Schnappschuss
+// daten/metrik_namen.json, Nur-Anzeige-Texte wetter.json), nicht aus einer Kopie: Mockup und App müssen
+// dieselben Wörter zeigen. #3383 S1: die Frontend-Schlüssel wertebereiche.symbolzeile.* entfielen mit der Waise
+// wertebereicheAnzeige.ts; live steht der Zeilenname aus dem Server-Katalog (label_de/label_en).
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
@@ -38,15 +40,16 @@ type Eintrag = {
 const LISTE: { elemente: Eintrag[] } = JSON.parse(readFileSync(join(REPO, 'docs/context/einstellungen_neu/elementliste.json'), 'utf-8'));
 const kat = (sprache: 'de' | 'en', bereich: string): Record<string, string> =>
 	JSON.parse(readFileSync(join(MSG, sprache, `${bereich}.json`), 'utf-8'));
-const WB_DE = kat('de', 'wertebereiche');
-const WB_EN = kat('en', 'wertebereiche');
 const WT_DE = kat('de', 'wetter');
 const WT_EN = kat('en', 'wetter');
+const METRIK_NAMEN: { namen: { id: string; de: string; en: string }[] } = JSON.parse(
+	readFileSync(join(REPO, 'docs/context/einstellungen_neu/daten/metrik_namen.json'), 'utf-8')
+);
 
 /** Reihenfolge wie die App (_REITER_WETTER): Nacht, Tages-Tief, Tages-Hoch. */
 const NEU = ['wind_chill_night', 'wind_chill_day_low', 'wind_chill_day_high'] as const;
-const nameDe = (id: string) => WB_DE[`wertebereiche.symbolzeile.${id}`];
-const nameEn = (id: string) => WB_EN[`wertebereiche.symbolzeile.${id}`];
+const nameDe = (id: string) => METRIK_NAMEN.namen.find((n) => n.id === id)?.de;
+const nameEn = (id: string) => METRIK_NAMEN.namen.find((n) => n.id === id)?.en;
 
 /** Untertitel wie im Mockup: `[Einheit, Hinweis].join(' · ')`, Hinweis = Nur-Anzeige-Hinweis des Katalogs. */
 const UNTERTITEL = `°C · ${WT_DE['wetter.untertitel.nur_anzeige']}`;
@@ -74,8 +77,8 @@ function zeile(liste: Eintrag[], name: string): Eintrag[] {
 describe('#3250 AC-1/AC-2: Gruppe Temperatur im Mockup (Trip) wie in der App', () => {
 	test('Katalog kennt alle drei Namen (Vorbedingung)', () => {
 		for (const id of NEU) {
-			assert.ok(nameDe(id), `DE-Name ${id} fehlt in wertebereiche.json`);
-			assert.ok(nameEn(id), `EN-Name ${id} fehlt in wertebereiche.json`);
+			assert.ok(nameDe(id), `DE-Name ${id} fehlt in daten/metrik_namen.json`);
+			assert.ok(nameEn(id), `EN-Name ${id} fehlt in daten/metrik_namen.json`);
 		}
 	});
 

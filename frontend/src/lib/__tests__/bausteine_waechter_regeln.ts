@@ -599,13 +599,7 @@ const BESTAND: string[] = [
 	'lib/components/shared/versand-tab/VTLaufzeitVergleich.svelte',
 	'lib/components/shared/versand-tab/VTNextBriefing.svelte',
 	'lib/components/shared/versand-tab/VTSchedulePlan.svelte',
-	'lib/components/shared/weather-metrics-tab/AggregationMetricRow.svelte',
-	'lib/components/shared/weather-metrics-tab/MultiSymbolMetricRow.svelte',
-	'lib/components/shared/weather-metrics-tab/ThresholdMetricRow.svelte',
-	'lib/components/shared/weather-metrics-tab/WeatherV2Grundauswahl.svelte',
-	'lib/components/shared/weather-metrics-tab/WeatherV2PresetBar.svelte',
 	'lib/components/shared/zustellung-tab/ZustellungTab.svelte',
-	'lib/components/trip-detail/AboutOutputLayout.svelte',
 	'lib/components/trip-detail/ActiveMetricRow.svelte',
 	'lib/components/trip-detail/BucketSection.svelte',
 	'lib/components/trip-detail/BucketSectionOff.svelte',
@@ -623,7 +617,6 @@ const BESTAND: string[] = [
 	'lib/components/trip-detail/TripStageRow.svelte',
 	'lib/components/trip-detail/TripTabs.svelte',
 	'lib/components/trip-detail/WaypointsPanel.svelte',
-	'lib/components/trip-detail/WeatherV2Kanaele.svelte',
 	'lib/components/trip-detail/waypoints/EtappenStrip.svelte',
 	'lib/components/trip-detail/waypoints/MapCanvas.svelte',
 	'lib/components/trip-detail/waypoints/PauseStageView.svelte',
@@ -720,7 +713,9 @@ const BESTAND: string[] = [
 // #3047 Runde 7 (p11): AlarmeScheduleTab.svelte entfernt (→ 197).
 // #3190: SavePresetDialog.svelte nach SEITEN_SCOPE (Inline-Karte aus Bausteinen) (→ 196).
 // #3366: Layout-Reiter LTCapNote, LTChannelPicker, LTCutLine, LayoutTab geloescht (Waisen) (188 → 184).
-const BESTAND_OBERGRENZE = 184; // #3297/#3020: sieben Alt-Editor-Bausteine geloescht (vorher 195, #3276)
+// #3383 S1: AggregationMetricRow, MultiSymbolMetricRow, ThresholdMetricRow, WeatherV2Grundauswahl,
+// WeatherV2PresetBar, AboutOutputLayout, WeatherV2Kanaele geloescht (Waisen) (184 → 177).
+const BESTAND_OBERGRENZE = 177; // #3297/#3020: sieben Alt-Editor-Bausteine geloescht (vorher 195, #3276)
 
 /** Token-Verstöße je Baustein-Datei (Ist-Stand 2026-11-10, ADR-0112). Darf nur sinken. */
 const AUSNAHMEN: Ausnahmen = {

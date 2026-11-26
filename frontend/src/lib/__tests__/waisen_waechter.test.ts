@@ -138,6 +138,10 @@ function aufloesen(spez: string, von: string, menge: Set<string>): string | null
 
 function kanten(src: string, rel: string, dateien: string[], menge: Set<string>): string[] {
 	const text = readFileSync(join(src, rel), 'utf8');
+	// Fail-closed (#3383 AC-4 e): die Array-Form würde KANTE still übergehen und Ziele als Waise melden.
+	if (/import\.meta\.glob\(\s*\[/.test(text)) {
+		throw new Error(`${rel}: Array-Form von import.meta.glob nicht unterstützt — Wächterlogik ergänzen`);
+	}
 	const aus: string[] = [];
 	for (const m of text.matchAll(KANTE)) {
 		if (m[2] !== undefined) {

@@ -28,16 +28,7 @@
     "frontend/src/lib/components/shared/mailInhaltKonstanten.ts": {
       "FRONTEND_LISTE": 1
     },
-    "frontend/src/lib/components/shared/weather-metrics-tab/WeatherV2Grundauswahl.svelte": {
-      "FRONTEND_LISTE": 1
-    },
     "frontend/src/lib/components/shared/weather-metrics-tab/compareMetricOrder.ts": {
-      "FRONTEND_LISTE": 1
-    },
-    "frontend/src/lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts": {
-      "FRONTEND_LISTE": 1
-    },
-    "frontend/src/lib/components/shared/weather-metrics-tab/wertebereicheAnzeige.ts": {
       "FRONTEND_LISTE": 1
     },
     "frontend/src/lib/components/shared/wetter-tab/ampelModell.ts": {
@@ -247,5 +238,5 @@
       "VERARBEITUNG_AUSSEN": 1
     }
   },
-  "hoechststand": 433
+  "hoechststand": 430
 }

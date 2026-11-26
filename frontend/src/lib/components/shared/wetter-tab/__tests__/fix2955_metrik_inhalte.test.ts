@@ -231,10 +231,9 @@ describe('AC-4: Wertebereiche und Alarme-Seite nutzen den Katalognamen', () => {
 		const { eig } = await umgebung();
 		for (const [id, name] of Object.entries(NAMEN)) assert.equal(eig[id].label_de, name, id);
 	});
-	test('Wertebereiche (Symbolzeile) und Alarme-Seite zeigen denselben Namen', () => {
-		const w = de('wertebereiche');
-		assert.equal(w['wertebereiche.symbolzeile.temperature_night'], NAMEN.temperature_night);
-		assert.equal(w['wertebereiche.symbolzeile.wind_chill_night'], NAMEN.wind_chill_night);
+	// #3383 S1: die Symbolzeilen-Schluessel (wertebereiche.symbolzeile.*) entfielen mit der Waise
+	// wertebereicheAnzeige.ts; der Name kommt live aus dem Katalog /api/metrics (Test oben).
+	test('Alarme-Seite zeigt denselben Namen', () => {
 		assert.equal(de('alarme')['alarme.metrik.humidity'], NAMEN.humidity);
 	});
 });
