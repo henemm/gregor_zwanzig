@@ -1,6 +1,6 @@
 // TDD RED — Issue #3020 R1: Tests zu lebendem Verhalten hängen nicht mehr an toten
 // Bausteinen. Je Nutzer läuft die ECHTE Testdatei in einem eigenen Prozess, für den die
-// 42 Dateien des Restbestands nicht existieren. Fällt mit R2 weg (dann sind sie gelöscht).
+// Dateien des Restbestands (rework_3020_umfang.ts) nicht existieren. Fällt mit R2 weg (dann sind sie gelöscht).
 // Pfadregel #1409: alle Pfade relativ zu DIESER Datei.
 
 import { test, describe } from 'node:test';

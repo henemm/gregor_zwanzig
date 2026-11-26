@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { RESTBESTAND, RESTBESTAND_ANZAHL, BARREL, BLEIBT } from './rework_3020_umfang.ts';
+import { RESTBESTAND, RESTBESTAND_ANZAHL, SPEC_ANZAHL, DURCH_WAISEN_ENTFERNT, BARREL, BLEIBT } from './rework_3020_umfang.ts';
 import { GELOESCHT, ENTFALLEN, KATALOG } from './rework_3020_rote_liste.ts';
 
 const STAND = Number(process.env.GZ_3020_STAND ?? 1);
@@ -31,7 +31,7 @@ const AUSSTEHEND_3355 = 0;
 /** `todo`-Fälle einer Testdatei, die auf #3355 verweist. */
 const todos3355 = (q: string): string[] => (q.includes('#3355') ? [...q.matchAll(/\btodo:\s*[A-Z_'"`]/g)].map((m) => m[0]) : []);
 /** Dürfen vor R2 schon fehlen: auf main gelöscht durch #3301 (02f684e86), #3298 (9bf9c2dbf) und #3366 (PR #3386,
- *  Layout-Reiter samt Hilfsdateien). Nur die Existenzprüfung entfällt, die Menge der 42 bleibt. */
+ *  Layout-Reiter samt Hilfsdateien). Nur die Existenzprüfung entfällt, die Menge bleibt. */
 const VORAB_GELOESCHT = [
 	'compare/compareHourlyMetricDefs.ts',
 	'compare/hourlyFriendlyMap.ts',
@@ -97,6 +97,7 @@ describe('Umfang (Vakuum-Schutz)', () => {
 	test('restbestand_42_ohne_dopplung', () => {
 		assert.equal(RESTBESTAND.length, RESTBESTAND_ANZAHL);
 		assert.equal(new Set(RESTBESTAND).size, RESTBESTAND_ANZAHL);
+		assert.equal(RESTBESTAND_ANZAHL + DURCH_WAISEN_ENTFERNT, SPEC_ANZAHL, '42 der Spec = Restbestand + durch #3383/#3384 entfernt');
 	});
 	test('rote_liste_60_145_15_ohne_dopplung', () => {
 		assert.equal(new Set(GELOESCHT.map(([, f]) => f)).size, 60);

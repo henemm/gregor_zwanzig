@@ -15,6 +15,12 @@ Abschnitt Mutationsproben). Bei „beleg“ ist „–“ = in R1 nicht verfäls
 Ausstehend zu #3355: 0. Die vier Fälle laufen ohne `todo` grün (Ursache mit 71c27e117 behoben; V1 baut den alten Fehler
 wieder ein und macht sie rot).
 
+R2-Restbestand: 26 der 42 Spec-Dateien. 16 haben die Waisen-Scheiben #3383 (S1) und #3384 (S4) bereits auf main entfernt
+(compare: `layoutPreviewRows.ts`, `versandPropsAus.ts`, `wetterMetrikenPropsAus.ts`; `molecules/GrundauswahlLeerHinweis.svelte`;
+`shared/reportConfigDirty.ts`; neun Dateien in `shared/weather-metrics-tab/`; trip-detail: `WeatherV2Kanaele.svelte`,
+`weatherSaveGate.ts`); ihre Löschung und Importfreiheit bewacht `trip_pfad_altfeld_loeschnachweis_3297.test.ts`.
+`rework_3020_umfang.ts` führt nur noch die 26 und prüft 26 + 16 = 42.
+
 ## Zählung
 
 | Art | Zeilen | beleg | neu | ausstehend | streichen |
