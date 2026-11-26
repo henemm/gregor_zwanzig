@@ -17,6 +17,11 @@ AC-Zuordnung (RED = schlaegt vor der Umsetzung fehl):
 """
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
+from pathlib import Path
+
 import pytest
 
 from output.renderers.channel_layout import selection_gap_notice
@@ -24,7 +29,7 @@ from output.renderers.comparison import render_comparison_text
 from output.renderers.email.compare_html import CV2_ZEILEN, render_compare_html
 from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 from tests.helpers.compare_order import (
-    html_uebersicht_labels, klartext_uebersicht_labels,
+    _HTML_LABEL_RE, WARN_LABEL, html_uebersicht_labels, klartext_uebersicht_labels,
 )
 from tests.unit.test_compare_metric_order import _result
 
@@ -200,3 +205,82 @@ def test_abgeleitete_sichten_unveraendert():
     assert set(_FORMAT_SNAPSHOT) | {"thunder_max", "precip_type"} == set(keys)
     for key, (wert, erwartet) in _FORMAT_SNAPSHOT.items():
         assert fmt[key](wert) == erwartet, f"{key}: {fmt[key](wert)!r} != {erwartet!r}"
+
+
+# ---------------------------------------------------------------------------
+# AC-4 (Fix-Loop 1, F001): die Pruefung feuert dort, wo sie wirkt -- beim
+# Import von ``comparison``. Eigener Interpreter, damit der Import wirklich
+# neu laeuft (kein Mock, kein patch).
+# ---------------------------------------------------------------------------
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+
+_IMPORT_SKRIPT = """
+from output.renderers.email import compare_html
+assert isinstance(compare_html.CV2_ZEILEN, list)
+compare_html.CV2_ZEILEN.append(
+    {"key": "erfundene_zeile", "metric_id": "temperature", "aggregation": "max"}
+)
+import output.renderers.comparison
+"""
+
+
+def _import_lauf(skript: str) -> subprocess.CompletedProcess:
+    env = dict(os.environ)
+    env["PYTHONPATH"] = os.pathsep.join(
+        [str(_REPO_ROOT / "src"), str(_REPO_ROOT), env.get("PYTHONPATH", "")]
+    )
+    return subprocess.run(
+        [sys.executable, "-c", skript], cwd=_REPO_ROOT, env=env,
+        capture_output=True, text=True, timeout=120,
+    )
+
+
+def test_import_pruefung_feuert_bei_abweichung():
+    # Gegenprobe: ohne Manipulation importiert das Modul sauber.
+    sauber = _import_lauf("import output.renderers.comparison")
+    assert sauber.returncode == 0, f"Sauberer Import scheitert:\n{sauber.stderr}"
+
+    lauf = _import_lauf(_IMPORT_SKRIPT)
+    assert lauf.returncode != 0, (
+        "Import von comparison muss bei einer CV2-Zeile ohne Format scheitern, "
+        f"lief aber durch.\nstdout: {lauf.stdout}\nstderr: {lauf.stderr}"
+    )
+    assert "ValueError" in lauf.stderr, lauf.stderr
+    assert "erfundene_zeile" in lauf.stderr, lauf.stderr
+
+
+# ---------------------------------------------------------------------------
+# AC-1 (Fix-Loop 1, F002): Schalter "Amtliche Warnungen" aus -> HTML ohne
+# Warnzeile und HTML-Zeilen == Klartext-Zeilen; an -> Warnzeile zuerst.
+# ---------------------------------------------------------------------------
+
+def _html_rohlabels(html: str) -> list[str]:
+    """Alle Zeilenkoepfe der HTML-Uebersicht inkl. Warnzeile."""
+    return _HTML_LABEL_RE.findall(html)
+
+
+@pytest.mark.parametrize(
+    "enabled_metrics", [None, ["warn", "temp_max"]], ids=["none", "mit_warn"],
+)
+def test_warnschalter_aus_ohne_warnzeile(enabled_metrics):
+    ergebnis = _result()
+    aus = render_compare_html(
+        ergebnis, enabled_metrics=enabled_metrics,
+        preset={**PRESET_ALLGEMEIN, "official_alerts_enabled": False},
+    )
+    text = render_comparison_text(ergebnis, enabled_metrics=enabled_metrics, preset=None)
+    text_labels = klartext_uebersicht_labels(text)
+
+    roh_aus = _html_rohlabels(aus)
+    assert roh_aus, "Vakuum-Schutz: HTML-Uebersicht ohne Zeilen"
+    assert WARN_LABEL not in roh_aus, f"Warnzeile trotz Schalter aus: {roh_aus}"
+    assert roh_aus == text_labels, f"HTML: {roh_aus}\nKlartext: {text_labels}"
+
+    an = render_compare_html(
+        ergebnis, enabled_metrics=enabled_metrics,
+        preset={**PRESET_ALLGEMEIN, "official_alerts_enabled": True},
+    )
+    roh_an = _html_rohlabels(an)
+    assert roh_an and roh_an[0] == WARN_LABEL, f"Warnzeile nicht zuerst: {roh_an}"
+    assert roh_an[1:] == roh_aus
