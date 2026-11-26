@@ -115,3 +115,4 @@ Test (TDD RED vor dem Fix): Guard im Test-Modus installieren, httpx-Sentinel wie
 ## Changelog
 
 - 2026-11-26: Initial spec created
+- 2026-11-26: Umsetzung — Testdatei heißt wegen Testnamen-Gate `tests/tdd/test_egress_ensemble_host_freigabe.py` (statt Arbeitstitel `test_issue_3348_ensemble_egress.py`); Go-Test für den Host in `internal/egress/inventory_ensemble_test.go`. Tatsächlicher Umfang: 3 Zeilen Produktionscode, ~177 Zeilen Tests.
