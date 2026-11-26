@@ -115,3 +115,39 @@ export async function ersteAngehakte(karte: Locator, stelle: string, ohne: strin
 	}
 	throw new Error(`keine angehakte, bedienbare Zelle in ${stelle}`);
 }
+
+/** Stilpruefung jeder Marke `[data-slot="et-marke"]` der Karte (#3375 F001, AC-1/AC-4/AC-6 „sichtbar“): berechnete
+ *  `display`/`visibility`, effektive Deckkraft (Produkt der `opacity` von Marke und allen Vorfahren bis zur Wurzel)
+ *  und Alpha der Schriftfarbe (`color`, `-webkit-text-fill-color`). Liefert Verstoesse als `metrik/stelle „Text“: Grund`. */
+export async function markenStilVerstoesse(karte: Locator): Promise<string[]> {
+	return karte.evaluate((k) => {
+		/** Alpha einer berechneten Farbe: rgb()/rgba() (Komma- oder Leerzeichenform), color(srgb … / a), oklch(… / a), transparent. */
+		const alpha = (farbe: string): number => {
+			const f = farbe.trim().toLowerCase();
+			if (f === 'transparent') return 0;
+			const m = f.match(/^[a-z-]+\((.*)\)$/);
+			if (!m) return 1;
+			const a = m[1].includes('/') ? m[1].split('/')[1] : m[1].includes(',') ? m[1].split(',')[3] : undefined;
+			if (a === undefined) return 1;
+			const n = parseFloat(a.trim());
+			if (Number.isNaN(n)) return 1;
+			return a.trim().endsWith('%') ? n / 100 : n;
+		};
+		const verstoesse: string[] = [];
+		for (const el of Array.from(k.querySelectorAll('[data-slot="et-marke"]')) as HTMLElement[]) {
+			const id = `${el.closest('[data-slot="et-zeile"]')?.getAttribute('data-metrik')}/${el.closest('[data-slot="et-zelle"]')?.getAttribute('data-stelle')}`;
+			const s = getComputedStyle(el);
+			const v: string[] = [];
+			if (s.display === 'none') v.push('display none');
+			if (s.visibility !== 'visible') v.push(`visibility ${s.visibility}`);
+			let deckkraft = 1;
+			for (let e: Element | null = el; e; e = e.parentElement) deckkraft *= parseFloat(getComputedStyle(e).opacity);
+			if (!(deckkraft > 0)) v.push(`effektive Deckkraft ${deckkraft}`);
+			if (!(alpha(s.color) > 0)) v.push(`Schriftfarbe ohne Deckkraft: ${s.color}`);
+			const fuellung = s.getPropertyValue('-webkit-text-fill-color');
+			if (fuellung && !(alpha(fuellung) > 0)) v.push(`Textfuellung ohne Deckkraft: ${fuellung}`);
+			for (const t of v) verstoesse.push(`${id} „${(el.textContent ?? '').trim()}“: ${t}`);
+		}
+		return verstoesse;
+	});
+}
