@@ -1,7 +1,7 @@
 // Issue #3020 R1 (E137; Spec docs/specs/modules/rework_3020_altbausteine_entfernen.md, AC-6) — Fehler #3361:
 // Anlegen, Karte „Was steht wo“ bedient (ein Haken, den 3-Tages-Ausblick fasst niemand an), danach in Zustellung
 // nur das Morgen-Briefing: der Ausblick steht in keinem Briefing. Soll (#3155 AC-7, #3122 AC-9): wer den Ausblick nicht
-// selbst gewählt hat, bekommt ihn in dem Briefing, das es gibt. Ausstehend (`todo`), hier nicht behoben.
+// selbst gewählt hat, bekommt ihn in dem Briefing, das es gibt. #3361 behebt ihn.
 //
 // Kette ohne Nachbau, für zwei Nutzer mit je eigenem Bestand: echte Vorschau des Python-Kerns
 // (build_placements_preview) -> ECHTES Instanz-Skript der Karte (Haken) -> echter Anlege-Rumpf (Trip und Orte) ->
@@ -104,7 +104,7 @@ describe('E137: Ausblick folgt im Anlegen der Zustellung', () => {
 			for (const r of vorschau(NUTZER.map((n) => [n, kind, RUMPF[kind](true)]))) assert.deepEqual(r.ausblick, ['morning']);
 		});
 
-		test(`Anlegen, Karte bedient ohne Ausblick-Wahl, danach nur Morgen: Ausblick steht im Morgen-Briefing (${kind})`, { todo: 'Fehler #3361: der POST trägt den Ausblick fest als Abend' }, async () => {
+		test(`Anlegen, Karte bedient ohne Ausblick-Wahl, danach nur Morgen: Ausblick steht im Morgen-Briefing (${kind})`, async () => {
 			const erste = vorschau(NUTZER.map((n) => [n, kind, RUMPF[kind](false)]));
 			const staende = await Promise.all(erste.map((v) => karteMitEinemHaken(kind, v.antwort)));
 			const r = vorschau(NUTZER.map((n, i) => [n, kind, RUMPF[kind](true, staende[i])]));

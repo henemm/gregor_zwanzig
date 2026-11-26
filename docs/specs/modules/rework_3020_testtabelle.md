@@ -26,9 +26,9 @@ R2-Restbestand: 26 der 42 Spec-Dateien. 16 haben die Waisen-Scheiben #3383 (S1) 
 | Art | Zeilen | beleg | neu | ausstehend | streichen |
 |---|---|---|---|---|---|
 | G01 bis G60 (gelöschte Testdateien) | 60 | 27 | 29 | 3 | 1 |
-| E001 bis E145 (entfallene Fälle) | 145 | 72 | 51 | 5 | 17 |
+| E001 bis E145 (entfallene Fälle) | 145 | 72 | 52 | 4 | 17 |
 | Katalogfälle | 15 | 0 | 15 | 0 | 0 |
-| Summe | 220 | 99 | 95 | 8 | 18 |
+| Summe | 220 | 99 | 96 | 7 | 18 |
 
 Ausstehende Zeilen und ihr Issue:
 
@@ -39,7 +39,6 @@ Ausstehende Zeilen und ihr Issue:
 - `E103`: #3358
 - `E104`: #3358
 - `E105`: #3358
-- `E137`: #3361
 
 ## Gelöschte Testdateien (G01 bis G60)
 
@@ -246,7 +245,7 @@ Ausstehende Zeilen und ihr Issue:
 | `E134` | neu | F501 am Reiter Wetter: veralteter, nie gespeicherter Reiter bekommt nach Teil-Erfolg 412, Fremdänderung bleibt | `frontend/src/lib/components/trip-detail/__tests__/trip_retry_fehlerpfade_kein_verlust.test.ts::F501 Teil-Erfolg: ein NIE gespeicherter, veralteter Reiter bekommt danach 412 — Fremdaenderung bleibt, Eingabe nicht still geschrieben` | M8 rot, M11 rot, M12 rot, R20 rot, GS19 rot |
 | `E135` | beleg | Die lebenden Schreiber senden outlook_metrics und outlook_metric_formats in keiner Tiefe (auch nicht null) | `frontend/src/lib/components/trip-new/__tests__/trip_pfad_ohne_altfelder_3297.test.ts::Reiter Wetter: beide PUTs ohne Altschluessel, Bestand sonst erhalten`; `frontend/src/lib/components/shared/wetter-tab/__tests__/was_steht_wo_speicherung.test.ts::Trip: report_config und display_config.show_night_block` | – |
 | `E136` | neu | Zurückgekehrter Reiter Zustellung zeigt die erste, ungesicherte Eingabe; zwei Änderungen landen beide | `frontend/src/lib/components/trip-detail/__tests__/trip_retry_reiterwechsel_eingabe_bleibt.test.ts::Zustellung: der zurueckgekehrte Reiter zeigt die erste Eingabe; zweite Aenderung ⇒ beide auf dem Server` | M7 rot, M8 rot, M11 rot, M12 rot, R20 rot, C5 rot, U4 rot, GS18 rot, weitere |
-| `E137` | ausstehend | #3361: Karte bedient, danach „nur Morgen“ ⇒ der POST trägt outlook_reports evening, der Ausblick steht in keinem Briefing. Unbedient gilt die Regel (E138 bis E140) | `frontend/src/lib/components/trip-new/__tests__/anlegen_ausblick_vorbelegung_folgt_zustellung.test.ts::Anlegen, Karte bedient ohne Ausblick-Wahl, danach nur Morgen: Ausblick steht im Morgen-Briefing (${kind})` | – |
+| `E137` | neu | #3361 behoben: Karte bedient, danach „nur Morgen“ ⇒ der Ausblick steht im Morgen-Briefing (Anlege-Stand ohne nie gewählten Ausblick). Unbedient gilt die Regel (E138 bis E140) | `frontend/src/lib/components/trip-new/__tests__/anlegen_ausblick_vorbelegung_folgt_zustellung.test.ts::Anlegen, Karte bedient ohne Ausblick-Wahl, danach nur Morgen: Ausblick steht im Morgen-Briefing (${kind})` | M1 rot: `ohneAusblick` in `uebernehmen` entfernt (#3361) |
 | `E138` | beleg | Vorbelegung beide Briefings ⇒ abends liegt in Python; die Anlage schreibt die Kern-Tabelle (zwei Nutzer) | `tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac1_outlook_reports_nach_vorbelegung`; `tests/tdd/test_placements_tabelle_endpoint.py::test_ac9_vorbelegung_ausblick_trip_und_orte`; `internal/handler/briefing_anlage_tabelle_3237_test.go::TestAnlage3237TripUndOrteSchreibenKernTabelleZweiNutzer` | – |
 | `E139` | beleg | Nur Abend ⇒ evening (Regel ist flächengleich, der Fall evening steht bei compare) | `tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac1_outlook_reports_nach_vorbelegung` | – |
 | `E140` | beleg | Nur Morgen ⇒ morning, für Trip und Orte, in Tabelle und Ausgabe | `tests/tdd/test_3237_placements_aus_grundauswahl.py::test_ac1_outlook_reports_nach_vorbelegung`; `tests/tdd/test_placements_aufloesung.py::test_ac9_vorbelegung_abends_bei_nur_morgen_morgens` | – |
@@ -352,7 +351,6 @@ sie ab (am Code gelesen, nicht auf Staging gemessen). Fachkurzform je Größe in
 | Trip mit `display_config: {}`: erstes Speichern der Tabelle tauscht die Größen | #3367 |
 | Vorlage im Hub: Bestandsfolge oder Vorlagen-Folge, Produktfrage | #3368 |
 | Vorlage folgt der Fortbewegung nicht (E101, E103 bis E105) | #3358 |
-| Anlegen: Ausblick in keinem Briefing (E137), Trip und Orte | #3361 |
 | Wetter-Änderung geht beim Verlassen verloren, wenn der Zustellungs-Flush den zweiten Wetter-PUT überholt (`todo` in `trip_wetter_zustellung_ein_controller`) | #3381 |
 
 Nebenbefunde ohne Issue: B3 tote Speicherfunktionen (`erstelleVersandVergleichSpeicherung`,
