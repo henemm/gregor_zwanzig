@@ -1,0 +1,61 @@
+{
+  "verified_commit": "94c5d892e870575bafbf4b5248b0211993099344",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/, /trips, /trips/new, /compare, /compare/new, /locations",
+      "evidence": "e2e_frontend_browser_gate.py frontend-only gegen Staging 94c5d892e: 6 Kernseiten angemeldet ohne Konsolenfehler geladen (Exit 0). R1 aendert keinen Produktionscode (nur __tests__, tests/, docs/), daher keine Element-/Textaenderung.",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-11",
+      "status": "PASS",
+      "url": "/api/health",
+      "evidence": "PR #3391 mit allen CI-Checks gruen gemergt; Staging /api/health commit=94c5d892e870575bafbf4b5248b0211993099344, python_core ok; Diff ohne src/, api/, internal/, cmd/",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-2..AC-6",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "Reine Test-Zusicherungen (R1), in CI frontend-test und test gruen; lokal Feature-Tests 1111 pass / 0 fail, Frontend-Volllauf 12093 pass / 0 fail, Python-Feature-Tests 91 pass; Adversary VERIFIED",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-26T07:27:50.769631+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: #3020 R1 nur Tests; 6 Kernseiten auf Staging ohne Fehler, CI gruen",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: #3020 R1 nur Tests; 6 Kernseiten auf Staging ohne Fehler, CI gruen",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-26T07:27:50.769631+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
