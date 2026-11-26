@@ -1,6 +1,6 @@
 package mcp
 
-// Werkzeuge ort_suchen und wetter (Issue #3281). Werkzeug- und Feldnamen
+// Werkzeuge ort_suchen, wetter (Issue #3281) und regen_nowcast (Issue #3398). Werkzeug- und Feldnamen
 // sind Protokoll und bleiben unuebersetzt; Beschreibungen und Fehlertexte
 // kommen aus dem Katalog (mcp.json) in der Sprache des Kontos. Die Antworten
 // enthalten ausschliesslich Orts- und Wetterdaten.
@@ -36,6 +36,8 @@ func werkzeuge(lang i18n.Lang) []map[string]any {
 	nurLesen := map[string]any{"readOnlyHint": true, "openWorldHint": true}
 	text := feld("string", "mcp.feld.text")
 	text["maxLength"] = resolver.OrtsucheMaxZeichen
+	felder := feld("array", "mcp.feld.felder")
+	felder["items"] = map[string]any{"type": "string"}
 	return []map[string]any{
 		{"name": "ort_suchen", "description": i18n.T(lang, "mcp.werkzeug.ort_suchen", nil), "annotations": nurLesen,
 			"inputSchema": map[string]any{"type": "object", "properties": map[string]any{"text": text},
@@ -44,7 +46,11 @@ func werkzeuge(lang i18n.Lang) []map[string]any {
 			"inputSchema": map[string]any{"type": "object", "properties": map[string]any{
 				"ort": feld("string", "mcp.feld.ort"), "lat": feld("number", "mcp.feld.lat"),
 				"lon": feld("number", "mcp.feld.lon"), "von": feld("string", "mcp.feld.von"),
-				"bis": feld("string", "mcp.feld.bis")}}},
+				"bis": feld("string", "mcp.feld.bis"), "felder": felder}}},
+		{"name": "regen_nowcast", "description": i18n.T(lang, "mcp.werkzeug.regen_nowcast", nil), "annotations": nurLesen,
+			"inputSchema": map[string]any{"type": "object", "properties": map[string]any{
+				"ort": feld("string", "mcp.feld.ort"), "lat": feld("number", "mcp.feld.lat"),
+				"lon": feld("number", "mcp.feld.lon")}}},
 	}
 }
 
@@ -64,6 +70,8 @@ func (s sitzung) werkzeugAufrufen(name string, args map[string]any) (string, boo
 		return s.ortSuchen(args)
 	case "wetter":
 		return s.wetter(args)
+	case "regen_nowcast":
+		return s.regenNowcast(args)
 	}
 	return s.t("mcp.fehler.werkzeug", i18n.Args{"name": name}), true
 }
@@ -71,6 +79,28 @@ func (s sitzung) werkzeugAufrufen(name string, args map[string]any) (string, boo
 func textArg(args map[string]any, name string) string {
 	v, _ := args[name].(string)
 	return strings.TrimSpace(v)
+}
+
+// felderArg: Feldauswahl als Liste oder Komma-Text; Namen bleiben unuebersetzt.
+func felderArg(args map[string]any) []string {
+	var roh []string
+	switch v := args["felder"].(type) {
+	case string:
+		roh = strings.Split(v, ",")
+	case []any:
+		for _, x := range v {
+			if name, ok := x.(string); ok {
+				roh = append(roh, name)
+			}
+		}
+	}
+	var felder []string
+	for _, name := range roh {
+		if name = strings.TrimSpace(name); name != "" {
+			felder = append(felder, name)
+		}
+	}
+	return felder
 }
 
 func zahlArg(args map[string]any, name string) (float64, bool) {
@@ -125,6 +155,7 @@ var eingabeTexte = map[string]string{
 	handler.MCPCodeBisVorVon:            "mcp.fehler.bis_vor_von",
 	handler.MCPCodeKoordinatenUngueltig: "mcp.fehler.koordinaten_ungueltig",
 	"mcp_zeitraum_ausserhalb":           "mcp.fehler.zeitraum_ausserhalb",
+	"mcp_feld_unbekannt":                "mcp.fehler.feld_unbekannt",
 	"invalid_params":                    "mcp.fehler.eingabe_ungueltig",
 }
 
@@ -140,7 +171,7 @@ func (s sitzung) wetterFehler(err error) string {
 		return s.t("mcp.fehler.bremse", i18n.Args{"sekunden": warten.WartenS})
 	case errors.As(err, &eingabe):
 		if key, ok := eingabeTexte[eingabe.Code]; ok {
-			return s.t(key, nil)
+			return s.t(key, i18n.Args{"feld": eingabe.Feld, "gueltig": strings.Join(eingabe.Gueltig, ", ")})
 		}
 		return s.t("mcp.fehler.eingabe_ungueltig", nil)
 	}
@@ -148,8 +179,9 @@ func (s sitzung) wetterFehler(err error) string {
 }
 
 // ortWaehlen: Koordinaten oder eindeutiger Ort. Ergebnis: Ort, oder ein
-// fertiger Text (Fehler bzw. Kandidatenliste) mit isError.
-func (s sitzung) ortWaehlen(args map[string]any) (*resolver.OrtKandidat, string, bool) {
+// fertiger Text (Fehler bzw. Kandidatenliste) mit isError. werkzeug nennt der
+// Hinweis bei Mehrdeutigkeit (erneuter Aufruf desselben Werkzeugs).
+func (s sitzung) ortWaehlen(args map[string]any, werkzeug string) (*resolver.OrtKandidat, string, bool) {
 	ort := textArg(args, "ort")
 	lat, hatLat := zahlArg(args, "lat")
 	lon, hatLon := zahlArg(args, "lon")
@@ -166,9 +198,26 @@ func (s sitzung) ortWaehlen(args map[string]any) (*resolver.OrtKandidat, string,
 	}
 	if len(k) > 1 {
 		return nil, jsonText(map[string]any{"mehrdeutig": true, "kandidaten": k,
-			"hinweis": s.t("mcp.hinweis.mehrdeutig", i18n.Args{"ort": ort})}), false
+			"hinweis": s.t("mcp.hinweis.mehrdeutig", i18n.Args{"ort": ort, "werkzeug": werkzeug})}), false
 	}
 	return &k[0], "", false
+}
+
+// mitOrt: Core-Antwort lesen und um den Ort ergaenzen; bei Fehler fertiger Text mit isError.
+func (s sitzung) mitOrt(roh json.RawMessage, err error, ort *resolver.OrtKandidat) (map[string]any, string, bool) {
+	if err != nil {
+		return nil, s.wetterFehler(err), true
+	}
+	var daten map[string]any
+	if json.Unmarshal(roh, &daten) != nil {
+		return nil, s.t("mcp.fehler.wetterdienst", nil), true
+	}
+	zone, _ := daten["zeitzone"].(string)
+	if ort.Zeitzone != "" {
+		zone = ort.Zeitzone
+	}
+	daten["ort"] = ortAusgabe{Name: ort.Name, Land: ort.Land, Lat: ort.Lat, Lon: ort.Lon, Zeitzone: zone}
+	return daten, "", false
 }
 
 type ortAusgabe struct {
@@ -181,27 +230,63 @@ type ortAusgabe struct {
 
 func (s sitzung) wetter(args map[string]any) (string, bool) {
 	von, bis := textArg(args, "von"), textArg(args, "bis")
-	ort, text, fehler := s.ortWaehlen(args)
+	ort, text, fehler := s.ortWaehlen(args, "wetter")
 	if ort == nil {
 		return text, fehler
 	}
 	roh, err := handler.MCPWetterAbrufen(s.ctx, s.h.o.Bremsen, s.h.o.CoreURL, s.uid,
-		handler.MCPWetterAnfrage{Lat: ort.Lat, Lon: ort.Lon, Von: von, Bis: bis})
-	if err != nil {
-		return s.wetterFehler(err), true
+		handler.MCPWetterAnfrage{Lat: ort.Lat, Lon: ort.Lon, Von: von, Bis: bis, Felder: felderArg(args)})
+	daten, text, fehler := s.mitOrt(roh, err, ort)
+	if daten == nil {
+		return text, fehler
 	}
-	var daten map[string]any
-	if json.Unmarshal(roh, &daten) != nil {
-		return s.t("mcp.fehler.wetterdienst", nil), true
-	}
-	zone, _ := daten["zeitzone"].(string)
-	if ort.Zeitzone != "" {
-		zone = ort.Zeitzone
-	}
-	daten["ort"] = ortAusgabe{Name: ort.Name, Land: ort.Land, Lat: ort.Lat, Lon: ort.Lon, Zeitzone: zone}
 	if begrenzt, _ := daten["begrenzt"].(bool); begrenzt {
 		ende, _ := daten["bis"].(string)
 		daten["hinweis"] = s.t("mcp.hinweis.begrenzt", i18n.Args{"ende": ende})
+	}
+	return jsonText(daten), false
+}
+
+// intensitaetTexte: stabiler Token des Core -> Anzeigetext (Katalog, gleiche
+// Schluessel wie der Radar-Alarm im Python-Kern).
+var intensitaetTexte = map[string]string{
+	"trocken": "alarm.radar.intensitaet.trocken", "leicht": "alarm.radar.intensitaet.leicht",
+	"maessig": "alarm.radar.intensitaet.maessig", "stark": "alarm.radar.intensitaet.stark",
+	"gewitter": "alarm.radar.intensitaet.gewitter", "hagel_gewitter": "alarm.radar.intensitaet.hagel_gewitter",
+}
+
+// nowcastHinweis: Hinweistext zur Datenlage; Drosselung und Ausfall vor "trocken".
+func (s sitzung) nowcastHinweis(daten map[string]any) string {
+	flag := func(name string) bool { b, _ := daten[name].(bool); return b }
+	switch {
+	case flag("gedrosselt"):
+		return s.t("mcp.hinweis.nowcast_gedrosselt", nil)
+	case flag("nicht_verfuegbar"):
+		return s.t("mcp.hinweis.nowcast_nicht_verfuegbar", nil)
+	case flag("trocken"):
+		return s.t("mcp.hinweis.nowcast_trocken", nil)
+	case flag("ueber_horizont_hinaus"):
+		return s.t("mcp.hinweis.nowcast_ueber_horizont", nil)
+	}
+	return ""
+}
+
+func (s sitzung) regenNowcast(args map[string]any) (string, bool) {
+	ort, text, fehler := s.ortWaehlen(args, "regen_nowcast")
+	if ort == nil {
+		return text, fehler
+	}
+	roh, err := handler.MCPNowcastAbrufen(s.ctx, s.h.o.Bremsen, s.h.o.CoreURL, s.uid, ort.Lat, ort.Lon)
+	daten, text, fehler := s.mitOrt(roh, err, ort)
+	if daten == nil {
+		return text, fehler
+	}
+	token, _ := daten["intensitaet"].(string)
+	if key, ok := intensitaetTexte[token]; ok {
+		daten["intensitaet_text"] = s.t(key, nil)
+	}
+	if hinweis := s.nowcastHinweis(daten); hinweis != "" {
+		daten["hinweis"] = hinweis
 	}
 	return jsonText(daten), false
 }

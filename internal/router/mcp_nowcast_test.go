@@ -12,7 +12,9 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/henemm/gregor-api/internal/handler"
 	"github.com/henemm/gregor-api/internal/i18n"
 	"github.com/henemm/gregor-api/internal/model"
 )
@@ -347,5 +349,87 @@ func TestMCPWetter_UnbekanntesFeldKatalogtextJeSprache(t *testing.T) {
 	}
 	if tDe == tEn {
 		t.Errorf("Fehlertext nicht sprachrichtig: %q", tDe)
+	}
+}
+
+// Adversary F002 (AC-11): die Mengenbremse `vorhersage` greift auch fuer
+// regen_nowcast, vor Kontingent und Core-Abruf.
+func TestMCPNowcast_MengenbremseVorhersage(t *testing.T) {
+	fest := time.Date(2026, 11, 26, 12, 0, 0, 0, time.UTC)
+	defer handler.SetBremsenUhr(func() time.Time { return fest })()
+	w, access := freigegebeneWelt(t)
+	args := map[string]any{"lat": 50.11, "lon": 8.68}
+	for i := 0; i < handler.BremseAbrufJeMinute; i++ {
+		if text, fehler := w.werkzeug(access, "regen_nowcast", args); fehler {
+			t.Fatalf("Abruf %d innerhalb der Bremse abgelehnt: %s", i+1, text)
+		}
+	}
+	text, fehler := w.werkzeug(access, "regen_nowcast", args)
+	if !fehler || !strings.Contains(text, "Sekunden") {
+		t.Fatalf("Werkzeugfehler mit Wartehinweis erwartet: %v %s", fehler, text)
+	}
+	if n := w.core.zaehleNowcast(); n != handler.BremseAbrufJeMinute {
+		t.Errorf("gebremster Aufruf darf den Core nicht rufen: %d Abrufe", n)
+	}
+	if reserve, _ := w.core.zaehle(); reserve != handler.BremseAbrufJeMinute {
+		t.Errorf("gebremster Aufruf darf kein Kontingent buchen: %d", reserve)
+	}
+}
+
+// Adversary F003 (AC-5): Kette Core-Rumpf (feld, gueltig) -> Go-Parser -> Text
+// in der Kontosprache, der den unbekannten und die gueltigen Namen nennt.
+func TestMCPWetter_UnbekanntesFeldNenntGueltigeNamenJeSprache(t *testing.T) {
+	w := neueMCPWelt(t, "anna", "emma")
+	de, _ := w.verbinden(w.konto(model.User{ID: "anna", Language: "de"}))
+	en, _ := w.verbinden(w.konto(model.User{ID: "emma", Language: "en"}))
+	w.core.mu.Lock()
+	w.core.abweisung = `{"code":"mcp_feld_unbekannt","detail":"Core-Text","feld":"gibt_es_nicht","gueltig":["t2m_c","wind_chill_c"]}`
+	w.core.mu.Unlock()
+	args := map[string]any{"lat": 50.1, "lon": 8.6, "felder": "gibt_es_nicht"}
+	for lang, access := range map[i18n.Lang]string{i18n.De: de["access_token"].(string), i18n.En: en["access_token"].(string)} {
+		text, fehler := w.werkzeug(access, "wetter", args)
+		want := i18n.T(lang, "mcp.fehler.feld_unbekannt", i18n.Args{"feld": "gibt_es_nicht", "gueltig": "t2m_c, wind_chill_c"})
+		if !fehler || text != want {
+			t.Errorf("%s: Text mit unbekanntem und gueltigen Namen erwartet: %q, war %q", lang, want, text)
+		}
+		for _, name := range []string{"gibt_es_nicht", "t2m_c", "wind_chill_c"} {
+			if !strings.Contains(text, name) {
+				t.Errorf("%s: %q fehlt im Text %q", lang, name, text)
+			}
+		}
+	}
+}
+
+// Adversary F004 (AC-12): Hinweis "ueber den Horizont hinaus" je Sprache.
+func TestMCPNowcast_UeberHorizontHinweisJeSprache(t *testing.T) {
+	w := neueMCPWelt(t, "anna", "emma")
+	de, _ := w.verbinden(w.konto(model.User{ID: "anna", Language: "de"}))
+	en, _ := w.verbinden(w.konto(model.User{ID: "emma", Language: "en"}))
+	args := map[string]any{"lat": 42.0, "lon": 9.0}
+	tDe, _ := w.werkzeug(de["access_token"].(string), "regen_nowcast", args)
+	tEn, _ := w.werkzeug(en["access_token"].(string), "regen_nowcast", args)
+	eDe, eEn := leseNowcast(t, tDe), leseNowcast(t, tEn)
+	if eDe.Hinweis != i18n.T(i18n.De, "mcp.hinweis.nowcast_ueber_horizont", nil) ||
+		eEn.Hinweis != i18n.T(i18n.En, "mcp.hinweis.nowcast_ueber_horizont", nil) || eDe.Hinweis == eEn.Hinweis {
+		t.Errorf("Horizont-Hinweis nicht sprachrichtig: %q / %q", eDe.Hinweis, eEn.Hinweis)
+	}
+}
+
+// Adversary F005 (AC-10/12): der Mehrdeutigkeits-Hinweis nennt das aufgerufene Werkzeug.
+func TestMCPNowcast_MehrdeutigHinweisNenntRegenNowcast(t *testing.T) {
+	w, access := freigegebeneWelt(t)
+	text, _ := w.werkzeug(access, "regen_nowcast", map[string]any{"ort": "Frankfurt"})
+	e := leseNowcast(t, text)
+	if !strings.Contains(e.Hinweis, "regen_nowcast") || strings.Contains(e.Hinweis, "wetter ") {
+		t.Errorf("Hinweis muss regen_nowcast nennen: %q", e.Hinweis)
+	}
+}
+
+// Adversary F008: Drosselung geht im Hinweis vor "trocken" (nie Entwarnung ohne Daten).
+func TestMCPNowcast_GedrosseltHinweisVorTrocken(t *testing.T) {
+	w, access := freigegebeneWelt(t)
+	text, _ := w.werkzeug(access, "regen_nowcast", map[string]any{"lat": 43.0, "lon": 9.0})
+	if e := leseNowcast(t, text); e.Hinweis != i18n.T(i18n.De, "mcp.hinweis.nowcast_gedrosselt", nil) {
+		t.Errorf("Drosselungs-Hinweis erwartet: %q", e.Hinweis)
 	}
 }

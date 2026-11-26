@@ -2,7 +2,7 @@
 entity_id: mcp_wetter_konnektor
 type: module
 created: 2026-11-22
-updated: 2026-11-22
+updated: 2026-11-26
 status: approved
 version: "1.0"
 tags: [mcp, oauth, wetter, go-api, python-core, adr-0128]
@@ -65,7 +65,7 @@ Vorlage (Verhalten inhaltlich 1:1, in Go übertragen, Ablage als Dateien statt S
 
 **Ortssuche (Go, `internal/resolver/ortssuche.go`):** `OrtSuchen(ctx, text, sprache)` fragt Nominatim per Freitext über den abgeschotteten Client (ADR-0114) und liefert je Kandidat Anzeigename, Land, lat/lon und IANA-Zeitzone (Zeitzone aus Koordinaten abgeleitet, Fallback über den Core-Hinweis). Höchstens 5 Kandidaten, Eingabe auf sinnvolle Länge begrenzt und als Freitext kodiert (nie als Pfad). Die Mengenbremse `aufloesen` gilt je Nutzer; Überschreitung ergibt einen verständlichen Fehler mit Wartezeit.
 
-**Core-Endpunkt (`api/routers/mcp_wetter.py`):** `GET /api/_internal/mcp/wetter?lat&lon&von&bis` (mit `X-GZ-Core-Auth`, ADR-0062). Er liefert kompakte stündliche Rohwerte in **Ortszeit** (naiv-UTC wird in die Zeitzone des Ortes umgerechnet, ISO-Zeit mit Offset) samt Einheiten je Feld: Temperatur, Niederschlag (mm), Niederschlagswahrscheinlichkeit, Wind, Böen, Windrichtung, Bewölkung, Gewitterstufe, **Sonnenminuten je Stunde** (abgeleitet nach Katalog, ADR-0127: Schwelle `dni_wm2` > 120 W/m², nicht in Go oder im Frontend nachgebaut), WMO-Wettercode, Schneefallgrenze/Nullgrenze. Maximal 7 Tage; ein längerer Zeitraum wird begrenzt und die Antwort trägt `begrenzt: true` samt tatsächlichem Ende. Provider-Fehler liefern 502 mit Katalogtext, Ausnahmetext nur im Log (wie `api/routers/forecast.py`).
+**Core-Endpunkt (`api/routers/mcp_wetter.py`):** `GET /api/_internal/mcp/wetter?lat&lon&von&bis` (mit `X-GZ-Core-Auth`, ADR-0062). Er liefert kompakte stündliche Rohwerte in **Ortszeit** (naiv-UTC wird in die Zeitzone des Ortes umgerechnet, ISO-Zeit mit Offset) samt Einheiten je Feld. Seit #3398 (`mcp_wetter_vollstaendig.md`) sind das die Felder **aller wählbaren Katalog-Metriken** (`get_all_metrics()`, über `dp_field` dedupliziert, Einheit aus dem Katalog), u. a. Temperatur, gefühlte Temperatur (`wind_chill_c`), Feuchte, Taupunkt, Niederschlag, Niederschlagswahrscheinlichkeit und -art, Wind, Böen, Windrichtung, Bewölkung gesamt/tief/mittel/hoch, Sicht, UV, Luftdruck, Gewitterstufe, Schneefallgrenze/Nullgrenze, Schneehöhe und Neuschnee (SNOWGRID, `enrich_snow` wie im Briefing), dazu der WMO-Wettercode und **Sonnenminuten je Stunde** (abgeleitet nach Katalog, ADR-0127: Schwelle `dni_wm2` > 120 W/m², nicht in Go oder im Frontend nachgebaut). Nie ausgegeben: `confidence_pct` (#710), `cape_jkg` (#1585). Optionaler Parameter `felder` (Komma-Liste oder Mehrfachparameter) beschränkt Stunden und Einheiten; ein unbekannter Name ergibt 422 `mcp_feld_unbekannt` mit den gültigen Namen. Maximal 7 Tage; ein längerer Zeitraum wird begrenzt und die Antwort trägt `begrenzt: true` samt tatsächlichem Ende. Provider-Fehler liefern 502 mit Katalogtext, Ausnahmetext nur im Log (wie `api/routers/forecast.py`).
 
 **Kontingent:** Vor jedem Core-Aufruf bucht Go über `reserviereForecastBudget` (Priorität `user_interactive`, 1500/Nutzer/Tag, ADR-0117); zusätzlich Mengenbremse `vorhersage` (60/min). Ist das Kontingent erschöpft, entsteht ein Werkzeugfehler mit Hinweis auf die Wartezeit, kein Abruf.
 
@@ -81,10 +81,11 @@ Vorlage (Verhalten inhaltlich 1:1, in Go übertragen, Ablage als Dateien statt S
 
 **Schutzschichten:** `AuthMiddleware` bekommt gezielte öffentliche Ausnahmen (Metadaten, `/token`, `/register`, `/authorize`; der MCP-Pfad prüft das Bearer-Token selbst). `IsMachinePath` nimmt nur `/token` und `/register` aus (kein Browser-Origin, Form bzw. JSON von claude.ai); `RequireJSONBody` erlaubt für `/token` `application/x-www-form-urlencoded`. `/authorize` POST bleibt unter `OriginGuard`. Der SvelteKit-Durchreicher `apiPfad.ts` bleibt unverändert (`/api/*` geht per nginx direkt an Go).
 
-**MCP-Endpunkt:** Streamable HTTP, nur POST mit JSON-Antwort, GET → 405 (wie Frieda); Protokollversionen `2025-11-25`, `2025-06-18`, `2025-03-26`, `2024-11-05` (`PROTOKOLLE`); Methoden `initialize`, `tools/list`, `tools/call`, `ping`. Zwei Werkzeuge:
+**MCP-Endpunkt:** Streamable HTTP, nur POST mit JSON-Antwort, GET → 405 (wie Frieda); Protokollversionen `2025-11-25`, `2025-06-18`, `2025-03-26`, `2024-11-05` (`PROTOKOLLE`); Methoden `initialize`, `tools/list`, `tools/call`, `ping`. Drei Werkzeuge (das dritte seit #3398):
 
 - `ort_suchen(text)`: liefert Kandidaten (Name, Land, lat/lon, Zeitzone).
-- `wetter(ort | lat+lon, von, bis, felder?)`: löst `ort` über dieselbe Ortssuche auf; ist er eindeutig, ruft Go den Core und antwortet mit Ortsname, Zeitzone, Einheiten und Stundenwerten. Mehrdeutiger Ort → Kandidatenliste statt Wetter, unbekannter Ort → Werkzeugfehler (`isError`) mit Hinweis, Zeitraum >7 Tage → begrenzt mit Hinweis im Ergebnis.
+- `wetter(ort | lat+lon, von, bis, felder?)`: löst `ort` über dieselbe Ortssuche auf; ist er eindeutig, ruft Go den Core und antwortet mit Ortsname, Zeitzone, Einheiten und Stundenwerten. Mehrdeutiger Ort → Kandidatenliste statt Wetter, unbekannter Ort → Werkzeugfehler (`isError`) mit Hinweis, Zeitraum >7 Tage → begrenzt mit Hinweis im Ergebnis. `felder` (Liste) wird als Mehrfachparameter an den Core gereicht; unbekannter Feldname → `isError` mit Katalogtext, der die gültigen Namen nennt.
+- `regen_nowcast(ort | lat+lon)` (#3398, `mcp_wetter_vollstaendig.md`): Ortswahl wie `wetter`, gleiche Mengenbremse und gleiches Kontingent, Core-Endpunkt `GET /api/_internal/mcp/nowcast` (Quellkette des Radar-Nowcasts wie Briefings und Alarme); Go ergänzt Ort, `intensitaet_text` und einen Hinweis (trocken, gedrosselt, nicht verfügbar, über den Horizont hinaus).
 
 Werkzeugbeschreibungen und alle Fehlertexte kommen aus dem Katalog `mcp.json` (de/en) in der Sprache des Kontos (`language`, ADR-0104); Protokoll-Token und Feldnamen werden nicht übersetzt. Die Antworten enthalten ausschließlich Wetter- und Ortssuchdaten.
 
@@ -172,7 +173,7 @@ Tests laufen gegen echte Handler/Router mit lokalem Fake-Nominatim-Server und ec
 
 ## Known Limitations
 
-- Kein Regenradar und kein Nowcast; Auflösung stündlich. „Regnet es in 2 Stunden?“ wird aus Stundenwerten beantwortet.
+- ~~Kein Regenradar und kein Nowcast~~: aufgehoben durch #3398 (Werkzeug `regen_nowcast`, bis 180 Minuten); `wetter` bleibt stündlich.
 - Zeitraum maximal 7 Tage je Aufruf.
 - Staging liegt hinter Basic-Auth; die nötigen `auth_basic off`-Ausnahmen liegen im Repo henemm-infra und sind Teil der Lieferung (eigener PR dort).
 - Authorization-Codes und CIMD-Cache liegen im RAM und gehen bei Neustart verloren (Codes sind kurzlebig, ein neuer Anmeldeversuch genügt); Tokens und Clients bleiben als Dateien erhalten.
@@ -188,3 +189,4 @@ Tests laufen gegen echte Handler/Router mit lokalem Fake-Nominatim-Server und ec
 
 - 2026-11-22: Initial spec created (Issue #3281, Workflow mcp-wetter-3281)
 - 2026-11-22: Freigabe durch PO
+- 2026-11-26: Feldmenge aus allen wählbaren Katalog-Metriken, Schnee, Parameter `felder`, Werkzeug `regen_nowcast`; Known Limitation „Kein Regenradar und kein Nowcast“ aufgehoben (Issue #3398, `mcp_wetter_vollstaendig.md`)

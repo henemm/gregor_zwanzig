@@ -1,0 +1,8 @@
+{
+  "alarm.radar.intensitaet.trocken": "No precipitation",
+  "alarm.radar.intensitaet.leicht": "Light rain",
+  "alarm.radar.intensitaet.maessig": "Moderate rain",
+  "alarm.radar.intensitaet.stark": "Heavy rain",
+  "alarm.radar.intensitaet.gewitter": "Thunderstorm",
+  "alarm.radar.intensitaet.hagel_gewitter": "Heavy hail/thunderstorm"
+}

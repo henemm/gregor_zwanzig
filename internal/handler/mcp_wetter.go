@@ -61,6 +61,9 @@ var mcpZeitFormate = []string{
 type MCPWetterAnfrage struct {
 	Lat, Lon float64
 	Von, Bis string
+	// Felder: optionale Feldauswahl (Issue #3398), geht als Mehrfachparameter
+	// `felder` an den Core; leer = alle Felder.
+	Felder []string
 }
 
 // MCPWartenFehler: Abruf abgelehnt (Mengenbremse oder Tageskontingent).
@@ -77,7 +80,11 @@ func (e *MCPWartenFehler) Error() string {
 // der Text des Core, falls er die Anfrage abgewiesen hat, sonst leer).
 type MCPEingabeFehler struct {
 	Code, Detail string
-	wurzel       error
+	// Feld, Gueltig: bei mcp_feld_unbekannt der unbekannte Name und die
+	// gueltigen Feldnamen aus dem Core (Issue #3398).
+	Feld    string
+	Gueltig []string
+	wurzel  error
 }
 
 func (e *MCPEingabeFehler) Error() string {
@@ -143,28 +150,46 @@ func MCPWetterAbrufen(ctx context.Context, bremsen *NutzerBremsen, coreURL, user
 	if err := pruefeMCPAnfrage(a); err != nil {
 		return nil, err
 	}
-	if ok, warten := bremsen.ZulassenVorhersage(ctx, userID); !ok {
-		return nil, &MCPWartenFehler{Grund: MCPGrundBremse, WartenS: wartenSekunden(warten)}
+	if err := mcpZulassen(ctx, bremsen, coreURL, userID); err != nil {
+		return nil, err
 	}
-	if urteil, err := reserviereForecastBudget(coreURL, userID); err != nil {
-		log.Printf("[mcp-wetter] WARN: budget reserve fehlgeschlagen, fail-open: %v", err)
-	} else if !urteil.Allowed {
-		return nil, &MCPWartenFehler{Grund: MCPGrundKontingent, WartenS: klemmeRetryAfter(urteil.RetryAfterS)}
-	}
-	return holeMCPWetter(ctx, coreURL, a)
-}
-
-func holeMCPWetter(ctx context.Context, coreURL string, a MCPWetterAnfrage) (json.RawMessage, error) {
-	frage := url.Values{}
-	frage.Set("lat", strconv.FormatFloat(a.Lat, 'f', -1, 64))
-	frage.Set("lon", strconv.FormatFloat(a.Lon, 'f', -1, 64))
+	frage := mcpKoordinaten(a.Lat, a.Lon)
 	if a.Von != "" {
 		frage.Set("von", a.Von)
 	}
 	if a.Bis != "" {
 		frage.Set("bis", a.Bis)
 	}
-	ziel := strings.TrimSuffix(coreURL, "/") + mcpWetterCorePfad + "?" + frage.Encode()
+	for _, feld := range a.Felder {
+		frage.Add("felder", feld)
+	}
+	return holeMCPCore(ctx, coreURL, mcpWetterCorePfad, frage)
+}
+
+// mcpZulassen: Mengenbremse `vorhersage`, dann Tageskontingent `user_interactive`
+// (fail-open wie /api/forecast). Gilt fuer wetter und regen_nowcast (#3398).
+func mcpZulassen(ctx context.Context, bremsen *NutzerBremsen, coreURL, userID string) error {
+	if ok, warten := bremsen.ZulassenVorhersage(ctx, userID); !ok {
+		return &MCPWartenFehler{Grund: MCPGrundBremse, WartenS: wartenSekunden(warten)}
+	}
+	if urteil, err := reserviereForecastBudget(coreURL, userID); err != nil {
+		log.Printf("[mcp-wetter] WARN: budget reserve fehlgeschlagen, fail-open: %v", err)
+	} else if !urteil.Allowed {
+		return &MCPWartenFehler{Grund: MCPGrundKontingent, WartenS: klemmeRetryAfter(urteil.RetryAfterS)}
+	}
+	return nil
+}
+
+func mcpKoordinaten(lat, lon float64) url.Values {
+	frage := url.Values{}
+	frage.Set("lat", strconv.FormatFloat(lat, 'f', -1, 64))
+	frage.Set("lon", strconv.FormatFloat(lon, 'f', -1, 64))
+	return frage
+}
+
+// holeMCPCore ruft einen internen MCP-Endpunkt des Core (ohne user_id).
+func holeMCPCore(ctx context.Context, coreURL, pfad string, frage url.Values) (json.RawMessage, error) {
+	ziel := strings.TrimSuffix(coreURL, "/") + pfad + "?" + frage.Encode()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ziel, nil)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrMCPWetterdienst, err)
@@ -191,8 +216,10 @@ func holeMCPWetter(ctx context.Context, coreURL string, a MCPWetterAnfrage) (jso
 // FastAPI (detail als Liste) wird zu invalid_params ohne Text.
 func coreEingabeFehler(roh []byte) error {
 	var antwort struct {
-		Code   string          `json:"code"`
-		Detail json.RawMessage `json:"detail"`
+		Code    string          `json:"code"`
+		Detail  json.RawMessage `json:"detail"`
+		Feld    string          `json:"feld"`
+		Gueltig []string        `json:"gueltig"`
 	}
 	_ = json.Unmarshal(roh, &antwort)
 	var detail string
@@ -200,5 +227,7 @@ func coreEingabeFehler(roh []byte) error {
 	if antwort.Code == "" {
 		antwort.Code = "invalid_params"
 	}
-	return zeitraumFehler(antwort.Code, detail)
+	fehler := &MCPEingabeFehler{Code: antwort.Code, Detail: detail, wurzel: ErrMCPZeitraum}
+	fehler.Feld, fehler.Gueltig = antwort.Feld, antwort.Gueltig
+	return fehler
 }

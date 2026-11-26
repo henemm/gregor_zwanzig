@@ -86,6 +86,9 @@ func neuerMCPCoreServer(t *testing.T) *mcpCore {
 		"nc_trocken":    ladeCoreAufzeichnung(t, "core_nowcast_trocken.json"),
 		"nc_nv":         ladeCoreAufzeichnung(t, "core_nowcast_nicht_verfuegbar.json"),
 		"nc_gedrosselt": ladeCoreAufzeichnung(t, "core_nowcast_gedrosselt.json"),
+		// Adversary F004/F008: Horizont-Hinweis und Vorrang gedrosselt vor trocken.
+		"nc_horizont":           ladeCoreAufzeichnung(t, "core_nowcast_horizont.json"),
+		"nc_gedrosselt_trocken": ladeCoreAufzeichnung(t, "core_nowcast_gedrosselt_trocken.json"),
 	}
 	c := &mcpCore{voll: map[string]bool{}}
 	c.srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -130,6 +133,10 @@ func neuerMCPCoreServer(t *testing.T) *mcpCore {
 				w.Write(aufz["nc_nv"])
 			case strings.HasPrefix(q.Get("lat"), "41"):
 				w.Write(aufz["nc_gedrosselt"])
+			case strings.HasPrefix(q.Get("lat"), "42"):
+				w.Write(aufz["nc_horizont"])
+			case strings.HasPrefix(q.Get("lat"), "43"):
+				w.Write(aufz["nc_gedrosselt_trocken"])
 			default:
 				w.Write(aufz["nc_regen"])
 			}

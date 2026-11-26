@@ -304,8 +304,8 @@ func TestMCP_SpracheDesKontos(t *testing.T) {
 		return m
 	}
 	lDe, lEn := liste(de["access_token"].(string)), liste(en["access_token"].(string))
-	if len(lDe) != 2 || lDe["wetter"] == nil || lDe["ort_suchen"] == nil || len(lEn) != 2 {
-		t.Fatalf("Werkzeuge ort_suchen und wetter erwartet: %v / %v", lDe, lEn)
+	if len(lDe) != 3 || lDe["wetter"] == nil || lDe["ort_suchen"] == nil || lDe["regen_nowcast"] == nil || len(lEn) != 3 {
+		t.Fatalf("Werkzeuge ort_suchen, wetter und regen_nowcast erwartet: %v / %v", lDe, lEn)
 	}
 	for name := range lDe {
 		if lDe[name]["description"] == lEn[name]["description"] {
