@@ -1,0 +1,61 @@
+{
+  "verified_commit": "152ee14be09d5b59c42c6e646e4a5d38e1f8deb2",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/gz2967-gr221-mallorca:AC-1",
+      "evidence": "Staging commit 152ee14be live. DE+EN trip detail tabs render, 0 console errors, no raw trip.about/trip.kanaele/wertebereiche keys; DE Wetter shows Was steht wo and Alarm ab rows (docs/artifacts/rework-3383-waisen-s1/de-trip-Wetter.png)",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/compare/cp-cc798e8ca9d34a15:AC-2",
+      "evidence": "DE+EN compare tabs Uebersicht/Orte/Wetter/Zustellung render, 0 console errors, no raw keys, no German in EN",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/new:AC-3",
+      "evidence": "trips/new and compare/new render DE and EN, no errors, no raw keys",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    }
+  ],
+  "verified_at": "2026-11-26T01:29:02.984417+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: 3/3 ACs gr\u00fcn",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "feat-3298-altfeld-typen-sperre": {
+      "verdict": "VERIFIED: 3/3 ACs gr\u00fcn",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-26T01:29:02.984417+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
