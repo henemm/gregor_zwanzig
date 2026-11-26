@@ -740,13 +740,13 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "altbestand",
-   "test": "internal/store/trip_display_config_felderhalt_test.go::TestRework3020_SpeichernOhneAenderungErhaeltMetrikFlags_ZweiNutzer",
+   "test": "frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::n3_semantik_wie_mail",
    "ac": "AC-11",
    "befund": "#3047 N3",
-   "status": "ausnahme",
-   "seite": "go",
+   "status": "gruen",
+   "seite": "frontend",
    "zustand": "nur_ein_bericht_semantik",
-   "verweis": "#3065 (Uebergangshilfe Nur-ein-Bericht bis Phase 2, geschlossen); Prod-Messung 25.11.2026: 0 Metriken nur in einem Bericht. Beleg: Bericht-Flags bleiben beim Speichern erhalten und wirken in der Mail weiter (#3020 R1b)"
+   "verweis": "#3364: gewaehlt ist, was mindestens ein Briefing fuehrt (wie der Mail-Filter); „−“ nimmt die Groesse aus beiden Briefings (loest #3065-Ausnahme ab)"
   },
   {
    "id": "D-trip_tabellen-nur_ein_bericht_kennzeichnung-frontend",
@@ -754,13 +754,13 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "altbestand",
-   "test": "internal/store/trip_display_config_felderhalt_test.go::TestRework3020_SpeichernOhneAenderungErhaeltMetrikFlags_ZweiNutzer",
+   "test": "frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::n3_editor_kennzeichnet_je_zeile",
    "ac": "AC-11",
    "befund": "#3047 N3",
-   "status": "ausnahme",
-   "seite": "go",
+   "status": "gruen",
+   "seite": "frontend",
    "zustand": "nur_ein_bericht_kennzeichnung",
-   "verweis": "#3065 (Uebergangshilfe Nur-ein-Bericht bis Phase 2, geschlossen); Prod-Messung 25.11.2026: 0 Metriken nur in einem Bericht; Kennzeichnung entfaellt bewusst (#3020 R1b)"
+   "verweis": "#3364: Karte kennzeichnet je Zeile „nur morgens“/„nur abends“ (DE und EN) aus dem Zeilenfeld briefing_only (loest #3065-Ausnahme ab)"
   },
   {
    "id": "D-trip_tabellen-nur_ein_bericht_editorstand-frontend",
@@ -768,13 +768,13 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "altbestand",
-   "test": "internal/store/trip_display_config_felderhalt_test.go::TestRework3020_SpeichernOhneAenderungErhaeltMetrikFlags_ZweiNutzer",
+   "test": "frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::n3_kennzeichnung_folgt_dem_editorstand",
    "ac": "AC-11",
    "befund": "#3047 N3",
-   "status": "ausnahme",
-   "seite": "go",
+   "status": "gruen",
+   "seite": "frontend",
    "zustand": "nur_ein_bericht_editorstand",
-   "verweis": "#3065 (Uebergangshilfe Nur-ein-Bericht bis Phase 2, geschlossen); Prod-Messung 25.11.2026: 0 Metriken nur in einem Bericht; Kennzeichnung entfaellt bewusst (#3020 R1b)"
+   "verweis": "#3364: Kennzeichnung folgt dem Editorstand; nach „−“ steht die Groesse in keinem Briefing und hat keine Zeile (loest #3065-Ausnahme ab)"
   },
   {
    "id": "D-trip_tabellen-bericht_flags_bewahrt-frontend",

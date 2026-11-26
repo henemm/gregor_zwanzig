@@ -261,6 +261,10 @@ def _antwort(kind, abo: _Abo, vm, placements, gespeichert, muster: _Muster, lang
         "cells": {stelle: _zelle(r.metric_id, stelle, _karten_zelle(abo.surface, r.metric_id, stelle, c),
                                  muster) for stelle, c in r.cells},
     } for r in vm.rows]
+    if abo.surface == "trip":
+        nur = _trip_nur_ein_briefing(abo.display_config)
+        for z in zeilen:
+            z["briefing_only"] = nur.get(z["metric_id"])
     max_laenge = _sms_max_laenge(abo.surface)
     return {
         "kind": kind, "lang": lang, "stored": gespeichert, "placements": placements,
@@ -278,6 +282,19 @@ def _antwort(kind, abo: _Abo, vm, placements, gespeichert, muster: _Muster, lang
         "legend": _legende(zeilen, abo.surface, vm, lang),
         "example_version": _beispiel_version(),
     }
+
+
+def _trip_nur_ein_briefing(display_config) -> dict:
+    """#3364: Katalog-ID -> ``"morning"``/``"evening"``, wenn genau eines der
+    beiden Briefings die Groesse fuehrt (Bericht-Flags, derselbe Filter wie
+    die Mail: Flag wenn gesetzt, sonst ``enabled``)."""
+    from services.channel_list_resolver import _trip_model
+
+    dc = _trip_model(display_config)
+    gefuehrt = {rt: {mc.metric_id for mc in dc.get_metrics_for_report_type(rt)}
+                for rt in ("morning", "evening")}
+    return {mid: rt for rt, anderes in (("morning", "evening"), ("evening", "morning"))
+            for mid in gefuehrt[rt] - gefuehrt[anderes]}
 
 
 def _beispiel_version() -> int:

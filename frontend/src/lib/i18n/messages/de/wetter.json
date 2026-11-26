@@ -161,6 +161,8 @@
 	"wetter.wsw.grund.nicht_in_email": "nicht in der E-Mail",
 	"wetter.wsw.marke.passt_nicht_mehr": "passt nicht mehr",
 	"wetter.wsw.marke.nur_tageswert": "nur Tageswert",
+	"wetter.wsw.nur_briefing.morning": "nur morgens",
+	"wetter.wsw.nur_briefing.evening": "nur abends",
 	"wetter.wsw.warnungen.name": "Amtliche Warnungen",
 	"wetter.wsw.warnungen.hinweis": "immer dabei: in E-Mail und Telegram zuerst, in der SMS am Ende",
 	"wetter.wsw.warnungen.grund": "immer dabei",

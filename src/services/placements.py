@@ -285,11 +285,11 @@ def placements_aus_grundauswahl(
     from services.channel_list_resolver import tabellen_grundauswahl
 
     ids, _eltern = tabellen_grundauswahl(display_config, surface)
-    places, formen = _heute_ohne_einstellung(display_config, surface, ids)
+    reports = resolve_outlook_reports(anlage_outlook_reports(display_config), enabled_reports)
+    places, formen = _heute_ohne_einstellung(display_config, surface, ids, reports)
     rows = [StoredRow(mid, tuple((s, mid in places.get(s, (mid,))) for s in stellen_fuer(surface)),
                       tuple((s, f) for s, f in formen.get(mid, {}).items()))
             for mid in dict.fromkeys(ids)]
-    reports = resolve_outlook_reports(anlage_outlook_reports(display_config), enabled_reports)
     return placements_dict(rows, reports)
 
 
@@ -308,10 +308,14 @@ def heutige_form(surface: str, stelle: str, metric_id: str, fmt: Optional[str]) 
     return standard_form(metric_id)
 
 
-def _heute_ohne_einstellung(display_config: object, surface: str, ids: Sequence[str]):
+def _heute_ohne_einstellung(
+    display_config: object, surface: str, ids: Sequence[str], reports: Sequence[str] = (),
+):
     """(Haken je Stelle, Formen je Metrik) wie ohne Kanal-Einstellung:
     Trip: Form aus dem Grundauswahl-Eintrag (``format_mode``/
-    ``use_friendly_format``), Haken ueberall. Orte: Roh; Ausblick und
+    ``use_friendly_format``), Haken ueberall; Ausblick nur fuer Groessen, die
+    ein Briefing aus ``reports`` (``outlook_reports``) fuehrt (#3364; ohne
+    Ausblick-Briefing bleibt der Haken wie bisher). Orte: Roh; Ausblick und
     Stundenverlauf nur fuer die bisherigen Vorgabemengen (nie eingestellt:
     feste Ausblick-Spalten bzw. ``HOURLY_DEFAULT_METRIC_IDS``).
     Haken: ``{stelle: menge}``, fehlende Stelle = ueberall an."""
@@ -321,8 +325,12 @@ def _heute_ohne_einstellung(display_config: object, surface: str, ids: Sequence[
         from services.channel_list_resolver import _trip_model
 
         dc = _trip_model(display_config)
+        if reports:
+            places["outlook"] = set()
         for rt in ("evening", "morning"):
             for mc in dc.get_metrics_for_report_type(rt):
+                if rt in reports:
+                    places["outlook"].add(mc.metric_id)
                 fmt = mc.format_mode if mc.format_mode is not None else (
                     None if mc.use_friendly_format else "raw")
                 zeile_fmt.setdefault(mc.metric_id, fmt)

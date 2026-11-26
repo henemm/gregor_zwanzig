@@ -52,12 +52,16 @@ ALTE_VERWEISE_OHNE_TEST: dict[str, str] = {
     "D-trip_tabellen-bericht_flags_bewahrt-frontend": "n3_speichern_bewahrt_bericht_flags",
     "D-trip_ausblick-grundauswahl_ohne_ausblick-frontend": "frontend_seite_trip_ausblick_grundauswahl_ohne_ausblick",
 }
-NUR_EIN_BERICHT_FAELLE = (
-    "D-trip_tabellen-nur_ein_bericht_semantik-frontend",
-    "D-trip_tabellen-nur_ein_bericht_kennzeichnung-frontend",
-    "D-trip_tabellen-nur_ein_bericht_editorstand-frontend",
-    "D-trip_tabellen-bericht_flags_bewahrt-frontend",
-)
+#: #3364: die drei Nur-ein-Bericht-Faelle sind gruen und zeigen auf die G44-Tests der Karte
+#: (vorher ``ausnahme`` mit #3065, Kennzeichnung entfiel); der Flag-Erhalt bleibt ``ausnahme``/#3065
+#: mit Go-Beleg.
+_KARTENTEST = "frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::"
+NUR_EIN_BERICHT_GRUEN = {
+    "D-trip_tabellen-nur_ein_bericht_semantik-frontend": _KARTENTEST + "n3_semantik_wie_mail",
+    "D-trip_tabellen-nur_ein_bericht_kennzeichnung-frontend": _KARTENTEST + "n3_editor_kennzeichnet_je_zeile",
+    "D-trip_tabellen-nur_ein_bericht_editorstand-frontend": _KARTENTEST + "n3_kennzeichnung_folgt_dem_editorstand",
+}
+BERICHT_FLAGS_BEWAHRT = "D-trip_tabellen-bericht_flags_bewahrt-frontend"
 TELEGRAM_NUR_TAGESWERT_TEST = (
     "frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::"
     "Trip: „nur Tageswert“, „passt nicht mehr“, Zeile mit max_length und Hinweissatz für Trip"
@@ -181,13 +185,30 @@ def test_ac3_katalog_verweist_jeden_der_26_faelle_ehrlich():
     assert fehler == [], "\n".join(fehler)
 
 
-def test_ac3_nur_ein_bericht_faelle_sind_ausnahme_mit_3065():
+def test_3364_nur_ein_bericht_faelle_gruen_auf_kartentest():
+    """#3364 (loest die Ratsche ``ausnahme``/#3065 ab): die drei Nur-ein-Bericht-Faelle stehen auf
+    ``gruen``, verweisen auf #3364 und zeigen genau auf ihren G44-Kartentest, der im Baum existiert.
+    Der Flag-Erhalt bleibt ``ausnahme`` mit #3065 (Go-Beleg)."""
     faelle = {f["id"]: f for _, f in w._alle_faelle(w.lade_falllisten(w.FALLLISTEN_DIR))}
-    falsch = [(fid, faelle.get(fid, {}).get("status"), faelle.get(fid, {}).get("verweis"))
-              for fid in NUR_EIN_BERICHT_FAELLE
-              if faelle.get(fid, {}).get("status") != "ausnahme"
-              or "#3065" not in str(faelle.get(fid, {}).get("verweis") or "")]
-    assert falsch == [], f"Nur-ein-Bericht-Faelle ohne ausnahme/#3065: {falsch}"
+    vitest_dateien = sorted(w.REPO_ROOT.glob(w.VITEST_GLOB))
+    fehler = []
+    for fid, soll_test in NUR_EIN_BERICHT_GRUEN.items():
+        fall = faelle.get(fid)
+        if fall is None:
+            fehler.append(f"{fid}: fehlt im Katalog")
+            continue
+        if fall.get("status") != "gruen":
+            fehler.append(f"{fid}: Status {fall.get('status')!r} statt 'gruen'")
+        if fall.get("test") != soll_test:
+            fehler.append(f"{fid}: Verweis {fall.get('test')!r} statt {soll_test!r}")
+        if "#3364" not in str(fall.get("verweis") or ""):
+            fehler.append(f"{fid}: Verweis nennt #3364 nicht")
+        if not w._pruefe_vitest_verweis(soll_test, vitest_dateien):
+            fehler.append(f"{fid}: Kartentest {soll_test!r} nicht gefunden")
+    bewahrt = faelle.get(BERICHT_FLAGS_BEWAHRT, {})
+    if bewahrt.get("status") != "ausnahme" or "#3065" not in str(bewahrt.get("verweis") or ""):
+        fehler.append(f"{BERICHT_FLAGS_BEWAHRT}: ohne ausnahme/#3065")
+    assert fehler == [], "\n".join(fehler)
 
 
 # ---------------------------------------------------------------------------

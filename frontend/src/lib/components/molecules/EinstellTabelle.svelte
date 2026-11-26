@@ -37,6 +37,8 @@
 	export interface EinstellMetrik {
 		id: string;
 		name: string;
+		/** #3364: Zeilenmarke unter dem Namen, etwa „nur morgens“. */
+		zeilenmarke?: string;
 		zellen: Record<string, EinstellZelle>;
 	}
 	export interface EinstellFesteZeile {
@@ -119,7 +121,10 @@
 			{#if m}
 				<div class="et-raster et-zeile" data-slot="et-zeile" data-metrik={m.id} style:grid-template-columns={raster}>
 					<DragHandle size={14} label={$t('bausteine.einstelltabelle.zeile_verschieben', { name: m.name })} />
-					<span class="et-name">{m.name}</span>
+					<span class="et-name">
+						{m.name}
+						{#if m.zeilenmarke}<small data-slot="et-zeilenmarke">{m.zeilenmarke}</small>{/if}
+					</span>
 					{#each stellen as s (s.id)}
 						{@const z = m.zellen[s.id]}
 						{@const bedienbar = s.bedienbar !== false}
