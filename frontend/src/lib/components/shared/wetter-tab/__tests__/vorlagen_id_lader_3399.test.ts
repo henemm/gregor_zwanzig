@@ -90,6 +90,19 @@ describe('#3399 S1 AC-6: Buendelung und Cache', () => {
 		assert.deepEqual(z.aufrufe, [3], 'ein Aufruf mit drei Eintraegen, nicht drei Aufrufe');
 	});
 
+	test('identische Eintraege in EINEM laden-Aufruf gehen nur einmal in die Anfrage (Fix-Loop 1, F002)', async () => {
+		const z = zaehlClient();
+		const s = sammler();
+		const gleich = abo('d1');
+		await erstelleVorlagenIdLader(z.client, s.melde).laden([gleich, { ...gleich, id: 'andere-id' }, abo('d2')]);
+		assert.deepEqual(z.aufrufe, [2], 'zwei verschiedene Eintraege, nicht drei');
+		assert.deepEqual(s.letzte(), [
+			{ zustand: 'geladen', vorlageId: 'allgemein' },
+			{ zustand: 'geladen', vorlageId: 'allgemein' },
+			{ zustand: 'geladen', vorlageId: 'allgemein' }
+		]);
+	});
+
 	test('mehr als 32 Eintraege: Pakete a 32 (zweiter Aufruf erst ab Eintrag 33)', async () => {
 		const z = zaehlClient();
 		const abos = Array.from({ length: 33 }, (_, i) => abo(`p33-${i}`));
@@ -140,8 +153,10 @@ describe('#3399 S1 AC-6: Ticket gegen veraltete Antworten', () => {
 		});
 		const s = sammler();
 		const lader = erstelleVorlagenIdLader(z.client, s.melde);
-		const alt = lader.laden([abo('t-alt', { display_config: { ampel: { template: 'skitouren' } } })]);
-		const neu = lader.laden([abo('t-neu', { display_config: { ampel: { template: 'wandern' } } })]);
+		// Eindeutiger preset_name je Abo (modulweiter Cache; „skitouren" allein ist aus dem ersten Test gecacht).
+		// Die Ampel-Vorlage rangiert vor preset_name, die erwartete ID bleibt also die der Ampel.
+		const alt = lader.laden([abo('t-alt', { display_config: { preset_name: 'x3399-t-alt', ampel: { template: 'skitouren' } } })]);
+		const neu = lader.laden([abo('t-neu', { display_config: { preset_name: 'x3399-t-neu', ampel: { template: 'wandern' } } })]);
 		await neu;
 		assert.deepEqual(s.letzte(), [{ zustand: 'geladen', vorlageId: 'wandern' }]);
 		const vorher = s.meldungen.length;

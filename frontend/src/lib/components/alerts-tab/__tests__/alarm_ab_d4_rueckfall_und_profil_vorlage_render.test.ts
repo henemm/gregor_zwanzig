@@ -15,6 +15,8 @@
 
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
+// #3399 S1: die Vorlagen-ID liefert der echte Server (resolve_entwurf), der Reiter uebernimmt sie.
+import { aufgeloestVon } from '../../shared/wetter-tab/__tests__/wetterTabDaten.ts';
 
 const { alarmeRoute, alarmeVergleich, wizard, locale, VORLAGEN_ALLGEMEIN } = await import('./f7Pruefstand.ts');
 
@@ -50,12 +52,15 @@ const VORLAGEN = {
 
 test('F203 Vergleich: Profil summer_trekking ohne ampel.template zeigt die Vorgabe von „alpen-trekking"', () => {
 	const preset = { id: 'v-st', name: 'Hochtour', location_ids: ['l1'], profil: 'summer_trekking' };
-	const html = alarmeVergleich(wizard(), { preset, templatesOverride: VORLAGEN });
+	const id = aufgeloestVon(preset).vorlage_id;
+	assert.equal(id, 'alpen-trekking', 'Kontrolle: der Server loest summer_trekking auf alpen-trekking auf');
+	const html = alarmeVergleich(wizard(), { preset, templatesOverride: VORLAGEN, vorlageIdOverride: id });
 	assert.equal(zelle(html, 'wind_gust'), 'Alarm ab: Rot', 'summer_trekking -> alpen-trekking (wie Python)');
 
 	// Kontrolle: ohne Profil faellt dieselbe Zeile auf „allgemein" (Orange) —
 	// die beiden Vorlagen sind also unterscheidbar.
-	const ohne = alarmeVergleich(wizard(), { preset: { ...preset, profil: undefined }, templatesOverride: VORLAGEN });
+	const ohneProfil = { ...preset, profil: undefined };
+	const ohne = alarmeVergleich(wizard(), { preset: ohneProfil, templatesOverride: VORLAGEN, vorlageIdOverride: aufgeloestVon(ohneProfil).vorlage_id });
 	assert.equal(zelle(ohne, 'wind_gust'), 'Alarm ab: Orange');
 });
 
@@ -66,17 +71,18 @@ test('F203 Vergleich: Profil summer_trekking ohne ampel.template zeigt die Vorga
 const VORLAGE_OHNE_BOEEN = { allgemein: { template: 'allgemein', metrics: {} } };
 
 test('F305 Vergleich: Vorlage ohne Boeen-Zeile zeigt „Alarm ab: Nie", nicht den Strich', () => {
-	const html = alarmeVergleich(wizard(), { templatesOverride: VORLAGE_OHNE_BOEEN });
+	const idVergleich = aufgeloestVon({ id: 'golden-de-vergleich', location_ids: ['l1', 'l2', 'l3'] }).vorlage_id;
+	const html = alarmeVergleich(wizard(), { templatesOverride: VORLAGE_OHNE_BOEEN, vorlageIdOverride: idVergleich });
 	assert.equal(zelle(html, 'wind_gust'), 'Alarm ab: Nie', 'geladene Vorlage ohne Zeile = Nie');
 
 	// Kontrolle: ist die Vorlage NICHT geladen (leere Antwort), bleibt es beim
 	// Strich — beide Zustaende sind an der Zeile unterscheidbar.
-	const ungeladen = alarmeVergleich(wizard(), { templatesOverride: {} });
+	const ungeladen = alarmeVergleich(wizard(), { templatesOverride: {}, vorlageIdOverride: idVergleich });
 	assert.notEqual(zelle(ungeladen, 'wind_gust'), 'Alarm ab: Nie', 'ungeladen darf nicht „Nie" raten');
 });
 
 test('F305 Trip EN: derselbe Rueckfall in der Nutzersprache', () => {
 	locale.set('en');
-	const html = alarmeRoute({ activeMetrics: ['wind_gust'], templatesOverride: VORLAGE_OHNE_BOEEN });
+	const html = alarmeRoute({ activeMetrics: ['wind_gust'], templatesOverride: VORLAGE_OHNE_BOEEN, vorlageIdOverride: aufgeloestVon({ display_config: {} }).vorlage_id });
 	assert.equal(zelle(html, 'wind_gust'), 'Alert from: Never');
 });

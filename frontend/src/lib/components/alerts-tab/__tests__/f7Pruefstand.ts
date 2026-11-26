@@ -146,6 +146,13 @@ export const VORLAGEN_ALLGEMEIN = {
 	}
 };
 
+/** #3399 S1: Standard-Antworten des Pruefstands als PAAR — Vorlagen-Ampeln wie /api/templates und die
+ *  Vorlagen-ID, die der echte Server (resolve_entwurf) fuer die Golden-Abos liefert (Trip mit leerer
+ *  display_config, Vergleich ohne display_config/profil => „allgemein"). Wer eigene Vorlagen-Ampeln
+ *  uebergibt, nennt auch die ID (`vorlageIdOverride`); ohne sie steht die Aufloesung aus („—"). */
+const vorlagenStandard = (over: Record<string, unknown>) =>
+	'templatesOverride' in over ? {} : { templatesOverride: VORLAGEN_ALLGEMEIN, vorlageIdOverride: 'allgemein' };
+
 export function alarmeRoute(over: Record<string, unknown> = {}): string {
 	return html(AlarmeTab, {
 		context: 'route',
@@ -155,7 +162,7 @@ export function alarmeRoute(over: Record<string, unknown> = {}): string {
 		existingChannels: { email: true, telegram: true, sms: false, premium_sms: false },
 		existingChannelThresholds: { telegram: 'MODERATE', sms: 'HIGH' },
 		profileOverride: { premium_sms_allowed: false },
-		templatesOverride: VORLAGEN_ALLGEMEIN,
+		...vorlagenStandard(over),
 		...over
 	});
 }
@@ -167,7 +174,7 @@ export function alarmeVergleich(wiz: Record<string, unknown> = wizard(), over: R
 		catalog: VERGLEICH_KATALOG,
 		preset: { id: 'golden-de-vergleich', name: 'Korsika', location_ids: ['l1', 'l2', 'l3'] },
 		profileOverride: null,
-		templatesOverride: VORLAGEN_ALLGEMEIN,
+		...vorlagenStandard(over),
 		...over
 	});
 }
