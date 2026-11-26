@@ -15,6 +15,7 @@ import { ausUmgebung } from './e2e/stagingZugang';
 // und daher hier NICHT gelistet. Ebenso seit #2347 S4 compare-alarm-config
 // (→ hub-versand-aufbau VA-2, hub-alarme-wertprops AW-4) und
 // compare-legacy-fields-survive-save (→ hub-kopf-bearbeiten KB-11): gelöscht.
+// Seit #3374 ebenso der Layout-Reiter-Test des Vergleich-Anlegens (→ hub-anlegen-ablauf AN-neu-1/2, AN-12).
 const user = ausUmgebung('GZ_VALIDATOR_USER');
 const pass = ausUmgebung('GZ_VALIDATOR_PASS');
 
@@ -34,7 +35,6 @@ export default defineConfig({
 			name: 'chromium-storagestate',
 			testMatch: [
 				/hub-editor-autosave-user-isolation\.spec\.ts/,
-				/layout-tab-vergleich\.spec\.ts/,
 				/issue-718-idealwert-validation\.spec\.ts/
 			],
 			dependencies: ['setup'],

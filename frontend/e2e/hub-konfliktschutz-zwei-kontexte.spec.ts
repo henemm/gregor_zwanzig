@@ -14,6 +14,11 @@
 //                 auf dem Server; der Kopf-PUT ist exakt { name } (#2381).
 //   KS-3 / AC-3 — Pausieren im Hub (Übertragungsweg je kind verschieden).
 //   KS-4 / AC-4 — Pausieren auf der Listenseite (/trips bzw. /compare).
+//   KS-neu-1/2  — #3374 (rework_3374_tote_browserpruefungen.md AC-8, aus der gelöschten
+//                 feat-1395-s3-Spec Fall 3/4, nur Trip wie das Original): nach Pausieren bzw.
+//                 Archivieren über das Hub-Menü speichert eine Alarm-Einstellung im Reiter
+//                 Zustellung mit 200 — kein selbstgebauter 412 (der Status-PATCH liefert keinen
+//                 neuen Stempel, die Seite muss ihren alten verwerfen).
 //
 // Warum E2E: „die fremde Änderung überlebt" wirkt erst im Zusammenspiel von
 // Seitenaufbau (ETag), Reiter-Nutzlast, 412-Pfad und Go-Merge — nur im Browser mit
@@ -83,7 +88,7 @@ async function benenneUm(page: Page, kind: HubKind, id: string, name: string): P
 	return puts[0];
 }
 
-async function kebabWaehle(page: Page, punkt: 'Pausieren'): Promise<void> {
+async function kebabWaehle(page: Page, punkt: 'Pausieren' | 'Archivieren'): Promise<void> {
 	await page.getByRole('button', { name: 'Weitere Aktionen' }).first().click();
 	const eintrag = page.getByRole('menuitem', { name: punkt });
 	await expect(eintrag, `Vorbedingung: der Hub bietet „${punkt}" an`).toBeVisible();
@@ -553,3 +558,55 @@ for (const kind of HUB_KINDS) {
 		});
 	});
 }
+
+// ─── KS-neu-1/KS-neu-2 (nur Trip, #3374) ──────────────────────────────────────
+// Ein Kontext: Status über das Hub-Menü setzen (Trip: PATCH …/state, ohne neuen Stempel), danach im
+// selben Tab die Alarm-Geste „Stille Stunden“ im Reiter Zustellung. Fängt: die Seite schickt den
+// Stempel von VOR dem Statuswechsel mit ⇒ 412 durch den eigenen Vorgänger.
+async function alarmNachStatuswechsel(page: Page, punkt: 'Pausieren' | 'Archivieren', gesetzt: (s: Stand) => boolean): Promise<void> {
+	await page.setViewportSize({ width: 1280, height: 900 });
+	const hub = await seedHub(page.request, 'route', { extra: KS_REITER.route[0].seed });
+	try {
+		const pfad = hubApiPath('route', hub.id);
+		const schreiber = sammleSchreiber(page, pfad);
+		await openHub(page, 'route', hub.id, { tab: 'zustellung' });
+		await ALARME_FALL.bereit(page);
+
+		await kebabWaehle(page, punkt);
+		if (punkt === 'Archivieren') {
+			await expect(page.getByTestId('trip-detail-archive-confirm-dialog')).toBeVisible({ timeout: 10_000 });
+			await page.getByTestId('trip-detail-archive-confirm-yes').click();
+		}
+		await expect.poll(() => status(schreiber.patches[0]), { timeout: 10_000, message: `${punkt}: Status-Abruf` }).toBe(200);
+		expect(gesetzt(await serverStand(page, 'route', hub.id)), `Vorbedingung: Trip ist nach „${punkt}" im neuen Status`).toBe(true);
+		expect(schreiber.puts.length, `„${punkt}" sendet keinen PUT auf den Trip`).toBe(0);
+
+		const gespeichert = page.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === pfad, {
+			timeout: 20_000
+		});
+		await ALARME_FALL.aendern(page);
+		const antwort = await gespeichert;
+		expect(antwort.status(), `nach „${punkt}": kein selbstgebauter Konflikt (412)`).toBe(200);
+		expect(await antwort.request().headerValue('if-match'), 'der Schreibvorgang trägt weiter einen Stempel').toBeTruthy();
+		await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
+		expect(schreiber.puts.length, 'genau ein Schreibvorgang für die eine Geste').toBe(1);
+
+		const stand = await serverStand(page, 'route', hub.id);
+		ALARME_FALL.pruefe(stand);
+		expect(gesetzt(stand), `der Status „${punkt}" bleibt beim Speichern erhalten`).toBe(true);
+	} finally {
+		await hub.aufraeumen();
+	}
+}
+
+test('KS-neu-1 (route): nach Pausieren über das Hub-Menü speichert eine Alarm-Einstellung in Zustellung mit 200, kein Selbst-412', async ({
+	page
+}) => {
+	await alarmNachStatuswechsel(page, 'Pausieren', (s) => Boolean(s.paused_at));
+});
+
+test('KS-neu-2 (route): nach Archivieren über das Hub-Menü speichert eine Alarm-Einstellung in Zustellung mit 200, kein Selbst-412', async ({
+	page
+}) => {
+	await alarmNachStatuswechsel(page, 'Archivieren', (s) => Boolean(s.archived_at));
+});
