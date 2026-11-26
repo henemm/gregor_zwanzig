@@ -1,5 +1,5 @@
 {
-  "_issue": "#2794 S3a AC-28: gemeinsame Faelle fuer den Abweichungszaehler. Gelesen von pytest (tests/tdd/test_2794_ac28_abweichungszaehler.py, Python-Referenz app.ampel.deviation_count) und spaeter von node --test (Frontend-Spiegel). Format: ampel = Abo-Ampel (display_config.ampel, nur Abweichungen, Vorlage ueber ampel.template, Werte aus src/app/ampel_templates.py), expected = Anzahl Abweichungen. Zaehlung je betroffener Metrik hoechstens einmal (mehrere Aenderungsarten an derselben Metrik = 1), Gewitterfarbe einmal.",
+  "_issue": "#2794 S3a AC-28, seit #2988 S4 Regressionsfixture (kein Frontend-Spiegel mehr): Faelle fuer den Abweichungszaehler. Gelesen von pytest (tests/tdd/test_2988_s4_regressionsfixtures.py gegen POST /api/ampel/aufloesung, Aufloesung app.ampel.resolve_entwurf) und von node --test (zaehler_referenz_2988.test.ts, Fallnamen). Format: ampel = Abo-Ampel (display_config.ampel, nur Abweichungen, Vorlage ueber ampel.template, Werte aus GET /api/templates), expected = Anzahl Abweichungen. Zaehlung je betroffener Metrik hoechstens einmal (mehrere Aenderungsarten an derselben Metrik = 1), Gewitterfarbe einmal.",
   "cases": [
     {"name": "keine_abo_ampel", "ampel": null, "expected": 0},
     {"name": "nur_vorlage", "ampel": {"template": "wandern"}, "expected": 0},

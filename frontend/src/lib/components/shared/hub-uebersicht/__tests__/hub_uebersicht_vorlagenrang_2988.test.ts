@@ -1,6 +1,8 @@
 // #2988 S3 (F001): die Trip-Uebersicht waehlt die Vorlage wie Python: `ampel.template` vor `preset_name` vor
 // `profil`. Spec: docs/specs/modules/rework_2988_ampel_ableitung.md (Uebersichten bleiben in S3 gleich).
 // Erwartung aus echtem Python (`aufgeloestVon`); die Vorlagen der Faelle zeigen nachweislich verschiedene Zahlen.
+// #2988 S4: die Rangfolge waehlt allein Python; die Uebersicht bekommt die aufgeloeste Ampel herein
+// (Vertrag hub_uebersicht_aufloesung_2988.test.ts) und zeigt die Zahl der Vorlage, die Python waehlt.
 // Nur der Trip: die Wetter-Karte des Ortsvergleichs zaehlt bei geladenem Katalog die Auswahl, nicht die Ampel
 // (die Vorlagen-Wahl ist dort nicht sichtbar), ihren Titel rechnet `aboVorlagenName` (vorlage_statt_profil_2796).
 //
@@ -48,7 +50,7 @@ function soll(t: Json): Json {
 	const stand = standAusAbo('route', t, aufgeloestVon(t), {}, { eig: EIG });
 	return am.alarmZaehler(stand.ampel, stand.auswahl, EIG);
 }
-const text = (t: Json): string => m.tripAlarmAbText(t, VORLAGEN, EIG);
+const text = (t: Json): string => m.tripAlarmAbText(t, aufgeloestVon(t), EIG);
 
 const ALLE = Object.keys(VORLAGEN.allgemein.metrics);
 const ausloesend = (template: string, metriken: string[]): number => Number(soll(trip({ template }, metriken)).werte?.ausloesend ?? 0);
@@ -110,7 +112,7 @@ describe('F001 (#2988): Rangfolge in „Wetter-Alarm aktiv“', () => {
 		test(`aktiv_${name}`, () => {
 			const t = trip(w, [X]);
 			assert.equal(aufgeloestVon(t).vorlage_id, vorlage, 'Messaufbau: Python wählt eine andere Vorlage');
-			assert.equal(m.tripWetterAlarmAktiv(t, VORLAGEN, EIG), aktiv(vorlage, X));
+			assert.equal(m.tripWetterAlarmAktiv(t, aufgeloestVon(t), EIG), aktiv(vorlage, X));
 		});
 	}
 });

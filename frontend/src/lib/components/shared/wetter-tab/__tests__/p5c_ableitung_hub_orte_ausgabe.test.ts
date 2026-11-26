@@ -235,7 +235,7 @@ describe('p5c-2 Hub-Uebersicht: Zahl der Uebersicht = Zahl der Ausgabe', () => {
 		test(`trip_alarmzeile_${id}`, () => {
 			const mail = HUB.trip[id].mail;
 			const z = alarmZaehler(lesen(HUB_TRIPS[id]).ampel, mail, EIG);
-			assert.equal(tripAlarmAbText(HUB_TRIPS[id] as never, VORLAGEN, EIG), tr(z.schluessel as MessageKey, z.werte));
+			assert.equal(tripAlarmAbText(HUB_TRIPS[id] as never, aufgeloestVon(HUB_TRIPS[id]), EIG), tr(z.schluessel as MessageKey, z.werte));
 		});
 	}
 	for (const id of Object.keys(HUB_ORTE)) {

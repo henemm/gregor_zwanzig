@@ -15,11 +15,8 @@
 //   type MetrikEigenschaften = {id, group, alertable, is_precursor, allowed_sides, display_only, unit}
 //   vorlagenAusTemplates(liste)                      -> VorlagenAmpeln            (GET /api/templates)
 //   eigenschaftenAusKatalog(apiMetrics)              -> Record<id, MetrikEigenschaften> (GET /api/metrics, nach Kategorie)
-//   vorlageIdVon(abo, vorlagen)                      -> string  (abo.template, unbekannt/fehlt -> 'allgemein')
-//   verschmelzen(vorlage: Ampel, abo?: Ampel|null)   -> Ampel   (Spiegel app.ampel._verschmelzen, mutiert nichts)
-//   zaehleAbweichungen(abo, vorlagen)                -> number  (siehe ampelModell.paritaet.test.ts)
-//   zaehleAbweichungenGegen(vorlage: Ampel, abo)     -> number  (gleiche Zaehlung gegen eine gegebene Vorlagen-Ampel)
-//   ampelFehler(ampel)                               -> string[] (leer = gueltig; Regelgleichheit validate_ampel)
+//   (#2988 S4: Aufloesung, Gueltigkeit und Vorlagen-Wahl rechnet allein Python, POST /api/ampel/aufloesung;
+//    hier ueber `pythonAufloesung` aus wetterTabDaten.ts. Der Zaehler zaehlt `abweichungsMenge`.)
 //   grenzenFehler({lower, upper})                    -> string[] Katalogschluessel wetter.* (AC-17)
 //   gewitterFarben('mittel'|'hoch')                  -> Farbe[]  (mittel: gelb·orange·rot, hoch: orange·rot)
 //   gewitterFehler(thunder)                          -> string[] (leer = gueltig)
@@ -29,7 +26,6 @@
 //   zeilenGruppen(auswahl, eig)                      -> {gruppe, metriken: string[]}[] (feste Gruppenfolge, nur belegte, unbekannte Ids fallen weg)
 //   aktiveMetriken(aufgeloest)                       -> string[] (enabled === true)
 //   auswahlLesen(context, displayConfig, aufgeloest) -> string[] (Trip: metrics[].enabled; Vergleich: active_metrics, fehlt -> aus Ampel)
-//   eigeneVorlageAmpel(preset, vorlagen)             -> Ampel (vollstaendig; ohne ampel: 'allgemein' mit enabled aus preset.metrics)
 //   alarmAbFuerAlle(ampel, auswahl, stufe, eig)      -> Ampel (nur gewaehlte alarmfaehige Metriken; Gewitter nie 'yellow')
 //   alarmZaehler(ampel, auswahl, eig)                -> {art: 'zaehler'|'keine_alarmfaehig', schluessel, werte}
 //   zuruecksetzen(vorlageId, vorlagen)               -> {ampel: Ampel (aufgeloest), auswahl: string[]}
@@ -40,7 +36,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { ampelModell, fixture, live, ohneOffene, pruefeKatalogModell, pythonAufloesen, wetterKatalog, type Json } from './wetterTabDaten.ts';
+import { ampelModell, ampelSchreiben, live, ohneOffene, pruefeKatalogModell, pythonAufloesung, wetterKatalog, type Json } from './wetterTabDaten.ts';
 
 const GRUPPEN_FOLGE = ['temperature', 'wind', 'precip_thunder', 'sky_visibility', 'snow_height'];
 
@@ -52,6 +48,17 @@ async function umgebung(): Promise<{ m: Json; vorlagen: Json; eig: Json }> {
 
 const enabledIds = (ampel: Json): string[] =>
 	Object.entries(ampel.metrics as Record<string, Json>).filter(([, e]) => e.enabled === true).map(([id]) => id).sort();
+
+/** Aufgeloeste Ampel eines Eintrags (Abo-Sicht `{ampel}` oder Altbestand `{metrics}`), echtes Python (#2988). */
+const aufgeloest = (eintrag: Json): Json => pythonAufloesung([eintrag])[0].ampel;
+
+/** Abweichungen einer aufgeloesten Ampel gegen eine Vorlagen-Ampel, wie der Reiter sie zaehlt (#2988 S1):
+ *  Eintraege der kleinsten Speichermenge plus Gewitter einmal; Auswahl = die eingeschalteten Zeilen. */
+async function abweichungen(vorlage: Json, ampel: Json): Promise<number> {
+	const { m } = await umgebung();
+	const menge = (await ampelSchreiben()).abweichungsMenge(vorlage, ampel, m.aktiveMetriken(ampel));
+	return Object.keys(menge.metrics ?? {}).length + (menge.thunder ? 1 : 0);
+}
 
 // ── Daten-Adapter ────────────────────────────────────────────────────────────
 
@@ -79,36 +86,6 @@ describe('Adapter: Vorlagen und Eigenschaften kommen aus /api/templates und /api
 				}
 			}
 		}
-	});
-
-	test('vorlageIdVon: template bekannt -> template, unbekannt/fehlt -> allgemein', async () => {
-		const { m, vorlagen } = await umgebung();
-		assert.equal(m.vorlageIdVon({ template: 'wandern' }, vorlagen), 'wandern');
-		assert.equal(m.vorlageIdVon({ template: 'gibt-es-nicht' }, vorlagen), 'allgemein');
-		assert.equal(m.vorlageIdVon(null, vorlagen), 'allgemein');
-		assert.equal(m.vorlageIdVon({}, vorlagen), 'allgemein');
-	});
-});
-
-// ── Aufloesung: Spiegel von _verschmelzen ────────────────────────────────────
-
-describe('Aufloesung Vorlage -> Abo = Python resolve_ampel', () => {
-	test('verschmelzen ergibt fuer alle Fixture-Faelle dieselbe Ampel wie resolve_ampel', async () => {
-		const { m, vorlagen } = await umgebung();
-		const faelle = (fixture('ampel_deviation_cases.json').cases as Json[]).filter((f) => f.ampel !== null);
-		const soll = pythonAufloesen(faelle.map((f) => f.ampel));
-		faelle.forEach((f, i) => {
-			const ist = m.verschmelzen(vorlagen[m.vorlageIdVon(f.ampel, vorlagen)], structuredClone(f.ampel));
-			assert.deepEqual(ohneOffene(ist), ohneOffene(soll[i]), `Fall ${f.name}: Aufloesung weicht von resolve_ampel ab`);
-		});
-	});
-
-	test('verschmelzen: offene Seite (null) im Abo heisst „keine Grenze“, mutiert die Vorlage nicht', async () => {
-		const { m, vorlagen } = await umgebung();
-		const vorher = JSON.stringify(vorlagen.wandern);
-		const r = m.verschmelzen(vorlagen.wandern, { template: 'wandern', metrics: { gust: { upper: null } } });
-		assert.deepEqual(ohneOffene(r).metrics.gust.upper, {});
-		assert.equal(JSON.stringify(vorlagen.wandern), vorher, 'verschmelzen mutiert die Vorlage');
 	});
 });
 
@@ -150,38 +127,8 @@ describe('AC-17: Reihenfolge-Regeln der Grenzen (Fehlerschluessel statt Text)', 
 		assert.notDeepEqual(oben, unten, 'oben und unten melden denselben Fehler');
 		assert.notDeepEqual(kreuz, oben, '„unten ueber oben“ meldet denselben Fehler wie die obere Reihenfolge');
 	});
-
-	test('ac17_regelgleich_mit_python_und_go_ueber_gemeinsame_vektoren', async () => {
-		const { m } = await umgebung();
-		for (const v of fixture('ampel_validierung_vektoren.json').vektoren as Json[]) {
-			const f = m.ampelFehler(structuredClone(v.ampel));
-			assert.equal(f.length === 0, v.gueltig, `Vektor ${v.name}: Frontend ${f.length === 0 ? 'gueltig' : 'ungueltig'} (${JSON.stringify(f)}), erwartet ${v.gueltig}`);
-		}
-	});
-
-	// #3222 S1 (ADR-0126): Windrichtung modus/sektoren regelgleich mit Python und Go.
-	// Der Kontext-Fall (Gegenwind im Ortsvergleich) folgt mit dem Editor (S4).
-	test('windrichtung_regelgleich_mit_python_und_go_ueber_gemeinsame_faelle', async () => {
-		const { m } = await umgebung();
-		const faelle = (fixture('ampel_windrichtung_cases.json').faelle as Json[]).filter((f) => f.kontext === 'route');
-		assert.ok(faelle.length >= 10, `zu wenige Faelle: ${faelle.length}`);
-		for (const fall of faelle) {
-			const f = m.ampelFehler(structuredClone(fall.ampel));
-			assert.equal(f.length === 0, fall.grund === null, `Fall ${fall.name}: Frontend ${JSON.stringify(f)}, erwartet Grund ${fall.grund}`);
-		}
-	});
-
-	// Adversary F001: Sektoren-Vergleich bei gleichem modus (Menge, Reihenfolge egal), gleiche Faelle wie pytest.
-	test('windrichtung_sektoren_abweichung_regelgleich_mit_python', async () => {
-		const { m } = await umgebung();
-		const faelle = fixture('ampel_windrichtung_cases.json').abweichung as Json[];
-		assert.ok(faelle.length >= 3, `zu wenige Faelle: ${faelle.length}`);
-		for (const fall of faelle) {
-			const vorlage = { metrics: { wind_direction: structuredClone(fall.vorlage) }, thunder: {} };
-			const n = m.zaehleAbweichungenGegen(vorlage, { metrics: { wind_direction: structuredClone(fall.abo) } });
-			assert.equal(n, fall.abweicht ? 1 : 0, `Fall ${fall.name}: Frontend zaehlt ${n}`);
-		}
-	});
+	// #2988 S4: die Regelgleichheit der ganzen Ampel (validate_ampel, Windrichtung) prueft nur noch
+	// Python/Go; der Frontend-Spiegel `ampelFehler` ist entfernt. Sektoren-Abweichung: #3230.
 });
 
 // ── AC-18: Gewitter-Regeln ───────────────────────────────────────────────────
@@ -334,21 +281,21 @@ describe('AC-37/AC-39: Auswahl lesen', () => {
 	test('ac37_aktive_metriken_aus_aufgeloester_ampel', async () => {
 		const { m, vorlagen } = await umgebung();
 		for (const id of Object.keys(vorlagen)) {
-			const a = m.verschmelzen(vorlagen[id], null);
+			const a = aufgeloest({ ampel: { template: id } });
 			assert.deepEqual([...m.aktiveMetriken(a)].sort(), enabledIds(vorlagen[id]), `Vorlage ${id}`);
 		}
 	});
 
 	test('ac37_trip_auswahl_aus_metrics_enabled_in_listenreihenfolge', async () => {
 		const { m, vorlagen } = await umgebung();
-		const a = m.verschmelzen(vorlagen.allgemein, null);
+		const a = aufgeloest({ ampel: { template: 'allgemein' } });
 		const dc = { metrics: [{ metric_id: 'wind', enabled: true }, { metric_id: 'gust', enabled: false }, { metric_id: 'humidity', enabled: true }] };
 		assert.deepEqual(m.auswahlLesen('route', dc, a), ['wind', 'humidity'], 'Trip liest metrics[], nicht die Ampel');
 	});
 
 	test('ac37_vergleich_auswahl_aus_active_metrics_eindeutig_in_reihenfolge', async () => {
 		const { m, vorlagen } = await umgebung();
-		const a = m.verschmelzen(vorlagen.allgemein, null);
+		const a = aufgeloest({ ampel: { template: 'allgemein' } });
 		const dc = {
 			active_metrics: [
 				{ metric_id: 'temperature', aggregation: 'max' },
@@ -361,7 +308,7 @@ describe('AC-37/AC-39: Auswahl lesen', () => {
 
 	test('ac39_vergleich_ohne_active_metrics_liest_aufgeloeste_ampel', async () => {
 		const { m, vorlagen } = await umgebung();
-		const a = m.verschmelzen(vorlagen.wandern, { template: 'wandern', metrics: { dewpoint: { enabled: true } } });
+		const a = aufgeloest({ ampel: { template: 'wandern', metrics: { dewpoint: { enabled: true } } } });
 		for (const dc of [{}, undefined, null, { ampel: { template: 'wandern' } }]) {
 			const aus = m.auswahlLesen('vergleich', dc, a);
 			assert.ok(aus.length > 0, `AC-39: leere Auswahl bei display_config=${JSON.stringify(dc)}`);
@@ -371,7 +318,7 @@ describe('AC-37/AC-39: Auswahl lesen', () => {
 
 	test('ac39_vergleich_bewusst_leere_active_metrics_bleibt_leer', async () => {
 		const { m, vorlagen } = await umgebung();
-		assert.deepEqual(m.auswahlLesen('vergleich', { active_metrics: [] }, m.verschmelzen(vorlagen.allgemein, null)), []);
+		assert.deepEqual(m.auswahlLesen('vergleich', { active_metrics: [] }, aufgeloest({ ampel: { template: 'allgemein' } })), []);
 	});
 
 	test('ac39_eigene_vorlage_ohne_ampel_nutzt_allgemein_mit_enabled_aus_metriken', async () => {
@@ -381,20 +328,22 @@ describe('AC-37/AC-39: Auswahl lesen', () => {
 			{ metric_id: 'humidity', enabled: true, use_friendly_format: false },
 			{ metric_id: 'gust', enabled: false, use_friendly_format: false }
 		] };
-		const a = m.eigeneVorlageAmpel(preset, vorlagen);
+		// #2988 S4: der Altbestand wird vom Server aufgeloest (Eintrag nur mit `metrics`, wie eintragAusVorlage).
+		const a = aufgeloest({ metrics: preset.metrics.map((x) => ({ metric_id: x.metric_id, enabled: x.enabled })) });
 		assert.deepEqual([...m.aktiveMetriken(a)].sort(), ['humidity', 'wind']);
 		assert.deepEqual(ohneOffene(a).metrics.gust.upper, ohneOffene(vorlagen.allgemein).metrics.gust.upper, 'Grenzen nicht aus „allgemein“');
 		assert.equal(a.metrics.gust.alarm_ab, vorlagen.allgemein.metrics.gust.alarm_ab);
 		assert.deepEqual(a.thunder, vorlagen.allgemein.thunder);
 		// Abweichungen zaehlen gegen DIESE Ableitung, nicht gegen „allgemein“
-		assert.equal(m.zaehleAbweichungenGegen(a, { metrics: { wind: { enabled: true } } }), 0);
-		assert.equal(m.zaehleAbweichungenGegen(a, { metrics: { gust: { enabled: true } } }), 1);
-		assert.equal(m.zaehleAbweichungenGegen(a, { metrics: { temperature: { enabled: false } } }), 0, 'temperature ist in der Ableitung aus');
+		const mit = (id: string, enabled: boolean) => ({ ...a, metrics: { ...a.metrics, [id]: { ...a.metrics[id], enabled } } });
+		assert.equal(await abweichungen(a, mit('wind', true)), 0);
+		assert.equal(await abweichungen(a, mit('gust', true)), 1);
+		assert.equal(await abweichungen(a, mit('temperature', false)), 0, 'temperature ist in der Ableitung aus');
 	});
 
 	test('ac39_eigene_vorlage_mit_ampel_wird_aufgeloest', async () => {
-		const { m, vorlagen } = await umgebung();
-		const a = m.eigeneVorlageAmpel({ name: 'Neu', metrics: [], ampel: { template: 'wandern', metrics: { gust: { alarm_ab: 'red' } } } }, vorlagen);
+		const { vorlagen } = await umgebung();
+		const a = aufgeloest({ ampel: { template: 'wandern', metrics: { gust: { alarm_ab: 'red' } } } });
 		assert.equal(a.metrics.gust.alarm_ab, 'red');
 		assert.deepEqual(ohneOffene(a).metrics.wind, ohneOffene(vorlagen.wandern).metrics.wind);
 	});
@@ -407,7 +356,7 @@ describe('AC-14: „Alarm ab fuer alle“ wirkt nur auf gewaehlte alarmfaehige M
 		const { m, vorlagen, eig } = await umgebung();
 		const vorlage = vorlagen.wandern;
 		const auswahl = [...enabledIds(vorlage), 'wind_direction'];
-		const vorher = m.verschmelzen(vorlage, null);
+		const vorher = aufgeloest({ ampel: { template: 'wandern' } });
 		const nachher = m.alarmAbFuerAlle(vorher, auswahl, 'red', eig);
 		let geaendert = 0;
 		for (const [id, e] of Object.entries(nachher.metrics as Record<string, Json>)) {
@@ -420,22 +369,25 @@ describe('AC-14: „Alarm ab fuer alle“ wirkt nur auf gewaehlte alarmfaehige M
 			}
 		}
 		assert.ok(geaendert > 0, 'Messaufbau: nichts geaendert');
-		assert.equal(m.zaehleAbweichungenGegen(vorlage, nachher), geaendert, 'AC-14: jede geaenderte Metrik zaehlt als eine Abweichung');
+		assert.equal(await abweichungen(vorlage, nachher), geaendert, 'AC-14: jede geaenderte Metrik zaehlt als eine Abweichung');
 		assert.equal(vorher.metrics.gust.alarm_ab, 'orange', 'alarmAbFuerAlle mutiert die Eingabe');
 	});
 
 	test('ac14_alarm_ab_fuer_alle_gelb_laesst_gewitter_nie_gelb', async () => {
 		const { m, vorlagen, eig } = await umgebung();
-		const a = m.alarmAbFuerAlle(m.verschmelzen(vorlagen.wandern, null), enabledIds(vorlagen.wandern), 'yellow', eig);
+		const a = m.alarmAbFuerAlle(aufgeloest({ ampel: { template: 'wandern' } }), enabledIds(vorlagen.wandern), 'yellow', eig);
 		assert.equal(a.metrics.gust.alarm_ab, 'yellow');
 		assert.notEqual(a.metrics.thunder.alarm_ab, 'yellow', 'Gewitter darf nie „Alarm ab Gelb“ bekommen');
-		assert.deepEqual(m.ampelFehler(a), [], 'Ergebnis waere serverseitig ungueltig');
+		// Der Server nimmt das Ergebnis an (eine ungueltige Ampel ignoriert er, dann stuende Boeen auf der Vorlage).
+		const r = aufgeloest({ ampel: a });
+		assert.equal(r.metrics.gust.alarm_ab, 'yellow', 'Ergebnis waere serverseitig ungueltig');
+		assert.equal(r.metrics.thunder.alarm_ab, a.metrics.thunder.alarm_ab, 'Ergebnis waere serverseitig ungueltig');
 	});
 
 	test('ac14_zaehler_x_von_y_z_ohne', async () => {
 		const { m, vorlagen, eig } = await umgebung();
 		const auswahl = [...enabledIds(vorlagen.wandern), 'wind_direction'];
-		const a = m.alarmAbFuerAlle(m.verschmelzen(vorlagen.wandern, null), auswahl, 'orange', eig);
+		const a = m.alarmAbFuerAlle(aufgeloest({ ampel: { template: 'wandern' } }), auswahl, 'orange', eig);
 		const faehig = auswahl.filter((id) => eig[id].alertable);
 		const z = m.alarmZaehler(a, auswahl, eig);
 		assert.equal(z.art, 'zaehler');
@@ -447,7 +399,7 @@ describe('AC-14: „Alarm ab fuer alle“ wirkt nur auf gewaehlte alarmfaehige M
 	test('ac14_zaehler_nie_zaehlt_nicht_als_ausloesend', async () => {
 		const { m, vorlagen, eig } = await umgebung();
 		const auswahl = ['gust', 'wind', 'humidity'];
-		const a = m.alarmAbFuerAlle(m.verschmelzen(vorlagen.wandern, null), auswahl, 'never', eig);
+		const a = m.alarmAbFuerAlle(aufgeloest({ ampel: { template: 'wandern' } }), auswahl, 'never', eig);
 		const z = m.alarmZaehler(a, auswahl, eig);
 		assert.equal(z.art, 'zaehler');
 		assert.deepEqual(z.werte, { ausloesend: 0, ausgewaehlt: 3, ohne: 1 }); // #2955 AC-5
@@ -455,7 +407,7 @@ describe('AC-14: „Alarm ab fuer alle“ wirkt nur auf gewaehlte alarmfaehige M
 
 	test('ac14_nur_vorboten_ergibt_keine_alarmfaehige_metrik', async () => {
 		const { m, vorlagen, eig } = await umgebung();
-		const z = m.alarmZaehler(m.verschmelzen(vorlagen.wandern, null), ['humidity', 'rain_probability'], eig);
+		const z = m.alarmZaehler(aufgeloest({ ampel: { template: 'wandern' } }), ['humidity', 'rain_probability'], eig);
 		assert.equal(z.art, 'keine_alarmfaehig');
 		pruefeKatalogModell(z, 'Alarm-Zaehler keine alarmfaehige');
 		assert.equal(
@@ -472,10 +424,9 @@ describe('AC-12: Zuruecksetzen auf die Vorlage ergibt 0 Abweichungen', () => {
 		test(`ac12_zuruecksetzen_${id}`, async () => {
 			const { m, vorlagen } = await umgebung();
 			const r = m.zuruecksetzen(id, vorlagen);
-			assert.deepEqual(ohneOffene(r.ampel), ohneOffene(m.verschmelzen(vorlagen[id], null)));
+			assert.deepEqual(ohneOffene(r.ampel), ohneOffene(aufgeloest({ ampel: { template: id } })));
 			assert.deepEqual([...r.auswahl].sort(), enabledIds(vorlagen[id]));
-			assert.equal(m.zaehleAbweichungenGegen(vorlagen[id], r.ampel), 0);
-			assert.equal(m.zaehleAbweichungen({ ...r.ampel, template: id }, vorlagen), 0);
+			assert.equal(await abweichungen(vorlagen[id], r.ampel), 0);
 		});
 	}
 });

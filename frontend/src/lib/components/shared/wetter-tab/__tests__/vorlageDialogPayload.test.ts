@@ -18,7 +18,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { ampelModell, ampelSchreiben, live, wetterKatalog, type Json } from './wetterTabDaten.ts';
+import { ampelModell, ampelSchreiben, pythonAufloesung, wetterKatalog, type Json } from './wetterTabDaten.ts';
 
 function enthaeltSchluessel(x: unknown, name: string): boolean {
 	if (x === null || typeof x !== 'object') return false;
@@ -29,8 +29,8 @@ function enthaeltSchluessel(x: unknown, name: string): boolean {
 async function abo(): Promise<{ m: Json; s: Json; ampel: Json }> {
 	const m = await ampelModell();
 	const s = await ampelSchreiben();
-	const vorlagen = m.vorlagenAusTemplates(live().templates);
-	const ampel = m.verschmelzen(vorlagen.wandern, { template: 'wandern', metrics: { gust: { alarm_ab: 'red' }, dewpoint: { enabled: true } } });
+	// #2988 S4: aufgeloeste Ampel vom Server (echtes Python), kein Frontend-Spiegel.
+	const ampel = pythonAufloesung([{ ampel: { template: 'wandern', metrics: { gust: { alarm_ab: 'red' }, dewpoint: { enabled: true } } } }])[0].ampel;
 	return { m, s, ampel };
 }
 

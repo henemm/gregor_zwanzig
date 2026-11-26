@@ -32,8 +32,7 @@
       "FRONTEND_LISTE": 1
     },
     "frontend/src/lib/components/shared/wetter-tab/ampelModell.ts": {
-      "FRONTEND_LISTE": 2,
-      "FRONTEND_VERZWEIGUNG": 1
+      "FRONTEND_LISTE": 2
     },
     "frontend/src/lib/components/shared/wetter-tab/corridorEditorState.ts": {
       "FRONTEND_LISTE": 3,
@@ -232,5 +231,5 @@
       "VERARBEITUNG_AUSSEN": 1
     }
   },
-  "hoechststand": 422
+  "hoechststand": 421
 }

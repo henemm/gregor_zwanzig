@@ -103,7 +103,6 @@
 	"wetter.grenzen.fehler_unten": "Unten muss rot kleiner als orange und orange kleiner als gelb sein.",
 	"wetter.grenzen.fehler_kreuz": "Die untere Grenze darf nicht über der oberen liegen.",
 	"wetter.grenzen.fehler_zahl": "Bitte eine Zahl eingeben oder das Feld leer lassen.",
-	"wetter.grenzen.fehler_ungueltig": "Diese Einstellung ist ungültig und wird nicht gespeichert.",
 	"wetter.nicht_im_briefing.titel": "Nicht im Briefing:",
 	"wetter.nicht_im_briefing.hinzufuegen": "+ {metrik}",
 	"wetter.nicht_im_briefing.hinzugefuegt": "{metrik} ist jetzt im Briefing und in jedem Kanal angehakt. Unter ‚Was steht wo‘ kannst du sie für einzelne Kanäle abwählen.",

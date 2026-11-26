@@ -21,6 +21,10 @@
 //         display_config.ampel gesetzt, mindestens eine aktive, alarmfähige Metrik mit
 //         „Alarm ab" ≠ never auf der aufgelösten Ampel. Einparametriger Aufruf bleibt gültig.
 //
+// #2988 S4: der zweite Parameter beider Funktionen ist die aufgelöste Ampel des Trips
+// (POST /api/ampel/aufloesung, hier echtes Python über `aufgeloestVon`), nicht mehr die Vorlagen;
+// ohne sie „—" bzw. nur die bisherigen Quellen. Vertrag: hub_uebersicht_aufloesung_2988.test.ts.
+//
 // Die Erwartung für „aktiv" kommt NICHT aus diesem Test, sondern aus der echten
 // Python-Funktion (Paritäts-Prüfung über load_trip_from_dict): die Übersicht darf nie
 // „aus" zeigen, während der Server alarmiert, und nie „an", wenn er es nicht tut.
@@ -110,10 +114,10 @@ describe('AC-32 U4: Alarm-Zeile der Trip-Übersicht = „Alarm ab"-Zähler des R
 	for (const [name, t] of Object.entries(FAELLE)) {
 		test(`${name}: Zahlen wie der Reiter Wetter (alarmZaehler auf standAusAbo)`, async () => {
 			const m = await modell();
-			const { vorlagen, eig } = await umgebung();
+			const { eig } = await umgebung();
 			const stand = (await wetterZustand()).standAusAbo('route', t, aufgeloestVon(t));
 			const z = (await ampelModell()).alarmZaehler(stand.ampel, stand.auswahl, eig);
-			const text: string = m.tripAlarmAbText(t, vorlagen, eig);
+			const text: string = m.tripAlarmAbText(t, aufgeloestVon(t), eig);
 			if (z.art === 'zaehler') {
 				assert.match(text, new RegExp(`^${z.werte.ausloesend} von ${z.werte.ausgewaehlt} Metriken lösen einen Alarm aus`), text);
 			} else {
@@ -123,22 +127,22 @@ describe('AC-32 U4: Alarm-Zeile der Trip-Übersicht = „Alarm ab"-Zähler des R
 		});
 	}
 
-	test('Ladefehler der Vorlagen ⇒ „—", nie eine geratene Zahl', async () => {
+	test('Auflösung oder Katalog fehlt ⇒ „—", nie eine geratene Zahl', async () => {
 		const m = await modell();
 		const { eig } = await umgebung();
 		assert.equal(m.tripAlarmAbText(FAELLE['nur Vorlage „allgemein" (Böen Alarm ab Orange)'], null, eig), '—');
-		assert.equal(m.tripAlarmAbText(FAELLE['nur Vorlage „allgemein" (Böen Alarm ab Orange)'], {}, null), '—');
+		assert.equal(m.tripAlarmAbText(FAELLE['nur Vorlage „allgemein" (Böen Alarm ab Orange)'], aufgeloestVon(FAELLE['nur Vorlage „allgemein" (Böen Alarm ab Orange)']), null), '—');
 	});
 });
 
 describe('AC-32 U4: „Alarm aktiv" folgt der Server-Regel ampel_alarmquelle_aktiv', () => {
 	test('Parität je Fall mit der echten Python-Funktion', async () => {
 		const m = await modell();
-		const { vorlagen, eig } = await umgebung();
+		const { eig } = await umgebung();
 		const soll = serverAktiv();
 		assert.equal(soll['nur Vorlage „allgemein" (Böen Alarm ab Orange)'], true, 'Fixtur-Schutz: Server muss für die reine Vorlage alarmieren');
 		assert.equal(soll['ohne ampel-Schlüssel (Altbestand)'], false, 'Fixtur-Schutz: ohne ampel-Schlüssel alarmiert der Server nicht');
-		const abweichung = Object.keys(FAELLE).filter((k) => m.tripWetterAlarmAktiv(FAELLE[k], vorlagen, eig) !== soll[k]);
+		const abweichung = Object.keys(FAELLE).filter((k) => m.tripWetterAlarmAktiv(FAELLE[k], aufgeloestVon(FAELLE[k]), eig) !== soll[k]);
 		assert.deepEqual(abweichung, [], `Übersicht weicht vom Server ab: ${abweichung.map((k) => `${k} (Server ${soll[k]})`).join('; ')}`);
 	});
 

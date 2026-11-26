@@ -249,6 +249,8 @@ Nicht umgezogen, weil nicht Teil dieses Issues (Liste „Nicht in diesem Issue" 
 - **Kleine Verhaltensangleichung:** Bei einer gespeicherten, ungültigen Abo-Ampel ignoriert Python auch deren `template` (Vorlage dann aus `preset_name`/`profil`), das Frontend nutzte es bisher. Go verhindert das Speichern ungültiger Ampeln; der Fall betrifft nur Altdaten. Es gilt Python.
 - **Auflösung ohne `kontext`:** wie `resolve_ampel` (Trip-Regeln); Gegenwind im Ortsvergleich verhindert Go beim Speichern.
 - Beim Öffnen des Reiters braucht es jetzt eine erreichbare Auflösung; offline bleibt „Erneut laden" (wie schon bei Katalog und Vorlagen).
+- **Eigene Vorlage über 256 KiB** (F002 aus S3): ergibt 413 und „Erneut laden". Die Oberfläche erzeugt solche Daten nicht (32 Systemampeln ≈ 107 KB).
+- **Ratsche `ampelModell.ts` (AC-18, gemessen in S4):** die beiden `FRONTEND_LISTE`-Funde sind Darstellungslisten des Reiters (`GRUPPEN_FOLGE`, `HINWEIS_IDS`), kein Spiegel; „2 auf 0" im AC-Text war eine Fehlmessung. S4 senkt `FRONTEND_VERZWEIGUNG` 1 → 0 (`windrichtungUngueltig`), `FRONTEND_LISTE` bleibt 2.
 
 ## Architektur-Entscheidung (ADR)
 

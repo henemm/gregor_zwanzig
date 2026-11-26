@@ -1,0 +1,216 @@
+{
+	"_format": "#2988 S4 AC-17: Referenz der Karte „Wetter\" der Vergleichs-Übersicht, erzeugt mit dem Code VOR S4 (hubUebersichtModell.deriveVergleichKennzahlen, Vorlagen aus /api/templates, Katalog aus /api/compare/metrics, Sprache de). Gelesen von frontend/src/lib/components/shared/hub-uebersicht/__tests__/wertebereiche_karte_2988.test.ts. faelle[].preset = Abo-Teil (über ein festes Grundgerüst gelegt), kurz/lang = beschreibungKurz/beschreibungLang.",
+	"faelle": [
+		{
+			"name": "drei_metriken",
+			"preset": {
+				"display_config": {
+					"active_metrics": [
+						"snow_depth",
+						"fresh_snow",
+						"sunshine"
+					]
+				}
+			},
+			"kurz": "3 Metriken im Briefing",
+			"lang": "3 Metriken im Briefing, für alle Orte nebeneinander. Kein Score, kein Ranking."
+		},
+		{
+			"name": "drei_im_neuformat",
+			"preset": {
+				"display_config": {
+					"active_metrics": [
+						{
+							"metric_id": "snow_depth",
+							"aggregation": "max"
+						},
+						{
+							"metric_id": "fresh_snow",
+							"aggregation": "max"
+						},
+						{
+							"metric_id": "sunshine",
+							"aggregation": "max"
+						}
+					]
+				}
+			},
+			"kurz": "3 Metriken im Briefing",
+			"lang": "3 Metriken im Briefing, für alle Orte nebeneinander. Kein Score, kein Ranking."
+		},
+		{
+			"name": "doppelte_zaehlen_einmal",
+			"preset": {
+				"display_config": {
+					"active_metrics": [
+						"snow_depth",
+						"snow_depth",
+						"fresh_snow"
+					]
+				}
+			},
+			"kurz": "2 Metriken im Briefing",
+			"lang": "2 Metriken im Briefing, für alle Orte nebeneinander. Kein Score, kein Ranking."
+		},
+		{
+			"name": "nicht_ausgebbare_zaehlen_nicht",
+			"preset": {
+				"display_config": {
+					"active_metrics": [
+						"snow_depth",
+						"fresh_snow",
+						"temperature_night",
+						"temperature_day_low",
+						"temperature_day_high"
+					]
+				}
+			},
+			"kurz": "2 Metriken im Briefing",
+			"lang": "2 Metriken im Briefing, für alle Orte nebeneinander. Kein Score, kein Ranking."
+		},
+		{
+			"name": "nur_nicht_ausgebbare",
+			"preset": {
+				"display_config": {
+					"active_metrics": [
+						"temperature_night",
+						"temperature_day_low"
+					]
+				}
+			},
+			"kurz": "0 Metriken im Briefing",
+			"lang": "0 Metriken im Briefing, für alle Orte nebeneinander. Kein Score, kein Ranking."
+		},
+		{
+			"name": "altschluessel",
+			"preset": {
+				"display_config": {
+					"active_metrics": [
+						"snow_depth_cm",
+						"snow_new_sum_cm",
+						"sunny_hours_h",
+						"wind_max_kmh"
+					]
+				}
+			},
+			"kurz": "4 Metriken im Briefing",
+			"lang": "4 Metriken im Briefing, für alle Orte nebeneinander. Kein Score, kein Ranking."
+		},
+		{
+			"name": "leere_liste",
+			"preset": {
+				"display_config": {
+					"active_metrics": []
+				}
+			},
+			"kurz": "0 Metriken im Briefing",
+			"lang": "0 Metriken im Briefing, für alle Orte nebeneinander. Kein Score, kein Ranking."
+		},
+		{
+			"name": "nie_eingestellt",
+			"preset": {
+				"display_config": {}
+			},
+			"kurz": "23 Metriken im Briefing",
+			"lang": "23 Metriken im Briefing, für alle Orte nebeneinander. Kein Score, kein Ranking."
+		},
+		{
+			"name": "ohne_display_config",
+			"preset": {},
+			"kurz": "23 Metriken im Briefing",
+			"lang": "23 Metriken im Briefing, für alle Orte nebeneinander. Kein Score, kein Ranking."
+		},
+		{
+			"name": "nie_eingestellt_mit_vorlage_wandern",
+			"preset": {
+				"display_config": {
+					"ampel": {
+						"template": "wandern"
+					}
+				}
+			},
+			"kurz": "23 Metriken im Briefing",
+			"lang": "23 Metriken im Briefing, für alle Orte nebeneinander. Kein Score, kein Ranking."
+		},
+		{
+			"name": "nie_eingestellt_profil_radtour",
+			"preset": {
+				"profil": "radtour",
+				"display_config": {}
+			},
+			"kurz": "23 Metriken im Briefing",
+			"lang": "23 Metriken im Briefing, für alle Orte nebeneinander. Kein Score, kein Ranking."
+		},
+		{
+			"name": "liste_mit_ampel_abweichungen",
+			"preset": {
+				"display_config": {
+					"active_metrics": [
+						"snow_depth",
+						"fresh_snow",
+						"sunshine",
+						"wind",
+						"cloud_total"
+					],
+					"ampel": {
+						"template": "wandern",
+						"metrics": {
+							"gust": {
+								"enabled": false
+							},
+							"dewpoint": {
+								"enabled": true
+							}
+						}
+					}
+				}
+			},
+			"kurz": "5 Metriken im Briefing",
+			"lang": "5 Metriken im Briefing, für alle Orte nebeneinander. Kein Score, kein Ranking."
+		},
+		{
+			"name": "liste_mit_ungueltiger_ampel",
+			"preset": {
+				"display_config": {
+					"active_metrics": [
+						"snow_depth",
+						"fresh_snow",
+						"sunshine",
+						"wind"
+					],
+					"ampel": {
+						"template": "wandern",
+						"metrics": {
+							"gust": {
+								"upper": {
+									"yellow": 90,
+									"orange": 60
+								}
+							}
+						}
+					}
+				}
+			},
+			"kurz": "4 Metriken im Briefing",
+			"lang": "4 Metriken im Briefing, für alle Orte nebeneinander. Kein Score, kein Ranking."
+		},
+		{
+			"name": "liste_mit_preset_name",
+			"preset": {
+				"display_config": {
+					"active_metrics": [
+						"snow_depth",
+						"fresh_snow",
+						"sunshine",
+						"wind",
+						"cloud_total",
+						"visibility"
+					],
+					"preset_name": "alpen-trekking"
+				}
+			},
+			"kurz": "6 Metriken im Briefing",
+			"lang": "6 Metriken im Briefing, für alle Orte nebeneinander. Kein Score, kein Ranking."
+		}
+	]
+}
