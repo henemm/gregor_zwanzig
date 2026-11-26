@@ -35,7 +35,8 @@
 	import AlertQuietHoursCard from '$lib/components/alerts-tab/AlertQuietHoursCard.svelte';
 	import AlertPreviewCard from '$lib/components/alerts-tab/AlertPreviewCard.svelte';
 	import AlertMetricLevelTable from '$lib/components/alerts-tab/AlertMetricLevelTable.svelte';
-	import { ladeVorlagenAmpeln, vorlageIdFuer, type VorlagenAmpeln } from '../alerts-tab/alarmAbAnzeige.ts';
+	import { ladeVorlagenAmpeln, type VorlagenAmpeln } from '../alerts-tab/alarmAbAnzeige.ts';
+	import { erstelleAboVorlageId } from './alarme-tab/aboVorlageId.svelte.ts'; // #3399 S1: Vorlagen-ID allein vom Server
 	import AlertMetricChannelsBlock from '$lib/components/alerts-tab/AlertMetricChannelsBlock.svelte';
 	import { baueDiff, type KanalEintrag, type KanalMap } from './alarme-tab/alertMetricChannels.ts';
 	import { vergleichAlarmRegeln } from '$lib/components/alerts-tab/alertPreviewHelpers'; // #2283 S5: echte Alarm-Vorschau statt VTAlertSample
@@ -147,6 +148,7 @@
 		// Tarif-Zustand so steuern, ohne dass `onMount` je laeuft (#1717).
 		profileOverride?: { premium_sms_allowed?: boolean } | null; /** #2521 S1: Infobox nur beim Anlegen (Default aus). */ showInfobox?: boolean;
 		/** #2793 S2b: Testhaken Vorlagen-Ampeln (Muster profileOverride). */ templatesOverride?: VorlagenAmpeln;
+		/** #3399 S1: Testhaken Vorlagen-ID (undefined = Antwort steht aus, null = Fehler; gesetzt => kein Laden). */ vorlageIdOverride?: string | null;
 	}
 	let {
 		context = 'route',
@@ -181,13 +183,15 @@
 		onChannelToggle,
 		existingChannelThresholds,
 		existingAlertMetricChannels = undefined, onAlertMetricChannelChange = undefined, alertMetricChannels = undefined,
-		profileOverride, showInfobox = false, templatesOverride
+		profileOverride, showInfobox = false, templatesOverride, vorlageIdOverride
 	}: Props = $props();
 
 	let vorlagenAmpeln = $state<VorlagenAmpeln>(untrack(() => templatesOverride ?? {})); // #2793 S2b: „Alarm ab" nur lesbar, EIN Code fuer beide Kontexte
 	onMount(() => { if (templatesOverride === undefined) ladeVorlagenAmpeln(fetch).then((v) => (vorlagenAmpeln = v)); });
 	const aboAmpel = $derived(((trip?.display_config as { ampel?: unknown } | undefined)?.ampel ?? (preset?.display_config as { ampel?: unknown } | undefined)?.ampel ?? null) as VorlagenAmpeln[string]);
-	const vorlageAmpel = $derived(vorlagenAmpeln[vorlageIdFuer(aboAmpel, trip?.display_config?.preset_name, preset?.profil, vorlagenAmpeln)] ?? null);
+	// #3399 S1 (AC-1/AC-7): nur die ID kommt aus der Server-Aufloesung, die Vorgabe aus der Vorlagen-Ampel; ohne ID „—".
+	const aboVorlage = erstelleAboVorlageId(() => ({ abo: trip ?? preset, extern: vorlageIdOverride }), api);
+	const vorlageAmpel = $derived(aboVorlage.id ? (vorlagenAmpeln[aboVorlage.id] ?? null) : null);
 
 	// ── Tarif-Zustand fuer das Premium-SMS-Gate (AC-5/AC-13) ───────────────────
 	// EIN Fetch-Ort fuer alle vier Mount-Punkte (Trip-Alarme-Reiter,
