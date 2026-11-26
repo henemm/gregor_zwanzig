@@ -1,0 +1,68 @@
+{
+  "verified_commit": "304cf27790f1d51f83b9711e9fa3b251c6b01828",
+  "findings": [
+    {
+      "ac": "AC-1 Trip DE+EN",
+      "status": "VERIFIED",
+      "url": "https://staging.gregor20.henemm.com/trips/new",
+      "evidence": "Karte bedient (1 Haken ab), Ausblick nicht angefasst, Zustellung nur Morgen. Anlege-POST: placements.rows=11, outlook_reports fehlt. Ansicht GET /api/briefings/{id}/placements?kind=route: outlook_reports=[\"morning\"]. DE-Pruefkonto und EN-Konto je gruen. Zweiter Nutzer: GET Ansicht 404, GET Abo 404 (beide Richtungen).",
+      "workflow": "fix-3361-ausblick-anlegen"
+    },
+    {
+      "ac": "AC-1 Orts-Vergleich DE+EN",
+      "status": "VERIFIED",
+      "url": "https://staging.gregor20.henemm.com/compare/new",
+      "evidence": "Vorbelegung dort Morgen; nach Wetter-Schritt Zustellung auf nur Abend gestellt (sonst ohne Wirkung). Anlege-POST: placements.rows=23, outlook_reports fehlt, gespeichert undefined; Ansicht outlook_reports=[\"evening\"]. DE und EN gruen. Zweiter Nutzer: Ansicht 404, Abo 404.",
+      "workflow": "fix-3361-ausblick-anlegen"
+    },
+    {
+      "ac": "AC-3 Trip+Orte (DE)",
+      "status": "VERIFIED",
+      "url": "https://staging.gregor20.henemm.com/trips/new",
+      "evidence": "Eigene Ausblick-Wahl bleibt: Trip Morgen zusaetzlich zur Vorbelegung gesetzt, dann nur Morgen: POST outlook_reports=[\"morning\",\"evening\"], Ansicht gleich. Orte: Abend gewaehlt, POST und Ansicht [\"morning\",\"evening\"].",
+      "workflow": "fix-3361-ausblick-anlegen"
+    },
+    {
+      "ac": "AC-5 Trip+Orte DE+EN",
+      "status": "VERIFIED",
+      "url": "https://staging.gregor20.henemm.com/trips/new",
+      "evidence": "Vor dem Anlegen zeigt Ausblick-Schalter die Vorbelegung: Trip evening=an (morning=aus), Orte morning=an (evening=aus), DE und EN gleich. Hinweis: im Orts-Vergleich ist die Vorbelegung Morgen, nicht Abend.",
+      "workflow": "fix-3361-ausblick-anlegen"
+    }
+  ],
+  "verified_at": "2026-11-26T15:34:05.463003+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Staging-E2E #3361 Ausblick im Anlegen (Trip und Orte, DE und EN, AC-1/3/5)",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "fix-3361-ausblick-anlegen": {
+      "verdict": "VERIFIED: Staging-E2E #3361 Ausblick im Anlegen (Trip und Orte, DE und EN, AC-1/3/5)",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-26T15:34:05.463003+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
