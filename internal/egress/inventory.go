@@ -22,6 +22,7 @@ const (
 var Inventory = map[string]Kind{
 	"api.open-meteo.com":             TestAccess,
 	"air-quality-api.open-meteo.com": TestAccess,
+	"ensemble-api.open-meteo.com":    TestAccess,
 	"dataset.api.hub.geosphere.at":   TestAccess,
 	// #1457 S2b: DWD-opendata (ICON-D2 Gewittersignale) — kostenlos und
 	// kontingentfrei; Staging braucht den Host fuer den Gewitter-Nachweis
