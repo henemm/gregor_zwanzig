@@ -1,0 +1,61 @@
+{
+  "verified_commit": "e7b376d3a30115325859b990bbc1c3701ad93f17",
+  "findings": [
+    {
+      "ac": "TELEGRAM-LIVE",
+      "status": "PASS",
+      "url": "telegram://staging-testbot",
+      "evidence": "Eigene Messung: test_issue_686_telegram_functional_live.py + test_telegram_live_zweisprachig.py mit GZ_TELEGRAM_LIVE=1 gegen Staging-Test-Bot: 10 passed, 0 skipped, 0 failed (docs/artifacts/rework-3385-waisen-s3/telegram-live-output.txt)",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "UI-DE",
+      "status": "PASS",
+      "url": "/",
+      "evidence": "Messung des staging-validator (nicht eigene): Oberflaeche DE, 2xPASS, Screenshots docs/artifacts/rework-3385-waisen-s3/de-*.png",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    },
+    {
+      "ac": "UI-EN",
+      "status": "PASS",
+      "url": "/",
+      "evidence": "Messung des staging-validator (nicht eigene): Oberflaeche EN, 2xPASS, Screenshots docs/artifacts/rework-3385-waisen-s3/en-*.png",
+      "workflow": "feat-3298-altfeld-typen-sperre"
+    }
+  ],
+  "verified_at": "2026-11-26T08:55:58.971676+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Telegram-Live 10 passed (eigene Messung), Oberflaeche DE/EN 4xPASS (staging-validator)",
+  "scope": "full-stack",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "feat-3298-altfeld-typen-sperre": {
+      "verdict": "VERIFIED: Telegram-Live 10 passed (eigene Messung), Oberflaeche DE/EN 4xPASS (staging-validator)",
+      "scope": "full-stack",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-26T08:55:58.971676+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
