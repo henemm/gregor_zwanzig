@@ -223,3 +223,106 @@ describe('#3399 S1: Fehler', () => {
 		assert.equal(z.aufrufe.length, 0);
 	});
 });
+
+// Fix-Schleife S3a (Staging-Befund): ein Seitenaufruf des Orts-Vergleich-Hubs sandte drei identische
+// POST /api/ampel/aufloesung. Der Cache kannte nur FERTIGE Ergebnisse; ein zweites laden() (weiterer
+// Verbraucher oder Effekt-Neulauf, weil die Seite das Preset beim Mount neu zuweist) vor der ersten
+// Antwort fragte erneut an. Laufende Anfragen werden je Eintrag geteilt.
+
+/** Ein Tor fuer ALLE Aufrufe: haelt jede Anfrage an, bis `oeffne()` kommt. */
+function gemeinsamesTor() {
+	let oeffne!: () => void;
+	const tor = new Promise<void>((r) => (oeffne = r));
+	return { tor: () => tor, oeffne: () => oeffne() };
+}
+
+describe('#3399 S3a AC-6: laufende Anfragen werden geteilt', () => {
+	test('drei Lader-Instanzen laden gleichzeitig dasselbe Abo: genau EIN Aufruf, alle melden dieselbe ID', async () => {
+		const t = gemeinsamesTor();
+		const z = zaehlClient({ tor: t.tor });
+		const a = abo('geteilt-1', { display_config: { preset_name: 'x3399-geteilt-1', ampel: { template: 'skitouren' } } });
+		const s = [sammler(), sammler(), sammler()];
+		const laeufe = s.map((x) => erstelleVorlagenIdLader(z.client, x.melde).laden([a]));
+		assert.ok(s.every((x) => x.meldungen[0][0].zustand === 'laedt'), 'jeder Verbraucher sieht zuerst „laedt"');
+		t.oeffne();
+		await Promise.all(laeufe);
+		assert.deepEqual(z.aufrufe, [1], 'Hub, Alarme-Reiter und Karte teilen die laufende Anfrage');
+		for (const x of s) assert.deepEqual(x.letzte(), [{ zustand: 'geladen', vorlageId: vid(a) }]);
+		assert.equal(vid(a), 'skitouren', 'Messaufbau: Server-ID der Ampel-Vorlage');
+	});
+
+	test('teilweise laufend: nur der noch nicht laufende Eintrag geht zusaetzlich raus', async () => {
+		const t = gemeinsamesTor();
+		const z = zaehlClient({ tor: t.tor });
+		const s2 = sammler();
+		const l1 = erstelleVorlagenIdLader(z.client, () => {}).laden([abo('teil-1')]);
+		const l2 = erstelleVorlagenIdLader(z.client, s2.melde).laden([abo('teil-1'), abo('teil-2')]);
+		t.oeffne();
+		await Promise.all([l1, l2]);
+		assert.deepEqual(z.aufrufe, [1, 1], 'teil-1 einmal (geteilt), teil-2 einmal');
+		assert.deepEqual(s2.letzte(), [
+			{ zustand: 'geladen', vorlageId: 'allgemein' },
+			{ zustand: 'geladen', vorlageId: 'allgemein' }
+		]);
+	});
+
+	// Adversary F001: getrennte Tore, damit die geteilte und die eigene Anfrage NICHT im selben Tick enden.
+	test('teilweise laufend, getrennte Antworten: Lader 2 meldet erst, wenn x UND y da sind', async () => {
+		let oeffne1!: () => void;
+		let oeffne2!: () => void;
+		const tore = [new Promise<void>((r) => (oeffne1 = r)), new Promise<void>((r) => (oeffne2 = r))];
+		let aufruf = 0;
+		const z = zaehlClient({ tor: () => tore[aufruf++] });
+		const x = abo('getrennt-x', { display_config: { preset_name: 'x3399-getrennt-x', ampel: { template: 'skitouren' } } });
+		const y = abo('getrennt-y', { display_config: { preset_name: 'x3399-getrennt-y', ampel: { template: 'radtour' } } });
+		const s2 = sammler();
+		const l1 = erstelleVorlagenIdLader(z.client, () => {}).laden([x]);
+		const l2 = erstelleVorlagenIdLader(z.client, s2.melde).laden([x, y]);
+		assert.deepEqual(z.aufrufe, [1, 1], 'x laeuft schon (Tor 1), nur y geht zusaetzlich raus (Tor 2)');
+		oeffne1();
+		await l1;
+		assert.ok(
+			!s2.letzte().every((m) => m.zustand === 'geladen'),
+			'Lader 2 darf nach Antwort 1 noch nicht „geladen" fuer beide melden: ' + JSON.stringify(s2.letzte())
+		);
+		oeffne2();
+		await l2;
+		assert.deepEqual(s2.letzte(), [
+			{ zustand: 'geladen', vorlageId: vid(x) },
+			{ zustand: 'geladen', vorlageId: vid(y) }
+		]);
+		assert.deepEqual([vid(x), vid(y)], ['skitouren', 'radtour'], 'Messaufbau: Server-IDs der Ampel-Vorlagen');
+	});
+
+	test('derselbe Lader laedt zweimal vor der ersten Antwort: EIN Aufruf, das Endergebnis wird gemeldet', async () => {
+		const t = gemeinsamesTor();
+		const z = zaehlClient({ tor: t.tor });
+		const s = sammler();
+		const lader = erstelleVorlagenIdLader(z.client, s.melde);
+		const a = abo('neulauf-1', { display_config: { preset_name: 'x3399-neulauf-1', ampel: { template: 'radtour' } } });
+		const erster = lader.laden([a]);
+		const zweiter = lader.laden([{ ...a, display_config: { ...a.display_config } }]);
+		t.oeffne();
+		await Promise.all([erster, zweiter]);
+		assert.deepEqual(z.aufrufe, [1], 'der Effekt-Neulauf fragt nicht erneut an');
+		assert.deepEqual(s.letzte(), [{ zustand: 'geladen', vorlageId: vid(a) }], 'das Ticket verschluckt das Ergebnis nicht');
+		assert.equal(vid(a), 'radtour');
+	});
+
+	test('scheitert die geteilte Anfrage: alle Wartenden melden „fehler"; spaeter wird neu angefragt', async () => {
+		const t = gemeinsamesTor();
+		const kaputt = zaehlClient({ tor: t.tor, fehler: 'wirft' });
+		const a = abo('geteilt-fehler');
+		const s = [sammler(), sammler()];
+		const laeufe = s.map((x) => erstelleVorlagenIdLader(kaputt.client, x.melde).laden([a]));
+		t.oeffne();
+		await assert.doesNotReject(Promise.all(laeufe));
+		assert.deepEqual(kaputt.aufrufe, [1], 'auch der Fehlschlag ist EINE geteilte Anfrage');
+		for (const x of s) assert.deepEqual(x.letzte(), [{ zustand: 'fehler', vorlageId: null }]);
+		const gut = zaehlClient();
+		const s3 = sammler();
+		await erstelleVorlagenIdLader(gut.client, s3.melde).laden([a]);
+		assert.deepEqual(gut.aufrufe, [1], 'der Fehler wurde weder gecacht noch als „laufend" behalten');
+		assert.deepEqual(s3.letzte(), [{ zustand: 'geladen', vorlageId: 'allgemein' }]);
+	});
+});

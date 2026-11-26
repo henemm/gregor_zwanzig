@@ -540,6 +540,35 @@ describe('#3399 S3a AC-2/AC-9: HubUebersicht fragt die Server-Aufloesung und zei
 		assert.equal(modell.wertebereicheKarte.titel, vorlageAnzeigename('de', id, undefined));
 	});
 
+	// Fix-Schleife S3a (Staging-Befund: drei identische POSTs je Seitenaufruf). CompareTabs reicht
+	// `currentPreset` ($state) und weist es beim Mount neu zu (Effekt `currentPreset = snapshotForRollback(preset)`);
+	// jede Neuzuweisung laesst den Abo-Effekt erneut laufen, noch bevor die erste Antwort da ist.
+	// Nachbau: die Prop ist ein Signal; der Effekt liest es (wie den reaktiven Prop im Browser),
+	// `quelle` selbst bleibt die ECHTE aus dem Quelltext und liest `preset` aus der Umgebung.
+	test('ein Seitenaufruf ⇒ genau EIN POST, auch wenn die Seite das Preset beim Mount neu zuweist', async () => {
+		const s = netzMitAufloesung('python');
+		const p = presetAufl('neuzuweisung', { preset_name: 'x3399-neuzuweisung', ampel: { template: 'radtour' } }, 'wandern');
+		const signal = $.state(p);
+		const reaktiv = (quelle: () => any, client: unknown) =>
+			inWurzel(erstelleAboVorlageId)(() => ($.get(signal), quelle()), client);
+		const hu = await umgebungFuer(
+			HU,
+			{ ...HU_LEER, context: 'vergleich', preset: p, orte: [], ...LADER_SAAT, erstelleAboVorlageId: reaktiv },
+			{ jsAlsTs: true }
+		);
+		mounten(hu);
+		$.flush();
+		for (let i = 0; i < 2; i++) {
+			hu.u.preset = structuredClone(p); // wie CompareTabs: neues Objekt, gleicher Inhalt
+			$.set(signal, hu.u.preset);
+			$.flush();
+		}
+		await setzen();
+		assert.equal(s.posts.length, 1, 'POSTs: ' + JSON.stringify(s.posts));
+		const modell = neuAuswerten(hu.ast, hu.quelle, hu.u, 'modell') as any;
+		assert.equal(modell.wertebereicheKarte.titel, vorlageAnzeigename('de', aufgeloestVon(p).vorlage_id, undefined));
+	});
+
 	test('vor der Antwort „—" (laedt)', async () => {
 		netzMitAufloesung('python');
 		const hu = await hubUebersicht({ context: 'vergleich', preset: presetAufl('laedt', { preset_name: 'skitouren' }), orte: [] });
