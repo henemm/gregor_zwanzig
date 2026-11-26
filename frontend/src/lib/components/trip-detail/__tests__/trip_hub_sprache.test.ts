@@ -35,13 +35,13 @@ const layoutLoad = (await import(pathToFileURL(path.join(P.FRONTEND, 'src/routes
 const tripLoad = (await import(pathToFileURL(path.join(P.FRONTEND, 'src/routes/trips/[id]/+page.server.ts')).href)).load;
 const { baueTripSpeicherung } = await import(pathToFileURL(path.join(P.KOMP, 'shared/tripSpeicherung.ts')).href);
 
-// #3020: Alt-Bausteine nur in ihren eigenen Faellen laden (fallen mit R2).
-const alt = () => import('./f9Altbausteine.ts');
+// #3020 R2: die Alt-Bausteine des Ausgabe-Layouts (BucketSection, BucketSectionOff, ActiveMetricRow,
+// ChannelLimitMarkers, PresetRow, TablePreview) sind geloescht, ihre Faelle samt Golden layout_bausteine entfallen.
 
-before(async () => {
+before(() => {
 	// Die de-Golden sind der Ist-Stand VOR der Umstellung und werden nie neu geschrieben;
 	// nur die en-Ansicht (Review-Hilfe, nicht verglichen) wird aktualisiert.
-	if (process.env.GZ_GOLDEN_SCHREIBEN === 'en') P.schreibeGolden('en', { ...P.htmlFaelle(), ...(await alt()).altFaelle() });
+	if (process.env.GZ_GOLDEN_SCHREIBEN === 'en') P.schreibeGolden('en', P.htmlFaelle());
 });
 afterEach(() => locale.set('de'));
 
@@ -93,11 +93,6 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 		assert.equal(leerraum(de + '\n'), leerraum(golden));
 	};
 	for (const fall of Object.keys(FAELLE)) test(`${fall}.de.html`, () => pruefeGolden(fall, FAELLE[fall]));
-	test('layout_bausteine.de.html', async () => pruefeGolden('layout_bausteine', (await alt()).layoutRendern));
-	test('Messaufbau: Golden der Alt-Bausteine enthaelt ihre deutschen Texte (faellt mit #3020 R2)', () => {
-		const golden = readFileSync(path.join(P.GOLDEN_DIR, 'layout_bausteine.de.html'), 'utf-8');
-		for (const s of ['✂ ab hier bei', '▾ Aufklappen']) assert.ok(golden.includes(s), s);
-	});
 	test('funktionen.de.txt: Aktionsliste, Reiter, Anlege-Kette, Etappen-Datum unveraendert (byte-gleich)', () => {
 		const golden = readFileSync(path.join(P.GOLDEN_DIR, 'funktionen.de.txt'), 'utf-8');
 		locale.set('en');
@@ -263,21 +258,7 @@ describe('AC-2: Aktionsliste Trip == Ortsvergleich, Texte aus aktionen.*', () =>
 });
 
 describe('AC-4: Metrik-Namen ueber metricLabel, col_label unveraendert', () => {
-	test('Ausgabe-Layout-Bausteine und Tabellen-Vorschau: label_en bzw. deutsch ohne label_en', async () => {
-		const A = await alt();
-		const { de, en } = deDannEn(() => A.layoutRendern());
-		const sEn = sichtbar(en);
-		hat(sichtbar(de), 'Böen');
-		for (const s of ['Wind gusts', 'Temperature', 'Bewölkung', 'Code', 'Raw', 'Simple', 'raw value only', '→ Detail', '↑ Column', 'Limit', 'Telegram 9/7', '✂ from here Telegram cuts off (max 7 columns)', 'No entries — add metrics from “Not in the briefing”.', 'Not in the briefing', '3 more metrics', '1 more metric', '· not output', '▴ Collapse', '▾ Expand', '+ Column', '+ Detail', '6 metrics', '1 metric', 'Default', 'Table preview', 'TODAY — 2 METRICS', 'TOMORROW — 0 METRICS', 'No metrics enabled for this horizon.', 'Time', '·simple', 'Temperature', 'Wind', 'Atmosphere'])
-			hat(sEn, s);
-		// #3383 S1: die Kanal-Texte (trip.kanaele.*, „Enable Email") entfielen mit der Waise WeatherV2Kanaele.
-		for (const s of ['title="Telegram: max 7 columns"', 'aria-label="Raw or simple"']) hat(en, s);
-		// Voller Name englisch; die Kurzform (Fallback `label.slice(0, 5)`) bleibt wie jede Kurzform (ADR-0042).
-		assert.ok(!/class="(label|off-name|col-name|metric-name)[^"]*">Böen</.test(en), 'voller Name noch deutsch');
-		// Fixture: Preset „Wandern" (Name = Daten), Zeitplan-Speicherstand mit Server-Text „Gespeichert.".
-		// #2881: „Gespeichert" (Etappen-Editor, ohne ✓) ist wortgleich der Anfang dieses Server-Texts.
-		assert.deepEqual(deutscheReste(sEn, [...DATEN, 'trip.aktivitaet.wandern', 'trip.etappen_editor.gespeichert']), []);
-	});
+	// #3020 R2: der Fall „Ausgabe-Layout-Bausteine und Tabellen-Vorschau“ entfaellt mit den geloeschten Bausteinen.
 	test('Uebersicht: Namensliste englisch, col_label der Fixture steht nirgends verfaelscht', () => {
 		const { en } = deDannEn(() => sichtbar(P.uebersichtRendern()));
 		hat(en, 'Temperature, Wind');

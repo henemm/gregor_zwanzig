@@ -20,12 +20,7 @@ export const F5_ANKER: [schluessel: string, de: string, en: string][] = [
 	// Preset speichern (SavePresetDialog): seit #2794 S3a Teil-PR 3 (AC-42) ueber den Katalog
 	// `wetter.dialog.*` (Anker dort: s3a2794_teil3_wetter_katalog); die Schluessel
 	// `wertebereiche.preset_dialog.*` sind mit Zeithorizonten und Zusammenfassung entfallen.
-	// Kategorien (CATEGORY_LABELS)
-	['wertebereiche.kategorie.temperature', 'Temperatur', 'Temperature'],
-	['wertebereiche.kategorie.wind', 'Wind', 'Wind'],
-	['wertebereiche.kategorie.precipitation', 'Niederschlag', 'Precipitation'],
-	['wertebereiche.kategorie.atmosphere', 'Atmosphäre', 'Atmosphere'],
-	['wertebereiche.kategorie.winter', 'Winter / Schnee', 'Winter / snow'],
+	// #3020 R2: Kategorien wertebereiche.kategorie.* entfielen mit BucketSectionOff/MetricOffShelf.
 	// Reihenfolge (WeatherV2Reihenfolge, LayoutTab-Zaehlwort)
 	['wertebereiche.reihenfolge.roh', 'Roh', 'Raw'],
 	['wertebereiche.reihenfolge.einfach', 'Einfach', 'Simple'],

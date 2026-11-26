@@ -50,17 +50,16 @@ const PRESET = { id: 'cmp-1', name: 'GR20 Nord', location_ids: ['a', 'b'], sched
 const JETZT = new Date('2026-10-17T12:00:00Z');
 const leer = () => {};
 
-/** Alle gemessenen Bausteine; jeder liefert sein HTML in der aktuellen Sprache. */
+/** Alle gemessenen Bausteine; jeder liefert sein HTML in der aktuellen Sprache.
+ *  #3020 R2: OutboxCard und PresetRail sind geloescht (kein Importeur), ihre Faelle entfallen. */
 async function bausteine(): Promise<Record<string, string>> {
-	const [BackLink, ConfirmDialog, SendConfirmDialog, ListActionsMenu, SubscriptionKebab, OutboxCard, PresetRail, SubscriptionCard] =
+	const [BackLink, ConfirmDialog, SendConfirmDialog, ListActionsMenu, SubscriptionKebab, SubscriptionCard] =
 		await Promise.all([
 			lade('atoms/BackLink.svelte'),
 			lade('molecules/ConfirmDialog.svelte'),
 			lade('molecules/SendConfirmDialog.svelte'),
 			lade('organisms/ListActionsMenu.svelte'),
 			lade('molecules/SubscriptionKebab.svelte'),
-			lade('organisms/OutboxCard.svelte'),
-			lade('organisms/PresetRail.svelte'),
 			lade('organisms/SubscriptionCard.svelte')
 		]);
 	const dialog = { open: true, profile: null, subscription: null, onConfirm: leer, onCancel: leer };
@@ -74,8 +73,6 @@ async function bausteine(): Promise<Record<string, string>> {
 		sendVergleich: html(SendConfirmDialog, { ...dialog, kind: 'vergleich' }),
 		listMenu: html(ListActionsMenu, { actions: [], onSelect: leer }),
 		kebab: html(SubscriptionKebab, { actions: [] }),
-		outbox: html(OutboxCard, { contextName: 'GR20', reports: [] }),
-		presetRail: html(PresetRail, { presets: [{ id: 'p', name: 'Eigen', builtin: false, metrics: [] }], totalActive: 3 }),
 		cardTrip: html(SubscriptionCard, { kind: 'trip', sub: TRIP, now: JETZT, dense: true, onAction: leer, channels: [] }),
 		cardVergleich: html(SubscriptionCard, { kind: 'vergleich', sub: PRESET, now: JETZT, dense: true, onAction: leer, channels: [] })
 	};
@@ -96,10 +93,6 @@ describe('AC-4: Englisch — kein deutsches Wort in Beschriftung und aria-label'
 		assert.ok(attribute(b.listMenu, 'aria-label').includes(weitere));
 		assert.ok(attribute(b.kebab, 'aria-label').includes(weitere), b.kebab);
 		assert.ok(attribute(b.cardTrip, 'aria-label').includes(weitere));
-		assert.ok(text(b.outbox).includes(trFor('en', 'bausteine.versand.heute')), text(b.outbox));
-		assert.ok(text(b.outbox).includes(trFor('en', 'bausteine.versand.alle_kanaele_ok')));
-		assert.ok(text(b.presetRail).includes(trFor('en', 'bausteine.profil.wetter_profil')), text(b.presetRail));
-		assert.ok(text(b.presetRail).includes(trFor('en', 'bausteine.profil.eigenes')));
 		assert.ok(text(b.cardTrip).includes(trFor('en', 'bausteine.abo.keine_kanaele')), text(b.cardTrip));
 		// Das Versandziel im Dialog liefert sendTargetLabel (Versand-Reiter, Paket F6), nicht F11.
 		const versandziel = sendTargetLabel(null, null).text;
@@ -139,15 +132,6 @@ describe('AC-5: Deutsch — wortgleich zur Ausgabe vor der Umstellung', () => {
 		assert.ok(attribute(b.kebab, 'aria-label').includes('Weitere Aktionen'));
 		assert.ok(attribute(b.kebab, 'title').includes('Weitere Aktionen'));
 		assert.ok(attribute(b.cardTrip, 'aria-label').includes('Weitere Aktionen'));
-		assert.ok(text(b.outbox).includes('Versand · heute'));
-		assert.ok(text(b.outbox).includes('Was geht raus · GR20'));
-		assert.ok(text(b.outbox).includes('Alle Kanäle ok'));
-		assert.ok(text(b.presetRail).includes('Wetter-Profil'));
-		assert.ok(text(b.presetRail).includes('Vorlage wählen oder eigenes Profil anlegen.'));
-		assert.ok(text(b.presetRail).includes('EIGEN'));
-		assert.ok(text(b.presetRail).includes('Eigenes Profil'));
-		assert.ok(text(b.presetRail).includes('Aktuelle Auswahl (3 Metriken) als Profil sichern.'));
-		assert.ok(text(b.presetRail).includes('+ Als Profil speichern'));
 		assert.ok(text(b.cardTrip).includes('noch keine Kanäle'));
 		assert.ok(text(b.cardTrip).includes('1 Etappen · 2026-10-17'), text(b.cardTrip));
 	});

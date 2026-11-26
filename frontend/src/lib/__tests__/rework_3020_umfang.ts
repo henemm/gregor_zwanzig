@@ -1,5 +1,5 @@
 // Umfang des Rückbaus #3020, Spec 2.0 (docs/specs/modules/rework_3020_altbausteine_entfernen.md, R2).
-// Gemeinsame Quelle für Rückbau-Wächter und Probe-Löschung. Pfade relativ zu `frontend/src/lib/components/`.
+// Quelle für den Rückbau-Wächter (bis R2 auch für die Probe-Löschung). Pfade relativ zu `frontend/src/lib/components/`.
 
 const unter = (ordner: string, namen: string): string[] =>
 	namen
@@ -66,7 +66,8 @@ export const BLEIBT = [
 /**
  * Tests, die lebendes Verhalten prüfen und ohne den Restbestand grün sein müssen. Relativ zu `frontend/src/`.
  * `trip_python_skip_next_ohne_412` und `wetter_tab_karte_mitspeichern_3020` hat #3357 gelöscht bzw. nie übernommen:
- * R1 stellt sie wieder her (AC-2, AC-3, R2-F4).
+ * R1 stellt sie wieder her (AC-2, AC-3, R2-F4). Bis R2 liefen sie in der Probe-Löschung; seit R2 (Restbestand gelöscht,
+ * Probe aufgelöst) beweist die normale Suite dasselbe. Die Liste bleibt als Nachweis, welche Tests die Probe abdeckte.
  */
 export const LEBENDE_HELFER_NUTZER: string[] = [
 	'lib/__tests__/trip_nach_412_folgeschreiben_traegt_altes_if_match.test.ts',

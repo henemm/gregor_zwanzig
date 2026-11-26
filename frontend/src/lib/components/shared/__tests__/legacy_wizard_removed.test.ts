@@ -99,9 +99,10 @@ test('AC-4: organisms/index.ts exportiert TripWizardShell nicht mehr, aktive Exp
 	const src = read(join(COMPONENTS, 'organisms', 'index.ts'));
 	assert.ok(!src.includes('TripWizardShell'), 'TripWizardShell-Re-Export muss weg (AC-4)');
 	// Issue #2277 S3 (AC-7): AlertRulesEditor ist kein aktiver Export mehr (toter
-	// Strang geloescht) — nur OutputLayoutEditor bleibt als Ueber-Loeschungs-Waechter.
-	for (const keep of ['OutputLayoutEditor']) {
-		assert.ok(src.includes(keep), `organisms/index.ts: aktiver Export ${keep} fehlt — Über-Löschung!`);
+	// Strang geloescht). #3020 R2: OutputLayoutEditor ist gelöscht; Ueber-Loeschungs-Waechter sind
+	// jetzt lebende Exporte, geprüft als echte export-Zeile (nicht als Kommentar).
+	for (const keep of ['TripHeader', 'WetterTabInhalt']) {
+		assert.match(src, new RegExp(`^export \\{ default as ${keep} \\}`, 'm'), `organisms/index.ts: aktiver Export ${keep} fehlt — Über-Löschung!`);
 	}
 });
 

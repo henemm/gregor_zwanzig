@@ -21,14 +21,11 @@ import { register } from 'node:module';
 
 const moleculesDir = dirname(fileURLToPath(import.meta.url));
 const componentsRoot = join(moleculesDir, '..');
-const organismsDir = join(componentsRoot, 'organisms');
 
 const read = (f: string) => readFileSync(f, 'utf-8');
 const has = (f: string) => existsSync(f);
 const readMol = (name: string) => read(join(moleculesDir, name));
 const hasMol = (name: string) => has(join(moleculesDir, name));
-const readOrg = (name: string) => read(join(organismsDir, name));
-const hasOrg = (name: string) => has(join(organismsDir, name));
 
 // #2660 (i18n F11): Texte stehen im Katalog; ihre Pruefung laeuft deshalb ueber
 // den echten SSR-Render (deutsche Standard-Sprache), nicht ueber den Quelltext.
@@ -305,90 +302,10 @@ describe('#2283 AC-14: CompareBriefingPreview, ComparePreviewMissing, CompareSms
 	}
 });
 
-// ════════════════ BLOCK C — Neue Organisms ════════════════
+// ════════════════ BLOCK C — Organisms ════════════════
 
-// Issue #1969 (AC-25): HomeHeroCompare ist gelöscht (kein Importeur; die
-// Startseite rendert ihren Vergleichs-Hero inline in routes/+page.svelte) —
-// AC-15 hat damit keinen Prüfling mehr.
-// Issue #2346 S2 (AC-10): HomeHeroTrip ist ebenfalls gelöscht (kein Importeur) —
-// AC-14 hat damit keinen Prüfling mehr; der Hero folgt in S3 als ein `HomeHero`.
-const HOME_ORGANISMS = ['OutboxCard', 'AlertsCard'];
-// #2794 S3a Teil-PR 4a (AC-31): MetricsEditorContextBar entfernt (kein Mount, reiner Re-Export).
-const METRICS_ORGANISMS = ['PresetRail', 'MetricOffShelf'];
-
-describe('AC-16/17: OutboxCard + AlertsCard', () => {
-	test('AC-16: OutboxCard.svelte existiert in organisms/', () => {
-		assert.ok(hasOrg('OutboxCard.svelte'), 'organisms/OutboxCard.svelte fehlt');
-	});
-	test('AC-16: OutboxCard hat Eyebrow "Versand · heute" + "Was geht raus" + Pill good', async () => {
-		const src = readOrg('OutboxCard.svelte');
-		const text = await gerenderterText('organisms/OutboxCard.svelte', { contextName: 'GR20', reports: [] });
-		assert.ok(/Versand · heute/.test(text), 'OutboxCard: Eyebrow "Versand · heute" fehlt');
-		assert.ok(/Was geht raus · GR20/.test(text), 'OutboxCard: "Was geht raus"-Titel fehlt');
-		assert.ok(/Alle Kanäle ok/.test(text), 'OutboxCard: Pill "Alle Kanäle ok" fehlt');
-		assert.ok(/<Pill tone="good">/.test(src), 'OutboxCard: Pill good fehlt');
-		assert.ok(/BriefingTimelineRow/.test(src), 'OutboxCard: BriefingTimelineRow-Import fehlt');
-	});
-
-	test('AC-17: AlertsCard.svelte existiert in organisms/', () => {
-		assert.ok(hasOrg('AlertsCard.svelte'), 'organisms/AlertsCard.svelte fehlt');
-	});
-	// #2794 Fix-Loop B5: deutscher Titel „Alarme · letzte 24 h".
-	test('AC-17: AlertsCard Eyebrow "Alarme · letzte 24 h" + Schwellen-Link', async () => {
-		const text = await gerenderterText('organisms/AlertsCard.svelte', { alerts: [] });
-		assert.ok(/Alarme · letzte 24 h/.test(text), 'AlertsCard: Eyebrow "Alarme · letzte 24 h" fehlt');
-		assert.ok(/Schwellen →/.test(text), 'AlertsCard: "Schwellen →"-Link fehlt');
-	});
-	test('AC-17: AlertsCard rendert AlertRow bei alerts > 0', () => {
-		const src = readOrg('AlertsCard.svelte');
-		assert.ok(/AlertRow/.test(src), 'AlertsCard: AlertRow-Import fehlt');
-	});
-});
-
-describe('AC-18: Metrics-Organisms (PresetRail, MetricOffShelf)', () => {
-	for (const name of METRICS_ORGANISMS) {
-		test(`${name}.svelte existiert in organisms/`, () => {
-			assert.ok(
-				hasOrg(`${name}.svelte`),
-				`organisms/${name}.svelte fehlt — noch nicht implementiert`
-			);
-		});
-	}
-
-	test('PresetRail rendert Preset-Liste + Eigenes-Profil-Block', () => {
-		const src = readOrg('PresetRail.svelte');
-		assert.ok(/Eigenes Profil|presets/.test(src), 'PresetRail: Preset-Rendering fehlt');
-	});
-
-	test('MetricOffShelf hat "Nicht im Briefing"-Aufklapp-Logik', () => {
-		const src = readOrg('MetricOffShelf.svelte');
-		assert.ok(
-			/Nicht im Briefing|nicht.*briefing|offShelf/i.test(src),
-			'MetricOffShelf: "Nicht im Briefing"-Sektion fehlt'
-		);
-	});
-});
-
-describe('AC-19: organisms/index.ts — alle neuen Organisms exportiert', () => {
-	const ALL_NEW_ORGANISMS = [
-		...HOME_ORGANISMS,
-		...METRICS_ORGANISMS,
-	];
-
-	test('organisms/index.ts existiert', () => {
-		assert.ok(hasOrg('index.ts'), 'organisms/index.ts fehlt');
-	});
-
-	for (const name of ALL_NEW_ORGANISMS) {
-		test(`organisms/index.ts exportiert ${name}`, () => {
-			const barrel = readOrg('index.ts');
-			assert.ok(
-				new RegExp(`\\b${name}\\b`).test(barrel),
-				`organisms/index.ts exportiert ${name} nicht`
-			);
-		});
-	}
-});
+// #3020 R2: OutboxCard, AlertsCard, PresetRail und MetricOffShelf sind gelöscht (kein Importeur außer dem Barrel).
+// AC-16 bis AC-19 haben damit keinen Prüfling mehr; ihre Löschung bewacht rework_3020_rueckbau_waechter.test.ts (AC-7).
 
 describe('AC-20: molecules/index.ts — alle neuen Molecules exportiert', () => {
 	const ALL_NEW_MOLECULES = [

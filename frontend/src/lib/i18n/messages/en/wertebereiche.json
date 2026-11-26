@@ -1,11 +1,6 @@
 {
 	"wertebereiche.tab.laedt": "Loading metrics…",
 	"wertebereiche.tab.speichert": "Saving…",
-	"wertebereiche.kategorie.temperature": "Temperature",
-	"wertebereiche.kategorie.wind": "Wind",
-	"wertebereiche.kategorie.precipitation": "Precipitation",
-	"wertebereiche.kategorie.atmosphere": "Atmosphere",
-	"wertebereiche.kategorie.winter": "Winter / snow",
 	"wertebereiche.reihenfolge.roh": "Raw",
 	"wertebereiche.reihenfolge.einfach": "Simple",
 	"wertebereiche.gewitter_stufe.kein": "None",

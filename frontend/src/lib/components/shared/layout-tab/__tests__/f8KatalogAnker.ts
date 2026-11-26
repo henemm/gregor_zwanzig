@@ -53,25 +53,7 @@ export const F8_ANKER: [schluessel: string, de: string, en: string][] = [
 	['layout.profil_metrik.thunder_level_max', 'Gewitter', 'Thunderstorm'],
 	['layout.profil_metrik.uv_index_max', 'UV-Index max', 'UV index max'],
 	['layout.profil_metrik.temp_max_c', 'Temperatur max', 'Temperature max'],
-	// Ausgabe-Layout (OutputLayoutEditor)
-	['layout.ausgabe.sms_eyebrow', 'SMS · Priorisierte Liste', 'SMS · priority list'],
-	['layout.ausgabe.reihenfolge', 'Reihenfolge', 'Order'],
-	[
-		'layout.ausgabe.sms_hinweis',
-		'SMS hat maximal 140 Zeichen. Reihenfolge: oben = wichtiger. Was nicht mehr in das Budget passt, wird automatisch weggelassen.',
-		'SMS has at most 140 characters. Order: top = more important. Anything that no longer fits the budget is left out automatically.'
-	],
-	['layout.ausgabe.zeichen', 'Zeichen', 'Characters'],
-	['layout.ausgabe.leer', 'Keine Metriken — aus „Nicht im Briefing" hinzufügen.', 'No metrics — add some from “Not in the briefing”.'],
-	['layout.ausgabe.sms_liste', 'SMS-Metriken, Reihenfolge', 'SMS metrics, order'],
-	['layout.ausgabe.entfernen', 'Entfernen', 'Remove'],
-	['layout.ausgabe.preset_auswahl', 'Preset-Auswahl', 'Preset selection'],
-	['layout.ausgabe.spalten_eyebrow', 'Im Briefing als Spalte', 'In the briefing as a column'],
-	['layout.ausgabe.spalten', 'Spalten', 'Columns'],
-	['layout.ausgabe.spalten_hinweis', 'Eine eigene Tabellen-Spalte je Metrik. Reihenfolge = von links nach rechts.', 'One table column per metric. Order = left to right.'],
-	['layout.ausgabe.detail_eyebrow', 'Im Briefing als Detail', 'In the briefing as a detail'],
-	['layout.ausgabe.detail_werte', 'Detail-Werte', 'Detail values'],
-	['layout.ausgabe.detail_hinweis', 'Erscheinen als kompakte Zeile direkt unter der Tabelle.', 'Shown as a compact line directly below the table.'],
+	// #3020 R2: Ausgabe-Layout-Editor (OutputLayoutEditor) geloescht, layout.ausgabe.* entfallen.
 	// #3297/#3020: Ausblick-Steuerung (OutlookLayoutControls) und Kopf/Format der Karte MailInhaltCard
 	// geloescht, ihre Schluessel entfallen. Bausteintexte (mailInhaltKonstanten.ts) bleiben:
 	['layout.mail_inhalt.etappen_kennzahlen', 'Etappen-Kennzahlen', 'Stage figures'],
