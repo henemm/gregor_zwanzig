@@ -754,27 +754,28 @@ def test_ac10_grundauswahl_vergleichstabelle():
         pruefe_vergleichstabelle(mail, fmt)
 
 
-def _offen(testname: str, grund: str) -> list:
-    """Faelle ``offen_feature`` zu ``testname`` -- rot belegt per
-    ``xfail(strict=True)``, damit die Umsetzung laut wird (#3047 J2)."""
+def _offen(testname: str) -> list:
+    """Faelle zu ``testname`` unabhaengig vom Status; ``offen_feature`` ->
+    ``xfail(strict=True)``, damit die Umsetzung laut wird (#3047 J2, #3102)."""
     faelle = json.loads(FALLLISTE.read_text(encoding="utf-8"))["faelle"]
-    params = [pytest.param(f, id=f["id"], marks=[pytest.mark.xfail(strict=True, reason=grund)])
+    params = [pytest.param(f, id=f["id"], marks=[pytest.mark.xfail(
+                  strict=True, reason=f"offen_feature: {f.get('verweis', '')[:60]}")]
+                  if f["status"] == "offen_feature" else [])
               for f in faelle if f["test"] == testname]
     assert params, f"Fallliste ohne Faelle fuer {testname}"
     return params
 
 
-@pytest.mark.parametrize("fall", _offen("test_p7_global_nachtraeglich_in_gespeicherter_liste",
-                                        "#3065 Phase 2: Abwahl nicht persistiert"))
+@pytest.mark.parametrize("fall", _offen("test_p7_global_nachtraeglich_in_gespeicherter_liste"))
 def test_p7_global_nachtraeglich_in_gespeicherter_liste(fall):
-    """Konzept §5 Punkt 6 / Nachpruefung Punkt 7: eine Metrik, die NACH dem
-    Speichern einer eigenen Liste in die Grundauswahl aufgenommen wird
-    (UV-Index), steht in allen Listen -- Vergleichstabelle
-    (``channel_active_metrics.email``), Stundenverlauf (``hourly_metrics``) und
-    Ausblick (``outlook_metrics``), die sie noch nicht kennen."""
-    p = preset_dict("basis")
-    dc = p["display_config"]
-    dc["active_metrics"] += _am(["uv_index"])
+    """Konzept §5 Punkt 6 / ADR-0124 Nr. 5 (#3102): eine Metrik, die NACH dem
+    Speichern der Tabelle in die Grundauswahl kommt (UV-Index), hat in der
+    gespeicherten Tabelle keine Zeile (= angehakt) und steht in der echten
+    Mail -- Vergleichstabelle, Stundenverlauf und Ausblick."""
+    from tests.helpers.tabelle_aus_wunsch import orte_wunsch_als_tabelle
+
+    vorher = preset_dict("basis")
+    dc = vorher["display_config"]
     liste = fall["liste"]
     if liste == "orte_vergleichstabelle":
         dc["channel_active_metrics"] = {"email": _am(["temperature", "wind", "gust"])}
@@ -782,7 +783,12 @@ def test_p7_global_nachtraeglich_in_gespeicherter_liste(fall):
         dc["hourly_metrics"] = ["gust", "temperature"]
     else:
         dc["outlook_metrics"] = ["wind", "temperature"]
-    mail = sende_orte_mail(p)
+    p = orte_wunsch_als_tabelle(vorher)
+    gespeichert = p["display_config"]["placements"]
+    # Vorbedingung (AC-4): die Tabelle stammt aus der Zeit VOR dem Einschalten.
+    assert "uv_index" not in {r["metric_id"] for r in gespeichert["rows"]}, gespeichert
+    p["display_config"]["active_metrics"] += _am(["uv_index"])
+    mail = sende_orte_mail(p, briefing="evening")
     if liste == "orte_vergleichstabelle":
         spalten = [html_vergleichstabelle(mail.html)[1]]
     elif liste == "orte_stundenverlauf":
