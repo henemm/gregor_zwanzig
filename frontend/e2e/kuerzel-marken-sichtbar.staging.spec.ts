@@ -20,7 +20,7 @@
 //   npx playwright test --project=tests e2e/kuerzel-marken-sichtbar.staging.spec.ts
 
 import { test, expect, type Locator, type Page } from '@playwright/test';
-import { folge, oeffneKarte, seedAbo, tabelle, tabelleGespeichert, zeile, type Abo, type HubKind, type Json } from './was-steht-wo.helpers';
+import { folge, markenStilVerstoesse, oeffneKarte, seedAbo, tabelle, tabelleGespeichert, zeile, type Abo, type HubKind, type Json } from './was-steht-wo.helpers';
 
 let abos: Abo[] = [];
 test.afterEach(async () => {
@@ -150,6 +150,7 @@ async function markenUeberAlleBreiten(page: Page, kind: HubKind, abo: Abo, soll:
 		await page.setViewportSize({ width, height });
 		await layoutSteht(page, karte, width);
 		const { marken, verstoesse } = await messeMarken(karte);
+		verstoesse.push(...(await markenStilVerstoesse(karte))); // F001: sichtbar heisst auch visibility, Deckkraft, Schriftfarbe
 		if (marken.length !== soll.length) befunde.push(`${width}x${height}: ${marken.length} Marken sichtbar, Server liefert ${soll.length} (${marken.join(', ')})`);
 		for (const v of verstoesse) befunde.push(`${width}x${height}: ${v}`);
 	}

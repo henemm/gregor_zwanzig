@@ -18,7 +18,7 @@
 //   npx playwright test --project=tests e2e/kanal-grenzen-und-hinweise.staging.spec.ts
 
 import { test, expect, type Locator } from '@playwright/test';
-import { oeffneKarte, seedAbo, tabelle, zelle, type Abo, type Json } from './was-steht-wo.helpers';
+import { markenStilVerstoesse, oeffneKarte, seedAbo, tabelle, zelle, type Abo, type Json } from './was-steht-wo.helpers';
 
 let abos: Abo[] = [];
 test.afterEach(async () => {
@@ -83,6 +83,8 @@ test('#3375 AC-1/AC-2: Trip mit neun Metriken — „nur Tageswert“ genau in d
 	}
 	for (const m of NEUN.slice(0, 7)) await expect(zelle(karte, m, 'telegram'), `Telegram-Zelle ${m}`).not.toContainText(NUR_TAGESWERT);
 	expect(await browserNurTageswert(karte), 'sichtbare Marken „nur Tageswert“ in der ganzen Karte').toEqual(['uv_index/telegram', 'sunshine/telegram']);
+	// F001: toBeVisible laesst opacity:0 und transparente Schrift durch — berechneter Stil jeder Marke.
+	expect(await markenStilVerstoesse(karte), 'Stil der Marken (visibility, Deckkraft, Schriftfarbe)').toEqual([]);
 });
 
 test('#3375 AC-3: Trip mit sieben Metriken — nirgends in der Karte „nur Tageswert“', async ({ page }) => {
