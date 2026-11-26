@@ -479,6 +479,215 @@ describe('#3385 AC-1/AC-7: Waisen S3 gelöscht, kein Import und kein Pfad mehr, 
 	}
 });
 
+// #3389 (Spec rework_3389_tote_exporte.md, AC-1/AC-2/AC-3/AC-6): Lösch-Nachweis auf EXPORTEBENE.
+// Der Waisen-Wächter erkennt nur ganze Dateien; die beiden Module bleiben lebend (fünf Hydrations-
+// Funktionen haben Produktionsaufrufer), ihre 21 toten Exporte samt den zwei nur noch internen Typen
+// `VersandSnapshot`/`LayoutSnapshot` sind gelöscht. RED heute: alle 23 Namen existieren, die 21
+// Testdateien und der Prüfstand bestehen, die Exportmenge ist zu groß.
+const MODUL_VERSAND_3389 = 'lib/components/shared/versandVergleichSpeicherung.ts';
+const MODUL_WETTER_3389 = 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
+
+const GELOESCHT_3389: Record<string, string[]> = {
+	[MODUL_VERSAND_3389]: [
+		'versandSnapshotAus',
+		'baueVersandNutzlast',
+		'flushPendingVersandSave',
+		'rollbackVersandSnapshot',
+		'versandVergleichSpeicherungAktiv',
+		'erstelleVersandVergleichSpeicherung',
+		'versandZustandsBruecke',
+		'VersandHydrationTarget',
+		'VersandVergleichSpeicherungOptionen',
+		'VersandSnapshot'
+	],
+	[MODUL_WETTER_3389]: [
+		'flushPendingLayoutSave',
+		'rollbackLayoutSnapshot',
+		'WetterMetrikenLayoutSnapshot',
+		'WetterMetrikenZustand',
+		'wetterMetrikenSnapshotAus',
+		'baueWetterMetrikenNutzlast',
+		'flushPendingWetterMetrikenSave',
+		'rollbackWetterMetrikenSnapshot',
+		'WetterMetrikenVergleichSpeicherungOptionen',
+		'erstelleWetterMetrikenVergleichSpeicherung',
+		'wetterMetrikenVergleichSpeicherungAktiv',
+		'wetterMetrikenZustandsBruecke',
+		'LayoutSnapshot'
+	]
+};
+
+const NAMEN_3389 = Object.values(GELOESCHT_3389).flat();
+
+const LEBEND_3389: Record<string, string[]> = {
+	[MODUL_VERSAND_3389]: ['hydrateVersandFieldsFromPreset'],
+	[MODUL_WETTER_3389]: [
+		'hydrateDayWindowFromPreset',
+		'hydrateWeatherMetricsFromPreset',
+		'hydrateLayoutFieldsFromPreset',
+		'wetterMetrikenHydrationAbgeschlossen'
+	]
+};
+
+/** Produktionsaufrufer der fünf lebenden Exporte (Schutz gegen „aus Versehen mitgelöscht“). */
+const AUFRUFER_3389: Record<string, string[]> = {
+	hydrateVersandFieldsFromPreset: [
+		'lib/components/compare/CompareTabs.svelte',
+		'lib/components/compare-new/compareNewVorlage.ts'
+	],
+	hydrateDayWindowFromPreset: [
+		'lib/components/compare/CompareTabs.svelte',
+		'lib/components/compare-new/compareNewVorlage.ts'
+	],
+	hydrateWeatherMetricsFromPreset: [
+		'lib/components/compare/CompareTabs.svelte',
+		'lib/components/compare/compareHubHydration.ts'
+	],
+	hydrateLayoutFieldsFromPreset: [
+		'lib/components/compare/CompareTabs.svelte',
+		'lib/components/compare-new/compareNewVorlage.ts'
+	],
+	wetterMetrikenHydrationAbgeschlossen: ['lib/components/compare/CompareTabs.svelte']
+};
+
+const GELOESCHTE_DATEIEN_3389 = [
+	'lib/components/shared/__tests__/versand_vergleich_speichert_selbst.test.ts',
+	'lib/components/shared/__tests__/versand_vergleich_konflikt_nochmal_speichern.test.ts',
+	'lib/components/shared/__tests__/versand_vergleich_flush_vor_pausieren.test.ts',
+	'lib/components/shared/__tests__/versand_nutzlast_verliert_keine_daten.test.ts',
+	'lib/components/shared/__tests__/versand_nutzlast_reicht_keepalive_durch.test.ts',
+	'lib/components/shared/__tests__/versand_enddatum_ohne_ereignis_bleibt_wirksam.test.ts',
+	'lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts',
+	'lib/components/shared/__tests__/versand_vergleich_reiterwechsel_verliert_nichts.test.ts',
+	'lib/components/compare/__tests__/compare_hub_layout_save.test.ts',
+	'lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts',
+	'lib/components/compare/__tests__/compare_feldsatz_roundtrip_datenerhalt.test.ts',
+	'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_drei_stille_gesten_bleiben_wirksam.test.ts',
+	'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_intra_gesture_kollision.test.ts',
+	'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_reicht_keepalive_durch.test.ts',
+	'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts',
+	'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts',
+	'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_flush_vor_pausieren.test.ts',
+	'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_konflikt_nochmal_speichern.test.ts',
+	'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_speichert_einmal.test.ts',
+	'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_reiterwechsel_verliert_nichts.test.ts',
+	'lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts'
+];
+
+const GELOESCHTER_PRUEFSTAND_3389 = 'lib/components/shared/weather-metrics-tab/__tests__/wetterMetrikenVergleichPruefstand.ts';
+
+const SCAN_3389_AUSNAHME = 'lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts';
+
+/**
+ * Alle exportierten Namen eines Quelltexts (Kommentare ausgenommen): `export [async] function|const|let|
+ * class|interface|type|enum <Name>` und `export { a, b as c }` (gezählt wird der nach außen sichtbare Name).
+ */
+function exporte3389(text: string): string[] {
+	const code = ohneKommentare(text);
+	const namen = new Set<string>();
+	const dekl =
+		/\bexport\s+(?:declare\s+)?(?:default\s+)?(?:async\s+)?(?:function\*?|const|let|var|class|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g;
+	for (const m of code.matchAll(dekl)) namen.add(m[1]);
+	for (const m of code.matchAll(/\bexport\s+(?:type\s+)?\{([^}]*)\}/g)) {
+		for (const teil of m[1].split(',')) {
+			const t = teil.trim().replace(/^type\s+/, '');
+			if (!t) continue;
+			const alias = t.split(/\s+as\s+/);
+			namen.add((alias[1] ?? alias[0]).trim());
+		}
+	}
+	return [...namen].sort();
+}
+
+/** Wortgenaue Funde (`datei:zeile -> Name`) der 23 Namen in einem Quelltext ohne Kommentare. */
+function wortFunde3389(rel: string, text: string): string[] {
+	const funde: string[] = [];
+	const muster = NAMEN_3389.map((n) => ({ n, re: new RegExp(`\\b${escape(n)}\\b`) }));
+	ohneKommentare(text)
+		.split('\n')
+		.forEach((zeile, i) => {
+			for (const { n, re } of muster) if (re.test(zeile)) funde.push(`${rel}:${i + 1} -> ${n}`);
+		});
+	return funde;
+}
+
+describe('#3389 AC-1/AC-2/AC-3/AC-6: tote Exporte gelöscht, Exportmenge genau die lebenden Hydrationen', () => {
+	test('Löschliste #3389 hat genau 23 Namen (21 tote Exporte + VersandSnapshot + LayoutSnapshot) ohne Doppelte', () => {
+		assert.equal(NAMEN_3389.length, 23);
+		assert.equal(new Set(NAMEN_3389).size, 23);
+		assert.equal(GELOESCHTE_DATEIEN_3389.length, 21);
+		assert.equal(new Set(GELOESCHTE_DATEIEN_3389).size, 21);
+	});
+
+	test('Dateien gelöscht: die 21 Testdateien und der Prüfstand wetterMetrikenVergleichPruefstand.ts existieren nicht', () => {
+		const vorhanden = [...GELOESCHTE_DATEIEN_3389, GELOESCHTER_PRUEFSTAND_3389].filter((rel) => existsSync(pfad(rel)));
+		assert.deepEqual(vorhanden, [], `existieren noch:\n${vorhanden.join('\n')}`);
+	});
+
+	for (const modul of [MODUL_VERSAND_3389, MODUL_WETTER_3389]) {
+		test(`Exportmenge ${basisname(modul)}: genau die lebenden Hydrations-Funktionen`, () => {
+			assert.equal(existsSync(pfad(modul)), true, `${modul} muss bestehen bleiben`);
+			const ist = exporte3389(readFileSync(pfad(modul), 'utf8'));
+			assert.deepEqual(ist, [...LEBEND_3389[modul]].sort(), `Exporte von ${modul}`);
+		});
+	}
+
+	test('die Ausnahmedatei des Wortscans existiert (sonst wäre die Ausnahme verwaist)', () => {
+		assert.equal(existsSync(pfad(SCAN_3389_AUSNAHME)), true);
+	});
+
+	test('Wortscan frontend/src und frontend/e2e: keiner der 23 Namen kommt außerhalb dieser Datei im Code vor', () => {
+		const funde: string[] = [];
+		for (const rel of scanDateien3385()) {
+			if (rel === SCAN_3389_AUSNAHME) continue;
+			funde.push(...wortFunde3389(rel, readFileSync(pfad(rel), 'utf8')));
+		}
+		assert.deepEqual(funde, [], `Verweise auf die in #3389 gelöschten Namen:\n${funde.join('\n')}`);
+	});
+
+	for (const [name, dateien] of Object.entries(AUFRUFER_3389)) {
+		test(`Aufrufer vorhanden (Regressionsschutz, heute grün): ${name}`, () => {
+			for (const rel of dateien) {
+				const code = ohneKommentare(readFileSync(pfad(rel), 'utf8'));
+				assert.match(code, new RegExp(`\\b${escape(name)}\\b`), `${rel} nutzt ${name} nicht mehr`);
+			}
+		});
+	}
+
+	// Selbstnachweis (AC-3): der Wächter auf eingebetteten Mini-Quellen, ohne Plattendateien.
+	test('Selbstnachweis (a): ein wieder eingeführtes export function erstelleVersandVergleichSpeicherung wird gemeldet', () => {
+		const quelle = 'export function hydrateVersandFieldsFromPreset() {}\nexport function erstelleVersandVergleichSpeicherung() {}\n';
+		const ist = exporte3389(quelle);
+		assert.notDeepEqual(ist, LEBEND_3389[MODUL_VERSAND_3389]);
+		assert.ok(ist.includes('erstelleVersandVergleichSpeicherung'));
+		assert.ok(wortFunde3389('mini.ts', quelle).some((f) => f.endsWith('-> erstelleVersandVergleichSpeicherung')));
+	});
+
+	test('Selbstnachweis (b): ein Name nur in einem // oder * Kommentar ist kein Fund', () => {
+		const quelle = [
+			'// früher: erstelleVersandVergleichSpeicherung',
+			'/**',
+			' * wetterMetrikenSnapshotAus war hier',
+			' */',
+			'const x = 1; // flushPendingLayoutSave ist weg',
+			'export function hydrateVersandFieldsFromPreset() {}'
+		].join('\n');
+		assert.deepEqual(wortFunde3389('mini.ts', quelle), []);
+		assert.deepEqual(exporte3389(quelle), ['hydrateVersandFieldsFromPreset']);
+	});
+
+	test('Selbstnachweis (c): export const neuerExport erscheint als zusätzlicher Export', () => {
+		const quelle = 'export function hydrateVersandFieldsFromPreset() {}\nexport const neuerExport = 1;\n';
+		assert.deepEqual(exporte3389(quelle), ['hydrateVersandFieldsFromPreset', 'neuerExport']);
+		assert.deepEqual(exporte3389('const a = 1;\nexport { a as neuerExport };\n'), ['neuerExport']);
+	});
+
+	test('Selbstnachweis (d): ein Import eines gelöschten Namens in einer anderen Datei wird gemeldet', () => {
+		const quelle = "import { wetterMetrikenSnapshotAus } from '../weatherMetricsCompareSave.ts';\n";
+		assert.deepEqual(wortFunde3389('andere.test.ts', quelle), ['andere.test.ts:1 -> wetterMetrikenSnapshotAus']);
+	});
+});
+
 describe('#3297 AC-8: show_outlook und multi_day_trend_reports aus dem Frontend-Produktionscode', () => {
 	test('keine Produktionsdatei unter frontend/src nennt einen der beiden Schlüssel', () => {
 		const funde: string[] = [];

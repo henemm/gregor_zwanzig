@@ -1,0 +1,1775 @@
+TAP version 13
+# Subtest: \#3297/\#3020 AC-7: toter Alt-Editor gelöscht, keine Importe, Vergleich-Hilfen erhalten
+    # Subtest: gelöscht: lib/components/shared/WeatherMetricsTab.svelte
+    ok 1 - gelöscht: lib/components/shared/WeatherMetricsTab.svelte
+      ---
+      duration_ms: 1.208372
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/WetterMetrikenVersandPanel.svelte
+    ok 2 - gelöscht: lib/components/shared/WetterMetrikenVersandPanel.svelte
+      ---
+      duration_ms: 0.12212
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/trip-detail/BriefingScheduleTab.svelte
+    ok 3 - gelöscht: lib/components/trip-detail/BriefingScheduleTab.svelte
+      ---
+      duration_ms: 0.084181
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/VersandTab.svelte
+    ok 4 - gelöscht: lib/components/shared/VersandTab.svelte
+      ---
+      duration_ms: 0.1192
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/MailInhaltCard.svelte
+    ok 5 - gelöscht: lib/components/shared/MailInhaltCard.svelte
+      ---
+      duration_ms: 0.148161
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/OutlookLayoutControls.svelte
+    ok 6 - gelöscht: lib/components/shared/OutlookLayoutControls.svelte
+      ---
+      duration_ms: 0.12601
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/weather-metrics-tab/channelMetricLayouts.ts
+    ok 7 - gelöscht: lib/components/shared/weather-metrics-tab/channelMetricLayouts.ts
+      ---
+      duration_ms: 0.150281
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/weather-metrics-tab/weatherMetricsSavePayload.ts
+    ok 8 - gelöscht: lib/components/shared/weather-metrics-tab/weatherMetricsSavePayload.ts
+      ---
+      duration_ms: 0.29629
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts
+    ok 9 - gelöscht: lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts
+      ---
+      duration_ms: 0.174121
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts
+    ok 10 - gelöscht: lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts
+      ---
+      duration_ms: 0.255071
+      type: 'test'
+      ...
+    # Subtest: keine Produktionsdatei importiert eine gelöschte Datei (statisch, Barrel-Export, dynamisch)
+    ok 11 - keine Produktionsdatei importiert eine gelöschte Datei (statisch, Barrel-Export, dynamisch)
+      ---
+      duration_ms: 85.00802
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareMetricSelection.ts
+    ok 12 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareMetricSelection.ts
+      ---
+      duration_ms: 0.120831
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareMetricOrder.ts
+    ok 13 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareMetricOrder.ts
+      ---
+      duration_ms: 0.06423
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareChannelMetricLayouts.ts
+    ok 14 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareChannelMetricLayouts.ts
+      ---
+      duration_ms: 0.046439
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts
+    ok 15 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts
+      ---
+      duration_ms: 0.040681
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte
+    ok 16 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte
+      ---
+      duration_ms: 0.03955
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/wetter-tab/wasStehtWoSpeicherung.ts
+    ok 17 - erhalten (Regressionsschutz, heute grün): lib/components/shared/wetter-tab/wasStehtWoSpeicherung.ts
+      ---
+      duration_ms: 0.03709
+      type: 'test'
+      ...
+    1..17
+ok 1 - \#3297/\#3020 AC-7: toter Alt-Editor gelöscht, keine Importe, Vergleich-Hilfen erhalten
+  ---
+  duration_ms: 90.763801
+  type: 'suite'
+  ...
+# Subtest: \#3366 AC-5: layout-tab-Waisen und Barrels gelöscht, keine Importe, ltChannels und lib/index erhalten
+    # Subtest: gelöscht: lib/components/shared/layout-tab/LTCapNote.svelte
+    ok 1 - gelöscht: lib/components/shared/layout-tab/LTCapNote.svelte
+      ---
+      duration_ms: 0.19493
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/layout-tab/LTChannelPicker.svelte
+    ok 2 - gelöscht: lib/components/shared/layout-tab/LTChannelPicker.svelte
+      ---
+      duration_ms: 0.05391
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/layout-tab/LTCutLine.svelte
+    ok 3 - gelöscht: lib/components/shared/layout-tab/LTCutLine.svelte
+      ---
+      duration_ms: 0.044199
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/layout-tab/LayoutTab.svelte
+    ok 4 - gelöscht: lib/components/shared/layout-tab/LayoutTab.svelte
+      ---
+      duration_ms: 0.04019
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/layout-tab/channelLayoutsDirty.ts
+    ok 5 - gelöscht: lib/components/shared/layout-tab/channelLayoutsDirty.ts
+      ---
+      duration_ms: 0.041659
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/layout-tab/ltIdealRange.ts
+    ok 6 - gelöscht: lib/components/shared/layout-tab/ltIdealRange.ts
+      ---
+      duration_ms: 6.870934
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/email-preview/index.ts
+    ok 7 - gelöscht: lib/components/email-preview/index.ts
+      ---
+      duration_ms: 0.08215
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/dot/index.ts
+    ok 8 - gelöscht: lib/components/ui/dot/index.ts
+      ---
+      duration_ms: 0.085411
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/elev-sparkline/index.ts
+    ok 9 - gelöscht: lib/components/ui/elev-sparkline/index.ts
+      ---
+      duration_ms: 0.06184
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/eyebrow/index.ts
+    ok 10 - gelöscht: lib/components/ui/eyebrow/index.ts
+      ---
+      duration_ms: 0.04663
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/input/index.ts
+    ok 11 - gelöscht: lib/components/ui/input/index.ts
+      ---
+      duration_ms: 0.04076
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/pill/index.ts
+    ok 12 - gelöscht: lib/components/ui/pill/index.ts
+      ---
+      duration_ms: 0.040151
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/segmented/index.ts
+    ok 13 - gelöscht: lib/components/ui/segmented/index.ts
+      ---
+      duration_ms: 0.040971
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/topo/index.ts
+    ok 14 - gelöscht: lib/components/ui/topo/index.ts
+      ---
+      duration_ms: 0.039
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/wicon/index.ts
+    ok 15 - gelöscht: lib/components/ui/wicon/index.ts
+      ---
+      duration_ms: 0.03865
+      type: 'test'
+      ...
+    # Subtest: keine Produktionsdatei importiert eine in \#3366 gelöschte Datei (statisch, Barrel-Export, dynamisch)
+    ok 16 - keine Produktionsdatei importiert eine in \#3366 gelöschte Datei (statisch, Barrel-Export, dynamisch)
+      ---
+      duration_ms: 90.667762
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/layout-tab/ltChannels.ts
+    ok 17 - erhalten (Regressionsschutz, heute grün): lib/components/shared/layout-tab/ltChannels.ts
+      ---
+      duration_ms: 0.12549
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/index.ts
+    ok 18 - erhalten (Regressionsschutz, heute grün): lib/index.ts
+      ---
+      duration_ms: 4.8167
+      type: 'test'
+      ...
+    1..18
+ok 2 - \#3366 AC-5: layout-tab-Waisen und Barrels gelöscht, keine Importe, ltChannels und lib/index erhalten
+  ---
+  duration_ms: 103.685345
+  type: 'suite'
+  ...
+# Subtest: \#3383 AC-1/AC-2/AC-8: Waisen S1 gelöscht, keine Importe, lebende Nachbarn erhalten
+    # Subtest: Löschliste \#3383 hat genau 14 Einträge ohne Doppelte
+    ok 1 - Löschliste \#3383 hat genau 14 Einträge ohne Doppelte
+      ---
+      duration_ms: 0.21044
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/molecules/GrundauswahlLeerHinweis.svelte
+    ok 2 - gelöscht (\#3383): lib/components/molecules/GrundauswahlLeerHinweis.svelte
+      ---
+      duration_ms: 0.09697
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/reportConfigDirty.ts
+    ok 3 - gelöscht (\#3383): lib/components/shared/reportConfigDirty.ts
+      ---
+      duration_ms: 0.067619
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/AggregationMetricRow.svelte
+    ok 4 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/AggregationMetricRow.svelte
+      ---
+      duration_ms: 0.062041
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/MultiSymbolMetricRow.svelte
+    ok 5 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/MultiSymbolMetricRow.svelte
+      ---
+      duration_ms: 0.042759
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/ThresholdMetricRow.svelte
+    ok 6 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/ThresholdMetricRow.svelte
+      ---
+      duration_ms: 0.041069
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/WeatherV2Grundauswahl.svelte
+    ok 7 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/WeatherV2Grundauswahl.svelte
+      ---
+      duration_ms: 0.045
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/WeatherV2PresetBar.svelte
+    ok 8 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/WeatherV2PresetBar.svelte
+      ---
+      duration_ms: 0.04245
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/compareAggregationGrouping.ts
+    ok 9 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/compareAggregationGrouping.ts
+      ---
+      duration_ms: 0.041141
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/nurEinBericht.ts
+    ok 10 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/nurEinBericht.ts
+      ---
+      duration_ms: 0.04876
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts
+    ok 11 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts
+      ---
+      duration_ms: 0.040381
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/wertebereicheAnzeige.ts
+    ok 12 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/wertebereicheAnzeige.ts
+      ---
+      duration_ms: 0.04051
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/trip-detail/AboutOutputLayout.svelte
+    ok 13 - gelöscht (\#3383): lib/components/trip-detail/AboutOutputLayout.svelte
+      ---
+      duration_ms: 0.040431
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/trip-detail/WeatherV2Kanaele.svelte
+    ok 14 - gelöscht (\#3383): lib/components/trip-detail/WeatherV2Kanaele.svelte
+      ---
+      duration_ms: 0.03685
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/trip-detail/weatherSaveGate.ts
+    ok 15 - gelöscht (\#3383): lib/components/trip-detail/weatherSaveGate.ts
+      ---
+      duration_ms: 0.03689
+      type: 'test'
+      ...
+    # Subtest: keine Produktionsdatei importiert eine in \#3383 gelöschte Datei (aufgelöster Modulpfad)
+    ok 16 - keine Produktionsdatei importiert eine in \#3383 gelöschte Datei (aufgelöster Modulpfad)
+      ---
+      duration_ms: 65.357913
+      type: 'test'
+      ...
+    # Subtest: keine Produktionsdatei importiert einen Basisnamen der \#3383-Löschliste
+    ok 17 - keine Produktionsdatei importiert einen Basisnamen der \#3383-Löschliste
+      ---
+      duration_ms: 32.349391
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts
+    ok 18 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts
+      ---
+      duration_ms: 0.149221
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/trip-detail/metricsEditor.ts
+    ok 19 - erhalten (Regressionsschutz, heute grün): lib/components/trip-detail/metricsEditor.ts
+      ---
+      duration_ms: 0.054869
+      type: 'test'
+      ...
+    1..19
+ok 3 - \#3383 AC-1/AC-2/AC-8: Waisen S1 gelöscht, keine Importe, lebende Nachbarn erhalten
+  ---
+  duration_ms: 99.187987
+  type: 'suite'
+  ...
+# Subtest: \#3384 AC-1: Waisen S4 gelöscht, keine Importe, EinstellTabelle erhalten
+    # Subtest: Löschliste \#3384 hat genau 19 Einträge ohne Doppelte
+    ok 1 - Löschliste \#3384 hat genau 19 Einträge ohne Doppelte
+      ---
+      duration_ms: 0.20661
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/compare/AddReportCard.svelte
+    ok 2 - gelöscht (\#3384): lib/components/compare/AddReportCard.svelte
+      ---
+      duration_ms: 0.09364
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/compare/CreateGroupDialog.svelte
+    ok 3 - gelöscht (\#3384): lib/components/compare/CreateGroupDialog.svelte
+      ---
+      duration_ms: 0.04736
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/compare/LocationPreviewMap.svelte
+    ok 4 - gelöscht (\#3384): lib/components/compare/LocationPreviewMap.svelte
+      ---
+      duration_ms: 0.04023
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/compare/layoutPreviewRows.ts
+    ok 5 - gelöscht (\#3384): lib/components/compare/layoutPreviewRows.ts
+      ---
+      duration_ms: 0.03796
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/compare/versandPropsAus.ts
+    ok 6 - gelöscht (\#3384): lib/components/compare/versandPropsAus.ts
+      ---
+      duration_ms: 0.03836
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/compare/wetterMetrikenPropsAus.ts
+    ok 7 - gelöscht (\#3384): lib/components/compare/wetterMetrikenPropsAus.ts
+      ---
+      duration_ms: 0.06125
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/edit/EditRouteSection.svelte
+    ok 8 - gelöscht (\#3384): lib/components/edit/EditRouteSection.svelte
+      ---
+      duration_ms: 0.04528
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/edit/EditWeatherSection.svelte
+    ok 9 - gelöscht (\#3384): lib/components/edit/EditWeatherSection.svelte
+      ---
+      duration_ms: 0.038199
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/edit/WeatherSummaryCard.svelte
+    ok 10 - gelöscht (\#3384): lib/components/edit/WeatherSummaryCard.svelte
+      ---
+      duration_ms: 0.044831
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/edit/weatherSummary.ts
+    ok 11 - gelöscht (\#3384): lib/components/edit/weatherSummary.ts
+      ---
+      duration_ms: 0.04399
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/mobile/DrawerGroup.svelte
+    ok 12 - gelöscht (\#3384): lib/components/mobile/DrawerGroup.svelte
+      ---
+      duration_ms: 0.04068
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/mobile/DrawerItem.svelte
+    ok 13 - gelöscht (\#3384): lib/components/mobile/DrawerItem.svelte
+      ---
+      duration_ms: 0.037709
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/mobile/NavIcon.svelte
+    ok 14 - gelöscht (\#3384): lib/components/mobile/NavIcon.svelte
+      ---
+      duration_ms: 0.038
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/trip-detail/waypoints/WaypointPin.svelte
+    ok 15 - gelöscht (\#3384): lib/components/trip-detail/waypoints/WaypointPin.svelte
+      ---
+      duration_ms: 0.037391
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/utils/alertMetricCatalogIds.ts
+    ok 16 - gelöscht (\#3384): lib/utils/alertMetricCatalogIds.ts
+      ---
+      duration_ms: 0.12071
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/utils/horizonHelpers.ts
+    ok 17 - gelöscht (\#3384): lib/utils/horizonHelpers.ts
+      ---
+      duration_ms: 0.055731
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/utils/naturalSort.ts
+    ok 18 - gelöscht (\#3384): lib/utils/naturalSort.ts
+      ---
+      duration_ms: 0.047799
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/utils/rightColumn.ts
+    ok 19 - gelöscht (\#3384): lib/utils/rightColumn.ts
+      ---
+      duration_ms: 0.04234
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/utils/weatherEmoji.ts
+    ok 20 - gelöscht (\#3384): lib/utils/weatherEmoji.ts
+      ---
+      duration_ms: 0.040989
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): ../e2e/issue-1093-unit.spec.ts
+    ok 21 - gelöscht (\#3384): ../e2e/issue-1093-unit.spec.ts
+      ---
+      duration_ms: 0.047731
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): ../e2e/playwright.1093.unit.config.ts
+    ok 22 - gelöscht (\#3384): ../e2e/playwright.1093.unit.config.ts
+      ---
+      duration_ms: 0.04189
+      type: 'test'
+      ...
+    # Subtest: keine Produktionsdatei importiert eine in \#3384 gelöschte Datei (aufgelöster Modulpfad)
+    ok 23 - keine Produktionsdatei importiert eine in \#3384 gelöschte Datei (aufgelöster Modulpfad)
+      ---
+      duration_ms: 29.282257
+      type: 'test'
+      ...
+    # Subtest: keine Produktionsdatei importiert einen Basisnamen der \#3384-Löschliste
+    ok 24 - keine Produktionsdatei importiert einen Basisnamen der \#3384-Löschliste
+      ---
+      duration_ms: 35.395936
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/molecules/EinstellTabelle.svelte
+    ok 25 - erhalten (Regressionsschutz, heute grün): lib/components/molecules/EinstellTabelle.svelte
+      ---
+      duration_ms: 0.119739
+      type: 'test'
+      ...
+    1..25
+ok 4 - \#3384 AC-1: Waisen S4 gelöscht, keine Importe, EinstellTabelle erhalten
+  ---
+  duration_ms: 67.971199
+  type: 'suite'
+  ...
+# Subtest: \#3384 AC-5 (F004): Wortscan auf das gelöschte Bauteil über frontend/src
+    # Subtest: die Ausnahmedatei existiert (sonst wäre die Ausnahme verwaist)
+    ok 1 - die Ausnahmedatei existiert (sonst wäre die Ausnahme verwaist)
+      ---
+      duration_ms: 0.10306
+      type: 'test'
+      ...
+    # Subtest: kein Treffer außerhalb der einen Ausnahmedatei
+    ok 2 - kein Treffer außerhalb der einen Ausnahmedatei
+      ---
+      duration_ms: 94.68082
+      type: 'test'
+      ...
+    1..2
+ok 5 - \#3384 AC-5 (F004): Wortscan auf das gelöschte Bauteil über frontend/src
+  ---
+  duration_ms: 94.954319
+  type: 'suite'
+  ...
+# Subtest: \#3385 AC-1/AC-7: Waisen S3 gelöscht, kein Import und kein Pfad mehr, Nachbarn erhalten
+    # Subtest: Löschliste \#3385 hat genau 7 Einträge ohne Doppelte
+    ok 1 - Löschliste \#3385 hat genau 7 Einträge ohne Doppelte
+      ---
+      duration_ms: 1.468683
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3385): lib/components/shared/versand-tab/VTBriefingChannels.svelte
+    ok 2 - gelöscht (\#3385): lib/components/shared/versand-tab/VTBriefingChannels.svelte
+      ---
+      duration_ms: 0.20703
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3385): lib/components/shared/versand-tab/VTLaufzeitRoute.svelte
+    ok 3 - gelöscht (\#3385): lib/components/shared/versand-tab/VTLaufzeitRoute.svelte
+      ---
+      duration_ms: 0.107211
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3385): lib/components/shared/versand-tab/VTLaufzeitVergleich.svelte
+    ok 4 - gelöscht (\#3385): lib/components/shared/versand-tab/VTLaufzeitVergleich.svelte
+      ---
+      duration_ms: 0.053471
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3385): lib/components/shared/versand-tab/VTNextBriefing.svelte
+    ok 5 - gelöscht (\#3385): lib/components/shared/versand-tab/VTNextBriefing.svelte
+      ---
+      duration_ms: 0.054891
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3385): lib/components/shared/versand-tab/VTSchedulePlan.svelte
+    ok 6 - gelöscht (\#3385): lib/components/shared/versand-tab/VTSchedulePlan.svelte
+      ---
+      duration_ms: 0.03985
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3385): lib/components/shared/versand-tab/channelContactLabel.ts
+    ok 7 - gelöscht (\#3385): lib/components/shared/versand-tab/channelContactLabel.ts
+      ---
+      duration_ms: 0.03887
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3385): lib/components/shared/versand-tab/vtBriefingChannelsText.ts
+    ok 8 - gelöscht (\#3385): lib/components/shared/versand-tab/vtBriefingChannelsText.ts
+      ---
+      duration_ms: 0.04143
+      type: 'test'
+      ...
+    # Subtest: die Ausnahmedatei des Importscans existiert (sonst wäre die Ausnahme verwaist)
+    ok 9 - die Ausnahmedatei des Importscans existiert (sonst wäre die Ausnahme verwaist)
+      ---
+      duration_ms: 0.06482
+      type: 'test'
+      ...
+    # Subtest: Importscan frontend/src und frontend/e2e: kein Spezifizierer und keine Pfad-Zeichenkette auf die \#3385-Löschliste
+    ok 10 - Importscan frontend/src und frontend/e2e: kein Spezifizierer und keine Pfad-Zeichenkette auf die \#3385-Löschliste
+      ---
+      duration_ms: 326.420707
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/molecules/EinstellTabelle.svelte
+    ok 11 - erhalten (Regressionsschutz, heute grün): lib/components/molecules/EinstellTabelle.svelte
+      ---
+      duration_ms: 0.146221
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/channelConnectionStatus.ts
+    ok 12 - erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/channelConnectionStatus.ts
+      ---
+      duration_ms: 0.049551
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/premiumSmsChannelState.ts
+    ok 13 - erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/premiumSmsChannelState.ts
+      ---
+      duration_ms: 0.036741
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/sendTargetLabel.ts
+    ok 14 - erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/sendTargetLabel.ts
+      ---
+      duration_ms: 0.035831
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/nextBriefingText.ts
+    ok 15 - erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/nextBriefingText.ts
+      ---
+      duration_ms: 0.039171
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/nextBriefingLoad.ts
+    ok 16 - erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/nextBriefingLoad.ts
+      ---
+      duration_ms: 0.03433
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/naechstesBriefingLader.svelte.ts
+    ok 17 - erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/naechstesBriefingLader.svelte.ts
+      ---
+      duration_ms: 0.03508
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/reportConfigPayload.ts
+    ok 18 - erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/reportConfigPayload.ts
+      ---
+      duration_ms: 0.034
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/mergeReportConfig.ts
+    ok 19 - erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/mergeReportConfig.ts
+      ---
+      duration_ms: 0.03413
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/dayWindowClamp.ts
+    ok 20 - erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/dayWindowClamp.ts
+      ---
+      duration_ms: 0.04889
+      type: 'test'
+      ...
+    1..20
+ok 6 - \#3385 AC-1/AC-7: Waisen S3 gelöscht, kein Import und kein Pfad mehr, Nachbarn erhalten
+  ---
+  duration_ms: 329.361902
+  type: 'suite'
+  ...
+# Subtest: \#3389 AC-1/AC-2/AC-3/AC-6: tote Exporte gelöscht, Exportmenge genau die lebenden Hydrationen
+    # Subtest: Löschliste \#3389 hat genau 23 Namen (21 tote Exporte + VersandSnapshot + LayoutSnapshot) ohne Doppelte
+    ok 1 - Löschliste \#3389 hat genau 23 Namen (21 tote Exporte + VersandSnapshot + LayoutSnapshot) ohne Doppelte
+      ---
+      duration_ms: 0.14644
+      type: 'test'
+      ...
+    # Subtest: Dateien gelöscht: die 21 Testdateien und der Prüfstand wetterMetrikenVergleichPruefstand.ts existieren nicht
+    not ok 2 - Dateien gelöscht: die 21 Testdateien und der Prüfstand wetterMetrikenVergleichPruefstand.ts existieren nicht
+      ---
+      duration_ms: 2.488836
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:622:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        existieren noch:
+        lib/components/shared/__tests__/versand_vergleich_speichert_selbst.test.ts
+        lib/components/shared/__tests__/versand_vergleich_konflikt_nochmal_speichern.test.ts
+        lib/components/shared/__tests__/versand_vergleich_flush_vor_pausieren.test.ts
+        lib/components/shared/__tests__/versand_nutzlast_verliert_keine_daten.test.ts
+        lib/components/shared/__tests__/versand_nutzlast_reicht_keepalive_durch.test.ts
+        lib/components/shared/__tests__/versand_enddatum_ohne_ereignis_bleibt_wirksam.test.ts
+        lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts
+        lib/components/shared/__tests__/versand_vergleich_reiterwechsel_verliert_nichts.test.ts
+        lib/components/compare/__tests__/compare_hub_layout_save.test.ts
+        lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts
+        lib/components/compare/__tests__/compare_feldsatz_roundtrip_datenerhalt.test.ts
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_drei_stille_gesten_bleiben_wirksam.test.ts
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_intra_gesture_kollision.test.ts
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_reicht_keepalive_durch.test.ts
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_flush_vor_pausieren.test.ts
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_konflikt_nochmal_speichern.test.ts
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_speichert_einmal.test.ts
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_reiterwechsel_verliert_nichts.test.ts
+        lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts
+        lib/components/shared/weather-metrics-tab/__tests__/wetterMetrikenVergleichPruefstand.ts
+        + actual - expected
+        
+        + [
+        +   'lib/components/shared/__tests__/versand_vergleich_speichert_selbst.test.ts',
+        +   'lib/components/shared/__tests__/versand_vergleich_konflikt_nochmal_speichern.test.ts',
+        +   'lib/components/shared/__tests__/versand_vergleich_flush_vor_pausieren.test.ts',
+        +   'lib/components/shared/__tests__/versand_nutzlast_verliert_keine_daten.test.ts',
+        +   'lib/components/shared/__tests__/versand_nutzlast_reicht_keepalive_durch.test.ts',
+        +   'lib/components/shared/__tests__/versand_enddatum_ohne_ereignis_bleibt_wirksam.test.ts',
+        +   'lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts',
+        +   'lib/components/shared/__tests__/versand_vergleich_reiterwechsel_verliert_nichts.test.ts',
+        +   'lib/components/compare/__tests__/compare_hub_layout_save.test.ts',
+        +   'lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts',
+        +   'lib/components/compare/__tests__/compare_feldsatz_roundtrip_datenerhalt.test.ts',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_drei_stille_gesten_bleiben_wirksam.test.ts',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_intra_gesture_kollision.test.ts',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_reicht_keepalive_durch.test.ts',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_flush_vor_pausieren.test.ts',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_konflikt_nochmal_speichern.test.ts',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_speichert_einmal.test.ts',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_reiterwechsel_verliert_nichts.test.ts',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetterMetrikenVergleichPruefstand.ts'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'lib/components/shared/__tests__/versand_vergleich_speichert_selbst.test.ts'
+        1: 'lib/components/shared/__tests__/versand_vergleich_konflikt_nochmal_speichern.test.ts'
+        2: 'lib/components/shared/__tests__/versand_vergleich_flush_vor_pausieren.test.ts'
+        3: 'lib/components/shared/__tests__/versand_nutzlast_verliert_keine_daten.test.ts'
+        4: 'lib/components/shared/__tests__/versand_nutzlast_reicht_keepalive_durch.test.ts'
+        5: 'lib/components/shared/__tests__/versand_enddatum_ohne_ereignis_bleibt_wirksam.test.ts'
+        6: 'lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts'
+        7: 'lib/components/shared/__tests__/versand_vergleich_reiterwechsel_verliert_nichts.test.ts'
+        8: 'lib/components/compare/__tests__/compare_hub_layout_save.test.ts'
+        9: 'lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts'
+        10: 'lib/components/compare/__tests__/compare_feldsatz_roundtrip_datenerhalt.test.ts'
+        11: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_drei_stille_gesten_bleiben_wirksam.test.ts'
+        12: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_intra_gesture_kollision.test.ts'
+        13: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_reicht_keepalive_durch.test.ts'
+        14: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts'
+        15: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts'
+        16: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_flush_vor_pausieren.test.ts'
+        17: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_konflikt_nochmal_speichern.test.ts'
+        18: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_speichert_einmal.test.ts'
+        19: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_reiterwechsel_verliert_nichts.test.ts'
+        20: 'lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts'
+        21: 'lib/components/shared/weather-metrics-tab/__tests__/wetterMetrikenVergleichPruefstand.ts'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:624:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Exportmenge versandVergleichSpeicherung: genau die lebenden Hydrations-Funktionen
+    not ok 3 - Exportmenge versandVergleichSpeicherung: genau die lebenden Hydrations-Funktionen
+      ---
+      duration_ms: 0.832881
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:628:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Exporte von lib/components/shared/versandVergleichSpeicherung.ts
+        + actual - expected
+        
+          [
+        +   'VersandHydrationTarget',
+        +   'VersandSnapshot',
+        +   'VersandVergleichSpeicherungOptionen',
+        +   'baueVersandNutzlast',
+        +   'erstelleVersandVergleichSpeicherung',
+        +   'flushPendingVersandSave',
+            'hydrateVersandFieldsFromPreset',
+        +   'rollbackVersandSnapshot',
+        +   'versandSnapshotAus',
+        +   'versandVergleichSpeicherungAktiv',
+        +   'versandZustandsBruecke'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'hydrateVersandFieldsFromPreset'
+      actual:
+        0: 'VersandHydrationTarget'
+        1: 'VersandSnapshot'
+        2: 'VersandVergleichSpeicherungOptionen'
+        3: 'baueVersandNutzlast'
+        4: 'erstelleVersandVergleichSpeicherung'
+        5: 'flushPendingVersandSave'
+        6: 'hydrateVersandFieldsFromPreset'
+        7: 'rollbackVersandSnapshot'
+        8: 'versandSnapshotAus'
+        9: 'versandVergleichSpeicherungAktiv'
+        10: 'versandZustandsBruecke'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:631:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Exportmenge weatherMetricsCompareSave: genau die lebenden Hydrations-Funktionen
+    not ok 4 - Exportmenge weatherMetricsCompareSave: genau die lebenden Hydrations-Funktionen
+      ---
+      duration_ms: 0.349811
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:628:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Exporte von lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts
+        + actual - expected
+        
+          [
+        +   'LayoutSnapshot',
+        +   'WetterMetrikenLayoutSnapshot',
+        +   'WetterMetrikenVergleichSpeicherungOptionen',
+        +   'WetterMetrikenZustand',
+        +   'baueWetterMetrikenNutzlast',
+        +   'erstelleWetterMetrikenVergleichSpeicherung',
+        +   'flushPendingLayoutSave',
+        +   'flushPendingWetterMetrikenSave',
+            'hydrateDayWindowFromPreset',
+            'hydrateLayoutFieldsFromPreset',
+            'hydrateWeatherMetricsFromPreset',
+        +   'rollbackLayoutSnapshot',
+        +   'rollbackWetterMetrikenSnapshot',
+            'wetterMetrikenHydrationAbgeschlossen',
+        +   'wetterMetrikenSnapshotAus',
+        +   'wetterMetrikenVergleichSpeicherungAktiv',
+        +   'wetterMetrikenZustandsBruecke'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'hydrateDayWindowFromPreset'
+        1: 'hydrateLayoutFieldsFromPreset'
+        2: 'hydrateWeatherMetricsFromPreset'
+        3: 'wetterMetrikenHydrationAbgeschlossen'
+      actual:
+        0: 'LayoutSnapshot'
+        1: 'WetterMetrikenLayoutSnapshot'
+        2: 'WetterMetrikenVergleichSpeicherungOptionen'
+        3: 'WetterMetrikenZustand'
+        4: 'baueWetterMetrikenNutzlast'
+        5: 'erstelleWetterMetrikenVergleichSpeicherung'
+        6: 'flushPendingLayoutSave'
+        7: 'flushPendingWetterMetrikenSave'
+        8: 'hydrateDayWindowFromPreset'
+        9: 'hydrateLayoutFieldsFromPreset'
+        10: 'hydrateWeatherMetricsFromPreset'
+        11: 'rollbackLayoutSnapshot'
+        12: 'rollbackWetterMetrikenSnapshot'
+        13: 'wetterMetrikenHydrationAbgeschlossen'
+        14: 'wetterMetrikenSnapshotAus'
+        15: 'wetterMetrikenVergleichSpeicherungAktiv'
+        16: 'wetterMetrikenZustandsBruecke'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:631:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: die Ausnahmedatei des Wortscans existiert (sonst wäre die Ausnahme verwaist)
+    ok 5 - die Ausnahmedatei des Wortscans existiert (sonst wäre die Ausnahme verwaist)
+      ---
+      duration_ms: 0.08314
+      type: 'test'
+      ...
+    # Subtest: Wortscan frontend/src und frontend/e2e: keiner der 23 Namen kommt außerhalb dieser Datei im Code vor
+    not ok 6 - Wortscan frontend/src und frontend/e2e: keiner der 23 Namen kommt außerhalb dieser Datei im Code vor
+      ---
+      duration_ms: 435.088302
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:639:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Verweise auf die in #3389 gelöschten Namen:
+        lib/components/compare/CompareTabs.svelte:537 -> flushPendingLayoutSave
+        lib/components/compare/__tests__/compare_feldsatz_roundtrip_datenerhalt.test.ts:11 -> erstelleVersandVergleichSpeicherung
+        lib/components/compare/__tests__/compare_feldsatz_roundtrip_datenerhalt.test.ts:34 -> erstelleVersandVergleichSpeicherung
+        lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts:5 -> rollbackLayoutSnapshot
+        lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts:5 -> LayoutSnapshot
+        lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts:23 -> rollbackLayoutSnapshot
+        lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts:26 -> LayoutSnapshot
+        lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts:28 -> rollbackLayoutSnapshot
+        lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts:35 -> LayoutSnapshot
+        lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts:41 -> rollbackLayoutSnapshot
+        lib/components/compare/__tests__/compare_hub_layout_save.test.ts:6 -> flushPendingLayoutSave
+        lib/components/compare/__tests__/compare_hub_layout_save.test.ts:6 -> LayoutSnapshot
+        lib/components/compare/__tests__/compare_hub_layout_save.test.ts:33 -> flushPendingLayoutSave
+        lib/components/compare/__tests__/compare_hub_layout_save.test.ts:36 -> LayoutSnapshot
+        lib/components/compare/__tests__/compare_hub_layout_save.test.ts:37 -> LayoutSnapshot
+        lib/components/compare/__tests__/compare_hub_layout_save.test.ts:39 -> flushPendingLayoutSave
+        lib/components/compare/__tests__/compare_hub_layout_save.test.ts:41 -> flushPendingLayoutSave
+        lib/components/compare/__tests__/compare_hub_layout_save.test.ts:48 -> LayoutSnapshot
+        lib/components/compare/__tests__/compare_hub_layout_save.test.ts:49 -> LayoutSnapshot
+        lib/components/compare/__tests__/compare_hub_layout_save.test.ts:51 -> flushPendingLayoutSave
+        lib/components/compare/__tests__/compare_hub_layout_save.test.ts:60 -> LayoutSnapshot
+        lib/components/compare/__tests__/compare_hub_layout_save.test.ts:61 -> LayoutSnapshot
+        lib/components/compare/__tests__/compare_hub_layout_save.test.ts:63 -> flushPendingLayoutSave
+        lib/components/compare/__tests__/compare_hub_layout_save.test.ts:65 -> flushPendingLayoutSave
+        lib/components/compare/__tests__/compare_outlook_metric_formats_persistenz.test.ts:6 -> flushPendingLayoutSave
+        lib/components/compare/__tests__/compare_outlook_metric_formats_persistenz.test.ts:6 -> LayoutSnapshot
+        lib/components/compare/__tests__/compare_outlook_metric_formats_persistenz.test.ts:111 -> LayoutSnapshot
+        lib/components/compare/__tests__/compare_outlook_metric_formats_persistenz.test.ts:114 -> flushPendingLayoutSave
+        lib/components/compare/__tests__/compare_outlook_metric_formats_persistenz.test.ts:121 -> LayoutSnapshot
+        lib/components/compare/__tests__/compare_outlook_metric_formats_persistenz.test.ts:123 -> flushPendingLayoutSave
+        lib/components/compare/__tests__/compare_retry_reiterwechsel_eingabe_bleibt.test.ts:10 -> erstelleVersandVergleichSpeicherung
+        lib/components/compare/__tests__/compare_retry_reiterwechsel_eingabe_bleibt.test.ts:290 -> erstelleVersandVergleichSpeicherung
+        lib/components/compare/__tests__/fix_3061_hub_hydrierer.test.ts:16 -> flushPendingWetterMetrikenSave
+        lib/components/compare/__tests__/fix_3061_hub_hydrierer.test.ts:18 -> wetterMetrikenSnapshotAus
+        lib/components/compare/__tests__/fix_3061_hub_hydrierer.test.ts:193 -> wetterMetrikenSnapshotAus
+        lib/components/compare/__tests__/fix_3061_hub_hydrierer.test.ts:195 -> wetterMetrikenSnapshotAus
+        lib/components/compare/__tests__/fix_3061_hub_hydrierer.test.ts:196 -> flushPendingWetterMetrikenSave
+        lib/components/compare/__tests__/fix_3061_hub_hydrierer.test.ts:198 -> flushPendingWetterMetrikenSave
+        lib/components/compare/__tests__/hub_nochmal_speichern_ueber_reiterwechsel.test.ts:13 -> erstelleVersandVergleichSpeicherung
+        lib/components/compare/__tests__/hub_nochmal_speichern_ueber_reiterwechsel.test.ts:53 -> erstelleVersandVergleichSpeicherung
+        lib/components/compare/__tests__/hub_put_queue.test.ts:12 -> erstelleVersandVergleichSpeicherung
+        lib/components/compare/__tests__/hub_put_queue.test.ts:94 -> erstelleVersandVergleichSpeicherung
+        lib/components/compare/__tests__/hub_put_queue.test.ts:158 -> erstelleVersandVergleichSpeicherung
+        lib/components/compare/__tests__/hub_versand_inline.test.ts:8 -> flushPendingVersandSave
+        lib/components/compare/__tests__/hub_versand_inline.test.ts:9 -> rollbackVersandSnapshot
+        lib/components/compare/__tests__/hub_versand_inline.test.ts:10 -> VersandSnapshot
+        lib/components/compare/__tests__/hub_versand_inline.test.ts:50 -> VersandSnapshot
+        lib/components/compare/__tests__/hub_versand_inline.test.ts:114 -> flushPendingVersandSave
+        lib/components/compare/__tests__/hub_versand_inline.test.ts:118 -> flushPendingVersandSave
+        lib/components/compare/__tests__/hub_versand_inline.test.ts:119 -> flushPendingVersandSave
+        lib/components/compare/__tests__/hub_versand_inline.test.ts:124 -> flushPendingVersandSave
+        lib/components/compare/__tests__/hub_versand_inline.test.ts:136 -> flushPendingVersandSave
+        lib/components/compare/__tests__/hub_versand_inline.test.ts:147 -> flushPendingVersandSave
+        lib/components/compare/__tests__/hub_versand_inline.test.ts:158 -> flushPendingVersandSave
+        lib/components/compare/__tests__/hub_versand_inline.test.ts:172 -> rollbackVersandSnapshot
+        lib/components/compare/__tests__/hub_versand_inline.test.ts:178 -> rollbackVersandSnapshot
+        lib/components/compare/__tests__/hub_versand_inline.test.ts:178 -> VersandSnapshot
+        lib/components/compare/__tests__/hub_versand_inline.test.ts:189 -> rollbackVersandSnapshot
+        lib/components/compare/__tests__/hub_versand_inline.test.ts:189 -> VersandSnapshot
+        lib/components/compare/__tests__/hub_versand_inline.test.ts:202 -> rollbackVersandSnapshot
+        lib/components/compare/__tests__/hub_versand_inline.test.ts:202 -> VersandSnapshot
+        lib/components/compare/feat3276_vergleich_ohne_altfelder.test.ts:16 -> baueWetterMetrikenNutzlast
+        lib/components/compare/feat3276_vergleich_ohne_altfelder.test.ts:17 -> WetterMetrikenLayoutSnapshot
+        lib/components/compare/feat3276_vergleich_ohne_altfelder.test.ts:19 -> baueVersandNutzlast
+        lib/components/compare/feat3276_vergleich_ohne_altfelder.test.ts:122 -> baueWetterMetrikenNutzlast
+        lib/components/compare/feat3276_vergleich_ohne_altfelder.test.ts:134 -> WetterMetrikenLayoutSnapshot
+        lib/components/compare/feat3276_vergleich_ohne_altfelder.test.ts:140 -> baueVersandNutzlast
+        lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:15 -> flushPendingLayoutSave
+        lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:180 -> flushPendingLayoutSave
+        lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:183 -> flushPendingLayoutSave
+        lib/components/shared/__tests__/alarme_vergleich_kanalwahl_speicherweg.test.ts:9 -> baueVersandNutzlast
+        lib/components/shared/__tests__/alarme_vergleich_kanalwahl_speicherweg.test.ts:12 -> wetterMetrikenSnapshotAus
+        lib/components/shared/__tests__/alarme_vergleich_kanalwahl_speicherweg.test.ts:12 -> baueWetterMetrikenNutzlast
+        lib/components/shared/__tests__/alarme_vergleich_kanalwahl_speicherweg.test.ts:171 -> baueVersandNutzlast
+        lib/components/shared/__tests__/alarme_vergleich_kanalwahl_speicherweg.test.ts:173 -> wetterMetrikenSnapshotAus
+        lib/components/shared/__tests__/alarme_vergleich_kanalwahl_speicherweg.test.ts:173 -> baueWetterMetrikenNutzlast
+        lib/components/shared/__tests__/alarme_vergleich_kein_zurueckschreiben.test.ts:15 -> erstelleVersandVergleichSpeicherung
+        lib/components/shared/__tests__/alarme_vergleich_kein_zurueckschreiben.test.ts:114 -> erstelleVersandVergleichSpeicherung
+        lib/components/shared/__tests__/alarme_vergleich_kein_zurueckschreiben.test.ts:205 -> erstelleVersandVergleichSpeicherung
+        lib/components/shared/__tests__/alarme_vergleich_kein_zurueckschreiben.test.ts:249 -> erstelleVersandVergleichSpeicherung
+        lib/components/shared/__tests__/alarme_vergleich_kein_zurueckschreiben.test.ts:306 -> erstelleVersandVergleichSpeicherung
+        lib/components/shared/__tests__/compareReiterAufbauPruefstand.ts:17 -> erstelleVersandVergleichSpeicherung
+        lib/components/shared/__tests__/compareReiterAufbauPruefstand.ts:21 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/__tests__/compareReiterAufbauPruefstand.ts:82 -> erstelleVersandVergleichSpeicherung
+        lib/components/shared/__tests__/compareReiterAufbauPruefstand.ts:117 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/__tests__/compare_alarm_versand_nutzlast_trennung.test.ts:5 -> baueVersandNutzlast
+        lib/components/shared/__tests__/compare_alarm_versand_nutzlast_trennung.test.ts:5 -> VersandSnapshot
+        lib/components/shared/__tests__/compare_alarm_versand_nutzlast_trennung.test.ts:38 -> VersandSnapshot
+        lib/components/shared/__tests__/compare_alarm_versand_nutzlast_trennung.test.ts:70 -> baueVersandNutzlast
+        lib/components/shared/__tests__/s3a2794_zustellung_vergleich_ein_speicherer.test.ts:12 -> erstelleVersandVergleichSpeicherung
+        lib/components/shared/__tests__/s3a2794_zustellung_vergleich_ein_speicherer.test.ts:48 -> erstelleVersandVergleichSpeicherung
+        lib/components/shared/__tests__/versand_enddatum_ohne_ereignis_bleibt_wirksam.test.ts:11 -> erstelleVersandVergleichSpeicherung
+        lib/components/shared/__tests__/versand_enddatum_ohne_ereignis_bleibt_wirksam.test.ts:12 -> versandSnapshotAus
+        lib/components/shared/__tests__/versand_enddatum_ohne_ereignis_bleibt_wirksam.test.ts:35 -> erstelleVersandVergleichSpeicherung
+        lib/components/shared/__tests__/versand_enddatum_ohne_ereignis_bleibt_wirksam.test.ts:78 -> versandSnapshotAus
+        lib/components/shared/__tests__/versand_enddatum_ohne_ereignis_bleibt_wirksam.test.ts:80 -> versandSnapshotAus
+        lib/components/shared/__tests__/versand_nutzlast_reicht_keepalive_durch.test.ts:10 -> erstelleVersandVergleichSpeicherung
+        lib/components/shared/__tests__/versand_nutzlast_reicht_keepalive_durch.test.ts:33 -> erstelleVersandVergleichSpeicherung
+        lib/components/shared/__tests__/versand_nutzlast_verliert_keine_daten.test.ts:5 -> versandSnapshotAus
+        lib/components/shared/__tests__/versand_nutzlast_verliert_keine_daten.test.ts:5 -> baueVersandNutzlast
+        lib/components/shared/__tests__/versand_nutzlast_verliert_keine_daten.test.ts:13 -> versandSnapshotAus
+        lib/components/shared/__tests__/versand_nutzlast_verliert_keine_daten.test.ts:13 -> baueVersandNutzlast
+        lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts:5 -> versandVergleichSpeicherungAktiv
+        lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts:14 -> versandVergleichSpeicherungAktiv
+        lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts:21 -> versandVergleichSpeicherungAktiv
+        lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts:34 -> versandVergleichSpeicherungAktiv
+        lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts:41 -> versandVergleichSpeicherungAktiv
+        lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts:50 -> versandVergleichSpeicherungAktiv
+        lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts:58 -> versandVergleichSpeicherungAktiv
+        lib/components/shared/__tests__/versand_vergleich_flush_vor_pausieren.test.ts:10 -> erstelleVersandVergleichSpeicherung
+        lib/components/shared/__tests__/versand_vergleich_flush_vor_pausieren.test.ts:32 -> erstelleVersandVergleichSpeicherung
+        lib/components/shared/__tests__/versand_vergleich_konflikt_nochmal_speichern.test.ts:11 -> erstelleVersandVergleichSpeicherung
+        lib/components/shared/__tests__/versand_vergleich_konflikt_nochmal_speichern.test.ts:36 -> erstelleVersandVergleichSpeicherung
+        lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:9 -> baueVersandNutzlast
+        lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:11 -> versandSnapshotAus
+        lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:12 -> rollbackVersandSnapshot
+        lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:13 -> VersandSnapshot
+        lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:52 -> versandSnapshotAus
+        lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:53 -> versandSnapshotAus
+        lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:54 -> versandSnapshotAus
+        lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:58 -> rollbackVersandSnapshot
+        lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:59 -> rollbackVersandSnapshot
+        lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:60 -> VersandSnapshot
+        lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:61 -> VersandSnapshot
+        lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:62 -> rollbackVersandSnapshot
+        lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:70 -> baueVersandNutzlast
+        lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:72 -> VersandSnapshot
+        lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:73 -> baueVersandNutzlast
+        lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:77 -> baueVersandNutzlast
+        lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:81 -> baueVersandNutzlast
+        lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:85 -> VersandSnapshot
+        lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:86 -> baueVersandNutzlast
+        lib/components/shared/__tests__/versand_vergleich_reiterwechsel_verliert_nichts.test.ts:16 -> erstelleVersandVergleichSpeicherung
+        lib/components/shared/__tests__/versand_vergleich_reiterwechsel_verliert_nichts.test.ts:53 -> erstelleVersandVergleichSpeicherung
+        lib/components/shared/__tests__/versand_vergleich_speichert_selbst.test.ts:10 -> erstelleVersandVergleichSpeicherung
+        lib/components/shared/__tests__/versand_vergleich_speichert_selbst.test.ts:34 -> erstelleVersandVergleichSpeicherung
+        lib/components/shared/versandVergleichSpeicherung.ts:10 -> VersandSnapshot
+        lib/components/shared/versandVergleichSpeicherung.ts:24 -> VersandHydrationTarget
+        lib/components/shared/versandVergleichSpeicherung.ts:40 -> VersandSnapshot
+        lib/components/shared/versandVergleichSpeicherung.ts:57 -> versandSnapshotAus
+        lib/components/shared/versandVergleichSpeicherung.ts:57 -> VersandHydrationTarget
+        lib/components/shared/versandVergleichSpeicherung.ts:57 -> VersandSnapshot
+        lib/components/shared/versandVergleichSpeicherung.ts:69 -> VersandSnapshot
+        lib/components/shared/versandVergleichSpeicherung.ts:83 -> baueVersandNutzlast
+        lib/components/shared/versandVergleichSpeicherung.ts:85 -> VersandSnapshot
+        lib/components/shared/versandVergleichSpeicherung.ts:113 -> flushPendingVersandSave
+        lib/components/shared/versandVergleichSpeicherung.ts:115 -> VersandSnapshot
+        lib/components/shared/versandVergleichSpeicherung.ts:116 -> VersandSnapshot
+        lib/components/shared/versandVergleichSpeicherung.ts:120 -> baueVersandNutzlast
+        lib/components/shared/versandVergleichSpeicherung.ts:123 -> rollbackVersandSnapshot
+        lib/components/shared/versandVergleichSpeicherung.ts:124 -> VersandHydrationTarget
+        lib/components/shared/versandVergleichSpeicherung.ts:125 -> VersandSnapshot
+        lib/components/shared/versandVergleichSpeicherung.ts:126 -> VersandSnapshot
+        lib/components/shared/versandVergleichSpeicherung.ts:128 -> VersandSnapshot
+        lib/components/shared/versandVergleichSpeicherung.ts:146 -> versandVergleichSpeicherungAktiv
+        lib/components/shared/versandVergleichSpeicherung.ts:155 -> VersandVergleichSpeicherungOptionen
+        lib/components/shared/versandVergleichSpeicherung.ts:157 -> VersandHydrationTarget
+        lib/components/shared/versandVergleichSpeicherung.ts:164 -> erstelleVersandVergleichSpeicherung
+        lib/components/shared/versandVergleichSpeicherung.ts:165 -> VersandVergleichSpeicherungOptionen
+        lib/components/shared/versandVergleichSpeicherung.ts:168 -> versandSnapshotAus
+        lib/components/shared/versandVergleichSpeicherung.ts:168 -> VersandSnapshot
+        lib/components/shared/versandVergleichSpeicherung.ts:175 -> versandSnapshotAus
+        lib/components/shared/versandVergleichSpeicherung.ts:177 -> flushPendingVersandSave
+        lib/components/shared/versandVergleichSpeicherung.ts:186 -> rollbackVersandSnapshot
+        lib/components/shared/versandVergleichSpeicherung.ts:196 -> versandSnapshotAus
+        lib/components/shared/versandVergleichSpeicherung.ts:211 -> versandZustandsBruecke
+        lib/components/shared/versandVergleichSpeicherung.ts:214 -> VersandHydrationTarget
+        lib/components/shared/versandVergleichSpeicherung.ts:215 -> VersandHydrationTarget
+        lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts:11 -> baueWetterMetrikenNutzlast
+        lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts:12 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts:13 -> wetterMetrikenSnapshotAus
+        lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts:43 -> baueWetterMetrikenNutzlast
+        lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts:47 -> wetterMetrikenSnapshotAus
+        lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts:47 -> baueWetterMetrikenNutzlast
+        lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts:66 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_drei_stille_gesten_bleiben_wirksam.test.ts:10 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_drei_stille_gesten_bleiben_wirksam.test.ts:32 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_hydration_vollstaendig_vor_baseline.test.ts:11 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_hydration_vollstaendig_vor_baseline.test.ts:83 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_intra_gesture_kollision.test.ts:10 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_intra_gesture_kollision.test.ts:32 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_reicht_keepalive_durch.test.ts:10 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_reicht_keepalive_durch.test.ts:33 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:11 -> baueWetterMetrikenNutzlast
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:12 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:13 -> wetterMetrikenSnapshotAus
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:89 -> baueWetterMetrikenNutzlast
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:96 -> wetterMetrikenSnapshotAus
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:96 -> baueWetterMetrikenNutzlast
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:110 -> wetterMetrikenSnapshotAus
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:110 -> baueWetterMetrikenNutzlast
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:128 -> wetterMetrikenSnapshotAus
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:128 -> baueWetterMetrikenNutzlast
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:138 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:155 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:201 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_reiterwechsel_verliert_nichts.test.ts:17 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_reiterwechsel_verliert_nichts.test.ts:62 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts:5 -> wetterMetrikenVergleichSpeicherungAktiv
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts:14 -> wetterMetrikenVergleichSpeicherungAktiv
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts:21 -> wetterMetrikenVergleichSpeicherungAktiv
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts:34 -> wetterMetrikenVergleichSpeicherungAktiv
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts:41 -> wetterMetrikenVergleichSpeicherungAktiv
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts:50 -> wetterMetrikenVergleichSpeicherungAktiv
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts:58 -> wetterMetrikenVergleichSpeicherungAktiv
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_und_wertebereiche_teilen_active_metric_keys.test.ts:14 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_und_wertebereiche_teilen_active_metric_keys.test.ts:61 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_flush_vor_pausieren.test.ts:10 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_flush_vor_pausieren.test.ts:32 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_konflikt_nochmal_speichern.test.ts:11 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_konflikt_nochmal_speichern.test.ts:36 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_speichert_einmal.test.ts:10 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_speichert_einmal.test.ts:34 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:36 -> LayoutSnapshot
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:40 -> LayoutSnapshot
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:44 -> flushPendingLayoutSave
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:46 -> LayoutSnapshot
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:47 -> LayoutSnapshot
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:63 -> rollbackLayoutSnapshot
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:63 -> LayoutSnapshot
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:68 -> WetterMetrikenLayoutSnapshot
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:77 -> WetterMetrikenZustand
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:79 -> WetterMetrikenZustand
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:83 -> WetterMetrikenLayoutSnapshot
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:83 -> WetterMetrikenZustand
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:83 -> wetterMetrikenSnapshotAus
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:96 -> WetterMetrikenLayoutSnapshot
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:101 -> baueWetterMetrikenNutzlast
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:103 -> WetterMetrikenLayoutSnapshot
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:121 -> WetterMetrikenLayoutSnapshot
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:125 -> flushPendingWetterMetrikenSave
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:127 -> WetterMetrikenLayoutSnapshot
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:128 -> WetterMetrikenLayoutSnapshot
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:132 -> baueWetterMetrikenNutzlast
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:135 -> rollbackWetterMetrikenSnapshot
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:136 -> WetterMetrikenZustand
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:137 -> WetterMetrikenLayoutSnapshot
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:138 -> WetterMetrikenLayoutSnapshot
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:141 -> wetterMetrikenSnapshotAus
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:150 -> WetterMetrikenVergleichSpeicherungOptionen
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:152 -> WetterMetrikenZustand
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:159 -> erstelleWetterMetrikenVergleichSpeicherung
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:160 -> WetterMetrikenVergleichSpeicherungOptionen
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:163 -> WetterMetrikenLayoutSnapshot
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:163 -> wetterMetrikenSnapshotAus
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:170 -> wetterMetrikenSnapshotAus
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:172 -> flushPendingWetterMetrikenSave
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:181 -> rollbackWetterMetrikenSnapshot
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:191 -> wetterMetrikenSnapshotAus
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:213 -> wetterMetrikenVergleichSpeicherungAktiv
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:222 -> wetterMetrikenZustandsBruecke
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:225 -> WetterMetrikenZustand
+        lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:226 -> WetterMetrikenZustand
+        + actual - expected
+        
+        + [
+        +   'lib/components/compare/CompareTabs.svelte:537 -> flushPendingLayoutSave',
+        +   'lib/components/compare/__tests__/compare_feldsatz_roundtrip_datenerhalt.test.ts:11 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/compare/__tests__/compare_feldsatz_roundtrip_datenerhalt.test.ts:34 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts:5 -> rollbackLayoutSnapshot',
+        +   'lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts:5 -> LayoutSnapshot',
+        +   'lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts:23 -> rollbackLayoutSnapshot',
+        +   'lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts:26 -> LayoutSnapshot',
+        +   'lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts:28 -> rollbackLayoutSnapshot',
+        +   'lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts:35 -> LayoutSnapshot',
+        +   'lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts:41 -> rollbackLayoutSnapshot',
+        +   'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:6 -> flushPendingLayoutSave',
+        +   'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:6 -> LayoutSnapshot',
+        +   'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:33 -> flushPendingLayoutSave',
+        +   'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:36 -> LayoutSnapshot',
+        +   'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:37 -> LayoutSnapshot',
+        +   'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:39 -> flushPendingLayoutSave',
+        +   'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:41 -> flushPendingLayoutSave',
+        +   'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:48 -> LayoutSnapshot',
+        +   'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:49 -> LayoutSnapshot',
+        +   'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:51 -> flushPendingLayoutSave',
+        +   'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:60 -> LayoutSnapshot',
+        +   'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:61 -> LayoutSnapshot',
+        +   'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:63 -> flushPendingLayoutSave',
+        +   'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:65 -> flushPendingLayoutSave',
+        +   'lib/components/compare/__tests__/compare_outlook_metric_formats_persistenz.test.ts:6 -> flushPendingLayoutSave',
+        +   'lib/components/compare/__tests__/compare_outlook_metric_formats_persistenz.test.ts:6 -> LayoutSnapshot',
+        +   'lib/components/compare/__tests__/compare_outlook_metric_formats_persistenz.test.ts:111 -> LayoutSnapshot',
+        +   'lib/components/compare/__tests__/compare_outlook_metric_formats_persistenz.test.ts:114 -> flushPendingLayoutSave',
+        +   'lib/components/compare/__tests__/compare_outlook_metric_formats_persistenz.test.ts:121 -> LayoutSnapshot',
+        +   'lib/components/compare/__tests__/compare_outlook_metric_formats_persistenz.test.ts:123 -> flushPendingLayoutSave',
+        +   'lib/components/compare/__tests__/compare_retry_reiterwechsel_eingabe_bleibt.test.ts:10 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/compare/__tests__/compare_retry_reiterwechsel_eingabe_bleibt.test.ts:290 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/compare/__tests__/fix_3061_hub_hydrierer.test.ts:16 -> flushPendingWetterMetrikenSave',
+        +   'lib/components/compare/__tests__/fix_3061_hub_hydrierer.test.ts:18 -> wetterMetrikenSnapshotAus',
+        +   'lib/components/compare/__tests__/fix_3061_hub_hydrierer.test.ts:193 -> wetterMetrikenSnapshotAus',
+        +   'lib/components/compare/__tests__/fix_3061_hub_hydrierer.test.ts:195 -> wetterMetrikenSnapshotAus',
+        +   'lib/components/compare/__tests__/fix_3061_hub_hydrierer.test.ts:196 -> flushPendingWetterMetrikenSave',
+        +   'lib/components/compare/__tests__/fix_3061_hub_hydrierer.test.ts:198 -> flushPendingWetterMetrikenSave',
+        +   'lib/components/compare/__tests__/hub_nochmal_speichern_ueber_reiterwechsel.test.ts:13 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/compare/__tests__/hub_nochmal_speichern_ueber_reiterwechsel.test.ts:53 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/compare/__tests__/hub_put_queue.test.ts:12 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/compare/__tests__/hub_put_queue.test.ts:94 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/compare/__tests__/hub_put_queue.test.ts:158 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/compare/__tests__/hub_versand_inline.test.ts:8 -> flushPendingVersandSave',
+        +   'lib/components/compare/__tests__/hub_versand_inline.test.ts:9 -> rollbackVersandSnapshot',
+        +   'lib/components/compare/__tests__/hub_versand_inline.test.ts:10 -> VersandSnapshot',
+        +   'lib/components/compare/__tests__/hub_versand_inline.test.ts:50 -> VersandSnapshot',
+        +   'lib/components/compare/__tests__/hub_versand_inline.test.ts:114 -> flushPendingVersandSave',
+        +   'lib/components/compare/__tests__/hub_versand_inline.test.ts:118 -> flushPendingVersandSave',
+        +   'lib/components/compare/__tests__/hub_versand_inline.test.ts:119 -> flushPendingVersandSave',
+        +   'lib/components/compare/__tests__/hub_versand_inline.test.ts:124 -> flushPendingVersandSave',
+        +   'lib/components/compare/__tests__/hub_versand_inline.test.ts:136 -> flushPendingVersandSave',
+        +   'lib/components/compare/__tests__/hub_versand_inline.test.ts:147 -> flushPendingVersandSave',
+        +   'lib/components/compare/__tests__/hub_versand_inline.test.ts:158 -> flushPendingVersandSave',
+        +   'lib/components/compare/__tests__/hub_versand_inline.test.ts:172 -> rollbackVersandSnapshot',
+        +   'lib/components/compare/__tests__/hub_versand_inline.test.ts:178 -> rollbackVersandSnapshot',
+        +   'lib/components/compare/__tests__/hub_versand_inline.test.ts:178 -> VersandSnapshot',
+        +   'lib/components/compare/__tests__/hub_versand_inline.test.ts:189 -> rollbackVersandSnapshot',
+        +   'lib/components/compare/__tests__/hub_versand_inline.test.ts:189 -> VersandSnapshot',
+        +   'lib/components/compare/__tests__/hub_versand_inline.test.ts:202 -> rollbackVersandSnapshot',
+        +   'lib/components/compare/__tests__/hub_versand_inline.test.ts:202 -> VersandSnapshot',
+        +   'lib/components/compare/feat3276_vergleich_ohne_altfelder.test.ts:16 -> baueWetterMetrikenNutzlast',
+        +   'lib/components/compare/feat3276_vergleich_ohne_altfelder.test.ts:17 -> WetterMetrikenLayoutSnapshot',
+        +   'lib/components/compare/feat3276_vergleich_ohne_altfelder.test.ts:19 -> baueVersandNutzlast',
+        +   'lib/components/compare/feat3276_vergleich_ohne_altfelder.test.ts:122 -> baueWetterMetrikenNutzlast',
+        +   'lib/components/compare/feat3276_vergleich_ohne_altfelder.test.ts:134 -> WetterMetrikenLayoutSnapshot',
+        +   'lib/components/compare/feat3276_vergleich_ohne_altfelder.test.ts:140 -> baueVersandNutzlast',
+        +   'lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:15 -> flushPendingLayoutSave',
+        +   'lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:180 -> flushPendingLayoutSave',
+        +   'lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:183 -> flushPendingLayoutSave',
+        +   'lib/components/shared/__tests__/alarme_vergleich_kanalwahl_speicherweg.test.ts:9 -> baueVersandNutzlast',
+        +   'lib/components/shared/__tests__/alarme_vergleich_kanalwahl_speicherweg.test.ts:12 -> wetterMetrikenSnapshotAus',
+        +   'lib/components/shared/__tests__/alarme_vergleich_kanalwahl_speicherweg.test.ts:12 -> baueWetterMetrikenNutzlast',
+        +   'lib/components/shared/__tests__/alarme_vergleich_kanalwahl_speicherweg.test.ts:171 -> baueVersandNutzlast',
+        +   'lib/components/shared/__tests__/alarme_vergleich_kanalwahl_speicherweg.test.ts:173 -> wetterMetrikenSnapshotAus',
+        +   'lib/components/shared/__tests__/alarme_vergleich_kanalwahl_speicherweg.test.ts:173 -> baueWetterMetrikenNutzlast',
+        +   'lib/components/shared/__tests__/alarme_vergleich_kein_zurueckschreiben.test.ts:15 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/shared/__tests__/alarme_vergleich_kein_zurueckschreiben.test.ts:114 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/shared/__tests__/alarme_vergleich_kein_zurueckschreiben.test.ts:205 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/shared/__tests__/alarme_vergleich_kein_zurueckschreiben.test.ts:249 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/shared/__tests__/alarme_vergleich_kein_zurueckschreiben.test.ts:306 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/shared/__tests__/compareReiterAufbauPruefstand.ts:17 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/shared/__tests__/compareReiterAufbauPruefstand.ts:21 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/__tests__/compareReiterAufbauPruefstand.ts:82 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/shared/__tests__/compareReiterAufbauPruefstand.ts:117 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/__tests__/compare_alarm_versand_nutzlast_trennung.test.ts:5 -> baueVersandNutzlast',
+        +   'lib/components/shared/__tests__/compare_alarm_versand_nutzlast_trennung.test.ts:5 -> VersandSnapshot',
+        +   'lib/components/shared/__tests__/compare_alarm_versand_nutzlast_trennung.test.ts:38 -> VersandSnapshot',
+        +   'lib/components/shared/__tests__/compare_alarm_versand_nutzlast_trennung.test.ts:70 -> baueVersandNutzlast',
+        +   'lib/components/shared/__tests__/s3a2794_zustellung_vergleich_ein_speicherer.test.ts:12 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/shared/__tests__/s3a2794_zustellung_vergleich_ein_speicherer.test.ts:48 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/shared/__tests__/versand_enddatum_ohne_ereignis_bleibt_wirksam.test.ts:11 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/shared/__tests__/versand_enddatum_ohne_ereignis_bleibt_wirksam.test.ts:12 -> versandSnapshotAus',
+        +   'lib/components/shared/__tests__/versand_enddatum_ohne_ereignis_bleibt_wirksam.test.ts:35 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/shared/__tests__/versand_enddatum_ohne_ereignis_bleibt_wirksam.test.ts:78 -> versandSnapshotAus',
+        +   'lib/components/shared/__tests__/versand_enddatum_ohne_ereignis_bleibt_wirksam.test.ts:80 -> versandSnapshotAus',
+        +   'lib/components/shared/__tests__/versand_nutzlast_reicht_keepalive_durch.test.ts:10 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/shared/__tests__/versand_nutzlast_reicht_keepalive_durch.test.ts:33 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/shared/__tests__/versand_nutzlast_verliert_keine_daten.test.ts:5 -> versandSnapshotAus',
+        +   'lib/components/shared/__tests__/versand_nutzlast_verliert_keine_daten.test.ts:5 -> baueVersandNutzlast',
+        +   'lib/components/shared/__tests__/versand_nutzlast_verliert_keine_daten.test.ts:13 -> versandSnapshotAus',
+        +   'lib/components/shared/__tests__/versand_nutzlast_verliert_keine_daten.test.ts:13 -> baueVersandNutzlast',
+        +   'lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts:5 -> versandVergleichSpeicherungAktiv',
+        +   'lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts:14 -> versandVergleichSpeicherungAktiv',
+        +   'lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts:21 -> versandVergleichSpeicherungAktiv',
+        +   'lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts:34 -> versandVergleichSpeicherungAktiv',
+        +   'lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts:41 -> versandVergleichSpeicherungAktiv',
+        +   'lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts:50 -> versandVergleichSpeicherungAktiv',
+        +   'lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts:58 -> versandVergleichSpeicherungAktiv',
+        +   'lib/components/shared/__tests__/versand_vergleich_flush_vor_pausieren.test.ts:10 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/shared/__tests__/versand_vergleich_flush_vor_pausieren.test.ts:32 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/shared/__tests__/versand_vergleich_konflikt_nochmal_speichern.test.ts:11 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/shared/__tests__/versand_vergleich_konflikt_nochmal_speichern.test.ts:36 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:9 -> baueVersandNutzlast',
+        +   'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:11 -> versandSnapshotAus',
+        +   'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:12 -> rollbackVersandSnapshot',
+        +   'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:13 -> VersandSnapshot',
+        +   'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:52 -> versandSnapshotAus',
+        +   'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:53 -> versandSnapshotAus',
+        +   'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:54 -> versandSnapshotAus',
+        +   'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:58 -> rollbackVersandSnapshot',
+        +   'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:59 -> rollbackVersandSnapshot',
+        +   'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:60 -> VersandSnapshot',
+        +   'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:61 -> VersandSnapshot',
+        +   'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:62 -> rollbackVersandSnapshot',
+        +   'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:70 -> baueVersandNutzlast',
+        +   'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:72 -> VersandSnapshot',
+        +   'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:73 -> baueVersandNutzlast',
+        +   'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:77 -> baueVersandNutzlast',
+        +   'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:81 -> baueVersandNutzlast',
+        +   'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:85 -> VersandSnapshot',
+        +   'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:86 -> baueVersandNutzlast',
+        +   'lib/components/shared/__tests__/versand_vergleich_reiterwechsel_verliert_nichts.test.ts:16 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/shared/__tests__/versand_vergleich_reiterwechsel_verliert_nichts.test.ts:53 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/shared/__tests__/versand_vergleich_speichert_selbst.test.ts:10 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/shared/__tests__/versand_vergleich_speichert_selbst.test.ts:34 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:10 -> VersandSnapshot',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:24 -> VersandHydrationTarget',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:40 -> VersandSnapshot',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:57 -> versandSnapshotAus',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:57 -> VersandHydrationTarget',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:57 -> VersandSnapshot',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:69 -> VersandSnapshot',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:83 -> baueVersandNutzlast',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:85 -> VersandSnapshot',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:113 -> flushPendingVersandSave',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:115 -> VersandSnapshot',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:116 -> VersandSnapshot',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:120 -> baueVersandNutzlast',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:123 -> rollbackVersandSnapshot',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:124 -> VersandHydrationTarget',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:125 -> VersandSnapshot',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:126 -> VersandSnapshot',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:128 -> VersandSnapshot',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:146 -> versandVergleichSpeicherungAktiv',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:155 -> VersandVergleichSpeicherungOptionen',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:157 -> VersandHydrationTarget',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:164 -> erstelleVersandVergleichSpeicherung',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:165 -> VersandVergleichSpeicherungOptionen',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:168 -> versandSnapshotAus',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:168 -> VersandSnapshot',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:175 -> versandSnapshotAus',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:177 -> flushPendingVersandSave',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:186 -> rollbackVersandSnapshot',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:196 -> versandSnapshotAus',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:211 -> versandZustandsBruecke',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:214 -> VersandHydrationTarget',
+        +   'lib/components/shared/versandVergleichSpeicherung.ts:215 -> VersandHydrationTarget',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts:11 -> baueWetterMetrikenNutzlast',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts:12 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts:13 -> wetterMetrikenSnapshotAus',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts:43 -> baueWetterMetrikenNutzlast',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts:47 -> wetterMetrikenSnapshotAus',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts:47 -> baueWetterMetrikenNutzlast',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts:66 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_drei_stille_gesten_bleiben_wirksam.test.ts:10 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_drei_stille_gesten_bleiben_wirksam.test.ts:32 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_hydration_vollstaendig_vor_baseline.test.ts:11 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_hydration_vollstaendig_vor_baseline.test.ts:83 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_intra_gesture_kollision.test.ts:10 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_intra_gesture_kollision.test.ts:32 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_reicht_keepalive_durch.test.ts:10 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_reicht_keepalive_durch.test.ts:33 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:11 -> baueWetterMetrikenNutzlast',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:12 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:13 -> wetterMetrikenSnapshotAus',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:89 -> baueWetterMetrikenNutzlast',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:96 -> wetterMetrikenSnapshotAus',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:96 -> baueWetterMetrikenNutzlast',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:110 -> wetterMetrikenSnapshotAus',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:110 -> baueWetterMetrikenNutzlast',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:128 -> wetterMetrikenSnapshotAus',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:128 -> baueWetterMetrikenNutzlast',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:138 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:155 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:201 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_reiterwechsel_verliert_nichts.test.ts:17 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_reiterwechsel_verliert_nichts.test.ts:62 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts:5 -> wetterMetrikenVergleichSpeicherungAktiv',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts:14 -> wetterMetrikenVergleichSpeicherungAktiv',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts:21 -> wetterMetrikenVergleichSpeicherungAktiv',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts:34 -> wetterMetrikenVergleichSpeicherungAktiv',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts:41 -> wetterMetrikenVergleichSpeicherungAktiv',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts:50 -> wetterMetrikenVergleichSpeicherungAktiv',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts:58 -> wetterMetrikenVergleichSpeicherungAktiv',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_und_wertebereiche_teilen_active_metric_keys.test.ts:14 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_und_wertebereiche_teilen_active_metric_keys.test.ts:61 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_flush_vor_pausieren.test.ts:10 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_flush_vor_pausieren.test.ts:32 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_konflikt_nochmal_speichern.test.ts:11 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_konflikt_nochmal_speichern.test.ts:36 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_speichert_einmal.test.ts:10 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_speichert_einmal.test.ts:34 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:36 -> LayoutSnapshot',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:40 -> LayoutSnapshot',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:44 -> flushPendingLayoutSave',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:46 -> LayoutSnapshot',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:47 -> LayoutSnapshot',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:63 -> rollbackLayoutSnapshot',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:63 -> LayoutSnapshot',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:68 -> WetterMetrikenLayoutSnapshot',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:77 -> WetterMetrikenZustand',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:79 -> WetterMetrikenZustand',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:83 -> WetterMetrikenLayoutSnapshot',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:83 -> WetterMetrikenZustand',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:83 -> wetterMetrikenSnapshotAus',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:96 -> WetterMetrikenLayoutSnapshot',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:101 -> baueWetterMetrikenNutzlast',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:103 -> WetterMetrikenLayoutSnapshot',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:121 -> WetterMetrikenLayoutSnapshot',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:125 -> flushPendingWetterMetrikenSave',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:127 -> WetterMetrikenLayoutSnapshot',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:128 -> WetterMetrikenLayoutSnapshot',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:132 -> baueWetterMetrikenNutzlast',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:135 -> rollbackWetterMetrikenSnapshot',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:136 -> WetterMetrikenZustand',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:137 -> WetterMetrikenLayoutSnapshot',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:138 -> WetterMetrikenLayoutSnapshot',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:141 -> wetterMetrikenSnapshotAus',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:150 -> WetterMetrikenVergleichSpeicherungOptionen',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:152 -> WetterMetrikenZustand',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:159 -> erstelleWetterMetrikenVergleichSpeicherung',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:160 -> WetterMetrikenVergleichSpeicherungOptionen',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:163 -> WetterMetrikenLayoutSnapshot',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:163 -> wetterMetrikenSnapshotAus',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:170 -> wetterMetrikenSnapshotAus',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:172 -> flushPendingWetterMetrikenSave',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:181 -> rollbackWetterMetrikenSnapshot',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:191 -> wetterMetrikenSnapshotAus',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:213 -> wetterMetrikenVergleichSpeicherungAktiv',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:222 -> wetterMetrikenZustandsBruecke',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:225 -> WetterMetrikenZustand',
+        +   'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:226 -> WetterMetrikenZustand'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'lib/components/compare/CompareTabs.svelte:537 -> flushPendingLayoutSave'
+        1: 'lib/components/compare/__tests__/compare_feldsatz_roundtrip_datenerhalt.test.ts:11 -> erstelleVersandVergleichSpeicherung'
+        2: 'lib/components/compare/__tests__/compare_feldsatz_roundtrip_datenerhalt.test.ts:34 -> erstelleVersandVergleichSpeicherung'
+        3: 'lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts:5 -> rollbackLayoutSnapshot'
+        4: 'lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts:5 -> LayoutSnapshot'
+        5: 'lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts:23 -> rollbackLayoutSnapshot'
+        6: 'lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts:26 -> LayoutSnapshot'
+        7: 'lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts:28 -> rollbackLayoutSnapshot'
+        8: 'lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts:35 -> LayoutSnapshot'
+        9: 'lib/components/compare/__tests__/compare_hub_layout_rollback.test.ts:41 -> rollbackLayoutSnapshot'
+        10: 'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:6 -> flushPendingLayoutSave'
+        11: 'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:6 -> LayoutSnapshot'
+        12: 'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:33 -> flushPendingLayoutSave'
+        13: 'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:36 -> LayoutSnapshot'
+        14: 'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:37 -> LayoutSnapshot'
+        15: 'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:39 -> flushPendingLayoutSave'
+        16: 'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:41 -> flushPendingLayoutSave'
+        17: 'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:48 -> LayoutSnapshot'
+        18: 'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:49 -> LayoutSnapshot'
+        19: 'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:51 -> flushPendingLayoutSave'
+        20: 'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:60 -> LayoutSnapshot'
+        21: 'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:61 -> LayoutSnapshot'
+        22: 'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:63 -> flushPendingLayoutSave'
+        23: 'lib/components/compare/__tests__/compare_hub_layout_save.test.ts:65 -> flushPendingLayoutSave'
+        24: 'lib/components/compare/__tests__/compare_outlook_metric_formats_persistenz.test.ts:6 -> flushPendingLayoutSave'
+        25: 'lib/components/compare/__tests__/compare_outlook_metric_formats_persistenz.test.ts:6 -> LayoutSnapshot'
+        26: 'lib/components/compare/__tests__/compare_outlook_metric_formats_persistenz.test.ts:111 -> LayoutSnapshot'
+        27: 'lib/components/compare/__tests__/compare_outlook_metric_formats_persistenz.test.ts:114 -> flushPendingLayoutSave'
+        28: 'lib/components/compare/__tests__/compare_outlook_metric_formats_persistenz.test.ts:121 -> LayoutSnapshot'
+        29: 'lib/components/compare/__tests__/compare_outlook_metric_formats_persistenz.test.ts:123 -> flushPendingLayoutSave'
+        30: 'lib/components/compare/__tests__/compare_retry_reiterwechsel_eingabe_bleibt.test.ts:10 -> erstelleVersandVergleichSpeicherung'
+        31: 'lib/components/compare/__tests__/compare_retry_reiterwechsel_eingabe_bleibt.test.ts:290 -> erstelleVersandVergleichSpeicherung'
+        32: 'lib/components/compare/__tests__/fix_3061_hub_hydrierer.test.ts:16 -> flushPendingWetterMetrikenSave'
+        33: 'lib/components/compare/__tests__/fix_3061_hub_hydrierer.test.ts:18 -> wetterMetrikenSnapshotAus'
+        34: 'lib/components/compare/__tests__/fix_3061_hub_hydrierer.test.ts:193 -> wetterMetrikenSnapshotAus'
+        35: 'lib/components/compare/__tests__/fix_3061_hub_hydrierer.test.ts:195 -> wetterMetrikenSnapshotAus'
+        36: 'lib/components/compare/__tests__/fix_3061_hub_hydrierer.test.ts:196 -> flushPendingWetterMetrikenSave'
+        37: 'lib/components/compare/__tests__/fix_3061_hub_hydrierer.test.ts:198 -> flushPendingWetterMetrikenSave'
+        38: 'lib/components/compare/__tests__/hub_nochmal_speichern_ueber_reiterwechsel.test.ts:13 -> erstelleVersandVergleichSpeicherung'
+        39: 'lib/components/compare/__tests__/hub_nochmal_speichern_ueber_reiterwechsel.test.ts:53 -> erstelleVersandVergleichSpeicherung'
+        40: 'lib/components/compare/__tests__/hub_put_queue.test.ts:12 -> erstelleVersandVergleichSpeicherung'
+        41: 'lib/components/compare/__tests__/hub_put_queue.test.ts:94 -> erstelleVersandVergleichSpeicherung'
+        42: 'lib/components/compare/__tests__/hub_put_queue.test.ts:158 -> erstelleVersandVergleichSpeicherung'
+        43: 'lib/components/compare/__tests__/hub_versand_inline.test.ts:8 -> flushPendingVersandSave'
+        44: 'lib/components/compare/__tests__/hub_versand_inline.test.ts:9 -> rollbackVersandSnapshot'
+        45: 'lib/components/compare/__tests__/hub_versand_inline.test.ts:10 -> VersandSnapshot'
+        46: 'lib/components/compare/__tests__/hub_versand_inline.test.ts:50 -> VersandSnapshot'
+        47: 'lib/components/compare/__tests__/hub_versand_inline.test.ts:114 -> flushPendingVersandSave'
+        48: 'lib/components/compare/__tests__/hub_versand_inline.test.ts:118 -> flushPendingVersandSave'
+        49: 'lib/components/compare/__tests__/hub_versand_inline.test.ts:119 -> flushPendingVersandSave'
+        50: 'lib/components/compare/__tests__/hub_versand_inline.test.ts:124 -> flushPendingVersandSave'
+        51: 'lib/components/compare/__tests__/hub_versand_inline.test.ts:136 -> flushPendingVersandSave'
+        52: 'lib/components/compare/__tests__/hub_versand_inline.test.ts:147 -> flushPendingVersandSave'
+        53: 'lib/components/compare/__tests__/hub_versand_inline.test.ts:158 -> flushPendingVersandSave'
+        54: 'lib/components/compare/__tests__/hub_versand_inline.test.ts:172 -> rollbackVersandSnapshot'
+        55: 'lib/components/compare/__tests__/hub_versand_inline.test.ts:178 -> rollbackVersandSnapshot'
+        56: 'lib/components/compare/__tests__/hub_versand_inline.test.ts:178 -> VersandSnapshot'
+        57: 'lib/components/compare/__tests__/hub_versand_inline.test.ts:189 -> rollbackVersandSnapshot'
+        58: 'lib/components/compare/__tests__/hub_versand_inline.test.ts:189 -> VersandSnapshot'
+        59: 'lib/components/compare/__tests__/hub_versand_inline.test.ts:202 -> rollbackVersandSnapshot'
+        60: 'lib/components/compare/__tests__/hub_versand_inline.test.ts:202 -> VersandSnapshot'
+        61: 'lib/components/compare/feat3276_vergleich_ohne_altfelder.test.ts:16 -> baueWetterMetrikenNutzlast'
+        62: 'lib/components/compare/feat3276_vergleich_ohne_altfelder.test.ts:17 -> WetterMetrikenLayoutSnapshot'
+        63: 'lib/components/compare/feat3276_vergleich_ohne_altfelder.test.ts:19 -> baueVersandNutzlast'
+        64: 'lib/components/compare/feat3276_vergleich_ohne_altfelder.test.ts:122 -> baueWetterMetrikenNutzlast'
+        65: 'lib/components/compare/feat3276_vergleich_ohne_altfelder.test.ts:134 -> WetterMetrikenLayoutSnapshot'
+        66: 'lib/components/compare/feat3276_vergleich_ohne_altfelder.test.ts:140 -> baueVersandNutzlast'
+        67: 'lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:15 -> flushPendingLayoutSave'
+        68: 'lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:180 -> flushPendingLayoutSave'
+        69: 'lib/components/compare/feat3298_vergleich_ohne_altfelder.test.ts:183 -> flushPendingLayoutSave'
+        70: 'lib/components/shared/__tests__/alarme_vergleich_kanalwahl_speicherweg.test.ts:9 -> baueVersandNutzlast'
+        71: 'lib/components/shared/__tests__/alarme_vergleich_kanalwahl_speicherweg.test.ts:12 -> wetterMetrikenSnapshotAus'
+        72: 'lib/components/shared/__tests__/alarme_vergleich_kanalwahl_speicherweg.test.ts:12 -> baueWetterMetrikenNutzlast'
+        73: 'lib/components/shared/__tests__/alarme_vergleich_kanalwahl_speicherweg.test.ts:171 -> baueVersandNutzlast'
+        74: 'lib/components/shared/__tests__/alarme_vergleich_kanalwahl_speicherweg.test.ts:173 -> wetterMetrikenSnapshotAus'
+        75: 'lib/components/shared/__tests__/alarme_vergleich_kanalwahl_speicherweg.test.ts:173 -> baueWetterMetrikenNutzlast'
+        76: 'lib/components/shared/__tests__/alarme_vergleich_kein_zurueckschreiben.test.ts:15 -> erstelleVersandVergleichSpeicherung'
+        77: 'lib/components/shared/__tests__/alarme_vergleich_kein_zurueckschreiben.test.ts:114 -> erstelleVersandVergleichSpeicherung'
+        78: 'lib/components/shared/__tests__/alarme_vergleich_kein_zurueckschreiben.test.ts:205 -> erstelleVersandVergleichSpeicherung'
+        79: 'lib/components/shared/__tests__/alarme_vergleich_kein_zurueckschreiben.test.ts:249 -> erstelleVersandVergleichSpeicherung'
+        80: 'lib/components/shared/__tests__/alarme_vergleich_kein_zurueckschreiben.test.ts:306 -> erstelleVersandVergleichSpeicherung'
+        81: 'lib/components/shared/__tests__/compareReiterAufbauPruefstand.ts:17 -> erstelleVersandVergleichSpeicherung'
+        82: 'lib/components/shared/__tests__/compareReiterAufbauPruefstand.ts:21 -> erstelleWetterMetrikenVergleichSpeicherung'
+        83: 'lib/components/shared/__tests__/compareReiterAufbauPruefstand.ts:82 -> erstelleVersandVergleichSpeicherung'
+        84: 'lib/components/shared/__tests__/compareReiterAufbauPruefstand.ts:117 -> erstelleWetterMetrikenVergleichSpeicherung'
+        85: 'lib/components/shared/__tests__/compare_alarm_versand_nutzlast_trennung.test.ts:5 -> baueVersandNutzlast'
+        86: 'lib/components/shared/__tests__/compare_alarm_versand_nutzlast_trennung.test.ts:5 -> VersandSnapshot'
+        87: 'lib/components/shared/__tests__/compare_alarm_versand_nutzlast_trennung.test.ts:38 -> VersandSnapshot'
+        88: 'lib/components/shared/__tests__/compare_alarm_versand_nutzlast_trennung.test.ts:70 -> baueVersandNutzlast'
+        89: 'lib/components/shared/__tests__/s3a2794_zustellung_vergleich_ein_speicherer.test.ts:12 -> erstelleVersandVergleichSpeicherung'
+        90: 'lib/components/shared/__tests__/s3a2794_zustellung_vergleich_ein_speicherer.test.ts:48 -> erstelleVersandVergleichSpeicherung'
+        91: 'lib/components/shared/__tests__/versand_enddatum_ohne_ereignis_bleibt_wirksam.test.ts:11 -> erstelleVersandVergleichSpeicherung'
+        92: 'lib/components/shared/__tests__/versand_enddatum_ohne_ereignis_bleibt_wirksam.test.ts:12 -> versandSnapshotAus'
+        93: 'lib/components/shared/__tests__/versand_enddatum_ohne_ereignis_bleibt_wirksam.test.ts:35 -> erstelleVersandVergleichSpeicherung'
+        94: 'lib/components/shared/__tests__/versand_enddatum_ohne_ereignis_bleibt_wirksam.test.ts:78 -> versandSnapshotAus'
+        95: 'lib/components/shared/__tests__/versand_enddatum_ohne_ereignis_bleibt_wirksam.test.ts:80 -> versandSnapshotAus'
+        96: 'lib/components/shared/__tests__/versand_nutzlast_reicht_keepalive_durch.test.ts:10 -> erstelleVersandVergleichSpeicherung'
+        97: 'lib/components/shared/__tests__/versand_nutzlast_reicht_keepalive_durch.test.ts:33 -> erstelleVersandVergleichSpeicherung'
+        98: 'lib/components/shared/__tests__/versand_nutzlast_verliert_keine_daten.test.ts:5 -> versandSnapshotAus'
+        99: 'lib/components/shared/__tests__/versand_nutzlast_verliert_keine_daten.test.ts:5 -> baueVersandNutzlast'
+        100: 'lib/components/shared/__tests__/versand_nutzlast_verliert_keine_daten.test.ts:13 -> versandSnapshotAus'
+        101: 'lib/components/shared/__tests__/versand_nutzlast_verliert_keine_daten.test.ts:13 -> baueVersandNutzlast'
+        102: 'lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts:5 -> versandVergleichSpeicherungAktiv'
+        103: 'lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts:14 -> versandVergleichSpeicherungAktiv'
+        104: 'lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts:21 -> versandVergleichSpeicherungAktiv'
+        105: 'lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts:34 -> versandVergleichSpeicherungAktiv'
+        106: 'lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts:41 -> versandVergleichSpeicherungAktiv'
+        107: 'lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts:50 -> versandVergleichSpeicherungAktiv'
+        108: 'lib/components/shared/__tests__/versand_speicherung_nur_im_vergleich_hub.test.ts:58 -> versandVergleichSpeicherungAktiv'
+        109: 'lib/components/shared/__tests__/versand_vergleich_flush_vor_pausieren.test.ts:10 -> erstelleVersandVergleichSpeicherung'
+        110: 'lib/components/shared/__tests__/versand_vergleich_flush_vor_pausieren.test.ts:32 -> erstelleVersandVergleichSpeicherung'
+        111: 'lib/components/shared/__tests__/versand_vergleich_konflikt_nochmal_speichern.test.ts:11 -> erstelleVersandVergleichSpeicherung'
+        112: 'lib/components/shared/__tests__/versand_vergleich_konflikt_nochmal_speichern.test.ts:36 -> erstelleVersandVergleichSpeicherung'
+        113: 'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:9 -> baueVersandNutzlast'
+        114: 'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:11 -> versandSnapshotAus'
+        115: 'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:12 -> rollbackVersandSnapshot'
+        116: 'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:13 -> VersandSnapshot'
+        117: 'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:52 -> versandSnapshotAus'
+        118: 'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:53 -> versandSnapshotAus'
+        119: 'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:54 -> versandSnapshotAus'
+        120: 'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:58 -> rollbackVersandSnapshot'
+        121: 'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:59 -> rollbackVersandSnapshot'
+        122: 'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:60 -> VersandSnapshot'
+        123: 'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:61 -> VersandSnapshot'
+        124: 'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:62 -> rollbackVersandSnapshot'
+        125: 'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:70 -> baueVersandNutzlast'
+        126: 'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:72 -> VersandSnapshot'
+        127: 'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:73 -> baueVersandNutzlast'
+        128: 'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:77 -> baueVersandNutzlast'
+        129: 'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:81 -> baueVersandNutzlast'
+        130: 'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:85 -> VersandSnapshot'
+        131: 'lib/components/shared/__tests__/versand_vergleich_premium_sms.test.ts:86 -> baueVersandNutzlast'
+        132: 'lib/components/shared/__tests__/versand_vergleich_reiterwechsel_verliert_nichts.test.ts:16 -> erstelleVersandVergleichSpeicherung'
+        133: 'lib/components/shared/__tests__/versand_vergleich_reiterwechsel_verliert_nichts.test.ts:53 -> erstelleVersandVergleichSpeicherung'
+        134: 'lib/components/shared/__tests__/versand_vergleich_speichert_selbst.test.ts:10 -> erstelleVersandVergleichSpeicherung'
+        135: 'lib/components/shared/__tests__/versand_vergleich_speichert_selbst.test.ts:34 -> erstelleVersandVergleichSpeicherung'
+        136: 'lib/components/shared/versandVergleichSpeicherung.ts:10 -> VersandSnapshot'
+        137: 'lib/components/shared/versandVergleichSpeicherung.ts:24 -> VersandHydrationTarget'
+        138: 'lib/components/shared/versandVergleichSpeicherung.ts:40 -> VersandSnapshot'
+        139: 'lib/components/shared/versandVergleichSpeicherung.ts:57 -> versandSnapshotAus'
+        140: 'lib/components/shared/versandVergleichSpeicherung.ts:57 -> VersandHydrationTarget'
+        141: 'lib/components/shared/versandVergleichSpeicherung.ts:57 -> VersandSnapshot'
+        142: 'lib/components/shared/versandVergleichSpeicherung.ts:69 -> VersandSnapshot'
+        143: 'lib/components/shared/versandVergleichSpeicherung.ts:83 -> baueVersandNutzlast'
+        144: 'lib/components/shared/versandVergleichSpeicherung.ts:85 -> VersandSnapshot'
+        145: 'lib/components/shared/versandVergleichSpeicherung.ts:113 -> flushPendingVersandSave'
+        146: 'lib/components/shared/versandVergleichSpeicherung.ts:115 -> VersandSnapshot'
+        147: 'lib/components/shared/versandVergleichSpeicherung.ts:116 -> VersandSnapshot'
+        148: 'lib/components/shared/versandVergleichSpeicherung.ts:120 -> baueVersandNutzlast'
+        149: 'lib/components/shared/versandVergleichSpeicherung.ts:123 -> rollbackVersandSnapshot'
+        150: 'lib/components/shared/versandVergleichSpeicherung.ts:124 -> VersandHydrationTarget'
+        151: 'lib/components/shared/versandVergleichSpeicherung.ts:125 -> VersandSnapshot'
+        152: 'lib/components/shared/versandVergleichSpeicherung.ts:126 -> VersandSnapshot'
+        153: 'lib/components/shared/versandVergleichSpeicherung.ts:128 -> VersandSnapshot'
+        154: 'lib/components/shared/versandVergleichSpeicherung.ts:146 -> versandVergleichSpeicherungAktiv'
+        155: 'lib/components/shared/versandVergleichSpeicherung.ts:155 -> VersandVergleichSpeicherungOptionen'
+        156: 'lib/components/shared/versandVergleichSpeicherung.ts:157 -> VersandHydrationTarget'
+        157: 'lib/components/shared/versandVergleichSpeicherung.ts:164 -> erstelleVersandVergleichSpeicherung'
+        158: 'lib/components/shared/versandVergleichSpeicherung.ts:165 -> VersandVergleichSpeicherungOptionen'
+        159: 'lib/components/shared/versandVergleichSpeicherung.ts:168 -> versandSnapshotAus'
+        160: 'lib/components/shared/versandVergleichSpeicherung.ts:168 -> VersandSnapshot'
+        161: 'lib/components/shared/versandVergleichSpeicherung.ts:175 -> versandSnapshotAus'
+        162: 'lib/components/shared/versandVergleichSpeicherung.ts:177 -> flushPendingVersandSave'
+        163: 'lib/components/shared/versandVergleichSpeicherung.ts:186 -> rollbackVersandSnapshot'
+        164: 'lib/components/shared/versandVergleichSpeicherung.ts:196 -> versandSnapshotAus'
+        165: 'lib/components/shared/versandVergleichSpeicherung.ts:211 -> versandZustandsBruecke'
+        166: 'lib/components/shared/versandVergleichSpeicherung.ts:214 -> VersandHydrationTarget'
+        167: 'lib/components/shared/versandVergleichSpeicherung.ts:215 -> VersandHydrationTarget'
+        168: 'lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts:11 -> baueWetterMetrikenNutzlast'
+        169: 'lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts:12 -> erstelleWetterMetrikenVergleichSpeicherung'
+        170: 'lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts:13 -> wetterMetrikenSnapshotAus'
+        171: 'lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts:43 -> baueWetterMetrikenNutzlast'
+        172: 'lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts:47 -> wetterMetrikenSnapshotAus'
+        173: 'lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts:47 -> baueWetterMetrikenNutzlast'
+        174: 'lib/components/shared/weather-metrics-tab/__tests__/f006_zustellung_schreibt_keine_wetterfelder.test.ts:66 -> erstelleWetterMetrikenVergleichSpeicherung'
+        175: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_drei_stille_gesten_bleiben_wirksam.test.ts:10 -> erstelleWetterMetrikenVergleichSpeicherung'
+        176: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_drei_stille_gesten_bleiben_wirksam.test.ts:32 -> erstelleWetterMetrikenVergleichSpeicherung'
+        177: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_hydration_vollstaendig_vor_baseline.test.ts:11 -> erstelleWetterMetrikenVergleichSpeicherung'
+        178: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_hydration_vollstaendig_vor_baseline.test.ts:83 -> erstelleWetterMetrikenVergleichSpeicherung'
+        179: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_intra_gesture_kollision.test.ts:10 -> erstelleWetterMetrikenVergleichSpeicherung'
+        180: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_intra_gesture_kollision.test.ts:32 -> erstelleWetterMetrikenVergleichSpeicherung'
+        181: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_reicht_keepalive_durch.test.ts:10 -> erstelleWetterMetrikenVergleichSpeicherung'
+        182: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_reicht_keepalive_durch.test.ts:33 -> erstelleWetterMetrikenVergleichSpeicherung'
+        183: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:11 -> baueWetterMetrikenNutzlast'
+        184: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:12 -> erstelleWetterMetrikenVergleichSpeicherung'
+        185: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:13 -> wetterMetrikenSnapshotAus'
+        186: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:89 -> baueWetterMetrikenNutzlast'
+        187: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:96 -> wetterMetrikenSnapshotAus'
+        188: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:96 -> baueWetterMetrikenNutzlast'
+        189: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:110 -> wetterMetrikenSnapshotAus'
+        190: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:110 -> baueWetterMetrikenNutzlast'
+        191: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:128 -> wetterMetrikenSnapshotAus'
+        192: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:128 -> baueWetterMetrikenNutzlast'
+        193: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:138 -> erstelleWetterMetrikenVergleichSpeicherung'
+        194: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:155 -> erstelleWetterMetrikenVergleichSpeicherung'
+        195: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts:201 -> erstelleWetterMetrikenVergleichSpeicherung'
+        196: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_reiterwechsel_verliert_nichts.test.ts:17 -> erstelleWetterMetrikenVergleichSpeicherung'
+        197: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_reiterwechsel_verliert_nichts.test.ts:62 -> erstelleWetterMetrikenVergleichSpeicherung'
+        198: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts:5 -> wetterMetrikenVergleichSpeicherungAktiv'
+        199: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts:14 -> wetterMetrikenVergleichSpeicherungAktiv'
+        200: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts:21 -> wetterMetrikenVergleichSpeicherungAktiv'
+        201: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts:34 -> wetterMetrikenVergleichSpeicherungAktiv'
+        202: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts:41 -> wetterMetrikenVergleichSpeicherungAktiv'
+        203: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts:50 -> wetterMetrikenVergleichSpeicherungAktiv'
+        204: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts:58 -> wetterMetrikenVergleichSpeicherungAktiv'
+        205: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_und_wertebereiche_teilen_active_metric_keys.test.ts:14 -> erstelleWetterMetrikenVergleichSpeicherung'
+        206: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_und_wertebereiche_teilen_active_metric_keys.test.ts:61 -> erstelleWetterMetrikenVergleichSpeicherung'
+        207: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_flush_vor_pausieren.test.ts:10 -> erstelleWetterMetrikenVergleichSpeicherung'
+        208: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_flush_vor_pausieren.test.ts:32 -> erstelleWetterMetrikenVergleichSpeicherung'
+        209: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_konflikt_nochmal_speichern.test.ts:11 -> erstelleWetterMetrikenVergleichSpeicherung'
+        210: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_konflikt_nochmal_speichern.test.ts:36 -> erstelleWetterMetrikenVergleichSpeicherung'
+        211: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_speichert_einmal.test.ts:10 -> erstelleWetterMetrikenVergleichSpeicherung'
+        212: 'lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_speichert_einmal.test.ts:34 -> erstelleWetterMetrikenVergleichSpeicherung'
+        213: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:36 -> LayoutSnapshot'
+        214: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:40 -> LayoutSnapshot'
+        215: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:44 -> flushPendingLayoutSave'
+        216: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:46 -> LayoutSnapshot'
+        217: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:47 -> LayoutSnapshot'
+        218: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:63 -> rollbackLayoutSnapshot'
+        219: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:63 -> LayoutSnapshot'
+        220: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:68 -> WetterMetrikenLayoutSnapshot'
+        221: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:77 -> WetterMetrikenZustand'
+        222: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:79 -> WetterMetrikenZustand'
+        223: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:83 -> WetterMetrikenLayoutSnapshot'
+        224: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:83 -> WetterMetrikenZustand'
+        225: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:83 -> wetterMetrikenSnapshotAus'
+        226: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:96 -> WetterMetrikenLayoutSnapshot'
+        227: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:101 -> baueWetterMetrikenNutzlast'
+        228: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:103 -> WetterMetrikenLayoutSnapshot'
+        229: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:121 -> WetterMetrikenLayoutSnapshot'
+        230: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:125 -> flushPendingWetterMetrikenSave'
+        231: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:127 -> WetterMetrikenLayoutSnapshot'
+        232: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:128 -> WetterMetrikenLayoutSnapshot'
+        233: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:132 -> baueWetterMetrikenNutzlast'
+        234: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:135 -> rollbackWetterMetrikenSnapshot'
+        235: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:136 -> WetterMetrikenZustand'
+        236: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:137 -> WetterMetrikenLayoutSnapshot'
+        237: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:138 -> WetterMetrikenLayoutSnapshot'
+        238: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:141 -> wetterMetrikenSnapshotAus'
+        239: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:150 -> WetterMetrikenVergleichSpeicherungOptionen'
+        240: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:152 -> WetterMetrikenZustand'
+        241: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:159 -> erstelleWetterMetrikenVergleichSpeicherung'
+        242: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:160 -> WetterMetrikenVergleichSpeicherungOptionen'
+        243: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:163 -> WetterMetrikenLayoutSnapshot'
+        244: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:163 -> wetterMetrikenSnapshotAus'
+        245: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:170 -> wetterMetrikenSnapshotAus'
+        246: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:172 -> flushPendingWetterMetrikenSave'
+        247: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:181 -> rollbackWetterMetrikenSnapshot'
+        248: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:191 -> wetterMetrikenSnapshotAus'
+        249: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:213 -> wetterMetrikenVergleichSpeicherungAktiv'
+        250: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:222 -> wetterMetrikenZustandsBruecke'
+        251: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:225 -> WetterMetrikenZustand'
+        252: 'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts:226 -> WetterMetrikenZustand'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:645:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Aufrufer vorhanden (Regressionsschutz, heute grün): hydrateVersandFieldsFromPreset
+    ok 7 - Aufrufer vorhanden (Regressionsschutz, heute grün): hydrateVersandFieldsFromPreset
+      ---
+      duration_ms: 1.120732
+      type: 'test'
+      ...
+    # Subtest: Aufrufer vorhanden (Regressionsschutz, heute grün): hydrateDayWindowFromPreset
+    ok 8 - Aufrufer vorhanden (Regressionsschutz, heute grün): hydrateDayWindowFromPreset
+      ---
+      duration_ms: 0.578701
+      type: 'test'
+      ...
+    # Subtest: Aufrufer vorhanden (Regressionsschutz, heute grün): hydrateWeatherMetricsFromPreset
+    ok 9 - Aufrufer vorhanden (Regressionsschutz, heute grün): hydrateWeatherMetricsFromPreset
+      ---
+      duration_ms: 0.574922
+      type: 'test'
+      ...
+    # Subtest: Aufrufer vorhanden (Regressionsschutz, heute grün): hydrateLayoutFieldsFromPreset
+    ok 10 - Aufrufer vorhanden (Regressionsschutz, heute grün): hydrateLayoutFieldsFromPreset
+      ---
+      duration_ms: 0.482961
+      type: 'test'
+      ...
+    # Subtest: Aufrufer vorhanden (Regressionsschutz, heute grün): wetterMetrikenHydrationAbgeschlossen
+    ok 11 - Aufrufer vorhanden (Regressionsschutz, heute grün): wetterMetrikenHydrationAbgeschlossen
+      ---
+      duration_ms: 2.758535
+      type: 'test'
+      ...
+    # Subtest: Selbstnachweis (a): ein wieder eingeführtes export function erstelleVersandVergleichSpeicherung wird gemeldet
+    ok 12 - Selbstnachweis (a): ein wieder eingeführtes export function erstelleVersandVergleichSpeicherung wird gemeldet
+      ---
+      duration_ms: 0.52111
+      type: 'test'
+      ...
+    # Subtest: Selbstnachweis (b): ein Name nur in einem // oder * Kommentar ist kein Fund
+    ok 13 - Selbstnachweis (b): ein Name nur in einem // oder * Kommentar ist kein Fund
+      ---
+      duration_ms: 0.328041
+      type: 'test'
+      ...
+    # Subtest: Selbstnachweis (c): export const neuerExport erscheint als zusätzlicher Export
+    ok 14 - Selbstnachweis (c): export const neuerExport erscheint als zusätzlicher Export
+      ---
+      duration_ms: 0.262621
+      type: 'test'
+      ...
+    # Subtest: Selbstnachweis (d): ein Import eines gelöschten Namens in einer anderen Datei wird gemeldet
+    ok 15 - Selbstnachweis (d): ein Import eines gelöschten Namens in einer anderen Datei wird gemeldet
+      ---
+      duration_ms: 0.130801
+      type: 'test'
+      ...
+    1..15
+not ok 7 - \#3389 AC-1/AC-2/AC-3/AC-6: tote Exporte gelöscht, Exportmenge genau die lebenden Hydrationen
+  ---
+  duration_ms: 446.246774
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:614:1'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3297 AC-8: show_outlook und multi_day_trend_reports aus dem Frontend-Produktionscode
+    # Subtest: keine Produktionsdatei unter frontend/src nennt einen der beiden Schlüssel
+    ok 1 - keine Produktionsdatei unter frontend/src nennt einen der beiden Schlüssel
+      ---
+      duration_ms: 33.076162
+      type: 'test'
+      ...
+    1..1
+ok 8 - \#3297 AC-8: show_outlook und multi_day_trend_reports aus dem Frontend-Produktionscode
+  ---
+  duration_ms: 33.160073
+  type: 'suite'
+  ...
+# Subtest: \#3389 AC-4: hydrateDayWindowFromPreset liest das gespeicherte Tagesfenster
+    # Subtest: gespeichertes Tagesfenster 6 bis 21 wird übernommen
+    ok 1 - gespeichertes Tagesfenster 6 bis 21 wird übernommen
+      ---
+      duration_ms: 1.101402
+      type: 'test'
+      ...
+    # Subtest: Altbestand ohne Tagesfenster-Felder liefert den Trip-Standard 4 bis 19
+    ok 2 - Altbestand ohne Tagesfenster-Felder liefert den Trip-Standard 4 bis 19
+      ---
+      duration_ms: 0.13412
+      type: 'test'
+      ...
+    # Subtest: Tagesfenster-Felder mit null liefern den Trip-Standard 4 bis 19
+    ok 3 - Tagesfenster-Felder mit null liefern den Trip-Standard 4 bis 19
+      ---
+      duration_ms: 0.15804
+      type: 'test'
+      ...
+    1..3
+ok 9 - \#3389 AC-4: hydrateDayWindowFromPreset liest das gespeicherte Tagesfenster
+  ---
+  duration_ms: 2.222195
+  type: 'suite'
+  ...
+1..9
+# tests 120
+# suites 9
+# pass 116
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1555.65865
