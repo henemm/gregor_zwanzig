@@ -36,7 +36,6 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { buildComparePresetSavePayload } from '../compareEditorSave.ts';
-import { flushPendingLayoutSave, type LayoutSnapshot } from '../../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
 import type { ComparePreset } from '../../../types.ts';
 
 /** Ortsvergleich mit MEHREREN gesetzten `display_config`-Feldern -- nur so
@@ -146,24 +145,5 @@ describe('#2049 F004 — Umschalten darf keine anderen display_config-Felder ver
 	});
 });
 
-// Issue #3298: der Layout-Snapshot traegt nur noch den Stundenverlauf-Schalter; die Faelle
-// „reine Formats-Umschaltung" und „Ausblick-Schalter" sind mit den Feldern entfallen.
-describe('#2049 F005 / #3276 / #3298 — Layout-Speicherweg sendet nur den Stundenverlauf-Schalter', () => {
-	const basis: LayoutSnapshot = { hourlyEnabled: true };
-
-	test('Stundenverlauf-Schalter geaendert -> PUT nur mit hourly_enabled, ohne display_config', () => {
-		const payload = flushPendingLayoutSave(makePreset(), { hourlyEnabled: false }, basis);
-		assert.ok(payload, 'hourly_enabled wird nicht mehr gespeichert');
-		assert.deepEqual(Object.keys(payload.body).sort(), ['hourly_enabled']);
-		assert.equal((payload.body as unknown as Record<string, unknown>).hourly_enabled, false);
-	});
-
-	test('unveraenderter Snapshot bleibt null (kein PUT ohne Aenderung)', () => {
-		const gleich: LayoutSnapshot = { ...basis };
-		assert.equal(
-			flushPendingLayoutSave(makePreset(), gleich, { ...gleich }),
-			null,
-			'der Waechter feuert einen PUT, obwohl sich nichts geaendert hat'
-		);
-	});
-});
+// Issue #3389: der Block „#2049 F005 / #3276 / #3298 — Layout-Speicherweg“ (2 Fälle) entfiel mit
+// dem toten Layout-Speicherer; den Stundenverlauf speichert der Zustellungs-Speicherer.

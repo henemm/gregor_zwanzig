@@ -52,15 +52,15 @@ const darstellung = abschnitt('DARSTELLUNG');
 const herkunft = abschnitt('HERKUNFT');
 
 describe('AC-23: Summenzeile der AC-2-Endbilanz stimmt mit den Tabellen überein', () => {
-	test('Messaufbau: jede Tabelle hat so viele Einträge, wie ihre Überschrift nennt (HERKUNFT 3 seit #3297)', () => {
+	test('Messaufbau: jede Tabelle hat so viele Einträge, wie ihre Überschrift nennt (HERKUNFT 1 seit #3389)', () => {
 		assert.ok(SOLL > 0, 'Messaufbau: EINGEFROREN_SOLL_ANZAHL in der Ratsche nicht gefunden');
-		assert.equal(herkunft.zeilen.length, 3); // #3297/#3020: 9 → 3 (Alt-Editor geloescht); #2794 S3a Teil-PR 4a: 15 → 9 (6 CorridorEditor-Eintraege entfernt)
+		assert.equal(herkunft.zeilen.length, 1); // #3389: 3 → 1 (die beiden …SpeicherungAktiv-Weichen mit den toten Exporten gelöscht); #3297/#3020: 9 → 3 (Alt-Editor geloescht); #2794 S3a Teil-PR 4a: 15 → 9 (6 CorridorEditor-Eintraege entfernt)
 		assert.equal(fachlich.ueberschriftZahl, fachlich.zeilen.length);
 		assert.equal(darstellung.ueberschriftZahl, darstellung.zeilen.length);
 		assert.equal(herkunft.ueberschriftZahl, herkunft.zeilen.length);
 	});
 
-	test('die Summenzeile nennt 3 HERKUNFT und als Gesamtzahl die Summe der Tabellenzeilen (= EINGEFROREN_SOLL_ANZAHL)', () => {
+	test('die Summenzeile nennt 1 HERKUNFT und als Gesamtzahl die Summe der Tabellenzeilen (= EINGEFROREN_SOLL_ANZAHL)', () => {
 		const summe = /\*\*Summe:\*\*\s*(\d+)\s*FACHLICH\s*\+\s*(\d+)\s*DARSTELLUNG\s*\+\s*(\d+)\s*HERKUNFT\s*=\s*\*\*(\d+)\*\*/.exec(quelle);
 		assert.ok(summe, 'Summenzeile „**Summe:** N FACHLICH + N DARSTELLUNG + N HERKUNFT = **N**" nicht gefunden');
 		const [, f, d, h, gesamt] = summe!.map(Number);

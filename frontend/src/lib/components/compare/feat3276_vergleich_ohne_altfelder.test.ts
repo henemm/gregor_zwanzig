@@ -30,11 +30,6 @@ import {
 	type CompareFeldsatz,
 	type NewComparePresetFields
 } from './compareEditorSave.ts';
-import {
-	baueWetterMetrikenNutzlast,
-	type WetterMetrikenLayoutSnapshot
-} from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
-import { baueVersandNutzlast } from '../shared/versandVergleichSpeicherung.ts';
 import { baueAlarmNutzlast } from '../shared/alarmeVergleichSpeicherung.ts';
 import { baueWertebereichNutzlast } from '../shared/wetter-tab/wertebereicheVergleichSpeicherung.ts';
 import type { ComparePreset } from '../../types.ts';
@@ -138,37 +133,10 @@ describe('#3276 AC-1: Anlegen (POST) ohne Altschluessel', () => {
 });
 
 describe('#3276 AC-2: Speichern (PUT) ohne Altschluessel, Bestand bleibt', () => {
-	test('Zustellungs-Speicherer sendet keinen Altschluessel, auch nach Aenderung', () => {
+	// #3389: der Fall am toten Wetter-Metriken-Speicherer und der Versand-Zweig entfielen; den
+	// lebenden Zustellungs-Speicherer belegt feat3298 (Fall `zustellung`).
+	test('Alarm- und Wertebereiche-Speicherer senden keinen Altschluessel (Bestand mit Altfeldern)', () => {
 		const preset = presetMitAltfeldern();
-		// #3298: die camelCase-Altfelder kennt der Snapshot-Typ nicht mehr; Fremdlast per Cast.
-		const { body } = baueWetterMetrikenNutzlast(preset, {
-			activeMetricKeys: ['temp_max_c'],
-			channelActiveMetricKeys: { email: ['wind_max_kmh'], telegram: null, sms: [] },
-			officialAlertsEnabled: true,
-			dayWindowStartHour: 4,
-			dayWindowEndHour: 19,
-			hourlyMetricKeys: ['temp_c', 'precip_mm'],
-			hourlyEnabled: false,
-			outlookMetricKeys: ['temp_max_c'],
-			outlookMetricFormats: { temp_max_c: false },
-			outlookEnabled: true,
-			hourlyMetricFormats: { temp_c: false }
-		} as WetterMetrikenLayoutSnapshot);
-		assert.deepEqual(altschluesselIn((body as unknown as Record<string, unknown>).display_config), []);
-	});
-
-	test('Versand-, Alarm- und Wertebereiche-Speicherer senden keinen Altschluessel (Bestand mit Altfeldern)', () => {
-		const preset = presetMitAltfeldern();
-		const versand = baueVersandNutzlast(preset, {
-			sendTelegram: true,
-			sendSms: false,
-			sendPremiumSms: false,
-			morningEnabled: true,
-			morningTime: '06:30',
-			eveningEnabled: false,
-			eveningTime: '18:00',
-			endDate: null
-		} as never).body as unknown as Record<string, unknown>;
 		const alarm = baueAlarmNutzlast(preset, {
 			metricAlertLevels: {},
 			channelThresholds: {},
@@ -185,7 +153,6 @@ describe('#3276 AC-2: Speichern (PUT) ohne Altschluessel, Bestand bleibt', () =>
 			activeMetricKeys: ['temp_max_c'],
 			metricAlertLevels: {}
 		} as never).body as unknown as Record<string, unknown>;
-		assert.deepEqual(altschluesselIn(versand.display_config), [], 'Versand');
 		assert.deepEqual(altschluesselIn(alarm.display_config), [], 'Alarme');
 		assert.deepEqual(altschluesselIn(werte.display_config), [], 'Wertebereiche');
 	});

@@ -44,19 +44,13 @@
 // Ausführen:
 //   cd frontend && npm test -- src/lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_hydration_vollstaendig_vor_baseline.test.ts
 
-import { test, describe, beforeEach, afterEach } from 'node:test';
+// Issue #3389: der Block „AC-3 (Mechanismus)“ entfiel mit dem toten Wetter-Metriken-Speicherer;
+// das lebende Prädikat prüft der Block „AC-3 (Prädikat)“.
+
+import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { api } from '../../../../api.ts';
-import { clearEtagRegistry } from '../../../../etagRegistry.ts';
-import { createFakeTripServer, type FakeTripServer } from '../../../../__tests__/fakeTripServer.ts';
-import type { ComparePreset } from '../../../../types.ts';
-import { createPutQueue } from '../../../compare/compareHubPersistenz.ts';
-import {
-	erstelleWetterMetrikenVergleichSpeicherung,
-	wetterMetrikenHydrationAbgeschlossen
-} from '../weatherMetricsCompareSave.ts';
-import { createController, hydrierterWs, makePreset } from './wetterMetrikenVergleichPruefstand.ts';
+import { wetterMetrikenHydrationAbgeschlossen } from '../weatherMetricsCompareSave.ts';
 
 describe('AC-3 (Prädikat): das Gate verlangt BEIDE Hydrationen', () => {
 	test('nur Wetter-Metriken hydriert → nicht bereit', () => {
@@ -94,60 +88,5 @@ describe('AC-3 (Prädikat): das Gate verlangt BEIDE Hydrationen', () => {
 		assert.equal(wetterMetrikenHydrationAbgeschlossen(stand), false, 'erst EINE von zwei Hydrationen fertig');
 		stand.layoutHydrated = true;
 		assert.equal(wetterMetrikenHydrationAbgeschlossen(stand), true, 'jetzt sind beide fertig');
-	});
-});
-
-describe('AC-3 (Mechanismus): erst NACH bestandenem Gate erzeugt — die spät eintreffende zweite Hydration löst KEINEN PUT aus', () => {
-	const PRESET_ID = 'cp-2276-s4-hydration';
-	let server: FakeTripServer;
-
-	beforeEach(() => {
-		clearEtagRegistry();
-		server = createFakeTripServer();
-		server.install();
-	});
-
-	afterEach(() => server.restore());
-
-	const puts = () => server.calls.filter((c) => c.method === 'PUT');
-
-	test('Orchestrierung entsteht ERST wenn wetterMetrikenHydrationAbgeschlossen() true liefert → kein PUT ohne Nutzergeste', async () => {
-		const preset = makePreset(PRESET_ID);
-		const ws = hydrierterWs(preset);
-		// Zustand VOR der zweiten (Layout-)Hydration: wie beim Mount, bevor
-		// hydrateLayoutTab() fertig ist — Platzhalter statt Server-Stand.
-		// #3298: einziges Layout-Feld ist der Stundenverlauf-Schalter (Feldsatz-Vorgabe true).
-		ws.hourlyEnabled = true;
-		let hydrationsStand = { wetterMetrikenHydrated: true, layoutHydrated: false };
-
-		let basis = preset;
-		const ctl = createController(PRESET_ID);
-		const queue = createPutQueue();
-
-		// Die Layout-Hydration trifft NACH dem ersten Hydrations-Status ein —
-		// korrekt implementiert wird die Orchestrierung ERST danach erzeugt
-		// (Design-Entscheidung 4, untrack()-Konstruktion).
-		ws.hourlyEnabled = preset.hourly_enabled ?? true;
-		hydrationsStand = { wetterMetrikenHydrated: true, layoutHydrated: true };
-		assert.equal(wetterMetrikenHydrationAbgeschlossen(hydrationsStand), true, 'Vorbedingung: Gate jetzt erfüllt');
-
-		erstelleWetterMetrikenVergleichSpeicherung({
-			client: api,
-			zustand: ws,
-			preset: () => basis,
-			enqueueHubWrite: (fn) => queue.enqueue(fn),
-			onCompareUpdate: (p: ComparePreset) => {
-				basis = p;
-			},
-			saveController: ctl
-		});
-
-		assert.equal(
-			ctl.hasPending,
-			false,
-			'eine erst nach vollständiger Hydration erzeugte Orchestrierung darf ohne Nutzergeste nichts planen'
-		);
-		await ctl.flush();
-		assert.equal(puts().length, 0, 'die nachgeholte Layout-Hydration allein darf nie einen PUT auslösen');
 	});
 });

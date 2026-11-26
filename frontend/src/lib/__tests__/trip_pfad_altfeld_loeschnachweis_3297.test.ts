@@ -576,7 +576,11 @@ const GELOESCHTE_DATEIEN_3389 = [
 
 const GELOESCHTER_PRUEFSTAND_3389 = 'lib/components/shared/weather-metrics-tab/__tests__/wetterMetrikenVergleichPruefstand.ts';
 
-const SCAN_3389_AUSNAHME = 'lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts';
+/** Der verkleinerte Versand-Prüfstand (Spec, AC-6): genau diese zwei Aufbauhilfen bleiben. */
+const PRUEFSTAND_VERSAND_3389 = 'lib/components/shared/__tests__/versandVergleichPruefstand.ts';
+const LEBEND_PRUEFSTAND_3389 = ['createController', 'makePreset'];
+
+const SCAN_3389_AUSNAHME ='lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts';
 
 /**
  * Alle exportierten Namen eines Quelltexts (Kommentare ausgenommen): `export [async] function|const|let|
@@ -599,10 +603,23 @@ function exporte3389(text: string): string[] {
 	return [...namen].sort();
 }
 
+/**
+ * Die zwei Typen bleiben laut Spec als NICHT exportierte Rückgabetypen der lebenden Hydrationen in ihrem
+ * eigenen Modul stehen; dort (und nur dort) ist der Name erlaubt. Ein zurückkehrendes `export` fängt die
+ * Exportmengen-Prüfung, jede Nennung in einer anderen Datei der Wortscan.
+ */
+const INTERN_3389: Record<string, string> = {
+	VersandSnapshot: MODUL_VERSAND_3389,
+	LayoutSnapshot: MODUL_WETTER_3389
+};
+
 /** Wortgenaue Funde (`datei:zeile -> Name`) der 23 Namen in einem Quelltext ohne Kommentare. */
 function wortFunde3389(rel: string, text: string): string[] {
 	const funde: string[] = [];
-	const muster = NAMEN_3389.map((n) => ({ n, re: new RegExp(`\\b${escape(n)}\\b`) }));
+	const muster = NAMEN_3389.filter((n) => INTERN_3389[n] !== rel).map((n) => ({
+		n,
+		re: new RegExp(`\\b${escape(n)}\\b`)
+	}));
 	ohneKommentare(text)
 		.split('\n')
 		.forEach((zeile, i) => {
@@ -622,6 +639,13 @@ describe('#3389 AC-1/AC-2/AC-3/AC-6: tote Exporte gelöscht, Exportmenge genau d
 	test('Dateien gelöscht: die 21 Testdateien und der Prüfstand wetterMetrikenVergleichPruefstand.ts existieren nicht', () => {
 		const vorhanden = [...GELOESCHTE_DATEIEN_3389, GELOESCHTER_PRUEFSTAND_3389].filter((rel) => existsSync(pfad(rel)));
 		assert.deepEqual(vorhanden, [], `existieren noch:\n${vorhanden.join('\n')}`);
+	});
+
+	// Gegenprüfung F003: auch der verkleinerte Prüfstand ist ein Ratschen-Vertrag auf genau zwei Exporte.
+	test(`Exportmenge ${basisname(PRUEFSTAND_VERSAND_3389)}: genau makePreset und createController`, () => {
+		assert.equal(existsSync(pfad(PRUEFSTAND_VERSAND_3389)), true, `${PRUEFSTAND_VERSAND_3389} muss bestehen bleiben`);
+		const ist = exporte3389(readFileSync(pfad(PRUEFSTAND_VERSAND_3389), 'utf8'));
+		assert.deepEqual(ist, [...LEBEND_PRUEFSTAND_3389].sort(), `Exporte von ${PRUEFSTAND_VERSAND_3389}`);
 	});
 
 	for (const modul of [MODUL_VERSAND_3389, MODUL_WETTER_3389]) {
@@ -685,6 +709,15 @@ describe('#3389 AC-1/AC-2/AC-3/AC-6: tote Exporte gelöscht, Exportmenge genau d
 	test('Selbstnachweis (d): ein Import eines gelöschten Namens in einer anderen Datei wird gemeldet', () => {
 		const quelle = "import { wetterMetrikenSnapshotAus } from '../weatherMetricsCompareSave.ts';\n";
 		assert.deepEqual(wortFunde3389('andere.test.ts', quelle), ['andere.test.ts:1 -> wetterMetrikenSnapshotAus']);
+	});
+
+	test('Selbstnachweis (e): VersandSnapshot ist nur im eigenen Modul erlaubt, in jeder anderen Datei ein Fund', () => {
+		const quelle = 'interface VersandSnapshot { a: boolean }\n';
+		assert.deepEqual(wortFunde3389(MODUL_VERSAND_3389, quelle), []);
+		assert.deepEqual(wortFunde3389(MODUL_WETTER_3389, quelle), [`${MODUL_WETTER_3389}:1 -> VersandSnapshot`]);
+		assert.deepEqual(wortFunde3389(MODUL_VERSAND_3389, 'function erstelleVersandVergleichSpeicherung() {}'), [
+			`${MODUL_VERSAND_3389}:1 -> erstelleVersandVergleichSpeicherung`
+		]);
 	});
 });
 

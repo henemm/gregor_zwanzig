@@ -10,16 +10,14 @@
 // F002-/F003-Blöcke bauten `handleVersandCommit`/`lastPersistedVersand-
 // Snapshot` aus CompareTabs.svelte INTERN nach (eigene `commit()`-Hülle mit
 // eigenem try/catch). Mit S5 speichert der Versand-Reiter selbst; diese
-// Mechanik gibt es nicht mehr. Beide Regressionen sind deshalb auf die echte
-// Orchestrierung `erstelleVersandVergleichSpeicherung()` samt echtem
-// Speicher-Controller umgestellt — sonst prüfte der Test seine eigene Hülle
-// statt des Prüflings. Die Fehlerbehandlung wandert damit dorthin, wo sie im
-// Produktivpfad liegt: die SaveFn wirft weiter, der Controller fängt.
+// Mechanik gibt es nicht mehr. Beide Regressionen liefen deshalb an der echten
+// Orchestrierung samt echtem Speicher-Controller; seit #3389 (toter
+// Versand-Speicherer entfernt) am lebenden Alarme-Speicherer. Die
+// Fehlerbehandlung liegt dort, wo sie im Produktivpfad liegt: die SaveFn
+// wirft weiter, der Controller fängt.
 //
-// Spec: docs/specs/modules/rework_2276_s5_versand.md — AC-1, AC-3
-//
-// Zielschnittstelle (existiert noch NICHT → RED per ERR_MODULE_NOT_FOUND):
-//   shared/versandVergleichSpeicherung.ts → erstelleVersandVergleichSpeicherung
+// Spec: docs/specs/modules/rework_2276_s5_versand.md — AC-1, AC-3;
+//       docs/specs/modules/rework_3389_tote_exporte.md
 //
 // Reine Funktions-/Transporttests gegen `fakeTripServer.ts`, kein Mock, kein
 // DOM/Browser — lauffähig unter node --experimental-strip-types.
@@ -37,12 +35,9 @@ import { createGoMergeServer } from '../../shared/__tests__/goMergeServerPruefst
 import type { ComparePreset } from '../../../types.ts';
 import type { PutClient } from '../../shared/tripSpeicherung.ts';
 import { createPutQueue, buildToggleActivePutPayload } from '../compareHubPersistenz.ts';
-import { erstelleVersandVergleichSpeicherung } from '../../shared/versandVergleichSpeicherung.ts';
-import {
-	createController,
-	hydrierterWiz,
-	makePreset
-} from '../../shared/__tests__/versandVergleichPruefstand.ts';
+import { hydrateAlarmFieldsFromPreset } from '../compareHubHydration.ts';
+import { erstelleAlarmeVergleichSpeicherung } from '../../shared/alarmeVergleichSpeicherung.ts';
+import { createController, makePreset } from '../../shared/__tests__/versandVergleichPruefstand.ts';
 
 const PRESET_ID = 'cmp-42';
 
@@ -112,22 +107,26 @@ afterEach(() => server.restore());
 
 const puts = () => server.calls.filter((c) => c.method === 'PUT');
 
-describe('F002-Integration: Versand-Speicherung + nachfolgender Toggle-Active-PUT', () => {
-	test('Toggle-PUT nach Versand-PUT sieht den aktualisierten currentPreset-Stand — kein stiller Datenverlust', async () => {
+// #3389: F002/F003 laufen seit dem Wegfall des toten Versand-Speicherers am lebenden
+// Alarme-Speicherer (dieselben Zusicherungen: Basis-Rückmeldung vor dem Toggle-PUT,
+// diff-basierter Rollback mit Baseline bei Queue-Ausführung).
+describe('F002-Integration: Alarme-Speicherung + nachfolgender Toggle-Active-PUT', () => {
+	test('Toggle-PUT nach Alarme-PUT sieht den aktualisierten currentPreset-Stand — kein stiller Datenverlust', async () => {
 		let currentPreset: ComparePreset = makePreset(PRESET_ID);
-		const wiz = hydrierterWiz(currentPreset);
+		const zustand: Record<string, unknown> = {};
+		hydrateAlarmFieldsFromPreset(zustand, currentPreset, []);
 		const ctl = createController(PRESET_ID);
 		const queue = createPutQueue();
 		// Seit #2375 sendet der Toggle nur { schedule, previous_schedule } — das
-		// Ueberleben der Versand-Aenderung entscheidet der Server-Abgleich, also
+		// Ueberleben der Alarme-Aenderung entscheidet der Server-Abgleich, also
 		// laeuft der Test gegen den Ersatz-Server, der wie der Go-Handler zusammenfuehrt
 		// (der fakeTripServer ersetzt den gespeicherten Rumpf komplett).
 		const goServer = createGoMergeServer({ [PRESET_ID]: currentPreset as unknown as Record<string, unknown> });
 		goServer.install();
 		try {
-			const versand = erstelleVersandVergleichSpeicherung({
+			const alarme = erstelleAlarmeVergleichSpeicherung({
 				client: api,
-				zustand: wiz,
+				zustand,
 				preset: () => currentPreset,
 				enqueueHubWrite: (fn) => queue.enqueue(fn),
 				onCompareUpdate: (p: ComparePreset) => {
@@ -136,11 +135,12 @@ describe('F002-Integration: Versand-Speicherung + nachfolgender Toggle-Active-PU
 				saveController: ctl
 			});
 
-			// 1) Nutzer klickt „Bis auf Weiteres" im Laufzeit-Control → wiz.endDate = null.
-			wiz.endDate = null;
-			versand.aenderungMelden();
+			// 1) Nutzer schaltet den Radar-Alarm an.
+			assert.strictEqual(zustand.radarAlertEnabled, false, 'Vorbedingung: Radar-Alarm aus');
+			zustand.radarAlertEnabled = true;
+			alarme.aenderungMelden();
 			await ctl.flush();
-			assert.strictEqual(goServer.putRuempfe().length, 1, 'Vorbedingung: der Versand-PUT ist raus');
+			assert.strictEqual(goServer.putRuempfe().length, 1, 'Vorbedingung: der Alarme-PUT ist raus');
 
 			// 2) Direkt danach klickt der Nutzer „Pausieren" — der Payload-Bau passiert
 			// innerhalb des enqueueten fn.
@@ -151,12 +151,12 @@ describe('F002-Integration: Versand-Speicherung + nachfolgender Toggle-Active-PU
 
 			assert.deepStrictEqual(goServer.putRuempfe()[1], { schedule: 'manual', previous_schedule: 'daily' });
 			assert.strictEqual(
-				currentPreset.end_date,
-				'',
-				'End-Datum-Loeschung („Bis auf Weiteres") ueberlebt den nachfolgenden Toggle-PUT'
+				currentPreset.radar_alert_enabled,
+				true,
+				'die Radar-Alarm-Aenderung ueberlebt den nachfolgenden Toggle-PUT'
 			);
 			const stand = goServer.stand(PRESET_ID);
-			assert.strictEqual(stand.end_date, '', 'Server-Zustand darf die Versand-Aenderung nicht verlieren');
+			assert.strictEqual(stand.radar_alert_enabled, true, 'Server-Zustand darf die Alarme-Aenderung nicht verlieren');
 			assert.strictEqual(stand.schedule, 'manual');
 		} finally {
 			goServer.restore();
@@ -166,8 +166,10 @@ describe('F002-Integration: Versand-Speicherung + nachfolgender Toggle-Active-PU
 
 describe('F003-Regression: die Rollback-Baseline wird bei Queue-AUSFUEHRUNG erfasst, nicht beim Planen', () => {
 	test('Edit A erfolgreich, Edit B (waehrend A noch offen) schlaegt fehl — der Rollback von B darf Edit A nicht verlieren', async () => {
-		let currentPreset: ComparePreset = makePreset(PRESET_ID, { morning_time: '06:00:00', send_sms: false });
-		const wiz = hydrierterWiz(currentPreset);
+		let currentPreset: ComparePreset = makePreset(PRESET_ID, { radar_alert_enabled: false });
+		const zustand: Record<string, unknown> = {};
+		hydrateAlarmFieldsFromPreset(zustand, currentPreset, []);
+		const ausgangOfficialWarnings = zustand.officialWarningsEnabled;
 		const ctl = createController(PRESET_ID);
 		const queue = createPutQueue();
 
@@ -195,9 +197,9 @@ describe('F003-Regression: die Rollback-Baseline wird bei Queue-AUSFUEHRUNG erfa
 			}
 		} as PutClient;
 
-		const versand = erstelleVersandVergleichSpeicherung({
+		const alarme = erstelleAlarmeVergleichSpeicherung({
 			client,
-			zustand: wiz,
+			zustand,
 			preset: () => currentPreset,
 			enqueueHubWrite: (fn) => queue.enqueue(fn),
 			onCompareUpdate: (p: ComparePreset) => {
@@ -206,15 +208,15 @@ describe('F003-Regression: die Rollback-Baseline wird bei Queue-AUSFUEHRUNG erfa
 			saveController: ctl
 		});
 
-		// Edit A: Morgen-Uhrzeit aendern.
-		wiz.morningTime = '07:30';
-		versand.aenderungMelden();
+		// Edit A: Radar-Alarm an.
+		zustand.radarAlertEnabled = true;
+		alarme.aenderungMelden();
 		const lauf = ctl.flush();
 		await gestartet;
 
-		// Edit B: SOFORT danach SMS umschalten, WAEHREND Edit A noch offen ist.
-		wiz.sendSms = true;
-		versand.aenderungMelden();
+		// Edit B: SOFORT danach amtliche Warnungen umschalten, WAEHREND Edit A noch offen ist.
+		zustand.officialWarningsEnabled = !(ausgangOfficialWarnings as boolean);
+		alarme.aenderungMelden();
 
 		torOeffnen();
 		await lauf.catch(() => {
@@ -225,15 +227,19 @@ describe('F003-Regression: die Rollback-Baseline wird bei Queue-AUSFUEHRUNG erfa
 		ctl.cancel(); // etwaigen Rest-Eintrag im Speicher-Platz räumen
 
 		assert.strictEqual(
-			(server.storedBody(PRESET_ID) as Record<string, unknown>).morning_time,
-			'07:30:00',
+			(server.storedBody(PRESET_ID) as Record<string, unknown>).radar_alert_enabled,
+			true,
 			'Edit A muss trotz spaeter fehlschlagendem Edit B auf dem Server persistiert bleiben'
 		);
 		assert.strictEqual(
-			wiz.morningTime,
-			'07:30',
+			zustand.radarAlertEnabled,
+			true,
 			'F003-Regression: der Rollback von Edit B darf Edit A NICHT aus der Anzeige entfernen'
 		);
-		assert.strictEqual(wiz.sendSms, false, 'Edit B selbst wird auf den (Edit-A-)Stand zurueckgerollt');
+		assert.strictEqual(
+			zustand.officialWarningsEnabled,
+			ausgangOfficialWarnings,
+			'Edit B selbst wird auf den (Edit-A-)Stand zurueckgerollt'
+		);
 	});
 });

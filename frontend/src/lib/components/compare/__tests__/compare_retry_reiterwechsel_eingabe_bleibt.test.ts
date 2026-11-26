@@ -27,7 +27,6 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { api } from '../../../api.ts';
 import { clearEtagRegistry, getKnownEtag, istKonflikt } from '../../../etagRegistry.ts';
-import { erstelleVersandVergleichSpeicherung } from '../../shared/versandVergleichSpeicherung.ts';
 import type { ComparePreset } from '../../../types.ts';
 import { createPutQueue } from '../compareHubPersistenz.ts';
 import { hydrateAlarmFieldsFromPreset } from '../compareHubHydration.ts';
@@ -293,49 +292,8 @@ describe('F205: `imWiederholen` gilt nur WAEHREND der Wiederholung', () => {
 	});
 });
 
-describe('F301a (Fix-Loop 4, Compare): ein GESCHEITERTER Retry laesst keinen Save aus einem erstmals geoeffneten Reiter mit Hub-Altstand durch', () => {
-	test('PX2: Fremd send_telegram=false, Retry 500, Versand erstmals oeffnen und speichern => 412, Server bleibt false; erneuter Retry => alles auf dem Server', async () => {
-		server.fremdSchreiben(ID, { send_telegram: false, name: 'Fremder Name' });
-		const ctl = createController(ID);
-		const h = await hub(ctl);
-		hydrateAlarmFieldsFromPreset(h.wizardState, h.u.currentPreset as ComparePreset, []);
-		const al = alarmeReiter(h, ctl);
-		h.wizardState.alertCooldownMinutes = 77;
-		al.aenderungMelden();
-		await fertig(ctl);
-		assert.equal(ctl.state, 'conflict', 'Vorbedingung: 412');
-
-		const ende = putsScheitern();
-		await ctl.retryConflict();
-		ende();
-		assert.equal(ctl.state, 'conflict');
-		assert.equal(istKonflikt(ID), true, 'die Markierung bleibt nach dem gescheiterten Retry');
-
-		versandErstmalsOeffnen(h);
-		const queue = createPutQueue();
-		const vs = erstelleVersandVergleichSpeicherung({
-			client: api,
-			zustand: h.wizardState,
-			preset: () => h.u.currentPreset as ComparePreset,
-			enqueueHubWrite: <T>(fn: () => Promise<T>) => queue.enqueue(fn),
-			onCompareUpdate: (p: ComparePreset) => {
-				h.u.currentPreset = p;
-			},
-			saveController: ctl
-		});
-		h.wizardState.eveningEnabled = true;
-		vs.aenderungMelden();
-		await fertig(ctl);
-		assert.equal(server.stand(ID).send_telegram, false, 'Fremdaenderung bleibt (kein Hub-Altstand darueber)');
-		assert.equal(ctl.state, 'conflict', 'Konflikt-Anzeige bleibt');
-
-		await ctl.retryConflict();
-		assert.equal(ctl.state, 'idle');
-		assert.equal(server.stand(ID).name, 'Fremder Name', 'Fremdaenderung ausserhalb der Versand-Gruppe steht nach dem Retry weiter');
-		assert.equal(server.stand(ID).alert_cooldown_minutes, 77);
-		assert.equal(server.stand(ID).evening_enabled, true);
-	});
-});
+// #3389: Block F301a (Fall PX2) entfiel mit dem toten Versand-Speicherer; „kein Save mit
+// Hub-Altstand nach gescheitertem Retry“ belegt compare_retry_fehlerpfade_kein_verlust (F501).
 
 describe('F204: ein Lese-GET im Flug waehrend eines 412 uebernimmt seinen Stempel nicht (bumpVersion in markiereKonflikt)', () => {
 	test('GET startet vor dem 412 und antwortet danach => die Registry behaelt den Stempel des abgelehnten Schreibens', async () => {

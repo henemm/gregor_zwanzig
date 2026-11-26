@@ -117,27 +117,13 @@ describe('Test 1 / AC-7: jeder Reiter sendet ausschließlich seine Eigenfelder',
 		);
 	});
 
-	test('versand: keine alert_cooldown_minutes/alert_quiet_*/alert_channels', async () => {
-		const { body } = await speichereEinmal('versand', 'aendern');
-		for (const k of ['alert_cooldown_minutes', 'alert_quiet_from', 'alert_quiet_to', 'alert_channels']) {
-			assert.ok(!(k in body), `Versand darf ${k} nicht senden (Besitzer: Alarme)`);
-		}
-	});
+	// #3389: der Fall „versand: keine alert_*-Felder“ entfiel mit dem toten Versand-Speicherer;
+	// den Feld-Besitz der Zustellung belegt zustellungSpeicherung.test.ts (NIE-Liste).
 });
 
 describe('Test 2 / AC-8: Leerauswahl und Löschen stehen explizit im Rumpf', () => {
-	// #2794 S3a Teil 3 (F006): die Metrikauswahl gehoert dem Reiter Wetter und steht hier nicht im Rumpf.
-	// Issue #3276 (Spec: nie leer senden): vorher „je [] im Rumpf" — `hourly_metrics`/`outlook_metrics`
-	// sind Altschluessel und werden weder gefuellt noch als [] gesendet (Go-Merge wuerde den Bestand
-	// ersetzen). Issue #3298: auch `outlook_enabled` entfaellt; der Rumpf traegt nur den
-	// Stundenverlauf-Schalter, kein display_config.
-	test('wetterMetriken: Leeren ⇒ KEIN [] im Rumpf, nur der Stundenverlauf-Schalter (#3276/#3298)', async () => {
-		const { body } = await speichereEinmal('wetterMetriken', 'leeren');
-		assert.equal(body.display_config, undefined, 'display_config (Altschluessel als []) im Rumpf');
-		assert.ok(!('outlook_enabled' in body), 'outlook_enabled im Rumpf');
-		assert.equal(body.hourly_enabled, false);
-		pruefeSchluesselsatz('wetterMetriken', body);
-	});
+	// #3389: die Fälle „wetterMetriken: Leeren“ und „versand: Bis auf Weiteres“ entfielen mit den toten
+	// Speicherern; `end_date: ""` belegt zustellungSpeicherung.test.ts (ac10_bis_datum_und_zurueck).
 
 	test('wertebereiche: Korridor-Leerung ⇒ corridors: [] UND ideal_ranges: {} im Rumpf', async () => {
 		const { body } = await speichereEinmal('wertebereiche', 'leeren');
@@ -146,13 +132,6 @@ describe('Test 2 / AC-8: Leerauswahl und Löschen stehen explizit im Rumpf', () 
 		assert.ok('ideal_ranges' in dc, 'ideal_ranges muss auch leer gesendet werden — weggelassen bliebe der alte Wert');
 		assert.deepEqual(dc.ideal_ranges, {}, 'geleerte Ideal-Ranges müssen als {} gesendet werden, nicht der Bestand');
 		pruefeSchluesselsatz('wertebereiche', body);
-	});
-
-	test('versand: „Bis auf Weiteres" ⇒ end_date: "" (nicht null, nicht weggelassen)', async () => {
-		const { body } = await speichereEinmal('versand', 'leeren');
-		assert.ok('end_date' in body, 'end_date muss gesendet werden');
-		assert.equal(body.end_date, '', 'Lösch-Sentinel ist "" (Go, compare_preset.go:338-340), nicht null');
-		pruefeSchluesselsatz('versand', body);
 	});
 
 	test('wertebereiche: Leerung erreicht den Server — nach dem Merge sind Korridore und Ideal-Ranges leer', async () => {

@@ -28,10 +28,7 @@ import type { ComparePreset } from '../../../types.ts';
 import { createPutQueue } from '../../compare/compareHubPersistenz.ts';
 import { hydrateAlarmFieldsFromPreset } from '../../compare/compareHubHydration.ts';
 import { erstelleAlarmeVergleichSpeicherung } from '../alarmeVergleichSpeicherung.ts';
-import {
-	erstelleVersandVergleichSpeicherung,
-	hydrateVersandFieldsFromPreset
-} from '../versandVergleichSpeicherung.ts';
+import { hydrateVersandFieldsFromPreset } from '../versandVergleichSpeicherung.ts';
 import { createController } from './versandVergleichPruefstand.ts';
 import { createGoMergeServer, vollerVergleich, type GoMergeServer } from './goMergeServerPruefstand.ts';
 
@@ -66,16 +63,14 @@ function zustellungReiter() {
 		zustand: wizardState
 	};
 	const alarme = erstelleAlarmeVergleichSpeicherung(gemeinsam);
-	const versand = erstelleVersandVergleichSpeicherung(gemeinsam);
+	// #3389: der frühere Versand-Speicherer als Nachbar ist entfernt (toter Export).
 	return {
 		ctl,
 		wizardState,
-		versand,
-		/** Nutzergeste im Alarme-Teil; beide gemounteten Reiter-Effekte melden. */
+		/** Nutzergeste im Alarme-Teil. */
 		aendern(feld: string, wert: unknown) {
 			wizardState[feld] = wert;
 			alarme.aenderungMelden();
-			versand.aenderungMelden();
 		}
 	};
 }
@@ -87,7 +82,7 @@ const fertig = async (ctl: ReturnType<typeof createController>) => {
 };
 const puts = () => server.putRuempfe();
 
-describe('S3a #2794 Fix: eine Cooldown-/Stille-Stunden-Geste im Vergleich = genau EIN Speichervorgang über den Alarme-Owner', () => {
+describe('S3a #2794 Fix: eine Cooldown-/Stille-Stunden-Geste im Vergleich = genau EIN Speichervorgang über den Alarme-Speicherer', () => {
 	test('Cooldown-Änderung: genau ein PUT, er trägt den Cooldown, der Server hat ihn', async () => {
 		const z = zustellungReiter();
 		z.aendern('alertCooldownMinutes', 30);
@@ -107,22 +102,5 @@ describe('S3a #2794 Fix: eine Cooldown-/Stille-Stunden-Geste im Vergleich = gena
 		assert.equal(puts().length, 1, `genau EIN PUT erwartet, gesehen: ${JSON.stringify(puts())}`);
 		assert.equal(puts()[0].alert_quiet_from, '21:00');
 		assert.equal(puts()[0].alert_quiet_to, '06:00');
-	});
-
-	test('der Versand-Speicherer allein meldet bei einer Alarm-Zustellungsänderung NICHTS an', () => {
-		const z = zustellungReiter();
-		z.wizardState.alertCooldownMinutes = 30;
-		z.wizardState.alertQuietFrom = '20:00';
-		z.versand.aenderungMelden();
-		assert.equal(z.ctl.hasPending, false, 'Versand darf für alert_*-Felder keinen Vorgang einplanen (Feld-Besitz: Alarme)');
-	});
-
-	test('Versand-Änderung speichert weiterhin über den Versand-Speicherer (Kontrolle)', async () => {
-		const z = zustellungReiter();
-		z.aendern('morningTime', '07:45');
-		await fertig(z.ctl);
-		assert.equal(puts().length, 1);
-		assert.equal(puts()[0].morning_time, '07:45:00');
-		assert.equal('alert_cooldown_minutes' in puts()[0], false);
 	});
 });

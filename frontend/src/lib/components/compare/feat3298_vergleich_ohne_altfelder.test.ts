@@ -35,10 +35,11 @@ import {
 	type CompareEditorEdits,
 	type NewComparePresetFields
 } from './compareEditorSave.ts';
-import {
-	flushPendingLayoutSave,
-	hydrateLayoutFieldsFromPreset
-} from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
+import { hydrateLayoutFieldsFromPreset } from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
+import { erstelleZustellungSpeicherung } from '../shared/zustellung-tab/zustellungSpeicherung.ts';
+import { standAusPreset } from '../shared/zustellung-tab/zustellungModell.ts';
+import { createPutQueue } from './compareHubPersistenz.ts';
+import { createController } from '../shared/__tests__/versandVergleichPruefstand.ts';
 import { feldsatzAusVorlage } from '../compare-new/compareNewVorlage.ts';
 import { pickEigenfelder, WETTER_DISPLAY_KEYS } from '../shared/pickEigenfelder.ts';
 import { api } from '../../api.ts';
@@ -206,19 +207,51 @@ describe('#3298 AC-2: Reiter speichern (PUT) ohne Altschluessel, Bestand beider 
 			assert.deepEqual(bNach, JSON.parse(JSON.stringify({ ...bestandMitAltfeldern(B, 'nutzer-b'), id: B })));
 		});
 	}
+
+	// #3389: der lebende Zustellungs-Speicherer (Versand und Alarme im Reiter Zustellung) erhaelt
+	// den Altschluessel-Beleg, den bisher die toten Reiter `versand`/`wetterMetriken` trugen.
+	test('zustellung: PUT-Rumpf ohne Altschluessel; Altbestand und Nachbar-Nutzer unveraendert', async () => {
+		await api.get(`/api/compare/presets/${A}`);
+		const start = bestandMitAltfeldern(A, 'nutzer-a');
+		const ctl = createController(A);
+		const queue = createPutQueue();
+		const vorher = standAusPreset(start as unknown as ComparePreset);
+		assert.notEqual(vorher.morgenZeit, '06:45', 'Messaufbau: die Geste muss eine Aenderung sein');
+		const speicherung = erstelleZustellungSpeicherung({
+			context: 'vergleich',
+			id: A,
+			client: api,
+			saveController: ctl,
+			basis: vorher,
+			enqueueHubWrite: <T>(fn: () => Promise<T>) => queue.enqueue(fn)
+		});
+		speicherung.aenderungMelden({ ...JSON.parse(JSON.stringify(vorher)), morgenZeit: '06:45' });
+		await ctl.flush();
+		const ruempfe = server.putRuempfe();
+		assert.equal(ruempfe.length, 1, `Messaufbau: genau EIN PUT erwartet, gesehen ${ruempfe.length}`);
+		assert.equal(server.mitschnitt.at(-1)?.status, 200, 'Messaufbau: der PUT muss durchgehen');
+
+		assert.deepEqual(altFunde(ruempfe[0]), [], 'zustellung: Altschluessel im PUT-Rumpf');
+
+		const nachher = server.stand(A);
+		assert.equal(String(nachher.morning_time).slice(0, 5), '06:45', 'Messaufbau: die Zustellungs-Aenderung steht auf dem Server');
+		const dcNach = nachher.display_config as Record<string, unknown>;
+		for (const [k, v] of Object.entries(ALT_DC)) assert.deepEqual(dcNach[k], v, `Bestand display_config.${k} veraendert`);
+		assert.equal(nachher.outlook_enabled, false, 'Bestand outlook_enabled veraendert');
+		assert.equal(nachher.show_outlook, true, 'Bestand show_outlook veraendert');
+		assert.deepEqual(dcNach.placements, (start.display_config as Record<string, unknown>).placements, 'placements veraendert');
+		assert.equal(nachher.user_id, 'nutzer-a', 'user_id darf sich nie aendern');
+
+		const bNach = server.stand(B);
+		assert.equal(bNach.user_id, 'nutzer-b');
+		assert.deepEqual(bNach, JSON.parse(JSON.stringify({ ...bestandMitAltfeldern(B, 'nutzer-b'), id: B })));
+	});
 });
 
-describe('#3298 AC-2: Layout-Flush und Voll-Rumpf ohne outlook_enabled', () => {
+describe('#3298 AC-2: Voll-Rumpf ohne outlook_enabled', () => {
 	const preset = bestandMitAltfeldern('cp-3298-l', 'nutzer-a') as unknown as ComparePreset;
 
-	test('flushPendingLayoutSave: Aenderung am Stundenverlauf-Schalter sendet kein outlook_enabled', () => {
-		const vorher = { hourlyEnabled: true, outlookEnabled: true } as never;
-		const jetzt = { hourlyEnabled: false, outlookEnabled: true } as never;
-		const p = flushPendingLayoutSave(preset, jetzt, vorher);
-		assert.ok(p, 'Aenderung an hourlyEnabled muss einen PUT ausloesen');
-		assert.deepEqual(altFunde(p.body), []);
-		assert.equal((p.body as unknown as Record<string, unknown>).hourly_enabled, false);
-	});
+	// #3389: der Fall am toten Layout-Speicherer (flushPendingLayoutSave) entfiel.
 
 	test('buildComparePresetSavePayload: edits.outlookEnabled ueberschreibt den Bestand nicht', () => {
 		const edits = {

@@ -1,15 +1,15 @@
 // TDD RED — Issue #2276 Scheibe S4 (Epic #2345), AC-4: `display_config.
-// active_metrics` wird von ZWEI Reitern geschrieben — dem Wertebereiche-Reiter
-// (S3, live aus `ws.activeMetricKeys`) UND der neuen Wetter-Metriken-
-// Orchestrierung (S4). Das ist sicher, WEIL beide Schreiber den Wert LIVE zum
-// Ausführungszeitpunkt lesen, nie aus einer beim Planen eingefrorenen Kopie —
+// active_metrics` schreibt der Wertebereiche-Reiter (S3) live aus
+// `ws.activeMetricKeys`. Das ist sicher, WEIL der Schreiber den Wert LIVE zum
+// Ausführungszeitpunkt liest, nie aus einer beim Planen eingefrorenen Kopie —
 // strukturell identisch zur bereits bekannten `metric_alert_levels`-
 // Überschneidung (Alarme/Wertebereiche, S3).
 //
+// Issue #3389: die Fälle am toten Wetter-Metriken-Speicherer (Fälle 1 und 3)
+// entfielen; der Fall am lebenden Wertebereiche-Speicherer bleibt.
+//
 // Spec: docs/specs/modules/rework_2276_s4_wetter_metriken.md — AC-4
 // Kontext-Dokument Abschnitt 1.8 (E3-Pflicht-Prüfung).
-//
-// Zielschnittstelle: s. wetter_metriken_vergleich_speichert_einmal.test.ts
 //
 // Ausführen:
 //   cd frontend && npm test -- src/lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_und_wertebereiche_teilen_active_metric_keys.test.ts
@@ -22,12 +22,8 @@ import { clearEtagRegistry } from '../../../../etagRegistry.ts';
 import { createFakeTripServer, type FakeTripServer } from '../../../../__tests__/fakeTripServer.ts';
 import type { ComparePreset } from '../../../../types.ts';
 import { createPutQueue } from '../../../compare/compareHubPersistenz.ts';
-import {
-	erstelleWertebereicheVergleichSpeicherung,
-	sichereSelbstSpeichererVorReiterwechsel
-} from '../../wetter-tab/wertebereicheVergleichSpeicherung.ts';
-import { erstelleWetterMetrikenVergleichSpeicherung } from '../weatherMetricsCompareSave.ts';
-import { createController, dc, hydrierterWs, makePreset, wetterMetrikenBedienung } from './wetterMetrikenVergleichPruefstand.ts';
+import { erstelleWertebereicheVergleichSpeicherung } from '../../wetter-tab/wertebereicheVergleichSpeicherung.ts';
+import { createController, hydrierterWs, makePreset } from '../../wetter-tab/__tests__/wertebereicheVergleichPruefstand.ts';
 
 const PRESET_ID = 'cp-2276-s4-active-metrics';
 
@@ -44,100 +40,49 @@ afterEach(() => server.restore());
 const puts = () => server.calls.filter((c) => c.method === 'PUT');
 const gespeichert = () => server.storedBody(PRESET_ID) as Record<string, unknown>;
 
-/** EIN Hub-Wizard-Zustand mit BEIDEN Domänen: Wertebereiche (corridors/
- *  idealRanges/metricAlertLevels) und Wetter-Metriken/Layout. */
+/** Hub-Wizard-Zustand mit der Wertebereiche-Domäne (corridors/idealRanges/metricAlertLevels/activeMetricKeys). */
 function hub() {
 	let basis: ComparePreset = makePreset(PRESET_ID, {
 		corridors: [{ metric: 'wind_max_kmh', range: [0, 40], notify: true, mark: true }],
 		display_config: {
 			ideal_ranges: { wind_max_kmh: { min: 0, max: 40 } },
 			metric_alert_levels: { wind_max_kmh: 'standard' },
-			active_metrics: ['wind_max_kmh', 'snow_depth_cm', 'temp_max_c'],
-			channel_active_metrics: {},
-			hourly_metrics: ['wind_max_kmh'],
-			outlook_metrics: ['temp_max_c'],
-			outlook_metric_formats: { temp_max_c: true }
+			active_metrics: ['wind_max_kmh', 'snow_depth_cm', 'temp_max_c']
 		}
 	});
 	const ws = hydrierterWs(basis);
-	ws.corridors = basis.corridors;
-	ws.idealRanges = (basis.display_config as Record<string, unknown>).ideal_ranges;
-	ws.metricAlertLevels = (basis.display_config as Record<string, unknown>).metric_alert_levels;
 	const ctl = createController(PRESET_ID);
 	const queue = createPutQueue();
-	const gemeinsam = {
+	const wertebereiche = erstelleWertebereicheVergleichSpeicherung({
 		client: api,
+		zustand: ws,
 		preset: () => basis,
 		enqueueHubWrite: <T>(fn: () => Promise<T>) => queue.enqueue(fn),
 		onCompareUpdate: (p: ComparePreset) => {
 			basis = p;
 		},
 		saveController: ctl
-	};
-	const wertebereiche = erstelleWertebereicheVergleichSpeicherung({ ...gemeinsam, zustand: ws });
-	const wetterMetriken = erstelleWetterMetrikenVergleichSpeicherung({ ...gemeinsam, zustand: ws });
-	return { ws, ctl, wertebereiche, wetterMetriken, bedienung: wetterMetrikenBedienung(ws) };
+	});
+	return { ws, ctl, wertebereiche };
 }
 
-describe('AC-4: activeMetricKeys live gelesen — Wetter-Metriken-Änderung + Wertebereiche-Speicherung im selben Hub-Besuch', () => {
-	// #2794 S3a Teil 3 (F006, AC-38): der Wetter-Metriken-Speicherer (jetzt nur Reiter Zustellung)
-	// schreibt `active_metrics` NICHT mehr; die Auswahl gehoert dem Reiter Wetter. Die Live-Lese-
-	// Zusicherung bleibt fuer den Wertebereiche-Schreiber (Test unten) und fuer die eigenen Felder.
-	test('Metrikauswahl in der Kopie geändert → der Wetter-Metriken-Speicherer plant NICHTS ein; Wertebereiche speichert danach die AKTUELLE Auswahl', async () => {
-		const { ws, ctl, wetterMetriken, wertebereiche, bedienung } = hub();
-
-		bedienung.toggleMetric('gust_max_kmh');
-		wetterMetriken.aenderungMelden();
-		assert.equal(ctl.hasPending, false, '#2794 F006: Metrikauswahl ist kein Feld des Zustellungs-Speicherers');
-
-		await sichereSelbstSpeichererVorReiterwechsel('wetter', 'zustellung', ctl);
-		assert.equal(puts().length, 0, 'der Zustellungs-Speicherer darf active_metrics nicht schreiben');
-
-		ws.corridors = [{ metric: 'wind_max_kmh', range: [0, 55], notify: true, mark: true }];
-		wertebereiche.aenderungMelden();
-		await ctl.flush();
-
-		assert.equal(puts().length, 1);
-		assert.ok(
-			(dc(gespeichert()).active_metrics as string[]).includes('gust_max_kmh'),
-			'der Wertebereiche-PUT darf die aktuelle Metrikauswahl nicht auf einen alten Stand zurücksetzen'
-		);
-	});
-
+describe('AC-4: activeMetricKeys live gelesen — Metrikauswahl-Änderung + Wertebereiche-Speicherung im selben Hub-Besuch', () => {
 	test('Metrikauswahl geändert, aber NOCH NICHT gespeichert — Wertebereiche speichert → die neue Auswahl wird LIVE mitgenommen, nicht aus der eingefrorenen Preset-Basis', async () => {
-		const { ws, ctl, wertebereiche, bedienung } = hub();
+		const { ws, ctl, wertebereiche } = hub();
+		assert.ok(Array.isArray(ws.activeMetricKeys), 'Messaufbau: die Metrikauswahl ist hydriert');
+		assert.equal((ws.activeMetricKeys as string[]).includes('gust_max_kmh'), false, 'Messaufbau: gust_max_kmh noch nicht gewählt');
 
-		bedienung.toggleMetric('gust_max_kmh');
-		// KEIN wetterMetriken.aenderungMelden() hier — die Änderung steht nur im
-		// Wizard-Zustand, noch nicht im Speicher-Takt des Controllers.
+		// Die Änderung steht nur im Wizard-Zustand, noch nicht im Speicher-Takt des Controllers.
+		ws.activeMetricKeys = [...(ws.activeMetricKeys as string[]), 'gust_max_kmh'];
 		ws.corridors = [{ metric: 'wind_max_kmh', range: [0, 55], notify: true, mark: true }];
 		wertebereiche.aenderungMelden();
 		await ctl.flush();
 
 		assert.equal(puts().length, 1);
+		const dc = (gespeichert().display_config as Record<string, unknown>) ?? {};
 		assert.ok(
-			(dc(gespeichert()).active_metrics as string[]).includes('gust_max_kmh'),
+			(dc.active_metrics as string[]).includes('gust_max_kmh'),
 			'activeMetricKeys muss live aus dem Wizard-Zustand kommen, nicht aus einer eingefrorenen Preset-Kopie'
-		);
-	});
-
-	test('Wetter-Metriken-SaveFn liest ihre Felder ERST bei Ausführung: eine Live-Änderung NACH aenderungMelden(), VOR dem Flush, landet trotzdem im PUT', async () => {
-		const { ctl, wetterMetriken, bedienung } = hub();
-
-		// #2794 F006: Metrikauswahl gehoert dem Reiter Wetter. #3276/#3298: gemessen am einzigen
-		// eigenen Schalter (Stundenverlauf). Die Live-Aenderung NACH der Meldung stellt den
-		// Ausgangsstand wieder her: liest die SaveFn erst bei Ausfuehrung, gibt es nichts zu senden;
-		// eine eingefrorene Kopie schickte dagegen den ueberholten Stand `false`.
-		bedienung.hourlyEnabledToggle();
-		wetterMetriken.aenderungMelden();
-		bedienung.hourlyEnabledToggle();
-
-		await ctl.flush();
-
-		assert.equal(
-			puts().length,
-			0,
-			'die SaveFn muss ihre Felder ERST bei Ausführung lesen — sonst sendet sie einen überholten Stand'
 		);
 	});
 });

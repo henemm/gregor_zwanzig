@@ -11,11 +11,8 @@ import { alarmSnapshotAus, baueAlarmNutzlast, erstelleAlarmeVergleichSpeicherung
 import { hydrateAlarmFieldsFromPreset } from '../../compare/compareHubHydration.ts';
 import { alarmePropsAus } from '../../compare/alarmePropsAus.ts';
 import { buildComparePresetSavePayload, buildNewComparePresetPayload } from '../../compare/compareEditorSave.ts';
-import { baueVersandNutzlast, hydrateVersandFieldsFromPreset } from '../versandVergleichSpeicherung.ts';
 import { baueWertebereichNutzlast, corridorSnapshotAus } from '../wetter-tab/wertebereicheVergleichSpeicherung.ts';
 import { goMerge } from './goMergeServerPruefstand.ts';
-import { baueWetterMetrikenNutzlast, wetterMetrikenSnapshotAus } from '../weather-metrics-tab/weatherMetricsCompareSave.ts';
-import { hydrierterWs } from '../weather-metrics-tab/__tests__/wetterMetrikenVergleichPruefstand.ts';
 
 const TG = { email: false, telegram: true, sms: false, premium_sms: false };
 const MAIL = { email: true, telegram: false, sms: false, premium_sms: false };
@@ -175,14 +172,11 @@ test('AC-55: Edit- und Create-Payload tragen alert_metric_channels', () => {
 	assert.deepStrictEqual(amcVon(neu), { thunder: TG }, 'Create');
 });
 
-test('AC-57: Versand-, Wertebereiche- und Wetter-Metriken-Teil-PUT senden das Feld gar nicht und lassen den Bestand unverändert', () => {
+// #3389: die Zweige „Versand“ und „Wetter-Metriken“ entfielen mit ihren toten Speicherern.
+test('AC-57: Wertebereiche-Teil-PUT sendet das Feld gar nicht und lässt den Bestand unverändert', () => {
 	const p = preset({ gust: TG, snowfall_limit: MAIL });
-	const versand = baueVersandNutzlast(p, hydrateVersandFieldsFromPreset(p)).body;
-	const wb = baueWertebereichNutzlast(p, corridorSnapshotAus({ corridors: [], idealRanges: {}, metricAlertLevels: {} })).body;
-	const wetter = baueWetterMetrikenNutzlast(p, wetterMetrikenSnapshotAus(hydrierterWs(p) as never)).body;
-	for (const [name, body] of [['Versand', versand], ['Wertebereiche', wb], ['Wetter-Metriken', wetter]] as const) {
-		// Auch eine unveränderte Vollmap wäre aus einer veralteten Hub-Basis ein Rückschreiber (Race).
-		assert.ok(!('alert_metric_channels' in (body as object)), `${name} sendet alert_metric_channels mit`);
-		assert.deepStrictEqual(goMerge(p as never, body as never).alert_metric_channels, { gust: TG, snowfall_limit: MAIL }, name);
-	}
+	const body = baueWertebereichNutzlast(p, corridorSnapshotAus({ corridors: [], idealRanges: {}, metricAlertLevels: {} })).body;
+	// Auch eine unveränderte Vollmap wäre aus einer veralteten Hub-Basis ein Rückschreiber (Race).
+	assert.ok(!('alert_metric_channels' in (body as object)), 'Wertebereiche sendet alert_metric_channels mit');
+	assert.deepStrictEqual(goMerge(p as never, body as never).alert_metric_channels, { gust: TG, snowfall_limit: MAIL }, 'Wertebereiche');
 });

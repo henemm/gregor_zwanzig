@@ -1,7 +1,7 @@
 ---
 spec_file: docs/specs/modules/rework_3389_tote_exporte.md
-spec_sha256: c3ff26549731f0a8bd6a2c8a6faf2dfb7ea4bedf72a35bba86c0fb496577e4c6
-spec_frozen_sha256: 411d597793bc81766872644299260c953c50029659bbf3df9ff49ddfb6973a8b
+spec_sha256: 2e4a7d5256b7bb39747ff32fd2a8f31c2be9f35a8282f42ade92a4035aab002f
+spec_frozen_sha256: cd87cd7866ab707aed1403f9695f8b23f6e627aba4a6e1501e03de4a5d20052d
 ---
 
 # PO-Briefing: rework-3389-tote-exporte
@@ -12,20 +12,20 @@ spec_frozen_sha256: 411d597793bc81766872644299260c953c50029659bbf3df9ff49ddfb697
 
 ## Was gebaut wird
 
-Ungenutzte Speicher-Altlogik des Ortsvergleichs wird samt ihrer Tests entfernt; für Nutzer ändert sich nichts Sichtbares.
+Ungenutzte alte Speicherlogik des Ortsvergleichs wird samt ihrer Tests entfernt; für Nutzer ändert sich nichts Sichtbares.
 
 ## Definition of Done
 
-Die 21 toten Funktionen und die zugehörigen Tests sind weg, alle übrigen Prüfungen und der Build laufen grün, die Oberfläche bleibt unverändert.
+Die 21 ungenutzten Funktionen und ihre Tests sind gelöscht, alle verbleibenden Prüfungen und der Build laufen grün, die Oberfläche bleibt unverändert.
 
 ## Wie geprüft wird
 
-Ein neuer Wächter beweist die Löschung, die verbleibenden Tests prüfen das Laden gespeicherter Werte; echte Browser-Prüfungen sind bewusst nicht Teil davon.
+Ein neuer Wächter belegt die Löschung, die verbleibenden Tests prüfen das Laden gespeicherter Werte; Browser-Prüfungen sind bewusst nicht Teil davon.
 
 ## Kritische Anmerkungen
 
-- Rund 53 Dateien betroffen, weit über den üblichen Umfang; die Spec begründet das als unteilbar.
-- Einige Prüfungen wandern vom entfernten Speicherer zum aktuellen; wenige Randfälle haben danach kein Gegenstück mehr, dokumentiert.
+- Rund 53 Dateien betroffen, weit über dem üblichen Umfang; die Spec begründet das als unteilbar.
+- Einige Prüfungen wandern zum aktuellen Speicherer; wenige Randfälle des entfernten Speicherers haben danach kein Gegenstück, dokumentiert.
 
 ## Freigabe-Frage
 

@@ -11,7 +11,7 @@
 //
 // Messaufbau: wie `compareReiterAufbauPruefstand.ts` (echte `erstelle…Speicherung`,
 // echte Hydration, echter SaveStatus MIT Kennung `vergleich`, echte Hub-Queue,
-// echtes `api`, Go-treuer Ersatz-Server) — aber ZWEI Reiter (Alarme, Versand) teilen
+// echtes `api`, Go-treuer Ersatz-Server) — aber ZWEI Reiter (Alarme, Wertebereiche; bis #3389 Versand) teilen
 // EINEN Controller, EINE Queue und EINE Basis, wie im Hub (CompareTabs).
 //
 // Erwartet gruen bleibend (Regressionswaechter, AC-21): Teilfeld-Nutzlasten des
@@ -32,10 +32,11 @@ import type { ComparePreset } from '../../../types.ts';
 import { createPutQueue } from '../compareHubPersistenz.ts';
 import { hydrateAlarmFieldsFromPreset } from '../compareHubHydration.ts';
 import { erstelleAlarmeVergleichSpeicherung } from '../../shared/alarmeVergleichSpeicherung.ts';
+import { erstelleWertebereicheVergleichSpeicherung } from '../../shared/wetter-tab/wertebereicheVergleichSpeicherung.ts';
 import {
-	erstelleVersandVergleichSpeicherung,
-	hydrateVersandFieldsFromPreset
-} from '../../shared/versandVergleichSpeicherung.ts';
+	hydrierterWs,
+	wertebereicheBedienung
+} from '../../shared/wetter-tab/__tests__/wertebereicheVergleichPruefstand.ts';
 import { createController } from '../../shared/__tests__/versandVergleichPruefstand.ts';
 import {
 	createGoMergeServer,
@@ -73,25 +74,32 @@ function hub() {
 	const alarmeZustand: Record<string, unknown> = {};
 	hydrateAlarmFieldsFromPreset(alarmeZustand, basis, []);
 	const alarme = erstelleAlarmeVergleichSpeicherung({ ...gemeinsam, zustand: alarmeZustand });
-	const versandZustand = hydrateVersandFieldsFromPreset(basis) as unknown as Record<string, unknown>;
-	const versand = erstelleVersandVergleichSpeicherung({ ...gemeinsam, zustand: versandZustand });
+	// #3389: Reiter B ist der Wertebereiche-Speicherer (der Versand-Speicherer war tot).
+	const wertebereicheZustand = hydrierterWs(basis);
+	const wertebereiche = erstelleWertebereicheVergleichSpeicherung({ ...gemeinsam, zustand: wertebereicheZustand });
 	return {
 		ctl,
 		alarmeAendern() {
 			alarmeZustand.radarAlertEnabled = !(alarmeZustand.radarAlertEnabled as boolean);
 			alarme.aenderungMelden();
 		},
-		versandAendern() {
-			versandZustand.morningTime = '07:15';
-			versand.aenderungMelden();
+		wertebereicheAendern() {
+			wertebereicheBedienung(wertebereicheZustand).patch('wind_max_kmh', { max: 55 });
+			wertebereiche.aenderungMelden();
 		}
 	};
 }
 
+/** Höchstwert des Wind-Korridors im Server-Stand. */
+const windMax = (stand: Record<string, unknown>) =>
+	((stand.corridors as Array<{ metric: string; range: [number | null, number | null] }>) ?? []).find(
+		(c) => c.metric === 'wind_max_kmh'
+	)?.range?.[1];
+
 const putEintraege = () => server.mitschnitt.filter((e) => e.method === 'PUT');
 
 describe('AC-20: Hub — Anzeige bleibt ueber den Reiterwechsel, Retry schreibt beide Reiter', () => {
-	test('A (Alarme) 412, Wechsel, B (Versand) speichert: Anzeige bleibt, B bekommt 412 mit If-Match, Fremdaenderung unveraendert', async () => {
+	test('A (Alarme) 412, Wechsel, B (Wertebereiche) speichert: Anzeige bleibt, B bekommt 412 mit If-Match, Fremdaenderung unveraendert', async () => {
 		server.fremdSchreiben(ID, { name: 'Fremd von A' });
 		const h = hub();
 		const stand0 = JSON.stringify(server.stand(ID));
@@ -102,24 +110,24 @@ describe('AC-20: Hub — Anzeige bleibt ueber den Reiterwechsel, Retry schreibt 
 		assert.equal(putEintraege()[0].status, 412, 'Vorbedingung: Alarme-Reiter scheitert am Fremdschreiber');
 		assert.equal(h.ctl.state, 'conflict', 'Vorbedingung: Konfliktanzeige');
 
-		// Reiterwechsel, Versand-Reiter speichert
-		h.versandAendern();
+		// Reiterwechsel, Wertebereiche-Reiter speichert
+		h.wertebereicheAendern();
 		await h.ctl.flush();
 
 		assert.equal(h.ctl.state, 'conflict', 'AC-20: „Nochmal speichern" bleibt nach dem Speichern im anderen Reiter sichtbar');
 		const b = putEintraege().at(-1)!;
-		assert.equal(b.ifMatch, alt, 'der Versand-PUT bei offenem Konflikt traegt das ALTE If-Match (kein unbedingtes Schreiben)');
+		assert.equal(b.ifMatch, alt, 'der Wertebereiche-PUT bei offenem Konflikt traegt das ALTE If-Match (kein unbedingtes Schreiben)');
 		assert.equal(b.status, 412);
 		assert.equal(JSON.stringify(server.stand(ID)), stand0, 'der Server ist unveraendert — weder A noch B haben geschrieben');
 		assert.equal(server.stand(ID).name, 'Fremd von A');
 	});
 
-	test('„Nochmal speichern": Fremdaenderung, Alarme-Aenderung (A) UND Versand-Aenderung (B) stehen danach auf dem Server', async () => {
+	test('„Nochmal speichern": Fremdaenderung, Alarme-Aenderung (A) UND Wertebereiche-Aenderung (B) stehen danach auf dem Server', async () => {
 		server.fremdSchreiben(ID, { name: 'Fremd von A' });
 		const h = hub();
 		h.alarmeAendern();
 		await h.ctl.flush();
-		h.versandAendern();
+		h.wertebereicheAendern();
 		await h.ctl.flush();
 		assert.equal(h.ctl.state, 'conflict', 'Vorbedingung');
 
@@ -132,7 +140,7 @@ describe('AC-20: Hub — Anzeige bleibt ueber den Reiterwechsel, Retry schreibt 
 		const s = server.stand(ID);
 		assert.equal(s.name, 'Fremd von A', 'Fremdaenderung bleibt');
 		assert.equal(s.radar_alert_enabled, true, 'Alarme-Aenderung aus Reiter A steht auf dem Server');
-		assert.equal(String(s.morning_time).slice(0, 5), '07:15', 'Versand-Aenderung aus Reiter B steht auf dem Server');
+		assert.equal(windMax(s), 55, 'Wertebereiche-Aenderung aus Reiter B steht auf dem Server');
 		assert.equal(h.ctl.state, 'idle', 'die Konfliktanzeige verschwindet');
 		const f = (registry as unknown as { istKonflikt?: (i: string) => boolean }).istKonflikt;
 		assert.equal(typeof f, 'function', 'etagRegistry.ts muss `istKonflikt(id)` exportieren');
@@ -143,11 +151,12 @@ describe('AC-20: Hub — Anzeige bleibt ueber den Reiterwechsel, Retry schreibt 
 		const h = hub();
 		h.alarmeAendern();
 		await h.ctl.flush();
-		h.versandAendern();
+		h.wertebereicheAendern();
 		await h.ctl.flush();
 
 		assert.equal(h.ctl.state, 'idle');
 		assert.ok(putEintraege().every((p) => p.status === 200));
 		assert.equal(server.stand(ID).radar_alert_enabled, true);
+		assert.equal(windMax(server.stand(ID)), 55);
 	});
 });

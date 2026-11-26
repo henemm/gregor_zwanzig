@@ -1,0 +1,85 @@
+== Runde 3 (nach Fix-Loop 1): Frontend gesamt ==
+# tests 11896
+# suites 2131
+# pass 11879
+# fail 0
+# cancelled 0
+# skipped 2
+# todo 15
+
+== Runde 3: Mutationen F001-F003 nachgeprueft (jetzt rot) ==
+W6 ['# fail 1'] 2 ['not ok 1 - AC-4: Altbestand oeffnen laesst activeMetricKeys null', 'not ok 31 - \\#3061 Speichern und Trip bleiben unveraendert']
+W7 ['# fail 1'] 2 ['not ok 1 - Preset mit hourly_enabled: false ⇒ Schalter nach dem Hydrieren aus', 'not ok 80 - \\#3389 AC-10: hydrateLayoutFieldsFromPreset übernimmt den gespeicherten Stundenverlauf-Schalter']
+W13 ['# fail 1'] 2 ['not ok 1 - gespeicherte Auswahl im Neuformat wird ohne Katalog-Argument auf Auswahl-Schlüssel zurückgeführt', 'not ok 81 - \\#3389 AC-10: hydrateWeatherMetricsFromPreset nutzt ohne Argument den registrierten Katalog']
+
+G1 ['# fail 2'] ['not ok 5 - Exportmenge weatherMetricsCompareSave: genau die lebenden Hydrations-Funktionen', 'not ok 7 - Wortscan frontend/src und frontend/e2e: keiner der 23 Namen kommt außerhalb dieser Datei im Code vor']
+G2 ['# fail 1'] ['not ok 4 - Exportmenge versandVergleichSpeicherung: genau die lebenden Hydrations-Funktionen', 'not ok 7 - \\#3389 AC-1/AC-2/AC-3/AC-6: tote Exporte gelöscht, Exportmenge genau die lebenden Hydrationen']
+G3 ['# fail 1'] ['not ok 2 - Dateien gelöscht: die 21 Testdateien und der Prüfstand wetterMetrikenVergleichPruefstand.ts existieren nicht', 'not ok 7 - \\#3389 AC-1/AC-2/AC-3/AC-6: tote Exporte gelöscht, Exportmenge genau die l
+G4 ['# fail 2'] ['not ok 7 - Wortscan frontend/src und frontend/e2e: keiner der 23 Namen kommt außerhalb dieser Datei im Code vor', 'not ok 7 - \\#3389 AC-1/AC-2/AC-3/AC-6: tote Exporte gelöscht, Exportmenge genau die lebenden H
+G5 ['# fail 3'] ['not ok 2 - die eingefrorene Soll-Liste ist unversehrt (46 Eintraege, keine Duplikate)', 'not ok 23 - AC-2: eingefrorene HERKUNFT-Zweig-Liste deckt sich mit dem Ist-Stand']
+G6 ['# fail 3'] ['not ok 2 - die eingefrorene Soll-Liste ist unversehrt (46 Eintraege, keine Duplikate)', 'not ok 23 - AC-2: eingefrorene HERKUNFT-Zweig-Liste deckt sich mit dem Ist-Stand']
+G7 ['# fail 1'] ['not ok 2 - die Summenzeile nennt 1 HERKUNFT und als Gesamtzahl die Summe der Tabellenzeilen (= EINGEFROREN_SOLL_ANZAHL)', 'not ok 34 - AC-23: Summenzeile der AC-2-Endbilanz stimmt mit den Tabellen überein']
+G8 ['# fail 1'] ['not ok 3 - Exportmenge versandVergleichPruefstand: genau makePreset und createController', 'not ok 7 - \\#3389 AC-1/AC-2/AC-3/AC-6: tote Exporte gelöscht, Exportmenge genau die lebenden Hydrationen']
+G9 ['# fail 1'] ['not ok 3 - versand: PUT-Rumpf = exakter Eigenfeld-Satz (kein name/location_ids/profil/schedule/id)', 'not ok 27 - Test 1 / AC-7: jeder Reiter sendet ausschließlich seine Eigenfelder']
+
+== Runde 1 und 2 (Stand vor Fix-Loop, Archiv) ==
+== Frontend gesamt (node --test, ganze Suite) ==
+# tests 11893
+# suites 2129
+# pass 11876
+# fail 0
+# cancelled 0
+# skipped 2
+# todo 15
+
+== svelte-check --threshold error ==
+1795690509901 COMPLETED 2233 FILES 32 ERRORS 70 WARNINGS 49 FILES_WITH_PROBLEMS
+
+== Python (benannt, -o addopts) ==
+124 passed, 2 warnings in 24.85s
+
+== Mutationen lebende Hydrationen (26 Dateien), ein fail = Mutation gefangen ==
+M1: ['# fail 1']  (gefangen)
+M11 Kontrolle neutral: ['# fail 0']
+M2 ['# fail 2'] 4 ['not ok 4 - \\#2727 AC-15 „Daten kommen spaet": vor der Hydration Standardwerte, danach Preset-Werte; Nutzerwert bleibt', 'not ok 26 - \\#1743 AC-9 / \\#2794: Versand-Hydration haengt am Reiter zustellung']
+M3 ['# fail 1'] 2 ['not ok 1 - hydratisiert alle Versand-Felder aus einem voll belegten Preset', 'not ok 32 - AC-36 (Basis): hydrateVersandFieldsFromPreset — Versand-Felder aus dem Preset']
+M4 ['# fail 1'] 2 ['not ok 2 - Defaults identisch zur Edit-Routen-Hydration, wenn Versand-Felder fehlen', 'not ok 32 - AC-36 (Basis): hydrateVersandFieldsFromPreset — Versand-Felder aus dem Preset']
+M5 ['# fail 2'] 4 ['not ok 4 - \\#2727 AC-15 „Daten kommen spaet": vor der Hydration Standardwerte, danach Preset-Werte; Nutzerwert bleibt', 'not ok 26 - \\#1743 AC-9 / \\#2794: Versand-Hydration haengt am Reiter zustellung']
+M6 ['# fail 1'] 2 ['not ok 2 - Defaults identisch zur Edit-Routen-Hydration, wenn Versand-Felder fehlen', 'not ok 32 - AC-36 (Basis): hydrateVersandFieldsFromPreset — Versand-Felder aus dem Preset']
+M7 ['# fail 1'] 2 ['not ok 1 - hydratisiert alle Versand-Felder aus einem voll belegten Preset', 'not ok 32 - AC-36 (Basis): hydrateVersandFieldsFromPreset — Versand-Felder aus dem Preset']
+M8 ['# fail 1'] 2 ['not ok 1 - hydratisiert alle Versand-Felder aus einem voll belegten Preset', 'not ok 32 - AC-36 (Basis): hydrateVersandFieldsFromPreset — Versand-Felder aus dem Preset']
+M9 ['# fail 1'] 2 ['not ok 1 - hydratisiert alle Versand-Felder aus einem voll belegten Preset', 'not ok 32 - AC-36 (Basis): hydrateVersandFieldsFromPreset — Versand-Felder aus dem Preset']
+M10 ['# fail 1'] 2 ['not ok 2 - Defaults identisch zur Edit-Routen-Hydration, wenn Versand-Felder fehlen', 'not ok 32 - AC-36 (Basis): hydrateVersandFieldsFromPreset — Versand-Felder aus dem Preset']
+W1 ['# fail 1'] 2 ['not ok 1 - gespeichertes Tagesfenster 6 bis 21 wird übernommen', 'not ok 79 - \\#3389 AC-4: hydrateDayWindowFromPreset liest das gespeicherte Tagesfenster']
+W2 ['# fail 2'] 3 ['not ok 2 - Altbestand ohne Tagesfenster-Felder liefert den Trip-Standard 4 bis 19', 'not ok 3 - Tagesfenster-Felder mit null liefern den Trip-Standard 4 bis 19']
+W3 ['# fail 2'] 3 ['not ok 2 - Altbestand ohne Tagesfenster-Felder liefert den Trip-Standard 4 bis 19', 'not ok 3 - Tagesfenster-Felder mit null liefern den Trip-Standard 4 bis 19']
+W4 ['# fail 7'] 11 ['not ok 1 - AC-2: Alarm-Hydrierer laesst activeMetricKeys bei Altbestand null', 'not ok 2 - AC-2: Wetter-Metriken-Hydrierer (CompareTabs) laesst activeMetricKeys bei Altbestand null']
+W5 ['# fail 5'] 8 ['not ok 1 - mit geladenem Katalog hydriert: Auswahl-Schluessel', 'not ok 2 - Alarme-Reiter als Deep-Link: Empfindlichkeits-Tabelle sieht dieselbe Auswahl']
+W6 ['# fail 1'] 2 ['not ok 1 - AC-4: Altbestand oeffnen laesst activeMetricKeys null', 'not ok 31 - \\#3061 Speichern und Trip bleiben unveraendert']
+W7 ['# fail 0'] 0 []
+W8 ['# fail 4'] 5 ['not ok 1 - nur Wetter-Metriken hydriert → nicht bereit', 'not ok 2 - nur Layout hydriert → nicht bereit']
+W9 ['# fail 3'] 4 ['not ok 1 - nur Wetter-Metriken hydriert → nicht bereit', 'not ok 2 - nur Layout hydriert → nicht bereit']
+W10 ['# fail 2'] 3 ['not ok 1 - nur Wetter-Metriken hydriert → nicht bereit', 'not ok 5 - zeitlich versetzter Abschluss: erst Wetter-Metriken, dann Layout — Gate kippt erst beim ZWEITEN Abschluss']
+W11 ['# fail 1'] 2 ['not ok 2 - nur Layout hydriert → nicht bereit', 'not ok 80 - AC-3 (Prädikat): das Gate verlangt BEIDE Hydrationen']
+W12 ['# fail 5'] 8 ['not ok 1 - mit geladenem Katalog hydriert: Auswahl-Schluessel', 'not ok 2 - Alarme-Reiter als Deep-Link: Empfindlichkeits-Tabelle sieht dieselbe Auswahl']
+W13 ['# fail 0'] 0 []
+
+== Mutationen Waechter/Ratschen ==
+G1 ['# fail 2'] ['not ok 4 - Exportmenge weatherMetricsCompareSave: genau die lebenden Hydrations-Funktionen', 'not ok 6 - Wortscan frontend/src und frontend/e2e: keiner der 23 Namen kommt außerhalb dieser Datei im Code vor']
+G2 ['# fail 1'] ['not ok 3 - Exportmenge versandVergleichSpeicherung: genau die lebenden Hydrations-Funktionen', 'not ok 7 - \\#3389 AC-1/AC-2/AC-3/AC-6: tote Exporte gelöscht, Exportmenge genau die lebenden Hydrationen']
+G3 ['# fail 1'] ['not ok 2 - Dateien gelöscht: die 21 Testdateien und der Prüfstand wetterMetrikenVergleichPruefstand.ts existieren nicht', 'not ok 7 - \\#3389 AC-1/AC-2/AC-3/AC-6: tote Exporte gelöscht, Exportmenge genau die lebe
+G4 ['# fail 2'] ['not ok 6 - Wortscan frontend/src und frontend/e2e: keiner der 23 Namen kommt außerhalb dieser Datei im Code vor', 'not ok 7 - \\#3389 AC-1/AC-2/AC-3/AC-6: tote Exporte gelöscht, Exportmenge genau die lebenden Hyd
+G5 ['# fail 3'] ['not ok 2 - die eingefrorene Soll-Liste ist unversehrt (46 Eintraege, keine Duplikate)', 'not ok 23 - AC-2: eingefrorene HERKUNFT-Zweig-Liste deckt sich mit dem Ist-Stand']
+G6 ['# fail 3'] ['not ok 2 - die eingefrorene Soll-Liste ist unversehrt (46 Eintraege, keine Duplikate)', 'not ok 23 - AC-2: eingefrorene HERKUNFT-Zweig-Liste deckt sich mit dem Ist-Stand']
+G7 ['# fail 1'] ['not ok 2 - die Summenzeile nennt 3 HERKUNFT und als Gesamtzahl die Summe der Tabellenzeilen (= EINGEFROREN_SOLL_ANZAHL)', 'not ok 34 - AC-23: Summenzeile der AC-2-Endbilanz stimmt mit den Tabellen überein']
+G8 ['# fail 0'] []
+G9 ['# fail 1'] ['not ok 3 - versand: PUT-Rumpf = exakter Eigenfeld-Satz (kein name/location_ids/profil/schedule/id)', 'not ok 27 - Test 1 / AC-7: jeder Reiter sendet ausschließlich seine Eigenfelder']
+
+== Mutationen compareHubPersistenz ==
+P1 ['# fail 13'] ['not ok 1 - zwei sofort aufeinanderfolgende persistPickedIds-Aufrufe laufen seriell, jeder PUT-Body ist exakt { location_ids }', 'not ok 2 - persistPickedIds gefolgt von handleToggleActive: beide laufen seriell, 
+P2 ['# fail 72'] ['not ok 1 - (a) Retry scheitert 500, derselbe Reiter speichert mit 412 ⇒ Konflikt bleibt, Nochmal speichern schreibt BEIDE Eingaben', 'not ok 2 - (b) Retry scheitert 500, derselbe Reiter speichert danach ⇒ 412 (K
+P3 ['# fail 1'] ['not ok 1 - togglePause: PUT-Rumpf exakt { schedule, previous_schedule }; Name eines anderen Tabs bleibt', 'not ok 66 - AC-6: Listenseite /compare — Kebab „Pausieren" sendet nur den Status']
+P4 ['# fail 0'] ['not ok 10 - minus_elter_nimmt_mitgelaufene_kinder_mit # TODO Fehler \\#3363: „−“ an Temperatur lässt die abgeleiteten Größen stehen', 'not ok 1 - Anlegen: Fortbewegung fuss ⇒ Vorlage alpen-trekking; ungesicherte 
+P5 ['# fail 1'] ['not ok 1 - togglePause: PUT-Rumpf exakt { schedule, previous_schedule }; Name eines anderen Tabs bleibt', 'not ok 66 - AC-6: Listenseite /compare — Kebab „Pausieren" sendet nur den Status']
+P6 ['# fail 0'] ['not ok 10 - minus_elter_nimmt_mitgelaufene_kinder_mit # TODO Fehler \\#3363: „−“ an Temperatur lässt die abgeleiteten Größen stehen', 'not ok 1 - Anlegen: Fortbewegung fuss ⇒ Vorlage alpen-trekking; ungesicherte 
+P7 ['# fail 1'] ['not ok 1 - Mutation des Arbeitszustands NACH dem Snapshot veraendert den Snapshot nicht', 'not ok 55 - Edge Case Spec Z.1020: snapshotForRollback liefert einen echten Deep-Copy-Prae-Zustand']
