@@ -45,7 +45,7 @@ Auftraggeber eines Batches.
 |---|---|---|
 | Frontend | `frontend/src/lib/i18n/messages/{de,en}/<bereich>.json` | `start`, `auth`, `nav`, `home`, `listen`, `konto`, `admin`, `wertebereiche`, `versand`, `alarme`, `layout`, `trip`, `vergleich`, `aktionen`, `bausteine`, `fehler`, `hilfe`, `wetter`, `zustellung`, `funktionen` (öffentliche Funktionsübersicht `/funktionen`, #3319) |
 | Python | `src/i18n/messages/{de,en}/<bereich>.json` | `allgemein`, `mail`, `vergleich`, `alarm`, `warnung`, `telegram`, `sms`, `versand`, `inbound`, `api` |
-| Go | `internal/i18n/messages/{de,en}/<bereich>.json` | `fehler`, `auth`, `konto`, `fach`, `mail`, `mcp` (MCP-Konnektor, #3281) |
+| Go | `internal/i18n/messages/{de,en}/<bereich>.json` | `fehler`, `auth`, `konto`, `fach`, `mail`, `alarm` (Radar-Intensitätstexte `alarm.radar.intensitaet.*` für den MCP-Nowcast, #3398), `mcp` (MCP-Konnektor, #3281) |
 
 Die Ladelisten (`frontend/src/lib/i18n/messages/de/index.ts`, Python-Loader, Go-`embed`) sind vollständig
 angelegt. Ein Paket ergänzt Schlüssel in einer fremden Bereichsdatei nur, wenn der Text dorthin gehört;

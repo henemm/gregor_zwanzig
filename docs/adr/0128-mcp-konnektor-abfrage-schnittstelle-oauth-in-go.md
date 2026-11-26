@@ -29,3 +29,7 @@ Der PO will in der Claude-App (Handy, Web) freie Wetterfragen zu beliebigen Orte
 - **Positiv:** Der PO fragt das Wetter beliebiger Orte direkt in Claude; Gregor liefert Daten, Claude formuliert. Sperre und Freigabe wirken sofort.
 - **Negativ / Preis:** Erster OAuth-Server im Projekt mit eigener Angriffsfläche (öffentliche Registrierung und Token-Tausch). Codes gehen bei einem Neustart verloren (neu verbinden genügt). Auf Staging braucht es `auth_basic off`-Ausnahmen in henemm-infra.
 - **Folgepflichten:** Neue Werkzeuge liefern nie Trip-, Orts-, Vergleichs- oder Empfängerdaten ohne neues ADR. Neue Nutzertexte nur über den Katalog `mcp.json` (de/en). `GZ_MCP_USER_IDS` muss in Staging und Produktion gesetzt sein, sonst kann niemand verbinden. „Auf allen Geräten abmelden“ beendet Konnektor-Tokens nicht; Entzug geht über Sperre oder Allowlist.
+
+## Nachtrag (2026-11-26, #3398)
+
+Die Werkzeugmenge ist um `regen_nowcast` erweitert (Radar-Nowcast, Spec `docs/specs/modules/mcp_wetter_vollstaendig.md`); `wetter` liefert jetzt alle wählbaren Katalogmetriken. Die Entscheidung bleibt unverändert: Wetterdaten, kein Kanal, keine Nutzerdaten.
