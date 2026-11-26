@@ -123,6 +123,10 @@ ANKER: dict[str, tuple[str, str]] = {
     "api.fehler.mcp_zeitraum_ausserhalb": (
         "Der Zeitraum liegt außerhalb der Vorhersage, für ihn gibt es keine Stundenwerte.",
         "The period lies outside the forecast; there are no hourly values for it."),
+    # Issue #3398: unbekannter Feldname im Parameter felder.
+    "api.fehler.mcp_feld_unbekannt": (
+        "Das Feld „{feld}“ gibt es nicht. Gültige Feldnamen: {gueltig}.",
+        'There is no field "{feld}". Valid field names: {gueltig}.'),
     "api.fehler.unbekannt": (
         "Die Anfrage konnte nicht verarbeitet werden.",
         "The request could not be processed."),

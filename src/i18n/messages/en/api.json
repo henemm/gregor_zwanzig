@@ -37,6 +37,7 @@
   "api.fehler.mcp_zeitpunkt_ungueltig": "The time given for {parameter} is invalid. Expected ISO 8601, for example 2026-11-22T14:00.",
   "api.fehler.mcp_bis_vor_von": "The end of the period (bis) must be after its start (von).",
   "api.fehler.mcp_zeitraum_ausserhalb": "The period lies outside the forecast; there are no hourly values for it.",
+  "api.fehler.mcp_feld_unbekannt": "There is no field \"{feld}\". Valid field names: {gueltig}.",
   "api.skala.wind.schwach": "weak",
   "api.skala.wind.maessig": "moderate",
   "api.skala.wind.stark": "strong",

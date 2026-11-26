@@ -22,6 +22,7 @@ from app.models import (
     ForecastMeta,
     NormalizedTimeseries,
     Provider,
+    PrecipType,
     ThunderLevel,
 )
 from providers.base import ProviderError
@@ -61,6 +62,10 @@ def _nearest(latitude: float, longitude: float) -> _FixtureLocation:
 
 def _maybe_int(value: object) -> Optional[int]:
     return int(value) if value is not None else None  # type: ignore[arg-type]
+
+
+def _maybe_precip_type(value: object) -> Optional[PrecipType]:
+    return PrecipType(value) if value is not None else None
 
 
 def _maybe_thunder(value: object) -> Optional[ThunderLevel]:
@@ -142,6 +147,14 @@ class FixtureProvider:
                     snowfall_limit_m=_maybe_int(p.get("snowfall_limit_m")),
                     wind_dir_deg=p.get("wind_dir_deg"),
                     freezing_level_m=_maybe_int(p.get("freezing_level_m")),
+                    # Issue #3398: uebrige waehlbare Katalogfelder.
+                    wind_direction_deg=_maybe_int(p.get("wind_direction_deg")),
+                    wind_chill_c=p.get("wind_chill_c"),
+                    humidity_pct=_maybe_int(p.get("humidity_pct")),
+                    dewpoint_c=p.get("dewpoint_c"),
+                    pressure_msl_hpa=p.get("pressure_msl_hpa"),
+                    snow_new_24h_cm=p.get("snow_new_24h_cm"),
+                    precip_type=_maybe_precip_type(p.get("precip_type")),
                 )
             )
 

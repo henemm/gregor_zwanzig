@@ -167,3 +167,33 @@ def test_ac5_confidence_als_feld_ist_unbekannt():
     resp = _abruf(felder="confidence_pct")
     assert resp.status_code == 422, resp.text
     assert resp.json()["code"] == "mcp_feld_unbekannt"
+
+
+def test_ac5_unbekanntes_feld_rumpf_traegt_feld_und_gueltig():
+    """F003 (Adversary): Go baut den Text der Kontosprache aus ``feld``/``gueltig``."""
+    body = _abruf(felder="t2m_c,gibt_es_nicht").json()
+    assert body["feld"] == "gibt_es_nicht"
+    assert body["gueltig"] == sorted(_erwartete_felder())
+
+
+def test_ac2_neue_waehlbare_metrik_erscheint_confidence_und_cape_nie(monkeypatch):
+    """F007 (Adversary): eine zusaetzlich waehlbare Katalog-Metrik erscheint ohne
+    Codeaenderung; confidence_pct und cape_jkg fehlen selbst dann, wenn ein
+    Katalogeintrag sie waehlbar machte."""
+    import dataclasses
+
+    import app.metric_catalog as katalog
+
+    echt = katalog.get_all_metrics()
+    vorlage = echt[0]
+    zusatz = [
+        dataclasses.replace(vorlage, id="testmetrik_tag", dp_field="is_day", unit="Tag"),
+        dataclasses.replace(vorlage, id="test_confidence", dp_field="confidence_pct", unit="%"),
+        dataclasses.replace(vorlage, id="test_cape", dp_field="cape_jkg", unit="J/kg"),
+    ]
+    monkeypatch.setattr(katalog, "get_all_metrics", lambda: [*echt, *zusatz])
+    body = _abruf().json()
+    assert body["einheiten"]["is_day"] == "Tag"
+    assert all("is_day" in s for s in body["stunden"])
+    assert not (set(body["einheiten"]) & NIE)
+    assert not (_stundenfelder(body) & NIE)

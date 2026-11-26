@@ -3,8 +3,8 @@
 SPEC: docs/specs/modules/mcp_wetter_konnektor.md
 
 Go ruft diesen Endpunkt erst nach der Kontingent-Buchung auf (``X-GZ-Core-Auth``,
-ADR-0062). Keine Bewertung, kein Renderer: ausgegeben werden die Rohfelder des
-Datenpunkts mit ihrer Einheit aus dem Katalog; die Sonnenminuten je Stunde
+ADR-0062). Keine Bewertung, kein Renderer: ausgegeben werden die Felder aller
+waehlbaren Katalog-Metriken mit ihrer Einheit aus dem Katalog (#3398); die Sonnenminuten je Stunde
 kommen aus der einen DNI-Umrechnung des Bestands (ADR-0127). Der Endpunkt liest
 keine Nutzerdaten.
 """
@@ -16,6 +16,7 @@ from enum import Enum
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import JSONResponse
 
 from api.fehler import api_fehler
 from i18n import t
@@ -29,26 +30,46 @@ HOECHSTZEITRAUM = timedelta(days=7)
 STANDARDZEITRAUM = timedelta(hours=24)
 _STUNDE = timedelta(hours=1)
 
-#: Ausgegebene Rohfelder des Datenpunkts (Namen bleiben unuebersetzt, ADR-0104).
-_ROHFELDER = (
-    "t2m_c", "precip_1h_mm", "pop_pct", "wind10m_kmh", "gust_kmh",
-    "wind_direction_deg", "cloud_total_pct", "thunder_level", "wmo_code",
-    "snowfall_limit_m", "freezing_level_m",
-)
+#: Nie ausgegeben: Verlaesslichkeits-Meta (#710) und CAPE (#1585), auch wenn
+#: ein Katalogeintrag sie je waehlbar machen sollte.
+_NIE = frozenset({"confidence_pct", "cape_jkg"})
 _SONNENMINUTEN = "sonnenminuten"
 
 
 def _einheiten() -> dict[str, str]:
-    """Einheit je ausgegebenem Feld; Rohfelder nach dem Katalog (``dp_field``)."""
+    """Einheit je ausgegebenem Feld, abgeleitet aus den waehlbaren Katalog-Metriken.
+
+    Feldname = ``dp_field`` (dedupliziert, Fenstermetriken teilen ihn); Strahlung
+    erscheint nur als abgeleitetes ``sonnenminuten`` (ADR-0127), dazu ``wmo_code``.
+    Eine neu waehlbare Metrik erscheint so ohne Codeaenderung (#3398)."""
     from app.metric_catalog import get_all_metrics
 
-    katalog: dict[str, str] = {}
+    einheiten: dict[str, str] = {}
     for metrik in get_all_metrics():
-        katalog.setdefault(metrik.dp_field, metrik.unit)
-    einheiten = {feld: katalog.get(feld, "") for feld in _ROHFELDER}
+        einheiten.setdefault(metrik.dp_field, metrik.unit or "")
+    for feld in ("dni_wm2", *_NIE):
+        einheiten.pop(feld, None)
     einheiten["wmo_code"] = "WMO"
     einheiten[_SONNENMINUTEN] = "min"
     return einheiten
+
+
+def _auswahl(felder: Optional[list[str]]) -> dict[str, str] | JSONResponse:
+    """Einheiten der gewaehlten Felder (Komma-Liste oder Mehrfachparameter).
+
+    Ohne Auswahl alle Felder. Ein unbekannter Name ergibt 422 ``mcp_feld_unbekannt``;
+    ``feld`` und ``gueltig`` stehen zusaetzlich maschinenlesbar im Rumpf, damit Go
+    den Text in der Kontosprache mit den gueltigen Namen bauen kann."""
+    alle = _einheiten()
+    namen = [n.strip() for eintrag in felder or [] for n in eintrag.split(",") if n.strip()]
+    for name in namen:
+        if name not in alle:
+            gueltig = sorted(alle)
+            return JSONResponse(status_code=422, content={
+                "code": "mcp_feld_unbekannt", "feld": name, "gueltig": gueltig,
+                "detail": t("api.fehler.mcp_feld_unbekannt", "de",
+                            feld=name, gueltig=", ".join(gueltig))})
+    return {name: alle[name] for name in namen} if namen else alle
 
 
 def _zeitpunkt(text: str, zone: tzinfo, parameter: str) -> datetime:
@@ -82,16 +103,18 @@ def _zeitraum(von: Optional[str], bis: Optional[str], zone: tzinfo) -> tuple[dat
     return start, ende, begrenzt
 
 
-def _stunde(punkt, zone: tzinfo, band: tuple[float, float]) -> dict:
-    """Eine Stunde: Ortszeit mit Offset, vorhandene Rohfelder, Sonnenminuten."""
+def _stunde(punkt, zone: tzinfo, band: tuple[float, float], felder: dict[str, str]) -> dict:
+    """Eine Stunde: Ortszeit mit Offset, vorhandene gewaehlte Felder, Sonnenminuten."""
     from services.weather_metrics import WeatherMetricsService
 
     zeile: dict = {"zeit": local_dt(punkt.ts, zone).isoformat()}
-    for feld in _ROHFELDER:
+    for feld in felder:
+        if feld == _SONNENMINUTEN:
+            continue
         inhalt = getattr(punkt, feld, None)
         if inhalt is not None:
             zeile[feld] = inhalt.value if isinstance(inhalt, Enum) else inhalt
-    if punkt.dni_wm2 is not None:
+    if _SONNENMINUTEN in felder and punkt.dni_wm2 is not None:
         anteil = WeatherMetricsService.dni_to_sunny_fraction(punkt.dni_wm2, *band)
         zeile[_SONNENMINUTEN] = round(anteil * 60)
     return zeile
@@ -106,16 +129,21 @@ def get_mcp_wetter(
     # Issue #1991 (wie /forecast): optionaler Hoehen-Override; ohne Angabe
     # ermittelt Open-Meteo die Hoehe selbst aus dem DEM.
     elevation_m: Optional[int] = Query(default=None),
+    # Issue #3398: optionale Feldauswahl, Komma-Liste oder Mehrfachparameter.
+    felder: Optional[list[str]] = Query(default=None),
 ):
     from app.config import Location, Settings
     from providers.base import get_provider
 
     zone = tz_for_coords(lat, lon)
     start, ende, begrenzt = _zeitraum(von, bis, zone)
+    auswahl = _auswahl(felder)
+    if isinstance(auswahl, JSONResponse):
+        return auswahl
     try:
         reihe = get_provider("openmeteo").fetch_forecast(
             Location(latitude=lat, longitude=lon, elevation_m=elevation_m), start=start, end=ende,
-            enrich_ensemble=False, enrich_snow=False,
+            enrich_ensemble=False, enrich_snow=True,
         )
     except Exception as e:
         # Wie /forecast (#2961): Ausnahmetext nur ins Log, nach aussen Katalogtext.
@@ -127,12 +155,12 @@ def get_mcp_wetter(
 
     settings = Settings()
     band = (settings.sunny_dni_min_wm2, settings.sunny_dni_max_wm2)
-    stunden = [_stunde(p, zone, band) for p in reihe.data if start <= to_utc(p.ts) < ende]
+    stunden = [_stunde(p, zone, band, auswahl) for p in reihe.data if start <= to_utc(p.ts) < ende]
     if not stunden:
         # Vergangenheit oder jenseits des Vorhersagehorizonts: Hinweis statt leerer Liste.
         raise api_fehler(422, "mcp_zeitraum_ausserhalb", None)
     return {
         "lat": lat, "lon": lon, "zeitzone": str(zone),
         "von": local_dt(start, zone).isoformat(), "bis": local_dt(ende, zone).isoformat(),
-        "begrenzt": begrenzt, "einheiten": _einheiten(), "stunden": stunden,
+        "begrenzt": begrenzt, "einheiten": auswahl, "stunden": stunden,
     }
