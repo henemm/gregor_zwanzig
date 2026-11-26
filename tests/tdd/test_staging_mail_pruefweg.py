@@ -117,6 +117,7 @@ class _Staging:
         self.preset_ohne_id = False             # Preset-POST-Antwort ohne "id"
         self.kern_verzoegerung_s = 0.0          # Kern antwortet erst nach dieser Zeit
         self.login_antwort: dict | None = None  # erzwingt eine abweichende Login-Antwort (F003)
+        self.anlage_placements: dict | None = None  # wie Go anlageTabelle: Tabelle beim Trip-POST
         outer = self
 
         class H(BaseHTTPRequestHandler):
@@ -188,11 +189,24 @@ class _Staging:
                 if pfad == "/api/auth/account/delete":
                     del u[sid]
                     return self._antwort(200, {})
+                if methode == "PUT" and re.fullmatch(r"/api/briefings/[^/]+/placements", pfad):
+                    # wie BriefingPlacementsPutHandler: Rumpf = ganze Tabelle, nur eigenes Abo der Art
+                    oid = pfad.split("/")[3]
+                    if (query.get("kind") or [""])[0] != "route" or oid not in n["trips"]:
+                        return self._antwort(404, {"error": "not_found"})
+                    alt = n["trips"][oid]
+                    n["trips"][oid] = {**alt, "display_config": {
+                        **(alt.get("display_config") or {}), "placements": body}}
+                    return self._antwort(200, {"placements": body})
                 for sammlung, praefix in (("trips", "/api/trips"), ("locations", "/api/locations"),
                                           ("presets", "/api/compare/presets")):
                     if methode == "POST" and pfad == praefix:
                         oid = body.get("id") or "p-" + secrets.token_hex(3)
                         n[sammlung][oid] = body
+                        if sammlung == "trips" and outer.anlage_placements is not None \
+                                and "display_config" not in body:
+                            n[sammlung][oid] = {**body, "display_config": {
+                                "placements": json.loads(json.dumps(outer.anlage_placements))}}
                         if sammlung == "presets" and outer.preset_ohne_id:
                             return self._antwort(201, {k: v for k, v in body.items() if k != "id"})
                         return self._antwort(201, {**body, "id": oid})
@@ -227,6 +241,7 @@ class _Staging:
             do_GET = lambda s: s._handle("GET")       # noqa: E731
             do_POST = lambda s: s._handle("POST")     # noqa: E731
             do_DELETE = lambda s: s._handle("DELETE")  # noqa: E731
+            do_PUT = lambda s: s._handle("PUT")       # noqa: E731
 
         self._srv = ThreadingHTTPServer(("127.0.0.1", 0), H)
         self.url = f"http://127.0.0.1:{self._srv.server_address[1]}"
@@ -1247,7 +1262,8 @@ def test_trip_mit_konfig_uebergibt_gespeichertes_objekt_als_datei(staging):
     assert "--orte" not in argv
     assert tag in _wert(argv, "--to-contains")
     (gespeichert,) = _posts(staging, "/api/trips")
-    assert r.konfig == [gespeichert]
+    # display_config setzt der --konfig-Modus nachtraeglich (Form Roh, Test unten)
+    assert [{k: v for k, v in k_.items() if k != "display_config"} for k_ in r.konfig] == [gespeichert]
     assert any(m == "GET" and p == f"/api/trips/{gespeichert['id']}" for m, p, _ in staging.bodies)
 
 
@@ -1327,3 +1343,59 @@ def test_main_orte_anzahl_zwei_ist_exit_2_eins_mit_konfig_laeuft(monkeypatch, tm
     assert len(_posts(staging, "/api/locations")) == 1
     assert len(r.orte[0]) == 1 and "--konfig" in r.aufrufe[0]
     assert staging.users == {}
+
+
+# AC-1 Nachtrag (Befund Echtlauf 26.11.): Form Roh fuer die Ampel-Groessen ----------
+
+_AMPEL_GROESSEN = ("wind", "gust", "precipitation", "rain_probability")
+_ERSTANLAGE = {"version": 1, "outlook_reports": ["evening"], "rows": [
+    {"metric_id": "temperature", "places": {"sms": False}},
+    {"metric_id": "wind", "formats": {"email": "simplified", "telegram": "simplified"}},
+    {"metric_id": "gust", "places": {"telegram": False}, "formats": {"email": "simplified"}},
+    {"metric_id": "cloud_total", "formats": {"email": "simplified"}},
+    {"metric_id": "precipitation", "formats": {"email": "simplified"}},
+]}
+
+
+def _email_formen(trip: dict) -> dict:
+    rows = trip["display_config"]["placements"]["rows"]
+    return {r["metric_id"]: (r.get("formats") or {}).get("email") for r in rows}
+
+
+def test_trip_mit_konfig_traegt_form_roh_fuer_die_ampel_groessen(staging):
+    w = _werkzeug()
+    staging.anlage_placements = _ERSTANLAGE
+    r = _ZustandRunner()
+    assert w.fuehre_lauf(["trip"], api=staging.api(w), validator_runner=r, tag="f1-aaaa", konfig=True) == 0
+    (gespeichert,) = r.konfig                    # so liegt der Trip beim Validator-Lauf am Fake
+    formen = _email_formen(gespeichert)
+    assert all(formen.get(mid) == "raw" for mid in _AMPEL_GROESSEN), formen
+
+
+def test_form_roh_ist_merge_und_ersetzt_nichts_anderes(staging):
+    w = _werkzeug()
+    staging.anlage_placements = _ERSTANLAGE
+    r = _ZustandRunner()
+    assert w.fuehre_lauf(["trip"], api=staging.api(w), validator_runner=r, tag="f2-aaaa", konfig=True) == 0
+    (gespeichert,) = r.konfig
+    tabelle = gespeichert["display_config"]["placements"]
+    assert tabelle["version"] == 1 and tabelle["outlook_reports"] == ["evening"]
+    zeilen = {z["metric_id"]: z for z in tabelle["rows"]}
+    assert [z["metric_id"] for z in tabelle["rows"][:5]] == [z["metric_id"] for z in _ERSTANLAGE["rows"]]
+    assert zeilen["temperature"] == {"metric_id": "temperature", "places": {"sms": False}}
+    assert zeilen["cloud_total"]["formats"] == {"email": "simplified"}
+    assert zeilen["wind"]["formats"] == {"email": "raw", "telegram": "simplified"}
+    assert zeilen["gust"]["places"] == {"telegram": False}
+
+
+def test_ohne_konfig_bleibt_trip_ohne_formaenderung(staging):
+    from datetime import date
+
+    w = _werkzeug()
+    staging.anlage_placements = _ERSTANLAGE
+    assert w.fuehre_lauf(["trip"], api=staging.api(w), validator_runner=_Runner(), tag="f3-aaaa",
+                         heute=date(2026, 11, 26)) == 0
+    (body,) = _posts(staging, "/api/trips")
+    assert "display_config" not in body
+    assert w.baue_trip_fuer_mail("f3-aaaa", date(2026, 11, 26)) == body
+    assert not any(m == "PUT" for m, _p, _b in staging.bodies)

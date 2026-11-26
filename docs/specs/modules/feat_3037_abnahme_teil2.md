@@ -96,12 +96,14 @@ Siehe Acceptance Criteria AC-7 bis AC-12.
 
 ## Known Limitations
 
+- Ampelfarbe der Form „Einfach“ (Ampelpunkt ohne Zahl) ist im Staging-Mailnachweis nicht prüfbar, weil der Mail-Prüfweg keine Rohwerte der Prognose kennt; sie ist in der Kern-Schicht (#3237) abgedeckt. Der Staging-Nachweis nutzt deshalb die Form „Roh“ für die Ampel-Größen.
+
 - Handy nur im 390-px-Fenster; das echte Gerät sieht Henning über das Soll/Ist-Bild.
 - Messläufe AC-7 bis AC-12 sind Live-Läufe gegen Staging, nicht Teil der CI.
 
 ## Acceptance Criteria
 
-- **AC-1:** Given der Mail-Prüfweg wird mit `--konfig` für einen Trip aufgerufen / When der Wegwerf-Trip angelegt und versendet ist / Then liest das Werkzeug den gespeicherten Trip per API und der Validator läuft mit `--konfig <Datei>` und `--to-contains <Wegwerf-Nutzer>`.
+- **AC-1:** Given der Mail-Prüfweg wird mit `--konfig` für einen Trip aufgerufen / When der Wegwerf-Trip angelegt und versendet ist / Then liest das Werkzeug den gespeicherten Trip per API und der Validator läuft mit `--konfig <Datei>` und `--to-contains <Wegwerf-Nutzer>`; im `--konfig`-Modus legt das Werkzeug den Wegwerf-Trip mit der Form „Roh“ für Wind, Böen, Regen und Regenwahrscheinlichkeit in der Stundentabelle an, damit die Ampelfarbe jeder Stunde gegen eine Zahl prüfbar ist (Befund Echtlauf 26.11.: bei „Einfach“ meldet der Validator nach #3237 „kein Vergleichswert“, Exit 1).
   - Test: Kern-Schicht mit Fake-Staging-Rand prüft die Validator-Argumente (Verhalten des Aufrufs, kein Dateiinhalt-Check).
 - **AC-2:** Given der Mail-Prüfweg wird mit `--konfig` für einen Ortsvergleich aufgerufen / When Preset und Orte angelegt sind / Then bekommt der Validator zusätzlich `--orte` mit allen angelegten Orten und `--orte` erscheint nie ohne `--konfig`.
   - Test: Kern-Schicht prüft die Argumente mit und ohne `--konfig`.
@@ -132,5 +134,7 @@ Siehe Acceptance Criteria AC-7 bis AC-12.
 - **Rationale:** Reine Werkzeug-Erweiterung des Staging-Mail-Prüfwegs und Messläufe; keine Entscheidungsfläche (Kanäle, Provider, Datenmodell, Auth, Editor, Test-/Deploy-Strategie) wird geändert.
 
 ## Changelog
+
+- 2026-11-26: AC-1 ergänzt nach Echtlauf (Trip-Mail mit `--konfig` Exit 1 nur wegen nicht prüfbarer Ampelpunkte): Wegwerf-Trip im `--konfig`-Modus mit Form „Roh“ für die Ampel-Größen.
 
 - 2026-11-26: Initial spec created

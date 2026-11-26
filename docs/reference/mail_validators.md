@@ -458,6 +458,13 @@ uv run python3 .claude/hooks/email_spec_validator.py \
 Das Postfach ist geteilt: `--konfig` setzt voraus, dass die geprüfte Mail dem
 Nutzer des JSON gehört (Auswahl über `--to-contains`).
 
+Bequemer Weg gegen echt zugestellte Staging-Mail (#3037): der Mail-Prüfweg legt
+Wegwerf-Nutzer und Objekt an, liest es per API (`GET /api/trips/{id}` bzw.
+`/api/compare/presets/{id}`), legt `konfig.json` (+ `orte.json`) privat (0700/0600)
+ab, ruft den Validator mit `--konfig`/`--orte`/`--to-contains +<tag>@` und löscht alles danach:
+`python3 .claude/tools/staging_mail_pruefen.py --typ trip|compare --konfig [--orte-anzahl 1|3]`
+(GET-Fehler ⇒ Exit 2, kein Validator-Lauf).
+
 ## Windrichtungs-Färbung — `--windrichtung JSON` (seit #3232, Nachzug #3228)
 
 Beide Validatoren prüfen mit `--windrichtung` die Windrichtungs-Färbung aus #3228

@@ -110,3 +110,10 @@ Staging, Staging-`.env` (Prüfkonto, Kern-Secret, IMAP), Stalwart-Test-Postfach,
 ### Open Questions
 
 Keine Produktfrage.
+
+## Befund Echtlauf Mails 26.11.
+
+- Orte (3) und ein Ort mit `--konfig`: Validator Exit 0.
+- Trip DE/EN mit `--konfig`: Exit 1, einzige Meldung „Ampelfarbe … kein Vergleichswert (Ampelpunkt, Klartext ohne Zahl,
+  kein Rohwert in --ampel-werte)“ für Wind/Böen/Regen/Regen-W. (Regel #3237, `briefing_mail_validator.py` ~Z. 1242).
+  Ohne `--konfig` Exit 0. Lösung (Spec AC-1 ergänzt): Wegwerf-Trip im `--konfig`-Modus mit Form „Roh“ für diese Größen.

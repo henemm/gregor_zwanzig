@@ -1,7 +1,7 @@
 ---
 spec_file: docs/specs/modules/feat_3037_abnahme_teil2.md
-spec_sha256: aedacdb063d25232b4a5470fc6a3e745133a7d5620d1bf8a4f23838401fa731b
-spec_frozen_sha256: 71c91a486dedd0ac0603ba23b8151d233b6ca260f220c55bca70e5f65484ae5f
+spec_sha256: d59e8161211fb2778b019a482452cfd71ad2c0d79f833078a49766ed4ec9e086
+spec_frozen_sha256: fa9c2acb7ac80a2a7731643b571880ac854438d2a869e5cf1657b73447b929e8
 ---
 
 # PO-Briefing: abnahme-3037-teil2
@@ -12,21 +12,20 @@ spec_frozen_sha256: 71c91a486dedd0ac0603ba23b8151d233b6ca260f220c55bca70e5f65484
 
 ## Was gebaut wird
 
-Die Abnahme der Tabelle „Was steht wo“ wird abgeschlossen: Trip und Orte werden gegen echte Testmails und Bilder geprüft.
+Der Mail-Prüfweg weist nach, dass „Einstellung = Mail-Inhalt“ für Trip, drei Orte und einen Ort stimmt.
 
 ## Definition of Done
 
-Alle Messläufe sind auf Staging grün oder jeder Befund hat ein Issue, Henning hat die Soll/Ist-Bilder erhalten, und #3037 ist geschlossen.
+Prüf-Mails für Trip, drei Orte und einen Ort bestehen die Prüfung, Bilder und Soll/Ist-Vergleiche liegen Henning vor, danach wird #3037 geschlossen.
 
 ## Wie geprüft wird
 
-Automatische Tests sichern das Prüfwerkzeug ab; Bilder, Mails und Elementliste werden live auf Staging gemessen, nicht in der Testautomatik.
+Werkzeug-Tests ohne Netz prüfen Aufruf, Aufräumen und Fehlerfall; echte Staging-Mails und Bilder werden live gemessen, nicht in der Automatik.
 
 ## Kritische Anmerkungen
 
-- Handy wird nur im 390-Pixel-Fenster geprüft; das echte Gerät beurteilt Henning anhand der Bilder.
-- Mail-Nachweis nur für E-Mail; Englisch nur für den Trip, Orte nur Deutsch.
-- Zusätzlich gebaut: Erweiterung des Mail-Prüfwerkzeugs, nötig für Konfigurationsabgleich und Ein-Ort-Fall.
+- Die Ampelfarbe der Form „Einfach“ ist im Staging-Mailnachweis nicht prüfbar; Nachweis nutzt „Roh“, „Einfach“ nur im Kern-Test.
+- Die Zusage, den Test-Trip mit Form „Roh“ anzulegen, hat keinen eigenen Automatik-Test, nur den Live-Lauf.
 
 ## Freigabe-Frage
 
