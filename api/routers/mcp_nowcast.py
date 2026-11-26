@@ -77,7 +77,7 @@ def get_mcp_nowcast(
     # Prioritaet user_briefing: Go hat das Kontingent bereits gebucht, der Core
     # bucht nicht doppelt; user_id=None (nutzerfrei, Spec S2).
     ergebnis = RadarNowcastService().get_nowcast(
-        lat, lon, elevation_m, priority="user_briefing", user_id=None,
+        lat, lon, elevation_m=elevation_m, priority="user_briefing", user_id=None,
     )
     frames = _frames(ergebnis.frames, datetime.now(timezone.utc), zone)
     return {"lat": lat, "lon": lon, "zeitzone": str(zone),
