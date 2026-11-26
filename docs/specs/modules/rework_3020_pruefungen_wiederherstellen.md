@@ -71,7 +71,7 @@ R1b, Wächter:
 - Regel neu: Ein Verweis gilt nur bei echtem Treffer, nämlich einem wörtlichen Titel oder einer Vorlage mit mindestens einem festen Textanteil. Eine reine Platzhalter-Vorlage zählt nie.
 - Selbstnachweis: ein erfundener Testname wird rot; eine Vorlage mit festem Anteil trifft weiter.
 - Die 26 falsch-grünen Fälle `D-*-frontend` in `fallliste_editor.json` (22× `frontend_seite_*`, 4× `n3_*`) werden einzeln auf einen existierenden, passenden Test mit Dateiangabe (`datei.test.ts::Titel`, wörtlicher Titel) umverwiesen oder bekommen einen ehrlichen Status. Erlaubt laut `ERLAUBTE_STATUS`: `gruen`, `rot_erwartet`, `ausnahme`, `offen_feature`; `ausnahme` und `offen_feature` verlangen ein Verweismuster `#N`/`ADR-N`.
-- Telegram-Schnittlinie: nicht entfallen. ADR-0124 Nr. 3: beim Trip zeigt die Telegram-Spalte ab der achten Metrik „nur Tageswert“. Das ist in der Karte gebaut und belegt durch `was_steht_wo_karte.test.ts::Trip: „nur Tageswert“, „passt nicht mehr“, Zeile mit max_length und Hinweissatz für Trip`. Die Katalogfälle zur Schnittlinie verweisen darauf und stehen auf `gruen`. Entfallen ist nur die alte `LTCutLine`. Der Browser-Fall folgt mit #3375.
+- Telegram-Schnittlinie: nicht entfallen. ADR-0124 Nr. 3: beim Trip zeigt die Telegram-Spalte ab der achten Metrik „nur Tageswert“. Das ist in der Karte gebaut und belegt durch `was_steht_wo_karte.test.ts::Trip: „nur Tageswert“, „passt nicht mehr“, Zeile mit max_length und Hinweissatz für Trip`. Die Katalogfälle zur Schnittlinie verweisen darauf und stehen auf `gruen`. Entfallen ist nur die alte `LTCutLine`. Der Browser-Fall ist mit #3375 erledigt: `kanal-grenzen-und-hinweise.staging.spec.ts` (#3375 AC-1/AC-2, Gegenfall AC-3).
 - SMS Roh/Einfach: entfallen, ADR-0124 Nr. 5 (SMS ohne Wahl); Status `ausnahme`, Verweis ADR-0124.
 - Nur-ein-Bericht (die vier `n3_*`-Fälle): Beleg ist der Dateikopf von `nurEinBericht.ts` („kennzeichnet bis Phase 2 (#3065)“); #3065 ist geschlossen. Prod-Messung 25.11.2026 (Kontext-Dokument, Nachtrag): 21 Dateien, 0 Metriken nur in einem Bericht, 0 Nutzer betroffen. Status `ausnahme`, Verweis #3065. Das ist eine Entscheidung des Tech Leads auf Grundlage von #3065 und der Messung.
 
@@ -177,7 +177,7 @@ Zeigt ein wiederhergestellter Test einen echten Produktfehler, wird er gemeldet 
 
 - **R2 (Waisen löschen) und #3366:** eigener Durchlauf.
 - **#3374:** tote Browser-Specs, eigener Durchlauf.
-- **#3375:** Browser-Fall zu Telegram „nur Tageswert“.
+- **#3375:** Browser-Fall zu Telegram „nur Tageswert“ (erledigt mit #3375: `kanal-grenzen-und-hinweise.staging.spec.ts`; Marken über 14 Auflösungen: `kuerzel-marken-sichtbar.staging.spec.ts`).
 - `frontend/src/lib/components/molecules/EinstellTabelle.svelte` und deren Test (andere Sitzung); Dateien unter `.claude/hooks`.
 - Wiederaufbau entfallener Alt-Funktionen (`LTCutLine`, SMS Roh/Einfach, Nur-ein-Bericht).
 
