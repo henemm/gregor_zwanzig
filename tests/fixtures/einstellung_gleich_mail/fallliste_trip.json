@@ -2252,8 +2252,8 @@
       "test": "test_p7_global_nachtraeglich_in_gespeicherter_liste",
       "ac": "AC-10, Konzept §5 Punkt 6",
       "befund": "Nachpruefung Punkt 7 (H4)",
-      "status": "offen_feature",
-      "verweis": "#3047 Nachpruefung Punkt 7: gespeicherte Liste kann 'bewusst abgewaehlt' und 'spaeter global eingeschaltet' nicht unterscheiden (Trip channel_layouts: Editor schreibt jede Katalog-Metrik, abwesende als enabled:false; Altbestand Golden C #2422 wertet fehlenden Eintrag als Abwahl; Orte/Ausblick/Stunden: reine ID-Listen) -> Datenmodell-Entscheidung (ADR zu ADR-0050) noetig"
+      "status": "gruen",
+      "verweis": "ADR-0124 Nr. 5 (#3122): fehlende Zeile = angehakt; P7 auf gespeicherter Tabelle belegt (#3102)"
     },
     {
       "id": "trip-p7--global_nachtraeglich-trip_ausblick--html",
@@ -2264,8 +2264,8 @@
       "test": "test_p7_global_nachtraeglich_in_gespeicherter_liste",
       "ac": "AC-10, Konzept §5 Punkt 6",
       "befund": "Nachpruefung Punkt 7 (H4)",
-      "status": "offen_feature",
-      "verweis": "#3047 Nachpruefung Punkt 7: gespeicherte Liste kann 'bewusst abgewaehlt' und 'spaeter global eingeschaltet' nicht unterscheiden (Trip channel_layouts: Editor schreibt jede Katalog-Metrik, abwesende als enabled:false; Altbestand Golden C #2422 wertet fehlenden Eintrag als Abwahl; Orte/Ausblick/Stunden: reine ID-Listen) -> Datenmodell-Entscheidung (ADR zu ADR-0050) noetig"
+      "status": "gruen",
+      "verweis": "ADR-0124 Nr. 5 (#3122): fehlende Zeile = angehakt; P7 auf gespeicherter Tabelle belegt (#3102)"
     },
     {
       "id": "trip-bericht-an--morgen_an--html",

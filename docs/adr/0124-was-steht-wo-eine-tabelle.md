@@ -55,7 +55,7 @@ Der PO hat anhand von Bildern entschieden (Varianten nebeneinander, echte Render
 - **Folgepflichten:**
   - Migration nach Read-Modify-Write mit Merge (ADR-0101), Bestandsdaten bleiben erhalten. Welche der heutigen Reihenfolgen je Kanal führt, legt die Spec fest.
   - Ein Datenmodell, ein Speicherweg und ein Resolver für Trip und Orte. `WeatherMetricsTab` und der Übergangsblock im Reiter Zustellung entfallen.
-  - Leitlinie für den Bau: Die Naht ist das View-Model des Lese-Resolvers (`src/services/channel_list_resolver.py`). Ausgaben, die ausschließlich daraus lesen, sind vom Neuschnitt unberührt; deshalb zuerst alle Ausgaben auf das View-Model stellen (#3099, #3100), danach den Eingang des Resolvers tauschen. Die schreibende Migration aus #3102 geht im Bau zu #3122 auf.
+  - Leitlinie für den Bau: Die Naht ist das View-Model des Lese-Resolvers (`src/services/channel_list_resolver.py`). Ausgaben, die ausschließlich daraus lesen, sind vom Neuschnitt unberührt; deshalb zuerst alle Ausgaben auf das View-Model stellen (#3099, #3100), danach den Eingang des Resolvers tauschen. Die schreibende Migration aus #3102 geht im Bau zu #3122 auf. (Erledigt: #3157, #3351.)
   - Offen für die Spec: SMS-Anfang bei Orten (Vorschlag `Orte 18.11.: …`, bei einem Ort `Tecklenburg 18.11.: …`; berührt `sms_format.md`), Wirkung von „Einfach“ im Orte-Telegram, Kompakt-Mail und Ausblick-Schalter (Regel #722), Vorbelegung des Ausblicks, wenn nur das Morgen-Briefing aktiv ist. Dazu:
     - Regel bei leerer Grundauswahl. Heute ist sie je Fläche und Stelle verschieden (ADR-0050, Nachtrag 2026-11-17).
     - Kürzel-Legende (Konzept W21, W10). Fassung 4 zeigt keine.

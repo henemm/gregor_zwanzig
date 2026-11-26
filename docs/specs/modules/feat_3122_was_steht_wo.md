@@ -44,7 +44,7 @@ Die Spec gilt für den ganzen Bau zu #3122. Gebaut wird in Scheiben, jede mit ei
 | B3 | Karte „Was steht wo“ im Reiter Wetter, Ergänzung der Design-Charter, Umschalten des Altbestands auf die Umrechnung | 11, 21 bis 33 |
 | B4 | 3-Tages-Ausblick: eine steuernde Stelle, Morgen/Abend auch bei Orten, ein Name | 8, 9, 12, 34 |
 | B5 | Name „Orte“ und Ein-Ort-Texte in Mail, Telegram, SMS; gemeinsam mit #2798 | 35 bis 37 |
-| B6 | Schreibende Migration, Rückbau der Altfelder und Altpfade (#3102, #3036, #3020) | 13, 38 |
+| B6 | Schreibende Migration, Rückbau der Altfelder und Altpfade (#3102, #3036, #3020; erledigt, #3102: #3157, #3277, #3351) | 13, 38 |
 | B7 | Abnahme (#3037) | Definition of Done |
 
 Abhängigkeiten: B1 → B2 → B3 → B6 → B7. B4 und B5 laufen nach B1 parallel zu B2/B3. #3101 (ein Vokabular) ist mit Teil A Nr. 2 entschieden und wird vor B2 gebaut.

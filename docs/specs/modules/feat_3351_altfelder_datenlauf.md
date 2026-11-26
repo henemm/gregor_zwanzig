@@ -67,7 +67,7 @@ Seit #3277 liest und liefert das Backend die zehn Altfelder (`ALTFELDER` in `src
 - **`--nachzaehlen`:** rein lesend; Exit 1, wenn ein Altfeld übrig ist; blockierte und ausgelassene Abos werden separat ausgewiesen.
 - **Datenwurzel** als Argument; Lauf als Dienstnutzer (`sudo -n -u claude-gregor`). Ablauf im Playbook `docs/reference/operations_playbook.md`.
 - **Reihenfolge:** erst Staging (`--blockierte-auslassen`, der blockierte Fall wird im Issue aggregiert benannt), dann Prod (fail-closed). Danach je eine Nachzählung mit 0, auf Staging außer bei ausgelassenen Abos.
-- **Nachweis:** Kommentar mit aggregierten Zahlen an #3351 und #3102. #3102 wird nicht geschlossen (weitere Punkte offen).
+- **Nachweis:** Kommentar mit aggregierten Zahlen an #3351 und #3102. #3102 wird nicht geschlossen (weitere Punkte offen). (Erledigt, #3102: Abschluss Phase 3 nach diesem Lauf.)
 - **Kein Dauerwächter** im Prod-Selftest in diesem Paket (gesperrte Hook-Dateien); stattdessen Abschnitt Known Limitations.
 
 ### Affected Files
@@ -88,7 +88,7 @@ Seit #3277 liest und liefert das Backend die zehn Altfelder (`ALTFELDER` in `src
 
 - Dauerwächter im Prod-Selftest (gesperrte Hook-Dateien); Go-seitiges Entfernen von Altfeldern (Folge-Issue nur, wenn die Wiederholungszählung Wiederkehr zeigt).
 - Löschen der Datei `compare_presets.json` (eigene Entscheidung).
-- Schließen von #3102 und Epic #3122.
+- Schließen von #3102 und Epic #3122. (Erledigt, #3102: Abschluss Phase 3.)
 
 ## Implementation Details
 
@@ -168,7 +168,7 @@ Test-Politik: kein Mock-Theater; echte tmp-Datenbäume, Skript als Subprozess, V
 - Adversary mit Mutations-Gegenprobe auf fail-closed und Sicherung-vor-Schreiben ohne offenes Finding.
 - Playbook-Abschnitt "Altfelder entfernen (#3351)" vorhanden.
 - Staging-Lauf (`--blockierte-auslassen`), danach Prod-Lauf (fail-closed), je eine Nachzählung mit 0 (Staging außer ausgelassenen Abos); Zahlen aggregiert, ohne Abo-IDs.
-- Nachweis-Kommentar mit Zahlen an #3351 und #3102; #3102 und Epic #3122 bleiben offen.
+- Nachweis-Kommentar mit Zahlen an #3351 und #3102; #3102 und Epic #3122 bleiben offen. (Erledigt, #3102: Abschluss Phase 3.)
 - Wiederholte Nachzählung nach einigen Tagen ist Teil der Abnahme in #3009.
 - Keine Änderung an Gate-Konfiguration oder gesperrten Hook-Dateien.
 

@@ -289,7 +289,7 @@
         "einfach"
       ]
     ],
-    "hinweis": "Fachlich unmoegliche Paare: (1) der Stundenverlauf kennt heute keine Darstellung je Zeile (Konzept W11, offen_feature, #3047 Phase 3), deshalb nur 'roh'; die Vergleichstabelle traegt Roh/Einfach seit #3039 ueber channel_layouts.email, eine nie eingestellte Vergleichstabelle hat keine Darstellung (Bestand = Roh, #3039 Regel 3); (2) eine bewusst leere Auswahl hat weder Reihenfolge noch Darstellung; (3) der nie eingestellte Stundenverlauf hat die feste Standardfolge (AC-13), keine waehlbare Reihenfolge. Reihenfolge 'katalog' = Folge des zentralen Registers, 'gemischt' ungleich Katalog und Umkehrung. Teilnehmende Faelle tragen 'werte'; der Test baut daraus das rohe Preset (Darstellung roh: channel_active_metrics, sonst channel_layouts.email). Format 'kompakt' (#3059): display_config.email_format = compact; die Kompakt-Mail traegt je Ort eine Zeile mit den Kuerzeln der E-Mail-Auswahl und eine Ausblick-Zeile, aber nie einen Stundenverlauf (#722): die kompakt-Faelle des Stundenverlaufs laufen echt und pruefen dessen Fehlen, Status 'ausnahme' mit Verweis."
+    "hinweis": "Fachlich unmoegliche Paare: (1) der Stundenverlauf kannte bis #3097 keine Darstellung je Zeile (Konzept W11; seit #3097 gruen, Fall O-SV-H-DARST); die Vergleichstabelle traegt Roh/Einfach seit #3039 ueber channel_layouts.email, eine nie eingestellte Vergleichstabelle hat keine Darstellung (Bestand = Roh, #3039 Regel 3); (2) eine bewusst leere Auswahl hat weder Reihenfolge noch Darstellung; (3) der nie eingestellte Stundenverlauf hat die feste Standardfolge (AC-13), keine waehlbare Reihenfolge. Reihenfolge 'katalog' = Folge des zentralen Registers, 'gemischt' ungleich Katalog und Umkehrung. Teilnehmende Faelle tragen 'werte'; der Test baut daraus das rohe Preset (Darstellung roh: channel_active_metrics, sonst channel_layouts.email). Format 'kompakt' (#3059): display_config.email_format = compact; die Kompakt-Mail traegt je Ort eine Zeile mit den Kuerzeln der E-Mail-Auswahl und eine Ausblick-Zeile, aber nie einen Stundenverlauf (#722): die kompakt-Faelle des Stundenverlaufs laufen echt und pruefen dessen Fehlen, Status 'ausnahme' mit Verweis."
   },
   "faelle": [
     {
@@ -1980,8 +1980,8 @@
       "test": "test_p7_global_nachtraeglich_in_gespeicherter_liste",
       "ac": "AC-10, Konzept §5 Punkt 6",
       "befund": "Nachpruefung Punkt 7 (H4)",
-      "status": "offen_feature",
-      "verweis": "#3047 Nachpruefung Punkt 7: gespeicherte Liste kann 'bewusst abgewaehlt' und 'spaeter global eingeschaltet' nicht unterscheiden (Trip channel_layouts: Editor schreibt jede Katalog-Metrik, abwesende als enabled:false; Altbestand Golden C #2422 wertet fehlenden Eintrag als Abwahl; Orte/Ausblick/Stunden: reine ID-Listen) -> Datenmodell-Entscheidung (ADR zu ADR-0050) noetig"
+      "status": "gruen",
+      "verweis": "ADR-0124 Nr. 5 (#3122): fehlende Zeile = angehakt; P7 auf gespeicherter Tabelle belegt (#3102)"
     },
     {
       "id": "O-p7--global_nachtraeglich-orte_stundenverlauf--html",
@@ -1992,8 +1992,8 @@
       "test": "test_p7_global_nachtraeglich_in_gespeicherter_liste",
       "ac": "AC-10, Konzept §5 Punkt 6",
       "befund": "Nachpruefung Punkt 7 (H4)",
-      "status": "offen_feature",
-      "verweis": "#3047 Nachpruefung Punkt 7: gespeicherte Liste kann 'bewusst abgewaehlt' und 'spaeter global eingeschaltet' nicht unterscheiden (Trip channel_layouts: Editor schreibt jede Katalog-Metrik, abwesende als enabled:false; Altbestand Golden C #2422 wertet fehlenden Eintrag als Abwahl; Orte/Ausblick/Stunden: reine ID-Listen) -> Datenmodell-Entscheidung (ADR zu ADR-0050) noetig"
+      "status": "gruen",
+      "verweis": "ADR-0124 Nr. 5 (#3122): fehlende Zeile = angehakt; P7 auf gespeicherter Tabelle belegt (#3102)"
     },
     {
       "id": "O-p7--global_nachtraeglich-orte_ausblick--html",
@@ -2004,8 +2004,8 @@
       "test": "test_p7_global_nachtraeglich_in_gespeicherter_liste",
       "ac": "AC-10, Konzept §5 Punkt 6",
       "befund": "Nachpruefung Punkt 7 (H4)",
-      "status": "offen_feature",
-      "verweis": "#3047 Nachpruefung Punkt 7: gespeicherte Liste kann 'bewusst abgewaehlt' und 'spaeter global eingeschaltet' nicht unterscheiden (Trip channel_layouts: Editor schreibt jede Katalog-Metrik, abwesende als enabled:false; Altbestand Golden C #2422 wertet fehlenden Eintrag als Abwahl; Orte/Ausblick/Stunden: reine ID-Listen) -> Datenmodell-Entscheidung (ADR zu ADR-0050) noetig"
+      "status": "gruen",
+      "verweis": "ADR-0124 Nr. 5 (#3122): fehlende Zeile = angehakt; P7 auf gespeicherter Tabelle belegt (#3102)"
     },
     {
       "id": "O-SV-H-J1-GRUNDAUSWAHL-GLEICH-VORGABE",

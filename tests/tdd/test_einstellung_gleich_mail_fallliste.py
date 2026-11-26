@@ -573,6 +573,49 @@ def test_ausnahmen_und_offene_features_tragen_verweis(echte_falllisten):
     _melde(pruefe_verweise(_geladen(echte_falllisten)), "Verweis fehlt")
 
 
+#: #3102 (Abschluss Phase 3, Epic #3058): Issue-Kette des Pruefkatalogs und
+#: seiner Phase 3. Ein ``offen_feature`` nennt als ERSTES (Leit-)Issue ein
+#: eigenes Folge-Issue ausserhalb dieser Kette (z. B. #3368); weitere Nummern
+#: dahinter sind Hintergrund (Befund-Herkunft, alte Goldens).
+PHASE3_KETTE = frozenset({3047, 3057, 3058, 3065, *range(3096, 3103)})
+
+
+def pruefe_offen_ausserhalb_phase3(dateien: dict[str, dict]) -> list[str]:
+    """(g) Abschlusskriterium #3058: kein ``offen_feature``, dessen Leit-Issue
+    in der Phase-3-Kette liegt oder fehlt."""
+    fehler = []
+    for name, fall in _alle_faelle(dateien):
+        if fall.get("status") != "offen_feature":
+            continue
+        leit = re.search(r"#(\d+)", str(fall.get("verweis") or ""))
+        if leit is None or int(leit.group(1)) in PHASE3_KETTE:
+            fehler.append(f"{name}: Fall {fall.get('id')!r} ist offen_feature ohne Folge-Issue "
+                          f"ausserhalb Phase 3 (Leit-Issue {leit.group(0) if leit else None})")
+    return fehler
+
+
+def test_kein_offen_feature_aus_phase3(echte_falllisten):
+    """(g) #3102: Phase 3 ist abgeschlossen -- kein offener Fall verweist nur
+    noch auf die Phase-3-Kette."""
+    _melde(pruefe_offen_ausserhalb_phase3(_geladen(echte_falllisten)), "offen_feature aus Phase 3")
+
+
+def test_selbsttest_offen_feature_aus_phase3_wird_abgelehnt(tmp_path):
+    """(g) Selbsttest: nur Phase-3-Verweise -> abgelehnt; mit Folge-Issue
+    (#3368) oder Status gruen -> erlaubt."""
+    daten = _syn_daten()
+    faelle = daten["fallliste_editor.json"]["faelle"]
+    faelle.append(_syn_fall("ed-p3a", "trip_vorlage", "editor", "standard", status="offen_feature",
+                            verweis="#3047 Nachpruefung Punkt 7, Golden C #2422, ADR zu ADR-0050"))
+    faelle.append(_syn_fall("ed-p3b", "trip_vorlage", "editor", "standard", status="offen_feature",
+                            verweis="#3065 Phase 2"))
+    faelle.append(_syn_fall("ed-ok", "trip_vorlage", "editor", "standard", status="offen_feature",
+                            verweis="#3368 (#3047 AC-16 gegen #2794 AC-37)"))
+    faelle.append(_syn_fall("ed-gr", "trip_vorlage", "editor", "standard", verweis="#3058"))
+    fehler = pruefe_offen_ausserhalb_phase3(lade_falllisten(_schreibe(tmp_path, daten)))
+    assert [f.split("'")[1] for f in fehler] == ["ed-p3a", "ed-p3b"], fehler
+
+
 def test_schema_der_fallliste(echte_falllisten):
     """(e) Pflichtfelder, erlaubte Werte, id global eindeutig."""
     _melde(pruefe_schema(_geladen(echte_falllisten)), "Schema verletzt")

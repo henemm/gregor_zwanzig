@@ -24,7 +24,7 @@ Die Tabelle „Was steht wo“ (`placements`) ist seit #3237 und #3276 die einzi
 - **File:** `src/app/models.py`, `src/app/loader.py`, `src/services/report_config_resolver.py`
 - **Identifier:** `UnifiedWeatherDisplayConfig`, `TripReportConfig`, `_parse_display_config`, `_trip_to_dict`, `save_location`, `ReportRenderOptions`
 
-> **Schicht-Hinweis:** Python-Core (`src/app/`, `src/services/`, `src/output/`, `api/`) trägt den Rückbau. Go-API nur `internal/model/compare_preset.go` (Feld `OutlookEnabled`). `.claude/hooks/_soll_aus_konfiguration.py` ist Prüfwerkzeug. **Kein Frontend** (#3297, #3298, #3301) und **kein Datenlauf** auf Bestandsdaten (#3351, schließt #3102).
+> **Schicht-Hinweis:** Python-Core (`src/app/`, `src/services/`, `src/output/`, `api/`) trägt den Rückbau. Go-API nur `internal/model/compare_preset.go` (Feld `OutlookEnabled`). `.claude/hooks/_soll_aus_konfiguration.py` ist Prüfwerkzeug. **Kein Frontend** (#3297, #3298, #3301) und **kein Datenlauf** auf Bestandsdaten (#3351, schließt #3102; erledigt, #3102: Abschluss mit #3351).
 
 > **Querschnitts-Prüfpunkte:**
 > - **Trip/Ortsvergleich-Teilung:** Rückbau trifft beide Pfade gleich; es entsteht keine neue Komponente, keine einseitige Neuanlage.
@@ -69,7 +69,7 @@ Die Tabelle „Was steht wo“ (`placements`) ist seit #3237 und #3276 die einzi
 ### Nicht in dieser Spec
 
 - Frontend-Schreibwege Trip (#3297), Typen, `outlook_enabled`-Round-Trip und Textscan (#3298), #3301.
-- Datenlauf auf Bestandsdaten inkl. `compare_presets.json` des Nutzers `default` und Abschluss #3102 (#3351). Reihenfolge: #3277, #3297, #3301/#3298, #3351.
+- Datenlauf auf Bestandsdaten inkl. `compare_presets.json` des Nutzers `default` und Abschluss #3102 (#3351; erledigt, #3102). Reihenfolge: #3277, #3297, #3301/#3298, #3351.
 - Kein serverseitiger Go-Strip auf Schreibwegen: er ließe noch schreibende Oberflächen stumm zurückspringen und wäre Wegwerfcode. Altfelder, die ein Client bis #3351 über Go-Schreibwege ablegt, bleiben wirkungslos auf der Platte; sobald das Abo über Python gespeichert wird, werden sie verworfen.
 
 ## Dependencies
@@ -84,7 +84,7 @@ Die Tabelle „Was steht wo“ (`placements`) ist seit #3237 und #3276 die einzi
 | `placements.placements_aus_grundauswahl` | Python-Service | Grundauswahl-Tabelle, künftig ohne `outlook_enabled` |
 | `tests/test_altpfad_import_sperre.py` | Muster | AST-Wächter mit ERLAUBT-Tabelle (Grund + Ablaufdatum) |
 | `tests/tdd/test_3237_golden_vier_kanaele.py` | Test | Nachweis Byte-Gleichheit aller vier Kanäle |
-| Issues #3297, #3298, #3301, #3351, #3102 | Issues | Folgeschritte (außerhalb dieser Spec) |
+| Issues #3297, #3298, #3301, #3351, #3102 | Issues | Folgeschritte (außerhalb dieser Spec; #3102 erledigt) |
 
 ## Implementation Details
 

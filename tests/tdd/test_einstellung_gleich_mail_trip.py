@@ -997,29 +997,36 @@ def test_n1_altbestand_ausblick_standardsatz(monkeypatch, fall):
 
 
 def _p7_faelle() -> list:
-    """Faelle ``offen_feature`` von Punkt 7 -- belegt rot, bis #3065 Phase 2
-    die Abwahl persistiert (dann ``xfail(strict)`` laut)."""
+    """Faelle von Punkt 7 unabhaengig vom Status; ``offen_feature`` ->
+    ``xfail(strict)``, damit ein erfuelltes, aber noch offen gefuehrtes
+    Feature laut wird (#3102)."""
     return [pytest.param(f, id=f["id"], marks=[pytest.mark.xfail(
-                strict=True, reason="#3065 Phase 2: Abwahl nicht persistiert")])
+                strict=True, reason=f"offen_feature: {f.get('verweis', '')[:60]}")]
+                if f["status"] == "offen_feature" else [])
             for f in _FALLLISTE["faelle"]
             if f["test"] == "test_p7_global_nachtraeglich_in_gespeicherter_liste"]
 
 
 @pytest.mark.parametrize("fall", _p7_faelle())
 def test_p7_global_nachtraeglich_in_gespeicherter_liste(monkeypatch, fall):
-    """Konzept §5 Punkt 6 / Nachpruefung Punkt 7: eine Metrik, die NACH dem
-    Speichern einer eigenen Liste global eingeschaltet wird (UV-Index), steht
-    in allen Listen -- hier in der gespeicherten E-Mail-Stundentabelle bzw. im
-    gespeicherten Ausblick, die sie noch gar nicht kennen (kein Eintrag, keine
-    Abwahl)."""
+    """Konzept §5 Punkt 6 / ADR-0124 Nr. 5 (#3102): eine Metrik, die NACH dem
+    Speichern der Tabelle in die Grundauswahl kommt (UV-Index), hat in der
+    gespeicherten Tabelle keine Zeile (= angehakt) und steht in der echten
+    Mail -- hier E-Mail-Stundentabelle bzw. Ausblick."""
     alt = ["temperature", "wind", "gust"]
     if fall["liste"] == "trip_ausblick":
-        data = trip_json(alt + ["uv_index"], outlook_metrics=["wind", "temperature"])
+        vorher = trip_json(alt, outlook_metrics=["wind", "temperature"])
+    else:
+        vorher = trip_json(alt, email_layout=metrik_eintraege(alt, katalog=tuple(alt)))
+    gespeichert = vorher["display_config"]["placements"]
+    # Vorbedingung (AC-4): die Tabelle stammt aus der Zeit VOR dem Einschalten.
+    assert "uv_index" not in {r["metric_id"] for r in gespeichert["rows"]}, gespeichert
+    data = trip_json(alt + ["uv_index"], display={"placements": gespeichert})
+    assert data["display_config"]["placements"] is gespeichert
+    if fall["liste"] == "trip_ausblick":
         tab = _ausblick(*_senden(monkeypatch, data, fall["format"])[:2], fall["format"])
         spalten = tab.spalten if tab else []
     else:
-        layout = metrik_eintraege(alt, katalog=tuple(alt))
-        data = trip_json(alt + ["uv_index"], email_layout=layout)
         html, text, _ = _senden(monkeypatch, data, fall["format"])
         spalten = _stundentabellen(html, text, fall["format"], "etappe")[0].spalten
     assert "uv_index" in spalten, f"{fall['id']}: global nachtraeglich aufgenommen, fehlt in {spalten}"
