@@ -72,7 +72,7 @@ Falls Importe brechen (voraussichtlich nicht, die Sichten bleiben): `tests/helpe
 1. **Ein Filter.** `select_cv2_rows(rows, enabled_metrics)` in `compare_html.py`, herausgezogen aus `_visible_metrics`: `None` ergibt alle Zeilen (ohne `warn`), `[]` ergibt keine, `warn` wird entfernt, Duplikate fallen per `dict.fromkeys` weg, unbekannte IDs werden uebersprungen. Die Reihenfolge ist die von `enabled_metrics` (bei `None` die von `rows`).
 2. **HTML.** `_visible_metrics` ruft den Filter auf und stellt die Warnzeile (sofern `alerts_enabled`) voran; Verhalten sonst unveraendert (Warnzeile immer erste Zeile, AC-7 aus #1359).
 3. **Klartext-Zeilen.** An der Zeilenwahl (heute `_ordered_rows(_PLAIN_ROWS, ...)` plus `_CV2_BY_KEY`-Nachschlag) wird `select_cv2_rows(CV2_ZEILEN, enabled_metrics)` verwendet; Labels weiter ueber `derive_row_labels(..., form="long")`.
-4. **Klartext-Format.** `_PLAIN_FMT: dict[str, formatter]` je Zeilenschluessel, ohne eigene Reihenfolge und ohne Label-Spalte. Beim Import wird geprueft, dass die Schluesselmenge genau den CV2-Schluesseln ohne `warn` entspricht; Abweichung wirft `ValueError` mit Nennung des Schluessels (ersetzt das fail-fast von `_sort_by_cv2_order`).
+4. **Klartext-Format.** `_PLAIN_FMT: dict[str, formatter]` je Zeilenschluessel, ohne eigene Reihenfolge und ohne Label-Spalte. Beim Import wird geprueft, dass die Schluesselmenge genau den CV2-Schluesseln ohne `warn` entspricht; Abweichung wirft `ValueError` mit Nennung des Schluessels (ersetzt das fail-fast von `_sort_by_cv2_order`). Die Pruefung ist eine eigene, direkt aufrufbare Funktion `_pruefe_plain_fmt(fmt_map, cv2_zeilen)` in `comparison.py` (wird beim Import mit `_PLAIN_FMT` und `CV2_ZEILEN` aufgerufen; Tests injizieren eine abweichende Zuordnung, keine Mocks).
 5. **Abgeleitete Sichten.** `_PLAIN_ROWS = tuple((k, f"vergleich.zeile.{k}", _PLAIN_FMT[k]) for k in CV2-Schluessel ohne warn)`; `_PLAIN_ROWS_BY_ID` und `_NIE_EINGESTELLT_IDS` werden daraus gebildet wie bisher. Telegram, Compact, Orte-SMS und Placements sehen dieselben Werte wie vorher.
 6. **Auswahl-Luecke.** Beide Pfade zaehlen `rowless_count` gegen dieselbe Schluesselmenge (CV2 ohne `warn`).
 7. **Entfernt:** `_PLAIN_ROWS_UNSORTED`, `_DAILY_PLAIN_ROWS` (als Teilliste), `_sort_by_cv2_order`, `_ordered_rows`.
@@ -145,4 +145,5 @@ Hinweis zu RED: Test 2 und Test 4 schlagen vor der Umsetzung fehl (HTML-Dedup bz
 
 ## Changelog
 
+- 2026-11-26: Pruef-Funktion `_pruefe_plain_fmt` benannt (TDD RED)
 - 2026-11-26: Initial spec created (Variante A aus `docs/context/refactor-2991-compare-zeilenliste.md`)
