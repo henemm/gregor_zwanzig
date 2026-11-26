@@ -6,6 +6,12 @@ mitgeladen wird. In `CLAUDE.md` steht je Gate nur noch der Merksatz und der Verw
 
 ## CI-Prod-Gate `ci_prod_gate.sh` (#2047 S2, seit 2026-10-06)
 
+**Stand #3394 (henemm-infra#522):** Die CI liefert nicht mehr nach Produktion aus. Der Job `deploy`
+wartet nur auf Staging und macht den Smoke-Test; SSH, Gate-Aufruf, Selbsttest, `concurrency` und
+Telegram sind dort entfernt. `ci_prod_gate.sh` nutzt jetzt der Pull-Deploy auf dem Server
+(`henemm-infra/scripts/pull-deploy-gregor-prod.sh`). Der folgende Text beschreibt die Gate-Logik;
+Aussagen zum CI-Job gelten nur noch historisch.
+
 Der CI-Job `deploy` (needs: alle sechs Ampel-Checks) schreibt **kein** Staging-Verdict mehr und
 führt **kein** `git reset` aus. `scripts/ci_prod_gate.sh` läuft auf dem Server-Checkout: `git fetch`,
 dann `staging_gate.py --check --expected-commit origin/main` (dieselbe Prüfung wie der Preflight von

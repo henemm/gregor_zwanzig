@@ -563,18 +563,18 @@ jobs:
           retention-days: 7
 
   deploy:
-    # C4-71 (#2047 S2): Deploy haengt an allen sechs Ampel-Checks.
+    # Nur noch Staging-Pruefung nach dem Merge: Staging-Stand abwarten, Smoke-Test.
+    # Produktion liefert der Server selbst aus (Pull-Deploy, #3289,
+    # henemm-infra/scripts/pull-deploy-gregor-prod.sh, Commit-Status deploy/prod).
+    # Kein SSH, keine Deploy-Geheimnisse, kein Telegram mehr hier (#3394,
+    # henemm-infra#522). Jobname `deploy` bleibt fuer Historie/Verweise.
+    # C4-71 (#2047 S2): haengt an allen sechs Ampel-Checks.
     needs: [test, lint, go-test, frontend-test, svelte-check, e2e]
     runs-on: ubuntu-24.04
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    # #2961: Deploy-Geheimnisse liegen im Environment `production`, das nur
+    # #2961: STAGING_BASIC_AUTH liegt im Environment `production`, das nur
     # Laeufe auf `main` lesen duerfen (Deployment-Branch-Regel).
     environment: production
-    # #2047 S2b: zwei Merges liefern nie gleichzeitig aus; ein laufender
-    # Deploy wird nie abgebrochen (der naechste reiht sich ein).
-    concurrency:
-      group: prod-deploy
-      cancel-in-progress: false
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -615,193 +615,3 @@ jobs:
           { [ "$ROOT" = "200" ] || [ "$ROOT" = "302" ]; } || { echo "ROOT $ROOT != 200/302"; exit 1; }
           [ "$HEALTH" = "200" ] || { echo "HEALTH $HEALTH != 200"; exit 1; }
           echo "Staging Smoke: OK"
-
-      # #2961: SSH-Zugang EINMAL vorbereiten. Schluessel und Ziel kommen per
-      # env (nie per ${{ }} in den Shell-Text), Dateien liegen mit umask 077
-      # unter $RUNNER_TEMP. Ist das Secret DEPLOY_KNOWN_HOSTS gesetzt, wird der
-      # Host-Schluessel geprueft (StrictHostKeyChecking=yes); fehlt es, bleibt
-      # das bisherige Verhalten mit einer sichtbaren Warnung, damit der Deploy
-      # nicht bricht, bevor der Eigentuemer das Secret angelegt hat
-      # (docs/reference/operations_playbook.md "Deploy-Geheimnisse an main binden").
-      - name: SSH-Zugang vorbereiten
-        env:
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-        run: |
-          umask 077
-          D="$RUNNER_TEMP/gz-deploy-ssh"
-          mkdir -p "$D"
-          printf '%s\n' "$DEPLOY_SSH_KEY" > "$D/deploy_key"
-          if [ -n "$DEPLOY_KNOWN_HOSTS" ]; then
-            printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$D/known_hosts"
-            CHECK=yes
-            KNOWN="$D/known_hosts"
-          else
-            echo "::warning::Secret DEPLOY_KNOWN_HOSTS fehlt - SSH-Host-Schluessel wird NICHT geprueft (StrictHostKeyChecking=no). Bitte anlegen, siehe operations_playbook.md 'Deploy-Geheimnisse an main binden'."
-            CHECK=no
-            KNOWN=/dev/null
-          fi
-          cat > "$D/config" <<EOF
-          Host gz-deploy
-            HostName $DEPLOY_HOST
-            User $DEPLOY_USER
-            IdentityFile $D/deploy_key
-            IdentitiesOnly yes
-            StrictHostKeyChecking $CHECK
-            UserKnownHostsFile $KNOWN
-          EOF
-
-      # #2047 Scheibe 2: Die CI schreibt KEINEN Staging-Nachweis mehr und resettet
-      # den Haupt-Checkout nicht. Sie liefert nur aus, wenn fuer origin/main bereits
-      # ein echter /e2e-verify-Nachweis vorliegt (oder der Stand docs-only ist).
-      # Einmal pruefen, nicht warten: /e2e-verify laeuft nach dem Merge laenger als
-      # dieser Job — der Normalfall ist /70-deploy Schritt 4. Das Skript wird aus
-      # origin/main bezogen (Henne-Ei beim ersten Rollout), `mktemp` statt festem
-      # /tmp-Pfad (weitere lokale Accounts auf dem Server).
-      - name: Prod-Gate pruefen
-        id: gate
-        run: |
-          set +e
-          OUT=$(ssh -F "$RUNNER_TEMP/gz-deploy-ssh/config" -o ConnectTimeout=30 gz-deploy \
-            "cd /home/hem/gregor_zwanzig && t=\$(mktemp /tmp/ci_prod_gate.XXXXXX) && git fetch origin 2>/dev/null && git show origin/main:scripts/ci_prod_gate.sh > \"\$t\" && bash \"\$t\" /home/hem/gregor_zwanzig; rc=\$?; rm -f \"\$t\"; exit \$rc")
-          RC=$?
-          set -e
-          echo "$OUT"
-          GATE=$(echo "$OUT" | grep -E '^PROD_GATE=(open|closed)$' | tail -n 1 || true)
-          if [ "$RC" -ne 0 ] || [ -z "$GATE" ]; then
-            echo "::error::Prod-Gate lieferte keine Entscheidung (rc=$RC) — Fetch/Skriptfehler"
-            exit 1
-          fi
-          if [ "$GATE" = "PROD_GATE=open" ]; then
-            echo "open=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "open=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Prod-Deploy uebersprungen (kein Nachweis)
-        if: steps.gate.outputs.open != 'true'
-        env:
-          SHA: ${{ github.sha }}
-        run: |
-          MSG="Kein /e2e-verify-Nachweis fuer ${SHA} — Prod-Deploy ueber /70-deploy Schritt 4"
-          echo "::notice::$MSG"
-          echo "### Prod-Deploy uebersprungen" >> "$GITHUB_STEP_SUMMARY"
-          echo "$MSG" >> "$GITHUB_STEP_SUMMARY"
-
-      # #2047 S2b: Das Deploy-Skript ist idempotent — steht der Stand schon live
-      # (z. B. per /70-deploy aus der Session), meldet es "bereits ausgeliefert"
-      # und startet nichts neu. Die Ausgabe laeuft live ins Log und wird danach
-      # auf genau dieses Literal geprueft (Kopplung mit henemm-infra
-      # scripts/deploy-gregor-prod.sh). Der Skript-Exitcode bleibt massgeblich.
-      - name: Deploy zu Produktion via SSH
-        id: deploy
-        if: steps.gate.outputs.open == 'true'
-        run: |
-          LOG=$(mktemp)
-          set +e
-          ssh -F "$RUNNER_TEMP/gz-deploy-ssh/config" \
-            -o ConnectTimeout=10 \
-            gz-deploy \
-            "bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh" 2>&1 | tee "$LOG"
-          EXIT=${PIPESTATUS[0]}
-          set -e
-          if grep -qF "bereits ausgeliefert" "$LOG"; then
-            echo "already=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "already=false" >> "$GITHUB_OUTPUT"
-          fi
-          rm -f "$LOG"
-          exit $EXIT
-
-      # #2047 S2b: Post-Deploy-Selbsttest auch im CI-Pfad (wie /70-deploy 4b).
-      # Exit != 0 macht den Job rot — nichts verschlucken.
-      - name: Post-Deploy-Selbsttest Produktion
-        if: success() && steps.gate.outputs.open == 'true'
-        run: |
-          set +e
-          ssh -F "$RUNNER_TEMP/gz-deploy-ssh/config" \
-            -o ConnectTimeout=10 \
-            gz-deploy \
-            "cd /home/hem/gregor_zwanzig && python3 .claude/hooks/prod_selftest.py"
-          EXIT=$?
-          set -e
-          exit $EXIT
-
-      # #2961: Schluesselmaterial nach den SSH-Schritten entfernen (immer).
-      - name: SSH-Zugang aufraeumen
-        if: always()
-        run: rm -rf "$RUNNER_TEMP/gz-deploy-ssh"
-
-      # Commit-Message NIE per ${{ }} in den Shell-Text interpolieren:
-      # Anfuehrungszeichen in der Message (z.B. "Nachtrag 2", 4c9ad35)
-      # zerrissen die Zuweisung — beide Notify-Steps rot, Run rot, obwohl
-      # der Deploy durch war (Runs 1911–1913, 2026-08-04). Der env-Umweg
-      # entschaerft zugleich die Script-Injection ueber Commit-Messages;
-      # json.dumps macht jeden Inhalt transportsicher. Nur die erste
-      # Message-Zeile — mehr liest auf dem Handy niemand.
-      # Drei Meldungen, die sich ausschliessen (#2047 S2b): deployed /
-      # bereits ausgeliefert / FEHLGESCHLAGEN; bei geschlossenem Gate keine.
-      - name: Telegram — Deploy erfolgreich (HENEMM Server)
-        if: success() && steps.gate.outputs.open == 'true' && steps.deploy.outputs.already != 'true'
-        env:
-          COMMIT_MSG: ${{ github.event.head_commit.message }}
-          CHAT_ID: ${{ secrets.HENEMM_DEPLOY_CHAT_ID }}
-          BOT_TOKEN: ${{ secrets.HENEMM_DEPLOY_BOT_TOKEN }}
-          SHA: ${{ github.sha }}
-        run: |
-          BODY=$(python3 - <<'EOF'
-          import json, os
-          lines = (os.environ.get("COMMIT_MSG") or "").splitlines()
-          first = lines[0] if lines else ""
-          sha = os.environ["SHA"][:7]
-          print(json.dumps({"chat_id": os.environ["CHAT_ID"], "text": "gregor20 deployed: %s %s" % (sha, first)}))
-          EOF
-          )
-          curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
-            -H "Content-Type: application/json" \
-            -d "$BODY" > /dev/null
-
-      - name: Telegram — Stand war schon live (HENEMM Server)
-        if: success() && steps.gate.outputs.open == 'true' && steps.deploy.outputs.already == 'true'
-        env:
-          COMMIT_MSG: ${{ github.event.head_commit.message }}
-          CHAT_ID: ${{ secrets.HENEMM_DEPLOY_CHAT_ID }}
-          BOT_TOKEN: ${{ secrets.HENEMM_DEPLOY_BOT_TOKEN }}
-          SHA: ${{ github.sha }}
-        run: |
-          BODY=$(python3 - <<'EOF'
-          import json, os
-          lines = (os.environ.get("COMMIT_MSG") or "").splitlines()
-          first = lines[0] if lines else ""
-          sha = os.environ["SHA"][:7]
-          text = "gregor20 bereits ausgeliefert (kein Neustart): %s %s" % (sha, first)
-          print(json.dumps({"chat_id": os.environ["CHAT_ID"], "text": text}))
-          EOF
-          )
-          curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
-            -H "Content-Type: application/json" \
-            -d "$BODY" > /dev/null
-
-      - name: Telegram — Deploy fehlgeschlagen (HENEMM Server)
-        if: failure()
-        env:
-          COMMIT_MSG: ${{ github.event.head_commit.message }}
-          CHAT_ID: ${{ secrets.HENEMM_DEPLOY_CHAT_ID }}
-          BOT_TOKEN: ${{ secrets.HENEMM_DEPLOY_BOT_TOKEN }}
-          SHA: ${{ github.sha }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          BODY=$(python3 - <<'EOF'
-          import json, os
-          lines = (os.environ.get("COMMIT_MSG") or "").splitlines()
-          first = lines[0] if lines else ""
-          sha = os.environ["SHA"][:7]
-          text = "gregor20 FEHLGESCHLAGEN: %s %s | %s" % (sha, first, os.environ["RUN_URL"])
-          print(json.dumps({"chat_id": os.environ["CHAT_ID"], "text": text}))
-          EOF
-          )
-          curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
-            -H "Content-Type: application/json" \
-            -d "$BODY" > /dev/null

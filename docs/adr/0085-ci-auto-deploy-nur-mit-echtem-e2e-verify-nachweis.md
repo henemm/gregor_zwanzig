@@ -46,3 +46,12 @@ Post-Deploy-Selbsttest.
   den Notausgang.
 - Das Kopplungs-Literal „bereits ausgeliefert" verbindet Skript und `ci.yml`. Beide Testdateien
   bewachen es.
+
+## Nachtrag 2026-11-26 (#3394, henemm-infra#522)
+
+Seit ADR-0129 liefert der Server Produktion per Pull-Deploy selbst aus. Der CI-Pfad dieses ADR
+(SSH-Zugang, Gate-Schritt, Deploy, Selbsttest, `concurrency: prod-deploy`, Telegram-Meldungen) ist
+aus `ci.yml` entfernt; der Job `deploy` wartet nur noch auf Staging und macht den Smoke-Test.
+Weiter gültig: kein Nachweis-Schreiber in der CI, Gate `ci_prod_gate.sh` (jetzt vom Pull-Deploy
+aufgerufen), idempotente Auslieferung mit Notausgang `GZ_FORCE_REDEPLOY=1`, Selbsttest nach jeder
+Auslieferung (im Pull-Deploy).
