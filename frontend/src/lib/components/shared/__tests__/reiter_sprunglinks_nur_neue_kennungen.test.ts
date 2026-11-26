@@ -3,7 +3,7 @@
 // (AC-9, AC-10, AC-11) — und die drei Bestandsfehler sind weg:
 //   (1) Home-Schnellaktion „Vorschau" eines Ortsvergleichs (`?tab=preview` → Uebersicht),
 //   (2) Trip-Liste „Wetter" (`#weather`, Hash wurde nie gelesen),
-//   (3) WeatherSummaryCard (`#weather`).
+//   (3) WeatherSummaryCard (`#weather`; mit #3384 S4 als Waise gelöscht).
 //
 // Spec: docs/specs/modules/feat_2287_tab_kennungen.md — AC-9, AC-10, AC-11
 //
@@ -125,21 +125,7 @@ describe('AC-10 (Verhalten): Trip-Liste — „Wetter" (Bestandsfehler #weather)
 	}
 });
 
-describe('AC-10 (Verhalten): WeatherSummaryCard „Wetter" oeffnet den Reiter Wetter', () => {
-	test('Klick-Handler → /trips/<id>?tab=wetter (kein #weather)', async () => {
-		const rek = gotoRekorder();
-		const { u } = await umgebungFuer(datei('lib/components/edit/WeatherSummaryCard.svelte'), {
-			goto: rek.goto,
-			tripId: 'khw',
-			displayConfig: null
-		}, { jsAlsTs: true });
-		(u.onOpenWeatherTab as () => void)();
-		assert.equal(rek.ziele.length, 1, JSON.stringify(rek.ziele));
-		assert.equal(rek.ziele[0].includes('#'), false);
-		assert.equal(rek.ziele[0].startsWith('/trips/khw?tab='), true, rek.ziele[0]);
-		assert.equal(tabAus(rek.ziele[0]), 'wetter');
-	});
-});
+// #3384 S4: Block „WeatherSummaryCard ‚Wetter‘ oeffnet den Reiter Wetter“ mit der Waise gelöscht.
 
 // #3297/#3020: AC-9 (VersandTab „Etappen oeffnen“) entfaellt — Datei geloescht.
 
@@ -314,7 +300,6 @@ describe('AC-10 / AC-15 (Quelltext-Scan, doc-compliance-test): kein Alt-Literal,
 		'routes/compare/+page.svelte',
 		'routes/trips/[id]/+page.svelte',
 		'routes/compare/[id]/+page.svelte',
-		'lib/components/edit/WeatherSummaryCard.svelte',
 		'lib/components/trip-detail/HubOverview.svelte',
 		// #2682: geteilte Übersicht (Baustein + Modell)
 		'lib/components/shared/hub-uebersicht/HubUebersicht.svelte',

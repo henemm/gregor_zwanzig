@@ -14,7 +14,7 @@
 //   2. Die ECHTEN Leser der Trip-Uebersicht, bestehende Module, die heute
 //      strikt `=== true` lesen und damit Altdaten (enabled=true ohne
 //      Per-Slot-Schluessel) als "aus" anzeigen (Defekt N2):
-//        - getReportSchedule        (utils/rightColumn.ts)
+//        - (getReportSchedule, utils/rightColumn.ts: mit #3384 S4 gelöscht)
 //        - setupStepTrip            (utils/cockpitHelpers568.ts, Schritt "Reports")
 //        - plannedBriefings         (routes/_home/cockpitHelpers.ts)
 //      HINWEIS Spec-Zeilenverweis: die Spec nennt "deriveNextSend" in
@@ -52,7 +52,6 @@ import { register } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
-import { getReportSchedule } from '../rightColumn.ts';
 import { setupStepTrip } from '../cockpitHelpers568.ts';
 import { plannedBriefings, heroKanaele, reportChannels } from '../../../routes/_home/cockpitHelpers.ts';
 
@@ -118,27 +117,9 @@ describe('AC-23 Naht 1 — reportSlotAktiv gegen die geteilte Tabelle', () => {
 	}
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-describe('AC-23 Naht 2a — getReportSchedule (rechte Spalte / Trip-Uebersicht)', () => {
-	for (const f of FAELLE) {
-		test(`getReportSchedule — ${f.name}`, () => {
-			const s = getReportSchedule(tripOf(f));
-			assert.equal(
-				s.morning_enabled,
-				f.slot_morning,
-				`Anzeige "Morgen" fuer ${JSON.stringify(f.report_config)}: erwartet ${f.slot_morning}, ` +
-					`ist ${s.morning_enabled} (rightColumn.ts liest strikt === true)`
-			);
-			assert.equal(
-				s.evening_enabled,
-				f.slot_evening,
-				`Anzeige "Abend" fuer ${JSON.stringify(f.report_config)}: erwartet ${f.slot_evening}, ` +
-					`ist ${s.evening_enabled}`
-			);
-		});
-	}
-});
+// #3384 S4: Naht 2a (getReportSchedule, utils/rightColumn.ts) mit der Waise gelöscht.
 
+// ─────────────────────────────────────────────────────────────────────────────
 describe('AC-23 Naht 2b — setupStepTrip, Schritt "Reports" (cockpitHelpers568)', () => {
 	for (const f of FAELLE) {
 		test(`setupStepTrip.Reports — ${f.name}`, () => {

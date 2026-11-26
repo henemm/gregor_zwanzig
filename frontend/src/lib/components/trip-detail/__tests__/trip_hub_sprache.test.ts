@@ -164,7 +164,7 @@ describe('AC-1: Trip-Hub englisch, Namen unveraendert', () => {
 		const { en } = deDannEn(() => P.wegpunkteRendern());
 		const s = sichtbar(en);
 		for (const t of ['+ Rest day', 'STAGES · DRAG TO SORT · + REST DAY BETWEEN', '2 GPX · 1 rest day', '+ Stage', 'Rest day', '⌂ Rest day · Carrozzu', 'Hut', 'Waypoint', 'Rename', 'Move', 'Delete', 'Location: Ortu di u Piobbu', 'Next: Bocca Piccaia', 'No location set', 'Save']) hat(s, t);
-		for (const t of ['aria-label="Remove stage"', 'aria-label="Rename waypoint"', 'aria-label="Move waypoint"', 'aria-label="Delete waypoint"', 'aria-label="Elevation profile with 2 waypoints"', 'aria-label="Elevation profile with 1 waypoint"', 'aria-label="Waypoint Calenzana"', 'aria-label="Waypoint 3"']) hat(en, t);
+		for (const t of ['aria-label="Remove stage"', 'aria-label="Rename waypoint"', 'aria-label="Move waypoint"', 'aria-label="Delete waypoint"', 'aria-label="Elevation profile with 2 waypoints"', 'aria-label="Elevation profile with 1 waypoint"', 'aria-label="Waypoint Calenzana"']) hat(en, t); // #3384 S4: 'Waypoint 3' (WaypointPin) gelöscht
 		// WaypointsPanel traegt im Golden-Zustand einen Server-Fehlertext (Daten), s. f9Pruefstand.
 		assert.deepEqual(deutscheReste(s, [...DATEN, 'aktionen.speichern', 'aktionen.speichern_fehlgeschlagen']), []);
 	});

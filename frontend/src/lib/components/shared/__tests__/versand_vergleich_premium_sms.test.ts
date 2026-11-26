@@ -30,7 +30,6 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'svelte/compiler';
-import { versandPropsAus } from '../../compare/versandPropsAus.ts';
 import {
 	baueVersandNutzlast,
 	hydrateVersandFieldsFromPreset,
@@ -62,39 +61,7 @@ function _preset(overrides: Partial<ComparePreset> = {}): ComparePreset {
 	} as ComparePreset;
 }
 
-// ─── versandPropsAus: sendPremiumSms als Klasse-A-Feld ─────────────────────
-
-describe('AC-8: versandPropsAus fuehrt sendPremiumSms + onSendPremiumSmsChange', () => {
-	test('das Buendel traegt sendPremiumSms als Wert (Default false ohne Bestand)', () => {
-		const wiz: Record<string, unknown> = {};
-		const props = versandPropsAus(wiz as never) as Record<string, unknown>;
-		assert.strictEqual(
-			props.sendPremiumSms,
-			false,
-			'AC-8: versandPropsAus muss sendPremiumSms fuehren (Default false ohne wiz.sendPremiumSms), ' +
-				`erhalten: ${JSON.stringify(props.sendPremiumSms)}`
-		);
-	});
-
-	test('das Buendel traegt sendPremiumSms unveraendert aus dem Wizard-Zustand', () => {
-		const wiz: Record<string, unknown> = { sendPremiumSms: true };
-		const props = versandPropsAus(wiz as never) as Record<string, unknown>;
-		assert.strictEqual(props.sendPremiumSms, true);
-	});
-
-	test('onSendPremiumSmsChange schreibt auf wiz.sendPremiumSms zurueck', () => {
-		const wiz: Record<string, unknown> = { sendPremiumSms: false };
-		const props = versandPropsAus(wiz as never) as Record<string, unknown>;
-		const onChange = props.onSendPremiumSmsChange as ((an: boolean) => void) | undefined;
-		assert.strictEqual(
-			typeof onChange,
-			'function',
-			`AC-8: versandPropsAus muss einen Rueckruf onSendPremiumSmsChange liefern, erhalten: ${typeof onChange}`
-		);
-		onChange!(true);
-		assert.strictEqual(wiz.sendPremiumSms, true, 'onSendPremiumSmsChange(true) muss wiz.sendPremiumSms setzen.');
-	});
-});
+// #3384 S4: Block „AC-8: versandPropsAus fuehrt sendPremiumSms“ mit der Waise versandPropsAus.ts gelöscht.
 
 // ─── Persistenzweg: VersandSnapshot/Hydration/Nutzlast ─────────────────────
 

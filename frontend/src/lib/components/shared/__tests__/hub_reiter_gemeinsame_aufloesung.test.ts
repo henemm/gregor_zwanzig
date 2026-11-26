@@ -445,14 +445,15 @@ describe('#2727 AC-15: CompareTabs — verzoegerte Alarm-Hydration fuellt den Re
 			{ jsAlsTs: true }
 		);
 		const { alarmePropsAus } = await import('../../compare/alarmePropsAus.ts');
-		const { versandPropsAus } = await import('../../compare/versandPropsAus.ts');
+		// #3384 S4: der Versand-Adapter versandPropsAus ist gelöscht; der Versand-Wert wird direkt im
+		// Feldsatz gesetzt und gelesen (Zusicherung unverändert: die späte Alarm-Hydration lässt ihn stehen).
 		// #2795 S3b 1b: der Hub ruft alarmePropsAus nicht mehr (der neue Reiter liest das Preset).
 		const feldsatz = hubFeldsatzAus(ast, u);
 		for (const e of effekteVon(ast, quelle, u, 'initialTab')) e();
 		// #2794 S3a: der Alt-Link ?tab=alarme oeffnet den Reiter Zustellung (dort stehen die Alarme).
 		assert.equal(u.activeTab, 'zustellung', 'Vorbedingung: Deep-Link oeffnet den Reiter mit dem Alarm-Baustein');
 		assert.equal(alarmePropsAus(feldsatz).cooldownMinutes, undefined, 'vor der Hydration: Standard „nicht gesetzt"');
-		versandPropsAus(feldsatz).onSendSmsChange(true);
+		feldsatz.sendSms = true;
 		for (const e of effekteVon(ast, quelle, u, 'hydrateAlarmeTab')) e();
 		for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
 		assert.equal(u.alarmeHydrated, true, 'die Alarm-Hydration ist nicht gelaufen');
@@ -461,6 +462,6 @@ describe('#2727 AC-15: CompareTabs — verzoegerte Alarm-Hydration fuellt den Re
 		assert.equal(alarme.quietFrom, '22:00');
 		assert.equal(alarme.quietTo, '07:00');
 		assert.deepEqual(alarme.existingChannels, { email: true, telegram: true, sms: false, premium_sms: false });
-		assert.equal(versandPropsAus(feldsatz).sendSms, true, 'die spaete Alarm-Hydration hat einen Nutzerwert ueberschrieben');
+		assert.equal(feldsatz.sendSms, true, 'die spaete Alarm-Hydration hat einen Nutzerwert ueberschrieben');
 	});
 });

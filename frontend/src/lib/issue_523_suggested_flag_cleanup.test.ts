@@ -59,22 +59,7 @@ test('AC-6: waypointEditor.ts hat keine stripSuggested-Funktion mehr', () => {
 	);
 });
 
-// AC-7: WaypointPin.svelte hat kein suggested-Prop und keinen dashed-Branch mehr
-test('AC-7: WaypointPin.svelte hat kein suggested-Prop mehr', () => {
-	const src = read('frontend/src/lib/components/trip-detail/waypoints/WaypointPin.svelte');
-	assert.ok(
-		!src.includes('suggested'),
-		'WaypointPin.svelte darf kein suggested-Prop mehr haben'
-	);
-});
-
-test('AC-7: WaypointPin.svelte hat keinen stroke-dasharray-Branch mehr', () => {
-	const src = read('frontend/src/lib/components/trip-detail/waypoints/WaypointPin.svelte');
-	assert.ok(
-		!src.includes('stroke-dasharray'),
-		'WaypointPin.svelte darf keinen gestrichelten SVG-Branch mehr haben'
-	);
-});
+// #3384 S4: AC-7 (WaypointPin.svelte) mit der Waise WaypointPin.svelte gelöscht.
 
 // WaypointCard: keine deprecated onConfirm/onReject mehr
 test('WaypointCard.svelte hat keine deprecated onConfirm-Prop mehr', () => {

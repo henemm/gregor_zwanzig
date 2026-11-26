@@ -146,14 +146,8 @@ const alsText = (f: Fund): string =>
 // Vokabular auf viele kleine Literale verteilt (Adversary-Befund F002) — ein
 // Register nicht, denn jede neue Fundstelle verlangt eine Zeile mit Begruendung
 // und faellt damit im Review auf.
+// #3384 S4: Eintrag utils/alertMetricCatalogIds.ts mit der Waise gelöscht.
 const BEKANNTE_KOLLISIONEN: { datei: string; schluessel: string; grund: string }[] = [
-	{
-		datei: 'frontend/src/lib/utils/alertMetricCatalogIds.ts',
-		schluessel: 'thunder_level',
-		grund:
-			'Alarm-Crosswalk (#1401 B): AlertMetric -> Register-ID. Eigenes Vokabular ' +
-			'der Alarme, das zufaellig denselben Schluesselnamen traegt.'
-	},
 	{
 		datei: 'frontend/src/lib/components/molecules/AlertRow.svelte',
 		schluessel: 'thunder_level',

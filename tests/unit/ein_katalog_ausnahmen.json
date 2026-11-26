@@ -57,14 +57,8 @@
     "frontend/src/lib/types.ts": {
       "FRONTEND_LISTE": 1
     },
-    "frontend/src/lib/utils/alertMetricCatalogIds.ts": {
-      "FRONTEND_LISTE": 2
-    },
     "frontend/src/lib/utils/alertMetricLabels.ts": {
       "FRONTEND_LISTE": 2
-    },
-    "frontend/src/lib/utils/weatherEmoji.ts": {
-      "FRONTEND_SCHWELLE": 6
     },
     "frontend/src/lib/utils/weatherUtils.ts": {
       "FRONTEND_SCHWELLE": 2
@@ -238,5 +232,5 @@
       "VERARBEITUNG_AUSSEN": 1
     }
   },
-  "hoechststand": 430
+  "hoechststand": 422
 }

@@ -29,12 +29,12 @@ PHANTOM_COCKPIT = ["StagePill", "StageStrip", "ActiveTripCard", "BriefingsTimeli
 # In Issue #316 namentlich genannte, bisher undokumentierte Komponenten.
 NAMED_COMPONENTS = [
     "MapCanvas",
-    "WaypointPin",
+    # "WaypointPin" und "LocationPreviewMap" entfernt (#3384 S4): als Waisen
+    # geloescht, Doku-Eintraege in docs/reference/frontend_components.md mit raus.
     "PauseStageView",
     "ProfileEditor",
     "StageCard",
     "WaypointCard",
-    "LocationPreviewMap",
     # "NewLocationWizard" entfernt (Issue #1196 S1 AC-4): die Wizards sind
     # abgeschafft (CLAUDE.md "Wizards existieren nicht mehr"),
     # `find frontend/src -iname "*NewLocationWizard*"` liefert keinen Treffer

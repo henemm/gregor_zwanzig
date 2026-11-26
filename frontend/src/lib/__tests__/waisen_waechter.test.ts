@@ -68,7 +68,7 @@ export const OBERGRENZE_WAISEN = 7;
 const istTest = (rel: string) => /(^|\/)__tests__\//.test(rel) || /\.(test|spec)\.(ts|js|mjs)$/.test(rel);
 const ENDUNGEN = ['.svelte', '.ts', '.js', '.mjs', '.svelte.ts', '.svelte.js'];
 const KANTE =
-	/(?:from\s*|import\s*\(\s*|import\s+|require\(\s*)['"]([^'"]+)['"]|import\.meta\.glob\(\s*['"]([^'"]+)['"]|new URL\(\s*['"]([^'"]+)['"]\s*,\s*import\.meta\.url/g;
+	/(?:from\s*|import\s*\(\s*|import\s+|require\(\s*)['"]([^'"]+)['"]|import\.meta\.glob\s*(?:<[^>]*>)?\s*\(\s*['"]([^'"]+)['"]|new URL\(\s*['"]([^'"]+)['"]\s*,\s*import\.meta\.url/g;
 
 /** Alle Quelldateien (.svelte/.ts/.js/.mjs) unter src, relativ mit `/`. */
 function alleDateien(src: string): string[] {
@@ -126,7 +126,7 @@ function aufloesen(spez: string, von: string, menge: Set<string>): string | null
 function kanten(src: string, rel: string, dateien: string[], menge: Set<string>): string[] {
 	const text = readFileSync(join(src, rel), 'utf8');
 	// Fail-closed (#3383 AC-4 e): die Array-Form würde KANTE still übergehen und Ziele als Waise melden.
-	if (/import\.meta\.glob\(\s*\[/.test(text)) {
+	if (/import\.meta\.glob\s*(?:<[^>]*>)?\s*\(\s*\[/.test(text)) {
 		throw new Error(`${rel}: Array-Form von import.meta.glob nicht unterstützt — Wächterlogik ergänzen`);
 	}
 	const aus: string[] = [];
@@ -182,8 +182,11 @@ export function pruefeRatsche(
 		if (!existsSync(join(src, b))) fehler.push(`${b}: existiert nicht mehr — aus der Liste streichen und OBERGRENZE_WAISEN senken`);
 		else if (!istWaise.has(b)) fehler.push(`${b}: ist wieder erreichbar — aus der Liste streichen und OBERGRENZE_WAISEN senken`);
 	}
-	if (bekannte.length > obergrenze) {
-		fehler.push(`BEKANNTE_WAISEN hat ${bekannte.length} Einträge, OBERGRENZE_WAISEN ist ${obergrenze} — die Liste darf nur schrumpfen`);
+	// #3384 F001: exakt gleich, sonst ließe eine erhöhte Obergrenze still Platz für eine künftige Waise.
+	if (bekannte.length !== obergrenze) {
+		fehler.push(
+			`BEKANNTE_WAISEN hat ${bekannte.length} Einträge, OBERGRENZE_WAISEN ist ${obergrenze} — beide müssen exakt gleich sein, die Liste darf nur schrumpfen`
+		);
 	}
 	if (new Set(bekannte).size !== bekannte.length) fehler.push('BEKANNTE_WAISEN enthält doppelte Einträge');
 	for (const [a, grund] of Object.entries(ausnahmen)) {

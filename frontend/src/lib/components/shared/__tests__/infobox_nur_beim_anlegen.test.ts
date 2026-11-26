@@ -505,13 +505,10 @@ describe('AC-6 Verdrahtung: die Bearbeiten-Hubs und die Wertprop-Bündel setzen 
 	}
 
 	// #2794 S3a Teil-PR 4a: corridorPropsAus ist mit seinem einzigen Verwender (Korridor-Editor) entfallen.
-	test('wetterMetriken-/alarme-/versandPropsAus liefern kein showInfobox-Feld', async () => {
+	// #3384 S4: wetterMetrikenPropsAus und versandPropsAus sind als Waisen gelöscht; es bleibt alarmePropsAus.
+	test('alarmePropsAus liefert kein showInfobox-Feld', async () => {
 		const wiz = neuerFeldsatz();
-		for (const [modul, fn] of [
-			['compare/wetterMetrikenPropsAus', 'wetterMetrikenPropsAus'],
-			['compare/alarmePropsAus', 'alarmePropsAus'],
-			['compare/versandPropsAus', 'versandPropsAus']
-		] as const) {
+		for (const [modul, fn] of [['compare/alarmePropsAus', 'alarmePropsAus']] as const) {
 			const props = await propsAus(modul, fn, wiz);
 			assert.ok(Object.keys(props).length > 3, `${fn}: leeres Bündel — Messaufbau kaputt`);
 			assert.ok(

@@ -1,0 +1,10 @@
+svelte-check nach der Löschung S4 (#3384)
+Datum: 2026-11-26
+Stand: Branch rework-3384-waisen-s4, Arbeitsstand GREEN (19 S4-Dateien, issue-1093-unit samt Config und 6 reine Waisentests gelöscht)
+Befehl (aus frontend/): npx svelte-kit sync && npx svelte-check --tsconfig ./tsconfig.json --output machine
+
+Ergebnis:
+COMPLETED 2241 FILES 32 ERRORS 71 WARNINGS 50 FILES_WITH_PROBLEMS
+
+Fehler:     32 (vorher 32, nicht gestiegen)
+Warnungen:  71 (vorher 72, gesunken)

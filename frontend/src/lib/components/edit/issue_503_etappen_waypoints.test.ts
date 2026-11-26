@@ -28,7 +28,6 @@ const STAGE_NAV_DROPDOWN = join(here, 'StageNavDropdown.svelte');
 
 // Issue #522 — Wegpunkt-Karte Visual-Redesign
 const WAYPOINT_CARD = join(here, '..', 'trip-detail', 'waypoints', 'WaypointCard.svelte');
-const WAYPOINT_PIN = join(here, '..', 'trip-detail', 'waypoints', 'WaypointPin.svelte');
 
 // ────────────────────────────────────────────────────────────────────────────
 // EditStagesPanelNew: Karte + Grid + keine KI/Suggested-Branches
@@ -274,39 +273,7 @@ describe('#522 WaypointCard Visual-Redesign', () => {
 	});
 });
 
-describe('#522 WaypointPin Cleanup (suggested-Branch raus)', () => {
-	test('hat kein suggested Prop mehr', () => {
-		const src = readFileSync(WAYPOINT_PIN, 'utf-8');
-		assert.ok(
-			!/suggested\??:\s*boolean/.test(src),
-			'WaypointPin.svelte darf kein "suggested?: boolean" Prop mehr deklarieren'
-		);
-	});
-
-	test('hat keinen stroke-dasharray-Branch mehr', () => {
-		const src = readFileSync(WAYPOINT_PIN, 'utf-8');
-		assert.ok(
-			!src.includes('stroke-dasharray'),
-			'WaypointPin.svelte darf kein stroke-dasharray (gestrichelter suggested-Pin) mehr enthalten'
-		);
-	});
-
-	test('hat keinen {#if suggested}-Branch mehr', () => {
-		const src = readFileSync(WAYPOINT_PIN, 'utf-8');
-		assert.ok(
-			!/\{#if\s+suggested\b/.test(src),
-			'WaypointPin.svelte darf keinen {#if suggested}-Block mehr haben'
-		);
-	});
-
-	test('aria-label hat keinen suggested-Zweig mehr', () => {
-		const src = readFileSync(WAYPOINT_PIN, 'utf-8');
-		assert.ok(
-			!/Vorgeschlagener\s+Wegpunkt/.test(src),
-			'WaypointPin.svelte darf kein "Vorgeschlagener Wegpunkt"-aria-label mehr enthalten'
-		);
-	});
-});
+// #3384 S4: Block „#522 WaypointPin Cleanup“ mit der Waise WaypointPin.svelte gelöscht.
 
 // ────────────────────────────────────────────────────────────────────────────
 // #524 — WaypointSidebar „+ auf Route" Button entsperren

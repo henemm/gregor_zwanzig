@@ -144,8 +144,8 @@ describe('AC-3: Etappen-Editor englisch, Wochentag ueber fmtWeekday', () => {
 	test('Datumsfeld: Wochentag je Sprache, Trip-Start und Startzeit englisch', () => {
 		const { de, en } = deDannEn(() => sichtbar(P.editFelderRendern()));
 		for (const t of ['So', 'Mo', 'Di', 'Datum· Trip-Start', '· Trip-Start', 'Startzeit']) hat(de, t);
-		for (const t of ['Sun', 'Mon', 'Tue', 'Date· Trip start', '· Trip start', 'Start time', 'Weather profile', 'Custom selection', '1 columns · 1 detail · 2 active', 'Edit in the weather tab →', 'Read-only.', 'Create 2 stages', '2 file(s) selected', 'Drag GPX files here', 'or click to choose', '2 stage(s) loaded', 'Create manually', 'Trip name'])
-			hat(en, t);
+		// #3384 S4: Texte von WeatherSummaryCard und EditRouteSection mit den Waisen gelöscht.
+		for (const t of ['Sun', 'Mon', 'Tue', 'Date· Trip start', '· Trip start', 'Start time']) hat(en, t);
 	});
 });
 
