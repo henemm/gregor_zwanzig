@@ -1,0 +1,117 @@
+{
+  "verified_commit": "ff6140d459bb26156e9e4a6af01d6cbe2ed821c0",
+  "findings": [
+    {
+      "ac": "Probe",
+      "status": "PASS",
+      "url": "/api/mcp",
+      "evidence": "staging_mcp_pruefen.py von aussen (iMac): BESTANDEN, Exit 0; Pfade, OAuth mit freigegebenem Konto und nicht freigegebenem Konto (403), Werkzeugliste, Wetteraufruf Frankfurt",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/api/mcp tools/list",
+      "evidence": "tools: ort_suchen, wetter, regen_nowcast; wetter-Schema hat felder; Beschreibungen de und en",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "/api/mcp wetter Innsbruck 24h",
+      "evidence": "24 Stunden; wind_chill_c (Einheit \u00b0C) 24/24 gefuellt, humidity_pct, dewpoint_c, uv_index, pressure_msl_hpa, visibility_m, cloud_low/mid/high_pct, sonnenminuten, wmo_code vorhanden; Stunde 0: t2m 0.2, wind_chill -2.4, humidity 96, dewpoint -0.4, wmo 73; kein confidence_pct, kein cape_jkg",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "/api/mcp wetter Obergurgl/Hintertux",
+      "evidence": "snow_depth_cm real gefuellt: Obergurgl 17 cm, Hintertux 4 cm, Innsbruck 0 cm; snow_new_24h_cm ist auf Staging fuer alle drei Orte leer (None), nur snow_depth gefuellt",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "/api/mcp wetter felder",
+      "evidence": "felder=[wind_chill_c,t2m_c] liefert nur t2m_c, wind_chill_c, zeit; unbekanntes Feld: isError true mit Liste gueltiger Feldnamen (de und en)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "/api/mcp regen_nowcast Frankfurt",
+      "evidence": "quelle radar, reichweite_min 70, trocken true, intensitaet trocken, beginn_min/ende_min null, laeuft_bereits false, konvektiv/hagel false, hinweis gesetzt, frames in Ortszeit +01:00",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "/api/mcp regen_nowcast Reykjavik",
+      "evidence": "ausserhalb Radar: quelle minutely_15, reichweite_min 180, beginn_min 85, ende_min 180, intensitaet leicht, ueber_horizont_hinaus true, 12 Frames in Ortszeit Atlantic/Reykjavik, Hinweis zur Untergrenze",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-10",
+      "status": "PASS",
+      "url": "/api/mcp regen_nowcast",
+      "evidence": "unbekannter Ort Xyzzyqwerty: isError true mit Hinweistext (en gemessen)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-12",
+      "status": "PASS",
+      "url": "/api/mcp en/de",
+      "evidence": "freigegebenes Konto mit language de und (temporaer auf en gestellt, danach auf de zurueckgesetzt) en: tools/list-Beschreibungen, Fehler- und Hinweistexte in Kontosprache; Protokoll-Token (trocken, leicht, minutely_15, Feldnamen) unuebersetzt; das en-Konto ist nicht fuer MCP freigegeben (403)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-13",
+      "status": "PASS",
+      "url": "/api/mcp",
+      "evidence": "Frage in der Claude-App nicht fahrbar; messbares Aequivalent: echte Werkzeugaufrufe wetter (wind_chill_c) und regen_nowcast ueber den echten Staging-MCP-Endpunkt mit echtem OAuth-Token, Werte aus Gregor",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-7-9-11",
+      "status": "PASS",
+      "url": "n/a",
+      "evidence": "Kontingent, Mengenbremse, Drosselung, Mandantentrennung durch Tests abgedeckt, hier nicht neu gemessen",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-26T12:00:41.916345+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: MCP-Konnektor Staging 1a58c297, Probe Exit 0, wetter und regen_nowcast gemessen; en-Lauf mit freigegebenem Konto bei temporaer auf en gestellter Sprache (danach de), AC-13 ueber echten Staging-MCP-Endpunkt statt in der Claude-App",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: MCP-Konnektor Staging 1a58c297, Probe Exit 0, wetter und regen_nowcast gemessen; en-Lauf mit freigegebenem Konto bei temporaer auf en gestellter Sprache (danach de), AC-13 ueber echten Staging-MCP-Endpunkt statt in der Claude-App",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-26T12:00:41.916345+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
