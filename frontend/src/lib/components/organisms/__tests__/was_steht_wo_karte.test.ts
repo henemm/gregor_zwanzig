@@ -239,6 +239,27 @@ describe('Marken und SMS-Beispiel (AC-27, AC-28)', () => {
 		const sms = text(eins(t, 'data-testid="was-steht-wo-sms"').innen);
 		assert.equal(sms, 'SMS-Beispiel: Etappe-X: N14 W30 · 17 von 160 Zeichen Die letzten 2 Metriken passen nicht mehr in die SMS. Zieh nach oben, was dir in der SMS wichtig ist.');
 	});
+	// #3385 AC-6 (Spec rework_3385_waisen_s3.md): Nachfolger von versand_telegram_je_kontext.test.ts für den
+	// Fallliste-Fall E-R8-F3N-VERSAND-TRIP. Die Grenze (7 Zeilen) rechnet das Backend; die Karte zeigt die
+	// Marke je Zeile aus der Antwort (ADR-0124 Nr. 3).
+	test('Trip mit neun Zeilen: Telegram-Marke „nur Tageswert“ erst ab der achten Zeile', async () => {
+		locale.set('de');
+		const ids = ['temperature', 'gust', 'wind', 'precipitation', 'rain_probability', 'cloud_cover', 'humidity', 'uv_index', 'sunshine'];
+		const rows = ids.map((metric_id, i) => ({
+			metric_id, name: `Zeile-${i + 1}`, position: i, parent: null, cells: {
+				email: z('on'), telegram: z('on', i >= 7 ? { mark: 'nur_tageswert' } : {}), sms: z('on'), outlook: z('off')
+			}
+		}));
+		const t = await karte(trip({ rows }), { context: 'route' });
+		assert.deepEqual(elemente(t, 'data-slot="et-zeile"').map((x) => attr(x.auf, 'data-metrik')), ids);
+		const mitMarke = ids.filter((id) => /nur Tageswert/.test(text(zelle(t, id, 'telegram').innen)));
+		assert.deepEqual(mitMarke, ['uv_index', 'sunshine'], 'nur Tageswert genau in den Telegram-Zellen der Zeilen 8 und 9');
+		for (const id of ids) {
+			for (const stelle of ['email', 'sms', 'outlook']) {
+				assert.doesNotMatch(text(zelle(t, id, stelle).innen), /nur Tageswert/, `${id}/${stelle} trägt keine Telegram-Marke`);
+			}
+		}
+	});
 	test('drei Orte: Grenze aus der Antwort (160), Fassung für mehrere Orte ohne „+N“ je Ort (#3172)', async () => {
 		const o = await karte(orte(3), { context: 'vergleich' });
 		const sms = text(eins(o, 'data-testid="was-steht-wo-sms"').innen);

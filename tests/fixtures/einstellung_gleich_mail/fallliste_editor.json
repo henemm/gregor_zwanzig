@@ -1840,12 +1840,13 @@
    "kontext": "orte",
    "format": "editor",
    "pruefung": "anzeige",
-   "test": "frontend/src/lib/components/shared/versand-tab/__tests__/versand_telegram_je_kontext.test.ts::de: Einleitung und Telegram-Unterzeile wahr",
+   "test": "frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::Orte: fünf Spalten, E-Mail „Übersicht“, Stundenverlauf „nur E-Mail“, Telegram im engen Raster „Telegr.“",
    "ac": "AC-24",
    "befund": "F3-Nachtrag",
-   "status": "gruen",
+   "status": "ausnahme",
    "runde": 8,
-   "paket": "r8fe"
+   "paket": "r8fe",
+   "verweis": "#3385: Editor zeigt die Telegram-Zeilengrenze nicht mehr (Orte-Karte kennzeichnet Telegram nicht je Zeile); Folge-Issue #3390"
   },
   {
    "id": "E-R8-F3N-VERSAND-ORTE-EN",
@@ -1853,12 +1854,13 @@
    "kontext": "orte",
    "format": "editor",
    "pruefung": "anzeige",
-   "test": "frontend/src/lib/components/shared/versand-tab/__tests__/versand_telegram_je_kontext.test.ts::en: Einleitung und Telegram-Unterzeile wahr",
+   "test": "frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::alle Texte englisch, Namen und Kürzel aus der Antwort unverändert",
    "ac": "AC-24",
    "befund": "F3-Nachtrag",
-   "status": "gruen",
+   "status": "ausnahme",
    "runde": 8,
-   "paket": "r8fe"
+   "paket": "r8fe",
+   "verweis": "#3385: Editor zeigt die Telegram-Zeilengrenze nicht mehr (Orte-Karte kennzeichnet Telegram nicht je Zeile); Folge-Issue #3390"
   },
   {
    "id": "E-R8-F3N-VERSAND-TRIP",
@@ -1866,12 +1868,13 @@
    "kontext": "trip",
    "format": "editor",
    "pruefung": "anzeige",
-   "test": "frontend/src/lib/components/shared/versand-tab/__tests__/versand_telegram_je_kontext.test.ts::Trip: Etappen-Tabelle mit den ersten 7 Spalten bleibt",
+   "test": "frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::Trip mit neun Zeilen: Telegram-Marke „nur Tageswert“ erst ab der achten Zeile",
    "ac": "AC-24",
    "befund": "F3-Nachtrag",
    "status": "gruen",
    "runde": 8,
-   "paket": "r8fe"
+   "paket": "r8fe",
+   "verweis": "#3385, ADR-0124 Nr. 3 (Telegram-Schnittlinie in der Karte „Was steht wo“)"
   },
   {
    "id": "E-3020-TRIP-TG-NUR-TAGESWERT",

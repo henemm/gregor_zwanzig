@@ -1,0 +1,1557 @@
+# RED #3385 Waisen S3, 2026-11-26, HEAD 67e4bda11 plus RED-Teständerungen
+# cd frontend && npm test -- <4 benannte Dateien>
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/__tests__/waisen_waechter.test.ts src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts src/lib/components/shared/__tests__/hub_geteilte_felder_cooldown_quiet_konsistent.test.ts src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts
+
+TAP version 13
+# Subtest: \#3297/\#3020 AC-7: toter Alt-Editor gelöscht, keine Importe, Vergleich-Hilfen erhalten
+    # Subtest: gelöscht: lib/components/shared/WeatherMetricsTab.svelte
+    ok 1 - gelöscht: lib/components/shared/WeatherMetricsTab.svelte
+      ---
+      duration_ms: 0.745201
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/WetterMetrikenVersandPanel.svelte
+    ok 2 - gelöscht: lib/components/shared/WetterMetrikenVersandPanel.svelte
+      ---
+      duration_ms: 0.11813
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/trip-detail/BriefingScheduleTab.svelte
+    ok 3 - gelöscht: lib/components/trip-detail/BriefingScheduleTab.svelte
+      ---
+      duration_ms: 0.08764
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/VersandTab.svelte
+    ok 4 - gelöscht: lib/components/shared/VersandTab.svelte
+      ---
+      duration_ms: 0.068722
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/MailInhaltCard.svelte
+    ok 5 - gelöscht: lib/components/shared/MailInhaltCard.svelte
+      ---
+      duration_ms: 0.13951
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/OutlookLayoutControls.svelte
+    ok 6 - gelöscht: lib/components/shared/OutlookLayoutControls.svelte
+      ---
+      duration_ms: 0.078409
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/weather-metrics-tab/channelMetricLayouts.ts
+    ok 7 - gelöscht: lib/components/shared/weather-metrics-tab/channelMetricLayouts.ts
+      ---
+      duration_ms: 0.131909
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/weather-metrics-tab/weatherMetricsSavePayload.ts
+    ok 8 - gelöscht: lib/components/shared/weather-metrics-tab/weatherMetricsSavePayload.ts
+      ---
+      duration_ms: 0.16953
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts
+    ok 9 - gelöscht: lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts
+      ---
+      duration_ms: 0.201821
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts
+    ok 10 - gelöscht: lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts
+      ---
+      duration_ms: 0.289711
+      type: 'test'
+      ...
+    # Subtest: keine Produktionsdatei importiert eine gelöschte Datei (statisch, Barrel-Export, dynamisch)
+    ok 11 - keine Produktionsdatei importiert eine gelöschte Datei (statisch, Barrel-Export, dynamisch)
+      ---
+      duration_ms: 46.454544
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareMetricSelection.ts
+    ok 12 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareMetricSelection.ts
+      ---
+      duration_ms: 0.15196
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareMetricOrder.ts
+    ok 13 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareMetricOrder.ts
+      ---
+      duration_ms: 0.0616
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareChannelMetricLayouts.ts
+    ok 14 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/compareChannelMetricLayouts.ts
+      ---
+      duration_ms: 0.045709
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts
+    ok 15 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts
+      ---
+      duration_ms: 0.041991
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte
+    ok 16 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte
+      ---
+      duration_ms: 0.0401
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/wetter-tab/wasStehtWoSpeicherung.ts
+    ok 17 - erhalten (Regressionsschutz, heute grün): lib/components/shared/wetter-tab/wasStehtWoSpeicherung.ts
+      ---
+      duration_ms: 0.03944
+      type: 'test'
+      ...
+    1..17
+ok 1 - \#3297/\#3020 AC-7: toter Alt-Editor gelöscht, keine Importe, Vergleich-Hilfen erhalten
+  ---
+  duration_ms: 50.068129
+  type: 'suite'
+  ...
+# Subtest: \#3366 AC-5: layout-tab-Waisen und Barrels gelöscht, keine Importe, ltChannels und lib/index erhalten
+    # Subtest: gelöscht: lib/components/shared/layout-tab/LTCapNote.svelte
+    ok 1 - gelöscht: lib/components/shared/layout-tab/LTCapNote.svelte
+      ---
+      duration_ms: 0.222891
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/layout-tab/LTChannelPicker.svelte
+    ok 2 - gelöscht: lib/components/shared/layout-tab/LTChannelPicker.svelte
+      ---
+      duration_ms: 0.059449
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/layout-tab/LTCutLine.svelte
+    ok 3 - gelöscht: lib/components/shared/layout-tab/LTCutLine.svelte
+      ---
+      duration_ms: 0.060979
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/layout-tab/LayoutTab.svelte
+    ok 4 - gelöscht: lib/components/shared/layout-tab/LayoutTab.svelte
+      ---
+      duration_ms: 0.57018
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/layout-tab/channelLayoutsDirty.ts
+    ok 5 - gelöscht: lib/components/shared/layout-tab/channelLayoutsDirty.ts
+      ---
+      duration_ms: 0.063379
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/shared/layout-tab/ltIdealRange.ts
+    ok 6 - gelöscht: lib/components/shared/layout-tab/ltIdealRange.ts
+      ---
+      duration_ms: 0.046719
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/email-preview/index.ts
+    ok 7 - gelöscht: lib/components/email-preview/index.ts
+      ---
+      duration_ms: 0.05677
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/dot/index.ts
+    ok 8 - gelöscht: lib/components/ui/dot/index.ts
+      ---
+      duration_ms: 0.048661
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/elev-sparkline/index.ts
+    ok 9 - gelöscht: lib/components/ui/elev-sparkline/index.ts
+      ---
+      duration_ms: 0.10256
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/eyebrow/index.ts
+    ok 10 - gelöscht: lib/components/ui/eyebrow/index.ts
+      ---
+      duration_ms: 0.0483
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/input/index.ts
+    ok 11 - gelöscht: lib/components/ui/input/index.ts
+      ---
+      duration_ms: 0.03988
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/pill/index.ts
+    ok 12 - gelöscht: lib/components/ui/pill/index.ts
+      ---
+      duration_ms: 0.0393
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/segmented/index.ts
+    ok 13 - gelöscht: lib/components/ui/segmented/index.ts
+      ---
+      duration_ms: 0.03859
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/topo/index.ts
+    ok 14 - gelöscht: lib/components/ui/topo/index.ts
+      ---
+      duration_ms: 0.03706
+      type: 'test'
+      ...
+    # Subtest: gelöscht: lib/components/ui/wicon/index.ts
+    ok 15 - gelöscht: lib/components/ui/wicon/index.ts
+      ---
+      duration_ms: 0.03757
+      type: 'test'
+      ...
+    # Subtest: keine Produktionsdatei importiert eine in \#3366 gelöschte Datei (statisch, Barrel-Export, dynamisch)
+    ok 16 - keine Produktionsdatei importiert eine in \#3366 gelöschte Datei (statisch, Barrel-Export, dynamisch)
+      ---
+      duration_ms: 40.739975
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/layout-tab/ltChannels.ts
+    ok 17 - erhalten (Regressionsschutz, heute grün): lib/components/shared/layout-tab/ltChannels.ts
+      ---
+      duration_ms: 0.1135
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/index.ts
+    ok 18 - erhalten (Regressionsschutz, heute grün): lib/index.ts
+      ---
+      duration_ms: 0.054
+      type: 'test'
+      ...
+    1..18
+ok 2 - \#3366 AC-5: layout-tab-Waisen und Barrels gelöscht, keine Importe, ltChannels und lib/index erhalten
+  ---
+  duration_ms: 42.747228
+  type: 'suite'
+  ...
+# Subtest: \#3383 AC-1/AC-2/AC-8: Waisen S1 gelöscht, keine Importe, lebende Nachbarn erhalten
+    # Subtest: Löschliste \#3383 hat genau 14 Einträge ohne Doppelte
+    ok 1 - Löschliste \#3383 hat genau 14 Einträge ohne Doppelte
+      ---
+      duration_ms: 0.20806
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/molecules/GrundauswahlLeerHinweis.svelte
+    ok 2 - gelöscht (\#3383): lib/components/molecules/GrundauswahlLeerHinweis.svelte
+      ---
+      duration_ms: 0.08806
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/reportConfigDirty.ts
+    ok 3 - gelöscht (\#3383): lib/components/shared/reportConfigDirty.ts
+      ---
+      duration_ms: 0.47987
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/AggregationMetricRow.svelte
+    ok 4 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/AggregationMetricRow.svelte
+      ---
+      duration_ms: 0.084159
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/MultiSymbolMetricRow.svelte
+    ok 5 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/MultiSymbolMetricRow.svelte
+      ---
+      duration_ms: 0.050059
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/ThresholdMetricRow.svelte
+    ok 6 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/ThresholdMetricRow.svelte
+      ---
+      duration_ms: 0.04313
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/WeatherV2Grundauswahl.svelte
+    ok 7 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/WeatherV2Grundauswahl.svelte
+      ---
+      duration_ms: 0.03989
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/WeatherV2PresetBar.svelte
+    ok 8 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/WeatherV2PresetBar.svelte
+      ---
+      duration_ms: 0.039061
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/compareAggregationGrouping.ts
+    ok 9 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/compareAggregationGrouping.ts
+      ---
+      duration_ms: 0.042339
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/nurEinBericht.ts
+    ok 10 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/nurEinBericht.ts
+      ---
+      duration_ms: 0.040931
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts
+    ok 11 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts
+      ---
+      duration_ms: 0.07664
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/shared/weather-metrics-tab/wertebereicheAnzeige.ts
+    ok 12 - gelöscht (\#3383): lib/components/shared/weather-metrics-tab/wertebereicheAnzeige.ts
+      ---
+      duration_ms: 0.050161
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/trip-detail/AboutOutputLayout.svelte
+    ok 13 - gelöscht (\#3383): lib/components/trip-detail/AboutOutputLayout.svelte
+      ---
+      duration_ms: 0.04308
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/trip-detail/WeatherV2Kanaele.svelte
+    ok 14 - gelöscht (\#3383): lib/components/trip-detail/WeatherV2Kanaele.svelte
+      ---
+      duration_ms: 0.039921
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3383): lib/components/trip-detail/weatherSaveGate.ts
+    ok 15 - gelöscht (\#3383): lib/components/trip-detail/weatherSaveGate.ts
+      ---
+      duration_ms: 0.038201
+      type: 'test'
+      ...
+    # Subtest: keine Produktionsdatei importiert eine in \#3383 gelöschte Datei (aufgelöster Modulpfad)
+    ok 16 - keine Produktionsdatei importiert eine in \#3383 gelöschte Datei (aufgelöster Modulpfad)
+      ---
+      duration_ms: 39.993256
+      type: 'test'
+      ...
+    # Subtest: keine Produktionsdatei importiert einen Basisnamen der \#3383-Löschliste
+    ok 17 - keine Produktionsdatei importiert einen Basisnamen der \#3383-Löschliste
+      ---
+      duration_ms: 27.891978
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts
+    ok 18 - erhalten (Regressionsschutz, heute grün): lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts
+      ---
+      duration_ms: 0.115561
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/trip-detail/metricsEditor.ts
+    ok 19 - erhalten (Regressionsschutz, heute grün): lib/components/trip-detail/metricsEditor.ts
+      ---
+      duration_ms: 0.052809
+      type: 'test'
+      ...
+    1..19
+ok 3 - \#3383 AC-1/AC-2/AC-8: Waisen S1 gelöscht, keine Importe, lebende Nachbarn erhalten
+  ---
+  duration_ms: 70.078665
+  type: 'suite'
+  ...
+# Subtest: \#3384 AC-1: Waisen S4 gelöscht, keine Importe, EinstellTabelle erhalten
+    # Subtest: Löschliste \#3384 hat genau 19 Einträge ohne Doppelte
+    ok 1 - Löschliste \#3384 hat genau 19 Einträge ohne Doppelte
+      ---
+      duration_ms: 0.200051
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/compare/AddReportCard.svelte
+    ok 2 - gelöscht (\#3384): lib/components/compare/AddReportCard.svelte
+      ---
+      duration_ms: 0.1101
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/compare/CreateGroupDialog.svelte
+    ok 3 - gelöscht (\#3384): lib/components/compare/CreateGroupDialog.svelte
+      ---
+      duration_ms: 0.04989
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/compare/LocationPreviewMap.svelte
+    ok 4 - gelöscht (\#3384): lib/components/compare/LocationPreviewMap.svelte
+      ---
+      duration_ms: 0.041279
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/compare/layoutPreviewRows.ts
+    ok 5 - gelöscht (\#3384): lib/components/compare/layoutPreviewRows.ts
+      ---
+      duration_ms: 0.0401
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/compare/versandPropsAus.ts
+    ok 6 - gelöscht (\#3384): lib/components/compare/versandPropsAus.ts
+      ---
+      duration_ms: 0.038269
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/compare/wetterMetrikenPropsAus.ts
+    ok 7 - gelöscht (\#3384): lib/components/compare/wetterMetrikenPropsAus.ts
+      ---
+      duration_ms: 0.040651
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/edit/EditRouteSection.svelte
+    ok 8 - gelöscht (\#3384): lib/components/edit/EditRouteSection.svelte
+      ---
+      duration_ms: 0.039289
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/edit/EditWeatherSection.svelte
+    ok 9 - gelöscht (\#3384): lib/components/edit/EditWeatherSection.svelte
+      ---
+      duration_ms: 0.037101
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/edit/WeatherSummaryCard.svelte
+    ok 10 - gelöscht (\#3384): lib/components/edit/WeatherSummaryCard.svelte
+      ---
+      duration_ms: 0.042069
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/edit/weatherSummary.ts
+    ok 11 - gelöscht (\#3384): lib/components/edit/weatherSummary.ts
+      ---
+      duration_ms: 0.040111
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/mobile/DrawerGroup.svelte
+    ok 12 - gelöscht (\#3384): lib/components/mobile/DrawerGroup.svelte
+      ---
+      duration_ms: 0.041629
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/mobile/DrawerItem.svelte
+    ok 13 - gelöscht (\#3384): lib/components/mobile/DrawerItem.svelte
+      ---
+      duration_ms: 0.035261
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/mobile/NavIcon.svelte
+    ok 14 - gelöscht (\#3384): lib/components/mobile/NavIcon.svelte
+      ---
+      duration_ms: 0.03796
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/components/trip-detail/waypoints/WaypointPin.svelte
+    ok 15 - gelöscht (\#3384): lib/components/trip-detail/waypoints/WaypointPin.svelte
+      ---
+      duration_ms: 0.03788
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/utils/alertMetricCatalogIds.ts
+    ok 16 - gelöscht (\#3384): lib/utils/alertMetricCatalogIds.ts
+      ---
+      duration_ms: 0.039929
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/utils/horizonHelpers.ts
+    ok 17 - gelöscht (\#3384): lib/utils/horizonHelpers.ts
+      ---
+      duration_ms: 0.036071
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/utils/naturalSort.ts
+    ok 18 - gelöscht (\#3384): lib/utils/naturalSort.ts
+      ---
+      duration_ms: 0.06531
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/utils/rightColumn.ts
+    ok 19 - gelöscht (\#3384): lib/utils/rightColumn.ts
+      ---
+      duration_ms: 0.04822
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): lib/utils/weatherEmoji.ts
+    ok 20 - gelöscht (\#3384): lib/utils/weatherEmoji.ts
+      ---
+      duration_ms: 0.07857
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): ../e2e/issue-1093-unit.spec.ts
+    ok 21 - gelöscht (\#3384): ../e2e/issue-1093-unit.spec.ts
+      ---
+      duration_ms: 0.046599
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3384): ../e2e/playwright.1093.unit.config.ts
+    ok 22 - gelöscht (\#3384): ../e2e/playwright.1093.unit.config.ts
+      ---
+      duration_ms: 0.038051
+      type: 'test'
+      ...
+    # Subtest: keine Produktionsdatei importiert eine in \#3384 gelöschte Datei (aufgelöster Modulpfad)
+    ok 23 - keine Produktionsdatei importiert eine in \#3384 gelöschte Datei (aufgelöster Modulpfad)
+      ---
+      duration_ms: 29.94393
+      type: 'test'
+      ...
+    # Subtest: keine Produktionsdatei importiert einen Basisnamen der \#3384-Löschliste
+    ok 24 - keine Produktionsdatei importiert einen Basisnamen der \#3384-Löschliste
+      ---
+      duration_ms: 27.135096
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/molecules/EinstellTabelle.svelte
+    ok 25 - erhalten (Regressionsschutz, heute grün): lib/components/molecules/EinstellTabelle.svelte
+      ---
+      duration_ms: 0.15752
+      type: 'test'
+      ...
+    1..25
+ok 4 - \#3384 AC-1: Waisen S4 gelöscht, keine Importe, EinstellTabelle erhalten
+  ---
+  duration_ms: 58.839369
+  type: 'suite'
+  ...
+# Subtest: \#3384 AC-5 (F004): Wortscan auf das gelöschte Bauteil über frontend/src
+    # Subtest: die Ausnahmedatei existiert (sonst wäre die Ausnahme verwaist)
+    ok 1 - die Ausnahmedatei existiert (sonst wäre die Ausnahme verwaist)
+      ---
+      duration_ms: 0.121351
+      type: 'test'
+      ...
+    # Subtest: kein Treffer außerhalb der einen Ausnahmedatei
+    ok 2 - kein Treffer außerhalb der einen Ausnahmedatei
+      ---
+      duration_ms: 67.951732
+      type: 'test'
+      ...
+    1..2
+ok 5 - \#3384 AC-5 (F004): Wortscan auf das gelöschte Bauteil über frontend/src
+  ---
+  duration_ms: 68.275963
+  type: 'suite'
+  ...
+# Subtest: \#3385 AC-1/AC-7: Waisen S3 gelöscht, kein Import und kein Pfad mehr, Nachbarn erhalten
+    # Subtest: Löschliste \#3385 hat genau 7 Einträge ohne Doppelte
+    ok 1 - Löschliste \#3385 hat genau 7 Einträge ohne Doppelte
+      ---
+      duration_ms: 0.396122
+      type: 'test'
+      ...
+    # Subtest: gelöscht (\#3385): lib/components/shared/versand-tab/VTBriefingChannels.svelte
+    not ok 2 - gelöscht (\#3385): lib/components/shared/versand-tab/VTBriefingChannels.svelte
+      ---
+      duration_ms: 0.753041
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:461:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/shared/versand-tab/VTBriefingChannels.svelte existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:462:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3385): lib/components/shared/versand-tab/VTLaufzeitRoute.svelte
+    not ok 3 - gelöscht (\#3385): lib/components/shared/versand-tab/VTLaufzeitRoute.svelte
+      ---
+      duration_ms: 0.168201
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:461:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/shared/versand-tab/VTLaufzeitRoute.svelte existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:462:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3385): lib/components/shared/versand-tab/VTLaufzeitVergleich.svelte
+    not ok 4 - gelöscht (\#3385): lib/components/shared/versand-tab/VTLaufzeitVergleich.svelte
+      ---
+      duration_ms: 0.11266
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:461:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/shared/versand-tab/VTLaufzeitVergleich.svelte existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:462:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3385): lib/components/shared/versand-tab/VTNextBriefing.svelte
+    not ok 5 - gelöscht (\#3385): lib/components/shared/versand-tab/VTNextBriefing.svelte
+      ---
+      duration_ms: 0.096479
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:461:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/shared/versand-tab/VTNextBriefing.svelte existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:462:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3385): lib/components/shared/versand-tab/VTSchedulePlan.svelte
+    not ok 6 - gelöscht (\#3385): lib/components/shared/versand-tab/VTSchedulePlan.svelte
+      ---
+      duration_ms: 0.179269
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:461:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/shared/versand-tab/VTSchedulePlan.svelte existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:462:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3385): lib/components/shared/versand-tab/channelContactLabel.ts
+    not ok 7 - gelöscht (\#3385): lib/components/shared/versand-tab/channelContactLabel.ts
+      ---
+      duration_ms: 0.09271
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:461:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/shared/versand-tab/channelContactLabel.ts existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:462:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gelöscht (\#3385): lib/components/shared/versand-tab/vtBriefingChannelsText.ts
+    not ok 8 - gelöscht (\#3385): lib/components/shared/versand-tab/vtBriefingChannelsText.ts
+      ---
+      duration_ms: 0.1263
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:461:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/shared/versand-tab/vtBriefingChannelsText.ts existiert noch
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:462:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: die Ausnahmedatei des Importscans existiert (sonst wäre die Ausnahme verwaist)
+    ok 9 - die Ausnahmedatei des Importscans existiert (sonst wäre die Ausnahme verwaist)
+      ---
+      duration_ms: 0.079649
+      type: 'test'
+      ...
+    # Subtest: Importscan frontend/src und frontend/e2e: kein Spezifizierer und keine Pfad-Zeichenkette auf die \#3385-Löschliste
+    not ok 10 - Importscan frontend/src und frontend/e2e: kein Spezifizierer und keine Pfad-Zeichenkette auf die \#3385-Löschliste
+      ---
+      duration_ms: 332.188341
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:470:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Verweise auf die in #3385 gelöschten Dateien:
+        lib/__tests__/bausteine_waechter_regeln.ts -> VTBriefingChannels (Pfad)
+        lib/__tests__/bausteine_waechter_regeln.ts -> VTLaufzeitRoute (Pfad)
+        lib/__tests__/bausteine_waechter_regeln.ts -> VTLaufzeitVergleich (Pfad)
+        lib/__tests__/bausteine_waechter_regeln.ts -> VTNextBriefing (Pfad)
+        lib/__tests__/bausteine_waechter_regeln.ts -> VTSchedulePlan (Pfad)
+        lib/__tests__/ink4_waechter.test.ts -> VTSchedulePlan (Pfad)
+        lib/components/edit/__tests__/report_config_uses_shared_schedule.test.ts -> VTSchedulePlan (Pfad)
+        lib/components/edit/__tests__/report_config_uses_shared_schedule.test.ts -> VTSchedulePlan (Pfad)
+        lib/components/shared/__tests__/telegram_kurzstil_shared_toggle.test.ts -> VTBriefingChannels (Pfad)
+        lib/components/shared/versand-tab/VTBriefingChannels.svelte -> channelContactLabel (Import/Export)
+        lib/components/shared/versand-tab/VTBriefingChannels.svelte -> vtBriefingChannelsText (Import/Export)
+        lib/components/shared/versand-tab/VTBriefingChannels.svelte -> channelContactLabel (Pfad)
+        lib/components/shared/versand-tab/VTBriefingChannels.svelte -> vtBriefingChannelsText (Pfad)
+        lib/components/shared/versand-tab/__tests__/channelContactLabel.test.ts -> channelContactLabel (Import/Export)
+        lib/components/shared/versand-tab/__tests__/channelContactLabel.test.ts -> channelContactLabel (Pfad)
+        lib/components/shared/versand-tab/__tests__/channel_checkbox_dedupe_render.test.ts -> channelContactLabel (Import/Export)
+        lib/components/shared/versand-tab/__tests__/channel_checkbox_dedupe_render.test.ts -> VTBriefingChannels (Pfad)
+        lib/components/shared/versand-tab/__tests__/channel_checkbox_dedupe_render.test.ts -> channelContactLabel (Pfad)
+        lib/components/shared/versand-tab/__tests__/f6VersandSsr.ts -> vtBriefingChannelsText (Pfad)
+        lib/components/shared/versand-tab/__tests__/f6VersandSsr.ts -> VTBriefingChannels (Pfad)
+        lib/components/shared/versand-tab/__tests__/f6VersandSsr.ts -> VTSchedulePlan (Pfad)
+        lib/components/shared/versand-tab/__tests__/f6VersandSsr.ts -> VTLaufzeitRoute (Pfad)
+        lib/components/shared/versand-tab/__tests__/f6VersandSsr.ts -> VTLaufzeitVergleich (Pfad)
+        lib/components/shared/versand-tab/__tests__/f6VersandSsr.ts -> VTNextBriefing (Pfad)
+        lib/components/shared/versand-tab/__tests__/naechstes_briefing_baustein_render.test.ts -> VTNextBriefing (Pfad)
+        lib/components/shared/versand-tab/__tests__/naechstes_briefing_verdrahtung.test.ts -> VTNextBriefing (Pfad)
+        lib/components/shared/versand-tab/__tests__/shared_schedule_quickpick.test.ts -> VTSchedulePlan (Pfad)
+        lib/components/shared/versand-tab/__tests__/sms_unbestaetigt_kanalstatus.test.ts -> VTBriefingChannels (Pfad)
+        lib/components/shared/versand-tab/__tests__/telegram_unterzeile_render.test.ts -> VTBriefingChannels (Pfad)
+        lib/components/shared/versand-tab/__tests__/versand_texte_ohne_wertung_en.test.ts -> vtBriefingChannelsText (Import/Export)
+        lib/components/shared/versand-tab/__tests__/versand_texte_ohne_wertung_en.test.ts -> vtBriefingChannelsText (Pfad)
+        lib/components/shared/versand-tab/__tests__/vtBriefingChannelsText.test.ts -> vtBriefingChannelsText (Import/Export)
+        lib/components/shared/versand-tab/__tests__/vtBriefingChannelsText.test.ts -> vtBriefingChannelsText (Pfad)
+        lib/components/shared/versand-tab/__tests__/vtBriefingChannelsTextNoJudgement.test.ts -> vtBriefingChannelsText (Import/Export)
+        lib/components/shared/versand-tab/__tests__/vtBriefingChannelsTextNoJudgement.test.ts -> vtBriefingChannelsText (Pfad)
+        lib/components/shared/versand-tab/__tests__/vt_schedule_plan_hour_step.test.ts -> VTSchedulePlan (Pfad)
+        lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts -> VTBriefingChannels (Pfad)
+        lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts -> VTSchedulePlan (Pfad)
+        lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts -> VTLaufzeitRoute (Pfad)
+        lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts -> VTLaufzeitVergleich (Pfad)
+        lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts -> VTNextBriefing (Pfad)
+        lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts -> vtBriefingChannelsText (Pfad)
+        lib/i18n/__tests__/reaktivitaet_waechter.test.ts -> channelContactLabel (Import/Export)
+        lib/i18n/__tests__/reaktivitaet_waechter.test.ts -> vtBriefingChannelsText (Import/Export)
+        + actual - expected
+        
+        + [
+        +   'lib/__tests__/bausteine_waechter_regeln.ts -> VTBriefingChannels (Pfad)',
+        +   'lib/__tests__/bausteine_waechter_regeln.ts -> VTLaufzeitRoute (Pfad)',
+        +   'lib/__tests__/bausteine_waechter_regeln.ts -> VTLaufzeitVergleich (Pfad)',
+        +   'lib/__tests__/bausteine_waechter_regeln.ts -> VTNextBriefing (Pfad)',
+        +   'lib/__tests__/bausteine_waechter_regeln.ts -> VTSchedulePlan (Pfad)',
+        +   'lib/__tests__/ink4_waechter.test.ts -> VTSchedulePlan (Pfad)',
+        +   'lib/components/edit/__tests__/report_config_uses_shared_schedule.test.ts -> VTSchedulePlan (Pfad)',
+        +   'lib/components/edit/__tests__/report_config_uses_shared_schedule.test.ts -> VTSchedulePlan (Pfad)',
+        +   'lib/components/shared/__tests__/telegram_kurzstil_shared_toggle.test.ts -> VTBriefingChannels (Pfad)',
+        +   'lib/components/shared/versand-tab/VTBriefingChannels.svelte -> channelContactLabel (Import/Export)',
+        +   'lib/components/shared/versand-tab/VTBriefingChannels.svelte -> vtBriefingChannelsText (Import/Export)',
+        +   'lib/components/shared/versand-tab/VTBriefingChannels.svelte -> channelContactLabel (Pfad)',
+        +   'lib/components/shared/versand-tab/VTBriefingChannels.svelte -> vtBriefingChannelsText (Pfad)',
+        +   'lib/components/shared/versand-tab/__tests__/channelContactLabel.test.ts -> channelContactLabel (Import/Export)',
+        +   'lib/components/shared/versand-tab/__tests__/channelContactLabel.test.ts -> channelContactLabel (Pfad)',
+        +   'lib/components/shared/versand-tab/__tests__/channel_checkbox_dedupe_render.test.ts -> channelContactLabel (Import/Export)',
+        +   'lib/components/shared/versand-tab/__tests__/channel_checkbox_dedupe_render.test.ts -> VTBriefingChannels (Pfad)',
+        +   'lib/components/shared/versand-tab/__tests__/channel_checkbox_dedupe_render.test.ts -> channelContactLabel (Pfad)',
+        +   'lib/components/shared/versand-tab/__tests__/f6VersandSsr.ts -> vtBriefingChannelsText (Pfad)',
+        +   'lib/components/shared/versand-tab/__tests__/f6VersandSsr.ts -> VTBriefingChannels (Pfad)',
+        +   'lib/components/shared/versand-tab/__tests__/f6VersandSsr.ts -> VTSchedulePlan (Pfad)',
+        +   'lib/components/shared/versand-tab/__tests__/f6VersandSsr.ts -> VTLaufzeitRoute (Pfad)',
+        +   'lib/components/shared/versand-tab/__tests__/f6VersandSsr.ts -> VTLaufzeitVergleich (Pfad)',
+        +   'lib/components/shared/versand-tab/__tests__/f6VersandSsr.ts -> VTNextBriefing (Pfad)',
+        +   'lib/components/shared/versand-tab/__tests__/naechstes_briefing_baustein_render.test.ts -> VTNextBriefing (Pfad)',
+        +   'lib/components/shared/versand-tab/__tests__/naechstes_briefing_verdrahtung.test.ts -> VTNextBriefing (Pfad)',
+        +   'lib/components/shared/versand-tab/__tests__/shared_schedule_quickpick.test.ts -> VTSchedulePlan (Pfad)',
+        +   'lib/components/shared/versand-tab/__tests__/sms_unbestaetigt_kanalstatus.test.ts -> VTBriefingChannels (Pfad)',
+        +   'lib/components/shared/versand-tab/__tests__/telegram_unterzeile_render.test.ts -> VTBriefingChannels (Pfad)',
+        +   'lib/components/shared/versand-tab/__tests__/versand_texte_ohne_wertung_en.test.ts -> vtBriefingChannelsText (Import/Export)',
+        +   'lib/components/shared/versand-tab/__tests__/versand_texte_ohne_wertung_en.test.ts -> vtBriefingChannelsText (Pfad)',
+        +   'lib/components/shared/versand-tab/__tests__/vtBriefingChannelsText.test.ts -> vtBriefingChannelsText (Import/Export)',
+        +   'lib/components/shared/versand-tab/__tests__/vtBriefingChannelsText.test.ts -> vtBriefingChannelsText (Pfad)',
+        +   'lib/components/shared/versand-tab/__tests__/vtBriefingChannelsTextNoJudgement.test.ts -> vtBriefingChannelsText (Import/Export)',
+        +   'lib/components/shared/versand-tab/__tests__/vtBriefingChannelsTextNoJudgement.test.ts -> vtBriefingChannelsText (Pfad)',
+        +   'lib/components/shared/versand-tab/__tests__/vt_schedule_plan_hour_step.test.ts -> VTSchedulePlan (Pfad)',
+        +   'lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts -> VTBriefingChannels (Pfad)',
+        +   'lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts -> VTSchedulePlan (Pfad)',
+        +   'lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts -> VTLaufzeitRoute (Pfad)',
+        +   'lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts -> VTLaufzeitVergleich (Pfad)',
+        +   'lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts -> VTNextBriefing (Pfad)',
+        +   'lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts -> vtBriefingChannelsText (Pfad)',
+        +   'lib/i18n/__tests__/reaktivitaet_waechter.test.ts -> channelContactLabel (Import/Export)',
+        +   'lib/i18n/__tests__/reaktivitaet_waechter.test.ts -> vtBriefingChannelsText (Import/Export)'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'lib/__tests__/bausteine_waechter_regeln.ts -> VTBriefingChannels (Pfad)'
+        1: 'lib/__tests__/bausteine_waechter_regeln.ts -> VTLaufzeitRoute (Pfad)'
+        2: 'lib/__tests__/bausteine_waechter_regeln.ts -> VTLaufzeitVergleich (Pfad)'
+        3: 'lib/__tests__/bausteine_waechter_regeln.ts -> VTNextBriefing (Pfad)'
+        4: 'lib/__tests__/bausteine_waechter_regeln.ts -> VTSchedulePlan (Pfad)'
+        5: 'lib/__tests__/ink4_waechter.test.ts -> VTSchedulePlan (Pfad)'
+        6: 'lib/components/edit/__tests__/report_config_uses_shared_schedule.test.ts -> VTSchedulePlan (Pfad)'
+        7: 'lib/components/edit/__tests__/report_config_uses_shared_schedule.test.ts -> VTSchedulePlan (Pfad)'
+        8: 'lib/components/shared/__tests__/telegram_kurzstil_shared_toggle.test.ts -> VTBriefingChannels (Pfad)'
+        9: 'lib/components/shared/versand-tab/VTBriefingChannels.svelte -> channelContactLabel (Import/Export)'
+        10: 'lib/components/shared/versand-tab/VTBriefingChannels.svelte -> vtBriefingChannelsText (Import/Export)'
+        11: 'lib/components/shared/versand-tab/VTBriefingChannels.svelte -> channelContactLabel (Pfad)'
+        12: 'lib/components/shared/versand-tab/VTBriefingChannels.svelte -> vtBriefingChannelsText (Pfad)'
+        13: 'lib/components/shared/versand-tab/__tests__/channelContactLabel.test.ts -> channelContactLabel (Import/Export)'
+        14: 'lib/components/shared/versand-tab/__tests__/channelContactLabel.test.ts -> channelContactLabel (Pfad)'
+        15: 'lib/components/shared/versand-tab/__tests__/channel_checkbox_dedupe_render.test.ts -> channelContactLabel (Import/Export)'
+        16: 'lib/components/shared/versand-tab/__tests__/channel_checkbox_dedupe_render.test.ts -> VTBriefingChannels (Pfad)'
+        17: 'lib/components/shared/versand-tab/__tests__/channel_checkbox_dedupe_render.test.ts -> channelContactLabel (Pfad)'
+        18: 'lib/components/shared/versand-tab/__tests__/f6VersandSsr.ts -> vtBriefingChannelsText (Pfad)'
+        19: 'lib/components/shared/versand-tab/__tests__/f6VersandSsr.ts -> VTBriefingChannels (Pfad)'
+        20: 'lib/components/shared/versand-tab/__tests__/f6VersandSsr.ts -> VTSchedulePlan (Pfad)'
+        21: 'lib/components/shared/versand-tab/__tests__/f6VersandSsr.ts -> VTLaufzeitRoute (Pfad)'
+        22: 'lib/components/shared/versand-tab/__tests__/f6VersandSsr.ts -> VTLaufzeitVergleich (Pfad)'
+        23: 'lib/components/shared/versand-tab/__tests__/f6VersandSsr.ts -> VTNextBriefing (Pfad)'
+        24: 'lib/components/shared/versand-tab/__tests__/naechstes_briefing_baustein_render.test.ts -> VTNextBriefing (Pfad)'
+        25: 'lib/components/shared/versand-tab/__tests__/naechstes_briefing_verdrahtung.test.ts -> VTNextBriefing (Pfad)'
+        26: 'lib/components/shared/versand-tab/__tests__/shared_schedule_quickpick.test.ts -> VTSchedulePlan (Pfad)'
+        27: 'lib/components/shared/versand-tab/__tests__/sms_unbestaetigt_kanalstatus.test.ts -> VTBriefingChannels (Pfad)'
+        28: 'lib/components/shared/versand-tab/__tests__/telegram_unterzeile_render.test.ts -> VTBriefingChannels (Pfad)'
+        29: 'lib/components/shared/versand-tab/__tests__/versand_texte_ohne_wertung_en.test.ts -> vtBriefingChannelsText (Import/Export)'
+        30: 'lib/components/shared/versand-tab/__tests__/versand_texte_ohne_wertung_en.test.ts -> vtBriefingChannelsText (Pfad)'
+        31: 'lib/components/shared/versand-tab/__tests__/vtBriefingChannelsText.test.ts -> vtBriefingChannelsText (Import/Export)'
+        32: 'lib/components/shared/versand-tab/__tests__/vtBriefingChannelsText.test.ts -> vtBriefingChannelsText (Pfad)'
+        33: 'lib/components/shared/versand-tab/__tests__/vtBriefingChannelsTextNoJudgement.test.ts -> vtBriefingChannelsText (Import/Export)'
+        34: 'lib/components/shared/versand-tab/__tests__/vtBriefingChannelsTextNoJudgement.test.ts -> vtBriefingChannelsText (Pfad)'
+        35: 'lib/components/shared/versand-tab/__tests__/vt_schedule_plan_hour_step.test.ts -> VTSchedulePlan (Pfad)'
+        36: 'lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts -> VTBriefingChannels (Pfad)'
+        37: 'lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts -> VTSchedulePlan (Pfad)'
+        38: 'lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts -> VTLaufzeitRoute (Pfad)'
+        39: 'lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts -> VTLaufzeitVergleich (Pfad)'
+        40: 'lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts -> VTNextBriefing (Pfad)'
+        41: 'lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts -> vtBriefingChannelsText (Pfad)'
+        42: 'lib/i18n/__tests__/reaktivitaet_waechter.test.ts -> channelContactLabel (Import/Export)'
+        43: 'lib/i18n/__tests__/reaktivitaet_waechter.test.ts -> vtBriefingChannelsText (Import/Export)'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:472:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/molecules/EinstellTabelle.svelte
+    ok 11 - erhalten (Regressionsschutz, heute grün): lib/components/molecules/EinstellTabelle.svelte
+      ---
+      duration_ms: 0.11864
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/channelConnectionStatus.ts
+    ok 12 - erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/channelConnectionStatus.ts
+      ---
+      duration_ms: 0.05174
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/premiumSmsChannelState.ts
+    ok 13 - erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/premiumSmsChannelState.ts
+      ---
+      duration_ms: 0.03712
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/sendTargetLabel.ts
+    ok 14 - erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/sendTargetLabel.ts
+      ---
+      duration_ms: 0.034969
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/nextBriefingText.ts
+    ok 15 - erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/nextBriefingText.ts
+      ---
+      duration_ms: 0.033281
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/nextBriefingLoad.ts
+    ok 16 - erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/nextBriefingLoad.ts
+      ---
+      duration_ms: 0.03274
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/naechstesBriefingLader.svelte.ts
+    ok 17 - erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/naechstesBriefingLader.svelte.ts
+      ---
+      duration_ms: 0.036381
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/reportConfigPayload.ts
+    ok 18 - erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/reportConfigPayload.ts
+      ---
+      duration_ms: 0.032021
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/mergeReportConfig.ts
+    ok 19 - erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/mergeReportConfig.ts
+      ---
+      duration_ms: 0.03194
+      type: 'test'
+      ...
+    # Subtest: erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/dayWindowClamp.ts
+    ok 20 - erhalten (Regressionsschutz, heute grün): lib/components/shared/versand-tab/dayWindowClamp.ts
+      ---
+      duration_ms: 0.0341
+      type: 'test'
+      ...
+    1..20
+not ok 6 - \#3385 AC-1/AC-7: Waisen S3 gelöscht, kein Import und kein Pfad mehr, Nachbarn erhalten
+  ---
+  duration_ms: 335.058536
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts:454:1'
+  failureType: 'subtestsFailed'
+  error: '8 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3297 AC-8: show_outlook und multi_day_trend_reports aus dem Frontend-Produktionscode
+    # Subtest: keine Produktionsdatei unter frontend/src nennt einen der beiden Schlüssel
+    ok 1 - keine Produktionsdatei unter frontend/src nennt einen der beiden Schlüssel
+      ---
+      duration_ms: 34.111537
+      type: 'test'
+      ...
+    1..1
+ok 7 - \#3297 AC-8: show_outlook und multi_day_trend_reports aus dem Frontend-Produktionscode
+  ---
+  duration_ms: 34.185706
+  type: 'suite'
+  ...
+# Subtest: \#3366 AC-1/AC-8, \#3383 AC-3, \#3384 AC-2/AC-3, \#3385 AC-2: Waisen-Wächter gegen den echten Baum
+    # Subtest: \#3385 AC-2: Waisenmenge (ohne AUSNAHMEN) ist leer, BEKANNTE_WAISEN leer, OBERGRENZE_WAISEN 0
+    not ok 1 - \#3385 AC-2: Waisenmenge (ohne AUSNAHMEN) ist leer, BEKANNTE_WAISEN leer, OBERGRENZE_WAISEN 0
+      ---
+      duration_ms: 58.27561
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/waisen_waechter.test.ts:199:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        lib/components/shared/versand-tab/VTBriefingChannels.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/components/shared/versand-tab/VTLaufzeitRoute.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/components/shared/versand-tab/VTLaufzeitVergleich.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/components/shared/versand-tab/VTNextBriefing.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/components/shared/versand-tab/VTSchedulePlan.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/components/shared/versand-tab/channelContactLabel.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        lib/components/shared/versand-tab/vtBriefingChannelsText.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)
+        + actual - expected
+        
+        + [
+        +   'lib/components/shared/versand-tab/VTBriefingChannels.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/components/shared/versand-tab/VTLaufzeitRoute.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/components/shared/versand-tab/VTLaufzeitVergleich.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/components/shared/versand-tab/VTNextBriefing.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/components/shared/versand-tab/VTSchedulePlan.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/components/shared/versand-tab/channelContactLabel.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)',
+        +   'lib/components/shared/versand-tab/vtBriefingChannelsText.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'lib/components/shared/versand-tab/VTBriefingChannels.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        1: 'lib/components/shared/versand-tab/VTLaufzeitRoute.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        2: 'lib/components/shared/versand-tab/VTLaufzeitVergleich.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        3: 'lib/components/shared/versand-tab/VTNextBriefing.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        4: 'lib/components/shared/versand-tab/VTSchedulePlan.svelte: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        5: 'lib/components/shared/versand-tab/channelContactLabel.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+        6: 'lib/components/shared/versand-tab/vtBriefingChannelsText.ts: neue Waise ohne Aufrufer aus routes/ — löschen oder anbinden (nicht still in BEKANNTE_WAISEN aufnehmen)'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/waisen_waechter.test.ts:201:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: \#3385 AC-2 (F001 aus \#3383): OBERGRENZE_WAISEN ist das Literal 0 und gleicht exakt der leeren Liste
+    ok 2 - \#3385 AC-2 (F001 aus \#3383): OBERGRENZE_WAISEN ist das Literal 0 und gleicht exakt der leeren Liste
+      ---
+      duration_ms: 0.14862
+      type: 'test'
+      ...
+    1..2
+not ok 8 - \#3366 AC-1/AC-8, \#3383 AC-3, \#3384 AC-2/AC-3, \#3385 AC-2: Waisen-Wächter gegen den echten Baum
+  ---
+  duration_ms: 59.11194
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/__tests__/waisen_waechter.test.ts:198:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3385 AC-3: Kopfkommentar nennt die exakte Gleichheit (doc-compliance-test)
+    # Subtest: Kopfkommentar nennt „BEKANNTE_WAISEN.length === OBERGRENZE_WAISEN“
+    ok 1 - Kopfkommentar nennt „BEKANNTE_WAISEN.length === OBERGRENZE_WAISEN“
+      ---
+      duration_ms: 0.288441
+      type: 'test'
+      ...
+    # Subtest: Kopfkommentar nennt kein „<=“ zwischen BEKANNTE_WAISEN.length und OBERGRENZE_WAISEN
+    ok 2 - Kopfkommentar nennt kein „<=“ zwischen BEKANNTE_WAISEN.length und OBERGRENZE_WAISEN
+      ---
+      duration_ms: 0.14158
+      type: 'test'
+      ...
+    1..2
+ok 9 - \#3385 AC-3: Kopfkommentar nennt die exakte Gleichheit (doc-compliance-test)
+  ---
+  duration_ms: 0.548141
+  type: 'suite'
+  ...
+# Subtest: \#3366 AC-2/AC-3/AC-4: Selbstnachweis am erfundenen Mini-Baum
+    # Subtest: Kern: erfundene Waise und nur-von-Test erreichte Datei sind Waisen; Barrel, dynamisch und hooks erreichbar
+    ok 1 - Kern: erfundene Waise und nur-von-Test erreichte Datei sind Waisen; Barrel, dynamisch und hooks erreichbar
+      ---
+      duration_ms: 2.504833
+      type: 'test'
+      ...
+    # Subtest: AC-2: nicht gelistete Waise macht rot und nennt den Pfad
+    ok 2 - AC-2: nicht gelistete Waise macht rot und nennt den Pfad
+      ---
+      duration_ms: 2.490963
+      type: 'test'
+      ...
+    # Subtest: AC-2: Eintrag in die Liste ohne Erhöhen der Obergrenze bleibt rot
+    ok 3 - AC-2: Eintrag in die Liste ohne Erhöhen der Obergrenze bleibt rot
+      ---
+      duration_ms: 6.840999
+      type: 'test'
+      ...
+    # Subtest: AC-3: gelisteter, aber erreichbarer und gelisteter, nicht vorhandener Eintrag melden "aus der Liste streichen"
+    ok 4 - AC-3: gelisteter, aber erreichbarer und gelisteter, nicht vorhandener Eintrag melden "aus der Liste streichen"
+      ---
+      duration_ms: 1.697463
+      type: 'test'
+      ...
+    1..4
+ok 10 - \#3366 AC-2/AC-3/AC-4: Selbstnachweis am erfundenen Mini-Baum
+  ---
+  duration_ms: 13.775109
+  type: 'suite'
+  ...
+# Subtest: \#3383 AC-4: Selbstnachweis F001 am erfundenen Mini-Baum
+    # Subtest: exakte Mini-Baum-Liste mit den F001-Dateien
+    ok 1 - exakte Mini-Baum-Liste mit den F001-Dateien
+      ---
+      duration_ms: 3.750194
+      type: 'test'
+      ...
+    # Subtest: (a) dynamischer Import macht die Zieldatei erreichbar
+    ok 2 - (a) dynamischer Import macht die Zieldatei erreichbar
+      ---
+      duration_ms: 4.754266
+      type: 'test'
+      ...
+    # Subtest: (b) import.meta.glob macht die passenden Dateien erreichbar, nicht passende bleiben Waise
+    ok 3 - (b) import.meta.glob macht die passenden Dateien erreichbar, nicht passende bleiben Waise
+      ---
+      duration_ms: 3.577125
+      type: 'test'
+      ...
+    # Subtest: (c) new URL('…', import.meta.url) gilt als Verweis
+    ok 4 - (c) new URL('…', import.meta.url) gilt als Verweis
+      ---
+      duration_ms: 2.695434
+      type: 'test'
+      ...
+    # Subtest: (d) nur von Testdateien unter routes/ importiert gilt als Waise
+    ok 5 - (d) nur von Testdateien unter routes/ importiert gilt als Waise
+      ---
+      duration_ms: 3.295715
+      type: 'test'
+      ...
+    # Subtest: (e) Array-Form von import.meta.glob wird laut rot statt still übergangen
+    ok 6 - (e) Array-Form von import.meta.glob wird laut rot statt still übergangen
+      ---
+      duration_ms: 2.205542
+      type: 'test'
+      ...
+    1..6
+ok 11 - \#3383 AC-4: Selbstnachweis F001 am erfundenen Mini-Baum
+  ---
+  duration_ms: 20.524648
+  type: 'suite'
+  ...
+# Subtest: \#3384 AC-3: Selbstnachweis F001 (Obergrenze exakt an Listenlänge gebunden)
+    # Subtest: Obergrenze größer als die Liste macht rot und nennt beide Zahlen
+    ok 1 - Obergrenze größer als die Liste macht rot und nennt beide Zahlen
+      ---
+      duration_ms: 1.642981
+      type: 'test'
+      ...
+    # Subtest: Obergrenze gleich der Listenlänge bleibt grün
+    ok 2 - Obergrenze gleich der Listenlänge bleibt grün
+      ---
+      duration_ms: 2.149733
+      type: 'test'
+      ...
+    1..2
+ok 12 - \#3384 AC-3: Selbstnachweis F001 (Obergrenze exakt an Listenlänge gebunden)
+  ---
+  duration_ms: 3.897266
+  type: 'suite'
+  ...
+# Subtest: \#3385 AC-2: Selbstnachweis leere Liste, Obergrenze 0
+    # Subtest: leere Liste, erfundene Waise ist rot und wird mit Pfad gemeldet
+    ok 1 - leere Liste, erfundene Waise ist rot und wird mit Pfad gemeldet
+      ---
+      duration_ms: 1.588422
+      type: 'test'
+      ...
+    # Subtest: leere Liste mit erhöhter Obergrenze ist rot (kein stiller Platz für eine künftige Waise)
+    ok 2 - leere Liste mit erhöhter Obergrenze ist rot (kein stiller Platz für eine künftige Waise)
+      ---
+      duration_ms: 3.103955
+      type: 'test'
+      ...
+    # Subtest: ohne Waise, leere Liste und Obergrenze 0 ist grün
+    ok 3 - ohne Waise, leere Liste und Obergrenze 0 ist grün
+      ---
+      duration_ms: 2.586064
+      type: 'test'
+      ...
+    1..3
+ok 13 - \#3385 AC-2: Selbstnachweis leere Liste, Obergrenze 0
+  ---
+  duration_ms: 7.42389
+  type: 'suite'
+  ...
+# Subtest: \#3384 AC-4: Selbstnachweis F002, Array-Form mit Typparameter
+    # Subtest: import.meta.glob<T>([…]) wird laut rot statt still übergangen
+    ok 1 - import.meta.glob<T>([…]) wird laut rot statt still übergangen
+      ---
+      duration_ms: 1.683993
+      type: 'test'
+      ...
+    1..1
+ok 14 - \#3384 AC-4: Selbstnachweis F002, Array-Form mit Typparameter
+  ---
+  duration_ms: 1.795483
+  type: 'suite'
+  ...
+# Subtest: \#3384 AC-4: Selbstnachweis F002, String-Form mit Typparameter
+    # Subtest: exakte Mini-Baum-Liste mit import.meta.glob<T>('./x/*.ts')
+    ok 1 - exakte Mini-Baum-Liste mit import.meta.glob<T>('./x/*.ts')
+      ---
+      duration_ms: 2.413694
+      type: 'test'
+      ...
+    # Subtest: import.meta.glob<T>('./x/*.ts') macht die passenden Dateien erreichbar
+    ok 2 - import.meta.glob<T>('./x/*.ts') macht die passenden Dateien erreichbar
+      ---
+      duration_ms: 2.141263
+      type: 'test'
+      ...
+    1..2
+ok 15 - \#3384 AC-4: Selbstnachweis F002, String-Form mit Typparameter
+  ---
+  duration_ms: 4.647007
+  type: 'suite'
+  ...
+# Subtest: Aufbau und Spalten je Kontext (AC-22)
+    # Subtest: Trip: Abschnitt-Marker, Kartentext, vier Spalten mit Unterzeile, kein Stundenverlauf, keine Premium-SMS-Spalte
+    ok 1 - Trip: Abschnitt-Marker, Kartentext, vier Spalten mit Unterzeile, kein Stundenverlauf, keine Premium-SMS-Spalte
+      ---
+      duration_ms: 3705.753304
+      type: 'test'
+      ...
+    # Subtest: Orte: fünf Spalten, E-Mail „Übersicht“, Stundenverlauf „nur E-Mail“, Telegram im engen Raster „Telegr.“
+    ok 2 - Orte: fünf Spalten, E-Mail „Übersicht“, Stundenverlauf „nur E-Mail“, Telegram im engen Raster „Telegr.“
+      ---
+      duration_ms: 2.058573
+      type: 'test'
+      ...
+    # Subtest: Zeilen in der Folge der Antwort mit Namen aus der Antwort
+    ok 3 - Zeilen in der Folge der Antwort mit Namen aus der Antwort
+      ---
+      duration_ms: 1.609863
+      type: 'test'
+      ...
+    1..3
+ok 16 - Aufbau und Spalten je Kontext (AC-22)
+  ---
+  duration_ms: 3710.286992
+  type: 'suite'
+  ...
+# Subtest: Feste Zeile „Amtliche Warnungen“ (AC-18, Oberflächen-Teil)
+    # Subtest: steht da, wenn die Antwort sie liefert; mit festem Haken in E-Mail, Telegram, SMS
+    ok 1 - steht da, wenn die Antwort sie liefert; mit festem Haken in E-Mail, Telegram, SMS
+      ---
+      duration_ms: 1.884652
+      type: 'test'
+      ...
+    # Subtest: fehlt ohne Eintrag in fixed_rows
+    ok 2 - fehlt ohne Eintrag in fixed_rows
+      ---
+      duration_ms: 12.565207
+      type: 'test'
+      ...
+    1..2
+ok 17 - Feste Zeile „Amtliche Warnungen“ (AC-18, Oberflächen-Teil)
+  ---
+  duration_ms: 14.695061
+  type: 'suite'
+  ...
+# Subtest: Zustände der Zellen (AC-26)
+    # Subtest: gesperrt mit Grundtext je reason, nicht in der E-Mail, ab
+    ok 1 - gesperrt mit Grundtext je reason, nicht in der E-Mail, ab
+      ---
+      duration_ms: 5.343696
+      type: 'test'
+      ...
+    # Subtest: Spalte eines ausgeschalteten Blocks ist nicht bedienbar (Stundenverlauf aus, Ausblick in keinem Briefing)
+    ok 2 - Spalte eines ausgeschalteten Blocks ist nicht bedienbar (Stundenverlauf aus, Ausblick in keinem Briefing)
+      ---
+      duration_ms: 1.286542
+      type: 'test'
+      ...
+    1..2
+ok 18 - Zustände der Zellen (AC-26)
+  ---
+  duration_ms: 6.858219
+  type: 'suite'
+  ...
+# Subtest: Roh/Einfach nur wo erlaubt (AC-25)
+    # Subtest: Knopf nur bei Haken und zwei Formen, nie in der SMS-Spalte
+    ok 1 - Knopf nur bei Haken und zwei Formen, nie in der SMS-Spalte
+      ---
+      duration_ms: 2.269414
+      type: 'test'
+      ...
+    # Subtest: Ampelpunkt aus der Antwort mit Farbwort
+    ok 2 - Ampelpunkt aus der Antwort mit Farbwort
+      ---
+      duration_ms: 3.768744
+      type: 'test'
+      ...
+    1..2
+ok 19 - Roh/Einfach nur wo erlaubt (AC-25)
+  ---
+  duration_ms: 6.319578
+  type: 'suite'
+  ...
+# Subtest: Marken und SMS-Beispiel (AC-27, AC-28)
+    # Subtest: Trip: „nur Tageswert“, „passt nicht mehr“, Zeile mit max_length und Hinweissatz für Trip
+    ok 1 - Trip: „nur Tageswert“, „passt nicht mehr“, Zeile mit max_length und Hinweissatz für Trip
+      ---
+      duration_ms: 1.787163
+      type: 'test'
+      ...
+    # Subtest: Trip mit neun Zeilen: Telegram-Marke „nur Tageswert“ erst ab der achten Zeile
+    ok 2 - Trip mit neun Zeilen: Telegram-Marke „nur Tageswert“ erst ab der achten Zeile
+      ---
+      duration_ms: 3.639265
+      type: 'test'
+      ...
+    # Subtest: drei Orte: Grenze aus der Antwort (160), Fassung für mehrere Orte ohne „+N“ je Ort (\#3172)
+    ok 3 - drei Orte: Grenze aus der Antwort (160), Fassung für mehrere Orte ohne „+N“ je Ort (\#3172)
+      ---
+      duration_ms: 2.184672
+      type: 'test'
+      ...
+    # Subtest: ein Ort: Fassung wie Trip, SMS beginnt mit O1 (keine Ortsnamen, \#3172)
+    ok 4 - ein Ort: Fassung wie Trip, SMS beginnt mit O1 (keine Ortsnamen, \#3172)
+      ---
+      duration_ms: 1.431503
+      type: 'test'
+      ...
+    # Subtest: ohne SMS-Beispiel keine Zeile
+    ok 5 - ohne SMS-Beispiel keine Zeile
+      ---
+      duration_ms: 1.026121
+      type: 'test'
+      ...
+    # Subtest: Kurzstil: Telegram-Spalte „Kurzstil: wie SMS“, Haken nicht bedienbar, keine Marke
+    ok 6 - Kurzstil: Telegram-Spalte „Kurzstil: wie SMS“, Haken nicht bedienbar, keine Marke
+      ---
+      duration_ms: 2.720194
+      type: 'test'
+      ...
+    1..6
+ok 20 - Marken und SMS-Beispiel (AC-27, AC-28)
+  ---
+  duration_ms: 13.185169
+  type: 'suite'
+  ...
+# Subtest: „Kürzel erklärt“ (AC-31)
+    # Subtest: beim Öffnen geschlossen; Kürzel der Metriken mit SMS-Haken und feste Einträge; kein Legenden-Satz
+    ok 1 - beim Öffnen geschlossen; Kürzel der Metriken mit SMS-Haken und feste Einträge; kein Legenden-Satz
+      ---
+      duration_ms: 1.711922
+      type: 'test'
+      ...
+    # Subtest: dasselbe Kürzel zweier Zeilen und ein Kürzel gleich einem festen Token rendern ohne Abbruch
+    ok 2 - dasselbe Kürzel zweier Zeilen und ein Kürzel gleich einem festen Token rendern ohne Abbruch
+      ---
+      duration_ms: 4.650177
+      type: 'test'
+      ...
+    # Subtest: \#3172: fester Eintrag mit Bedeutung aus der Antwort (O1 der Orte-SMS) erscheint, ohne Bedeutung und Schlüssel nicht
+    ok 3 - \#3172: fester Eintrag mit Bedeutung aus der Antwort (O1 der Orte-SMS) erscheint, ohne Bedeutung und Schlüssel nicht
+      ---
+      duration_ms: 1.442283
+      type: 'test'
+      ...
+    # Subtest: Kürzel einer Metrik ohne SMS-Haken fehlt; Eintrag ohne Bedeutung zeigt nur das Kürzel
+    ok 4 - Kürzel einer Metrik ohne SMS-Haken fehlt; Eintrag ohne Bedeutung zeigt nur das Kürzel
+      ---
+      duration_ms: 1.089962
+      type: 'test'
+      ...
+    1..4
+ok 21 - „Kürzel erklärt“ (AC-31)
+  ---
+  duration_ms: 9.125962
+  type: 'suite'
+  ...
+# Subtest: Blöcke und Einstellungen je Kanal (AC-29, AC-30, AC-37)
+    # Subtest: Trip: Ausblick Morgen/Abend, Etappen-Kennzahlen, Vortag-Vergleich, Nacht-Stundentabelle, E-Mail-Format, Kurzstil, Premium-SMS
+    ok 1 - Trip: Ausblick Morgen/Abend, Etappen-Kennzahlen, Vortag-Vergleich, Nacht-Stundentabelle, E-Mail-Format, Kurzstil, Premium-SMS
+      ---
+      duration_ms: 1.448342
+      type: 'test'
+      ...
+    # Subtest: Fix-Loop T2: Kurzstil ohne verbundenes Telegram gesperrt; ein eingeschalteter Kurzstil bleibt abschaltbar (AC-28)
+    ok 2 - Fix-Loop T2: Kurzstil ohne verbundenes Telegram gesperrt; ein eingeschalteter Kurzstil bleibt abschaltbar (AC-28)
+      ---
+      duration_ms: 1.781592
+      type: 'test'
+      ...
+    # Subtest: drei Orte: Stundenverlauf „je Ort“, E-Mail-Format, keine Trip-Blöcke
+    ok 3 - drei Orte: Stundenverlauf „je Ort“, E-Mail-Format, keine Trip-Blöcke
+      ---
+      duration_ms: 2.183774
+      type: 'test'
+      ...
+    # Subtest: ein Ort: „Stunden-Tabelle unter der Übersicht, nur in der E-Mail.“ ohne „je Ort“ (AC-37)
+    ok 4 - ein Ort: „Stunden-Tabelle unter der Übersicht, nur in der E-Mail.“ ohne „je Ort“ (AC-37)
+      ---
+      duration_ms: 1.707092
+      type: 'test'
+      ...
+    1..4
+ok 22 - Blöcke und Einstellungen je Kanal (AC-29, AC-30, AC-37)
+  ---
+  duration_ms: 7.66935
+  type: 'suite'
+  ...
+# Subtest: Zustände der Karte
+    # Subtest: Laden und Fehler mit erneutem Versuch
+    ok 1 - Laden und Fehler mit erneutem Versuch
+      ---
+      duration_ms: 5.712998
+      type: 'test'
+      ...
+    # Subtest: leere Grundauswahl: sachlicher Leertext statt Tabelle
+    ok 2 - leere Grundauswahl: sachlicher Leertext statt Tabelle
+      ---
+      duration_ms: 0.717271
+      type: 'test'
+      ...
+    1..2
+ok 23 - Zustände der Karte
+  ---
+  duration_ms: 6.62945
+  type: 'suite'
+  ...
+# Subtest: Englisch (AC-33)
+    # Subtest: alle Texte englisch, Namen und Kürzel aus der Antwort unverändert
+    ok 1 - alle Texte englisch, Namen und Kürzel aus der Antwort unverändert
+      ---
+      duration_ms: 1.405142
+      type: 'test'
+      ...
+    1..1
+ok 24 - Englisch (AC-33)
+  ---
+  duration_ms: 1.494242
+  type: 'suite'
+  ...
+# Subtest: \#3283 B2: Zusatzspalten zeigen nur Haken und Roh/Einfach, keinen Beispielwert (AC-2)
+    # Subtest: Trip: Ausblick ohne Beispielwert, obwohl die Antwort einen liefert; Kanalspalten behalten ihn
+    ok 1 - Trip: Ausblick ohne Beispielwert, obwohl die Antwort einen liefert; Kanalspalten behalten ihn
+      ---
+      duration_ms: 2.207162
+      type: 'test'
+      ...
+    # Subtest: Orte (3): Stundenverlauf und Ausblick ohne Beispielwert, E-Mail mit
+    ok 2 - Orte (3): Stundenverlauf und Ausblick ohne Beispielwert, E-Mail mit
+      ---
+      duration_ms: 1.274232
+      type: 'test'
+      ...
+    # Subtest: Orte (1): Stundenverlauf und Ausblick ohne Beispielwert, E-Mail mit
+    ok 3 - Orte (1): Stundenverlauf und Ausblick ohne Beispielwert, E-Mail mit
+      ---
+      duration_ms: 0.916291
+      type: 'test'
+      ...
+    1..3
+ok 25 - \#3283 B2: Zusatzspalten zeigen nur Haken und Roh/Einfach, keinen Beispielwert (AC-2)
+  ---
+  duration_ms: 4.613976
+  type: 'suite'
+  ...
+# Subtest: \#3283 B1: Spaltenbreiten nach Soll-Bild, kein abgeschnittener Beispielwert (AC-1)
+    # Subtest: Trip: drei Kanalspalten mindestens 150 px, Ausblick 118 px
+    ok 1 - Trip: drei Kanalspalten mindestens 150 px, Ausblick 118 px
+      ---
+      duration_ms: 1.290682
+      type: 'test'
+      ...
+    # Subtest: Orte: drei Kanalspalten mindestens 150 px, Stundenverlauf und Ausblick je 118 px
+    ok 2 - Orte: drei Kanalspalten mindestens 150 px, Stundenverlauf und Ausblick je 118 px
+      ---
+      duration_ms: 1.369772
+      type: 'test'
+      ...
+    # Subtest: Tokens 150px/118px existieren; Beispielwert ohne Auslassungspunkte (doc-compliance-test)
+    ok 3 - Tokens 150px/118px existieren; Beispielwert ohne Auslassungspunkte (doc-compliance-test)
+      ---
+      duration_ms: 33.514866
+      type: 'test'
+      ...
+    1..3
+ok 26 - \#3283 B1: Spaltenbreiten nach Soll-Bild, kein abgeschnittener Beispielwert (AC-1)
+  ---
+  duration_ms: 36.3044
+  type: 'suite'
+  ...
+# Subtest: \#3283 B6: Einfach-Symbol als E-Mail-Beispiel lesbar (AC-8)
+    # Subtest: reines Symbol trägt das Kennzeichen data-art="symbol", Text mit Buchstaben oder Ziffern nicht
+    ok 1 - reines Symbol trägt das Kennzeichen data-art="symbol", Text mit Buchstaben oder Ziffern nicht
+      ---
+      duration_ms: 4.886297
+      type: 'test'
+      ...
+    # Subtest: Symbol in --g-text-sm und --g-ink, Kontrast AA gegen die Karte (doc-compliance-test)
+    ok 2 - Symbol in --g-text-sm und --g-ink, Kontrast AA gegen die Karte (doc-compliance-test)
+      ---
+      duration_ms: 10.884444
+      type: 'test'
+      ...
+    1..2
+ok 27 - \#3283 B6: Einfach-Symbol als E-Mail-Beispiel lesbar (AC-8)
+  ---
+  duration_ms: 15.914161
+  type: 'suite'
+  ...
+# Subtest: \#3283 B7: Legende als Raster, Kürzel mono ohne Fettdruck (AC-9)
+    # Subtest: dl: Grid auto 1fr, Abstand 4px/14px; dt: Mono, normales Gewicht, keine Mindestbreite (doc-compliance-test)
+    ok 1 - dl: Grid auto 1fr, Abstand 4px/14px; dt: Mono, normales Gewicht, keine Mindestbreite (doc-compliance-test)
+      ---
+      duration_ms: 18.220105
+      type: 'test'
+      ...
+    1..1
+ok 28 - \#3283 B7: Legende als Raster, Kürzel mono ohne Fettdruck (AC-9)
+  ---
+  duration_ms: 18.296335
+  type: 'suite'
+  ...
+# Subtest: AC-14 (Wirkort Anlegen, \#3333): Reiter Zustellung und Reiter Alarme teilen DENSELBEN Feldsatz
+    # Subtest: Cooldown und Stille Stunden aus dem Reiter Zustellung kommen im Buendel des Reiters Alarme und im POST an
+    ok 1 - Cooldown und Stille Stunden aus dem Reiter Zustellung kommen im Buendel des Reiters Alarme und im POST an
+      ---
+      duration_ms: 367.312989
+      type: 'test'
+      ...
+    # Subtest: \#3385 AC-4: Cooldown 60 aus dem Reiter Alarme steht im Prop preset des Reiters Zustellung und im POST
+    ok 2 - \#3385 AC-4: Cooldown 60 aus dem Reiter Alarme steht im Prop preset des Reiters Zustellung und im POST
+      ---
+      duration_ms: 87.512369
+      type: 'test'
+      ...
+    # Subtest: \#3385 AC-4: Cooldown 60 und danach gelöscht: weder Prop preset noch POST enthalten 60
+    ok 3 - \#3385 AC-4: Cooldown 60 und danach gelöscht: weder Prop preset noch POST enthalten 60
+      ---
+      duration_ms: 90.125743
+      type: 'test'
+      ...
+    # Subtest: \#3385 AC-4: Stille Stunden 22:00–06:00 aus dem Reiter Alarme stehen im Prop preset und im POST
+    ok 4 - \#3385 AC-4: Stille Stunden 22:00–06:00 aus dem Reiter Alarme stehen im Prop preset und im POST
+      ---
+      duration_ms: 76.610104
+      type: 'test'
+      ...
+    # Subtest: \#3385 AC-4: Stille Stunden gesetzt und danach gelöscht: weder Prop preset noch POST enthalten sie
+    ok 5 - \#3385 AC-4: Stille Stunden gesetzt und danach gelöscht: weder Prop preset noch POST enthalten sie
+      ---
+      duration_ms: 112.372562
+      type: 'test'
+      ...
+    1..5
+ok 29 - AC-14 (Wirkort Anlegen, \#3333): Reiter Zustellung und Reiter Alarme teilen DENSELBEN Feldsatz
+  ---
+  duration_ms: 735.93688
+  type: 'suite'
+  ...
+1..29
+# tests 164
+# suites 29
+# pass 155
+# fail 9
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4504.40953
+
+# uv run pytest -q tests/tdd/test_einstellung_gleich_mail_fallliste.py (Verweis-Wächter Fallliste, grün)
+.........................                                                [100%]

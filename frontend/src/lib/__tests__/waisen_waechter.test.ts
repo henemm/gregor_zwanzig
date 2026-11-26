@@ -13,7 +13,7 @@
 // Auflösung: Alias `$lib`, relative Pfade, `.js`→`.ts`, `.svelte`, Barrels (`index.*`).
 // Dateien unter `__tests__/`, `*.test.*`, `*.spec.*` sind weder Wurzel noch Aufrufer.
 //
-// Ratsche: Waisen (ohne AUSNAHMEN) == BEKANNTE_WAISEN, BEKANNTE_WAISEN.length <= OBERGRENZE_WAISEN.
+// Ratsche: Waisen (ohne AUSNAHMEN) == BEKANNTE_WAISEN, BEKANNTE_WAISEN.length === OBERGRENZE_WAISEN.
 // Die Liste darf nur schrumpfen: jede Löschscheibe streicht ihre Einträge und senkt die Konstante im
 // selben Commit. Ein neuer Eintrag geht nur, wenn jemand OBERGRENZE_WAISEN sichtbar erhöht.
 //
@@ -27,6 +27,12 @@
 // bewusst nicht mehr in BEKANNTE_WAISEN. F001: die Obergrenze muss exakt der Listenlänge entsprechen
 // (rot, bis pruefeRatsche auf `!==` verschärft ist). F002: Array-Sperre und Kantenregel erkennen auch
 // `import.meta.glob<T>(…)` (rot, bis beide Regexe den optionalen Typparameter kennen).
+//
+// #3385 S3 (Spec docs/specs/modules/rework_3385_waisen_s3.md, AC-2/AC-3): Gruppe S3 gestrichen,
+// BEKANNTE_WAISEN leer, OBERGRENZE_WAISEN 0. RED vor der Löschung S3: die 7 S3-Dateien existieren noch
+// und stehen bewusst nicht mehr in BEKANNTE_WAISEN. Der Wächter bleibt als Ratsche: jede neue Datei ohne
+// Aufrufer macht ihn rot (Mini-Fall „leere Liste, erfundene Waise“). F001 (aus #3384): der Kopfkommentar
+// nennt die exakte Gleichheit, wie pruefeRatsche sie prüft (doc-compliance-Zusicherung unten).
 //
 // Ausführen (aus frontend/):
 //   npm test -- src/lib/__tests__/waisen_waechter.test.ts
@@ -49,21 +55,14 @@ export const AUSNAHMEN: Record<string, string> = {
 export const BEKANNTE_WAISEN: string[] = [
 	// S4 #3384 gelöscht (19 Einträge, Lösch-Nachweis trip_pfad_altfeld_loeschnachweis_3297.test.ts)
 	// S1 #3383 gelöscht (14 Einträge, Lösch-Nachweis trip_pfad_altfeld_loeschnachweis_3297.test.ts)
-	// S3 #3385: versand-tab
-	'lib/components/shared/versand-tab/VTBriefingChannels.svelte',
-	'lib/components/shared/versand-tab/VTLaufzeitRoute.svelte',
-	'lib/components/shared/versand-tab/VTLaufzeitVergleich.svelte',
-	'lib/components/shared/versand-tab/VTNextBriefing.svelte',
-	'lib/components/shared/versand-tab/VTSchedulePlan.svelte',
-	'lib/components/shared/versand-tab/channelContactLabel.ts',
-	'lib/components/shared/versand-tab/vtBriefingChannelsText.ts'
+	// S3 #3385 gelöscht (7 Einträge, Lösch-Nachweis trip_pfad_altfeld_loeschnachweis_3297.test.ts)
 ];
 
 /**
  * Feste Obergrenze (Literal, Muster BESTAND_OBERGRENZE): 56 Waisen − 15 gelöscht (#3366 S2) − lib/index.ts = 40;
- * − 14 gelöscht (#3383 S1) = 26; − 19 gelöscht (#3384 S4) = 7 (nur S3).
+ * − 14 gelöscht (#3383 S1) = 26; − 19 gelöscht (#3384 S4) = 7; − 7 gelöscht (#3385 S3) = 0.
  */
-export const OBERGRENZE_WAISEN = 7;
+export const OBERGRENZE_WAISEN = 0;
 
 const istTest = (rel: string) => /(^|\/)__tests__\//.test(rel) || /\.(test|spec)\.(ts|js|mjs)$/.test(rel);
 const ENDUNGEN = ['.svelte', '.ts', '.js', '.mjs', '.svelte.ts', '.svelte.js'];
@@ -196,15 +195,33 @@ export function pruefeRatsche(
 	return fehler;
 }
 
-describe('#3366 AC-1/AC-8, #3383 AC-3, #3384 AC-2/AC-3: Waisen-Wächter gegen den echten Baum', () => {
-	test('Waisenmenge (ohne AUSNAHMEN) ist genau BEKANNTE_WAISEN ohne Gruppen S1 und S4 und hält OBERGRENZE_WAISEN 7', () => {
+describe('#3366 AC-1/AC-8, #3383 AC-3, #3384 AC-2/AC-3, #3385 AC-2: Waisen-Wächter gegen den echten Baum', () => {
+	test('#3385 AC-2: Waisenmenge (ohne AUSNAHMEN) ist leer, BEKANNTE_WAISEN leer, OBERGRENZE_WAISEN 0', () => {
 		const fehler = pruefeRatsche(SRC, findeWaisen(SRC), BEKANNTE_WAISEN, AUSNAHMEN, OBERGRENZE_WAISEN);
 		assert.deepEqual(fehler, [], fehler.join('\n'));
 	});
 
-	test('#3384 AC-3 (F001): OBERGRENZE_WAISEN ist das Literal 7 und gleicht exakt der Listenlänge', () => {
-		assert.equal(OBERGRENZE_WAISEN, 7);
+	test('#3385 AC-2 (F001 aus #3383): OBERGRENZE_WAISEN ist das Literal 0 und gleicht exakt der leeren Liste', () => {
+		assert.equal(OBERGRENZE_WAISEN, 0);
+		assert.equal(BEKANNTE_WAISEN.length, 0);
 		assert.equal(OBERGRENZE_WAISEN, BEKANNTE_WAISEN.length);
+	});
+});
+
+// #3385 AC-3 (Finding F001 aus #3384), doc-compliance: der Kopfkommentar beschreibt die Ratsche so, wie
+// pruefeRatsche sie prüft (exakte Gleichheit), und nennt kein „<=“ zwischen Listenlänge und Obergrenze.
+describe('#3385 AC-3: Kopfkommentar nennt die exakte Gleichheit (doc-compliance-test)', () => {
+	// Nur der Kopfkommentar: die zusammenhängenden `//`-Zeilen am Dateianfang bis zur ersten anderen Zeile.
+	const zeilen = readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n');
+	const ende = zeilen.findIndex((z) => !z.startsWith('//'));
+	const kopf = zeilen.slice(0, ende).join('\n');
+
+	test('Kopfkommentar nennt „BEKANNTE_WAISEN.length === OBERGRENZE_WAISEN“', () => {
+		assert.match(kopf, /BEKANNTE_WAISEN\.length === OBERGRENZE_WAISEN/);
+	});
+
+	test('Kopfkommentar nennt kein „<=“ zwischen BEKANNTE_WAISEN.length und OBERGRENZE_WAISEN', () => {
+		assert.doesNotMatch(kopf, /BEKANNTE_WAISEN\.length\s*<=\s*OBERGRENZE_WAISEN/);
 	});
 });
 
@@ -389,6 +406,41 @@ describe('#3384 AC-3: Selbstnachweis F001 (Obergrenze exakt an Listenlänge gebu
 		const fehler = mitMiniBaum({}, (src) =>
 			pruefeRatsche(src, findeWaisen(src), ['lib/nurTest.ts', 'lib/erfundeneWaise.ts'], AUSNAHMEN, 2)
 		);
+		assert.deepEqual(fehler, []);
+	});
+});
+
+// #3385 AC-2: nach der Leerung bleibt die Ratsche wirksam. Leere Liste, Obergrenze 0: jede Datei ohne
+// Aufrufer wird als neue Waise rot gemeldet, nichts wird still übergangen.
+describe('#3385 AC-2: Selbstnachweis leere Liste, Obergrenze 0', () => {
+	test('leere Liste, erfundene Waise ist rot und wird mit Pfad gemeldet', () => {
+		const fehler = mitMiniBaum({}, (src) => pruefeRatsche(src, findeWaisen(src), [], AUSNAHMEN, 0));
+		assert.deepEqual(
+			fehler.map((f) => f.split(':')[0]),
+			['lib/erfundeneWaise.ts', 'lib/nurTest.ts'],
+			fehler.join('\n')
+		);
+		for (const f of fehler) assert.match(f, /: neue Waise ohne Aufrufer aus routes\//);
+	});
+
+	test('leere Liste mit erhöhter Obergrenze ist rot (kein stiller Platz für eine künftige Waise)', () => {
+		const fehler = mitMiniBaum({}, (src) => {
+			rmSync(join(src, 'lib/erfundeneWaise.ts'));
+			rmSync(join(src, 'lib/nurTest.ts'));
+			rmSync(join(src, 'lib/__tests__'), { recursive: true });
+			return pruefeRatsche(src, findeWaisen(src), [], AUSNAHMEN, 1);
+		});
+		assert.equal(fehler.length, 1, fehler.join('\n'));
+		assert.match(fehler[0], /BEKANNTE_WAISEN hat 0 Einträge, OBERGRENZE_WAISEN ist 1/);
+	});
+
+	test('ohne Waise, leere Liste und Obergrenze 0 ist grün', () => {
+		const fehler = mitMiniBaum({}, (src) => {
+			rmSync(join(src, 'lib/erfundeneWaise.ts'));
+			rmSync(join(src, 'lib/nurTest.ts'));
+			rmSync(join(src, 'lib/__tests__'), { recursive: true });
+			return pruefeRatsche(src, findeWaisen(src), [], AUSNAHMEN, 0);
+		});
 		assert.deepEqual(fehler, []);
 	});
 });
