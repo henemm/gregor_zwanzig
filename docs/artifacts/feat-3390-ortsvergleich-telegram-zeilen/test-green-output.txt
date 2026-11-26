@@ -1,0 +1,562 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit
+configfile: pyproject.toml
+plugins: xdist-3.8.0, timeout-2.4.0, anyio-4.14.2, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 50 items
+
+tests/tdd/test_einstellung_gleich_mail_waechter_3020.py ........         [ 16%]
+tests/tdd/test_einstellung_gleich_mail_fallliste.py .................... [ 56%]
+......................                                                   [100%]
+
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 50 passed, 2 warnings in 2.98s ========================
+TAP version 13
+# Subtest: Aufbau und Spalten je Kontext (AC-22)
+    # Subtest: Trip: Abschnitt-Marker, Kartentext, vier Spalten mit Unterzeile, kein Stundenverlauf, keine Premium-SMS-Spalte
+    ok 1 - Trip: Abschnitt-Marker, Kartentext, vier Spalten mit Unterzeile, kein Stundenverlauf, keine Premium-SMS-Spalte
+      ---
+      duration_ms: 3262.08976
+      type: 'test'
+      ...
+    # Subtest: Orte: fünf Spalten, E-Mail „Übersicht“, Stundenverlauf „nur E-Mail“, Telegram im engen Raster „Telegr.“
+    ok 2 - Orte: fünf Spalten, E-Mail „Übersicht“, Stundenverlauf „nur E-Mail“, Telegram im engen Raster „Telegr.“
+      ---
+      duration_ms: 2.069483
+      type: 'test'
+      ...
+    # Subtest: Kartentext nennt die Abwahl-Regel: Zeilen aus der Grundauswahl, hier nur abwählen (route, de)
+    ok 3 - Kartentext nennt die Abwahl-Regel: Zeilen aus der Grundauswahl, hier nur abwählen (route, de)
+      ---
+      duration_ms: 1.601014
+      type: 'test'
+      ...
+    # Subtest: Kartentext nennt die Abwahl-Regel: Zeilen aus der Grundauswahl, hier nur abwählen (route, en)
+    ok 4 - Kartentext nennt die Abwahl-Regel: Zeilen aus der Grundauswahl, hier nur abwählen (route, en)
+      ---
+      duration_ms: 1.604763
+      type: 'test'
+      ...
+    # Subtest: Kartentext nennt die Abwahl-Regel: Zeilen aus der Grundauswahl, hier nur abwählen (vergleich, de)
+    ok 5 - Kartentext nennt die Abwahl-Regel: Zeilen aus der Grundauswahl, hier nur abwählen (vergleich, de)
+      ---
+      duration_ms: 1.269592
+      type: 'test'
+      ...
+    # Subtest: Kartentext nennt die Abwahl-Regel: Zeilen aus der Grundauswahl, hier nur abwählen (vergleich, en)
+    ok 6 - Kartentext nennt die Abwahl-Regel: Zeilen aus der Grundauswahl, hier nur abwählen (vergleich, en)
+      ---
+      duration_ms: 1.388653
+      type: 'test'
+      ...
+    # Subtest: Zeilen in der Folge der Antwort mit Namen aus der Antwort
+    ok 7 - Zeilen in der Folge der Antwort mit Namen aus der Antwort
+      ---
+      duration_ms: 1.497053
+      type: 'test'
+      ...
+    1..7
+ok 1 - Aufbau und Spalten je Kontext (AC-22)
+  ---
+  duration_ms: 3272.633818
+  type: 'suite'
+  ...
+# Subtest: Feste Zeile „Amtliche Warnungen“ (AC-18, Oberflächen-Teil)
+    # Subtest: steht da, wenn die Antwort sie liefert; mit festem Haken in E-Mail, Telegram, SMS
+    ok 1 - steht da, wenn die Antwort sie liefert; mit festem Haken in E-Mail, Telegram, SMS
+      ---
+      duration_ms: 1.507713
+      type: 'test'
+      ...
+    # Subtest: fehlt ohne Eintrag in fixed_rows
+    ok 2 - fehlt ohne Eintrag in fixed_rows
+      ---
+      duration_ms: 1.495613
+      type: 'test'
+      ...
+    1..2
+ok 2 - Feste Zeile „Amtliche Warnungen“ (AC-18, Oberflächen-Teil)
+  ---
+  duration_ms: 3.387756
+  type: 'suite'
+  ...
+# Subtest: Zustände der Zellen (AC-26)
+    # Subtest: gesperrt mit Grundtext je reason, nicht in der E-Mail, ab
+    ok 1 - gesperrt mit Grundtext je reason, nicht in der E-Mail, ab
+      ---
+      duration_ms: 16.697419
+      type: 'test'
+      ...
+    # Subtest: Spalte eines ausgeschalteten Blocks ist nicht bedienbar (Stundenverlauf aus, Ausblick in keinem Briefing)
+    ok 2 - Spalte eines ausgeschalteten Blocks ist nicht bedienbar (Stundenverlauf aus, Ausblick in keinem Briefing)
+      ---
+      duration_ms: 2.804274
+      type: 'test'
+      ...
+    1..2
+ok 3 - Zustände der Zellen (AC-26)
+  ---
+  duration_ms: 19.841124
+  type: 'suite'
+  ...
+# Subtest: Roh/Einfach nur wo erlaubt (AC-25)
+    # Subtest: Knopf nur bei Haken und zwei Formen, nie in der SMS-Spalte
+    ok 1 - Knopf nur bei Haken und zwei Formen, nie in der SMS-Spalte
+      ---
+      duration_ms: 3.248997
+      type: 'test'
+      ...
+    # Subtest: Ampelpunkt aus der Antwort mit Farbwort
+    ok 2 - Ampelpunkt aus der Antwort mit Farbwort
+      ---
+      duration_ms: 3.006626
+      type: 'test'
+      ...
+    1..2
+ok 4 - Roh/Einfach nur wo erlaubt (AC-25)
+  ---
+  duration_ms: 6.569131
+  type: 'suite'
+  ...
+# Subtest: Marken und SMS-Beispiel (AC-27, AC-28)
+    # Subtest: Trip: „nur Tageswert“, „passt nicht mehr“, Zeile mit max_length und Hinweissatz für Trip
+    ok 1 - Trip: „nur Tageswert“, „passt nicht mehr“, Zeile mit max_length und Hinweissatz für Trip
+      ---
+      duration_ms: 1.846804
+      type: 'test'
+      ...
+    # Subtest: Trip mit neun Zeilen: Telegram-Marke „nur Tageswert“ erst ab der achten Zeile
+    ok 2 - Trip mit neun Zeilen: Telegram-Marke „nur Tageswert“ erst ab der achten Zeile
+      ---
+      duration_ms: 12.553552
+      type: 'test'
+      ...
+    # Subtest: drei Orte: Grenze aus der Antwort (160), Fassung für mehrere Orte ohne „+N“ je Ort (\#3172)
+    ok 3 - drei Orte: Grenze aus der Antwort (160), Fassung für mehrere Orte ohne „+N“ je Ort (\#3172)
+      ---
+      duration_ms: 1.850114
+      type: 'test'
+      ...
+    # Subtest: ein Ort: Fassung wie Trip, SMS beginnt mit O1 (keine Ortsnamen, \#3172)
+    ok 4 - ein Ort: Fassung wie Trip, SMS beginnt mit O1 (keine Ortsnamen, \#3172)
+      ---
+      duration_ms: 1.158321
+      type: 'test'
+      ...
+    # Subtest: ohne SMS-Beispiel keine Zeile
+    ok 5 - ohne SMS-Beispiel keine Zeile
+      ---
+      duration_ms: 1.073262
+      type: 'test'
+      ...
+    # Subtest: Kurzstil: Telegram-Spalte „Kurzstil: wie SMS“, Haken nicht bedienbar, keine Marke
+    ok 6 - Kurzstil: Telegram-Spalte „Kurzstil: wie SMS“, Haken nicht bedienbar, keine Marke
+      ---
+      duration_ms: 1.181572
+      type: 'test'
+      ...
+    1..6
+ok 5 - Marken und SMS-Beispiel (AC-27, AC-28)
+  ---
+  duration_ms: 20.085356
+  type: 'suite'
+  ...
+# Subtest: „Kürzel erklärt“ (AC-31)
+    # Subtest: beim Öffnen geschlossen; Kürzel der Metriken mit SMS-Haken und feste Einträge; kein Legenden-Satz
+    ok 1 - beim Öffnen geschlossen; Kürzel der Metriken mit SMS-Haken und feste Einträge; kein Legenden-Satz
+      ---
+      duration_ms: 1.396882
+      type: 'test'
+      ...
+    # Subtest: dasselbe Kürzel zweier Zeilen und ein Kürzel gleich einem festen Token rendern ohne Abbruch
+    ok 2 - dasselbe Kürzel zweier Zeilen und ein Kürzel gleich einem festen Token rendern ohne Abbruch
+      ---
+      duration_ms: 1.051122
+      type: 'test'
+      ...
+    # Subtest: \#3172: fester Eintrag mit Bedeutung aus der Antwort (O1 der Orte-SMS) erscheint, ohne Bedeutung und Schlüssel nicht
+    ok 3 - \#3172: fester Eintrag mit Bedeutung aus der Antwort (O1 der Orte-SMS) erscheint, ohne Bedeutung und Schlüssel nicht
+      ---
+      duration_ms: 1.053322
+      type: 'test'
+      ...
+    # Subtest: Kürzel einer Metrik ohne SMS-Haken fehlt; Eintrag ohne Bedeutung zeigt nur das Kürzel
+    ok 4 - Kürzel einer Metrik ohne SMS-Haken fehlt; Eintrag ohne Bedeutung zeigt nur das Kürzel
+      ---
+      duration_ms: 1.444093
+      type: 'test'
+      ...
+    1..4
+ok 6 - „Kürzel erklärt“ (AC-31)
+  ---
+  duration_ms: 5.14232
+  type: 'suite'
+  ...
+# Subtest: Blöcke und Einstellungen je Kanal (AC-29, AC-30, AC-37)
+    # Subtest: Trip: Ausblick Morgen/Abend, Etappen-Kennzahlen, Vortag-Vergleich, Nacht-Stundentabelle, E-Mail-Format, Kurzstil, Premium-SMS
+    ok 1 - Trip: Ausblick Morgen/Abend, Etappen-Kennzahlen, Vortag-Vergleich, Nacht-Stundentabelle, E-Mail-Format, Kurzstil, Premium-SMS
+      ---
+      duration_ms: 1.640633
+      type: 'test'
+      ...
+    # Subtest: Trip: alle Blöcke, Ausblick und E-Mail-Format mit Titel und Hinweis aus dem Katalog (de)
+    ok 2 - Trip: alle Blöcke, Ausblick und E-Mail-Format mit Titel und Hinweis aus dem Katalog (de)
+      ---
+      duration_ms: 2.205974
+      type: 'test'
+      ...
+    # Subtest: Trip: alle Blöcke, Ausblick und E-Mail-Format mit Titel und Hinweis aus dem Katalog (en)
+    ok 3 - Trip: alle Blöcke, Ausblick und E-Mail-Format mit Titel und Hinweis aus dem Katalog (en)
+      ---
+      duration_ms: 2.963136
+      type: 'test'
+      ...
+    # Subtest: Fix-Loop T2: Kurzstil ohne verbundenes Telegram gesperrt; ein eingeschalteter Kurzstil bleibt abschaltbar (AC-28)
+    ok 4 - Fix-Loop T2: Kurzstil ohne verbundenes Telegram gesperrt; ein eingeschalteter Kurzstil bleibt abschaltbar (AC-28)
+      ---
+      duration_ms: 4.494577
+      type: 'test'
+      ...
+    # Subtest: drei Orte: Stundenverlauf „je Ort“, E-Mail-Format, keine Trip-Blöcke
+    ok 5 - drei Orte: Stundenverlauf „je Ort“, E-Mail-Format, keine Trip-Blöcke
+      ---
+      duration_ms: 0.993062
+      type: 'test'
+      ...
+    # Subtest: ein Ort: „Stunden-Tabelle unter der Übersicht, nur in der E-Mail.“ ohne „je Ort“ (AC-37)
+    ok 6 - ein Ort: „Stunden-Tabelle unter der Übersicht, nur in der E-Mail.“ ohne „je Ort“ (AC-37)
+      ---
+      duration_ms: 1.023641
+      type: 'test'
+      ...
+    1..6
+ok 7 - Blöcke und Einstellungen je Kanal (AC-29, AC-30, AC-37)
+  ---
+  duration_ms: 13.618204
+  type: 'suite'
+  ...
+# Subtest: Zustände der Karte
+    # Subtest: Laden und Fehler mit erneutem Versuch
+    ok 1 - Laden und Fehler mit erneutem Versuch
+      ---
+      duration_ms: 5.954071
+      type: 'test'
+      ...
+    # Subtest: leere Grundauswahl: sachlicher Leertext statt Tabelle
+    ok 2 - leere Grundauswahl: sachlicher Leertext statt Tabelle
+      ---
+      duration_ms: 0.712321
+      type: 'test'
+      ...
+    1..2
+ok 8 - Zustände der Karte
+  ---
+  duration_ms: 6.790441
+  type: 'suite'
+  ...
+# Subtest: Englisch (AC-33)
+    # Subtest: alle Texte englisch, Namen und Kürzel aus der Antwort unverändert
+    ok 1 - alle Texte englisch, Namen und Kürzel aus der Antwort unverändert
+      ---
+      duration_ms: 1.138642
+      type: 'test'
+      ...
+    1..1
+ok 9 - Englisch (AC-33)
+  ---
+  duration_ms: 1.224912
+  type: 'suite'
+  ...
+# Subtest: \#3283 B2: Zusatzspalten zeigen nur Haken und Roh/Einfach, keinen Beispielwert (AC-2)
+    # Subtest: Trip: Ausblick ohne Beispielwert, obwohl die Antwort einen liefert; Kanalspalten behalten ihn
+    ok 1 - Trip: Ausblick ohne Beispielwert, obwohl die Antwort einen liefert; Kanalspalten behalten ihn
+      ---
+      duration_ms: 1.807812
+      type: 'test'
+      ...
+    # Subtest: Orte (3): Stundenverlauf und Ausblick ohne Beispielwert, E-Mail mit
+    ok 2 - Orte (3): Stundenverlauf und Ausblick ohne Beispielwert, E-Mail mit
+      ---
+      duration_ms: 2.162234
+      type: 'test'
+      ...
+    # Subtest: Orte (1): Stundenverlauf und Ausblick ohne Beispielwert, E-Mail mit
+    ok 3 - Orte (1): Stundenverlauf und Ausblick ohne Beispielwert, E-Mail mit
+      ---
+      duration_ms: 0.968411
+      type: 'test'
+      ...
+    1..3
+ok 10 - \#3283 B2: Zusatzspalten zeigen nur Haken und Roh/Einfach, keinen Beispielwert (AC-2)
+  ---
+  duration_ms: 5.108019
+  type: 'suite'
+  ...
+# Subtest: \#3283 B1: Spaltenbreiten nach Soll-Bild, kein abgeschnittener Beispielwert (AC-1)
+    # Subtest: Trip: drei Kanalspalten mindestens 150 px, Ausblick 118 px
+    ok 1 - Trip: drei Kanalspalten mindestens 150 px, Ausblick 118 px
+      ---
+      duration_ms: 1.385193
+      type: 'test'
+      ...
+    # Subtest: Orte: drei Kanalspalten mindestens 150 px, Stundenverlauf und Ausblick je 118 px
+    ok 2 - Orte: drei Kanalspalten mindestens 150 px, Stundenverlauf und Ausblick je 118 px
+      ---
+      duration_ms: 1.003781
+      type: 'test'
+      ...
+    # Subtest: Tokens 150px/118px existieren; Beispielwert ohne Auslassungspunkte (doc-compliance-test)
+    ok 3 - Tokens 150px/118px existieren; Beispielwert ohne Auslassungspunkte (doc-compliance-test)
+      ---
+      duration_ms: 34.935731
+      type: 'test'
+      ...
+    1..3
+ok 11 - \#3283 B1: Spaltenbreiten nach Soll-Bild, kein abgeschnittener Beispielwert (AC-1)
+  ---
+  duration_ms: 37.460586
+  type: 'suite'
+  ...
+# Subtest: \#3283 B6: Einfach-Symbol als E-Mail-Beispiel lesbar (AC-8)
+    # Subtest: reines Symbol trägt das Kennzeichen data-art="symbol", Text mit Buchstaben oder Ziffern nicht
+    ok 1 - reines Symbol trägt das Kennzeichen data-art="symbol", Text mit Buchstaben oder Ziffern nicht
+      ---
+      duration_ms: 2.028474
+      type: 'test'
+      ...
+    # Subtest: Symbol in --g-text-sm und --g-ink, Kontrast AA gegen die Karte (doc-compliance-test)
+    ok 2 - Symbol in --g-text-sm und --g-ink, Kontrast AA gegen die Karte (doc-compliance-test)
+      ---
+      duration_ms: 12.381363
+      type: 'test'
+      ...
+    1..2
+ok 12 - \#3283 B6: Einfach-Symbol als E-Mail-Beispiel lesbar (AC-8)
+  ---
+  duration_ms: 14.520206
+  type: 'suite'
+  ...
+# Subtest: \#3283 B7: Legende als Raster, Kürzel mono ohne Fettdruck (AC-9)
+    # Subtest: dl: Grid auto 1fr, Abstand 4px/14px; dt: Mono, normales Gewicht, keine Mindestbreite (doc-compliance-test)
+    ok 1 - dl: Grid auto 1fr, Abstand 4px/14px; dt: Mono, normales Gewicht, keine Mindestbreite (doc-compliance-test)
+      ---
+      duration_ms: 17.36673
+      type: 'test'
+      ...
+    1..1
+ok 13 - \#3283 B7: Legende als Raster, Kürzel mono ohne Fettdruck (AC-9)
+  ---
+  duration_ms: 17.436749
+  type: 'suite'
+  ...
+# Subtest: \#3020 G02: der 3-Tages-Ausblick heißt überall gleich
+    # Subtest: Ausblick trägt überall den einen Namen, kein alter Name (DE und EN, Trip und Orte)
+    ok 1 - Ausblick trägt überall den einen Namen, kein alter Name (DE und EN, Trip und Orte)
+      ---
+      duration_ms: 15.942138
+      type: 'test'
+      ...
+    1..1
+ok 14 - \#3020 G02: der 3-Tages-Ausblick heißt überall gleich
+  ---
+  duration_ms: 16.061639
+  type: 'suite'
+  ...
+# Subtest: \#3020 G49/G50: die Telegram-Spalte behauptet nur, was Telegram tut
+    # Subtest: Orte, de: neun Metriken stehen alle in der Telegram-Spalte, ohne Marke und ohne Grenz-Text
+    ok 1 - Orte, de: neun Metriken stehen alle in der Telegram-Spalte, ohne Marke und ohne Grenz-Text
+      ---
+      duration_ms: 6.21074
+      type: 'test'
+      ...
+    # Subtest: Orte, de: fünf Metriken, keine Marke in der Telegram-Spalte
+    ok 2 - Orte, de: fünf Metriken, keine Marke in der Telegram-Spalte
+      ---
+      duration_ms: 2.448433
+      type: 'test'
+      ...
+    # Subtest: Orte, en: neun Metriken stehen alle in der Telegram-Spalte, ohne Marke und ohne Grenz-Text
+    ok 3 - Orte, en: neun Metriken stehen alle in der Telegram-Spalte, ohne Marke und ohne Grenz-Text
+      ---
+      duration_ms: 3.276936
+      type: 'test'
+      ...
+    # Subtest: Orte, en: fünf Metriken, keine Marke in der Telegram-Spalte
+    ok 4 - Orte, en: fünf Metriken, keine Marke in der Telegram-Spalte
+      ---
+      duration_ms: 2.081293
+      type: 'test'
+      ...
+    # Subtest: Orte: die E-Mail-Spalte trägt nie eine Telegram-Marke
+    ok 5 - Orte: die E-Mail-Spalte trägt nie eine Telegram-Marke
+      ---
+      duration_ms: 3.630236
+      type: 'test'
+      ...
+    # Subtest: Trip, de: neun Metriken, „nur Tageswert“ genau an Platz 8 und 9, keine Zeile fehlt
+    ok 6 - Trip, de: neun Metriken, „nur Tageswert“ genau an Platz 8 und 9, keine Zeile fehlt
+      ---
+      duration_ms: 5.444001
+      type: 'test'
+      ...
+    # Subtest: Trip, en: neun Metriken, „nur Tageswert“ genau an Platz 8 und 9, keine Zeile fehlt
+    ok 7 - Trip, en: neun Metriken, „nur Tageswert“ genau an Platz 8 und 9, keine Zeile fehlt
+      ---
+      duration_ms: 4.121338
+      type: 'test'
+      ...
+    1..7
+ok 15 - \#3020 G49/G50: die Telegram-Spalte behauptet nur, was Telegram tut
+  ---
+  duration_ms: 27.582118
+  type: 'suite'
+  ...
+# Subtest: \#3020 G44: nur morgens / nur abends (Altbestand)
+    # Subtest: n3_semantik_wie_mail
+    not ok 1 - n3_semantik_wie_mail # TODO Fehler \#3364: Reiter und Karte lesen die Bericht-Flags nicht
+      ---
+      duration_ms: 2306.343094
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts:710:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          [
+            'gust',
+            'precipitation',
+            'temperature',
+            'thunder',
+        -   'wind'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'gust'
+        1: 'precipitation'
+        2: 'temperature'
+        3: 'thunder'
+        4: 'wind'
+      actual:
+        0: 'gust'
+        1: 'precipitation'
+        2: 'temperature'
+        3: 'thunder'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts:716:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: n3_editor_kennzeichnet_je_zeile
+    not ok 2 - n3_editor_kennzeichnet_je_zeile # TODO Fehler \#3364: Reiter und Karte lesen die Bericht-Flags nicht
+      ---
+      duration_ms: 1384.048365
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts:721:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        de
+        + actual - expected
+        
+          [
+        -   [
+        -     'nur morgens'
+        -   ],
+        -   [
+        -     'nur morgens'
+        -   ],
+        -   [
+        -     'nur abends'
+        -   ],
+            [],
+            [],
+        +   [],
+        +   [],
+        +   []
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0:
+          0: 'nur morgens'
+        1:
+          0: 'nur morgens'
+        2:
+          0: 'nur abends'
+        3:
+        4:
+      actual:
+        0:
+        1:
+        2:
+        3:
+        4:
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts:728:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: n3_kennzeichnung_folgt_dem_editorstand
+    not ok 3 - n3_kennzeichnung_folgt_dem_editorstand # TODO Fehler \#3364: Reiter und Karte lesen die Bericht-Flags nicht
+      ---
+      duration_ms: 1388.565823
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts:734:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + []
+        - [
+        -   'nur morgens'
+        - ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'nur morgens'
+      actual:
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts:737:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+ok 16 - \#3020 G44: nur morgens / nur abends (Altbestand)
+  ---
+  duration_ms: 5080.198173
+  type: 'suite'
+  ...
+1..16
+# tests 52
+# suites 16
+# pass 49
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 3
+# duration_ms 9370.662156

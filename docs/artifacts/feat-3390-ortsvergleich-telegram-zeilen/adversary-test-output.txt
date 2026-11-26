@@ -1,0 +1,26 @@
+# Adversary-Lauf #3390
+
+## pytest
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+68 passed, 38 warnings in 7.08s
+
+## node --test was_steht_wo_karte.test.ts
+  ...
+1..16
+# tests 52
+# suites 16
+# pass 49
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 3
+# duration_ms 9016.530237
+
+## Mutationen (String-Ersetzung, per cmp identisch zurueck)
+M1 ORTE-DE auf ausnahme: 1 failed, 49 passed
+M2 falscher Titel EN: 3 failed, 47 passed
+M3 Titel auf alten Spaltenkopf-Test: 1 failed, 49 passed
+M4a Marke im Antwort-Mock der Karte: node 4 fail
+M4b Telegram-Zelle aus im Mock: node 5 fail
+M5 Produktion EinstellTabelle.svelte zeigt Marke bei zustand on: node 44 fail

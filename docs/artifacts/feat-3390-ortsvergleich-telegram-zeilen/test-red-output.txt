@@ -1,0 +1,59 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit
+configfile: pyproject.toml
+plugins: xdist-3.8.0, timeout-2.4.0, anyio-4.14.2, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 8 items
+
+tests/tdd/test_einstellung_gleich_mail_waechter_3020.py .......F         [100%]
+
+=================================== FAILURES ===================================
+________ test_3390_orte_telegram_faelle_verweisen_gruen_auf_kartentest _________
+
+    def test_3390_orte_telegram_faelle_verweisen_gruen_auf_kartentest():
+        """AC-1/AC-2 (#3390): ORTE-DE/-EN stehen auf ``gruen`` und verweisen auf genau den
+        Kartentest ihrer Sprache, der im Baum existiert."""
+        faelle = {f["id"]: f for _, f in w._alle_faelle(w.lade_falllisten(w.FALLLISTEN_DIR))}
+        vitest_dateien = sorted(w.REPO_ROOT.glob(w.VITEST_GLOB))
+        fehler = []
+        for fid, soll_test in ORTE_TELEGRAM_ALLE_ZEILEN.items():
+            fall = faelle.get(fid)
+            if fall is None:
+                fehler.append(f"{fid}: fehlt im Katalog")
+                continue
+            if fall.get("status") != "gruen":
+                fehler.append(f"{fid}: Status {fall.get('status')!r} statt 'gruen'")
+            if fall.get("test") != soll_test:
+                fehler.append(f"{fid}: Verweis {fall.get('test')!r} statt {soll_test!r}")
+            if not w._pruefe_vitest_verweis(soll_test, vitest_dateien):
+                fehler.append(f"{fid}: Kartentest {soll_test!r} nicht gefunden")
+>       assert fehler == [], "\n".join(fehler)
+E       AssertionError: E-R8-F3N-VERSAND-ORTE-DE: Status 'ausnahme' statt 'gruen'
+E         E-R8-F3N-VERSAND-ORTE-DE: Verweis 'frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::Orte: fünf Spalten, E-Mail „Übersicht“, Stundenverlauf „nur E-Mail“, Telegram im engen Raster „Telegr.“' statt 'frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::Orte, de: neun Metriken stehen alle in der Telegram-Spalte, ohne Marke und ohne Grenz-Text'
+E         E-R8-F3N-VERSAND-ORTE-EN: Status 'ausnahme' statt 'gruen'
+E         E-R8-F3N-VERSAND-ORTE-EN: Verweis 'frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::alle Texte englisch, Namen und Kürzel aus der Antwort unverändert' statt 'frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::Orte, en: neun Metriken stehen alle in der Telegram-Spalte, ohne Marke und ohne Grenz-Text'
+E       assert ["E-R8-F3N-VE... Grenz-Text'"] == []
+E         
+E         Left contains 4 more items, first extra item: "E-R8-F3N-VERSAND-ORTE-DE: Status 'ausnahme' statt 'gruen'"
+E         Use -v to get more diff
+
+tests/tdd/test_einstellung_gleich_mail_waechter_3020.py:237: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  /home/hem/gregor_zwanzig/.claude/worktrees/jiggly-tickling-biscuit/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/tdd/test_einstellung_gleich_mail_waechter_3020.py::test_3390_orte_telegram_faelle_verweisen_gruen_auf_kartentest
+=================== 1 failed, 7 passed, 2 warnings in 1.17s ====================

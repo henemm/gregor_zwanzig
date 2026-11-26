@@ -1,5 +1,5 @@
 {
- "_hinweis": "#3047 Paket D: Faelle Editor-Standard = Mail-Standard. Eingaben und Soll in editor_standard.json; Python-Seite tests/tdd/test_einstellung_gleich_mail_editor_standard.py, Frontend-Seite frontend/src/lib/components/shared/wetter-tab/__tests__/editor_standard_gleich_ausgabe_3020.test.ts (node:test, Testname = erstes Argument von test/rotErwartet; seit #3020 R1, davor der mit #3357 geloeschte Alt-Editor) sowie Karte 'Was steht wo' und Reiter (ac26_/p5c_/was_steht_wo_karte, #3020 R1b); jeder D-*-frontend-Fall nennt seine Datei. N1/N2 sind neue Befunde dieses Pakets (nicht im Issue-Wortlaut). #3276: die Frontend-Faelle orte_stundenverlauf/orte_ausblick entfallen -- der Ortsvergleich hat dafuer keinen eigenen Editor mehr (Einstellung nur in der Tabelle 'Was steht wo'). #3297 hatte mit dem Alt-Editor die Faelle E-P12-TL3-ORTE-KURZSTIL, E-R8-F3-*, E-R8-F3N-ORTE-*, E-R8-F3N-TRIP-STUNDENTABELLE und E-R8-T1-SMS-LADEN-A/B gestrichen; #3020 R1 fuehrt sie mit lebenden Belegen (Karte 'Was steht wo', Zustellung) weiter. #3020 R1b: Faelle mit Altfeld-Zustand (channel_layouts, outlook_metrics, channel_active_metrics) stehen auf ausnahme (ADR-0124), Nur-ein-Bericht auf ausnahme (#3065). E-3020-TRIP-TG-NUR-TAGESWERT belegt die Telegram-Schnittlinie (ADR-0124 Nr. 3). Die Versand-Faelle E-R8-F3N-VERSAND-* haengen bis #3020 R2 am Restbestand.",
+ "_hinweis": "#3047 Paket D: Faelle Editor-Standard = Mail-Standard. Eingaben und Soll in editor_standard.json; Python-Seite tests/tdd/test_einstellung_gleich_mail_editor_standard.py, Frontend-Seite frontend/src/lib/components/shared/wetter-tab/__tests__/editor_standard_gleich_ausgabe_3020.test.ts (node:test, Testname = erstes Argument von test/rotErwartet; seit #3020 R1, davor der mit #3357 geloeschte Alt-Editor) sowie Karte 'Was steht wo' und Reiter (ac26_/p5c_/was_steht_wo_karte, #3020 R1b); jeder D-*-frontend-Fall nennt seine Datei. N1/N2 sind neue Befunde dieses Pakets (nicht im Issue-Wortlaut). #3276: die Frontend-Faelle orte_stundenverlauf/orte_ausblick entfallen -- der Ortsvergleich hat dafuer keinen eigenen Editor mehr (Einstellung nur in der Tabelle 'Was steht wo'). #3297 hatte mit dem Alt-Editor die Faelle E-P12-TL3-ORTE-KURZSTIL, E-R8-F3-*, E-R8-F3N-ORTE-*, E-R8-F3N-TRIP-STUNDENTABELLE und E-R8-T1-SMS-LADEN-A/B gestrichen; #3020 R1 fuehrt sie mit lebenden Belegen (Karte 'Was steht wo', Zustellung) weiter. #3020 R1b: Faelle mit Altfeld-Zustand (channel_layouts, outlook_metrics, channel_active_metrics) stehen auf ausnahme (ADR-0124), Nur-ein-Bericht auf ausnahme (#3065). E-3020-TRIP-TG-NUR-TAGESWERT belegt die Telegram-Schnittlinie (ADR-0124 Nr. 3). Die Versand-Faelle E-R8-F3N-VERSAND-* belegen die Telegram-Spalte der Karte 'Was steht wo': TRIP die Schnittlinie 'nur Tageswert' (#3385), ORTE-DE/-EN alle Zeilen ohne Marke wie die Nachricht (#3390, PO 26.11.; Telegram-Ausgabe in #3404).",
  "dimensionen": {},
  "faelle": [
   {
@@ -1856,13 +1856,13 @@
    "kontext": "orte",
    "format": "editor",
    "pruefung": "anzeige",
-   "test": "frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::Orte: fünf Spalten, E-Mail „Übersicht“, Stundenverlauf „nur E-Mail“, Telegram im engen Raster „Telegr.“",
+   "test": "frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::Orte, de: neun Metriken stehen alle in der Telegram-Spalte, ohne Marke und ohne Grenz-Text",
    "ac": "AC-24",
    "befund": "F3-Nachtrag",
-   "status": "ausnahme",
+   "status": "gruen",
    "runde": 8,
    "paket": "r8fe",
-   "verweis": "#3385: Editor zeigt die Telegram-Zeilengrenze nicht mehr (Orte-Karte kennzeichnet Telegram nicht je Zeile); Folge-Issue #3390"
+   "verweis": "#3390: Karte zeigt alle Zeilen als ‚in Telegram‘, gleich der Nachricht (nichts fällt weg); PO-Entscheidung 26.11.: keine Marke ‚in Zeile 2‘; Telegram-Ausgabe gesondert in #3404"
   },
   {
    "id": "E-R8-F3N-VERSAND-ORTE-EN",
@@ -1870,13 +1870,13 @@
    "kontext": "orte",
    "format": "editor",
    "pruefung": "anzeige",
-   "test": "frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::alle Texte englisch, Namen und Kürzel aus der Antwort unverändert",
+   "test": "frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::Orte, en: neun Metriken stehen alle in der Telegram-Spalte, ohne Marke und ohne Grenz-Text",
    "ac": "AC-24",
    "befund": "F3-Nachtrag",
-   "status": "ausnahme",
+   "status": "gruen",
    "runde": 8,
    "paket": "r8fe",
-   "verweis": "#3385: Editor zeigt die Telegram-Zeilengrenze nicht mehr (Orte-Karte kennzeichnet Telegram nicht je Zeile); Folge-Issue #3390"
+   "verweis": "#3390: Karte zeigt alle Zeilen als ‚in Telegram‘, gleich der Nachricht (nichts fällt weg); PO-Entscheidung 26.11.: keine Marke ‚in Zeile 2‘; Telegram-Ausgabe gesondert in #3404"
   },
   {
    "id": "E-R8-F3N-VERSAND-TRIP",
