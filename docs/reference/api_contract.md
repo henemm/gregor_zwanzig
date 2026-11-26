@@ -2507,8 +2507,9 @@ Issue #1351 Teil 1.)
 
 Optionaler Query-Parameter `lang` (`de`|`en`, seit #2751): wählt nur die Sprache von
 `hourlyNotSelectableReason`; fehlt er oder ist er unbekannt, ist die Antwort die deutsche
-(statischer Katalog ohne Nutzerbezug). Antwort: `{"metrics": [...]}`, genau 26 Einträge,
-Reihenfolge deckungsgleich mit `ALL_METRICS` im Frontend.
+(statischer Katalog ohne Nutzerbezug). Antwort: `{"metrics": [...], "default_order": [...]}`,
+`metrics` genau 26 Einträge, Reihenfolge deckungsgleich mit `ALL_METRICS` im Frontend.
+`default_order` ist die Mail-Standardfolge der wählbaren Schlüssel (seit #2989, s. Field Definitions).
 
 **Response 200:**
 
@@ -2556,7 +2557,8 @@ Reihenfolge deckungsgleich mit `ALL_METRICS` im Frontend.
       "alertMetric": null,
       "alarmCapable": false
     }
-  ]
+  ],
+  "default_order": ["<key>", "<key>", "..."]
 }
 ```
 
@@ -2571,6 +2573,7 @@ Reihenfolge deckungsgleich mit `ALL_METRICS` im Frontend.
 | metrics[].alarmCapable | bool | Seit Teil 3 (#1350). Ab #1435 E1a-1 die **Boolean-Sicht auf `alertMetric`** (`alertMetric is not None`), nicht mehr eine zweite, handgepflegte Liste — steuert unverändert die „Warnen"-Button-Sperre im Schwellen-Editor. Die Menge ist verhaltensneutral identisch geblieben: genau dieselben 10 Keys wie zuvor aus `compare_alert.py::_SUMMARY_KEY_TO_CATALOG_ID` (nachgewiesen in `tests/unit/test_alert_metric_identity_delivery.py`); `compare_alert.py` bleibt das tatsächlich alarmauslösende Modul und ist von dieser Etappe unverändert |
 | metrics[].metric_id | string | Seit Issue #1373 S2 Scheibe A. Kennung der zugrundeliegenden Größe im zentralen Wetterkatalog (`src/app/metric_catalog.py`), z. B. `"temperature"` |
 | metrics[].aggregation | string | Seit Issue #1373 S2 Scheibe A. Die Auswertung dieser Größe, die der Eintrag zeigt (`min`/`max`/`avg`/`sum`), z. B. `"max"` |
+| default_order | string[] | Seit Issue #2989. Die Mail-Standardfolge der wählbaren Katalog-Schlüssel (`CV2_ZEILEN` ohne `warn`, je Zeile über `key_for(metric_id, aggregation)` aufgelöst). Menge und Anzahl entsprechen genau den Einträgen von `metrics[].key` (ohne Duplikate). Weicht die Ableitung ab, bricht sie mit Fehler ab, statt eine falsche Folge auszuliefern. Quelle für „nie eingestellt = alle Größen" im Ortsvergleich; ersetzt die frühere Frontend-Kopie `COMPARE_METRIC_KEYS`. `metrics` bleibt unverändert (Auswahlliste folgt weiter der Katalogreihenfolge) |
 
 Jeder Compare-Eintrag ist damit nachweisbar an eine Größe des zentralen
 Wetterkatalogs gebunden — der Katalog bleibt jedoch eine **kuratierte**
@@ -5427,7 +5430,8 @@ Ablage: `GZ_DATA_DIR/mcp/clients.json` (DCR-Clients) und `GZ_DATA_DIR/mcp/tokens
 
 ## Changelog
 
-- 2026-11-26: Issue #3398 (Spec `docs/specs/modules/mcp_wetter_vollstaendig.md`) — MCP-Werkzeug `wetter` liefert alle wählbaren Katalog-Metriken stündlich (inkl. `wind_chill_c`, Schnee im SNOWGRID-Gebiet) und nimmt `felder` an (422 `mcp_feld_unbekannt`). Neues Werkzeug `regen_nowcast` mit Core-Endpunkt `GET /api/_internal/mcp/nowcast` (Abschnitt 27).
+- 2026-11-26: Issue #2989 (Spec `docs/specs/modules/refactor_2989_compare_default_order_ssot.md`) — `GET /api/compare/metrics` liefert zusätzlich `default_order` (Standardfolge der wählbaren Ortsvergleich-Schlüssel aus dem Backend-Katalog, §15.1). `metrics` unverändert. Das Frontend liest die Standardmenge daraus; die Frontend-Liste `COMPARE_METRIC_KEYS` entfällt.
+- 2026-11-26: Issue #3398 (Spec `docs/specs/modules/mcp_wetter_vollstaendig.md`) — MCP-Werkzeug `wetter` liefert alle wählbaren Katalog-Metriken stündlich (inkl. `wind_chill_c`, Schnee im SNOWGRID-Gebiet) und nimmt `felder` an (422 `mcp_feld_unbekannt`). Neues Werkzeug `regen_nowcast` mit Core-Endpunkt `GET /api/_internal/mcp/nowcast` (Abschnitt 27). (Spec `docs/specs/modules/mcp_wetter_vollstaendig.md`) — MCP-Werkzeug `wetter` liefert alle wählbaren Katalog-Metriken stündlich (inkl. `wind_chill_c`, Schnee im SNOWGRID-Gebiet) und nimmt `felder` an (422 `mcp_feld_unbekannt`). Neues Werkzeug `regen_nowcast` mit Core-Endpunkt `GET /api/_internal/mcp/nowcast` (Abschnitt 27).
 - 2026-11-25: Issue #2988 S2 (Spec `docs/specs/modules/rework_2988_ampel_ableitung.md`) — neu `POST /api/ampel/aufloesung`: der Python-Kern löst bis zu 32 Entwürfe (Vorlage + Abweichungen, Altbestand eigener Vorlagen) zur vollständigen Ampel auf; zustandslos, noch ohne Aufrufer. §11 „Ampel auflösen“.
 - 2026-11-25: Issue #3277 (Epic #3122 B6b-3, Spec `docs/specs/modules/feat_3277_altfelder_entfernen.md`) — Die zehn Altfelder `channel_layouts`, `channel_layouts_per_report`, `channel_active_metrics`, `outlook_metrics`, `outlook_metric_formats`, `hourly_metrics`, `hourly_metric_formats`, `show_outlook`, `multi_day_trend_reports`, `outlook_enabled` sind aus Python-Modell (`UnifiedWeatherDisplayConfig`, `TripReportConfig`), Loader, Serialisierung, E-Mail-Renderern (Parameter `show_outlook`) und dem Go-Struct `ComparePreset` (Feld `OutlookEnabled`) entfernt. Gelesen werden sie nicht mehr; jedes Speichern über Python (`save_trip`, `update_trip`, `save_location`, Status-/Pause-Schreiber der Ortsvergleiche) entfernt sie aus oberster Ebene, `display_config` und `report_config` (zentrale Liste `ALTFELDER` in `src/app/loader.py`), alle übrigen Schlüssel bleiben per Merge erhalten (ADR-0101). Ausblick an/aus und „Ausblick erscheint im“ stehen allein in `display_config.placements.outlook_reports`. Go-Schreibwege lassen einen von Clients gesendeten Schlüssel `outlook_enabled` beim Dekodieren fallen; Bestand bleibt bis zum Datenlauf #3351. Request-Felder `hourly_metrics`/`hourly_metric_formats` der Validator-Vorschau bleiben (Request-Parameter ohne Store-Bezug). Für Nutzer ändert sich in keinem Kanal etwas.
 - 2026-11-24: Issue #3036 — `GET /api/briefings/{id}/placements?kind=route`: `blocks` (Trip) führt zusätzlich `show_compact_summary` (Kurz-Zusammenfassung) und `show_stability` (Großwetterlage). Beide Schalter stehen unter „Ganze Blöcke ein- und ausschalten“ in der Tabelle „Was steht wo“ und sind bei Kompakt-Format gesperrt; gespeichert werden sie als `report_config.show_compact_summary` bzw. `report_config.show_stability`.

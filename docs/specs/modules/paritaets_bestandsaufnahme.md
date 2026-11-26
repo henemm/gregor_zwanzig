@@ -123,4 +123,5 @@ Nicht in Scope: Sanierung der Doppelungen, Klon-Detektor (#1197), Ortsvergleich-
 
 ## Changelog
 
+- 2026-11-26: Punkt `COMPARE_METRIC_KEYS` (NEU-8 im Issue-Body von #1986) erledigt durch #2989: Frontend-Kopie entfernt, Standardfolge kommt als `default_order` aus dem Backend-Katalog (`GET /api/compare/metrics`). Die Liste selbst bleibt als Momentaufnahme unverändert; der Status steht im Issue #1986.
 - 2026-11-13: Initial spec created
