@@ -898,17 +898,26 @@ def _visible_metrics(
     if not alerts_enabled:
         zeilen = [m for m in zeilen if m["key"] != "warn"]
     warn_row = [m for m in zeilen if m["key"] == "warn"]
-    if enabled_metrics is None:
-        return derive_row_labels(zeilen, form="long", lang=lang)
-    by_key = {m["key"]: m for m in zeilen}
-    ordered = [by_key[k] for k in enabled_metrics if k in by_key and k != "warn"]
+    ordered = select_cv2_rows(zeilen, enabled_metrics)
     return derive_row_labels(warn_row + ordered, form="long", lang=lang)
+
+
+def select_cv2_rows(rows: list[dict], enabled_metrics: list[str] | None) -> list[dict]:
+    """Issue #2991: EIN Zeilenfilter fuer HTML- und Klartext-Uebersicht.
+
+    ``None`` = alle ``rows`` in deren Folge, ``[]`` = keine Zeile. Sonst die
+    Folge von ``enabled_metrics``; ``warn`` (reine HTML-Zeile, vom Aufrufer
+    vorangestellt), Duplikate und unbekannte IDs fallen weg."""
+    if enabled_metrics is None:
+        return [m for m in rows if m["key"] != "warn"]
+    by_key = {m["key"]: m for m in rows if m["key"] != "warn"}
+    return [by_key[k] for k in dict.fromkeys(enabled_metrics) if k in by_key]
 
 
 def rowless_count(enabled_metrics: list[str] | None, row_keys) -> int:
     """Issue #1405 S3: Anzahl gewaehlter Groessen OHNE Zeilendefinition in
-    ``row_keys`` -- genau die, die der Zeilenfilter (``_visible_metrics`` bzw.
-    ``comparison._ordered_rows``) verwirft. Die Warn-Zeile ist immer sichtbar
+    ``row_keys`` -- genau die, die der Zeilenfilter (``select_cv2_rows``,
+    Issue #2991) verwirft. Die Warn-Zeile ist immer sichtbar
     und zaehlt nie. ``None`` (kein Filter) = 0."""
     if enabled_metrics is None:
         return 0

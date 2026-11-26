@@ -42,6 +42,7 @@ from output.renderers.email.compare_html import (
     _fmt_visibility_overview, _metric_value, _should_merge_wind_dir,
     _units_legend_text, _visible_hour_metrics, derive_row_labels, fmt_word_cell,
     loc_hail_flag, loc_thunder_signals, location_render_order, rowless_count,
+    select_cv2_rows,
 )
 from output.renderers.email.outlook_state_hint import (
     OutlookState, render_outlook_state_plain,
@@ -72,116 +73,70 @@ import services.alert_urgency as alert_urgency
 #: Formatierungs-Tags der Telegram-HTML-Vorlagen (Issue #3047 p2b).
 _HTML_TAG_RE = _re.compile(r"</?[a-zA-Z][a-zA-Z0-9]*[^<>]*>")
 
-# Issue #1285: die fuenf bisher stillschweigend verworfenen Uebersichts-Zeilen
-# (Renderer-Metrik-ID, Label, Formatierung). Wert-Quelle und Formatierung sind
-# BEWUSST die des HTML-Pfads (`compare_html._metric_value` / `_fmt_*`) statt
-# einer Klartext-Kopie -- sonst beschreibt dieselbe Wetterlage in HTML und
-# Klartext derselben Mail verschiedene Zahlen.
-# Issue #1401 Scheibe A2b: das zweite Tupel-Element ist NICHT mehr die
-# Mail-Beschriftung -- die leitet der Mail-Klartext jetzt aus dem zentralen
-# Register ab (`compare_html.derive_row_labels`, dieselbe Quelle wie der
-# HTML-Teil). Es bleibt ausschliesslich das Kanal-Label des Telegram-Pfads
-# (`_plain_metric_cell`); seit Issue #2666 als Katalog-Schluessel
-# ``vergleich.zeile.<Zeilenschluessel>`` (de-Text = bisheriges Label).
-_DAILY_PLAIN_ROWS: tuple[tuple[str, str, object], ...] = (
-    ("precip_sum", "vergleich.zeile.precip_sum", lambda v: f"{v:.1f} mm"),
-    ("pop_max", "vergleich.zeile.pop_max", lambda v: f"{v:.0f}%"),
-    ("thunder_max", "vergleich.zeile.thunder_max", _fmt_thunder),
-    ("uv_max", "vergleich.zeile.uv_max", lambda v: f"{v:.0f}"),
-    ("visibility_min", "vergleich.zeile.visibility_min", _fmt_visibility_overview),
-    # Issue #1296, Klasse B (kein LocationResult-Feld, Live-Ableitung ueber
-    # _metric_value -> _daily_summary, analog den fuenf #1285-Zeilen).
-    # Issue #1585: die cape_max-Zeile ist hier ersatzlos entfallen -- sie muss
-    # mit CV2_METRICS (compare_html.py) synchron bleiben, `derive_row_labels`
-    # schlaegt sie ueber `_CV2_BY_KEY` nach und wirft sonst KeyError.
-    ("freezing_level", "vergleich.zeile.freezing_level", lambda v: f"{v:.0f} m"),
-    # Issue #1324, Klasse B (kein LocationResult-Feld, Live-Ableitung ueber
-    # _metric_value -> _daily_summary). HTML-Parität: dieselben Werte.
-    ("humidity_avg", "vergleich.zeile.humidity_avg", lambda v: f"{v:.0f}%"),
-    ("dewpoint_avg", "vergleich.zeile.dewpoint_avg", lambda v: format_value("temperature", v, style="plain")),
-    ("pressure_avg", "vergleich.zeile.pressure_avg", lambda v: f"{v:.0f} hPa"),
-    ("precip_type", "vergleich.zeile.precip_type", _fmt_precip_type),
-    ("snowfall_limit", "vergleich.zeile.snowfall_limit", lambda v: f"{v:.0f} m"),
-)
-
-# Issue #1359 Scheibe 1: ALLE Uebersichts-Zeilen des Klartext-Teils als EINE
-# geordnete Tabelle (Renderer-Metrik-ID, Label, Formatierung). Vorher standen
-# sie als feste Folge einzelner `if _metric_visible(...)`-Bloecke im Quelltext
-# -- die im Editor eingestellte Metrik-Reihenfolge konnte deshalb gar nicht
-# ankommen (der Test prueft nur Mitgliedschaft, nicht Position).
-# Issue #1356: die Quellcode-Reihenfolge dieser Tabelle ist NICHT mehr die
-# Standard-Reihenfolge. Einzige Quelle der Standard-Reihenfolge (Altbestaende
-# ohne gespeicherte Auswahl) ist `CV2_METRICS` (compare_html.py); die Tabelle
-# wird beim Import per `_sort_by_cv2_order` in diese Folge gebracht (Spec
-# docs/specs/modules/compare_metric_default_order_ssot.md).
-# Werte kommen einheitlich ueber `_metric_value` (HTML-Paritaet, keine zweite
-# Wert-Quelle): fuer IDs ohne `_DAILY_AGGREGATE_FIELD`-Eintrag ist das exakt
-# das bisherige `getattr(loc_result, metric_id)`.
-_PLAIN_ROWS_UNSORTED: tuple[tuple[str, str, object], ...] = (
-    ("temp_max", "vergleich.zeile.temp_max", lambda v: format_value("temperature", v, style="plain")),
-    ("wind_max", "vergleich.zeile.wind_max", lambda v: format_value("wind", v, style="plain")),
-    ("temp_min", "vergleich.zeile.temp_min", lambda v: format_value("temperature", v, style="plain")),
-    ("gust_max", "vergleich.zeile.gust_max", lambda v: format_value("wind", v, style="plain")),
-    ("wind_direction_avg", "vergleich.zeile.wind_direction_avg", lambda v: f"{v}°"),
-    ("wind_chill_min", "vergleich.zeile.wind_chill_min",
-     lambda v: format_value("temperature", v, style="plain")),
-    ("wind_chill_max", "vergleich.zeile.wind_chill_max",
-     lambda v: format_value("temperature", v, style="plain")),
-    ("cloud_low_avg", "vergleich.zeile.cloud_low_avg", lambda v: f"{v}%"),
-    ("cloud_mid_avg", "vergleich.zeile.cloud_mid_avg", lambda v: f"{v}%"),
-    ("cloud_high_avg", "vergleich.zeile.cloud_high_avg", lambda v: f"{v}%"),
-    *_DAILY_PLAIN_ROWS,
-    ("sunny_hours", "vergleich.zeile.sunny_hours", lambda v: f"{format_value('sunshine', v, style='bare')}h"),
-    ("cloud_avg", "vergleich.zeile.cloud_avg", lambda v: format_value("cloud_total", v, style="plain")),
-    ("snow_depth_cm", "vergleich.zeile.snow_depth_cm", lambda v: format_value("snow_depth", v, style="plain")),
-    ("snow_new_cm", "vergleich.zeile.snow_new_cm", lambda v: f"{v:.0f} cm"),
-)
+# Issue #2991 (#1986 NEU-10): Klartext-Format je Uebersichts-Zeilenschluessel
+# als REINE Zuordnung -- ohne eigene Reihenfolge, ohne eigene Zeilenwahl.
+# Zeilenmenge, Folge und Auswahl-Luecke kommen allein aus `CV2_METRICS` und
+# dem gemeinsamen Filter `select_cv2_rows` (compare_html.py), derselben
+# Quelle wie im HTML-Teil. Wert-Quelle bleibt `_metric_value` (HTML-Paritaet,
+# #1285); die Formate selbst sind bewusst Klartext-eigen (`213°`, `4.0h`,
+# Angleichung an HTML ist Folge-Issue #3425).
+_PLAIN_FMT: dict[str, object] = {
+    "temp_max": lambda v: format_value("temperature", v, style="plain"),
+    "wind_max": lambda v: format_value("wind", v, style="plain"),
+    "temp_min": lambda v: format_value("temperature", v, style="plain"),
+    "gust_max": lambda v: format_value("wind", v, style="plain"),
+    "wind_direction_avg": lambda v: f"{v}°",
+    "wind_chill_min": lambda v: format_value("temperature", v, style="plain"),
+    "wind_chill_max": lambda v: format_value("temperature", v, style="plain"),
+    "cloud_low_avg": lambda v: f"{v}%",
+    "cloud_mid_avg": lambda v: f"{v}%",
+    "cloud_high_avg": lambda v: f"{v}%",
+    "precip_sum": lambda v: f"{v:.1f} mm",
+    "pop_max": lambda v: f"{v:.0f}%",
+    "thunder_max": _fmt_thunder,
+    "uv_max": lambda v: f"{v:.0f}",
+    "visibility_min": _fmt_visibility_overview,
+    "freezing_level": lambda v: f"{v:.0f} m",
+    "humidity_avg": lambda v: f"{v:.0f}%",
+    "dewpoint_avg": lambda v: format_value("temperature", v, style="plain"),
+    "pressure_avg": lambda v: f"{v:.0f} hPa",
+    "precip_type": _fmt_precip_type,
+    "snowfall_limit": lambda v: f"{v:.0f} m",
+    "sunny_hours": lambda v: f"{format_value('sunshine', v, style='bare')}h",
+    "cloud_avg": lambda v: format_value("cloud_total", v, style="plain"),
+    "snow_depth_cm": lambda v: format_value("snow_depth", v, style="plain"),
+    "snow_new_cm": lambda v: f"{v:.0f} cm",
+}
 
 
-def _sort_by_cv2_order(rows) -> tuple:
-    """Klartext-Zeilen in die Reihenfolge von ``CV2_METRICS`` bringen (#1356).
-
-    ``CV2_METRICS`` ist die einzige Quelle der Standard-Reihenfolge; ``warn``
-    ist eine reine HTML-Zeile und wird uebersprungen. Fail-fast: steht ein
-    Schluessel nur in einer der beiden Listen, bricht der Aufruf (und damit der
-    Modulimport) mit ``ValueError`` ab, der den Schluessel nennt -- keine Zeile
-    wird still ans Ende gehaengt.
-    """
-    cv2_keys = [m["key"] for m in CV2_ZEILEN if m["key"] != "warn"]
-    by_id = {row[0]: row for row in rows}
-    nur_plain = [k for k in by_id if k not in cv2_keys]
-    nur_cv2 = [k for k in cv2_keys if k not in by_id]
+def _pruefe_plain_fmt(fmt_map: dict, cv2_zeilen) -> None:
+    """Fail-fast (#2991, ersetzt `_sort_by_cv2_order`): die Format-Zuordnung
+    deckt exakt die CV2-Schluessel ohne ``warn``. Abweichung -> ``ValueError``
+    mit dem betroffenen Schluessel; keine Zeile faellt still weg."""
+    cv2_keys = [m["key"] for m in cv2_zeilen if m["key"] != "warn"]
+    nur_plain = [k for k in fmt_map if k not in cv2_keys]
+    nur_cv2 = [k for k in cv2_keys if k not in fmt_map]
     if nur_plain or nur_cv2:
         raise ValueError(
-            "plain rows and CV2_METRICS diverge: "
-            f"only in plain rows: {nur_plain}; only in CV2_METRICS: {nur_cv2}"
+            "_PLAIN_FMT and CV2_METRICS diverge: "
+            f"only in _PLAIN_FMT: {nur_plain}; only in CV2_METRICS: {nur_cv2}"
         )
-    return tuple(by_id[k] for k in cv2_keys)
 
 
-_PLAIN_ROWS: tuple[tuple[str, str, object], ...] = _sort_by_cv2_order(
-    _PLAIN_ROWS_UNSORTED
+_pruefe_plain_fmt(_PLAIN_FMT, CV2_ZEILEN)
+
+# Abgeleitete Sicht fuer Telegram, Compact, Orte-SMS und Placements
+# (Renderer-Metrik-ID, Kanal-Label-Schluessel, Format) in CV2-Folge (#1356).
+# Das Kanal-Label ``vergleich.zeile.<key>`` gilt nur fuer den Telegram-Pfad;
+# die Mail leitet ihre Beschriftung aus `derive_row_labels` ab (#1401 A2b).
+_PLAIN_ROWS: tuple[tuple[str, str, object], ...] = tuple(
+    (m["key"], f"vergleich.zeile.{m['key']}", _PLAIN_FMT[m["key"]])
+    for m in CV2_ZEILEN if m["key"] != "warn"
 )
 
 # Beschriftungs-Quelle des Klartext-Zwillings: dieselben Register-Verknuepfungen
 # wie im HTML-Pfad, nach Zeilen-Key ansprechbar (Issue #1401 A2b).
 _CV2_BY_KEY: dict[str, dict] = {m["key"]: m for m in CV2_ZEILEN}
-
-
-def _ordered_rows(rows, enabled_metrics: list[str] | None) -> list | tuple:
-    """Zeilen-/Zell-Definitionen in der vom Nutzer eingestellten Reihenfolge.
-
-    Issue #1359: ``enabled_metrics`` ist eine GEORDNETE Liste (Listenposition
-    = Reihenfolge, kein eigenes ``order``-Feld). ``None`` = Altbestand ohne
-    gespeicherte Auswahl und folgt der Standard-Reihenfolge von ``rows``
-    (fuer ``_PLAIN_ROWS`` die von ``CV2_METRICS``, Issue #1356). Eine leere Liste bleibt leer (AC-8) -- sie darf nicht in "alle
-    Metriken" umgedeutet werden. Semantik identisch zu ``_visible_metrics()``
-    im HTML-Pfad (``output.renderers.email.compare_html``).
-    """
-    if enabled_metrics is None:
-        return rows
-    by_id = {row[0]: row for row in rows}
-    return [by_id[m] for m in dict.fromkeys(enabled_metrics) if m in by_id]
 
 
 def render_comparison_text(
@@ -327,11 +282,13 @@ def render_comparison_text(
         # Issue #1453: derselbe Uebersichtsblock wie im HTML-Teil -> dieselbe
         # Namensform (ausgeschriebener deutscher Registername). Ohne `form`
         # liefen HTML- und Klartext-Teil derselben Mail auseinander.
-        ordered = _ordered_rows(_PLAIN_ROWS, enabled_metrics)
+        # Issue #2991: Zeilenwahl ueber denselben Filter wie der HTML-Teil.
         labelled = derive_row_labels(
-            [_CV2_BY_KEY[key] for key, _de, _fmt in ordered], form="long", lang=lang,
+            select_cv2_rows(CV2_ZEILEN, enabled_metrics), form="long", lang=lang,
         )
-        for (metric_id, _label_key, fmt), row in zip(ordered, labelled):
+        for row in labelled:
+            metric_id = row["key"]
+            fmt = _PLAIN_FMT[metric_id]
             value = _metric_value(loc_result, metric_id)
             cell = (
                 # Issue #1680 S1: der Klartext-Teil der Mail zeigt die
@@ -350,7 +307,7 @@ def render_comparison_text(
     # Issue #1405 S3: EIN Hinweis je Mail unter der Uebersicht, dieselbe Zahl
     # wie im HTML-Teil (Zeilen ohne Definition + unmappbare Eintraege).
     gap_notice = selection_gap_notice(
-        rowless_count(enabled_metrics, _PLAIN_ROWS_BY_ID) + unresolved_count,
+        rowless_count(enabled_metrics, {m["key"] for m in CV2_ZEILEN}) + unresolved_count,
         scope="vergleich", lang=lang,
     )
     if gap_notice:

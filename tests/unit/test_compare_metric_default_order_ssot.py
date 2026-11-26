@@ -10,7 +10,7 @@ des Produktivcodes), keine Mocks.
 AC-Zuordnung (RED = schlaegt vor der Umsetzung fehl):
 - AC-1: Klartext-Reihenfolge == HTML-Reihenfolge bei None        -> RED
 - AC-2: Schluesselfolge _PLAIN_ROWS == CV2_METRICS (ohne warn)    -> RED
-- AC-3: Sortier-Hilfe wirft mit Schluesselnamen                   -> RED
+- AC-3: Format-Pruefung (#2991 _pruefe_plain_fmt) nennt Schluessel -> RED
 - AC-7: Sink mit plain_body / **kw erhaelt den Klartext           -> RED
 - AC-8: Positions-Sink bleibt unveraendert                        -> GRUEN (Regression)
 - AC-9: Amtswarn-Sinks bleiben bei subject/body                   -> GRUEN (Regression)
@@ -80,26 +80,25 @@ def test_ac2_plain_rows_schluesselfolge_gleich_cv2_ohne_warn():
 
 
 def test_ac3_sortierung_nennt_unbekannten_schluessel():
-    """GIVEN eine Plain-Zeile mit Schluessel, der nicht in CV2_METRICS steht
-    WHEN die Sortier-Hilfe laeuft THEN klare Fehlermeldung mit Schluessel."""
+    """GIVEN eine Klartext-Format-Zuordnung mit Schluessel, der nicht in
+    CV2_METRICS steht WHEN die Import-Pruefung laeuft THEN klare Fehlermeldung
+    mit Schluessel (#2991: ersetzt das fail-fast von ``_sort_by_cv2_order``)."""
     from output.renderers import comparison
 
-    rows = tuple(comparison._PLAIN_ROWS) + (
-        ("erfundene_metrik_xyz", "vergleich.zeile.erfunden", lambda v: str(v)),
-    )
-    with pytest.raises((ValueError, KeyError)) as exc:
-        comparison._sort_by_cv2_order(rows)
+    fmt = {**comparison._PLAIN_FMT, "erfundene_metrik_xyz": lambda v: str(v)}
+    with pytest.raises(ValueError) as exc:
+        comparison._pruefe_plain_fmt(fmt, CV2_METRICS)
     assert "erfundene_metrik_xyz" in str(exc.value)
 
 
 def test_ac3_sortierung_nennt_fehlenden_schluessel():
-    """GIVEN CV2_METRICS kennt einen Schluessel, den die Plain-Zeilen nicht haben
-    THEN bricht die Sortierung ebenfalls mit dem Schluesselnamen ab."""
+    """GIVEN CV2_METRICS kennt einen Schluessel, den die Format-Zuordnung nicht
+    hat THEN bricht die Pruefung ebenfalls mit dem Schluesselnamen ab."""
     from output.renderers import comparison
 
-    rows = tuple(r for r in comparison._PLAIN_ROWS if r[0] != "humidity_avg")
-    with pytest.raises((ValueError, KeyError)) as exc:
-        comparison._sort_by_cv2_order(rows)
+    fmt = {k: f for k, f in comparison._PLAIN_FMT.items() if k != "humidity_avg"}
+    with pytest.raises(ValueError) as exc:
+        comparison._pruefe_plain_fmt(fmt, CV2_METRICS)
     assert "humidity_avg" in str(exc.value)
 
 
@@ -248,29 +247,32 @@ def test_ac4_sms_bei_standard_folgt_mail_tabelle():
 # ---------------------------------------------------------------------------
 
 
-def test_ac5_plain_rows_sind_dieselben_zeilen_nur_umsortiert():
+def test_ac5_plain_rows_sind_abgeleitete_sicht_der_format_zuordnung():
+    """#2991: ``_PLAIN_ROWS`` ist eine abgeleitete Sicht -- Folge aus
+    CV2_METRICS, Formatierer aus ``_PLAIN_FMT`` (keine eigene Klartext-Tabelle
+    mit eigener Reihenfolge mehr)."""
     from output.renderers import comparison
 
-    assert sorted(comparison._PLAIN_ROWS, key=lambda r: r[0]) == \
-        sorted(comparison._PLAIN_ROWS_UNSORTED, key=lambda r: r[0])
-    assert len(comparison._PLAIN_ROWS) == len(comparison._PLAIN_ROWS_UNSORTED)
+    cv2 = [m["key"] for m in CV2_METRICS if m["key"] != "warn"]
+    assert [r[0] for r in comparison._PLAIN_ROWS] == cv2
+    assert all(r[2] is comparison._PLAIN_FMT[r[0]] for r in comparison._PLAIN_ROWS)
 
 
-def test_ac5_klartext_zeilen_und_werte_mengengleich_zur_alten_folge():
-    """Der Klartext in alter Folge (Auswahl = Schluessel von
-    _PLAIN_ROWS_UNSORTED) und der neue Standard-Klartext (None) enthalten
-    dieselben Zeilen mit denselben Werten -- nur die Reihenfolge differiert."""
+def test_ac5_klartext_zeilen_und_werte_mengengleich_bei_umgekehrter_folge():
+    """Der Klartext in umgekehrter Auswahlfolge und der Standard-Klartext (None)
+    enthalten dieselben Zeilen mit denselben Werten -- nur die Reihenfolge
+    differiert."""
     from collections import Counter
 
     from output.renderers import comparison
 
-    alte_folge = [row[0] for row in comparison._PLAIN_ROWS_UNSORTED]
-    alt = render_comparison_text(_result(), enabled_metrics=alte_folge, preset=None)
+    umgekehrt = [row[0] for row in comparison._PLAIN_ROWS][::-1]
+    alt = render_comparison_text(_result(), enabled_metrics=umgekehrt, preset=None)
     neu = render_comparison_text(_result(), enabled_metrics=None, preset=None)
 
     alt_labels = klartext_uebersicht_labels(alt)
     assert len(alt_labels) >= 20, f"Vakuum-Schutz: nur {len(alt_labels)} Zeilen"
     assert Counter(alt.splitlines()) == Counter(neu.splitlines())
     assert alt_labels != klartext_uebersicht_labels(neu), (
-        "Gegenprobe: die alte Folge muss sich von der neuen unterscheiden"
+        "Gegenprobe: die umgekehrte Folge muss sich von der Standardfolge unterscheiden"
     )
