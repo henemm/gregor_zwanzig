@@ -202,3 +202,36 @@ def test_ac4_katalogfall_telegram_nur_tageswert_verweist_gruen_auf_kartentest():
     assert all(f.get("status") == "gruen" for f in faelle), [(f["id"], f.get("status")) for f in faelle]
     vitest_dateien = sorted(w.REPO_ROOT.glob(w.VITEST_GLOB))
     assert w._pruefe_vitest_verweis(TELEGRAM_NUR_TAGESWERT_TEST, vitest_dateien)
+
+
+# ---------------------------------------------------------------------------
+# #3390: Ortsvergleich-Telegram "alle Zeilen" ist gruen auf dem Kartentest belegt
+# ---------------------------------------------------------------------------
+
+ORTE_TELEGRAM_ALLE_ZEILEN = {
+    f"E-R8-F3N-VERSAND-ORTE-{lang.upper()}": (
+        "frontend/src/lib/components/organisms/__tests__/was_steht_wo_karte.test.ts::"
+        f"Orte, {lang}: neun Metriken stehen alle in der Telegram-Spalte, ohne Marke und ohne Grenz-Text"
+    )
+    for lang in ("de", "en")
+}
+
+
+def test_3390_orte_telegram_faelle_verweisen_gruen_auf_kartentest():
+    """AC-1/AC-2 (#3390): ORTE-DE/-EN stehen auf ``gruen`` und verweisen auf genau den
+    Kartentest ihrer Sprache, der im Baum existiert."""
+    faelle = {f["id"]: f for _, f in w._alle_faelle(w.lade_falllisten(w.FALLLISTEN_DIR))}
+    vitest_dateien = sorted(w.REPO_ROOT.glob(w.VITEST_GLOB))
+    fehler = []
+    for fid, soll_test in ORTE_TELEGRAM_ALLE_ZEILEN.items():
+        fall = faelle.get(fid)
+        if fall is None:
+            fehler.append(f"{fid}: fehlt im Katalog")
+            continue
+        if fall.get("status") != "gruen":
+            fehler.append(f"{fid}: Status {fall.get('status')!r} statt 'gruen'")
+        if fall.get("test") != soll_test:
+            fehler.append(f"{fid}: Verweis {fall.get('test')!r} statt {soll_test!r}")
+        if not w._pruefe_vitest_verweis(soll_test, vitest_dateien):
+            fehler.append(f"{fid}: Kartentest {soll_test!r} nicht gefunden")
+    assert fehler == [], "\n".join(fehler)
