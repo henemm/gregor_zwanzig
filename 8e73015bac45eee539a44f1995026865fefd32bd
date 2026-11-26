@@ -1,0 +1,52 @@
+{
+  "verified_commit": "8e73015bac45eee539a44f1995026865fefd32bd",
+  "findings": [
+    {
+      "ac": "AC-1/AC-6",
+      "status": "PASS",
+      "url": "staging compare mail de",
+      "evidence": "staging_mail_pruefen.py --typ compare: Mail GZM 261940-0c8da9d4 Vergleich zugestellt, email_spec_validator Exit 0 (HTML+Klartext)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-1/AC-6",
+      "status": "PASS",
+      "url": "staging compare mail en",
+      "evidence": "staging_mail_pruefen.py --typ compare --lang en: Mail GZM 261940-1cf9838c Vergleich an +en@, Validator Exit 0",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "staging gate compare de",
+      "evidence": "send_gate_test_mails --only compare Token 2e8c1883, email_spec_validator --windrichtung Exit 0",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "staging gate compare en",
+      "evidence": "send_gate_test_mails --lang en --only compare Token baddcb2a, Validator --lang en --to-contains +en@ --windrichtung Exit 0",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-26T19:43:01.045106+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Vergleichsmail aus einer Zeilenliste auf Staging zugestellt, email_spec_validator Exit 0 de+en, Windrichtungs-Faerbung de+en Exit 0",
+  "scope": "backend",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Vergleichsmail aus einer Zeilenliste auf Staging zugestellt, email_spec_validator Exit 0 de+en, Windrichtungs-Faerbung de+en Exit 0",
+      "scope": "backend",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-26T19:43:01.045106+00:00"
+    }
+  }
+}
