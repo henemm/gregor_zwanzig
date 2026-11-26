@@ -1,0 +1,20 @@
+== node --test: Waechter, Loesch-Nachweis, geaenderte Testdateien, layout-tab, Ratschen ==
+# tests 393
+# suites 41
+# pass 393
+# fail 0
+# cancelled 0
+# skipped 0
+393 passed, 0 failed
+
+== node --test gesamte Frontend-Suite (npm test) ==
+# tests 11811
+# pass 11808
+# fail 0
+# cancelled 0
+# skipped 2
+11808 passed, 0 failed, 2 skipped
+
+== npm run build: exit 0 ==
+== pytest benannte Dateien (-o addopts) ==
+123 passed, 2 warnings in 32.80s
