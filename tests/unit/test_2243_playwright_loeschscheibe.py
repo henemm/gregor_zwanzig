@@ -46,7 +46,7 @@ AUSFUEHRBAR = (".ts", ".mjs", ".js", ".py", ".sh", ".yml", ".yaml", ".json")
 GEKUERZTE_SPECS = [
     "issue-675-stage-start-time.spec.ts",
     "issue-592-593-trips-navigation.spec.ts",
-    "epic-138-metriken-editor.spec.ts",
+    # epic-138-metriken-editor.spec.ts mit #3374 ganz gelöscht (AC-5b → was-steht-wo-karte WS-neu-1).
     "trip-header-btn-migration.spec.ts",
     "forms-dialogs-btn-migration.spec.ts",
 ]
@@ -61,10 +61,6 @@ TOTE_FAELLE = {
         "AC-1: Klick auf Zeile",
         "AC-1b: Desktop-<tr>",
         "AC-2: Aktions-Cell",
-    ],
-    "epic-138-metriken-editor.spec.ts": [
-        "AC-8: WeatherConfigDialog sendet use_friendly_format",
-        "AC-9: Wizard-Bearbeitung emittiert use_friendly_format",
     ],
     "trip-header-btn-migration.spec.ts": [
         "AC-1: TripHeader.svelte importiert Btn statt Button",
@@ -87,17 +83,6 @@ LEBENDE_FAELLE = {
         "AC-4: Action-Sheet enthält",
         "AC-13: Klick auf \"Trips\" im Breadcrumb navigiert zu /trips",
     ],
-    "epic-138-metriken-editor.spec.ts": [
-        "AC-1: Metriken-Tab zeigt WeatherMetricsTab-Komponente",
-        "AC-2: Grundauswahl-Sektion zeigt Metrik-Toggle-Buttons",
-        "AC-3: Preset-Leiste zeigt Preset-Pills",
-        "AC-4: Klick auf \"Wandern\"-Preset",
-        # AC-5 (Roh/Einfach im Kanal-Block) mit #3154 gestrichen, Ersatz was-steht-wo-karte WS-3.
-        "AC-5b (#2049)",
-        "AC-6: Metrik-Toggle löst Auto-Save-PUT",
-        "AC-7: Grundauswahl-Zustand nach Auto-Save und Reload",
-        "AC-10: SaveIndicator zeigt saving",
-    ],
     "trip-header-btn-migration.spec.ts": [
         "AC-2: alle Header-Action-Buttons haben data-slot=\"btn\"",
     ],
@@ -107,7 +92,7 @@ LEBENDE_FAELLE = {
 }
 
 BEHALTENE_SPECS = [
-    "layout-tab-vergleich.spec.ts",
+    # layout-tab-vergleich.spec.ts mit #3374 gelöscht (AC-4/AC-8 → hub-anlegen-ablauf AN-neu-1/AN-neu-2).
     "compare-editor-slice3.spec.ts",
     "compare-editor-fidelity-s8d.spec.ts",
     "compare-flow-navigation.spec.ts",
@@ -219,10 +204,11 @@ def test_ac3_tote_faelle_fehlen_lebende_faelle_gelistet():
 
 
 def test_ac3_kein_describe_skip_mehr_in_epic_138():
-    # doc-compliance-test: die toten Blöcke waren `describe.skip`; der Runner
-    # listet übersprungene Blöcke trotzdem, daher zusätzlich am Quelltext.
-    text = (E2E / "epic-138-metriken-editor.spec.ts").read_text("utf-8")
-    assert "describe.skip" not in text
+    # doc-compliance-test: die toten Blöcke waren `describe.skip`; seit #3374 ist
+    # die ganze Datei gelöscht (AC-5b lebt als was-steht-wo-karte WS-neu-1), ein
+    # Wiederauftauchen samt Skip-Blöcken fällt hier auf.
+    spec = E2E / "epic-138-metriken-editor.spec.ts"
+    assert not spec.exists() or "describe.skip" not in spec.read_text("utf-8")
 
 
 # ── AC-4 ────────────────────────────────────────────────────────────────────

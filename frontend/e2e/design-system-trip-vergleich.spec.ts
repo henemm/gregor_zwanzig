@@ -48,6 +48,9 @@
 //                 kein PUT bis zur neuen Zeit).  DS-1 Jahr angefangen ⇒ „Startdatum fehlt"; geleert
 //                 und neu getippt ⇒ Hinweis erscheint nie.
 //
+// #3374 (rework_3374_tote_browserpruefungen.md AC-9): DS-neu-1 Etappen-Startzeit mit If-Match gespeichert,
+// nach Neuladen in Anzeige und Server-Stand (aus der gelöschten feat-1395-s3-Spec Fall 5).
+//
 // Pflicht-Mutationen (Spec Implementation Details 4, Lieferung A): (a) MTabBar-Rahmen-Reset
 // entfernt ⇒ DS-8 rot; (b) `.mono`-Regel gelöscht ⇒ DS-7 rot; (c) „+ Neuer Trip" im Leerzustand
 // zurück auf accent ⇒ DS-5 rot. Lieferung B: (d) BackLink-Höhe am Handy zurück auf 36 px ⇒ DS-6
@@ -1377,4 +1380,38 @@ test('DS-6: Tippflächen am Handy (390 × 844) mindestens 44 × 44 — Kopfleist
 		for (const h of Object.values(hubs)) await h.aufraeumen();
 	}
 	expect(fehler, fehler.join('\n')).toEqual([]);
+});
+
+// ─── DS-neu-1 (#3374, rework_3374_tote_browserpruefungen.md AC-9) ──────────────
+// Aus der gelöschten feat-1395-s3-Spec Fall 5: der Etappen-Reiter schreibt über denselben Trichter wie alle
+// Trip-Schreibstellen — die Startzeit geht mit If-Match (Stempel aus dem Seitenaufbau) hinaus, wird mit 200
+// angenommen und steht nach Neuladen in Anzeige und Server-Stand.
+test('DS-neu-1 (1280 px): Etappen-Startzeit wird mit If-Match gespeichert und bleibt nach Neuladen', async ({ page }) => {
+	await page.setViewportSize(DESKTOP);
+	await setzeSprache(page, 'de');
+	const hub = await seedHub(page.request, 'route');
+	try {
+		const pfad = `/api/trips/${hub.id}`;
+		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
+		await expect(zeitFeld(page)).toBeVisible({ timeout: 15_000 });
+		const gespeichert = page.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === pfad, {
+			timeout: 30_000
+		});
+		await tippeUhrzeit(page, zeitFeld(page), '09:30');
+		const antwort = await gespeichert;
+		expect(antwort.status(), 'Speichern im Etappen-Reiter gelingt').toBe(200);
+		expect(await antwort.request().headerValue('if-match'), 'der Schreibvorgang trägt den Stempel (If-Match)').toMatch(/^(W\/)?"[^"]+"$/);
+		await expect(page.getByTestId('save-indicator')).not.toHaveAttribute('data-state', 'error');
+		await expect
+			.poll(async () => ((await tripStand(page, hub.id)).stages as Etappe[])[0]?.start_time, { message: 'Startzeit gespeichert', timeout: 15_000 })
+			.toBe('09:30');
+
+		await openHub(page, 'route', hub.id, { tab: 'etappen' }); // frischer Seitenaufbau = Neuladen
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
+		await expect(feldEingabe(zeitFeld(page)), 'Anzeige nach Neuladen').toHaveText('09:30', { timeout: 15_000 });
+		expect(((await tripStand(page, hub.id)).stages as Etappe[])[0]?.start_time, 'Server-Stand nach Neuladen').toBe('09:30');
+	} finally {
+		await hub.aufraeumen();
+	}
 });
