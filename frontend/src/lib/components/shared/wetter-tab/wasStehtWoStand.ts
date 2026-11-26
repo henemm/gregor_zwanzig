@@ -125,6 +125,15 @@ export function mitAusblick(alt: Placements, berichte: { morning: boolean; eveni
 	return p;
 }
 
+/**
+ * #3361: Kopie ohne `outlook_reports`. Im Anlege-POST steht der Ausblick nur bei eigener Wahl;
+ * ohne Wert löst der Kern die Vorbelegung (ADR-0124 Nr. 6) nach der echten Zustellung auf.
+ */
+export function ohneAusblick(p: Placements): Placements {
+	const { outlook_reports: _weg, ...rest } = p;
+	return rest as Placements;
+}
+
 /** „−“ in der Grundauswahl: die Zeile der Metrik fällt weg (später wieder aufgenommen ist sie überall angehakt). */
 export function ohneZeile(alt: Placements, metrik: string): Placements {
 	const p = kopie(alt);

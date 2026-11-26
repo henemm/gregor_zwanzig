@@ -173,6 +173,43 @@ for (const kind of KINDS) {
 			}
 		});
 
+		test(`AC-2/AC-5: Neuaufbau über start (Reiterwechsel), weiterer Haken: Stand weiter ohne outlook_reports, nur Morgen -> morning (${kind})`, async () => {
+			const erste = beideBriefings(kind);
+			const staende: J[] = [];
+			for (const v of erste) {
+				const s1 = await nurHaken(kind, v.antwort);
+				assert.equal('outlook_reports' in s1.placements, false, 'Messaufbau: S1 ohne Ausblick');
+				const gemeldet: J[] = [];
+				const k2 = await P.bauen(P.DATEI.karte, {
+					...P.LAUFZEIT,
+					api: { ...P.LAUFZEIT.api, post: async () => JSON.parse(JSON.stringify(v.antwort)) },
+					context: kind,
+					id: '',
+					createMode: true,
+					entwurf: () => ({}),
+					start: JSON.parse(JSON.stringify(s1)),
+					onAnlegeStand: (s: J) => gemeldet.push(JSON.parse(JSON.stringify(s)))
+				});
+				await k2.u.laden();
+				assert.equal(k2.u.phase, 'bereit', 'Messaufbau: Karte 2 nicht geladen');
+				ableitungen(k2);
+				k2.u.haken({ metrik: 'gust', stelle: 'telegram', an: false });
+				ableitungen(k2);
+				assert.equal(gemeldet.length, 1, 'Messaufbau: ein gemeldeter Stand nach Neuaufbau');
+				const s2 = gemeldet[0];
+				assert.equal(s2.placements.rows.find((r: J) => r.metric_id === 'wind').places.telegram, false, 'Messaufbau: S1-Haken bleibt');
+				assert.equal(
+					'outlook_reports' in s2.placements,
+					false,
+					`Stand nach Neuaufbau trägt den nie gewählten Ausblick fest: ${JSON.stringify(s2.placements.outlook_reports)}`
+				);
+				assert.deepEqual(k2.u.ausblickBerichte, ['evening'], 'Ausblick-Schalter nach Neuaufbau: Vorbelegung der Vorschau');
+				staende.push(s2);
+			}
+			const r = vorschau(NUTZER.map((n, i) => [n, kind, RUMPF[kind](true, staende[i])]));
+			assert.deepEqual(r.map((x) => x.ausblick), [['morning'], ['morning']], 'nur Morgen nach Neuaufbau: Ausblick morgens');
+		});
+
 		test(`AC-4: Hub (createMode=false): Karte schreibt die Tabelle samt Ausblick der Antwort unverändert (${kind})`, async () => {
 			for (const [i, v] of beideBriefings(kind).entries()) {
 				const id = `abo-3361-${i}`;

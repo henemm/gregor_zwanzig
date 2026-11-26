@@ -82,7 +82,9 @@
 	function uebernehmen(a: PlacementsAntwort): void {
 		antwort = a;
 		// #3305: im Anlegen ersetzt die Vorschau nur die Ansicht; der lokale Stand bleibt.
-		if (!createMode || !lokal) lokal = klon(a.placements);
+		// #3361: im Anlegen ohne Ausblick übernehmen (nur eigene Wahl geht in den POST); im Hub unverändert.
+		if (!createMode) lokal = klon(a.placements);
+		else if (!lokal) lokal = S.ohneAusblick(klon(a.placements));
 		if (createMode) felderStart ??= felderAusAntwort(a);
 		phase = 'bereit';
 	}
