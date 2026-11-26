@@ -1,0 +1,68 @@
+{
+  "verified_commit": "4d2a67c999543b15c3a7ff1469831da29177cc41",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/api/compare/metrics?lang=de",
+      "evidence": "Kern 127.0.0.1:8001 auf 4d2a67c99: default_order 25 Schluessel, temp_max_c..snowfall_limit_m (CV2-Folge), Menge gleich metrics[].key, ohne Duplikate",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "/api/compare/metrics?lang=en",
+      "evidence": "lang=en: dieselbe default_order, metrics unveraendert vorhanden (25 Eintraege)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "mail:compare de",
+      "evidence": "staging_mail_pruefen.py --typ compare Exit 0, Betreff GZM 261428-075a99cf Vergleich, email_spec_validator Exit 0",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "mail:compare en",
+      "evidence": "staging_mail_pruefen.py --typ compare --lang en Exit 0, Betreff GZM 261428-9fccd9ef Vergleich, Validator Exit 0",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-26T14:29:56.319015+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Katalog liefert default_order (de/en), Vergleichs-Mail de/en zugestellt und gueltig (#2989)",
+  "scope": "full-stack",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Katalog liefert default_order (de/en), Vergleichs-Mail de/en zugestellt und gueltig (#2989)",
+      "scope": "full-stack",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-26T14:29:56.319015+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
