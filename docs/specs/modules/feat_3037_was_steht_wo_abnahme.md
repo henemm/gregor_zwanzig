@@ -93,16 +93,14 @@ Nicht im Scope: Karten-Produktcode (außer kleinem Fix nach Definition of Done),
 
 - [ ] Spec freigegeben, Test `test_soll_ist_bild.py` rot vor Umsetzung, dann grün
 - [ ] Staging-Lauf Orte und Ein-Ort (DE/EN × 1280/390) grün, Wegwerf-Abo entfernt, Sprache DE
-- [ ] Elementliste `--abnahme` DE und EN: Abschnitt der Tabelle ohne Abweichung, übrige Abweichungen zugeordnet
-- [ ] Mail-Nachweis Orte (3 Orte, 1 Ort) mit `--konfig`, Exit 0
-- [ ] Soll/Ist-Bilder an Henning, Bildprüfer-Befunde zugeordnet
-- [ ] Nach #3364: Trip-Bild, Trip-Mail, Katalog ohne `todo`/`xfail`
-- [ ] PR mit allen 6 CI-Checks grün, Deploy und Selftest, Issue #3037 erst nach vollständiger Abnahme schließen
+- [ ] Elementliste `--abnahme` DE und EN gemessen, jede Abweichung ohne Besitzer einer Ursache und einem Issue zugeordnet (#3419–#3422)
+- [ ] Katalog #3047 Ausgangsstand Exit 0 mit genau drei `xfail`
+- [ ] PR mit allen 6 CI-Checks grün, Deploy und Selftest, Issue #3037 bleibt offen (Fortsetzung)
 
 ## Expected Behavior
 
 - **Input:** Prüfkonto auf Staging mit Seed (Trip, Orte mit drei Orten) und ein Wegwerf-Abo mit einem Ort.
-- **Output:** Ganzseitenbilder je Kontext, Sprache und Breite; Mockup-Gegenbilder; zusammengesetzte Soll/Ist-PNGs; Messprotokolle (Elementliste, Mail-Validatoren, Katalog).
+- **Output:** Ganzseitenbilder je Kontext, Sprache und Breite; Mockup-Gegenbilder; zusammengesetzte Soll/Ist-PNGs; Messprotokolle (Elementliste DE/EN, Katalog-Ausgangsstand).
 - **Side effects:** Wegwerf-Abo und ein Ort im Prüfkonto während des Laufs (danach entfernt); Prüfkonto-Sprache wird zwischenzeitlich umgeschaltet und am Ende auf DE gesetzt.
 
 ## Test Plan
@@ -116,13 +114,11 @@ Nicht im Scope: Karten-Produktcode (außer kleinem Fix nach Definition of Done),
 ### Messläufe (Abnahme, kein Code)
 
 - [ ] Elementliste `--abnahme --scope wetter/normal` DE und EN mit Prüfkonto (AC-6)
-- [ ] Staging-Mails Trip, drei Orte, ein Ort + Validatoren `--konfig` Exit 0 (AC-7)
 - [ ] Katalog #3047 Kern-Schicht Exit 0 (AC-8)
-- [ ] `mockup-bildpruefer` je Kontext/Breite, Soll/Ist-Bild an Henning (AC-10)
 
 ## Acceptance Criteria
 
-- **AC-1:** Given das Prüfkonto ist auf Staging angemeldet und der Trip, der Orte-Vergleich mit drei Orten bzw. das Abo mit einem Ort ist geöffnet (Trip erst nach Auslieferung #3364) / When die Ganzseitenbilder im Reiter Wetter bei 1280 px und 390 px, je Deutsch und Englisch, aufgenommen werden / Then entstehen je Kontext vier Bilder, deren Breite dem jeweiligen Fenster entspricht, und die Tabelle „Was steht wo“ ist darauf sichtbar.
+- **AC-1:** Given das Prüfkonto ist auf Staging angemeldet und der Orte-Vergleich mit drei Orten bzw. das Abo mit einem Ort ist geöffnet (Trip-Kontext in der Fortsetzung nach #3364; das Werkzeug enthält ihn bereits) / When die Ganzseitenbilder im Reiter Wetter bei 1280 px und 390 px, je Deutsch und Englisch, aufgenommen werden / Then entstehen je Kontext vier Bilder, deren Breite dem jeweiligen Fenster entspricht, und die Tabelle „Was steht wo“ ist darauf sichtbar.
   - Test: Staging-Playwright-Lauf als Prüfkonto, Bildbreite je Aufnahme gleich Fensterbreite, Tabelle sichtbar.
 
 - **AC-2:** Given ein Wegwerf-Abo mit genau einem Ort existiert im Prüfkonto / When der Reiter Wetter dieses Orte-Vergleichs geöffnet wird / Then heißt der Bereich „Orte“ (Englisch „Locations“) und kein sichtbarer Text enthält Mehrzahl-Formulierungen wie „alle Orte“ oder „1 Orte“.
@@ -137,20 +133,24 @@ Nicht im Scope: Karten-Produktcode (außer kleinem Fix nach Definition of Done),
 - **AC-5:** Given ein Mockup-Bild und ein Staging-Bild gleicher Breite / When die Bildfunktion sie zusammensetzt / Then zeigt das Ergebnis das Mockup links und das Staging-Bild rechts, beide beschriftet mit „Soll (Mockup)“ und „Ist (Staging)“ samt Kontext, Breite und Sprache, ohne Verzerrung bei unterschiedlicher Höhe.
   - Test: `tests/tdd/test_soll_ist_bild.py` mit zwei Testbildern unterschiedlicher Höhe, Breite des Ergebnisses gleich Summe beider, Farbpunkte links und rechts stimmen, Höhe gleich der größeren; kein Netz.
 
-- **AC-6:** Given das Prüfkonto mit Seed-IDs für Trip und Orte / When der Elementlisten-Abgleich mit `--abnahme --scope wetter/normal` auf Deutsch und mit `--sprache en` läuft / Then meldet der Abschnitt „was-steht-wo“ keine Abweichung, und jede andere Abweichung der Seite ist einem Besitzer (Issue) zugeordnet.
-  - Test: Abgleichlauf DE und EN gegen Staging, Bericht je Sprache ohne Abweichung im Abschnitt, Besitzerliste vollständig.
+- **AC-6:** Given das Prüfkonto mit Seed-IDs für Trip und Orte / When der Elementlisten-Abgleich mit `--abnahme --scope wetter/normal` auf Deutsch und mit `--sprache en` läuft / Then liegt je Sprache ein Bericht vor, und jede Abweichung ohne Besitzer ist einer belegten Ursache und einem Issue zugeordnet (Zielzustand „Abschnitt ohne Abweichung“ siehe Fortsetzung).
+  - Test: Abgleichlauf DE und EN gegen Staging; Zuordnungstabelle Ursache → Issue im Issue #3037.
 
-- **AC-7:** Given Staging-Mails für Trip, drei Orte und einen Ort wurden über die Versand-Schnittstelle ausgelöst / When der jeweilige Mail-Validator mit der gespeicherten Konfiguration (`--konfig`) die zugestellte Mail prüft / Then beendet er sich mit Exit 0, das heißt die Mail zeigt genau, was in der Tabelle eingestellt ist.
-  - Test: Versand per API als Prüfkonto, Validator gegen die Mail im Stalwart-Test-Postfach, Exit-Code 0 je Fall (Trip erst nach #3364).
-
-- **AC-8:** Given der Prüfkatalog #3047 für das neue Datenmodell / When die Kern-Schicht ausgeführt wird / Then endet sie mit Exit 0; vor Auslieferung #3364 bleiben genau die drei bekannten Fälle als `xfail`, danach ist kein Fall dieser Gruppe mehr `todo` oder `xfail`.
-  - Test: Kern-Schicht-Lauf der Katalog-Testdateien, Ausgabe zählt grün, Ausnahme und offen.
+- **AC-8:** Given der Prüfkatalog #3047 für das neue Datenmodell vor Auslieferung #3364 / When die Kern-Schicht ausgeführt wird / Then endet sie mit Exit 0, und genau die drei bekannten Fälle „nur morgens/abends“ stehen als `xfail`.
+  - Test: Kern-Schicht-Lauf der Katalog-Testdateien (Ausgangsstand), Ausgabe zählt grün, Ausnahme und offen.
 
 - **AC-9:** Given ein zweites Konto neben dem Prüfkonto und ein Wegwerf-Abo im Prüfkonto / When der Test endet, auch nach einem Fehler, und das zweite Konto seine Abos abruft / Then ist das Wegwerf-Abo entfernt, die Prüfkonto-Sprache ist wieder Deutsch, und das zweite Konto hat das Abo nie gesehen.
   - Test: Abruf der Abos mit beiden Konten vor, während und nach dem Lauf (inkl. absichtlich abgebrochenem Lauf), Namenspräfix nicht mehr vorhanden, Sprache gleich DE.
 
-- **AC-10:** Given die Soll/Ist-Bilder je Kontext und Breite liegen vor / When der Bildprüfer sie in höchstens zwei Runden prüft / Then ist jede Abweichung entweder in der Karte behoben oder einem eigenen Issue mit Verweis zugeordnet, und Henning erhält die Soll/Ist-Bilder mit Mockup links und Staging rechts.
-  - Test: Bildprüfer-Bericht je Kontext/Breite ohne offenen Befund; jeder Befund trägt Issue-Nummer oder Verweis auf den Fix; Bilder an den PO übergeben.
+## Fortsetzung #3037 (eigener Workflow, nicht Teil dieser Lieferung)
+
+Nach #3419–#3422 (Soll-Bild, Elementliste, Seed und Abgleich-Werkzeug nachgezogen) und nach Auslieferung #3364 wird #3037 als neuer Workflow fortgesetzt, mit diesen Zielen als Acceptance Criteria der Fortsetzungs-Spec:
+- Trip-Kontext: Ganzseitenbilder DE/EN × 1280/390.
+- Elementliste `--abnahme` DE und EN: Abschnitt „was-steht-wo“ ohne Abweichung, übrige Abweichungen mit Besitzer.
+- Staging-Mails Trip, drei Orte, ein Ort: Validatoren mit `--konfig` Exit 0.
+- Katalog #3047 ohne `todo`/`xfail` der Gruppe „nur morgens/abends“.
+- Bildprüfer je Kontext/Breite ohne offenen Befund; Soll/Ist-Bilder (Mockup links, Staging rechts) an Henning.
+- #3037 wird erst danach geschlossen.
 
 ## Known Limitations
 
@@ -167,3 +167,4 @@ Nicht im Scope: Karten-Produktcode (außer kleinem Fix nach Definition of Done),
 ## Changelog
 
 - 2026-11-26: Initial spec created
+- 2026-11-26: Zuschnitt nach Erstmessung (Tech Lead): Soll-Bild/Elementliste veraltet und Abgleich-Werkzeug lückenhaft (#3419–#3422); diese Lieferung = Prüfwerkzeug + Erstmessung mit Zuordnung; Zielzustand der Messläufe und Bild an den PO in die Fortsetzung verschoben.
