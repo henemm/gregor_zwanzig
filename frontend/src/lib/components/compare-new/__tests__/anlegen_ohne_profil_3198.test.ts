@@ -27,7 +27,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { umgebungFuer, ohneTypen, werte, type Knoten } from '../../shared/__tests__/svelteInstanzPruefstand.ts';
-import { aufloesungPost, live, REPO } from '../../shared/wetter-tab/__tests__/wetterTabDaten.ts';
+import { aufgeloestVon, aufloesungPost, live, REPO } from '../../shared/wetter-tab/__tests__/wetterTabDaten.ts';
 import { toCompareSelectionEntries } from '../../shared/weather-metrics-tab/compareMetricSelection.ts';
 import * as Z from '../../shared/wetter-tab/wetterZustand.ts';
 import { STANDARD_VORLAGE } from '../../shared/wetter-tab/ampelModell.ts';
@@ -92,12 +92,16 @@ const LIVE_API = {
 
 const ORTE = ['loc-a', 'loc-b', 'loc-c'].map((id) => ({ id, name: id, lat: 0, lon: 0 }));
 
-async function editor(opts: { stateOverride?: Knoten; vorlage?: Knoten | null } = {}) {
+// #3399 S2: die Seite loest die Quelle serverseitig auf und reicht `vorlageId` durch. Ohne
+// ausdrueckliche Angabe nimmt der Pruefstand das ECHTE resolve_entwurf der Quelle (wie die Seite).
+async function editor(opts: { stateOverride?: Knoten; vorlage?: Knoten | null; vorlageId?: string | null } = {}) {
+	const vorlageId = opts.vorlageId !== undefined ? opts.vorlageId : opts.vorlage ? aufgeloestVon(opts.vorlage).vorlage_id : null;
 	const gesendet: Array<{ url: string; payload: Knoten }> = [];
 	const { ast, quelle, u } = await umgebungFuer(EDITOR, {
 		untrack: (fn: () => unknown) => fn(),
 		stateOverride: opts.stateOverride,
 		vorlage: opts.vorlage ?? null,
+		vorlageId,
 		locations: ORTE,
 		alarmeCatalog: KATALOG,
 		api: {
@@ -220,15 +224,13 @@ function quelle(over: Partial<ComparePreset> = {}): ComparePreset {
 
 describe('AC-5: Anlegen aus Vorlage (?from=<id>)', () => {
 	test('reine Funktion: Quelle profil=wintersport ohne ampel.template ⇒ vorlageId „wintersport“', () => {
-		const f = feldsatzAusVorlage(quelle(), ORTE as unknown as Location[]) as Knoten;
+		const f = feldsatzAusVorlage(quelle(), ORTE as unknown as Location[], aufgeloestVon(quelle() as never).vorlage_id) as Knoten;
 		assert.equal(f.vorlageId, 'wintersport', `VERTRAG FEHLT (#3198): feldsatzAusVorlage leitet die Vorlage nicht ab (vorlageId=${JSON.stringify(f.vorlageId)})`);
 	});
 
 	test('reine Funktion: Quelle mit ampel.template „wassersport“ (profil wandern) ⇒ vorlageId „wassersport“', () => {
-		const f = feldsatzAusVorlage(
-			quelle({ profil: 'wandern', display_config: { region: 'Tirol', ampel: { template: 'wassersport' } } } as never),
-			ORTE as unknown as Location[]
-		) as Knoten;
+		const q = quelle({ profil: 'wandern', display_config: { region: 'Tirol', ampel: { template: 'wassersport' } } } as never);
+		const f = feldsatzAusVorlage(q, ORTE as unknown as Location[], aufgeloestVon(q as never).vorlage_id) as Knoten;
 		assert.equal(f.vorlageId, 'wassersport', 'ampel.template der Quelle wird nicht uebernommen');
 	});
 
@@ -243,6 +245,22 @@ describe('AC-5: Anlegen aus Vorlage (?from=<id>)', () => {
 		const ed = await editor({ vorlage: quelle() as unknown as Knoten });
 		const wt = await wetterTabMontieren(ed);
 		assert.equal(wt.stand.vorlageId, 'wintersport');
+	});
+
+	// #3399 S2 (AC-5): die Vorlage kommt aus der Server-Aufloesung der Seite, nicht aus der Rangfolge.
+	test('#3399 S2: Server-ID „wassersport“ bei Quelle profil=wintersport ⇒ Reiter und POST „wassersport“', async () => {
+		const ed = await editor({ vorlage: quelle() as unknown as Knoten, vorlageId: 'wassersport' });
+		const wt = await wetterTabMontieren(ed);
+		assert.equal(wt.stand.vorlageId, 'wassersport', 'Editor rechnet die Vorlage selbst statt der Server-ID');
+		assert.equal(vorlageImPost(await speichern(ed)), 'wassersport');
+	});
+
+	test('#3399 S2: Aufloesung gescheitert (vorlageId null) ⇒ POST „allgemein“, Name und Orte der Quelle bleiben', async () => {
+		const ed = await editor({ vorlage: quelle() as unknown as Knoten, vorlageId: null });
+		const p = await speichern(ed);
+		assert.equal(vorlageImPost(p), 'allgemein', 'bei Fehler geratene Vorlage aus der Rangfolge');
+		assert.match(String(p.name), /Skitouren Tirol/);
+		assert.deepEqual(p.location_ids, ['loc-a', 'loc-b']);
 	});
 
 	test('Editor mit Quelle ampel.template „wassersport“: Reiter zeigt und POST traegt „wassersport“', async () => {
