@@ -22,6 +22,12 @@
 // nicht mehr in BEKANNTE_WAISEN; Selbstnachweis (e) ist rot, bis die Wächterlogik die Array-Form von
 // import.meta.glob laut meldet.
 //
+// #3384 S4 (Spec docs/specs/modules/rework_3384_waisen_s4.md, AC-2/AC-3/AC-4): Gruppe S4 gestrichen,
+// OBERGRENZE_WAISEN 7 (nur S3). RED vor der Löschung S4: die 19 S4-Dateien existieren noch und stehen
+// bewusst nicht mehr in BEKANNTE_WAISEN. F001: die Obergrenze muss exakt der Listenlänge entsprechen
+// (rot, bis pruefeRatsche auf `!==` verschärft ist). F002: Array-Sperre und Kantenregel erkennen auch
+// `import.meta.glob<T>(…)` (rot, bis beide Regexe den optionalen Typparameter kennen).
+//
 // Ausführen (aus frontend/):
 //   npm test -- src/lib/__tests__/waisen_waechter.test.ts
 
@@ -41,26 +47,7 @@ export const AUSNAHMEN: Record<string, string> = {
 
 /** Bekannte Waisen (Ratsche, darf nur schrumpfen). Löschung je Scheibe: S1 #3383, S3 #3385, S4 #3384. */
 export const BEKANNTE_WAISEN: string[] = [
-	// S4 #3384: compare/edit/mobile/utils
-	'lib/components/compare/AddReportCard.svelte',
-	'lib/components/compare/CreateGroupDialog.svelte',
-	'lib/components/compare/LocationPreviewMap.svelte',
-	'lib/components/compare/layoutPreviewRows.ts',
-	'lib/components/compare/versandPropsAus.ts',
-	'lib/components/compare/wetterMetrikenPropsAus.ts',
-	'lib/components/edit/EditRouteSection.svelte',
-	'lib/components/edit/EditWeatherSection.svelte',
-	'lib/components/edit/WeatherSummaryCard.svelte',
-	'lib/components/edit/weatherSummary.ts',
-	'lib/components/mobile/DrawerGroup.svelte',
-	'lib/components/mobile/DrawerItem.svelte',
-	'lib/components/mobile/NavIcon.svelte',
-	'lib/components/trip-detail/waypoints/WaypointPin.svelte',
-	'lib/utils/alertMetricCatalogIds.ts',
-	'lib/utils/horizonHelpers.ts',
-	'lib/utils/naturalSort.ts',
-	'lib/utils/rightColumn.ts',
-	'lib/utils/weatherEmoji.ts',
+	// S4 #3384 gelöscht (19 Einträge, Lösch-Nachweis trip_pfad_altfeld_loeschnachweis_3297.test.ts)
 	// S1 #3383 gelöscht (14 Einträge, Lösch-Nachweis trip_pfad_altfeld_loeschnachweis_3297.test.ts)
 	// S3 #3385: versand-tab
 	'lib/components/shared/versand-tab/VTBriefingChannels.svelte',
@@ -74,9 +61,9 @@ export const BEKANNTE_WAISEN: string[] = [
 
 /**
  * Feste Obergrenze (Literal, Muster BESTAND_OBERGRENZE): 56 Waisen − 15 gelöscht (#3366 S2) − lib/index.ts = 40;
- * − 14 gelöscht (#3383 S1) = 26 (19 S4 + 7 S3).
+ * − 14 gelöscht (#3383 S1) = 26; − 19 gelöscht (#3384 S4) = 7 (nur S3).
  */
-export const OBERGRENZE_WAISEN = 26;
+export const OBERGRENZE_WAISEN = 7;
 
 const istTest = (rel: string) => /(^|\/)__tests__\//.test(rel) || /\.(test|spec)\.(ts|js|mjs)$/.test(rel);
 const ENDUNGEN = ['.svelte', '.ts', '.js', '.mjs', '.svelte.ts', '.svelte.js'];
@@ -206,10 +193,15 @@ export function pruefeRatsche(
 	return fehler;
 }
 
-describe('#3366 AC-1/AC-8, #3383 AC-3: Waisen-Wächter gegen den echten Baum', () => {
-	test('Waisenmenge (ohne AUSNAHMEN) ist genau BEKANNTE_WAISEN ohne Gruppe S1 und hält OBERGRENZE_WAISEN 26', () => {
+describe('#3366 AC-1/AC-8, #3383 AC-3, #3384 AC-2/AC-3: Waisen-Wächter gegen den echten Baum', () => {
+	test('Waisenmenge (ohne AUSNAHMEN) ist genau BEKANNTE_WAISEN ohne Gruppen S1 und S4 und hält OBERGRENZE_WAISEN 7', () => {
 		const fehler = pruefeRatsche(SRC, findeWaisen(SRC), BEKANNTE_WAISEN, AUSNAHMEN, OBERGRENZE_WAISEN);
 		assert.deepEqual(fehler, [], fehler.join('\n'));
+	});
+
+	test('#3384 AC-3 (F001): OBERGRENZE_WAISEN ist das Literal 7 und gleicht exakt der Listenlänge', () => {
+		assert.equal(OBERGRENZE_WAISEN, 7);
+		assert.equal(OBERGRENZE_WAISEN, BEKANNTE_WAISEN.length);
 	});
 });
 
@@ -217,8 +209,12 @@ describe('#3366 AC-1/AC-8, #3383 AC-3: Waisen-Wächter gegen den echten Baum', (
  * Erfundener Mini-Baum (Selbstnachweis), liefert das src-Verzeichnis.
  * `f001`: zusätzliche Dateien für die Kantenarten aus Finding F001 (#3383 AC-4 a–d).
  * `arrayGlob`: eine Route mit der nicht unterstützten Array-Form von `import.meta.glob` (#3383 AC-4 e).
+ * `typArrayGlob`: Array-Form mit Typparameter `import.meta.glob<T>([…])` (#3384 AC-4, F002).
+ * `typGlob`: String-Form mit Typparameter `import.meta.glob<T>('…')` (#3384 AC-4, F002).
  */
-function miniBaum(opt: { f001?: boolean; arrayGlob?: boolean } = {}): string {
+type MiniOpt = { f001?: boolean; arrayGlob?: boolean; typArrayGlob?: boolean; typGlob?: boolean };
+
+function miniBaum(opt: MiniOpt = {}): string {
 	const wurzel = mkdtempSync(join(tmpdir(), 'waisen-waechter-'));
 	const src = join(wurzel, 'src');
 	const datei = (rel: string, inhalt: string) => {
@@ -258,11 +254,22 @@ function miniBaum(opt: { f001?: boolean; arrayGlob?: boolean } = {}): string {
 		datei('routes/arr/+page.ts', "export const module = import.meta.glob(['$lib/arr/*.ts']);\n");
 		datei('lib/arr/c.ts', 'export const c = 1;\n');
 	}
+	if (opt.typArrayGlob) {
+		datei('routes/tarr/+page.ts', "type Modul = { a: number };\nexport const module = import.meta.glob<Modul>(['./x/*.ts']);\n");
+		datei('routes/tarr/x/c.ts', 'export const c = 1;\n');
+	}
+	if (opt.typGlob) {
+		datei('routes/tglob/+page.ts', "export { module } from '$lib/tglob';\n");
+		datei('lib/tglob/index.ts', "type Modul = { a: number };\nexport const module = import.meta.glob<Modul>('./x/*.ts');\n");
+		datei('lib/tglob/x/a.ts', 'export const a = 1;\n');
+		datei('lib/tglob/x/b.ts', 'export const b = 1;\n');
+		datei('lib/tglob/x/nicht.svelte', '<p>passt nicht zum Muster</p>\n');
+	}
 	return src;
 }
 
 /** Mini-Baum bauen, Funktion ausführen, Baum sicher entfernen. */
-function mitMiniBaum<T>(opt: { f001?: boolean; arrayGlob?: boolean }, f: (src: string) => T): T {
+function mitMiniBaum<T>(opt: MiniOpt, f: (src: string) => T): T {
 	const src = miniBaum(opt);
 	try {
 		return f(src);
@@ -361,5 +368,49 @@ describe('#3383 AC-4: Selbstnachweis F001 am erfundenen Mini-Baum', () => {
 			() => mitMiniBaum({ arrayGlob: true }, findeWaisen),
 			/Array-Form von import\.meta\.glob nicht unterstützt — Wächterlogik ergänzen/
 		);
+	});
+});
+
+// #3384 AC-3 (Finding F001 aus #3383): die Obergrenze muss exakt der Listenlänge entsprechen. Eine
+// erhöhte Obergrenze ohne neuen Eintrag ließe sonst still Platz für eine künftige Waise.
+describe('#3384 AC-3: Selbstnachweis F001 (Obergrenze exakt an Listenlänge gebunden)', () => {
+	test('Obergrenze größer als die Liste macht rot und nennt beide Zahlen', () => {
+		const fehler = mitMiniBaum({}, (src) =>
+			pruefeRatsche(src, findeWaisen(src), ['lib/nurTest.ts', 'lib/erfundeneWaise.ts'], AUSNAHMEN, 3)
+		);
+		assert.equal(fehler.length, 1, fehler.join('\n'));
+		assert.match(fehler[0], /BEKANNTE_WAISEN hat 2 Einträge, OBERGRENZE_WAISEN ist 3/);
+	});
+
+	test('Obergrenze gleich der Listenlänge bleibt grün', () => {
+		const fehler = mitMiniBaum({}, (src) =>
+			pruefeRatsche(src, findeWaisen(src), ['lib/nurTest.ts', 'lib/erfundeneWaise.ts'], AUSNAHMEN, 2)
+		);
+		assert.deepEqual(fehler, []);
+	});
+});
+
+// #3384 AC-4 (Finding F002 aus #3383): der Typparameter `import.meta.glob<T>(…)` darf weder die
+// Array-Sperre noch die Kantenregel umgehen.
+describe('#3384 AC-4: Selbstnachweis F002, Array-Form mit Typparameter', () => {
+	test('import.meta.glob<T>([…]) wird laut rot statt still übergangen', () => {
+		assert.throws(
+			() => mitMiniBaum({ typArrayGlob: true }, findeWaisen),
+			/Array-Form von import\.meta\.glob nicht unterstützt — Wächterlogik ergänzen/
+		);
+	});
+});
+
+describe('#3384 AC-4: Selbstnachweis F002, String-Form mit Typparameter', () => {
+	test('exakte Mini-Baum-Liste mit import.meta.glob<T>(\'./x/*.ts\')', () => {
+		const waisen = mitMiniBaum({ typGlob: true }, findeWaisen);
+		assert.deepEqual(waisen, ['lib/erfundeneWaise.ts', 'lib/index.ts', 'lib/nurTest.ts', 'lib/tglob/x/nicht.svelte']);
+	});
+
+	test('import.meta.glob<T>(\'./x/*.ts\') macht die passenden Dateien erreichbar', () => {
+		const waisen = mitMiniBaum({ typGlob: true }, findeWaisen);
+		assert.ok(!waisen.includes('lib/tglob/x/a.ts'), 'lib/tglob/x/a.ts gilt trotz glob<T> als Waise');
+		assert.ok(!waisen.includes('lib/tglob/x/b.ts'), 'lib/tglob/x/b.ts gilt trotz glob<T> als Waise');
+		assert.ok(waisen.includes('lib/tglob/x/nicht.svelte'), 'Datei außerhalb des Glob-Musters gilt als erreichbar');
 	});
 });
