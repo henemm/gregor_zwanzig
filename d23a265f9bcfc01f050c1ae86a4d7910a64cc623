@@ -1,0 +1,61 @@
+{
+  "verified_commit": "d23a265f9bcfc01f050c1ae86a4d7910a64cc623",
+  "findings": [
+    {
+      "ac": "AC-1..AC-9",
+      "status": "PASS",
+      "url": "/trips/<id>, /compare/new, /compare/<id>",
+      "evidence": "Staging auf d23a265: die 10 \u00fcbertragenen Browser-F\u00e4lle WS-neu-1..5, AN-neu-1/2, KS-neu-1/2, DS-neu-1 gegen Staging 11 passed (inkl. Setup), Testsitzung danach abgemeldet (401)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-10..AC-14",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "L\u00f6sch-Nachweis + Pin-Tests 88 passed; CI-e2e-Check auf PR 3401 gr\u00fcn (neue F\u00e4lle im CI-Stack)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-15",
+      "status": "PASS",
+      "url": "/",
+      "evidence": "Keine Produktcode-\u00c4nderung; Startseite DE und EN auf Staging geladen (Sprach-Cookie de/en), ROOT 200, HEALTH 200",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-26T09:01:23.552878+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: reine Testpflege, \u00fcbertragene Browser-F\u00e4lle auf Staging gr\u00fcn, DE/EN-Smoke ok",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: reine Testpflege, \u00fcbertragene Browser-F\u00e4lle auf Staging gr\u00fcn, DE/EN-Smoke ok",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-26T09:01:23.552878+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
