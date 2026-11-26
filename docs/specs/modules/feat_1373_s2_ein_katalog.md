@@ -176,7 +176,7 @@ unangetastet: der Renderer (`compare_html.py`, S3/S5) und `compare_hourly_metric
 6. KEIN UMBAU
 
    compare_metric_ids.py (FRONTEND_TO_RENDERER_METRIC_ID,
-   RENDERER_TO_TRIP_METRIC_ID), der Renderer (CV2_METRICS/HOUR_METRICS in
+   Trip-ID-Zuordnung, seit #2992 `renderer_to_trip_metric_id()`), der Renderer (CV2_METRICS/HOUR_METRICS in
    compare_html.py) und die Persistenz (display_config.active_metrics)
    bleiben in dieser Lieferung unangetastet -- S3/S5/Scheibe B.
 ```
