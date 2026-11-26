@@ -14,4 +14,4 @@
 	let { data } = $props();
 </script>
 
-<CompareNewEditor locations={data.locations} vorlage={data.vorlage} />
+<CompareNewEditor locations={data.locations} vorlage={data.vorlage} vorlageId={data.vorlageId} />

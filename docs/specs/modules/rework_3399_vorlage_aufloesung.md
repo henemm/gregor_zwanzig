@@ -81,11 +81,11 @@ Sichtbar ändert sich wenig: Der Vorlagenname erscheint erst nach der Server-Ant
 
 | File | Change Type | Description |
 |------|-------------|-------------|
-| `frontend/src/lib/components/compare-new/compareNewVorlage.ts` | MODIFY | `feldsatzAusVorlage(…, vorlageId)`, `JEDE_VORLAGE` entfällt |
+| `frontend/src/lib/components/compare-new/compareNewVorlage.ts` | MODIFY | `feldsatzAusVorlage(…, vorlageId)` (`null` ⇒ Feld weglassen, Anlege-Voreinstellung greift), neu `vorlageIdDerQuelle(client, preset): Promise<string \| null>` (`loeseAmpelnAuf` mit `eintragAusAbo`, jeder Fehler ⇒ `null`, wirft nie); `JEDE_VORLAGE` entfällt |
 | `frontend/src/lib/components/compare-new/CompareNewEditor.svelte` | MODIFY | Prop `vorlageId`, an `feldsatzAusVorlage` |
-| `frontend/src/routes/compare/new/+page.server.ts` | MODIFY | löst die Quelle vor dem Start auf, Fehler ⇒ `vorlageId: null` |
+| `frontend/src/routes/compare/new/+page.server.ts` | MODIFY | löst die Quelle vor dem Start per `vorlageIdDerQuelle` auf (POST an die Go-API mit Sitzungs-Cookie); ohne Quelle kein Aufruf; Fehler ⇒ `vorlageId: null` |
 | `frontend/src/routes/compare/new/+page.svelte` | MODIFY | reicht `data.vorlageId` durch |
-| Tests | MODIFY | `compareNewVorlage.test.ts`, `anlegen_ohne_profil_3198.test.ts:223` |
+| Tests | MODIFY | `compareNewVorlage.test.ts`, `anlegen_ohne_profil_3198.test.ts:220-255`, `feat3298_vergleich_ohne_altfelder.test.ts:292-295`, `compare_new_editor_postet_einmal.test.ts:148`; Kern mit echtem `resolve_entwurf` (`aufloesungPost`); Live `frontend/e2e/rework-3399-kopie.spec.ts` |
 
 **S3a – Name und Hub-Übersicht (ca. 90 LoC).**
 
@@ -188,3 +188,4 @@ Sichtbar ändert sich wenig: Der Vorlagenname erscheint erst nach der Server-Ant
 ## Changelog
 
 - 2026-11-26: Initial spec created (Phase 3), Grundlage `docs/context/rework-3399-vorlage-aufloesung.md`.
+- 2026-11-26: S1 live (PR #3407). S2 präzisiert: Auflösungs-Helfer `vorlageIdDerQuelle` in `compareNewVorlage.ts` (keine zusätzliche Datei), Testliste ergänzt; Kontext `docs/context/rework-3399-s2-kopie.md`.

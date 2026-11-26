@@ -104,7 +104,7 @@ const AUSNAHMEN: { pfad: string; enthaelt: string; grund: string }[] = [
 		pfad: 'lib/components/compare-new/CompareNewEditor.svelte',
 		// Trifft NUR die eigene Deklaration `vorlagenFelder` (Fund-Text: erste 90 Zeichen,
 		// reaktivitaet_scan.ts `ausschnitt`); der `$state`-Startwert `wiz` bleibt voll gescannt.
-		enthaelt: 'vorlagenFelder = untrack(() => (vorlage ? feldsatzAusVorlage(vorlage, locations) : {}))',
+		enthaelt: 'vorlagenFelder = untrack(() => (vorlage ? feldsatzAusVorlage(vorlage, locations, vorlageId',
 		grund:
 			'Namensfeld: Vorschlagsname „<Name> (Kopie)“ (tr(\'vergleich.neu.kopie\')) ist der einmalige Startwert des Namensfelds beim Anlegen aus Vorlage und danach Nutzereingabe. Verhalten identisch zu main #2659, dort als Anweisung `vorlageInZustand` in routes/compare/new/+page.svelte. #2727 verlegt die Uebernahme in den Initialisierer (AC-7: einmalig, kein $effect).'
 	}

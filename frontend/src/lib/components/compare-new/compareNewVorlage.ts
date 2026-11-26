@@ -27,15 +27,29 @@ import {
 	hydrateDayWindowFromPreset,
 	hydrateLayoutFieldsFromPreset
 } from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
-import { vorlageIdFuer, type VorlagenAmpeln } from '../alerts-tab/alarmAbAnzeige.ts';
+import {
+	eintragAusAbo,
+	loeseAmpelnAuf,
+	type AufloesungClient
+} from '../shared/wetter-tab/ampelAufloesung.ts';
 
-// Issue #3198: die Vorlagenliste kennt erst der Reiter Wetter (er prueft die ID
-// beim Lesen); hier gilt jede ID der Rueckfallkette als bekannt.
-const JEDE_VORLAGE = new Proxy({}, { has: () => true }) as VorlagenAmpeln;
+// Issue #3399 S2 (AC-5): Vorlage der Quelle aus der Server-Aufloesung; jeder Fehler ⇒ null
+// (Anlege-Voreinstellung greift), wirft nie.
+export async function vorlageIdDerQuelle(
+	client: AufloesungClient,
+	preset: ComparePreset
+): Promise<string | null> {
+	try {
+		return (await loeseAmpelnAuf(client, [eintragAusAbo(preset)]))[0].vorlage_id;
+	} catch {
+		return null;
+	}
+}
 
 export function feldsatzAusVorlage(
 	preset: ComparePreset,
-	locations: Location[]
+	locations: Location[],
+	vorlageId: string | null = null
 ): Partial<CompareFeldsatz> {
 	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
 
@@ -57,14 +71,9 @@ export function feldsatzAusVorlage(
 		// Issue #2659 (i18n F10): Vorschlagsname in der Sprache des Nutzers (danach Nutzerdaten).
 		name: tr('vergleich.neu.kopie', { name: preset.name }),
 		region: (displayConfig.region as string | undefined) ?? '',
-		// Issue #3198 (S4b-3): Vorlage der Quelle (ampel.template -> profil -> allgemein);
-		// das Profil selbst steuert das Anlegen nicht mehr (ADR-0108).
-		vorlageId: vorlageIdFuer(
-			displayConfig.ampel as VorlagenAmpeln[string],
-			displayConfig.preset_name as string | undefined,
-			preset.profil,
-			JEDE_VORLAGE
-		),
+		// Issue #3399 S2 (AC-5): Vorlage der Quelle kommt aufgeloest vom Server; null ⇒ Feld
+		// fehlt und der Standard (STANDARD_VORLAGE) greift. Das Profil steuert nichts (ADR-0108).
+		...(vorlageId !== null ? { vorlageId } : {}),
 		activityProfile: null,
 		pickedIds: (preset.location_ids ?? []).filter((id) => locations.some((l) => l.id === id)),
 		schedule: preset.schedule === 'weekly' ? 'weekly' : 'daily_morning',
