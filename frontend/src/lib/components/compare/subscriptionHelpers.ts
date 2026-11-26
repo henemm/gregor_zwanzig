@@ -9,6 +9,7 @@
 import type { ComparePreset, ActivityProfile } from '../../types.js';
 // Issue #1268 (AC-10): geteilte Slot-Aufloesung — NICHT nachbauen.
 import { primarySendSlot } from '../../utils/cockpitHelpers568';
+import { aktiveKanalNamen } from '../shared/aktiveKanaele.ts';
 // Issue #2659 (i18n F10): Anzeige-Texte ueber den Katalog (vergleich.*, listen.*, home.*,
 // bausteine.profil.*); Wochentage aus dem geteilten Datumsformat (lib/i18n/format.ts).
 import { locale, tr, trn, type MessageKey } from '../../i18n/index.ts';
@@ -265,9 +266,8 @@ export function relativeLastSent(iso: string | undefined): string {
  * Kanal-Keys aus den Opt-in-Feldern. Signal NIEMALS (PO #610).
  *
  * Issue #1452 (AC-7): E-Mail wird NICHT mehr über eine "@"-Heuristik auf
- * `preset.empfaenger` abgeleitet. Compare-Presets kennen kein E-Mail-Opt-out
- * (KL-6 in `versand_tab_vergleich.md`) und senden immer an die Konto-Settings
- * des Nutzers — der E-Mail-Kanal ist damit unbedingt aktiv. `empfaenger` ist
+ * `preset.empfaenger` abgeleitet. Seit #2795 ist die Orts-Mail abwaehlbar
+ * (`send_email:false`); fehlendes `send_email` heisst an. `empfaenger` ist
  * seit #1452 inert und darf die Kanal-Anzeige nicht mehr beeinflussen.
  *
  * Issue #1270 (AC-8, KB-6): Telegram/SMS werden aus den Opt-in-Feldern
@@ -282,14 +282,8 @@ export function relativeLastSent(iso: string | undefined): string {
  * (Opt-in, nicht Zustellbarkeit — die meldet der Versand-Tab).
  */
 export function presetChannels(preset: ComparePreset): string[] {
-	// E-Mail ohne Opt-out (KL-6) → immer aktiv, unabhängig von `empfaenger`.
-	const result: string[] = ['Email'];
-	if (preset.send_telegram === true) result.push('Telegram');
-	if (preset.send_sms === true) result.push('SMS');
-	// Issue #2229 (AC-1): Premium-SMS ist vierter Versandkanal (ADR-0049) und
-	// folgt wie Telegram/SMS dem Opt-in — Muster `_home/cockpitHelpers.ts`.
-	if (preset.send_premium_sms === true) result.push('Premium-SMS');
-	return result;
+	// Issue #2990: dieselbe Ableitung wie der Trip (shared/aktiveKanaele.ts).
+	return aktiveKanalNamen(preset as unknown as Record<string, unknown>);
 }
 
 /**

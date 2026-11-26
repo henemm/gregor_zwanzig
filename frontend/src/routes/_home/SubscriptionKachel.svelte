@@ -10,7 +10,7 @@
 	import type { SubscriptionKind } from '$lib/components/shared/subscriptionTabs.js';
 	import type { ComparePreset, Trip } from '$lib/types.js';
 	import { kachelActions } from './kachelActions.js';
-	import { reportChannels } from './cockpitHelpers.js';
+	import { aktiveKanalNamen } from '$lib/components/shared/aktiveKanaele.js';
 	import { locale } from '$lib/i18n/index.js';
 
 	interface Props {
@@ -22,16 +22,10 @@
 
 	let { kind, sub, nextSend = null, lastSent = null }: Props = $props();
 
-	// Anzeigenamen wie presetChannels (Vergleich), damit beide kinds gleich aussehen.
-	const KANAL_NAME: Record<string, string> = {
-		email: 'Email',
-		telegram: 'Telegram',
-		sms: 'SMS',
-		'premium-sms': 'Premium-SMS'
-	};
+	// #2990: beide kinds aus derselben Kanal-Ableitung (shared/aktiveKanaele).
 	const channels = $derived(
 		kind === 'trip'
-			? reportChannels((sub as Trip).report_config).map((k) => KANAL_NAME[k] ?? k)
+			? aktiveKanalNamen((sub as Trip).report_config as Record<string, unknown> | undefined)
 			: presetChannels(sub as ComparePreset)
 	);
 	const hub = $derived((kind === 'trip' ? '/trips/' : '/compare/') + sub.id);
