@@ -16,6 +16,7 @@ Aendert keinen Produktcode und beruehrt keine Daten bestehender Nutzer.
 
 Aufruf:  python3 .claude/tools/staging_mail_pruefen.py --typ trip|compare|beide [--lang de|en]
              [--report-type morning|evening] [--format full|compact] [--timeout 300] [--ohne-cleanup]
+             [--orte-anzahl 1|3] [--konfig]
 Exit:    0 = alle gewaehlten Pfade bestanden (Validator Exit 0),
          1 = Mail nicht zugestellt, Versand abgelehnt oder Validator-Befund,
          2 = Aufruf-/Umgebungsfehler (Zugangsdaten, Core 401, Registrierung, Aufraeumen)
@@ -26,8 +27,10 @@ import argparse
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -67,6 +70,8 @@ PFLICHT = ("GZ_CORE_SHARED_SECRET", "GZ_AUTH_USER", "GZ_AUTH_PASS")
 PFLICHT_EN = ("GZ_CORE_SHARED_SECRET", "GZ_E2E_EN_USER", "GZ_E2E_EN_PASS")
 PFLICHT_IMAP = ("GZ_TEST_IMAP_USER", "GZ_TEST_IMAP_PASS")
 EN_SUBADRESSE = "+en@"
+# Groessen mit Ampelpunkt in der Trip-Stundentabelle (= metric_catalog.AMPEL_METRIC_IDS)
+AMPEL_GROESSEN = ("wind", "gust", "precipitation", "rain_probability")
 _VALIDATOREN = {"trip": ("briefing_mail_validator.py", "trip-briefing"),
                 "compare": ("email_spec_validator.py", "compare")}
 _EXIT_2 = {"core_401", "zugangsdaten_fehlen", "registrierung_abgelehnt", "login_abgelehnt",
@@ -90,10 +95,10 @@ def baue_trip_name(tag: str) -> str:
     return f"GZM {tag}"
 
 
-def baue_orte(tag: str) -> list[dict]:
+def baue_orte(tag: str, anzahl: int = 3) -> list[dict]:
     basis = ((47.27, 11.39), (47.42, 10.98), (47.07, 12.69))  # Innsbruck, Zugspitze, Grossglockner
     return [{"id": f"gzm-{tag}-ort{i + 1}", "name": f"GZM {tag} Ort {i + 1}", "lat": lat, "lon": lon}
-            for i, (lat, lon) in enumerate(basis)]
+            for i, (lat, lon) in enumerate(basis[:anzahl])]
 
 
 def baue_preset(tag: str, location_ids: list[str]) -> dict:
@@ -118,12 +123,19 @@ def waehle_validator(pfad: str) -> tuple[str, str]:
     return _VALIDATOREN[pfad]
 
 
-def baue_validator_aufruf(pfad: str, betreff: str, lang: str = "de") -> list[str]:
+def baue_validator_aufruf(pfad: str, betreff: str, lang: str = "de", konfig_pfad=None,
+                          orte_pfad=None, to_contains=None) -> list[str]:
     skript, mail_type = waehle_validator(pfad)
     aufruf = ["uv", "run", "python3", str(HOOKS / skript),
               "--mail-type", mail_type, "--subject-contains", betreff]
     if lang == "en":
         aufruf += ["--lang", "en", "--to-contains", EN_SUBADRESSE]
+    elif to_contains:
+        aufruf += ["--to-contains", to_contains]
+    if konfig_pfad:  # --orte nie ohne --konfig (#3037 Teil 2)
+        aufruf += ["--konfig", str(konfig_pfad)]
+        if orte_pfad:
+            aufruf += ["--orte", str(orte_pfad)]
     return aufruf
 
 
@@ -193,6 +205,19 @@ class MailApi(pw.StagingApi):
             raise StagingFehler("Preset-Antwort ohne id")
         return preset_id
 
+    def lies_objekt(self, pfad: str, objekt_id: str) -> dict:
+        """Gespeichertes Objekt so, wie die Go-API es liefert (Trip bzw. Compare-Preset)."""
+        sammlung = "trips" if pfad == "trip" else "compare/presets"
+        antwort = self._rufe("GET", f"{self._basis}/api/{sammlung}/{quote(objekt_id, safe='')}")
+        if not isinstance(antwort, dict) or not antwort:
+            raise StagingFehler(f"GET /api/{sammlung}/... ohne Objekt")
+        return antwort
+
+    def setze_placements(self, trip_id: str, placements: dict) -> None:
+        """Ganze Tabelle "Was steht wo" des Trips speichern (PUT, Rumpf = Tabelle)."""
+        self._rufe("PUT", f"{self._basis}/api/briefings/{quote(trip_id, safe='')}/placements?kind=route",
+                   placements)
+
     def loesche_ort(self, ort_id: str) -> None:
         self._rufe("DELETE", f"{self._basis}/api/locations/{quote(ort_id, safe='')}")
 
@@ -247,16 +272,35 @@ class EnMailApi(MailApi):
 # Lauf
 # ---------------------------------------------------------------------------
 
-def _bereite_trip(api, tag, heute, angelegt, email_format) -> tuple[str, str]:
+def mit_form_roh(placements) -> dict:
+    """Tabelle mit E-Mail-Form Roh fuer die Ampel-Groessen; alles andere bleibt (Merge).
+    Ampelpunkt ohne Zahl ist im Staging-Nachweis nicht pruefbar (#3037 AC-1, Regel #3237)."""
+    tabelle = json.loads(json.dumps(placements)) if isinstance(placements, dict) else {"version": 1}
+    zeilen = tabelle.get("rows") if isinstance(tabelle.get("rows"), list) else []
+    for mid in AMPEL_GROESSEN:
+        zeile = next((z for z in zeilen if isinstance(z, dict) and z.get("metric_id") == mid), None)
+        if zeile is None:
+            zeile = {"metric_id": mid}
+            zeilen.append(zeile)
+        formen = zeile.get("formats") if isinstance(zeile.get("formats"), dict) else {}
+        zeile["formats"] = {**formen, "email": "raw"}
+    tabelle["rows"] = zeilen
+    return tabelle
+
+
+def _bereite_trip(api, tag, heute, angelegt, email_format, konfig=False) -> tuple[str, str]:
     trip = baue_trip_fuer_mail(tag, heute, email_format)
     api.lege_trip_an(trip)
     angelegt["trip"].append(trip["id"])
+    if konfig:  # Read-Modify-Write auf die bei der Anlage erzeugte Tabelle
+        dc = api.lies_objekt("trip", trip["id"]).get("display_config") or {}
+        api.setze_placements(trip["id"], mit_form_roh(dc.get("placements")))
     return trip["id"], trip["name"]
 
 
-def _bereite_compare(api, tag, angelegt) -> tuple[str, str]:
+def _bereite_compare(api, tag, angelegt, orte_anzahl=3) -> tuple[str, str]:
     ids = []
-    for ort in baue_orte(tag):
+    for ort in baue_orte(tag, orte_anzahl):
         ids.append(api.lege_ort_an(ort))
         angelegt["orte"].append(ort["id"])
     preset = baue_preset(tag, ids)
@@ -265,13 +309,50 @@ def _bereite_compare(api, tag, angelegt) -> tuple[str, str]:
     return preset_id, preset["name"]
 
 
+def _schreibe_privat(datei: Path, inhalt) -> str:
+    fd = os.open(datei, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump(inhalt, f, ensure_ascii=False)
+    return str(datei)
+
+
+def _lege_konfig_ab(api, pfad, oid, ordner, tag, orte_anzahl) -> dict:
+    """Gespeichertes Objekt (+ Compare-Ortsnamen) in den privaten Sitzungsordner legen."""
+    extra = {"konfig_pfad": _schreibe_privat(Path(ordner) / "konfig.json", api.lies_objekt(pfad, oid))}
+    if pfad == "compare":
+        orte = {o["id"]: o["name"] for o in baue_orte(tag, orte_anzahl)}
+        extra["orte_pfad"] = _schreibe_privat(Path(ordner) / "orte.json", orte)
+    return extra
+
+
+def _pruefe_mail(pfad, oid, betreff, *, api, runner, tag, lang, konfig, orte_anzahl) -> tuple:
+    """Validator-Lauf; mit --konfig vorher Objekt lesen, Ordner (0700) im finally loeschen."""
+    ordner = tempfile.mkdtemp(prefix="gzm-konfig-") if konfig else None
+    try:
+        extra = {}
+        if konfig:
+            try:
+                extra = _lege_konfig_ab(api, pfad, oid, ordner, tag, orte_anzahl)
+            except (StagingFehler, OSError) as exc:
+                print(f"FAIL {pfad}: gespeichertes Objekt nicht lesbar - {exc}", file=sys.stderr)
+                return ("umgebung", None)
+            if lang != "en":  # Mail gehoert nachweislich dem Wegwerf-Nutzer dieses Laufs
+                extra["to_contains"] = f"+{tag}@"
+        code = runner(baue_validator_aufruf(pfad, betreff, lang, **extra))
+    finally:
+        if ordner:
+            shutil.rmtree(ordner, ignore_errors=True)
+    print(f"{'PASS' if code == 0 else 'FAIL'} {pfad}: Betreff-Marker '{betreff}', Validator Exit {code}")
+    return ("validator", code)
+
+
 def _fahre_pfad(pfad, *, api, runner, tag, report_type, heute, angelegt, email_format,
-                lang="de") -> tuple:
+                lang="de", orte_anzahl=3, konfig=False) -> tuple:
     try:
         if pfad == "trip":
-            oid, betreff = _bereite_trip(api, tag, heute, angelegt, email_format)
+            oid, betreff = _bereite_trip(api, tag, heute, angelegt, email_format, konfig)
         else:
-            oid, betreff = _bereite_compare(api, tag, angelegt)
+            oid, betreff = _bereite_compare(api, tag, angelegt, orte_anzahl)
     except (StagingFehler, OSError) as exc:
         print(f"FAIL {pfad}: Anlegen gescheitert - {exc}", file=sys.stderr)
         return ("umgebung", None)
@@ -286,9 +367,8 @@ def _fahre_pfad(pfad, *, api, runner, tag, report_type, heute, angelegt, email_f
     if antwort.get("sent") is not True:
         print(f"FAIL {pfad}: Versand nicht erfolgt (status={_kennung(antwort) or '?'})", file=sys.stderr)
         return ("versand_abgelehnt", None)
-    code = runner(baue_validator_aufruf(pfad, betreff, lang))
-    print(f"{'PASS' if code == 0 else 'FAIL'} {pfad}: Betreff-Marker '{betreff}', Validator Exit {code}")
-    return ("validator", code)
+    return _pruefe_mail(pfad, oid, betreff, api=api, runner=runner, tag=tag, lang=lang,
+                        konfig=konfig, orte_anzahl=orte_anzahl)
 
 
 def _loesche(funktion, art, oid) -> bool:
@@ -357,7 +437,8 @@ def _melde_nutzer_an(api, tag, lang, en_zugang):
 
 
 def fuehre_lauf(pfade, *, api, validator_runner, tag, report_type="morning", heute=None,
-                email_format="full", aufraeumen=True, lang="de", en_zugang=None) -> int:
+                email_format="full", aufraeumen=True, lang="de", en_zugang=None,
+                orte_anzahl=3, konfig=False) -> int:
     heute = heute or date.today()
     angelegt = {"preset": [], "orte": [], "trip": []}
     ausgaenge = []
@@ -370,7 +451,8 @@ def fuehre_lauf(pfade, *, api, validator_runner, tag, report_type="morning", heu
                 ausgaenge.append(_fahre_pfad(pfad, api=api, runner=validator_runner, tag=tag,
                                              report_type=report_type, heute=heute,
                                              angelegt=angelegt, email_format=email_format,
-                                             lang=lang))
+                                             lang=lang, orte_anzahl=orte_anzahl,
+                                             konfig=konfig))
     finally:
         if not _raeume_auf(api, angelegt, aufraeumen, lang):
             ausgaenge.append(("aufraeumen_fehlgeschlagen", None))
@@ -426,6 +508,10 @@ def _argumente(argv):
     p.add_argument("--ohne-cleanup", action="store_true", help="nur Fehlersuche: nichts loeschen")
     p.add_argument("--lang", choices=("de", "en"), default="de",
                    help="eine Sprache je Aufruf; en = fester Staging-Nutzer en (#2830)")
+    p.add_argument("--orte-anzahl", type=int, choices=(1, 3), default=3,
+                   help="Orte des Wegwerf-Vergleichs (#3037)")
+    p.add_argument("--konfig", action="store_true",
+                   help="gespeichertes Objekt per API lesen und dem Validator als --konfig reichen")
     return p.parse_args(argv)
 
 
@@ -457,7 +543,8 @@ def main(argv=None, *, transport=None, helfer_transport=None, validator_runner=N
     return fuehre_lauf(pfade, api=api, validator_runner=runner, tag=baue_mail_tag(),
                        report_type=args.report_type, heute=datetime.now(ZoneInfo("Europe/Vienna")).date(),
                        email_format=args.email_format, aufraeumen=not args.ohne_cleanup,
-                       lang=args.lang, en_zugang=en_zugang)
+                       lang=args.lang, en_zugang=en_zugang, orte_anzahl=args.orte_anzahl,
+                       konfig=args.konfig)
 
 
 if __name__ == "__main__":

@@ -107,6 +107,7 @@ def _werkzeug():
 class _Staging:
     def __init__(self, ablehnen: dict | None = None, kern_antwort=None):
         self.ablehnen = ablehnen or {}          # Pfad-Teil -> HTTP-Status
+        self.ablehnen_get: dict = {}            # wie ablehnen, aber nur fuer GET (#3037 Teil 2)
         self.kern_antwort = kern_antwort        # (status, body) für Einzelversand
         self.users: dict[str, dict] = {}
         self.log: list[tuple] = []              # (user, methode, pfad)
@@ -116,6 +117,7 @@ class _Staging:
         self.preset_ohne_id = False             # Preset-POST-Antwort ohne "id"
         self.kern_verzoegerung_s = 0.0          # Kern antwortet erst nach dieser Zeit
         self.login_antwort: dict | None = None  # erzwingt eine abweichende Login-Antwort (F003)
+        self.anlage_placements: dict | None = None  # wie Go anlageTabelle: Tabelle beim Trip-POST
         outer = self
 
         class H(BaseHTTPRequestHandler):
@@ -146,6 +148,10 @@ class _Staging:
                 for teil, status in outer.ablehnen.items():
                     if teil in pfad:
                         return self._antwort(status, {"error": "abgelehnt"})
+                if methode == "GET":
+                    for teil, status in outer.ablehnen_get.items():
+                        if teil in pfad:
+                            return self._antwort(status, {"error": "abgelehnt"})
                 if pfad.startswith("/api/scheduler/"):
                     return self._kern(methode, pfad, query)
                 u = outer.users
@@ -183,14 +189,32 @@ class _Staging:
                 if pfad == "/api/auth/account/delete":
                     del u[sid]
                     return self._antwort(200, {})
+                if methode == "PUT" and re.fullmatch(r"/api/briefings/[^/]+/placements", pfad):
+                    # wie BriefingPlacementsPutHandler: Rumpf = ganze Tabelle, nur eigenes Abo der Art
+                    oid = pfad.split("/")[3]
+                    if (query.get("kind") or [""])[0] != "route" or oid not in n["trips"]:
+                        return self._antwort(404, {"error": "not_found"})
+                    alt = n["trips"][oid]
+                    n["trips"][oid] = {**alt, "display_config": {
+                        **(alt.get("display_config") or {}), "placements": body}}
+                    return self._antwort(200, {"placements": body})
                 for sammlung, praefix in (("trips", "/api/trips"), ("locations", "/api/locations"),
                                           ("presets", "/api/compare/presets")):
                     if methode == "POST" and pfad == praefix:
                         oid = body.get("id") or "p-" + secrets.token_hex(3)
                         n[sammlung][oid] = body
+                        if sammlung == "trips" and outer.anlage_placements is not None \
+                                and "display_config" not in body:
+                            n[sammlung][oid] = {**body, "display_config": {
+                                "placements": json.loads(json.dumps(outer.anlage_placements))}}
                         if sammlung == "presets" and outer.preset_ohne_id:
                             return self._antwort(201, {k: v for k, v in body.items() if k != "id"})
                         return self._antwort(201, {**body, "id": oid})
+                    if methode == "GET" and pfad.startswith(praefix + "/"):
+                        oid = pfad.rsplit("/", 1)[1]
+                        if oid in n[sammlung]:
+                            return self._antwort(200, {**n[sammlung][oid], "id": oid})
+                        return self._antwort(404, {"error": "not_found"})
                     if methode == "DELETE" and pfad.startswith(praefix + "/"):
                         n[sammlung].pop(pfad.rsplit("/", 1)[1], None)
                         return self._antwort(204 if False else 200, {})
@@ -217,6 +241,7 @@ class _Staging:
             do_GET = lambda s: s._handle("GET")       # noqa: E731
             do_POST = lambda s: s._handle("POST")     # noqa: E731
             do_DELETE = lambda s: s._handle("DELETE")  # noqa: E731
+            do_PUT = lambda s: s._handle("PUT")       # noqa: E731
 
         self._srv = ThreadingHTTPServer(("127.0.0.1", 0), H)
         self.url = f"http://127.0.0.1:{self._srv.server_address[1]}"
@@ -1138,3 +1163,239 @@ def test_gesamtlauf_trip_en_auf_staging():
 @pytest.mark.skipif(not _staging_en_bereit(), reason="Staging-Zugangsdaten des Nutzers en nicht lesbar")
 def test_gesamtlauf_compare_en_auf_staging():
     assert _werkzeug().main(["--typ", "compare", "--lang", "en"]) == 0
+
+
+
+# ---------------------------------------------------------------------------
+# #3037 Teil 2 (abnahme-3037-teil2): --orte-anzahl und --konfig
+# Spec: docs/specs/modules/feat_3037_abnahme_teil2.md (AC-1 bis AC-6)
+# ---------------------------------------------------------------------------
+
+import os  # noqa: E402
+import stat  # noqa: E402
+
+
+def _wert(argv, flag):
+    return argv[argv.index(flag) + 1]
+
+
+class _ZustandRunner:
+    """Validator-Ersatz, der waehrend des Aufrufs Dateien und Rechte festhaelt."""
+
+    def __init__(self, exit_code=0):
+        self.exit_code = exit_code
+        self.aufrufe: list[list[str]] = []
+        self.konfig: list = []        # JSON der --konfig-Datei zum Aufrufzeitpunkt
+        self.orte: list = []          # JSON der --orte-Datei zum Aufrufzeitpunkt
+        self.modi: list[tuple] = []   # (Verzeichnismodus, Konfig-Dateimodus, Orte-Dateimodus|None)
+        self.verzeichnisse: list[Path] = []
+
+    def __call__(self, argv):
+        self.aufrufe.append(list(argv))
+        if "--konfig" in argv:
+            kp = Path(_wert(argv, "--konfig"))
+            self.konfig.append(json.loads(kp.read_text()))
+            self.verzeichnisse.append(kp.parent)
+            op = Path(_wert(argv, "--orte")) if "--orte" in argv else None
+            if op is not None:
+                self.orte.append(json.loads(op.read_text()))
+            self.modi.append((stat.S_IMODE(os.stat(kp.parent).st_mode),
+                              stat.S_IMODE(os.stat(kp).st_mode),
+                              stat.S_IMODE(os.stat(op).st_mode) if op is not None else None))
+        return self.exit_code
+
+
+def _posts(staging, pfad):
+    return [b for m, p, b in staging.bodies if m == "POST" and p == pfad]
+
+
+# AC-3 -------------------------------------------------------------------------
+
+@pytest.mark.parametrize("anzahl", [1, 3])
+def test_baue_orte_liefert_gewuenschte_anzahl(anzahl):
+    w = _werkzeug()
+    orte = w.baue_orte("t3-aaaa", anzahl)
+    assert len(orte) == anzahl
+    assert [o["id"] for o in orte] == [o["id"] for o in w.baue_orte("t3-aaaa")][:anzahl]
+
+
+def test_lauf_compare_mit_einem_ort_legt_genau_einen_ort_an(staging):
+    w = _werkzeug()
+    assert w.fuehre_lauf(["compare"], api=staging.api(w), validator_runner=_Runner(),
+                         tag="o1-aaaa", orte_anzahl=1) == 0
+    assert len(_posts(staging, "/api/locations")) == 1
+    (preset,) = _posts(staging, "/api/compare/presets")
+    assert len(preset["location_ids"]) == 1
+
+
+def test_lauf_compare_standard_legt_weiter_drei_orte_an(staging):
+    w = _werkzeug()
+    assert w.fuehre_lauf(["compare"], api=staging.api(w), validator_runner=_Runner(), tag="o3-aaaa") == 0
+    assert len(_posts(staging, "/api/locations")) == 3
+    assert len(_posts(staging, "/api/compare/presets")[0]["location_ids"]) == 3
+
+
+# Aufruf-Bau --------------------------------------------------------------------
+
+def test_validator_aufruf_haengt_konfig_orte_und_to_contains_an():
+    w = _werkzeug()
+    basis = w.baue_validator_aufruf("compare", "B")
+    a = w.baue_validator_aufruf("compare", "B", konfig_pfad="/k.json", orte_pfad="/o.json",
+                                to_contains="+x1@")
+    assert a[:len(basis)] == basis
+    assert _wert(a, "--konfig") == "/k.json" and _wert(a, "--orte") == "/o.json"
+    assert _wert(a, "--to-contains") == "+x1@"
+    nur_to = w.baue_validator_aufruf("trip", "B", to_contains="+x1@")
+    assert "--konfig" not in nur_to and "--orte" not in nur_to
+    ohne_orte = w.baue_validator_aufruf("trip", "B", konfig_pfad="/k.json")
+    assert "--orte" not in ohne_orte
+
+
+# AC-1 -------------------------------------------------------------------------
+
+def test_trip_mit_konfig_uebergibt_gespeichertes_objekt_als_datei(staging):
+    w = _werkzeug()
+    r = _ZustandRunner()
+    tag = "k1-aaaa"
+    assert w.fuehre_lauf(["trip"], api=staging.api(w), validator_runner=r, tag=tag, konfig=True) == 0
+    (argv,) = r.aufrufe
+    assert "--orte" not in argv
+    assert tag in _wert(argv, "--to-contains")
+    (gespeichert,) = _posts(staging, "/api/trips")
+    # display_config setzt der --konfig-Modus nachtraeglich (Form Roh, Test unten)
+    assert [{k: v for k, v in k_.items() if k != "display_config"} for k_ in r.konfig] == [gespeichert]
+    assert any(m == "GET" and p == f"/api/trips/{gespeichert['id']}" for m, p, _ in staging.bodies)
+
+
+# AC-2 -------------------------------------------------------------------------
+
+def test_compare_mit_konfig_uebergibt_preset_und_ortsnamen(staging):
+    w = _werkzeug()
+    r = _ZustandRunner()
+    assert w.fuehre_lauf(["compare"], api=staging.api(w), validator_runner=r, tag="k2-aaaa", konfig=True) == 0
+    (argv,) = r.aufrufe
+    assert argv.index("--konfig") and "--orte" in argv and "--to-contains" in argv
+    (preset,) = _posts(staging, "/api/compare/presets")
+    (konfig,) = r.konfig
+    assert konfig["id"] and {**preset, "id": konfig["id"]} == konfig
+    assert r.orte == [{o["id"]: o["name"] for o in _posts(staging, "/api/locations")}]
+    assert len(r.orte[0]) == 3
+
+
+@pytest.mark.parametrize("pfad", ["trip", "compare"])
+def test_ohne_konfig_bleibt_argv_unveraendert(staging, pfad):
+    w = _werkzeug()
+    r = _Runner()
+    assert w.fuehre_lauf([pfad], api=staging.api(w), validator_runner=r, tag="k0-aaaa") == 0
+    (argv,) = r.aufrufe
+    assert not {"--konfig", "--orte", "--to-contains"} & set(argv)
+
+
+# AC-4 -------------------------------------------------------------------------
+
+@pytest.mark.parametrize("exit_code", [0, 1])
+@pytest.mark.parametrize("pfad", ["trip", "compare"])
+def test_konfig_dateien_sind_privat_und_danach_geloescht(staging, pfad, exit_code):
+    w = _werkzeug()
+    r = _ZustandRunner(exit_code)
+    assert w.fuehre_lauf([pfad], api=staging.api(w), validator_runner=r, tag="r4-aaaa", konfig=True) == exit_code
+    ((dir_modus, konf_modus, orte_modus),) = r.modi
+    assert dir_modus == 0o700 and konf_modus == 0o600
+    assert orte_modus == (0o600 if pfad == "compare" else None)
+    assert not r.verzeichnisse[0].exists()
+
+
+# AC-5 -------------------------------------------------------------------------
+
+@pytest.mark.parametrize("pfad,teil", [("trip", "/api/trips/"), ("compare", "/api/compare/presets/")])
+def test_get_fehler_ist_umgebung_ohne_validator_und_raeumt_auf(staging, pfad, teil):
+    w = _werkzeug()
+    staging.ablehnen_get = {teil: 500}
+    r = _ZustandRunner()
+    assert w.fuehre_lauf([pfad], api=staging.api(w), validator_runner=r, tag="g5-aaaa", konfig=True) == 2
+    assert r.aufrufe == []
+    assert len(staging.konto_loeschungen()) == 1
+    assert staging.users == {}
+
+
+# AC-6 -------------------------------------------------------------------------
+
+def test_to_contains_ist_je_lauf_eindeutig_und_nie_default(staging):
+    w = _werkzeug()
+    werte = []
+    for tag in ("u6-aaaa", "u6-bbbb"):
+        r = _Runner()
+        assert w.fuehre_lauf(["trip"], api=staging.api(w), validator_runner=r, tag=tag, konfig=True) == 0
+        werte.append(_wert(r.aufrufe[0], "--to-contains"))
+    assert werte[0] != werte[1]
+    assert all("default" not in v and v for v in werte)
+
+
+# CLI --------------------------------------------------------------------------
+
+def test_main_orte_anzahl_zwei_ist_exit_2_eins_mit_konfig_laeuft(monkeypatch, tmp_path, staging):
+    w = _werkzeug()
+    _main_env(monkeypatch, tmp_path, w, staging)
+    assert w.main(["--typ", "compare", "--orte-anzahl", "2"], validator_runner=_Runner()) == 2
+    assert staging.log == []
+    r = _ZustandRunner()
+    assert w.main(["--typ", "compare", "--orte-anzahl", "1", "--konfig"], validator_runner=r) == 0
+    assert len(_posts(staging, "/api/locations")) == 1
+    assert len(r.orte[0]) == 1 and "--konfig" in r.aufrufe[0]
+    assert staging.users == {}
+
+
+# AC-1 Nachtrag (Befund Echtlauf 26.11.): Form Roh fuer die Ampel-Groessen ----------
+
+_AMPEL_GROESSEN = ("wind", "gust", "precipitation", "rain_probability")
+_ERSTANLAGE = {"version": 1, "outlook_reports": ["evening"], "rows": [
+    {"metric_id": "temperature", "places": {"sms": False}},
+    {"metric_id": "wind", "formats": {"email": "simplified", "telegram": "simplified"}},
+    {"metric_id": "gust", "places": {"telegram": False}, "formats": {"email": "simplified"}},
+    {"metric_id": "cloud_total", "formats": {"email": "simplified"}},
+    {"metric_id": "precipitation", "formats": {"email": "simplified"}},
+]}
+
+
+def _email_formen(trip: dict) -> dict:
+    rows = trip["display_config"]["placements"]["rows"]
+    return {r["metric_id"]: (r.get("formats") or {}).get("email") for r in rows}
+
+
+def test_trip_mit_konfig_traegt_form_roh_fuer_die_ampel_groessen(staging):
+    w = _werkzeug()
+    staging.anlage_placements = _ERSTANLAGE
+    r = _ZustandRunner()
+    assert w.fuehre_lauf(["trip"], api=staging.api(w), validator_runner=r, tag="f1-aaaa", konfig=True) == 0
+    (gespeichert,) = r.konfig                    # so liegt der Trip beim Validator-Lauf am Fake
+    formen = _email_formen(gespeichert)
+    assert all(formen.get(mid) == "raw" for mid in _AMPEL_GROESSEN), formen
+
+
+def test_form_roh_ist_merge_und_ersetzt_nichts_anderes(staging):
+    w = _werkzeug()
+    staging.anlage_placements = _ERSTANLAGE
+    r = _ZustandRunner()
+    assert w.fuehre_lauf(["trip"], api=staging.api(w), validator_runner=r, tag="f2-aaaa", konfig=True) == 0
+    (gespeichert,) = r.konfig
+    tabelle = gespeichert["display_config"]["placements"]
+    assert tabelle["version"] == 1 and tabelle["outlook_reports"] == ["evening"]
+    zeilen = {z["metric_id"]: z for z in tabelle["rows"]}
+    assert [z["metric_id"] for z in tabelle["rows"][:5]] == [z["metric_id"] for z in _ERSTANLAGE["rows"]]
+    assert zeilen["temperature"] == {"metric_id": "temperature", "places": {"sms": False}}
+    assert zeilen["cloud_total"]["formats"] == {"email": "simplified"}
+    assert zeilen["wind"]["formats"] == {"email": "raw", "telegram": "simplified"}
+    assert zeilen["gust"]["places"] == {"telegram": False}
+
+
+def test_ohne_konfig_bleibt_trip_ohne_formaenderung(staging):
+    from datetime import date
+
+    w = _werkzeug()
+    staging.anlage_placements = _ERSTANLAGE
+    assert w.fuehre_lauf(["trip"], api=staging.api(w), validator_runner=_Runner(), tag="f3-aaaa",
+                         heute=date(2026, 11, 26)) == 0
+    (body,) = _posts(staging, "/api/trips")
+    assert "display_config" not in body
+    assert w.baue_trip_fuer_mail("f3-aaaa", date(2026, 11, 26)) == body
+    assert not any(m == "PUT" for m, _p, _b in staging.bodies)
