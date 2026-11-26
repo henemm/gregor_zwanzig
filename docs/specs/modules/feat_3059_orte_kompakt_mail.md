@@ -30,7 +30,7 @@ Orte-Abos können wie Trips wahlweise als ausführliche oder als kompakte Text-M
 
 - Zusatzblock „Vergleich mit gestern“ für Orte: ausgelagert nach #3342 (neuer Datenpfad mit datierten Snapshots).
 - Etappen-Kennzahlen und Nacht-Stundentabelle für Orte: nicht vorgesehen (PO-Entscheidung 2026-11-24, Kommentar in #3059).
-- Migration/Aufräumen aus Phase 3 (#3102) und Orte anlegen / Zustellung (#3333).
+- Migration/Aufräumen aus Phase 3 (#3102; erledigt, #3102: #3157, #3351, #3237, #3277) und Orte anlegen / Zustellung (#3333).
 - Kein Go-Strukturwechsel: `display_config` ist dort eine Map.
 
 ### Affected Files

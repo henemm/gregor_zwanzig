@@ -44,7 +44,7 @@ In Scope:
 
 Nicht in Scope:
 - Telegram-Kurzform = SMS-Text (#3099).
-- Abbau der Altquelle `channel_active_metrics` samt Orte-Fallback ohne `channel_layouts` (#3102).
+- Abbau der Altquelle `channel_active_metrics` samt Orte-Fallback ohne `channel_layouts` (#3102; erledigt, #3102: #3277, #3351).
 - Vereinheitlichung des Format-Standards ohne Angabe (Trip: Katalog, Orte: Roh; Entscheidung #3096, bleibt).
 - Jede sichtbare Änderung der zugestellten Telegram-Nachricht.
 
@@ -79,7 +79,7 @@ Reihenfolge: RED, Adapter, Umstellung, Golden/Prüfkatalog grün, Fallliste und 
    - `bucket`, `order` und `sms_threshold` stammen aus dem Quell-`MetricConfig` der Grundauswahl (`ChannelRow` trägt sie nicht); die Reihenfolge nach `bucket`/`order` in `render_for_channel` muss der Resolver-Folge entsprechen (per Test gesichert); Schwellen-Fallback wie `_globale_schwelle`;
    - Format zurückschreiben (Umkehr von `_trip_format`): `None` = Katalog-Standard, MetricConfig unverändert (nicht als Roh deuten); `raw` leitet `format_mode="raw"` und `use_friendly_format=False` ab; jedes andere Format setzt `format_mode=<format>`.
 3. **Eine Liste für alle Lesestellen:** `_dc_telegram` entsteht ausschließlich aus dem Adapter. Alle `dc`-Lesestellen in `narrow.py` (Tabelle über `render_for_channel`, Kurzübersicht über `get_enabled_metric_ids`, Fußzeile, Windrichtung-Merge über `should_merge_wind_dir`) bleiben im Verhalten unverändert und lesen dieselbe Liste (Adversary F004 aus #1719). `narrow.py` selbst wird nicht umgebaut.
-4. **Orte:** `resolve_compare_render_options` füllt `enabled_metrics_by_channel["telegram"]` aus `view.telegram` und `metric_formats("telegram")`; Versand und Vorschau nutzen das bereits. Kein Code, nur Fälle. Fallback ohne `channel_layouts` bleibt bis #3102.
+4. **Orte:** `resolve_compare_render_options` füllt `enabled_metrics_by_channel["telegram"]` aus `view.telegram` und `metric_formats("telegram")`; Versand und Vorschau nutzen das bereits. Kein Code, nur Fälle. Fallback ohne `channel_layouts` bleibt bis #3102 (erledigt, #3102: #3277, #3351).
 5. **Fallliste:** neue Datei `tests/fixtures/einstellung_gleich_mail/fallliste_telegram.json` mit NEUEN IDs (Präfix `telegram-`); bestehende Telegram-Fälle (`trip-r7-telegram-*`, `R7-KAT-trip-telegram-*`, `T-P9-TG-*`, `O-R7-TG-*`, `O-P9-TG-*`) bleiben in `fallliste_trip`/`fallliste_orte` (IDs global eindeutig, andere Tests referenzieren sie). Eintrag `"telegram"` in `TEILDATEIEN` des Wächters, `_syn_daten()` und die Fehlerzahl-Selbsttests entsprechend angepasst, `PY_TEST_GLOBS` um `test_3098_*.py` erweitert. Achsen: Trip/Orte × DE/EN × Roh/Einfach (inkl. Windrichtung-Merge) × Katalog- vs. Ziehfolge × Kanal-Ebene nie/leer/gesetzt × morning/evening; Kopf `briefing_typ`. `pruefe_kanal_abdeckung` darf nicht sinken.
 6. **#3063:** Fälle `telegram-kopf-typ-*` und `telegram-windrichtung-roh-*` im neuen Pfad; nach Auslieferung wird #3063 mit geschlossen.
 
@@ -172,7 +172,7 @@ Zusicherungen am Ergebnis der Telegram-Ausgabe, kein Mock-Theater (kein `Mock()`
 
 - Format-Standard ohne Angabe bleibt zwischen Trip (Katalog) und Orte (Roh) verschieden (Designentscheidung).
 - Telegram-Kurzform = SMS-Text bleibt bei der SMS-Auswahl bis #3099.
-- Orte-Fallback ohne `channel_layouts` (`channel_active_metrics`) bleibt bis #3102.
+- Orte-Fallback ohne `channel_layouts` (`channel_active_metrics`) bleibt bis #3102 (erledigt, #3102: #3277, #3351).
 - `ChannelRow` trägt `bucket`/`order`/`sms_threshold` nicht; der Adapter ergänzt sie aus der Grundauswahl.
 
 ## Architektur-Entscheidung (ADR)

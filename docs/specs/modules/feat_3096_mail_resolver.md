@@ -128,7 +128,7 @@ Zusicherungen werden am Mail-Ergebnis geprüft, nicht an Hilfsfunktionen; kein M
 - [ ] Neu: GIVEN Vorschau und Versand derselben Konfiguration WHEN beide gerendert THEN gleiche Spalten (AC-5).
 - [ ] Umstellen auf Resolver/Adapter: `test_einstellung_gleich_mail_editor_standard.py` (:40,43,113,141), `test_channel_metric_matrix.py` (:121,248-256,569,715), `test_einstellung_gleich_mail_orte.py` (:104,594; Soll-Orakel ohne `HOURLY_DEFAULT_METRIC_IDS`-Direktzugriff im Renderer-Sinn), `tests/helpers/metrik_listen_scan.py` (:346), `tests/test_resolution_loss_guard.py` (:702,852; Allowlist auf `helpers.py::email_col_order`).
 - [ ] Nur Kommentare korrigieren: `test_compare_preview_hourly_parity.py`, `test_compare_metric_order_and_wind_direction.py` (:169), `unit/test_compare_hourly_legacy_selection_bestandsschutz.py`.
-- [ ] Unverändert grün (Regression, einzeln benannt): Golden- und Prüfkatalog-Tests aus AC-1, `test_3057_channel_list_resolver.py`, `test_3065_ausblick_stundenverlauf_resolver.py` (Orakel bleibt bis #3102).
+- [ ] Unverändert grün (Regression, einzeln benannt): Golden- und Prüfkatalog-Tests aus AC-1, `test_3057_channel_list_resolver.py`, `test_3065_ausblick_stundenverlauf_resolver.py` (Orakel bleibt bis #3102; erledigt, #3102: Orakel durch #3237/#3277 gelöscht).
 - [ ] Mutations-Gegenprobe durch den Adversary (Kopie extern, String-Ersetzung, nie `git checkout/stash/reset`): Adapter ohne `selectable`-Filter; Adapter mit vertauschter Folge; Vorgabeliste im Renderer um eine Spalte gekürzt; Resolver-Aufruf auf kollabiertem statt unkollabiertem dc; `hourly_metrics` im Validator nicht aufgelöst. Jede Verfälschung muss mindestens einen Test rot machen, Prüfung am Mail-Ergebnis.
 - Live-E2E: Staging-Mail-Validatoren gegen echt zugestellte Mail (Trip und Orte), Ergebnis unverändert.
 
@@ -136,7 +136,7 @@ Zusicherungen werden am Mail-Ergebnis geprüft, nicht an Hilfsfunktionen; kein M
 
 - Telegram, SMS, Premium-SMS auf Resolver umstellen: #3098, #3099, #3100.
 - Vokabular-Vereinheitlichung (Renderer-Kennung/Katalog-ID): #3101.
-- Migration, Differenztest-Orakel und Import-Sperre, Löschung der Orakel aus #3057/#3065: #3102.
+- Migration, Differenztest-Orakel und Import-Sperre, Löschung der Orakel aus #3057/#3065: #3102 (erledigt, #3102: #3157, #3351, #3237, #3277).
 - Roh/Einfach im Stundenverlauf: #3097.
 - Vereinheitlichung des Format-Standards ohne Angabe (Trip Katalog, Orte Roh): bewusst nicht Teil; bei Bedarf eigenes Folge-Issue mit Produktentscheidung.
 - Jede sichtbare Änderung der zugestellten Mail in irgendeinem Kanal, außer der freigegebenen Angleichung von Update-/Alarm-Mail an die E-Mail-Auswahl.
@@ -164,7 +164,7 @@ Zusicherungen werden am Mail-Ergebnis geprüft, nicht an Hilfsfunktionen; kein M
 ## Known Limitations
 
 - Format-Standard ohne Angabe bleibt zwischen Trip (Katalog) und Orte (Roh) verschieden (Designentscheidung, siehe oben).
-- Differenztest-Orakel aus #3057/#3065 bestehen bis #3102 weiter; deshalb bleibt `resolve_hourly_metrics` erhalten.
+- Differenztest-Orakel aus #3057/#3065 bestehen bis #3102 weiter; deshalb bleibt `resolve_hourly_metrics` erhalten. (Erledigt, #3102: Orakel und Altpfade durch #3237/#3277 gelöscht.)
 - `hourlyDefault` im Frontend-Katalog bleibt als Anzeige für den Editor.
 - Der Umfang liegt über der Schätzung (src rund +157/-98 statt rund +60/-60, 11 Code-Dateien), weil neben Trip- und Orte-Mail auch Vorschau-, Validator- und Konfig-Resolver auf den Adapter umgestellt wurden und mehrere Bestandstests auf den neuen Adapter zeigen mussten; keine Code-Datei liegt außerhalb der Datei-Tabelle der Spec.
 

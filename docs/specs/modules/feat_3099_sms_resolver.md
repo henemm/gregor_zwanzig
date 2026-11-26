@@ -45,7 +45,7 @@ In Scope:
 Nicht in Scope:
 - Premium-SMS-eigener Resolver-Zweig `premium_sms` (bewusste Nicht-Änderung, siehe Implementation Details).
 - Neuformulierung der Fälle im Format des Neuschnitts (#3122/ADR-0124; PO-Auflage 17.11.: Fälle bleiben vorerst im heutigen Format `channel_layouts.sms`).
-- Abbau der Altquelle `channel_active_metrics` (#3102).
+- Abbau der Altquelle `channel_active_metrics` (#3102; erledigt, #3102: #3277, #3351).
 - Jede sichtbare Änderung der zugestellten SMS und der SMS-Schwelle.
 
 ## Estimated Scope
@@ -175,7 +175,7 @@ Zusicherungen am Ergebnis der SMS-Ausgabe, kein Mock-Theater (kein `Mock()`/`pat
 
 - Fälle stehen im heutigen Format `channel_layouts.sms`; sie werden beim Neuschnitt (#3122/ADR-0124) umformuliert (PO-Auflage 17.11.).
 - Premium-SMS hat keine eigene Inhaltsliste; der Zweig `premium_sms` des Resolvers bleibt ungelesen.
-- Orte-Fallback ohne `channel_layouts` (`channel_active_metrics`) bleibt bis #3102.
+- Orte-Fallback ohne `channel_layouts` (`channel_active_metrics`) bleibt bis #3102 (erledigt, #3102: #3277, #3351).
 
 ## Architektur-Entscheidung (ADR)
 

@@ -161,7 +161,7 @@ Zusicherungen werden am Mail-Ergebnis bzw. am gespeicherten Datensatz geprueft, 
 
 - Roh/Einfach in Telegram, SMS, Premium-SMS: #3098, #3099, #3100.
 - Verlagerung nach `channel_layouts.hourly` und neuer Kanal-Editor: #3060.
-- Vokabular-Vereinheitlichung: #3101; Migration und Orakel-Loeschung: #3102.
+- Vokabular-Vereinheitlichung: #3101; Migration und Orakel-Loeschung: #3102 (erledigt, #3102: #3157, #3351, #3237, #3277).
 - Einfachform fuer Temperatur, Gewitter und andere Metriken ohne bestehende Einfachform.
 - Trip-Mail (hat keinen Stundenverlauf in diesem Sinn).
 
