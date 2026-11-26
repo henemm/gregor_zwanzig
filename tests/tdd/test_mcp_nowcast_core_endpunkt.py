@@ -6,8 +6,9 @@ Echter ASGI-Aufruf von ``GET /api/_internal/mcp/nowcast``. Quelle ist der
 Offline-Radarpfad des Dienstes (``GZ_TEST_FIXTURE_DIR``; Radar-Frames aus dem
 Geschwisterordner ``radar/minutely_15.json``, relativ zu *jetzt* gestempelt).
 Jeder Test schreibt seine eigene Frame-Datei und nutzt eigene Koordinaten
-(der Radar-Cache ist je Kachel gemeinsam). Offline faellt jede Kette auf
-``minutely_15`` zurueck; ``radar``/``INCA`` und Drosselung sind hier nicht
+(der Radar-Cache ist je Kachel gemeinsam). Offline liefert jede Open-Meteo-Stufe
+der Kette die Fixture (in der AROME-HD-Box ``AROME-FR``, ausserhalb aller Boxen
+``minutely_15``); ``radar``/``INCA`` und Drosselung sind hier nicht
 erreichbar (siehe Bericht).
 """
 from __future__ import annotations
@@ -68,7 +69,9 @@ def test_ac6_regen_in_30_minuten_alle_felder(monkeypatch, tmp_path):
     # Erste Stunde ab jetzt: Frames bei +30 (2 mm/h) und +45 (4 mm/h), je 15 min.
     assert body["max_mm_h_erste_stunde"] == pytest.approx(4.0)
     assert body["summe_erste_stunde_mm"] == pytest.approx(1.5, abs=0.1)
-    assert body["quelle"] == "minutely_15"
+    # Frankfurt liegt in der AROME-HD-Box; offline liefert jede Open-Meteo-Stufe
+    # der Kette die Fixture, die Quelle wird ehrlich durchgereicht.
+    assert body["quelle"] == "AROME-FR"
     assert 0 < body["reichweite_min"] <= 180
     assert isinstance(body["ueber_horizont_hinaus"], bool)
     # Frames: Ortszeit mit Offset, hoechstens 180 Minuten.
@@ -136,6 +139,11 @@ def test_ac9_quelle_ausgefallen_keine_erfundenen_werte(monkeypatch, tmp_path):
     assert body["nicht_verfuegbar"] is True
     assert body["trocken"] is False
     assert body["beginn_min"] is None and body["intensitaet"] != "gewitter"
+    # F001 (Adversary): ohne Daten keine erfundenen Werte, auch kein "trocken"-Token.
+    assert body["intensitaet"] is None
+    assert body["max_mm_h_erste_stunde"] is None
+    assert body["summe_erste_stunde_mm"] is None
+    assert body["reichweite_min"] is None
 
 
 @pytest.mark.parametrize("params", [
@@ -152,3 +160,55 @@ def test_ohne_core_auth_abgelehnt():
     resp = client.get(PFAD, params={"lat": 50.0, "lon": 8.0})
     assert resp.status_code == 401
     assert "frames" not in resp.text
+
+
+class _Aufzeichnend:
+    """Aufzeichnender Wrapper um den echten RadarNowcastService (kein Mock):
+    haelt Aufrufparameter und das echte Ergebnis fest."""
+
+    aufrufe: list[dict] = []
+    ergebnisse: list = []
+
+
+def _aufzeichnen(monkeypatch):
+    import services.radar_service as radar
+
+    _Aufzeichnend.aufrufe, _Aufzeichnend.ergebnisse = [], []
+
+    class _Dienst(radar.RadarNowcastService):
+        def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing",
+                        user_id=None, deadline_at=None):
+            _Aufzeichnend.aufrufe.append({"priority": priority, "user_id": user_id})
+            ergebnis = super().get_nowcast(lat, lon, elevation_m, priority=priority,
+                                           user_id=user_id, deadline_at=deadline_at)
+            _Aufzeichnend.ergebnisse.append(ergebnis)
+            return ergebnis
+
+    monkeypatch.setattr(radar, "RadarNowcastService", _Dienst)
+
+
+def test_f006_core_ruft_nutzerfrei_und_reicht_reichweite_und_horizont_durch(monkeypatch, tmp_path):
+    """F006: user_id=None (Mandantenfreiheit), Reichweite und Horizont aus dem Dienst."""
+    _setze_frames(monkeypatch, tmp_path, _raster({60: (2.0, 61), 75: (2.0, 61), 90: (2.0, 61)}, bis=90))
+    _aufzeichnen(monkeypatch)
+    body = _abruf(47.80, 13.04).json()
+    assert _Aufzeichnend.aufrufe == [{"priority": "user_briefing", "user_id": None}]
+    ergebnis = _Aufzeichnend.ergebnisse[0]
+    assert body["reichweite_min"] == ergebnis.source_reach_minutes
+    assert body["reichweite_min"] is not None and body["reichweite_min"] < 180
+    assert body["ueber_horizont_hinaus"] is True
+    assert body["ueber_horizont_hinaus"] == ergebnis.event_ongoing_beyond_horizon
+    assert body["gedrosselt"] is ergebnis.throttled is False
+
+
+def test_f006_hagel_nur_bei_nassem_frame_und_keine_frames_vor_jetzt(monkeypatch, tmp_path):
+    """Hagel-Code ohne Niederschlag ist kein Hagel; Frames vor jetzt fallen heraus."""
+    frames = [{"offset_min": -30, "precip_mm_h": 0.0, "weather_code": 0}]
+    frames += _raster({30: (0.0, 96)})
+    _setze_frames(monkeypatch, tmp_path, frames)
+    lat, lon = 49.45, 11.08
+    jetzt = datetime.now(tz_for_coords(lat, lon))
+    body = _abruf(lat, lon).json()
+    assert body["hagel"] is False
+    assert all(datetime.fromisoformat(f["zeit"]) >= jetzt - timedelta(seconds=5)
+               for f in body["frames"]), body["frames"][:2]
