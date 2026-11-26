@@ -1,0 +1,96 @@
+{
+  "verified_commit": "97853c3e874c4c6014cd204fd15a6c49975d04d1",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "id": "AC-1",
+      "status": "PASS",
+      "url": "/trips/gz2967-gr221-mallorca/wetter",
+      "evidence": "Elementlisten-Abgleich wetter/normal Staging 97853c3e8: DE gefunden 1040, abweichend 8, nicht_pruefbar 48, zusaetzlich 14, 0 ohne Besitzer, Exit 0; EN gefunden 1015, abweichend 9, nicht_pruefbar 72, zusaetzlich 21, 0 ohne Besitzer, Exit 0",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-2",
+      "id": "AC-2",
+      "status": "PASS",
+      "url": "/orte/cp-cc798e8ca9d34a15/wetter",
+      "evidence": "Elementlisten-Abgleich wetter/normal Staging 97853c3e8: DE gefunden 1040, abweichend 8, nicht_pruefbar 48, zusaetzlich 14, 0 ohne Besitzer, Exit 0; EN gefunden 1015, abweichend 9, nicht_pruefbar 72, zusaetzlich 21, 0 ohne Besitzer, Exit 0",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-3",
+      "id": "AC-3",
+      "status": "PASS",
+      "url": "/trips/gz2967-gr221-mallorca/wetter",
+      "evidence": "Elementlisten-Abgleich wetter/normal Staging 97853c3e8: DE gefunden 1040, abweichend 8, nicht_pruefbar 48, zusaetzlich 14, 0 ohne Besitzer, Exit 0; EN gefunden 1015, abweichend 9, nicht_pruefbar 72, zusaetzlich 21, 0 ohne Besitzer, Exit 0",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-4",
+      "id": "AC-4",
+      "status": "PASS",
+      "url": "/orte/cp-cc798e8ca9d34a15/wetter",
+      "evidence": "Elementlisten-Abgleich wetter/normal Staging 97853c3e8: DE gefunden 1040, abweichend 8, nicht_pruefbar 48, zusaetzlich 14, 0 ohne Besitzer, Exit 0; EN gefunden 1015, abweichend 9, nicht_pruefbar 72, zusaetzlich 21, 0 ohne Besitzer, Exit 0",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5",
+      "id": "AC-5",
+      "status": "PASS",
+      "url": "/trips/gz2967-gr221-mallorca/wetter",
+      "evidence": "Elementliste/Text-Abgleich gemessen (DE gefunden 1040, abweichend 8, nicht_pruefbar 48, 0 ohne Besitzer; EN gefunden 1015, abweichend 9, nicht_pruefbar 72, 0 ohne Besitzer, je Exit 0), Bildpr\u00fcfung folgt in #3037",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-6",
+      "id": "AC-6",
+      "status": "PASS",
+      "url": "/orte/cp-cc798e8ca9d34a15/wetter",
+      "evidence": "Elementlisten-Abgleich wetter/normal Staging 97853c3e8: DE gefunden 1040, abweichend 8, nicht_pruefbar 48, zusaetzlich 14, 0 ohne Besitzer, Exit 0; EN gefunden 1015, abweichend 9, nicht_pruefbar 72, zusaetzlich 21, 0 ohne Besitzer, Exit 0",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-7",
+      "id": "AC-7",
+      "status": "PASS",
+      "url": "/trips/gz2967-gr221-mallorca/wetter",
+      "evidence": "Elementlisten-Abgleich wetter/normal Staging 97853c3e8: DE gefunden 1040, abweichend 8, nicht_pruefbar 48, zusaetzlich 14, 0 ohne Besitzer, Exit 0; EN gefunden 1015, abweichend 9, nicht_pruefbar 72, zusaetzlich 21, 0 ohne Besitzer, Exit 0",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-26T20:41:12.582368+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Elementlisten-Abgleich wetter/normal DE+EN 0 ohne Besitzer auf Staging 97853c3e8",
+  "scope": "full-stack",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Elementlisten-Abgleich wetter/normal DE+EN 0 ohne Besitzer auf Staging 97853c3e8",
+      "scope": "full-stack",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-26T20:41:12.582368+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
