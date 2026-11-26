@@ -236,13 +236,13 @@ gegen Staging (Schritt 3 oben) — der Selbsttest bestätigt hier nur „Prod le
 korrekt auf Login um", nicht „Feature funktioniert". Siehe Spec Issue #564 und #1353 für
 technische Details.
 
-**Selbsttest im CI-Pfad (#2047 S2b, ADR-0085):** Liefert die CI aus (Gate `open`), ruft sie danach per ssh
-`cd /home/hem/gregor_zwanzig && python3 .claude/hooks/prod_selftest.py` auf. Exit ≠ 0 macht den Job
-rot. Ohne Workflow-Variable landet der Bericht unter `docs/artifacts/unknown/`. Das Deploy-Skript
-ist idempotent: Steht `deployed_commit` schon auf `origin/main`, meldet es „bereits ausgeliefert"
-und startet nichts neu (Notausgang `GZ_FORCE_REDEPLOY=1`). CI und `/70-deploy` können denselben
-Stand also gefahrlos beide ausliefern. Der Job `deploy` ist per
-`concurrency: {group: prod-deploy, cancel-in-progress: false}` serialisiert.
+**Kein Prod-Deploy aus der CI (seit #3394, henemm-infra#522):** Der CI-Job `deploy` wartet nur noch,
+bis Staging den Merge-Stand hat, und macht den Staging-Smoke-Test. SSH-Zugang, Prod-Gate, Deploy,
+Selbsttest und Telegram-Meldungen sind aus der CI entfernt; Produktion liefert allein der Server
+per Pull-Deploy (unten) aus, der danach `prod_selftest.py` ausführt. Das Deploy-Skript ist
+idempotent: Steht `deployed_commit` schon auf `origin/main`, meldet es „bereits ausgeliefert"
+und startet nichts neu (Notausgang `GZ_FORCE_REDEPLOY=1`). Timer und `/70-deploy` können denselben
+Stand also gefahrlos beide ausliefern (`flock` im Deploy-Skript).
 
 ---
 
@@ -273,7 +273,7 @@ Ausführlich (aus `CLAUDE.md` ausgelagert, #2640):
 | 4b | Post-Deploy-Selftest: `python3 .claude/hooks/prod_selftest.py` — nur Exit 0 fährt weiter |
 | 5 | `gh issue close <N>` — nur wenn 4b Exit 0 |
 
-**Ein Merge ist kein Prod-Deploy:** der CI-Job `deploy` liefert nur bei vorliegendem `/e2e-verify`-Nachweis aus (`scripts/ci_prod_gate.sh` → `PROD_GATE=open`); sonst bleibt er grün/übersprungen; dann liefert der Server-Timer aus, sobald der Nachweis als Git-Note vorliegt (Pull-Deploy, unten), oder Schritt 4 (`/70-deploy`) direkt vom Server (#2047 S2, #3289).
+**Ein Merge ist kein Prod-Deploy:** Produktion bekommt einen Stand erst mit `/e2e-verify`-Nachweis (`scripts/ci_prod_gate.sh` → `PROD_GATE=open`). Dann liefert der Server-Timer aus, sobald der Nachweis als Git-Note vorliegt (Pull-Deploy, unten), oder Schritt 4 (`/70-deploy`) direkt vom Server (#2047 S2, #3289). Die CI liefert seit #3394 nicht mehr aus.
 
 ### Pull-Deploy: Server liefert Prod selbst aus (#3289, ADR-0129)
 
@@ -292,8 +292,8 @@ erbracht. `GZ_E2E_PUBLISH=0` schaltet nur das Veröffentlichen ab und ist für T
 `scripts/e2e_nachweis_holen.py <repo>` auf: Notes-Ref holen, für `origin/main` und seine
 letzten 40 Vorfahren die Note als `.claude/e2e_verified/<sha>.json` ablegen, nur wenn
 `verified_commit` der Note zum Commit passt (fail-closed, inhaltsgleiche Datei bleibt
-unberührt). Gate, Vorfahren-Regel (#1382) und Selbsttest sind unverändert. Der CI-Job
-`deploy` und der Timer sehen damit denselben Nachweis.
+unberührt). Gate, Vorfahren-Regel (#1382) und Selbsttest sind unverändert. Timer und
+`/70-deploy` sehen damit denselben Nachweis.
 
 **Timer.** `henemm-infra/scripts/pull-deploy-gregor-prod.sh`, Cron `*/5`, eigenes `flock`,
 Log `/home/hem/backups/pull-deploy-gregor-prod.log`:
@@ -313,9 +313,9 @@ die Sperre auf.
 
 **Notausgänge.** `GZ_FORCE_REDEPLOY=1 bash /home/hem/henemm-infra/scripts/pull-deploy-gregor-prod.sh`
 versucht eine gescheiterte SHA bewusst erneut. Der direkte Weg vom Server
-(`deploy-gregor-prod.sh` + `prod_selftest.py`) bleibt erlaubt; Doppel-Deploy mit Timer oder
-CI-Job ist unschädlich (`flock`, idempotent über `last_prod_deploy.json`). `GZ_SKIP_E2E_GATE`
-öffnet weder CI-Gate noch Timer.
+(`deploy-gregor-prod.sh` + `prod_selftest.py`) bleibt erlaubt; Doppel-Deploy mit dem Timer ist
+unschädlich (`flock`, idempotent über `last_prod_deploy.json`). `GZ_SKIP_E2E_GATE`
+öffnet den Timer nicht.
 
 **Rückmeldung an die Sitzung.** Außerhalb des Servers deployt `/70-deploy` nicht selbst,
 sondern fragt `gh api repos/henemm/gregor_zwanzig/commits/<sha>/status` nach `deploy/prod`:
@@ -383,33 +383,24 @@ alle 3 Services restarten → Smoke-Test`. Ohne diesen vollen Lauf entsteht Code
 **parallel-session-sicher**: es blockiert nicht mehr bei „dirty" Arbeitsbaum und serialisiert
 gleichzeitige Deploys über `flock`. Schritt 4 darf daher aus jeder Session jederzeit laufen.
 
-### Deploy-Geheimnisse an main binden (#2961)
+### Deploy-Geheimnisse an main binden (#2961, Stand #3394)
 
-Stand im Repo: `ci.yml` gibt dem `GITHUB_TOKEN` nur Leserechte (`permissions: contents: read`),
-alle Actions sind auf Commit-SHAs gepinnt, die Deploy-Geheimnisse gehen per `env:` in die
-Schritte (nie per `${{ }}` in den Shell-Text), und der SSH-Zugang wird einmal im Schritt
-„SSH-Zugang vorbereiten" unter `$RUNNER_TEMP` (umask 077) angelegt und am Ende gelöscht.
-Ist das Secret `DEPLOY_KNOWN_HOSTS` gesetzt, prüft SSH den Host-Schlüssel
-(`StrictHostKeyChecking yes`); fehlt es, läuft der Deploy wie bisher ohne Prüfung weiter und
-der Lauf zeigt eine `::warning::`-Zeile.
+`ci.yml` gibt dem `GITHUB_TOKEN` nur Leserechte (`permissions: contents: read`), alle Actions
+sind auf Commit-SHAs gepinnt, Geheimnisse gehen per `env:` in die Schritte (nie per `${{ }}`
+in den Shell-Text).
 
-**Umgesetzt am 2026-11-13** (Nacharbeit #2961):
+**Seit #3394 (henemm-infra#522) braucht die CI keinen Zugang zum Server mehr.** Der SSH-Deploy
+aus der CI ist entfernt, Produktion liefert allein der Pull-Deploy auf dem Server. Damit
+entfallen die vier Secrets `DEPLOY_SSH_KEY`, `DEPLOY_USER`, `DEPLOY_HOST`, `DEPLOY_KNOWN_HOSTS`
+(Environment `production`) und die Telegram-Secrets `HENEMM_DEPLOY_BOT_TOKEN`/`HENEMM_DEPLOY_CHAT_ID`
+(Repository); sie werden nach dem Merge gelöscht. Auf dem Server entfallen der Schlüssel
+`ci-deploy-gz-2026-11` in `~hem/.ssh/authorized_keys` und `ci-ssh-dispatch.sh` (henemm-infra#522).
 
-1. **Environment `production`** mit Deployment-Branch-Regel „nur `main`"; der Job `deploy`
-   trägt `environment: production`. Dort liegen `DEPLOY_SSH_KEY`, `DEPLOY_USER`,
-   `DEPLOY_HOST` (Server-IP), `DEPLOY_KNOWN_HOSTS`, `STAGING_BASIC_AUTH`. Die gleichnamigen
-   Repository-Secrets sind gelöscht, ein Workflow auf einem anderen Branch kommt nicht mehr
-   an sie heran. `STAGING_BASIC_AUTH` = `GZ_STAGING_VALIDATOR_USER:…PASS` aus
-   `/etc/henemm/secrets.env`; nach einer Rotation dort auch dieses Secret neu setzen
-   (`gh secret set STAGING_BASIC_AUTH --env production < datei`).
-   Bewusst als Repository-Secret geblieben: `HENEMM_DEPLOY_BOT_TOKEN`/`HENEMM_DEPLOY_CHAT_ID`
-   (nur Telegram-Meldung, Wert liegt nicht auf dem Server, Verschieben bräuchte ihn).
-2. **SSH-Schlüssel neu und begrenzt:** neuer Schlüssel `ci-deploy-gz-2026-11`, in
-   `~hem/.ssh/authorized_keys` mit `command="…/ci-ssh-dispatch.sh",restrict` (henemm-infra#282);
-   der alte Schlüssel ist entfernt.
-3. **`DEPLOY_KNOWN_HOSTS`:** `ssh-keyscan` der Server-IP, Fingerabdrücke gegen
-   `/etc/ssh/ssh_host_*_key.pub` abgeglichen. Ändert sich der Host-Schlüssel des Servers,
-   scheitert der Deploy an der Prüfung, dann dieses Secret neu setzen.
+**Was bleibt:** Environment `production` mit Deployment-Branch-Regel „nur `main`"; der Job
+`deploy` trägt `environment: production`, weil dort `STAGING_BASIC_AUTH` für den Staging-Smoke-Test
+liegt (ein Workflow auf einem anderen Branch kommt nicht heran). `STAGING_BASIC_AUTH` =
+`GZ_STAGING_VALIDATOR_USER:…PASS` aus `/etc/henemm/secrets.env`; nach einer Rotation dort auch
+dieses Secret neu setzen (`gh secret set STAGING_BASIC_AUTH --env production < datei`).
 
 **Geheimnis-Suche:** Der Job `lint` prüft den ausgecheckten Stand mit gitleaks in fester
 Version (`.gitleaks.toml`, eigene Regel für Hex-Passwörter). Ein Platzhalter-Geheimnis in
@@ -512,11 +503,9 @@ jedem Merge nach `main`. Seit Scheibe 2 (2026-10-06) gibt es diesen Schritt nich
 CI-Job `deploy` schreibt kein Verdict und führt kein `git reset` aus. Stattdessen läuft
 `scripts/ci_prod_gate.sh` auf dem Server-Checkout: `git fetch`, dann
 `staging_gate.py --check --expected-commit origin/main`, Ausgabe `PROD_GATE=open|closed`.
-Der Job hängt an allen sechs Ampel-Checks. Prod-Deploy und Erfolgs-Telegram laufen nur bei
-`open`. Bei `closed` bleibt der Job grün, der Deploy-Schritt wird übersprungen, und die
-Job-Summary verweist auf `/70-deploy` Schritt 4 (manueller Deploy vom Server nach
-`/e2e-verify`) — das ist der Normalfall, kein Fehler. Schlägt der `git fetch` fehl, ist der
-Job rot. `scripts/wip_safety.sh` bleibt als eigenständiges Skript erhalten.
+Seit #3394 ruft nicht mehr die CI dieses Skript auf, sondern der Pull-Deploy
+(`henemm-infra/scripts/pull-deploy-gregor-prod.sh`) und `/70-deploy`; bei `closed` wartet der
+Timer auf den Nachweis. `scripts/wip_safety.sh` bleibt als eigenständiges Skript erhalten.
 
 **Wiederherstellen:**
 

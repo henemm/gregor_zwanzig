@@ -58,10 +58,10 @@ ebenfalls, solange der Drift-Monitor ruhig ist. Im Zweifel trotzdem ausliefern.
 bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh
 ```
 
-**CI-Abkuerzung (#2047 S2):** Der CI-Job `deploy` liefert nur dann selbst aus, wenn
-`scripts/ci_prod_gate.sh` `PROD_GATE=open` meldet (Nachweis fuer `origin/main` liegt vor).
-Sonst bleibt er gruen mit uebersprungenem Deploy-Schritt und verweist hierher — das ist der
-**Normalfall, kein Fehler**; dann diesen Schritt 4 manuell vom Server nach `/e2e-verify`.
+**Kein CI-Deploy mehr (#3394):** Die CI liefert nicht nach Produktion aus. Liegt der Nachweis
+fuer `origin/main` vor (`scripts/ci_prod_gate.sh` meldet `PROD_GATE=open`), liefert der Server
+per Pull-Deploy (Cron */5) selbst aus; dieser Schritt 4 vom Server bleibt erlaubt und ist
+dank Idempotenz unschaedlich.
 
 `systemctl restart` allein reicht **nie**. Das Skript nimmt ein `flock`-Lock, synchronisiert
 hart auf `origin/main` (Daten unberuehrt, WIP gesichert), baut Go-Binary + Frontend, startet

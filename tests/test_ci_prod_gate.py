@@ -3,7 +3,9 @@
 Prueflinge:
 
 * ``scripts/ci_prod_gate.sh`` (Aufruf ``bash ci_prod_gate.sh <repo>``)
-* ``.github/workflows/ci.yml`` — Job ``deploy`` (AC-7, YAML-Parse)
+* ``.github/workflows/ci.yml`` — Job ``deploy`` (AC-7, YAML-Parse). Die SSH-Schritte
+  (Gate, Deploy, Telegram) sind seit #3394 entfernt; das Gate-Skript nutzt der
+  Pull-Deploy (henemm-infra/scripts/pull-deploy-gregor-prod.sh).
 
 Alle Verhaltenstests laufen gegen ECHTE Wegwerf-Git-Repos (bare ``origin`` +
 Haupt-Checkout + zweiter Klon als "andere Session"), echte Commits, echter
@@ -286,28 +288,11 @@ def test_geerbtes_skip_flag_wird_neutralisiert(sb: Sandbox):
     assert _gate_lines(proc) == ["PROD_GATE=closed"], proc.stdout + proc.stderr
 
 
-def test_ssh_befehl_fetcht_vor_dem_skript_bezug():
-    """F003 — # doc-compliance-test: Fetch muss VOR `git show origin/main:` stehen."""
-    run = _step(_deploy_job(), "Prod-Gate pruefen")["run"]
-    fetch = run.find("git fetch origin")
-    show = run.find("git show origin/main:scripts/ci_prod_gate.sh")
-    assert fetch != -1 and show != -1, run
-    assert fetch < show
-    between = run[fetch:show]
-    assert "&&" in between and ";" not in between.replace("\\;", ""), between
-
-
 # --- AC-7 / statische Teile von AC-8: ci.yml als geparste Struktur -----------------
 
 
 def _deploy_job() -> dict:
     return yaml.safe_load(CI_WORKFLOW.read_text(encoding="utf-8"))["jobs"]["deploy"]
-
-
-def _step(job: dict, name_part: str) -> dict:
-    hits = [s for s in job["steps"] if name_part in s.get("name", "")]
-    assert len(hits) == 1, f"Schritt mit {name_part!r}: {len(hits)} Treffer"
-    return hits[0]
 
 
 def test_deploy_haengt_an_allen_sechs_ampel_jobs():
@@ -323,96 +308,3 @@ def test_deploy_schreibt_keinen_nachweis_und_resettet_nicht():
         run = step.get("run", "")
         assert "--write-verdict" not in run, f"{step.get('name')}: schreibt Nachweis"
         assert "git reset" not in run, f"{step.get('name')}: git reset"
-
-
-def test_prod_deploy_und_erfolgsmeldung_nur_bei_offenem_gate():
-    """AC-7c + AC-8 (statisch) — # doc-compliance-test."""
-    job = _deploy_job()
-    gate = _step(job, "Prod-Gate pruefen")
-    assert gate.get("id") == "gate"
-    assert "ci_prod_gate.sh" in gate["run"]
-    assert "PROD_GATE" in gate["run"]
-
-    cond = "steps.gate.outputs.open == 'true'"
-    assert cond in _step(job, "Deploy zu Produktion via SSH").get("if", "")
-    ok = _step(job, "Deploy erfolgreich").get("if", "")
-    assert "success()" in ok and cond in ok
-
-    skipped = _step(job, "Prod-Deploy uebersprungen")
-    assert "steps.gate.outputs.open != 'true'" in skipped.get("if", "")
-    assert "/70-deploy" in skipped["run"] and "GITHUB_STEP_SUMMARY" in skipped["run"]
-    assert "github.sha" in skipped["run"] or "GITHUB_SHA" in skipped["run"] or "SHA" in str(skipped.get("env", ""))
-
-
-# --- Schrittlogik der CI-Schritte real ausgefuehrt (bash), ``${{ }}`` ersetzt ------
-
-
-def _run_step(step: dict, workdir: Path, extra_env: dict, ssh_script: str | None = None):
-    """Fuehrt ``run`` eines Workflow-Schritts mit bash -e aus. ``ssh`` ist ein kleines
-    Transport-Shim (Fake-Binary im PATH, das Ausgabe/Exit-Code vorgibt) — der
-    Gate-Entscheid selbst ist oben gegen echte Repos getestet; hier geht es um die
-    Weiterverarbeitung der Antwort im Schritt (outputs.open / Rot bei fehlender Zeile)."""
-    import re
-
-    script = re.sub(r"\$\{\{[^}]*\}\}", "x", step["run"])
-    bin_dir = workdir / "bin"
-    bin_dir.mkdir(exist_ok=True)
-    if ssh_script is not None:
-        shim = bin_dir / "ssh"
-        shim.write_text("#!/usr/bin/env bash\n" + ssh_script + "\n", encoding="utf-8")
-        shim.chmod(0o755)
-    out_file = workdir / "gh_output"
-    sum_file = workdir / "gh_summary"
-    out_file.write_text("", encoding="utf-8")
-    sum_file.write_text("", encoding="utf-8")
-    env = {
-        "PATH": f"{bin_dir}:{os.environ['PATH']}",
-        "HOME": str(workdir),
-        "GITHUB_OUTPUT": str(out_file),
-        "GITHUB_STEP_SUMMARY": str(sum_file),
-        **extra_env,
-    }
-    proc = subprocess.run(
-        ["bash", "-e", "-c", script], capture_output=True, text=True, env=env, cwd=str(workdir)
-    )
-    return proc, out_file.read_text(encoding="utf-8"), sum_file.read_text(encoding="utf-8")
-
-
-@pytest.fixture()
-def stepdir():
-    path = Path(tempfile.mkdtemp(prefix="ci-prod-gate-step-"))
-    try:
-        yield path
-    finally:
-        shutil.rmtree(path, ignore_errors=True)
-
-
-@pytest.mark.parametrize(
-    "ssh_script,expect_rc0,expect_output",
-    [
-        ('echo "[staging-gate] Meldung"; echo "PROD_GATE=open"', True, "open=true"),
-        ('echo "PROD_GATE=closed"', True, "open=false"),
-        ('echo "kein Gate-Satz"; exit 0', False, ""),
-        ('echo "PROD_GATE=open"; exit 3', False, ""),
-        ("exit 255", False, ""),
-    ],
-)
-def test_gate_schritt_setzt_output_und_wird_rot_ohne_entscheidung(
-    stepdir: Path, ssh_script: str, expect_rc0: bool, expect_output: str
-):
-    """AC-5/AC-7 (Schrittlogik): fehlende Entscheidung oder ssh-Fehler -> Schritt rot,
-    kein ``open=``-Output; sonst open=true|false."""
-    gate = _step(_deploy_job(), "Prod-Gate pruefen")
-    proc, out, _ = _run_step(gate, stepdir, {}, ssh_script)
-    assert (proc.returncode == 0) is expect_rc0, proc.stdout + proc.stderr
-    assert out.strip() == expect_output
-
-
-def test_uebersprungen_schritt_nennt_sha_und_70_deploy_in_der_job_summary(stepdir: Path):
-    """AC-8 (Inhalt der Job-Summary, Schritt real ausgefuehrt)."""
-    skipped = _step(_deploy_job(), "Prod-Deploy uebersprungen")
-    sha = "abc123def4567890abc123def4567890abc123de"
-    proc, _, summary = _run_step(skipped, stepdir, {"SHA": sha})
-    assert proc.returncode == 0, proc.stderr
-    assert sha in summary and "/70-deploy Schritt 4" in summary
-    assert "::notice::" in proc.stdout
