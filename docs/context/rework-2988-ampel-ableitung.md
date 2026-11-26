@@ -338,3 +338,12 @@ Dieser Durchlauf liefert **nur S4** (AC-16 bis AC-18). Code-Stand c8b09202e; unt
 - `ampelSchreiben.test.ts`: `ac21_ac20_trip_felder_tagesfenster_in_report_config_und_warnungen_doppelt`, `ac21_ac20_vergleich_radar_warnungen_tagesfenster_top_level`, `ac37_trip_metrics_vollstaendig_reihenfolge_bestehend_neue_hinten`
 - `p5c_ableitung_hub_orte_ausgabe.test.ts`: `eigene_vorlage_leitet_kinder_ab_mail_wie_vor_p5a`, `plus_elter_bringt_abgeleitete_kinder_wie_vor_p5a`, `plus_elter_fuegt_vorhandenes_kind_nicht_doppelt_an`, `bewusstes_minus_schreibt_nur_dieses_kind_aus`, `minus_elter_nimmt_mitgelaufene_kinder_mit`, `trip_plus_temperatur_mit_kindern`, `vorlage_uebernehmen_mail_wie_vor_p5a_und_anzeige_gleich_mail`
 Vor dem PR: `cd frontend && npm test -- src/lib/__tests__/rework_3020_rueckbau_waechter.test.ts` grün. `hub_overview_alarm_ab_verdrahtung` ist nicht zitiert (frei).
+
+## S4 geliefert (2026-11-26)
+
+- **Stand:** Commit 1949d8679 (AC-16 bis AC-18). Die Trip-Übersicht holt die aufgelöste Ampel über `POST /api/ampel/aufloesung` (neuer Lader `shared/hub-uebersicht/tripAufloesung.ts`, veraltete Antworten per Ticket verworfen). Die Wertebereiche-Karte liest `auswahlLesen` direkt, ohne Serveraufruf. `/api/templates` wird von der Übersicht nicht mehr für die Alarm-Zeile geladen.
+- **Entfernt:** der TS-Spiegel in `ampelModell.ts` (`verschmelzen`, `vorlageIdVon`, `zaehleAbweichungen(Gegen)`, `eigeneVorlageAmpel`, `ampelFehler`, `metrikFehler`, `windrichtungUngueltig`, `zeileWeichtAb`, `richtungWeichtAb`, `WIND_MODI`, `WIND_SEKTOREN`), `lokalAufgeloest` und der i18n-Schlüssel `wetter.grenzen.fehler_ungueltig`.
+- **Ratsche:** `ampelModell.ts` FRONTEND_VERZWEIGUNG 1 auf 0. `hoechststand` steht auf 421 (die RED-Zahl 432 galt vor #3384 S4, das ebenfalls gesenkt hat).
+- **Known Limitation:** FRONTEND_LISTE bleibt bei 2 (`GRUPPEN_FOLGE`, `HINWEIS_IDS` in `ampelModell.ts`). Das sind Darstellungslisten, kein Spiegel der Ableitung. Die Spec-Vorgabe „FRONTEND_LISTE 2 auf 0“ (AC-18) ist damit nicht erfüllt; die Listen gehören nicht zu #2988.
+- **Folge-Issue #3399:** `vorlageIdFuer` (`alarmAbAnzeige.ts`) bleibt als Spiegel bestehen; Nutzer sind `AlarmeTab`, `vorlageName`, `compareNewVorlage`. Eigenes Issue, nicht in #2988.
+- **Referenzdoku geprüft:** keine veralteten Beschreibungen in `docs/reference/`, `docs/features/`, `CLAUDE.md`. Der Changelog-Eintrag 2026-11-09 in `api_contract.md` nennt `deviation_count` historisch und bleibt unverändert.
