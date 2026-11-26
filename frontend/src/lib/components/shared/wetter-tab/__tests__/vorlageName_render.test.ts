@@ -1,6 +1,6 @@
 // Issue #2981 (Epic #2913, ADR-0104), Fix-Loop Adversary M4–M11: die Verdrahtung des
 // Helfers vorlageAnzeigename in den Komponenten wird dort geprueft, wo sie WIRKT — im
-// Server-Render (svelte/server) von VorlageKarte und WeatherV2PresetBar, mit dem echten
+// Server-Render (svelte/server) von VorlageKarte (WeatherV2PresetBar entfiel mit #3383), mit dem echten
 // locale-Store und dem echten Katalog. Kein Mock.
 //
 // Zweige, die erst nach einem Klick erscheinen (offenes Menue, Rueckfrage), rendert der
@@ -31,7 +31,6 @@ register(
 const { render } = await import('svelte/server');
 
 const KARTE = pathToFileURL(path.join(COMPONENTS, 'organisms', 'wetter-tab', 'VorlageKarte.svelte')).href;
-const LEISTE = pathToFileURL(path.join(COMPONENTS, 'shared', 'weather-metrics-tab', 'WeatherV2PresetBar.svelte')).href;
 
 async function lade(url: string, start: [string, string][] = []): Promise<any> {
 	const abfrage = start.length ? `?start=${encodeURIComponent(JSON.stringify(start))}` : '';
@@ -60,13 +59,6 @@ function elementMitTestid(h: string, testid: string): string {
 	}
 	assert.fail(`Element ${testid} nicht geschlossen`);
 }
-/** Oeffnender Tag des Elements mit dieser Testid. */
-function tagMitTestid(h: string, testid: string): string {
-	const m = h.match(new RegExp(`<[a-z]+\\b[^>]*data-testid="${testid}"[^>]*>`));
-	assert.ok(m, `Element ${testid} fehlt`);
-	return m[0];
-}
-
 afterEach(() => locale.set('de'));
 
 // Server-Labels wie /api/templates (deutsch, src/app/metric_catalog.py).
@@ -159,30 +151,5 @@ describe('VorlageKarte: Rückfrage {neu} und Verlust-Text (AC-2, AC-4)', () => {
 		assert.match(frage, /Use “Mein Wochenende”\?/);
 	});
 });
-
-describe('WeatherV2PresetBar: Chip-Text und Tooltip (AC-7)', () => {
-	const barProps = {
-		selectedTemplate: 'wandern',
-		dirty: false,
-		templates: [
-			{ id: 'wandern', label: 'Wandern', metrics: [] },
-			{ id: 'gletscher-neu', label: 'Gletschertour', metrics: [] }
-		],
-		userPresets: [],
-		onSelectPreset: noop,
-		onOpenSaveDialog: noop
-	};
-	test('EN: Chip und title „Hiking“; unbekannte ID mit Server-Label', async () => {
-		locale.set('en');
-		const h = html(await lade(LEISTE), barProps);
-		assert.equal(text(elementMitTestid(h, 'weather-preset-pill-wandern')), 'Hiking');
-		assert.match(tagMitTestid(h, 'weather-preset-pill-wandern'), /\stitle="Hiking"/);
-		assert.equal(text(elementMitTestid(h, 'weather-preset-pill-gletscher-neu')), 'Gletschertour');
-	});
-	test('DE: Chip und title „Wandern“', async () => {
-		locale.set('de');
-		const h = html(await lade(LEISTE), barProps);
-		assert.equal(text(elementMitTestid(h, 'weather-preset-pill-wandern')), 'Wandern');
-		assert.match(tagMitTestid(h, 'weather-preset-pill-wandern'), /\stitle="Wandern"/);
-	});
-});
+// #3383 S1: der Block „WeatherV2PresetBar: Chip-Text und Tooltip (AC-7)" entfiel mit der Waise
+// WeatherV2PresetBar.svelte (ohne Produktionsaufrufer).

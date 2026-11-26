@@ -1,0 +1,60 @@
+#3383 Waisen S1 — GREEN-Nachweis (2026-11-26, Branch rework-3383-waisen-s1)
+
+== 1. Frontend-Suite komplett (cd frontend && npm test) ==
+# tests 11746
+# suites 2130
+# pass 11743
+# fail 0
+# cancelled 0
+# skipped 2
+# todo 1
+(todo = Altbefund „warn|flaeche (hell)“, eigenes Ticket, unverändert)
+
+== 2. Wächter und Lösch-Nachweis (benannt) ==
+npm test -- src/lib/__tests__/waisen_waechter.test.ts src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts
+ok 3 - #3383 AC-1/AC-2/AC-8: Waisen S1 gelöscht, keine Importe, lebende Nachbarn erhalten (20 Unterfälle)
+ok 5 - #3366 AC-1/AC-8, #3383 AC-3: Waisen-Wächter gegen den echten Baum (OBERGRENZE_WAISEN 26)
+ok 7 - #3383 AC-4: Selbstnachweis F001 am erfundenen Mini-Baum (a–e, inkl. (e) Array-Form wirft)
+# tests 67
+# pass 67
+# fail 0
+(RED vorher: 67 Tests, 48 pass, 19 fail — test-red-output.txt)
+
+== 3. Ratschen/Katalog/Prüfstände (benannt) ==
+npm test -- keine_hartkodierten_nutzertexte reaktivitaet_waechter deutsch_unveraendert katalog_schluessel_haben_verwender
+             paritaet_de_en ink4_waechter bausteine_waechter waisen_waechter trip_pfad_altfeld_loeschnachweis_3297
+             keine_alten_reiternamen
+# tests 240
+# pass 240
+# fail 0
+npm test -- e2e/feat3204_… e2e/feat3250_… e2e/feat3205_… elementliste_uebersicht_2969 elementliste_aktuell trip_hub_sprache
+# tests 372
+# pass 372
+# fail 0
+
+== 4. Python (benannt, -o addopts="") ==
+uv run pytest tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py tests/unit/test_2243_playwright_loeschscheibe.py
+  tests/tdd/test_einstellung_gleich_mail_fallliste.py tests/tdd/test_einstellung_gleich_mail_waechter_3020.py
+  tests/test_3007_besitzerliste.py -o addopts=""
+102 passed, 2 warnings
+
+== 5. Build ==
+npm run build -> exit 0
+
+== 6. svelte-check ==
+vorher: COMPLETED 2287 FILES 32 ERRORS 72 WARNINGS 51 FILES_WITH_PROBLEMS
+nachher: COMPLETED 2268 FILES 32 ERRORS 72 WARNINGS 51 FILES_WITH_PROBLEMS
+(svelte-check-vorher.txt / svelte-check-nachher.txt)
+
+== 7. Gemessene Ratschen ==
+- OBERGRENZE_WAISEN 40 -> 26 (RED-Commit), BEKANNTE_WAISEN ohne Gruppe S1
+- BESTAND (bausteine_waechter_regeln.ts): 7 Einträge gestrichen, BESTAND_OBERGRENZE 184 -> 177
+- ink4 AUSNAHMEN: WeatherV2Grundauswahl (1), WeatherV2Kanaele (2) gestrichen
+- ein_katalog: 3 Einträge (WeatherV2Grundauswahl, outlookFriendlyCapability, wertebereicheAnzeige) per
+  Projektwerkzeug (katalog_verarbeitung_scan --schreibe-ausnahmen) entfernt; hoechststand/HOECHSTSTAND 433 -> 430
+- reaktivitaet_waechter: Zählungen (5/0/2) nachgemessen, unverändert
+- keine_hartkodierten_nutzertexte: keine S1-Pfade in Listen, unverändert grün
+- Katalogschlüssel ohne Verwender (gemessen mit katalog_schluessel_haben_verwender): 54 je Sprache entfernt
+  (trip.about.* 19, trip.kanaele.* 13, wertebereiche.* 22), de/en gleiche Menge
+- Goldens f9: nur layout_bausteine.{de,en}.html (je eine Zeile WeatherV2Kanaele) per GZ_GOLDEN_SCHREIBEN neu
+- Elementliste per scripts/elementliste_aus_mockup.ts neu erzeugt, ALT_SHA in elementliste_uebersicht_2969 nachgeführt

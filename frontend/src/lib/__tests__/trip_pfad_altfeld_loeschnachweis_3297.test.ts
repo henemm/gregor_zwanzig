@@ -35,12 +35,13 @@ const GELOESCHT = [
 	'lib/components/shared/OutlookLayoutControls.svelte',
 	'lib/components/shared/weather-metrics-tab/channelMetricLayouts.ts',
 	'lib/components/shared/weather-metrics-tab/weatherMetricsSavePayload.ts',
-	'lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts'
+	'lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts',
+	// #3383 S1: bis dahin in ERHALTEN, dann als Waise gelöscht (Spec rework_3383_waisen_s1.md, AC-2)
+	'lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts'
 ];
 
 /** Bleiben (Vergleich/Vorlagen, Rest #3298/#3301). */
 const ERHALTEN = [
-	'lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts',
 	'lib/components/shared/weather-metrics-tab/compareMetricSelection.ts',
 	'lib/components/shared/weather-metrics-tab/compareMetricOrder.ts',
 	'lib/components/shared/weather-metrics-tab/compareChannelMetricLayouts.ts',
@@ -160,6 +161,76 @@ describe('#3366 AC-5: layout-tab-Waisen und Barrels gelöscht, keine Importe, lt
 	});
 
 	for (const rel of ERHALTEN_3366) {
+		test(`erhalten (Regressionsschutz, heute grün): ${rel}`, () => {
+			assert.equal(existsSync(pfad(rel)), true, `${rel} wurde mitgelöscht, wird aber noch gebraucht`);
+		});
+	}
+});
+
+// #3383 S1 (Spec rework_3383_waisen_s1.md, AC-1/AC-2/AC-8): 14 Waisen der Gruppe S1 gelöscht.
+// RED heute: alle 14 existieren noch. Importscan zweifach: Auflösung des Modulpfads auf den gelöschten
+// Pfad und Basisnamen-Scan (Pfadsegment-genau) im Produktionscode.
+const GELOESCHT_3383 = [
+	'lib/components/molecules/GrundauswahlLeerHinweis.svelte',
+	'lib/components/shared/reportConfigDirty.ts',
+	'lib/components/shared/weather-metrics-tab/AggregationMetricRow.svelte',
+	'lib/components/shared/weather-metrics-tab/MultiSymbolMetricRow.svelte',
+	'lib/components/shared/weather-metrics-tab/ThresholdMetricRow.svelte',
+	'lib/components/shared/weather-metrics-tab/WeatherV2Grundauswahl.svelte',
+	'lib/components/shared/weather-metrics-tab/WeatherV2PresetBar.svelte',
+	'lib/components/shared/weather-metrics-tab/compareAggregationGrouping.ts',
+	'lib/components/shared/weather-metrics-tab/nurEinBericht.ts',
+	'lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts',
+	'lib/components/shared/weather-metrics-tab/wertebereicheAnzeige.ts',
+	'lib/components/trip-detail/AboutOutputLayout.svelte',
+	'lib/components/trip-detail/WeatherV2Kanaele.svelte',
+	'lib/components/trip-detail/weatherSaveGate.ts'
+];
+
+const ERHALTEN_3383 = [
+	'lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts',
+	'lib/components/trip-detail/metricsEditor.ts',
+	'lib/components/trip-detail/waypoints/WaypointPin.svelte'
+];
+
+describe('#3383 AC-1/AC-2/AC-8: Waisen S1 gelöscht, keine Importe, lebende Nachbarn erhalten', () => {
+	test('Löschliste #3383 hat genau 14 Einträge ohne Doppelte', () => {
+		assert.equal(new Set(GELOESCHT_3383).size, 14);
+	});
+
+	for (const rel of GELOESCHT_3383) {
+		test(`gelöscht (#3383): ${rel}`, () => {
+			assert.equal(existsSync(pfad(rel)), false, `${rel} existiert noch`);
+		});
+	}
+
+	test('keine Produktionsdatei importiert eine in #3383 gelöschte Datei (aufgelöster Modulpfad)', () => {
+		const ziele = new Map<string, string>();
+		for (const rel of GELOESCHT_3383) for (const z of importZiele(rel)) ziele.set(z, rel);
+		const muster = /(?:from|import\s*\()\s*['"]([^'"]+)['"]/g;
+		const funde: string[] = [];
+		for (const rel of produktionsdateien()) {
+			const text = readFileSync(pfad(rel), 'utf8');
+			for (const m of text.matchAll(muster)) {
+				const z = modulZiel(m[1], rel);
+				if (z !== null && ziele.has(z)) funde.push(`${rel} -> ${ziele.get(z)}`);
+			}
+		}
+		assert.deepEqual(funde, [], 'Produktions-Importe der in #3383 gelöschten Dateien');
+	});
+
+	test('keine Produktionsdatei importiert einen Basisnamen der #3383-Löschliste', () => {
+		const namen = GELOESCHT_3383.map(basisname);
+		const muster = new RegExp(`(?:from|import\\s*\\()\\s*['"][^'"]*/(${namen.map(escape).join('|')})(?:\\.svelte|\\.ts|\\.js)?['"]`, 'g');
+		const funde: string[] = [];
+		for (const rel of produktionsdateien()) {
+			const text = readFileSync(pfad(rel), 'utf8');
+			for (const m of text.matchAll(muster)) funde.push(`${rel} -> ${m[1]}`);
+		}
+		assert.deepEqual(funde, [], 'Produktions-Importe der Basisnamen aus #3383');
+	});
+
+	for (const rel of ERHALTEN_3383) {
 		test(`erhalten (Regressionsschutz, heute grün): ${rel}`, () => {
 			assert.equal(existsSync(pfad(rel)), true, `${rel} wurde mitgelöscht, wird aber noch gebraucht`);
 		});

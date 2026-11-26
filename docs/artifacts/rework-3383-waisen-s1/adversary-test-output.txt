@@ -1,0 +1,14 @@
+Adversary-Lauf rework-3383-waisen-s1, Stand gestaged
+== node --test, 17 benannte Dateien: 671 passed, 0 failed
+# tests 671
+# pass 671
+# fail 0
+# skipped 0
+== node --test, gesamte Frontend-Suite (npm test): 11743 passed, 0 failed, 2 skipped, EXIT 0
+# tests 11746
+# pass 11743
+# fail 0
+# skipped 2
+== pytest -o addopts= (4 benannte Dateien):
+72 passed, 2 warnings in 14.91s
+== npm run build: EXIT 0; svelte-check: 32 Fehler / 72 Warnungen, gleich wie vorher

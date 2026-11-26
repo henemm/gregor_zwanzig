@@ -1,0 +1,14 @@
+svelte-check-Baseline vor der Löschung S1 (#3383)
+Datum: 2026-11-26
+Stand: Branch rework-3383-waisen-s1, HEAD 1e3e0429e plus RED-Teständerungen (noch keine Datei gelöscht)
+Befehl (aus frontend/): npx svelte-kit sync && npx svelte-check --tsconfig ./tsconfig.json --output machine
+
+Ergebnis:
+COMPLETED 2287 FILES 32 ERRORS 72 WARNINGS 51 FILES_WITH_PROBLEMS
+
+Fehler:     32
+Warnungen:  72
+
+Keiner der Befunde liegt in einer der 14 S1-Dateien oder in den beiden geänderten Testdateien
+(waisen_waechter.test.ts, trip_pfad_altfeld_loeschnachweis_3297.test.ts).
+Nach der Löschung dürfen beide Zahlen nicht steigen (Spec AC-7).
