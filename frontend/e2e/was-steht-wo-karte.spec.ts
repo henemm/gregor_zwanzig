@@ -29,6 +29,12 @@
 //         (eigene Kennung, eigene Regel bzw. eigene Orte), ein zweiter Nutzer sieht nichts Fremdes (Adversary F004).
 //   WS-15 Trip: E-Mail-Format „Kompakt“ sperrt Etappen-Kennzahlen, Vortag-Vergleich und Nacht-Stundentabelle (sie
 //         wirken in der Kompakt-Mail nicht), gespeicherte Werte bleiben; „Ausführlich“ gibt sie mit altem Wert frei.
+//   Übertragen aus gelöschten Alt-Specs (#3374, Spec rework_3374_tote_browserpruefungen.md AC-1 bis AC-5):
+//   WS-neu-1 Trip: Vorschau-Spalte Roh/Einfach hin und zurück bleibt nach Neuladen, Gewitter ohne Schalter.
+//   WS-neu-2 Trip: Klick auf Überschriften speichert nichts; Schalter per Tastatur speichert, bleibt nach Neuladen.
+//   WS-neu-3 Trip: Lesefehler der Karte -> Fehler + „Neu laden“, kein Schreibvorgang; „Neu laden“ holt die Tabelle.
+//   WS-neu-4 drei Orte: Stundenverlauf-Spalte nur „nur in der E-Mail“, keine Kanal-Kappung.
+//   WS-neu-5 Trip ohne Etappe mit zwei Wegpunkten: Beispiel-Alarm zeigt Hinweis, keine Vorschau, kein Abruf.
 //
 //   cd frontend && npx playwright test e2e/was-steht-wo-karte.spec.ts --workers=1 --trace off
 
@@ -37,6 +43,7 @@ import { createTestLocation, kontrastBericht, kontrastVerstoesse, messeKontrast,
 import { wegwerfPasswort } from './stagingZugang';
 import { DESKTOP, MOBIL, WT, aktiveDerVorlage, oeffneWetter, stand, vorlagen, type Json } from './s3a2794-teil3.helpers';
 import { ZT, oeffneZustellung, tid } from './s3b2795-zustellung.helpers';
+import { TRIP_METRIKEN } from './was-steht-wo.helpers';
 
 type Fall = { name: string; kind: HubKind; orte: number };
 const FAELLE: Fall[] = [
@@ -972,6 +979,160 @@ test.describe('Karte „Was steht wo“ — #3155 Vorbelegung und ein Name', () 
 				await expect(page.getByTestId(id), `${id} entfernt`).toHaveCount(0);
 			for (const alt of ['Mehrtages-Trend', '3-Tages-Vorschau', 'Nächste Etappen'])
 				await expect(page.getByText(alt, { exact: false }), `„${alt}“ steht noch im Reiter Wetter`).toHaveCount(0);
+		} finally {
+			await abo.aufraeumen();
+		}
+	});
+});
+
+// ── #3374: übertragene Zusicherungen der gelöschten Alt-Specs ────────────────────────────────────
+// Spec docs/specs/modules/rework_3374_tote_browserpruefungen.md AC-1 bis AC-5. Herkunft: epic-138 AC-5b
+// (WS-neu-1), weather-metrics-tab-autosave F003/F004 (WS-neu-2) und AC-3 (WS-neu-3), compare-hourly-
+// metric-order AC-3 (WS-neu-4), fix-2069-alert-preview-echte-segmente (a) (WS-neu-5). Einzige abgefangene
+// Antwort: der Tabellen-Abruf der Karte in WS-neu-3 (ein Lesefehler lässt sich am echten Stack nicht erzeugen).
+/** Feste Grundauswahl mit Gewitter (vorlagen-unabhängig), Form wie `seed`. */
+async function seedMitGewitter(request: APIRequestContext, extra: Json = {}): Promise<Abo> {
+	const hub = await seedHub(request, 'route', {
+		extra: { display_config: { metrics: TRIP_METRIKEN.map((metric_id) => ({ metric_id, enabled: true })) }, ...extra }
+	});
+	return { kind: 'route', id: hub.id, ortNamen: [], aufraeumen: hub.aufraeumen };
+}
+/** Alle Schreibvorgänge des Browsers auf das Abo und seine Tabelle (Pfade, in Absende-Reihenfolge). */
+function schreibvorgaenge(page: Page, abo: Abo): string[] {
+	const pfade = new Set([abo.kind === 'route' ? `/api/trips/${abo.id}` : `/api/compare/presets/${abo.id}`, tabellenPfad(abo.id)]);
+	const puts: string[] = [];
+	page.on('request', (r) => {
+		const p = new URL(r.url()).pathname;
+		if (r.method() === 'PUT' && pfade.has(p)) puts.push(p);
+	});
+	return puts;
+}
+
+test.describe('Karte „Was steht wo“ — #3374 übertragene Zusicherungen', () => {
+	test('WS-neu-1 (Trip): Vorschau-Spalte Roh/Einfach bleibt nach Neuladen, Gewitter hat dort keinen Schalter', async ({ page }) => {
+		await page.setViewportSize(DESKTOP);
+		const abo = await seedMitGewitter(page.request);
+		try {
+			let karte = await oeffneKarte(page, abo);
+			await expect(zeile(karte, 'thunder'), 'Messaufbau: Gewitter steht in der Tabelle').toHaveCount(1);
+			await expect(zelle(karte, 'thunder', 'outlook'), 'Messaufbau: Gewitter hat eine Vorschau-Zelle').toHaveCount(1);
+			await expect(knopf(karte, 'thunder', 'outlook'), 'Gewitter: kein Roh/Einfach in der Vorschau').toHaveCount(0);
+			const vorher = await knopf(karte, 'gust', 'outlook').getAttribute('data-wert');
+			expect(vorher, 'Messaufbau: Böen haben Roh/Einfach in der Vorschau').toMatch(/^(raw|simplified)$/);
+			const neu = vorher === 'raw' ? 'simplified' : 'raw';
+			for (const [soll, schritt] of [[neu, 'umgeschaltet'], [vorher!, 'zurückgeschaltet']] as const) {
+				const gespeichert = tabelleGespeichert(page, abo);
+				await knopf(karte, 'gust', 'outlook').click();
+				await expect(knopf(karte, 'gust', 'outlook')).toHaveAttribute('data-wert', soll);
+				await gespeichert;
+				expect(rowVon((await tabelle(page.request, abo)).placements, 'gust')?.formats?.outlook, `gespeichert (${schritt})`).toBe(soll);
+				await page.reload();
+				karte = await oeffneKarte(page, abo);
+				await expect(knopf(karte, 'gust', 'outlook'), `nach Neuladen (${schritt})`).toHaveAttribute('data-wert', soll);
+				await expect(knopf(karte, 'thunder', 'outlook')).toHaveCount(0);
+			}
+		} finally {
+			await abo.aufraeumen();
+		}
+	});
+
+	test('WS-neu-2 (Trip): Klick auf Überschriften speichert nichts; Schalter per Tastatur speichert und bleibt nach Neuladen', async ({ page }) => {
+		await page.setViewportSize(DESKTOP);
+		const abo = await seed(page.request, FAELLE[0]);
+		try {
+			let karte = await oeffneKarte(page, abo);
+			const puts = schreibvorgaenge(page, abo);
+			const pfad = `/api/trips/${abo.id}`;
+			const sw = karte.getByTestId('was-steht-wo-show_stage_stats');
+			await expect(sw).toHaveAttribute('aria-checked', 'true');
+			// Streuklicks (F003): Abschnitts-Überschrift und Zeilentitel neben dem Schalter.
+			await karte.getByText('Ganze Blöcke ein- und ausschalten', { exact: true }).click();
+			await karte.getByText('Etappen-Kennzahlen', { exact: true }).click();
+			await expect(sw, 'Streuklick schaltet nicht').toHaveAttribute('aria-checked', 'true');
+			// Statt fester Wartezeit: die folgende Tastatur-Geste (F004) muss der EINZIGE Schreibvorgang sein —
+			// ein (auch verzögert zusammengelegtes) Speichern der Streuklicks fiele hier auf.
+			const put = page.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === pfad, { timeout: 20_000 });
+			await sw.focus();
+			await page.keyboard.press('Space');
+			const antwort = await put;
+			expect(antwort.status(), 'Tastatur-Geste speichert').toBe(200);
+			expect(puts, 'einziger Schreibvorgang ist die Tastatur-Geste').toEqual([pfad]);
+			expect(antwort.request().postDataJSON(), 'nur der umgeschaltete Block fährt mit').toEqual({ report_config: { show_stage_stats: false } });
+			expect((await stand(page.request, 'route', abo.id)).report_config.show_stage_stats).toBe(false);
+			await page.reload();
+			karte = await oeffneKarte(page, abo);
+			await expect(karte.getByTestId('was-steht-wo-show_stage_stats'), 'nach Neuladen').toHaveAttribute('aria-checked', 'false');
+		} finally {
+			await abo.aufraeumen();
+		}
+	});
+
+	test('WS-neu-3 (Trip): Lesefehler der Karte zeigt Fehler und „Neu laden“, speichert nichts; „Neu laden“ holt die Tabelle', async ({ page }) => {
+		await page.setViewportSize(DESKTOP);
+		const abo = await seed(page.request, FAELLE[0]);
+		try {
+			const vorher = (await stand(page.request, 'route', abo.id)).display_config;
+			const puts = schreibvorgaenge(page, abo);
+			const istTabelle = (u: URL) => u.pathname === tabellenPfad(abo.id);
+			await page.route(istTabelle, (route) =>
+				route.request().method() === 'GET' ? route.fulfill({ status: 500, json: { error: 'Serverfehler' } }) : route.continue()
+			);
+			const reiter = await oeffneWetter(page, abo.kind, abo.id);
+			const karte = reiter.getByTestId('was-steht-wo');
+			await expect(karte.getByTestId('was-steht-wo-fehler')).toBeVisible({ timeout: 20_000 });
+			await expect(karte.getByTestId('was-steht-wo-erneut-laden')).toBeVisible();
+			await expect(karte.getByTestId('was-steht-wo-tabelle'), 'keine Tabelle ohne Daten').toHaveCount(0);
+			await expect(karte.getByTestId('was-steht-wo-show_stage_stats'), 'keine Schalter ohne Daten').toHaveCount(0);
+
+			await page.unroute(istTabelle);
+			const geladen = page.waitForResponse((r) => r.request().method() === 'GET' && istTabelle(new URL(r.url())), { timeout: 20_000 });
+			await karte.getByTestId('was-steht-wo-erneut-laden').click();
+			expect((await geladen).status()).toBe(200);
+			await expect(karte.getByTestId('was-steht-wo-tabelle')).toBeVisible({ timeout: 20_000 });
+			await expect(karte.getByTestId('was-steht-wo-fehler')).toHaveCount(0);
+			expect(puts, 'Fehler und Neuladen schreiben nichts').toEqual([]);
+			expect((await stand(page.request, 'route', abo.id)).display_config, 'gespeicherter Stand unverändert').toEqual(vorher);
+		} finally {
+			await abo.aufraeumen();
+		}
+	});
+
+	test('WS-neu-4 (drei Orte): Stundenverlauf-Spalte sagt nur „nur in der E-Mail“, keine Kappungsaussage', async ({ page }) => {
+		await page.setViewportSize(DESKTOP);
+		const abo = await seed(page.request, FAELLE[1]);
+		const KAPPUNG: RegExp[] = [/Telegram\s*·\s*max\s*\d+/i, /kappt\s+je\s+Kanal/i, /Spalten\s+pro\s+Kanal/i, /Übersicht\s+pro\s+Kanal/i, /max\.?\s*\d+\s*(Orte|Spalten)/i];
+		try {
+			const karte = await oeffneKarte(page, abo);
+			await expect(karte.locator('[data-slot="et-kopf-stelle"][data-stelle="hourly"]'), 'Spalte Stundenverlauf').toHaveCount(1);
+			await expect(karte).toContainText('Stunden-Tabelle je Ort unter der Übersicht, nur in der E-Mail.');
+			await expect(karte.locator('[data-testid="wm2-cut-line"]'), 'keine Schnittlinie').toHaveCount(0);
+			const text = await karte.innerText();
+			for (const k of KAPPUNG) expect(text, `keine Kanal-Kappungsaussage (${k})`).not.toMatch(k);
+		} finally {
+			await abo.aufraeumen();
+		}
+	});
+
+	test('WS-neu-5 (Trip): ohne Etappe mit zwei Wegpunkten zeigt der Beispiel-Alarm einen Hinweis statt einer Vorschau, kein Abruf', async ({ page }) => {
+		await page.setViewportSize(DESKTOP);
+		const abo = await seedMitGewitter(page.request, {
+			stages: [{ id: 's1', name: 'Tag 1', date: '2027-08-01', waypoints: [{ id: 'a', name: 'Start', lat: 47.0, lon: 11.0, elevation_m: 1000 }] }]
+		});
+		try {
+			const s = await stand(page.request, 'route', abo.id);
+			expect(((s.alert_rules as Json[] | undefined) ?? []).length, 'Messaufbau: das Abo hat Alarm-Regeln').toBeGreaterThan(0);
+			expect((s.stages as Json[]).every((e) => (e.waypoints?.length ?? 0) < 2), 'Messaufbau: keine Etappe mit zwei Wegpunkten').toBe(true);
+			const abrufe: string[] = [];
+			page.on('request', (r) => {
+				if (r.url().includes('/alert-preview')) abrufe.push(r.url());
+			});
+			const z = await oeffneZustellung(page, abo.kind, abo.id);
+			const karte = z.getByTestId(ZT.beispielAlarm).getByTestId('alert-preview-card');
+			await expect(karte.getByTestId('alert-preview-no-stages')).toBeVisible();
+			await expect(karte.getByTestId('alert-preview-no-metrics'), 'nicht der Hinweis „keine Metriken“').toHaveCount(0);
+			await expect(karte.getByTestId('alert-preview-load-btn'), 'keine Vorschau anzufordern').toHaveCount(0);
+			await expect(karte.getByTestId('alert-preview-error')).toHaveCount(0);
+			expect(abrufe, 'kein Abruf der Alarm-Vorschau').toEqual([]);
 		} finally {
 			await abo.aufraeumen();
 		}

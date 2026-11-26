@@ -23,6 +23,10 @@
 // Die mobile CTA-Kette (CTA_KETTE, AN-14) bleibt wörtlich: der Mobil-Fuß ist unverändert
 // (Spec Entscheidung 10).
 //
+// #3374 (rework_3374_tote_browserpruefungen.md AC-6/AC-7): aus der gelöschten layout-tab-vergleich-Spec
+// übertragen — AN-neu-1 (ohne Orte bleibt Zustellung gesperrt), AN-neu-2 (Zustellung bei 390 px ohne
+// waagerechtes Scrollen); deren AC-7/AC-11 deckt AN-12.
+//
 // Kind-Unterschiede stehen als Selektor-/Textdaten in ANLEGE_SEL (helpers.ts) bzw.
 // in AN_SEL unten; jeder kind-Zweig trägt seinen Begründungskommentar (Spec
 // „Kind-Kontraste"). AN-12 ist echtes Compare-Eigen (Stundenverlauf steht in
@@ -843,4 +847,42 @@ test('AN-12 (vergleich): kein eigener Stundenverlauf-Schalter (#3276), keine Lay
 		page.locator('.cm-desktop [data-testid^="weather-metrics-vergleich-option-"]'),
 		'AN-12: Aggregationswahl (Max/Min) im Schritt Wetter, AC-15 verbietet sie'
 	).toHaveCount(0);
+});
+
+// ─── AN-neu-1/AN-neu-2 (nur vergleich, #3374) ─────────────────────────────────
+// Aus layout-tab-vergleich AC-4/AC-8 übertragen. Compare-eigen wie das Original: die Sperre hängt an den
+// Orten (Trip: an Etappen, AN-1), die 390-px-Messung galt dem Anlege-Schritt Zustellung des Vergleichs.
+test('AN-neu-1 (vergleich): ohne Orte bleibt der Schritt Zustellung gesperrt, ein Klick wechselt nicht', async ({ page }) => {
+	const kind: HubKind = 'vergleich';
+	const sel = ANLEGE_SEL[kind];
+	await page.setViewportSize(DESKTOP);
+	await anlegenPflicht(page, kind, { name: einName('ANneu1'), nurKopf: true });
+	const zustellung = sel.reiter(page, 'zustellung');
+	await expect(zustellung).toBeVisible({ timeout: 15_000 });
+	await erwarteZustand(page, kind, 'zustellung', { gesperrt: true }, 'AN-neu-1: Zustellung ohne Orte nicht gesperrt');
+	await zustellung.click({ force: true });
+	await erwarteZustand(page, kind, sel.ersterSchritt, { aktiv: true }, 'AN-neu-1: Klick auf die gesperrte Zustellung wechselt');
+	await erwarteZustand(page, kind, 'zustellung', { aktiv: false, gesperrt: true }, 'AN-neu-1: gesperrte Zustellung wurde aktiv');
+	await expect(page.locator('[data-testid="zustellung-tab"]:visible'), 'AN-neu-1: Inhalt der Zustellung sichtbar').toHaveCount(0);
+});
+
+test('AN-neu-2 (vergleich, 390 px): Schritt Zustellung ist offen und die Seite scrollt nicht waagerecht', async ({ page }) => {
+	const kind: HubKind = 'vergleich';
+	const name = einName('ANneu2');
+	const post = postMitschnitt(page, kind);
+	try {
+		await anlegenPflicht(page, kind, { name, mobil: true, viewport: MOBIL });
+		await bisAlarme(page, kind, true);
+		await expect(page.locator('[data-testid="zustellung-tab"]:visible'), 'AN-neu-2: Inhalt der Zustellung fehlt').toBeVisible({ timeout: 15_000 });
+		// Überstand = scrollWidth − clientWidth der Seite; ≤ 0 heißt: kein waagerechtes Scrollen.
+		await expect
+			.poll(() => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), {
+				message: 'AN-neu-2: Seite scrollt bei 390 px waagerecht (scrollWidth > clientWidth)',
+				timeout: 10_000
+			})
+			.toBeLessThanOrEqual(0);
+		expect(page.viewportSize()?.width, 'Messaufbau: 390 px').toBe(MOBIL.width);
+	} finally {
+		await aufraeumen(page.request, kind, name, post.ids);
+	}
 });

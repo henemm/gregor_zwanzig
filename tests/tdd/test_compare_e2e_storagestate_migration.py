@@ -29,7 +29,8 @@ MIGRATED_FILES = [
     # hub-alarme-wertprops AW-4 bzw. hub-kopf-bearbeiten KB-11, global.setup-storageState).
     # versand-tab-vergleich.spec.ts entfaellt mit #2347 S3b (geteilt als
     # hub-versand-aufbau/-speichert-selbst, Anmeldung per global.setup-storageState).
-    "layout-tab-vergleich.spec.ts",
+    # layout-tab-vergleich.spec.ts entfaellt mit #3374 (AC-4/AC-8 als
+    # hub-anlegen-ablauf AN-neu-1/AN-neu-2, AC-7/AC-11 durch AN-12 gedeckt).
     "issue-718-idealwert-validation.spec.ts",
 ]
 
