@@ -102,8 +102,8 @@ def test_bekannte_fundstellen_der_bestandsaufnahme_werden_erkannt(bestand):
         ("src/output/renderers/email/helpers.py", ID_VERZWEIGUNG),
         (".claude/hooks/_soll_aus_konfiguration.py", VALIDATOR_IMPORT),
         ("internal/handler/ampel.go", "GO_VERZWEIGUNG"),
-        ("frontend/src/lib/components/shared/wetter-tab/ampelModell.ts",
-         "FRONTEND_VERZWEIGUNG"),
+        # #2988 S4: die Stelle in ampelModell.ts (Spiegel windrichtungUngueltig) faellt weg.
+        ("frontend/src/lib/components/ui/wicon/WIcon.svelte", "FRONTEND_VERZWEIGUNG"),
     }
     assert erwartet <= stellen, f"nicht erkannt: {sorted(erwartet - stellen)}"
     windworte = {f.zeile for f in bestand
