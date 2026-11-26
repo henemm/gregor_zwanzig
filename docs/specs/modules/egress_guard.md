@@ -141,6 +141,7 @@ vollständige bekannte Host-Set mit konservativer Default-Isolationsart
 |------|---------------|
 | `api.open-meteo.com` | TEST_ACCESS |
 | `air-quality-api.open-meteo.com` | TEST_ACCESS |
+| `ensemble-api.open-meteo.com` | TEST_ACCESS (#3348) |
 | `dataset.api.hub.geosphere.at` | TEST_ACCESS |
 | `warnungen.zamg.at` | BLOCKED (Scheibe 2b #1348) |
 | `api.brightsky.dev` | TEST_ACCESS |

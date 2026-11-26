@@ -32,6 +32,8 @@ class EgressBlockedError(Exception):
 INVENTORY: dict[str, IsolationKind] = {
     "api.open-meteo.com": IsolationKind.TEST_ACCESS,
     "air-quality-api.open-meteo.com": IsolationKind.TEST_ACCESS,
+    # Issue #3348: Open-Meteo-Ensemble (Verlaesslichkeit, Grosswetterlage, Gewitter-Mehrheit) -- gleicher kontingentfreier Anbieter wie api.open-meteo.com.
+    "ensemble-api.open-meteo.com": IsolationKind.TEST_ACCESS,
     "dataset.api.hub.geosphere.at": IsolationKind.TEST_ACCESS,
     # Scheibe 2b #1348: Test/Staging erreichen echte Warn-APIs nicht mehr
     "warnungen.zamg.at": IsolationKind.BLOCKED,
