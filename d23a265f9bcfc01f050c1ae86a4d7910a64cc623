@@ -2,30 +2,30 @@
   "verified_commit": "d23a265f9bcfc01f050c1ae86a4d7910a64cc623",
   "findings": [
     {
-      "ac": "AC-1..AC-9",
+      "ac": "AC-16",
       "status": "PASS",
-      "url": "/trips/<id>, /compare/new, /compare/<id>",
-      "evidence": "Staging auf d23a265: die 10 \u00fcbertragenen Browser-F\u00e4lle WS-neu-1..5, AN-neu-1/2, KS-neu-1/2, DS-neu-1 gegen Staging 11 passed (inkl. Setup), Testsitzung danach abgemeldet (401)",
+      "url": "staging.gregor20.henemm.com Trip-Hub:AC-16",
+      "evidence": "Staging 6e3fccd81. Spec rework-2988-uebersicht 4 von 4 gruen. DE: Alarm-Zeile 5 von 13 Metriken gleich Zaehler im Reiter Wetter, genau 1 Aufruf der Aufloesung, bei Netzabbruch und HTTP 503 Gedankenstrich. EN: Zeile Alert trigger 5 of 13 metrics trigger an alert, gleiche Zahl wie Reiter, 1 Aufruf, Gedankenstrich bei Abbruch und 503. Regression Reiter Wetter: Specs zaehler und laden 14 von 14 gruen",
       "workflow": "unknown"
     },
     {
-      "ac": "AC-10..AC-14",
+      "ac": "AC-17",
       "status": "PASS",
-      "url": "-",
-      "evidence": "L\u00f6sch-Nachweis + Pin-Tests 88 passed; CI-e2e-Check auf PR 3401 gr\u00fcn (neue F\u00e4lle im CI-Stack)",
+      "url": "staging.gregor20.henemm.com Ortsvergleich-Hub:AC-17",
+      "evidence": "DE: Karte N Metriken im Briefing sichtbar, 0 Aufrufe der Aufloesung beim Oeffnen und 1,5 s Wartezeit. EN: Karte N metrics in the briefing sichtbar, 0 Aufrufe",
       "workflow": "unknown"
     },
     {
-      "ac": "AC-15",
-      "status": "PASS",
-      "url": "/",
-      "evidence": "Keine Produktcode-\u00c4nderung; Startseite DE und EN auf Staging geladen (Sprach-Cookie de/en), ROOT 200, HEALTH 200",
+      "ac": "AC-18",
+      "status": "SKIPPED",
+      "url": "n.a. AC-18",
+      "evidence": "Reiner Kern- und Ratschen-Nachweis ohne UI, out-of-scope fuer Staging-Validierung",
       "workflow": "unknown"
     }
   ],
-  "verified_at": "2026-11-26T09:01:23.552878+00:00",
+  "verified_at": "2026-11-26T09:36:18.597719+00:00",
   "environment": "staging",
-  "staging_verdict": "VERIFIED: reine Testpflege, \u00fcbertragene Browser-F\u00e4lle auf Staging gr\u00fcn, DE/EN-Smoke ok",
+  "staging_verdict": "VERIFIED: 2/2 UI-ACs gruen (AC-16, AC-17; AC-18 Kern, SKIPPED), DE und EN",
   "scope": "frontend-only",
   "langs": [
     "de",
@@ -41,13 +41,13 @@
   ],
   "verdicts": {
     "unknown": {
-      "verdict": "VERIFIED: reine Testpflege, \u00fcbertragene Browser-F\u00e4lle auf Staging gr\u00fcn, DE/EN-Smoke ok",
+      "verdict": "VERIFIED: 2/2 UI-ACs gruen (AC-16, AC-17; AC-18 Kern, SKIPPED), DE und EN",
       "scope": "frontend-only",
       "langs": [
         "de",
         "en"
       ],
-      "at": "2026-11-26T09:01:23.552878+00:00",
+      "at": "2026-11-26T09:36:18.597719+00:00",
       "frontend_pages_checked": [
         "/",
         "/trips",
