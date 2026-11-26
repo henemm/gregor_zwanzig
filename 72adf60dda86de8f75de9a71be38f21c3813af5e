@@ -1,0 +1,103 @@
+{
+  "verified_commit": "72adf60dda86de8f75de9a71be38f21c3813af5e",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/ID?tab=wetter",
+      "evidence": "Browser DE+EN, zwei Nutzer: Reiter Wetter zeigt cloud_mid (enabled:false, morning_enabled:true) und wind (morning_enabled:false) als gewaehlte Zeilen; Screenshots staging-de/en-1-wetter-vorher.png",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/api/trips/ID",
+      "evidence": "Minus an cloud_mid per Browser, danach API display_config: enabled:false ohne morning_enabled/evening_enabled; DE und EN",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/ID?tab=wetter",
+      "evidence": "Plus an cloud_mid per Browser: enabled:true ohne Flags, Karte ohne Marke; DE und EN; staging-*-4-nach-plus.png",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/api/trips/ID",
+      "evidence": "Nach Minus/Plus uebrige Originaleintraege (temperature, wind morning_enabled:false, cloud_low evening_enabled:false) identisch; hinzugekommen nur bekannte Temperatur-Kinder (bestehender Mechanismus)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/ID?tab=wetter",
+      "evidence": "Karte: Zeilenmarke DE nur morgens/nur abends, EN morning only/evening only; API briefing_only cloud_mid=morning, wind=evening, cloud_low=morning, temperature=null; Vergleich-Kontext durch Kerntests, nicht auf Staging",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/ID?tab=wetter",
+      "evidence": "Nach Minus: Zeile cloud_mid aus Karte und API-rows weg, Plus-Chip sichtbar; staging-*-3-nach-minus.png",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/api/briefings/ID/placements?kind=route",
+      "evidence": "outlook_reports=[evening]; cloud_low (nur morgens) Ausblick-Zelle state=off, kein Haken; wind Ausblick on. Erstanlage nicht separat auf Staging gemessen",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "Mailweg-DE",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com",
+      "evidence": "staging_mail_pruefen.py --typ trip Exit 0, Validator Exit 0",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "Mailweg-EN",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com",
+      "evidence": "staging_mail_pruefen.py --typ trip --lang en Exit 0, Validator Exit 0",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-26T17:14:44.833770+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: #3364 AC-1..7 auf Staging DE+EN, Mailweg DE/EN Exit 0",
+  "scope": "full-stack",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: #3364 AC-1..7 auf Staging DE+EN, Mailweg DE/EN Exit 0",
+      "scope": "full-stack",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-26T17:14:44.833770+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
