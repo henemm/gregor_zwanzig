@@ -11,7 +11,7 @@
 import type { Ampel, AmpelMetrik, AmpelSeite } from './ampelModell.ts';
 import { aktiveMetriken, gleicheSeite, mitAbgeleiteten, tripMetrikEintraege, vergleichsKatalogIds, vergleichsMetrikId, type AltSchluessel } from './ampelModell.ts';
 import { DERIVED_METRIC_RULES } from '../../trip-detail/metricsEditor.ts';
-import { getCompareDefaultOrder } from './compareMetricCatalogLoader.ts';
+import { getCompareDefaultOrder } from './compareDefaultOrder.ts';
 import { klon } from './klon.ts';
 import { amtlicheWarnungenFelder, type WarnFelder } from './amtlicheWarnungen.ts';
 

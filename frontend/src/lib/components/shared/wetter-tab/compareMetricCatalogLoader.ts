@@ -16,6 +16,7 @@ import { locale, trFor, type Lang, type MessageKey } from '../../../i18n/index.t
 import { metricLabel, type MetricLabelFields } from '../../../i18n/metricLabel.ts';
 import { de } from '../../../i18n/messages/de/index.ts';
 import type { CompareMetricCatalogEntry, CompareMetricCatalogResponse } from '$lib/types';
+import { getCompareDefaultOrder, setCompareDefaultOrder } from './compareDefaultOrder.ts';
 import {
 	_COMPARE_DEFAULTS,
 	ROUTE_CORRIDOR_CATALOG_IDS,
@@ -95,14 +96,10 @@ export function buildCompareMetricDefs(response: CompareMetricCatalogResponse): 
 const cachedResponses = new Map<Lang, Promise<CompareMetricCatalogResponse>>();
 
 // Issue #2989: Mail-Standardfolge der Vergleichs-Schluessel (`default_order` der
-// Katalog-Antwort) — einzige Quelle fuer „nie eingestellt = alle Groessen". Modulweit,
-// sprachunabhaengig, befuellt im geteilten Fetch-Chain; `null` bis eine Antwort da ist.
-let defaultOrder: string[] | null = null;
-
-/** Standardfolge aus der ersten verarbeiteten Katalog-Antwort (Kopie), sonst `null`. */
-export function getCompareDefaultOrder(): string[] | null {
-	return defaultOrder ? [...defaultOrder] : null;
-}
+// Katalog-Antwort), befuellt im geteilten Fetch-Chain. Der Speicher liegt im
+// abhaengigkeitsfreien compareDefaultOrder.ts (reine Ableitungen lesen dort, ohne
+// den API-Client zu laden); der Getter wird hier re-exportiert.
+export { getCompareDefaultOrder };
 
 function fetchCompareMetricCatalogOnce(): Promise<CompareMetricCatalogResponse> {
 	const lang: Lang = get(locale) === 'en' ? 'en' : 'de';
@@ -111,7 +108,7 @@ function fetchCompareMetricCatalogOnce(): Promise<CompareMetricCatalogResponse> 
 		cached = api
 			.get<CompareMetricCatalogResponse>(`/api/compare/metrics?lang=${lang}`)
 			.then((r) => {
-				if (Array.isArray(r?.default_order)) defaultOrder = [...r.default_order];
+				if (Array.isArray(r?.default_order)) setCompareDefaultOrder(r.default_order);
 				return r;
 			})
 			.catch((e: unknown) => {

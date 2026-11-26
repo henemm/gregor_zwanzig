@@ -13,7 +13,7 @@
 // „nie eingestellt" (`null`) von „bewusst leer" (`[]`) -- EINZIGE Quelle der
 // Wahrheit fuer Anzeige UND Umschalt-Handler in WeatherMetricsTab.svelte.
 
-import { getCompareDefaultOrder } from '../wetter-tab/compareMetricCatalogLoader.ts';
+import { getCompareDefaultOrder } from '../wetter-tab/compareDefaultOrder.ts';
 
 /**
  * `null` (nie eingestellt) -> frische Kopie der Standardfolge aus dem Katalog
