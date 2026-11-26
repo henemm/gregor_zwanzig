@@ -1,0 +1,20 @@
+{
+ "lat": 40.0,
+ "lon": -3.0,
+ "zeitzone": "Europe/Berlin",
+ "konvektiv": false,
+ "hagel": false,
+ "quelle": "minutely_15",
+ "ueber_horizont_hinaus": false,
+ "laeuft_bereits": false,
+ "beginn_min": null,
+ "ende_min": null,
+ "intensitaet": "trocken",
+ "max_mm_h_erste_stunde": 0.0,
+ "summe_erste_stunde_mm": 0.0,
+ "reichweite_min": 0,
+ "gedrosselt": true,
+ "nicht_verfuegbar": false,
+ "trocken": false,
+ "frames": []
+}

@@ -59,6 +59,7 @@ type mcpCore struct {
 	mu       sync.Mutex
 	reserve  []string // user_id je Reservierung
 	wetter   []url.Values
+	nowcast  []url.Values // Aufrufe von /api/_internal/mcp/nowcast (Issue #3398)
 	voll     map[string]bool
 	gestoert bool
 	// abweisung: 4xx-Rumpf, mit dem der Core den Wetterabruf ablehnt (leer = keiner).
@@ -80,6 +81,11 @@ func neuerMCPCoreServer(t *testing.T) *mcpCore {
 		"frankfurt": ladeCoreAufzeichnung(t, "core_frankfurt_2h.json"),
 		"muenster":  ladeCoreAufzeichnung(t, "core_muenster_72h.json"),
 		"zehn":      ladeCoreAufzeichnung(t, "core_frankfurt_10tage.json"),
+		// Issue #3398: Nowcast-Antworten im Format des Core-Endpunkts.
+		"nc_regen":      ladeCoreAufzeichnung(t, "core_nowcast_regen.json"),
+		"nc_trocken":    ladeCoreAufzeichnung(t, "core_nowcast_trocken.json"),
+		"nc_nv":         ladeCoreAufzeichnung(t, "core_nowcast_nicht_verfuegbar.json"),
+		"nc_gedrosselt": ladeCoreAufzeichnung(t, "core_nowcast_gedrosselt.json"),
 	}
 	c := &mcpCore{voll: map[string]bool{}}
 	c.srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -114,6 +120,18 @@ func neuerMCPCoreServer(t *testing.T) *mcpCore {
 				w.Write(aufz["muenster"])
 			default:
 				w.Write(aufz["frankfurt"])
+			}
+		case "/api/_internal/mcp/nowcast":
+			c.nowcast = append(c.nowcast, q)
+			switch {
+			case strings.HasPrefix(q.Get("lat"), "51.96"):
+				w.Write(aufz["nc_trocken"])
+			case strings.HasPrefix(q.Get("lat"), "40"):
+				w.Write(aufz["nc_nv"])
+			case strings.HasPrefix(q.Get("lat"), "41"):
+				w.Write(aufz["nc_gedrosselt"])
+			default:
+				w.Write(aufz["nc_regen"])
 			}
 		default:
 			w.WriteHeader(http.StatusOK)
