@@ -97,7 +97,7 @@ Reihenfolge TDD: Test zuerst (rot: Modul fehlt, `send_email:false` zeigt noch â€
 - **AC-6:** Given ein Trip ohne aktiven Slot (Morgen und Abend aus) / When der Hero seine Kanaele anzeigt / Then bleibt die Kanal-Liste leer, waehrend die Trip-Timeline-Chips der geplanten Briefings unveraendert bleiben.
   - Test: `heroKanaele` mit Slots aus gegen leere Liste; bestehende Tests `home_hero_paritaet` und `report_slot_aktiv` (Defaults von `reportChannels`) bleiben gruen.
 
-- **AC-7:** Given der gesamte Frontend-Code / When Kanal-Flags ausgewertet werden / Then geschieht das nur noch im Baustein `shared/aktiveKanaele.ts`; `reportChannels`, `heroKanaele` und `presetChannels` liefern genau dessen Ergebnis, und die lokale `KANAL_NAME`-Tabelle der Kachel ist entfernt.
+- **AC-7:** Given die Kanal-Anzeigen von Startseite, Hero, Vergleichs-Liste, Detail-Hub-Stat und Status-Zeile / When dort Kanal-Flags ausgewertet werden / Then geschieht das nur noch im Baustein `shared/aktiveKanaele.ts` (Hub-Uebersicht `tripBriefingKanaele` und Zustellungs-Reiter `standAusPreset` sind ausserhalb des Scopes, Folge-Issue #3413); `reportChannels`, `heroKanaele` und `presetChannels` liefern genau dessen Ergebnis, und die lokale `KANAL_NAME`-Tabelle der Kachel ist entfernt.
   - Test: Verhaltenstest: die drei alten Funktionen liefern fuer dieselbe Eingabe dasselbe wie `aktiveKanaele`/`aktiveKanalNamen`; eine Mutation der Flag-Regel im Baustein (z.B. E-Mail immer an) macht Tests rot, und zwar fuer Trip UND Vergleich.
 
 ## Test Plan
@@ -132,3 +132,4 @@ Ausfuehrung je Datei: `cd frontend && node --import ./test-lib-loader.mjs --expe
 ## Changelog
 
 - 2026-11-26: Initial spec created
+- 2026-11-26: AC-7 auf die Affected Files begrenzt (Adversary F002), Rest nach #3413; Kachel-Test fuer Vergleich ergaenzt (F001)

@@ -1,7 +1,7 @@
 ---
 spec_file: docs/specs/modules/refactor_2990_kanal_ableitung_eine_quelle.md
-spec_sha256: feea2f77cd93ec5f2a1ce999cf51aa8ac79acc7c0b5e9d002b0297023ffe0975
-spec_frozen_sha256: 418fe4e06f7e0459dc332e230a1199cfa96aa57fdcd8d45c0703c510016620bc
+spec_sha256: 4e1ab3ca75e08c0871b6c97ac02aea492a91e5196aa4227e7b6d2aa81b47ed9b
+spec_frozen_sha256: 301e0d5335f0cc7a104bcebbec73b9ba7069b99fd323cffabdc355d988d7002d
 ---
 
 # PO-Briefing: feature-2990-kanal-ableitung
@@ -12,19 +12,20 @@ spec_frozen_sha256: 418fe4e06f7e0459dc332e230a1199cfa96aa57fdcd8d45c0703c5100166
 
 ## Was gebaut wird
 
-Trip und Ortsvergleich zeigen ihre aktiven Versandkanäle künftig aus einer gemeinsamen Regel, in gleicher Reihenfolge.
+Trip und Ortsvergleich zeigen bei gleichen Einstellungen dieselben aktiven Versandkanäle, abgeleitet aus einer gemeinsamen Regel.
 
 ## Definition of Done
 
-Bei gleichen Kanal-Einstellungen zeigen Trip und Ortsvergleich überall dieselben Kanäle, und abgeschaltete Orts-Mail erscheint nicht mehr als „Email".
+Ein Ortsvergleich mit abgeschalteter Orts-Mail zeigt kein "Email" mehr, und Trip und Vergleich zeigen gleiche Kanäle in gleicher Reihenfolge.
 
 ## Wie geprüft wird
 
-Automatische Tests prüfen Kanalliste, Reihenfolge und Abschalt-Fälle; Versand selbst bleibt unberührt und ungeprüft, nur die Anzeige ändert sich.
+Automatische Tests prüfen Kanalliste, Reihenfolge und Sonderfälle für beide Kontexte; Versand selbst und Backend bleiben ungeprüft, weil unberührt.
 
 ## Kritische Anmerkungen
 
-- Zusatz zum Ticket: Anzeige-Fehler beim Ortsvergleich (abgeschaltete Orts-Mail zeigte „Email") wird mitbehoben, gestützt auf frühere Entscheidung #2795.
+- Verhaltensänderung: Ortsvergleiche mit abgeschalteter E-Mail zeigen künftig kein "Email" mehr; folgt der früheren Entscheidung #2795.
+- Hub-Übersicht und Zustellungs-Reiter bleiben bewusst außerhalb; Folge-Issue #3413. Dort kann die Doppelung vorerst bestehen.
 
 ## Freigabe-Frage
 

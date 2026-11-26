@@ -131,6 +131,35 @@ describe('AC-9: Trip-Kanaele kommen aus den report_config-Flags, nie aus empfaen
 	});
 });
 
+describe('#2990 AC-2/AC-3: Vergleichs-Kachel zeigt die Kanaele aus den Preset-Flags, gleich wie der Trip', () => {
+	const ALLE = { send_email: true, send_telegram: true, send_sms: true, send_premium_sms: true };
+
+	test('F001: Preset mit send_email:false + send_telegram:true => nur Telegram, kein Email', async () => {
+		const Kachel = await laden(path.join(HOME, 'SubscriptionKachel.svelte'));
+		const preset = { ...PRESET, send_email: false, send_telegram: true, send_sms: false, send_premium_sms: false };
+		const chips = kanaele(html(Kachel, { kind: 'vergleich', sub: preset }));
+		assert.deepEqual(chips, ['Telegram']);
+		assert.ok(!chips.includes('Email'), 'Email erscheint trotz send_email:false');
+	});
+
+	test('F001: Preset mit allen vier Flags => Email, Telegram, SMS, Premium-SMS in dieser Reihenfolge', async () => {
+		const Kachel = await laden(path.join(HOME, 'SubscriptionKachel.svelte'));
+		const chips = kanaele(html(Kachel, { kind: 'vergleich', sub: { ...PRESET, ...ALLE } }));
+		assert.deepEqual(chips, ['Email', 'Telegram', 'SMS', 'Premium-SMS']);
+	});
+
+	test('Paritaet: Trip mit gleichen Flags (Slots an) rendert dieselben Chips wie der Vergleich', async () => {
+		const Kachel = await laden(path.join(HOME, 'SubscriptionKachel.svelte'));
+		for (const flags of [ALLE, { send_email: false, send_telegram: true, send_sms: false, send_premium_sms: false }]) {
+			const trip = { ...TRIP, empfaenger: [], report_config: { enabled: true, morning_enabled: true, evening_enabled: true, ...flags } };
+			const t = kanaele(html(Kachel, { kind: 'trip', sub: trip }));
+			const c = kanaele(html(Kachel, { kind: 'vergleich', sub: { ...PRESET, ...flags } }));
+			assert.ok(t.length > 0, 'Messaufbau: Trip ohne Chips');
+			assert.deepEqual(c, t, `Vergleich weicht vom Trip ab bei ${JSON.stringify(flags)}`);
+		}
+	});
+});
+
 describe('AC-17: Kennung und Link beider kinds', () => {
 	test('Trip: subscription-card-{id}, data-kind, Name als echter Link auf den Hub; kein altes trip-card', async () => {
 		const Kachel = await laden(path.join(HOME, 'SubscriptionKachel.svelte'));

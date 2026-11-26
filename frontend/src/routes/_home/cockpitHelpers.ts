@@ -24,9 +24,8 @@ import {
 	type NextBriefing
 } from '../../lib/components/shared/versand-tab/nextBriefingText.ts';
 import { reportSlotAktiv } from '../../lib/utils/reportSlotAktiv.ts';
-// Issue #2422 S3: Kanal-Defaults (E-Mail fehlend => an, Rest fehlend => aus)
-// aus derselben Ladefunktion wie der Editor — keine dritte Fassung.
-import { ladeReportZustand } from '../../lib/components/shared/versand-tab/reportConfigPayload.ts';
+// Issue #2990: Kanal-Ableitung aus EINER Quelle fuer Trip und Ortsvergleich.
+import { aktiveKanaele, aktiveKanalNamen } from '../../lib/components/shared/aktiveKanaele.ts';
 import {
 	formatNextSend,
 	presetChannels
@@ -126,15 +125,10 @@ export interface BriefingReport {
 
 /** Aktive Kanäle aus report_config (email/telegram/sms/premium-sms). Signal ist
  *  entfernt (#610). Issue #2422 S3: Defaults wie Editor und Versand — ein
- *  fehlendes `send_email` (auch ganz ohne report_config) heisst E-Mail an. */
+ *  fehlendes `send_email` (auch ganz ohne report_config) heisst E-Mail an.
+ *  Issue #2990: genau das Ergebnis von `aktiveKanaele` (shared). */
 export function reportChannels(rc: ReportConfig | undefined): string[] {
-	const z = ladeReportZustand(rc as Record<string, unknown> | undefined);
-	const out: string[] = [];
-	if (z.send_email) out.push('email');
-	if (z.send_telegram) out.push('telegram');
-	if (z.send_sms) out.push('sms');
-	if (z.send_premium_sms) out.push('premium-sms');
-	return out;
+	return aktiveKanaele(rc as Record<string, unknown> | undefined);
 }
 
 /** Kanal-Dots der Startseite (Hero-Trip): Beschriftung je aktivem Briefing-Kanal,
@@ -142,13 +136,7 @@ export function reportChannels(rc: ReportConfig | undefined): string[] {
  *  (reportSlotAktiv), Kanal-Defaults wie der Editor, alle vier Kanaele. */
 export function heroKanaele(rc: ReportConfig | undefined): string[] {
 	if (!reportSlotAktiv(rc, 'morning') && !reportSlotAktiv(rc, 'evening')) return [];
-	const z = ladeReportZustand(rc as Record<string, unknown> | undefined);
-	const out: string[] = [];
-	if (z.send_email) out.push('Email');
-	if (z.send_telegram) out.push('Telegram');
-	if (z.send_sms) out.push('SMS');
-	if (z.send_premium_sms) out.push('Premium-SMS');
-	return out;
+	return aktiveKanalNamen(rc as Record<string, unknown> | undefined);
 }
 
 /**
