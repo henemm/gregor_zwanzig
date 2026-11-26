@@ -332,7 +332,7 @@ def soll_vergleich(location_ids: list[str], empfaenger: list[str]) -> dict:
     return {"name": VERGLEICH_NAME, "location_ids": location_ids, "profil": "allgemein",
             "schedule": "daily", "morning_enabled": True, "morning_time": "07:00:00",
             "empfaenger": empfaenger,
-            "display_config": {"region": "Westfalen", "ampel": {"template": "allgemein"},
+            "display_config": {"region": "Münsterland", "ampel": {"template": "allgemein"},
                                "active_metrics": [{"metric_id": m, "aggregation": a}
                                                   for m, a in _ORTE_METRIKEN]},
             **soll_kanalauswahl_vergleich()}

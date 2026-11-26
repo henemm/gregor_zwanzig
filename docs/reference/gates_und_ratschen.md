@@ -793,6 +793,17 @@ als Besitzer). `--strict` unverändert (rot bei Abweichung oder `nicht_pruefbar`
 besitzerbasierte Prüfung für den Scheiben-Abschluss.
 Stand 2026-11-19 (#3008, #3011): Der Platzhalter `{metrik}` in der Gegenrichtung passt nur auf bekannte Metriknamen (Registernamen aus `GET /api/metrics`, im Staging-Lauf einmal geladen, plus DE-Namen der Elementliste); ist die Menge leer, erklärt er nichts (fail-closed), und Fremdtexte mit „+ “ werden `zusaetzlich`. `{zahl}` und die Hinrichtung bleiben unverändert. `leseBesitzer` prüft zusätzlich Abschnitts-Besitzer (`ctx`, `reiter`, `abschnitt`) gegen die Elementliste; der Kern-Test `elementliste_besitzer_kern.test.ts` fängt verwaiste Einträge ohne Staging ab.
 
+**Nachzug „Was steht wo“ (#3419–#3422, Spec `docs/specs/modules/feat_3419_elementliste_nachzug.md`, Stand 2026-11-26):**
+Zellmuster (`{metrik} in|im <Stelle>`) sind an ihre Tabellenzeile gebunden (#3420): Ein fehlendes Kästchen erzeugt genau
+eine Abweichung, keine Reihenfolge-Kaskade (Zeilenbindung in `bewerteZelle`, `elementliste_abgleich_logik.ts`). Die
+Grenzen-Abschnitte prüft der Datensatz `wetterOverrides` mit den Grenzwerten des Mockups inklusive Minuswerten
+(#3421, Gültigkeit #3192 bleibt); stimmt eine Metrik mit der Vorlage ganz überein, rückt ihr Rot um 1 nach außen.
+Die EN-Gegenrichtung übersetzt Metriknamen über die Namenspaare aus `daten/metrik_namen.json` und
+`vergleich.zeile.*` (#3422, z. B. „Gusts 62 km/h“). Angenommene Beispielwerte der Hinrichtung (`{wert}`) erklären
+die Gegenrichtung nur auf derselben Seite (ctx und Reiter, #3419 Nr. 6). Der Generator nimmt `aria-hidden`-Beschriftungen
+mit `data-beschriftung="sichtbar"` und Emoji-Beispiele auf. Seed-Region ist „Münsterland“ (Runbook
+`docs/runbooks/staging_pruefkonto_seed.md`).
+
 **EN-Zuordner des Generators (#2968, Spec `docs/specs/modules/feat_2968_elementliste_en_zuordnung.md`, Stand
 2026-11-19):** Grundsatz „nichts erfinden“: `text_en` kommt nur aus dem i18n-Katalog oder ist ein sprachneutrales
 DE-Muster; neue Katalogschlüssel entstehen dafür nie. `ermittleEn(text, katalog, bekannte?)` prüft der Reihe nach:

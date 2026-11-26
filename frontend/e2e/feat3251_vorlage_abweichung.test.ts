@@ -104,14 +104,15 @@ describe('#3251 AC-1: Elementliste führt den Abschnitt vorlage-abweichung', () 
 		});
 	}
 
-	test('Normalzustand bleibt unverändert: Abschnitt `vorlage` zeigt weiter „▾ unverändert“ ohne Zurücksetzen-Zeile', () => {
-		for (const ctx of ['trip', 'orte']) {
-			const normal = LISTE.elemente.filter(
-				(e) => e.ctx === ctx && e.reiter === 'wetter' && e.zustand === 'normal' && e.abschnitt === 'vorlage',
-			);
-			assert.ok(normal.some((e) => e.text_de === '▾ unverändert'), `„▾ unverändert“ fehlt (${ctx})`);
-			assert.ok(!normal.some((e) => e.i18n_key === 'wetter.vorlage.zuruecksetzen'), `Zurücksetzen-Zeile im Normalzustand (${ctx})`);
-		}
+	test('Normalzustand: Orte „▾ unverändert“ ohne Zurücksetzen-Zeile; Trip „▾ 1 Abweichung“ mit Zurücksetzen (#3419 AC-6)', () => {
+		// #3419 (AC-6): der Seed-Trip weicht wie das Soll-Bild in Bewölkung von „Alpen-Trekking“ ab; live zeigt die
+		// Vorlagenkarte dann Stand und Zurücksetzen-Zeile (VorlageKarte.svelte, abweichungen > 0).
+		const normal = (ctx: string) =>
+			LISTE.elemente.filter((e) => e.ctx === ctx && e.reiter === 'wetter' && e.zustand === 'normal' && e.abschnitt === 'vorlage');
+		assert.ok(normal('orte').some((e) => e.text_de === '▾ unverändert'), '„▾ unverändert“ fehlt (orte)');
+		assert.ok(!normal('orte').some((e) => e.i18n_key === 'wetter.vorlage.zuruecksetzen'), 'Zurücksetzen-Zeile im Normalzustand (orte)');
+		assert.ok(normal('trip').some((e) => e.text_de === '▾ 1 Abweichung'), '„▾ 1 Abweichung“ fehlt (trip)');
+		assert.ok(normal('trip').some((e) => e.i18n_key === 'wetter.vorlage.zuruecksetzen'), 'Zurücksetzen-Zeile fehlt (trip)');
 	});
 });
 

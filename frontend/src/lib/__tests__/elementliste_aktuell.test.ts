@@ -285,7 +285,11 @@ describe('AC-11: EN aus dem Katalog — exakter Treffer, Muster, sonst Lücke (n
 			} else if (e.i18n_key === null && e.rolle === 'bedeutung') {
 				// #3258: Bedeutung der Legende „Kürzel erklärt“ ohne Frontend-Schlüssel ⇒ EN aus dem Server-Katalog
 				// (Schnappschuss daten/kuerzel_bedeutung.json), nie erfunden.
-				assert.equal(e.text_en, ladeKuerzelBedeutungen().get(e.text_de), `${e.id}: Bedeutung ohne Server-Katalog-EN`);
+				// #3284/#3419: Bereichs-Paar „Tiefst/Höchst“ ⇒ EN je Teil aus dem Server-Katalog, mit „/“ verbunden
+				// (wie placements_view_service._legende).
+				const b = ladeKuerzelBedeutungen();
+				const soll = b.get(e.text_de) ?? (e.text_de.includes('/') ? e.text_de.split('/').map((x) => b.get(x)).join('/') : undefined);
+				assert.equal(e.text_en, soll, `${e.id}: Bedeutung ohne Server-Katalog-EN`);
 			} else if (e.i18n_key === null && ladeMetrikNamen().has(e.text_de)) {
 				// #3154: Metrikname ohne Frontend-Schlüssel ⇒ EN aus dem Server-Katalog (Schnappschuss
 				// daten/metrik_namen.json), nie erfunden.

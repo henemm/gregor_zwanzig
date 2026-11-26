@@ -842,7 +842,8 @@ def test_ac5_f003_vergleich_rmw_erhaelt_display_config_zusatzfeld(fake, capsys):
     dc["region"] = "verstellt"
     assert _lauf(mod, server, env) == 0
     dc = _seed_daten(server)["compare"][orte_id]["display_config"]
-    assert dc["region"] == "Westfalen", "Soll-Feld wird zurueckgesetzt"
+    # #3419 AC-6: Soll-Region ist „Münsterland“ (Kopf „Orte · Münsterland“ wie im Mockup).
+    assert dc["region"] == "Münsterland", "Soll-Feld wird zurueckgesetzt"
     assert dc.get("zusatz_2967") == {"bleibt": True}, "RMW: Zusatzfeld muss bleiben"
 
 
@@ -1592,3 +1593,54 @@ def test_3327_archiv_trip_nur_im_pruefkonto(fake):
     assert ARCHIV_ID in _seed_daten(server)["trips"]
     assert server.zustand("nutzer-b") == vorher
     assert ARCHIV_ID not in server.konten["default"]["daten"]["trips"]
+
+
+# --- Paket #3419 (AC-6): Region und Vorlagen-Uebereinstimmung ------------------------
+# Spec: docs/specs/modules/feat_3419_elementliste_nachzug.md (Implementation Details Nr. 6, AC-6).
+
+
+def test_3419_ac6_vergleich_region_muensterland_im_soll():
+    """GIVEN der Seed  WHEN der Vergleichs-Payload gebaut wird
+    THEN lautet display_config.region „Münsterland“ (Kopf „Orte · Münsterland“ wie im Mockup)."""
+    mod = _modul()
+    soll = mod.soll_vergleich(["o1"], ["a@example.invalid", "b@example.invalid"])
+    assert soll["display_config"]["region"] == "Münsterland"
+
+
+def test_3419_ac6_gespeicherte_region_muensterland_zweiter_lauf_schreibt_nichts(fake, capsys):
+    """GIVEN ein leeres Pruefkonto  WHEN der Seed zweimal laeuft
+    THEN traegt der gespeicherte Vergleich die Region „Münsterland“ und der zweite Lauf
+    schreibt keinen Datensatz (idempotent)."""
+    mod = _modul()
+    server, env = fake
+    assert _lauf(mod, server, env) == 0
+    _, orte_id = _ausgabe_ids(capsys.readouterr().out)
+    assert _seed_daten(server)["compare"][orte_id]["display_config"]["region"] == "Münsterland"
+    server.aufrufe.clear()
+    assert _lauf(mod, server, env) == 0
+    assert _datenschreiber(server) == []
+
+
+def _vorlage_an(tid: str) -> set[str]:
+    from app.ampel_templates import AMPEL_TEMPLATES
+
+    return {m for m, e in AMPEL_TEMPLATES[tid]["metrics"].items() if e["enabled"]}
+
+
+def test_3419_ac6_seed_trip_weicht_von_alpen_trekking_genau_in_bewoelkung_ab():
+    """GIVEN Seed-Trip mit Vorlage „Alpen-Trekking“  WHEN seine Metrik-Auswahl mit der Vorlage
+    verglichen wird  THEN weicht er genau in ``cloud_total`` (Bewoelkung) ab.
+
+    Waechter (PO-Soll-Bild: Bewoelkung im Trip „Nicht im Briefing“, Mockup ``TRIP_OFF``): die
+    Vorlage ``alpen-trekking`` (src/app/ampel_templates.py) hat ``cloud_total`` im Briefing, der
+    Seed bleibt bei aus; der Live-Picker zeigt dazu „1 Abweichung“, das Soll-Bild ebenso (AC-6).
+    Jede weitere Abweichung oder ein Einschalten von Bewoelkung im Seed roetet diesen Test."""
+    mod = _modul()
+    wetter = mod.soll_wetter()
+    assert wetter["ampel"]["template"] == "alpen-trekking"
+    vorlage = _vorlage_an("alpen-trekking")
+    an_liste = {m["metric_id"] for m in wetter["metrics"] if m["enabled"]}
+    an_ampel = {m for m, e in wetter["ampel"]["metrics"].items() if e["enabled"]}
+    assert sorted(an_liste ^ vorlage) == ["cloud_total"]
+    assert sorted(an_ampel ^ vorlage) == ["cloud_total"]
+    assert "cloud_total" in vorlage and "cloud_total" not in an_liste
