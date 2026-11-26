@@ -69,6 +69,32 @@ describe('F203: Eingabe waehrend der Wiederholung ⇒ kein Neuaufbau ueber die E
 		assert.equal(a.ctl.state, 'idle');
 	});
 
+	// #3020 R1: derselbe Fall am lebenden Reiter Zustellung (eigener Speicherer mit Basis-Stand).
+	test("Nutzer tippt im Reiter Zustellung, waehrend 'Nochmal speichern' laeuft ⇒ kein 'wiederholt', beide Eingaben landen auf dem Server", async () => {
+		server.foreignWrite(P.TRIP_ID, { name: 'Fremder Name' });
+		const a = P.neuerAufbau();
+		const seite = await P.tripSeite(a, server);
+		const z = await P.zustellungReiter(P.neuerAufbau(seite.trip(), a.ctl));
+		z.aendern({ morgenZeit: '08:00' });
+		await P.fertig(a.ctl);
+		assert.equal(a.ctl.state, 'conflict', 'Vorbedingung: 412');
+
+		langsamePuts = true;
+		const retry = a.ctl.retryConflict();
+		await new Promise((r) => setTimeout(r, 20)); // der Wiederholungs-PUT ist unterwegs
+		z.aendern({ abendZeit: '20:00' }); // Nutzer tippt: ausstehender Speichervorgang
+		await retry;
+		langsamePuts = false;
+
+		assert.equal(a.ctl.hasPending, true, 'Vorbedingung: die Eingabe steht aus');
+		assert.equal(seite.inst.u.uebernommeneFassung, 0, 'KEIN Neuaufbau der Reiter ueber die ausstehende Eingabe');
+		await P.fertig(a.ctl);
+		const rc = stand().report_config as Record<string, unknown>;
+		assert.deepEqual([rc.morning_time, rc.evening_time], ['08:00:00', '20:00:00']);
+		assert.equal(stand().name, 'Fremder Name');
+		assert.equal(a.ctl.state, 'idle');
+	});
+
 	test("Gegenprobe: ohne Eingabe waehrend der Wiederholung baut die Seite nach vollem Erfolg einmal neu auf", async () => {
 		server.foreignWrite(P.TRIP_ID, { name: 'Fremder Name' });
 		const a = P.neuerAufbau();

@@ -378,6 +378,37 @@ def test_ac16_trip_nur_tageswert_ab_der_achten_telegram_metrik(client):
         assert z["cells"]["email"]["mark"] is None and z["cells"]["outlook"]["mark"] is None
 
 
+def test_abgewaehlte_telegram_metrik_zaehlt_nicht_zur_spaltengrenze(client):
+    """#3020 R1 (G04, AC-12 der Altdatei): die Grenze von sieben Spalten zaehlt
+    nur die in Telegram angehakten Metriken. Soll aus der echten Nachricht
+    (#3373: ueber den Versandaufbau)."""
+    from app.metric_catalog import get_metric
+
+    folge = ["wind", "gust", "precipitation", "rain_probability", "cloud_total",
+             "humidity", "uv_index", "thunder", "dewpoint"]
+    ab = {"gust", "cloud_total"}
+
+    def anlegen_und_lesen(user, abgewaehlt):
+        _trip(user, "t-g04", grund=folge, placements={"version": 1, "rows": [
+            {"metric_id": m, **({"places": {"telegram": False}} if m in abgewaehlt else {})}
+            for m in folge]})
+        antwort = _ok(client, "t-g04", "route", user)
+        bericht = _trip_versand_bericht(user, "t-g04")
+        blase = next(b for b in bericht.telegram_bubbles if "<pre>" in b)
+        kopf = blase.split("<pre>", 1)[1].strip().split("\n", 1)[0].split()
+        kuerzel = {get_metric(m).compact_label: m for m in folge}
+        markiert = {z["metric_id"] for z in antwort["rows"]
+                    if z["cells"]["telegram"]["mark"] == "nur_tageswert"}
+        an = [z["metric_id"] for z in antwort["rows"] if z["cells"]["telegram"]["state"] == "on"]
+        return an, markiert, [kuerzel[k] for k in kopf[1:]]
+
+    # Nutzer B ohne Abwahl: die Grenze greift ab Platz 8 (sonst bewiese der Fall nichts).
+    assert anlegen_und_lesen(NUTZER_B, set()) == (folge, set(folge[7:]), folge[:7])
+    # Nutzer A: neun Metriken, zwei der ersten sieben in Telegram abgewaehlt.
+    rest = [m for m in folge if m not in ab]
+    assert anlegen_und_lesen(NUTZER_A, ab) == (rest, set(), rest)
+
+
 @pytest.mark.parametrize("anzahl", [3, 1])
 def test_ac16_orte_spalten_zeilen_formen_und_beispiele(client, anzahl):
     from app.metric_catalog import get_metric

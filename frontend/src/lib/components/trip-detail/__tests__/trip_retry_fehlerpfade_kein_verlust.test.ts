@@ -341,8 +341,69 @@ describe('M27: Pausieren — trip und Stempel nie nur eines von beiden', () => {
 	});
 });
 
-// #3297/#3020: F006/M23 (outlook_metrics im Alt-Reiter Wetter-Metriken) und F501 (veralteter
-// Alt-Reiter Wetter-Metriken) prueften shared/WeatherMetricsTab (geloescht, nirgends gemountet).
+describe('F006 / M23: nie eingestellte Wetter-Felder werden weggelassen, nicht als null gesendet', () => {
+	test('outlook_metrics === null ⇒ kein outlook_metrics-Schluessel in irgendeinem PUT-Rumpf', async () => {
+		// #3020 R1: lebende Schreiber (Reiter Wetter, Karte „Was steht wo“) mit einem Seitenstand ohne Ausblick-Wahl.
+		const trip = P.vollerTrip();
+		Object.assign(trip.display_config as object, { outlook_metrics: null, outlook_metric_formats: null });
+		const a = P.neuerAufbau(trip);
+		(await P.wetterReiter(a)).abwaehlen('wind');
+		await P.fertig(a.ctl);
+		(await P.karteWasStehtWo(a)).schalten('show_night_block', false);
+		await P.fertig(a.ctl);
+		const geschrieben = puts();
+		assert.equal(geschrieben.length, 3, 'Messaufbau: /weather-config, Trip-PUT und Schalter-PUT');
+		for (const p of geschrieben) {
+			const body = (p.anfrage ?? {}) as Record<string, unknown>;
+			const d = (p.path.includes('/weather-config') ? body : (body.display_config ?? {})) as Record<string, unknown>;
+			assert.equal('outlook_metrics' in d, false, `PUT ${p.path}: outlook_metrics darf nicht gesendet werden`);
+			assert.equal('outlook_metric_formats' in d, false, `PUT ${p.path}: outlook_metric_formats darf nicht gesendet werden`);
+		}
+		assert.deepEqual(dc().outlook_metrics, ['temp_max_c'], 'Bestand unveraendert');
+	});
+});
+
+describe('F501 (#3020 R1): Teil-Erfolg der Wiederholung laesst keinen veralteten lebenden Reiter durch', () => {
+	test('F501 Teil-Erfolg: ein NIE gespeicherter, veralteter Reiter bekommt danach 412 — Fremdaenderung bleibt, Eingabe nicht still geschrieben', async () => {
+		server.foreignWrite(P.TRIP_ID, { name: 'Fremder Name', report_config: { day_window_end_hour: 21 } });
+		const a = P.neuerAufbau();
+		await P.tripSeite(a, server);
+		const wm = await P.wetterReiter(a); // veralteter Reiter, bisher nie gespeichert
+		await konfliktInA(a);
+		(await P.zustellungReiter(a)).aendern({ morgenZeit: '08:00' });
+		await P.fertig(a.ctl);
+
+		let n = 0;
+		fehler = (m) => m === 'PUT' && ++n === 2; // erster Wiederholungs-PUT ok, zweiter 500
+		await a.ctl.retryConflict();
+		fehler = null;
+		assert.equal(a.ctl.state, 'conflict');
+		assert.equal(istKonflikt(P.TRIP_ID), true);
+
+		const rc = () => stand().report_config as Record<string, unknown>;
+		wm.aendern({ tagesfenster: { start: 6, end: 18 } });
+		await P.fertig(a.ctl);
+		assert.equal(rc().day_window_end_hour, 21, 'Fremdaenderung darf nicht still ueberschrieben werden');
+		assert.notEqual(rc().day_window_start_hour, 6, 'die Eingabe des veralteten Reiters wurde abgelehnt, nicht still geschrieben');
+		assert.equal(a.ctl.state, 'conflict');
+	});
+
+	test('Serverfehler (500) an Zustellung: die Eingabe bleibt offen, Erneut versuchen sendet genau sie', async () => {
+		const a = P.neuerAufbau();
+		const z = await P.zustellungReiter(a);
+		fehler = (m) => m === 'PUT';
+		z.aendern({ morgenZeit: '08:00' });
+		await P.fertig(a.ctl);
+		fehler = null;
+		assert.equal(a.ctl.state, 'error');
+		assert.equal((stand().report_config as Record<string, unknown>).morning_time, '07:00:00');
+
+		z.aendern({ abendZeit: '20:00' });
+		await P.fertig(a.ctl);
+		assert.deepEqual(puts().at(-1)!.anfrage, { report_config: { morning_time: '08:00:00', evening_time: '20:00:00' } });
+		assert.equal(a.ctl.state, 'idle');
+	});
+});
 
 describe('F301a (Fix-Loop 4): ein GESCHEITERTER Retry laesst keinen Save mit veraltetem Reiterstand durch', () => {
 	test('PX3: Fremd alert_cooldown_minutes=99, Retry 500, Speichern im weiter offenen Alarme-Reiter => 412, Server bleibt 99, Konflikt-Anzeige bleibt', async () => {

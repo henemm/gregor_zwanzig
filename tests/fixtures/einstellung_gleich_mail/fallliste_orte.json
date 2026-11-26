@@ -1,5 +1,4 @@
 {
-  "_hinweis": "#3297/#3020: Fall O-VT-H-NEU-IN-LISTEN entfaellt -- WeatherMetricsTab.svelte und sein Test neue_metrik_in_allen_listen_orte.test.ts sind mit dem Alt-Editor geloescht; der Ortsvergleich schreibt seit #3276 keine channel_active_metrics/outlook_metrics/hourly_metrics mehr.",
   "dimensionen": {
     "auswahl_muster": [
       "teilmenge",
@@ -5154,6 +5153,19 @@
       "konfig": "marke_abend",
       "briefing": "evening",
       "sprache": "en"
+    },
+    {
+      "id": "O-VT-H-NEU-IN-LISTEN",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "frontend/src/lib/components/organisms/__tests__/wetter_tab_karte_mitspeichern_3020.test.ts::vergleich „+“: neue Zeile hinten, überall angehakt; Haken und Form der übrigen Zeilen bleiben",
+      "ac": "AC-10",
+      "befund": "T3",
+      "status": "gruen",
+      "seite": "frontend",
+      "verweis": "#3020 R1: Reiter Wetter -> Karte „Was steht wo“ -> PUT (placements); Baustein wasStehtWoStand.ts mitGrundauswahl"
     }
   ]
 }

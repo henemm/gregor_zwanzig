@@ -39,7 +39,7 @@ import {
 	lt,
 	ce,
 	CONTENT_MODULE_DESCRIPTIONS,
-	ausgabeLayoutRendern,
+	gpxRendern,
 	htmlFaelle,
 	funktionsTabelle,
 	schreibeGolden
@@ -50,6 +50,9 @@ const base = pathToFileURL(FRONTEND + '/').href;
 register(pathToFileURL(path.join(FRONTEND, 'test-env-dynamic-private-stub-hooks.mjs')).href, base);
 register(pathToFileURL(path.join(FRONTEND, 'src/routes/admin/__tests__/server-load-resolve.hooks.mjs')).href, base);
 const layoutLoad = (await import(pathToFileURL(path.join(FRONTEND, 'src/routes/+layout.server.ts')).href)).load;
+
+// #3020: der Ausgabe-Layout-Editor (Restbestand, faellt mit R2) nur in seinen eigenen Faellen laden.
+const { ausgabeLayoutRendern } = await import('./f8Altbausteine.ts');
 
 before(() => {
 	// Die de-Golden sind der Ist-Stand VOR der Umstellung und werden nie neu geschrieben;
@@ -270,6 +273,7 @@ describe('AC-4: zwei Nutzer, zwei Sprachen, gleiche Wertebereiche, gleiche Speic
 			lang,
 			fremd,
 			layout: sichtbar(ausgabeLayoutRendern('email')), // #3366: Ausgabe-Layout statt geloeschtem Layout-Reiter
+			seite: sichtbar(gpxRendern()), // #3020 R1: zweite lebende Flaeche (GPX-Seite) in der Sprache des Nutzers
 			// #2794 S3a Teil-PR 4a: die Korridor-Ansicht (CorridorEditor) ist entfernt; die
 			// Zeilennamen der Logik folgen weiter der Sprache, die Nutzlast bleibt sprachfrei.
 			zeilenNamen: zeilen.map((z: { label: string }) => z.label),
@@ -288,6 +292,8 @@ describe('AC-4: zwei Nutzer, zwei Sprachen, gleiche Wertebereiche, gleiche Speic
 		assert.equal(b.fremd, null, 'B liest den Trip von A');
 		hat(a.layout, 'Detail values');
 		hat(b.layout, 'Detail-Werte');
+		hat(a.seite, 'Upload a GPX file to create a stage and a trip from it.');
+		hat(b.seite, 'Lade eine GPX-Datei hoch, um daraus eine Etappe und einen Trip zu erstellen.');
 		assert.ok(a.zeilenNamen.includes('Wind gusts'), `A (en): ${a.zeilenNamen.join(', ')}`);
 		assert.ok(b.zeilenNamen.includes('Böen'), `B (de): ${b.zeilenNamen.join(', ')}`);
 		assert.deepEqual(a.nutzlast, b.nutzlast);

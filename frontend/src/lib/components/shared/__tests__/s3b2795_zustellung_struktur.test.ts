@@ -218,6 +218,24 @@ describe('AC-27/AC-31: keine Kanaele je Wettergroesse, keine amtlichen Warnungen
 		}
 	});
 
+	// #3020 R1 (E016, E063): Vorlage, Grundauswahl und „Was steht wo“ bedient allein der Reiter Wetter. Verboten ist
+	// JEDER Organismus dieses Reiters (Liste aus dem Ordner, waechst mit), nicht nur die oben genannten.
+	test('s3b2795_zustellung_bettet_keine_wetter_bausteine_ein', () => {
+		const wetter = [
+			...readdirSync(join(KOMP, 'organisms', 'wetter-tab')).filter((f) => f.endsWith('.svelte')).map((f) => basename(f, '.svelte')),
+			'WetterTab'
+		];
+		for (const n of ['VorlageKarte', 'WasStehtWoKarte', 'WetterTabInhalt']) assert.ok(wetter.includes(n), `Messaufbau: ${n} nicht in der Liste`);
+		for (const d of baum()) {
+			const { ast } = svelteAst(d);
+			const da = alle(ast.fragment, (n) => n.type === 'Component' && wetter.includes(n.name)).map((n) => n.name);
+			assert.deepEqual(da, [], `${basename(d)} bettet Wetter-Bausteine ein: ${da.join(', ')}`);
+			// Auch unter anderem Namen oder ueber `svelte:component`: kein Import aus dem Ordner des Reiters Wetter.
+			const imp = importe(d).map((i) => i.quelle).filter((q) => q.endsWith('.svelte') && (q.includes('/wetter-tab/') || wetter.includes(basename(q, '.svelte'))));
+			assert.deepEqual(imp, [], `${basename(d)} importiert Wetter-Bausteine: ${imp.join(', ')}`);
+		}
+	});
+
 	test('s3b2795_vergleich_hub_reicht_keinen_alarme_tab_hinein', () => {
 		assert.ok(!propNamen(svelteAst(REITER).ast).includes('alarmeBereich'), 'ZustellungTab nimmt weiter ein AlarmeTab-Snippet (alarmeBereich) an');
 		const { ast, quelle } = svelteAst(VERGLEICH_HUB);
