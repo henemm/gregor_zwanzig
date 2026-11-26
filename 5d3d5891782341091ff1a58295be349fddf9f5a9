@@ -4,42 +4,49 @@
     {
       "ac": "AC-1",
       "status": "PASS",
-      "url": "staging",
-      "evidence": "Zuordnung aus Katalog; Staging auf 5d3d589, Compare-Mail DE (GZM 262156-adbe4c1d Vergleich) und EN (GZM 262156-1a84c583 Vergleich) echt zugestellt, email_spec_validator Exit 0",
+      "url": "staging compare mail",
+      "evidence": "Zuordnung aus Katalog; Compare-Mail auf Staging 5d3d58917 echt zugestellt, email_spec_validator Exit 0 (de: GZM 262156-a8b6b586 Vergleich, en: GZM 262157-734a6c1a Vergleich)",
       "workflow": "unknown"
     },
     {
       "ac": "AC-2",
       "status": "PASS",
-      "url": "staging",
-      "evidence": "Vergleichsmail-Satz unveraendert: Compare-Validator DE/EN Exit 0; lokal byte-gleich ueber 512 Teilmengen gegen 97853c3",
+      "url": "staging compare mail",
+      "evidence": "Zusammenfassungssatz der Compare-Mail de+en von Validator abgenommen; Byte-Gleichheit zum Altstand lokal fuer drei Auswahlen gemessen",
       "workflow": "unknown"
     },
     {
       "ac": "AC-3",
       "status": "PASS",
-      "url": "staging",
-      "evidence": "temp_min-Filter auf Renderer-ID per Test + Mutation belegt; Staging-Compare-Mail DE/EN Validator Exit 0",
+      "url": "local core test",
+      "evidence": "nur temp_min -> kein Temperatur-Satzteil, Kern-Test gruen (keine Staging-Auswahl dafuer herstellbar ohne Eingriff)",
       "workflow": "unknown"
     },
     {
       "ac": "AC-4",
       "status": "PASS",
-      "url": "staging",
-      "evidence": "ValueError bei fehlendem Katalog-Paar (Kerntest); Staging-Versand ohne Fehler, beide Mails zugestellt",
+      "url": "local core test",
+      "evidence": "fehlendes Katalog-Paar -> ValueError mit Renderer-ID, Kern-Test gruen",
       "workflow": "unknown"
     },
     {
       "ac": "AC-5",
       "status": "PASS",
-      "url": "staging",
-      "evidence": "Metrik-Listen-Ratsche gruen, CI 6/6 gruen; Trip-Briefing DE (GZM 262156-adbe4c1d) und EN (GZM 262156-1a84c583) briefing_mail_validator Exit 0",
+      "url": "local core test",
+      "evidence": "Metrik-Listen-Ratsche und Ein-Katalog-Ratsche gruen (118/118 Einzellauf), CI 6/6 gruen",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "REGRESSION-TRIP",
+      "status": "PASS",
+      "url": "staging trip mail",
+      "evidence": "Trip-Briefing de (GZM 262156-a8b6b586) und en (GZM 262156-89b815bc) briefing_mail_validator Exit 0",
       "workflow": "unknown"
     }
   ],
-  "verified_at": "2026-11-26T21:57:08.695720+00:00",
+  "verified_at": "2026-11-26T21:57:37.533255+00:00",
   "environment": "staging",
-  "staging_verdict": "VERIFIED: Trip- und Vergleichsmail DE/EN auf Staging 5d3d589 echt zugestellt, alle Validatoren Exit 0",
+  "staging_verdict": "VERIFIED: Compare- und Trip-Mail auf Staging 5d3d58917 in de und en echt zugestellt und validiert; AC-3..5 per Kern-Tests",
   "scope": "backend",
   "langs": [
     "de",
@@ -47,13 +54,13 @@
   ],
   "verdicts": {
     "unknown": {
-      "verdict": "VERIFIED: Trip- und Vergleichsmail DE/EN auf Staging 5d3d589 echt zugestellt, alle Validatoren Exit 0",
+      "verdict": "VERIFIED: Compare- und Trip-Mail auf Staging 5d3d58917 in de und en echt zugestellt und validiert; AC-3..5 per Kern-Tests",
       "scope": "backend",
       "langs": [
         "de",
         "en"
       ],
-      "at": "2026-11-26T21:57:08.695720+00:00"
+      "at": "2026-11-26T21:57:37.533255+00:00"
     }
   }
 }
