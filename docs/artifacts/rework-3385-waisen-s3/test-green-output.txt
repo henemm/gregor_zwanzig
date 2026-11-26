@@ -1,0 +1,190 @@
+# #3385 Waisen S3 — GREEN (2026-11-26, Branch rework-3385-waisen-s3)
+
+## cd frontend && npm test (ganze Suite, node --test)
+# tests 11515
+# suites 2104
+# pass 11512
+# fail 0
+# cancelled 0
+# todo 1
+(exit 0)
+
+Auszug (benannte Wächter dieser Scheibe):
+ok 329 - \#3385 AC-1/AC-7: Waisen S3 gelöscht, kein Import und kein Pfad mehr, Nachbarn erhalten
+ok 340 - \#3366 AC-1/AC-8, \#3383 AC-3, \#3384 AC-2/AC-3, \#3385 AC-2: Waisen-Wächter gegen den echten Baum
+ok 341 - \#3385 AC-3: Kopfkommentar nennt die exakte Gleichheit (doc-compliance-test)
+ok 345 - \#3385 AC-2: Selbstnachweis leere Liste, Obergrenze 0
+ok 1392 - AC-14 (Wirkort Anlegen, \#3333): Reiter Zustellung und Reiter Alarme teilen DENSELBEN Feldsatz   (F002 / #3385 AC-4)
+ok 1932 - \#2406 AC-14 — unbestaetigte SMS-Nummer erscheint nicht als sendebereit
+ok 2633 - Selbsttest an Beispielquelltexten   (reaktivitaet_waechter, Mini-Module, AC-10)
+ok 2634 - Bestand: Sprachwechsel ohne Neuladen erreicht jede Anzeige   (F6 gestrichen; F7 = 2, F8 = 0)
+ok 267 - AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert   (Elementliste neu erzeugt)
+
+## cd frontend && npm run check -- --output machine (svelte-check)
+COMPLETED 2223 FILES 32 ERRORS 70 WARNINGS 49 FILES_WITH_PROBLEMS   (vorher 32 / 71)
+
+## cd frontend && npm run build
+exit 0
+
+## uv run pytest -o addopts="" -q -m "not live" <benannte Dateien>
+tests/tdd/test_einstellung_gleich_mail_fallliste.py tests/test_versand_zweisprachig.py
+tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py tests/tdd/test_765_backend_hygiene_compliance.py
+tests/tdd/test_einstellung_gleich_mail_waechter_3020.py tests/test_hilfe_befehle_drift.py
+tests/test_i18n_doku_vollstaendig.py tests/test_i18n_keine_hartkodierten_nutzertexte_python.py
+tests/tdd/test_einstellung_gleich_mail_orte.py tests/test_3258_kuerzel_bedeutung_schnappschuss.py
+tests/test_i18n_glossar_und_vertrag.py tests/unit/test_i18n_katalog_paritaet.py
+tests/tdd/test_telegram_live_zweisprachig.py tests/unit/test_2243_playwright_loeschscheibe.py
+tests/unit/test_e2e_positivliste_ratschen_bindung.py
+2364 passed, 1 deselected, 3 xfailed, 2 warnings in 74.18s
+
+## Gemessene Zahlen nach dem Löschen
+BESTAND_OBERGRENZE 167 -> 162 (= BESTAND.length)
+ein_katalog hoechststand/HOECHSTSTAND: 422 gemessen, unverändert (keine S3-Datei im Bestand)
+ink4: Eintrag VTSchedulePlan.svelte entfernt (keine Gesamtzahl im Test)
+EINGEFROREN 13 -> 10 (FACHLICH 5, DARSTELLUNG 2, HERKUNFT 3)
+versand.json de/en: je 36 Schlüssel ohne Verwender entfernt (gleiche Menge); bausteine.json unverändert
+funktionen.de.txt / funktionen.en.txt: je genau 6 Zeilen vtBriefingLeadText/vtBriefingSubTexts entfallen
+
+=== F001-Fix (AC-10): reaktivitaet_waechter.test.ts mit TelegramKurzstilToggle.svelte in F7 ===
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/i18n/__tests__/reaktivitaet_waechter.test.ts
+
+TAP version 13
+# Subtest: Selbsttest an Beispielquelltexten
+    # Subtest: $derived mit tr()-Helfer ohne $locale ist rot, mit $locale gruen
+    ok 1 - $derived mit tr()-Helfer ohne $locale ist rot, mit $locale gruen
+      ---
+      duration_ms: 31.130015
+      type: 'test'
+      ...
+    # Subtest: transitiv: sendTargetLabel (ruft tr) und lokale Helfer zaehlen, sprachfreie Exporte nicht
+    ok 2 - transitiv: sendTargetLabel (ruft tr) und lokale Helfer zaehlen, sprachfreie Exporte nicht
+      ---
+      duration_ms: 8.54025
+      type: 'test'
+      ...
+    # Subtest: Markup-Ausdruck ohne $locale ist rot; Ereignis-Handler und $t sind gruen
+    ok 3 - Markup-Ausdruck ohne $locale ist rot; Ereignis-Handler und $t sind gruen
+      ---
+      duration_ms: 13.970136
+      type: 'test'
+      ...
+    # Subtest: Startwerte frieren ein: Konstante, $state-Start, $props-Standardwert
+    ok 4 - Startwerte frieren ein: Konstante, $state-Start, $props-Standardwert
+      ---
+      duration_ms: 1.664723
+      type: 'test'
+      ...
+    1..4
+ok 1 - Selbsttest an Beispielquelltexten
+  ---
+  duration_ms: 56.306674
+  type: 'suite'
+  ...
+# Subtest: Bestand: Sprachwechsel ohne Neuladen erreicht jede Anzeige
+    # Subtest: F3 \#2652 Cockpit und Listen
+    ok 1 - F3 \#2652 Cockpit und Listen
+      ---
+      duration_ms: 285.356916
+      type: 'test'
+      ...
+    # Subtest: F4 \#2653 Konto, Admin, Navigation
+    ok 2 - F4 \#2653 Konto, Admin, Navigation
+      ---
+      duration_ms: 105.927422
+      type: 'test'
+      ...
+    # Subtest: F5 \#2654 Wertebereiche-Reiter
+    ok 3 - F5 \#2654 Wertebereiche-Reiter
+      ---
+      duration_ms: 30.317505
+      type: 'test'
+      ...
+    # Subtest: F8 \#2657 Layout-Reiter, Korridor-Editor, Ausgabe-Layout, GPX
+    ok 4 - F8 \#2657 Layout-Reiter, Korridor-Editor, Ausgabe-Layout, GPX
+      ---
+      duration_ms: 13.061535
+      type: 'test'
+      ...
+    # Subtest: F9 \#2658 Trip-Hub, Anlegen, Etappen-Editor, Vorschau-Rahmen
+    ok 5 - F9 \#2658 Trip-Hub, Anlegen, Etappen-Editor, Vorschau-Rahmen
+      ---
+      duration_ms: 295.385258
+      type: 'test'
+      ...
+    # Subtest: F7 \#2656 Alarme-Reiter, Alarm-Kanal-Picker, alerts-tab
+    ok 6 - F7 \#2656 Alarme-Reiter, Alarm-Kanal-Picker, alerts-tab
+      ---
+      duration_ms: 38.880314
+      type: 'test'
+      ...
+    # Subtest: F10 \#2659 Ortsvergleich-Hub, Anlegen, Orte, transponierte Uebersicht
+    ok 7 - F10 \#2659 Ortsvergleich-Hub, Anlegen, Orte, transponierte Uebersicht
+      ---
+      duration_ms: 103.783949
+      type: 'test'
+      ...
+    # Subtest: Messaufbau F8: ohne die $locale-Lesung bleibt keine Ableitung (Zaehlung nach \#3366: 0)
+    ok 8 - Messaufbau F8: ohne die $locale-Lesung bleibt keine Ableitung (Zaehlung nach \#3366: 0)
+      ---
+      duration_ms: 17.925191
+      type: 'test'
+      ...
+    # Subtest: Messaufbau F7: ohne die $locale-Lesung waeren zwei Ableitungen/Ausdruecke gemeldet
+    ok 9 - Messaufbau F7: ohne die $locale-Lesung waeren zwei Ableitungen/Ausdruecke gemeldet
+      ---
+      duration_ms: 55.979394
+      type: 'test'
+      ...
+    # Subtest: jede Ausnahme trifft noch einen Fund (keine toten Eintraege)
+    ok 10 - jede Ausnahme trifft noch einen Fund (keine toten Eintraege)
+      ---
+      duration_ms: 469.333097
+      type: 'test'
+      ...
+    1..10
+ok 2 - Bestand: Sprachwechsel ohne Neuladen erreicht jede Anzeige
+  ---
+  duration_ms: 1416.627101
+  type: 'suite'
+  ...
+1..2
+# tests 14
+# suites 2
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1993.070642
+
+=== Nachtrag 2026-11-26: Angleich an #3020 R1 nach Merge origin/main ===
+Aenderungen: rework_3020_umfang.ts (versand-tab-Block aus RESTBESTAND, 26->19 / 16->23),
+rework_3020_probe_loeschung.test.ts (Selbsttest-Beispiel organisms/OutboxCard.svelte statt geloeschter Datei),
+docs/specs/modules/rework_3020_testtabelle.md (E017/E018 auf die von #3385 umbenannten Testnamen 10 bzw. 5/2/3).
+
+--- node --import ./test-lib-loader.mjs --experimental-strip-types --test src/lib/__tests__/rework_3020_*.test.ts
+    src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts waisen_waechter.test.ts
+    src/lib/components/organisms/__tests__/was_steht_wo_karte*.test.ts --- (Exit 0)
+    not ok 1 - n3_semantik_wie_mail # TODO Fehler \#3364: Reiter und Karte lesen die Bericht-Flags nicht
+    not ok 2 - n3_editor_kennzeichnet_je_zeile # TODO Fehler \#3364: Reiter und Karte lesen die Bericht-Flags nicht
+    not ok 3 - n3_kennzeichnung_folgt_dem_editorstand # TODO Fehler \#3364: Reiter und Karte lesen die Bericht-Flags nicht
+# tests 290
+# pass 287
+# fail 0
+# todo 3
+
+--- npm test (gesamte Frontend-Suite) --- (Exit 0)
+# tests 11982
+# suites 2170
+# pass 11965
+# fail 0
+# cancelled 0
+# skipped 2
+# todo 15
+# duration_ms 544854.714608
+
+--- uv run pytest tests/tdd/test_einstellung_gleich_mail_fallliste.py -o addopts="" --- (Exit 0)
+======================= 42 passed, 2 warnings in 11.16s ========================
+fallliste_editor.json: E-R8-F3N-VERSAND-TRIP, -ORTE-DE, -ORTE-EN tragen den #3385-Stand (was_steht_wo_karte-Belege, Verweis #3385/#3390).

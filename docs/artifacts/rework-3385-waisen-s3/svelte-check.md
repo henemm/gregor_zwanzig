@@ -19,4 +19,10 @@ sie entfällt mit der Löschung.
 
 ## nachher
 
-(nach der Löschung eintragen; beide Zahlen dürfen nicht steigen)
+- Datum: 2026-11-26
+- Stand: Branch rework-3385-waisen-s3, GREEN (7 S3-Dateien, 11 Waisentests, 14 HTML-Goldens gelöscht; Tests, Ratschen, Katalog angepasst)
+- Ergebnis: `COMPLETED 2223 FILES 32 ERRORS 70 WARNINGS 49 FILES_WITH_PROBLEMS`
+- Fehler: 32 (vorher 32, unverändert)
+- Warnungen: 70 (vorher 71; entfallen ist die Warnung in `VTLaufzeitVergleich.svelte` 26:37)
+
+Keiner der 32 Fehler liegt in einer in GREEN geänderten Datei.

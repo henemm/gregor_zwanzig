@@ -10,16 +10,9 @@
 // Verwendet in versand_tab_sprache.test.ts (Wertvergleich + statischer Gegencheck).
 
 export const F6_ANKER: [schluessel: string, de: string, en: string][] = [
-	// Kanaele (VTBriefingChannels)
-	['versand.kanaele.titel', 'Geplantes Briefing · Kanäle', 'Planned briefing · channels'],
-	['versand.kanal.email_fehlt', 'E-Mail-Adresse fehlt — <link>', 'Email address missing — <link>'],
-	['versand.kanal.telegram_fehlt', 'Telegram-Chat-ID fehlt — <link>', 'Telegram chat ID missing — <link>'],
-	['versand.kanal.nummer_fehlt', 'Handynummer fehlt — <link>', 'Mobile number missing — <link>'],
-	['versand.kanal.im_account_einrichten', 'im Account einrichten', 'set it up in your account'],
-	['versand.kanal.nummer_unbestaetigt', 'Nummer noch nicht bestätigt — <link>', 'Number not confirmed yet — <link>'],
-	['versand.kanal.code_eingeben', 'Code im Account eingeben', 'enter the code in your account'],
-	['versand.kanal.sms_ab_standard', 'SMS ab Level Standard verfügbar', 'SMS is available from the Standard level'],
-	['versand.kanal.bald_verfuegbar', 'bald verfügbar', 'coming soon'],
+	// #3385: versand.kanaele.*, versand.kanal.*, versand.briefing.*, versand.zeitplan.*,
+	// versand.laufzeit.* und versand.naechstes.titel entfallen mit den geloeschten Bausteinen
+	// (VTBriefingChannels, vtBriefingChannelsText, VTSchedulePlan, VTLaufzeit*, VTNextBriefing).
 	// Verbindungsstatus (channelConnectionStatus)
 	['versand.status.nicht_verbunden', 'nicht verbunden', 'not connected'],
 	['versand.status.bestaetigt', 'bestätigt', 'confirmed'],
@@ -40,47 +33,7 @@ export const F6_ANKER: [schluessel: string, de: string, en: string][] = [
 	],
 	['versand.premium_sms.hinweis.nie_gemeldet', 'Das Gerät hat sich noch nie gemeldet — die Rückadresse wird beim ersten Empfang gelernt.', 'The device has never reported in — the reply address is learned on first receipt.'],
 	['versand.premium_sms.zuletzt_gemeldet', 'zuletzt gemeldet am <datum>', 'last reported on <datum>'],
-	// Einleitung und Unterzeilen (vtBriefingChannelsText)
-	[
-		'versand.briefing.lead.route',
-		'Das Trip-Briefing ist eine Etappen-Tabelle — E-Mail trägt alle Spalten, Telegram die ersten <telegram_spalten>, SMS kein Raster, Fließtext.',
-		'The trip briefing is a stage table — email carries all columns, Telegram the first <telegram_spalten>, SMS has no grid, plain text.'
-	],
-	[
-		'versand.briefing.lead.vergleich',
-		// #3047 R8 (AC-24, ADR-0095): kein „nur ≤ 7 Spalten“, keine Kanal-Empfehlung.
-		'Der Orts-Vergleich ist eine breite Tabelle — E-Mail trägt alle Spalten, Telegram alle Zeilen (ab Platz <platz> in einer zweiten Zeile je Ort), SMS kein Raster, Fließtext.',
-		'The location comparison is a wide table — email carries all columns, Telegram all rows (from position <platz> in a second line per location), SMS has no grid, plain text.'
-	],
-	['versand.briefing.sub.email', 'Layout · volle Tabelle', 'Layout · full table'],
-	['versand.briefing.sub.telegram', 'Layout · <telegram_spalten> Spalten', 'Layout · <telegram_spalten> columns'],
-	['versand.briefing.sub.telegram_vergleich', 'Layout · alle Zeilen, ab Platz <platz> zweite Zeile je Ort', 'Layout · all rows, from position <platz> a second line per location'],
-	['versand.briefing.sub.telegram_kurzform', 'folgt der SMS-Auswahl', 'follows the SMS selection'],
-	['versand.briefing.sub.sms', 'Layout · kein Raster, <zeichen> Zeichen', 'Layout · no grid, <zeichen> characters'],
-	// Zeitplan (VTSchedulePlan)
-	['versand.zeitplan.titel', 'Briefing-Zeitplan', 'Briefing schedule'],
-	['versand.zeitplan.kein_kanal', 'Kein Kanal aktiv.', 'No channel active.'],
-	['versand.zeitplan.kein_kanal_text', 'Aktiviere oben mindestens einen Briefing-Kanal, damit hier Zeitplan-Optionen erscheinen.', 'Turn on at least one briefing channel above to see schedule options here.'],
-	['versand.zeitplan.vergleich_intro', 'Wie beim Trip: das <morgen> zeigt den heutigen Tag, das <abend> den morgigen. Du wählst nur die Uhrzeit.', 'As with a trip: the <morgen> shows today, the <abend> shows tomorrow. You only choose the time.'],
-	['versand.zeitplan.morgen', 'Morgen-Briefing', 'Morning briefing'],
-	['versand.zeitplan.morgen_sub', 'Gleicher Tag — alles für die heutige Etappe', 'Same day — everything for today’s stage'],
-	['versand.zeitplan.abend', 'Abend-Briefing', 'Evening briefing'],
-	['versand.zeitplan.abend_sub', 'Nächster Tag — Ausblick auf morgen', 'Next day — outlook for tomorrow'],
-	['versand.zeitplan.aktiv', 'Aktiv', 'Active'],
-	['versand.zeitplan.uhrzeit', 'Uhrzeit', 'Time'],
-	['versand.zeitplan.morgens', 'Morgens <zeit>', 'Morning <zeit>'],
-	['versand.zeitplan.abends', 'Abends <zeit>', 'Evening <zeit>'],
-	// #3155: versand.zeitplan.trend/_sub/im_morgen/im_abend entfallen mit der Karte „Mehrtages-Trend".
-	// Laufzeit (VTLaufzeitRoute / VTLaufzeitVergleich)
-	['versand.laufzeit.titel', 'Laufzeit', 'Duration'],
-	['versand.laufzeit.route', 'Läuft mit der Trip · endet <ende>', 'Runs with the trip · ends <ende>'],
-	['versand.laufzeit.route_sub', 'Das Enddatum ergibt sich aus den Etappen — es wird dort gepflegt, nicht hier.', 'The end date comes from the stages — it is maintained there, not here.'],
-	['versand.laufzeit.etappen_oeffnen', 'Etappen öffnen →', 'Open stages →'],
-	['versand.laufzeit.offen', 'Bis auf Weiteres', 'Until further notice'],
-	['versand.laufzeit.bis_datum', 'Bis Datum', 'Until a date'],
-	['versand.laufzeit.ohne_ende', 'Der Versand läuft ohne Enddatum weiter.', 'Delivery continues without an end date.'],
-	// Naechstes Briefing (VTNextBriefing / nextBriefingText)
-	['versand.naechstes.titel', 'Nächstes Briefing', 'Next briefing'],
+	// Naechstes Briefing (nextBriefingText)
 	['versand.naechstes.pausiert', 'pausiert', 'paused'],
 	['versand.naechstes.pausiert_bis', 'pausiert bis <bis>', 'paused until <bis>'],
 	['versand.naechstes.beendet.route', 'Trip beendet', 'Trip ended'],

@@ -585,11 +585,6 @@ const BESTAND: string[] = [
 	'lib/components/shared/hub-uebersicht/HubUebersicht.svelte',
 	'lib/components/shared/status-schild/StatusSchild.svelte',
 	'lib/components/shared/subscription-header/SubscriptionHeader.svelte',
-	'lib/components/shared/versand-tab/VTBriefingChannels.svelte',
-	'lib/components/shared/versand-tab/VTLaufzeitRoute.svelte',
-	'lib/components/shared/versand-tab/VTLaufzeitVergleich.svelte',
-	'lib/components/shared/versand-tab/VTNextBriefing.svelte',
-	'lib/components/shared/versand-tab/VTSchedulePlan.svelte',
 	'lib/components/shared/zustellung-tab/ZustellungTab.svelte',
 	'lib/components/trip-detail/ActiveMetricRow.svelte',
 	'lib/components/trip-detail/BucketSection.svelte',
@@ -707,7 +702,9 @@ const BESTAND: string[] = [
 // trip_pfad_altfeld_loeschnachweis_3297.test.ts, GELOESCHT_3383) (184 → 177).
 // #3384 S4: zehn Waisen-Bausteine aus compare/, edit/, mobile/ und WaypointPin geloescht
 // (Liste GELOESCHT_3384 im selben Lösch-Nachweis) (177 → 167).
-const BESTAND_OBERGRENZE = 167; // #3297/#3020: sieben Alt-Editor-Bausteine geloescht (vorher 195, #3276)
+// #3385 S3: fünf Waisen-Bausteine aus shared/versand-tab/ geloescht (VTBriefingChannels,
+// VTLaufzeitRoute, VTLaufzeitVergleich, VTNextBriefing, VTSchedulePlan) (167 → 162).
+const BESTAND_OBERGRENZE = 162; // #3297/#3020: sieben Alt-Editor-Bausteine geloescht (vorher 195, #3276)
 
 /** Token-Verstöße je Baustein-Datei (Ist-Stand 2026-11-10, ADR-0112). Darf nur sinken. */
 const AUSNAHMEN: Ausnahmen = {

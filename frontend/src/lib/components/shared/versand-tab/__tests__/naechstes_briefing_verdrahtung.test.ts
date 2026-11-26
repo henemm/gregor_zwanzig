@@ -5,7 +5,7 @@
 //
 // Testart (Kern, kein Netz): svelteInstanzPruefstand wertet das ECHTE
 // Instanz-Skript mit gesäten Props aus und liest die Attribut-Ausdrücke der
-// ECHTEN Einbettungen (<VTNextBriefing …>). Geprüft wird, mit welcher Quelle
+// ECHTEN Einbettungen (#3385: der Baustein VTNextBriefing ist geloescht). Geprüft wird, mit welcher Quelle
 // (context, id, neuLaden = savedAt) jede Komponente den geteilten Lader
 // füttert, welcher Pfad daraus abgefragt wird und was dann angezeigt wird.
 // WIE der Lader auf diese Quelle reagiert (Neuladen, veraltete Antworten),
@@ -30,7 +30,6 @@ process.env.TZ = 'America/Los_Angeles';
 const HIER = dirname(fileURLToPath(import.meta.url));
 const FRONTEND = resolve(HIER, '../../../../../..');
 const basis = pathToFileURL(FRONTEND + '/').href;
-const BAUSTEIN = join(HIER, '..', 'VTNextBriefing.svelte');
 const VERGLEICH_HUB = join(HIER, '..', '..', '..', 'compare', 'CompareTabs.svelte');
 const TRIP_KARTE = join(HIER, '..', '..', '..', 'trip-detail', 'HubOverview.svelte');
 const UEBERSICHT = join(HIER, '..', '..', 'hub-uebersicht', 'HubUebersicht.svelte');
@@ -43,7 +42,6 @@ register(pathToFileURL(join(HIER, '..', '..', '__tests__', 'svelteTsModulHook.mj
 
 const { render } = await import('svelte/server');
 const { ladeNaechstesBriefing } = await import('../nextBriefingLoad.ts');
-const VTNextBriefing = (await import(pathToFileURL(BAUSTEIN).href)).default;
 
 const NB = (local_time: string) => ({
 	at: `2026-10-22T${local_time}:00+02:00`,
@@ -80,25 +78,13 @@ function deklaration(ast: Knoten, quelle: string, u: Knoten, name: string): unkn
 	}
 	throw new Error(`Messaufbau: Deklaration ${name} fehlt`);
 }
-const text = (html: string) => html.replace(/<!--[\s\S]*?-->/g, '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
-/** Quelle, mit der der Baustein bei diesen Props den Lader füttert. */
-async function bausteinQuelle(props: Record<string, unknown>) {
-	const { u } = await umgebungFuer(
-		BAUSTEIN,
-		{ nextBriefing: undefined, id: undefined, reloadKey: undefined, context: undefined, ...props },
-		{ jsAlsTs: true }
-	);
-	assert.ok(u.lader && typeof u.lader === 'object', 'Messaufbau: Lader im Baustein nicht auswertbar');
-	return u.lader.quelle as { context: string; id?: string; neuLaden?: unknown; extern?: unknown };
-}
-
-/** Kette Quelle → Abruf (aufgezeichnet) → Anzeige des Bausteins. */
-async function abrufUndAnzeige(q: { context: string; id?: string }, antwort: unknown) {
+/** Kette Quelle → Abruf (aufgezeichnet). #3385: die Anzeige im Baustein VTNextBriefing
+ *  (Waise, geloescht) entfaellt; die Anzeige im Hub pruefen (c/F007) und (f). */
+async function abruf(q: { context: string; id?: string }, antwort: unknown) {
 	const pfade: string[] = [];
-	const nb = await ladeNaechstesBriefing(async (p: string) => (pfade.push(p), antwort), q.context as never, q.id!);
-	const zeile = text(render(VTNextBriefing, { props: { nextBriefing: nb, context: q.context } }).body);
-	return { pfade, zeile };
+	await ladeNaechstesBriefing(async (p: string) => (pfade.push(p), antwort), q.context as never, q.id!);
+	return { pfade };
 }
 
 const ANTWORT = { trips: { 't-1969': NB('08:00') }, compare: { 'cp-1969': NB('07:00') } };
@@ -138,7 +124,7 @@ describe('(c) Vergleichs-Hub: Hub-Stat „Nächster Versand" aus dem Backend-Wer
 		assert.equal(q.context, 'vergleich');
 		assert.equal(q.id, 'cp-1969');
 		assert.equal(q.neuLaden, GESPEICHERT, 'Hub lädt nach dem Speichern nicht neu');
-		const { pfade } = await abrufUndAnzeige(q, ANTWORT);
+		const { pfade } = await abruf(q, ANTWORT);
 		assert.deepEqual(pfade, ['/api/next-briefings?preset_id=cp-1969']);
 	});
 
@@ -266,7 +252,7 @@ describe('(f) HubOverview ohne Prop: lädt selbst und zeigt das Kürzel', () => 
 		assert.equal(q.context, 'route');
 		assert.equal(q.id, 't-1969');
 		assert.equal(q.extern, undefined);
-		const { pfade } = await abrufUndAnzeige(q, ANTWORT);
+		const { pfade } = await abruf(q, ANTWORT);
 		assert.deepEqual(pfade, ['/api/next-briefings?trip_id=t-1969']);
 	});
 

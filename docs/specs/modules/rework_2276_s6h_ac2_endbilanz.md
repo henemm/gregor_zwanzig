@@ -98,26 +98,23 @@ Diese Scheibe:
   Zählbefehl) und prüft, dass die drei Kategorie-Summen 27/6/14 ergeben.
   Verhindert, dass diese Dokumentation und die Ratsche künftig auseinanderlaufen.
 
-## Anhang: AC-2-Endbilanz — alle 13 Ratschen-Einträge (seit #3297/#3020 ohne die elf Einträge von `VersandTab.svelte`, `WeatherMetricsTab.svelte`, `weatherMetricsTabSections.ts` und `WetterMetrikenVersandPanel.svelte` (Dateien gelöscht); Stand `3cece096`, S6g live; seit #2287 ohne `alarmeTabSections.ts:42`; seit #1743 mit `WetterMetrikenVersandPanel.svelte:66`; seit #1721 mit `WeatherMetricsTab.svelte:2042`; AlarmeTab-Zeilen seit #1895 S3b1 und S3b2 nachgemessen; seit #2794 S3a Teil-PR 4a ohne die 22 Einträge von `CorridorEditor.svelte`/`CorridorEditorMobile.svelte` (Oberfläche entfernt), Korridor-Logik unter `wetter-tab/`)
+## Anhang: AC-2-Endbilanz — alle 10 Ratschen-Einträge (seit #3385 ohne `versand-tab/vtBriefingChannelsText.ts:22/:29` und `versand-tab/VTSchedulePlan.svelte:72` (Waisen gelöscht); seit #3297/#3020 ohne die elf Einträge von `VersandTab.svelte`, `WeatherMetricsTab.svelte`, `weatherMetricsTabSections.ts` und `WetterMetrikenVersandPanel.svelte` (Dateien gelöscht); Stand `3cece096`, S6g live; seit #2287 ohne `alarmeTabSections.ts:42`; seit #1743 mit `WetterMetrikenVersandPanel.svelte:66`; seit #1721 mit `WeatherMetricsTab.svelte:2042`; AlarmeTab-Zeilen seit #1895 S3b1 und S3b2 nachgemessen; seit #2794 S3a Teil-PR 4a ohne die 22 Einträge von `CorridorEditor.svelte`/`CorridorEditorMobile.svelte` (Oberfläche entfernt), Korridor-Logik unter `wetter-tab/`)
 
-### FACHLICH (7 — echter Sachunterschied, bleibt dauerhaft)
+### FACHLICH (5 — echter Sachunterschied, bleibt dauerhaft)
 
 | Datei:Zeile | Grund |
 |---|---|
 | `AlarmeTab.svelte:268` | Ableitung `unalertableSelectedMetricNames` — route liefert strukturell immer `[]` (#1435 AC-7) |
 | `AlarmeTab.svelte:553` | Anzeige-Zwilling der fachlichen Zusicherung aus `:268` |
 | `AlarmeTab.svelte:604` | Beispielwarnung: Ort- statt Etappen-Subjekt, zwei verschiedene Komponenten |
-| `versand-tab/vtBriefingChannelsText.ts:22` | SMS-Zeichenbudget: Trip 160 / Vergleich 153 (unterschiedliches Layout) |
-| `versand-tab/vtBriefingChannelsText.ts:29` | Einleitungstext: Etappen-Tabelle vs. Orts-Tabelle — inhaltlich verschiedene Datenform |
 | `alarme-tab/alarmeTabSections.ts:27` | Radar-Abschnitt nur im Vergleich |
 | `wetter-tab/corridorEditorState.ts:331` | Markieren-Schalter bei Tages-Summen nur im Trip gesperrt |
 
-### DARSTELLUNG (3 — nur Beschriftung/Sichtbarkeit, kein Datenweg-Unterschied)
+### DARSTELLUNG (2 — nur Beschriftung/Sichtbarkeit, kein Datenweg-Unterschied)
 
 | Datei:Zeile | Grund |
 |---|---|
 | `AlarmeTab.svelte:571` | Kurzstil-Schalter — im Trip steht derselbe Schalter im Versand-Reiter (#1260 S5), reine Platzierung |
-| `versand-tab/VTSchedulePlan.svelte:72` | Erklärtext „wie beim Trip" — reine Zusatzerklärung, keine Funktionsänderung |
 | `alarme-tab/alarmeTabSections.ts:38` | nur Überschrifttext |
 
 ### HERKUNFT (3 — AC-2-Abweichung, bleibt bestehen, siehe Begründung oben)
@@ -128,11 +125,11 @@ Diese Scheibe:
 | `wetter-tab/wertebereicheVergleichSpeicherung.ts:203` | dito für Wertebereiche | dito |
 | `weather-metrics-tab/weatherMetricsCompareSave.ts:364` | dito für Wetter-Metriken (#3298: −75 durch entfernte Lese-Naht, Layout-Altfelder und Ausblick-Schalter; #3276: −53 durch entfernte Altschlüssel, Fix-Loop F005: −79 durch entfernten `flushPendingWeatherMetricsSave`; #2794 Teil 3 F006: um 5 Zeilen verschoben; #3061/#3047 J5: null-Hydrierer zusammengeführt, netto unverschoben; #3097: +15 durch `hourlyMetricFormats`; Weiche unverändert) | dito **und** zugleich die von S4 AC-13 geforderte Hydration-Barriere — AC-13 hat Vorrang (siehe AC-3) |
 
-**Summe:** 7 FACHLICH + 3 DARSTELLUNG + 3 HERKUNFT = **13**, deckungsgleich
+**Summe:** 5 FACHLICH + 2 DARSTELLUNG + 3 HERKUNFT = **10**, deckungsgleich
 mit `EINGEFROREN_SOLL_ANZAHL` (Summenzeile in #2727 korrigiert — sie nannte 14 / 46;
 Abgleich der `context ===`-Zweige gegen die Soll-Liste bestanden, kein Zweig entfällt;
 #1721 hob danach FACHLICH 27 → 28; #2794 S3a Teil-PR 4a senkte sie mit dem entfernten
-Corridor-Editor auf 14 / 3 / 9 = 26; #3155 entfernte die `isRoute`-Weiche in `VTSchedulePlan.svelte`: 13 / 3 / 9 = 25; #3297/#3020 löschten den Alt-Editor samt Versand-Baustein: 7 / 3 / 3 = 13).
+Corridor-Editor auf 14 / 3 / 9 = 26; #3155 entfernte die `isRoute`-Weiche in `VTSchedulePlan.svelte`: 13 / 3 / 9 = 25; #3297/#3020 löschten den Alt-Editor samt Versand-Baustein: 7 / 3 / 3 = 13; #3385 löschte die Waisen `vtBriefingChannelsText.ts` und `VTSchedulePlan.svelte`: 5 / 2 / 3 = 10).
 
 ## Changelog
 

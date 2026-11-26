@@ -51,7 +51,6 @@ const AUSNAHMEN: Record<string, number> = {
 	'lib/components/compare/LocationNewModal.svelte': 7,
 	'lib/components/shared/AlertChannelPicker.svelte': 1,
 	'lib/components/shared/dnd/DragHandle.svelte': 1,
-	'lib/components/shared/versand-tab/VTSchedulePlan.svelte': 1,
 	'lib/components/shared/hub-uebersicht/HubUebersicht.svelte': 1,
 	'lib/components/mobile/StageCardM.svelte': 1,
 	'lib/components/mobile/Sheet.svelte': 1,

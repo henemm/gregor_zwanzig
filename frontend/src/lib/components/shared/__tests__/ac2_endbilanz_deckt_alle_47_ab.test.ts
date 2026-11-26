@@ -87,25 +87,25 @@ describe('S6h AC-2-Endbilanz: Spec-Tabelle deckt die Ratsche restlos ab', () => 
 		assert.ok(existsSync(RATSCHE), `Ratsche nicht gefunden (aufgeloest: ${RATSCHE})`);
 	});
 
-	test('aus der Ratsche extrahiert: genau 13 Eintraege (Positiv-Kontrolle des Regex)', () => {
+	test('aus der Ratsche extrahiert: genau 10 Eintraege (Positiv-Kontrolle des Regex)', () => {
 		const ratsche = extrahiereRatschenListe();
 		assert.strictEqual(
 			ratsche.length,
-			13, // #3297/#3020: elf Eintraege der geloeschten Alt-Editor-Dateien entfallen; #3276: weatherMetricsTabSections.ts:68 (Stundenverlauf nur im Vergleich) entfaellt; #2287: alarmeTabSections.ts:42 gestrichen; #1743: WetterMetrikenVersandPanel.svelte:66 neu; #1721: WeatherMetricsTab.svelte:2042 neu; #2794 Teil-PR 4a: 22 CorridorEditor-Eintraege entfernt; #3155: VTSchedulePlan.svelte:57 entfernt
-			`Extraktion aus EINGEFROREN lieferte ${ratsche.length} statt 13 Eintraege`
+			10, // #3385: vtBriefingChannelsText.ts:22/:29 und VTSchedulePlan.svelte:72 (Waisen) entfallen; #3297/#3020: elf Eintraege der geloeschten Alt-Editor-Dateien entfallen; #3276: weatherMetricsTabSections.ts:68 (Stundenverlauf nur im Vergleich) entfaellt; #2287: alarmeTabSections.ts:42 gestrichen; #1743: WetterMetrikenVersandPanel.svelte:66 neu; #1721: WeatherMetricsTab.svelte:2042 neu; #2794 Teil-PR 4a: 22 CorridorEditor-Eintraege entfernt; #3155: VTSchedulePlan.svelte:57 entfernt
+			`Extraktion aus EINGEFROREN lieferte ${ratsche.length} statt 10 Eintraege`
 		);
 		assert.strictEqual(new Set(ratsche).size, ratsche.length, 'EINGEFROREN enthaelt Duplikate');
 	});
 
-	test('aus der Spec extrahiert: FACHLICH 7, DARSTELLUNG 3, HERKUNFT 3, Summe 13', () => {
+	test('aus der Spec extrahiert: FACHLICH 5, DARSTELLUNG 2, HERKUNFT 3, Summe 10', () => {
 		const spec = leseSpec();
 		const fachlich = extrahiereSpecKategorie(spec, 'FACHLICH');
 		const darstellung = extrahiereSpecKategorie(spec, 'DARSTELLUNG');
 		const herkunft = extrahiereSpecKategorie(spec, 'HERKUNFT');
-		assert.strictEqual(fachlich.length, 7, 'FACHLICH-Tabelle hat nicht 7 Eintraege (#3297: -5 Alt-Editor; #3276: -weatherMetricsTabSections.ts:68; #1721: +WeatherMetricsTab.svelte:2042; #2794 4a: -14 CorridorEditor; #3155: -VTSchedulePlan.svelte:57)');
-		assert.strictEqual(darstellung.length, 3, 'DARSTELLUNG-Tabelle hat nicht 3 Eintraege (#2794 4a: -2 CorridorEditor)');
+		assert.strictEqual(fachlich.length, 5, 'FACHLICH-Tabelle hat nicht 5 Eintraege (#3385: -vtBriefingChannelsText.ts:22/:29; #3297: -5 Alt-Editor; #3276: -weatherMetricsTabSections.ts:68; #1721: +WeatherMetricsTab.svelte:2042; #2794 4a: -14 CorridorEditor; #3155: -VTSchedulePlan.svelte:57)');
+		assert.strictEqual(darstellung.length, 2, 'DARSTELLUNG-Tabelle hat nicht 2 Eintraege (#3385: -VTSchedulePlan.svelte:72; #2794 4a: -2 CorridorEditor)');
 		assert.strictEqual(herkunft.length, 3, 'HERKUNFT-Tabelle hat nicht 3 Eintraege (#3297: -6 Alt-Editor; #1743: +WetterMetrikenVersandPanel.svelte:66; #2794 4a: -6 CorridorEditor)');
-		assert.strictEqual(fachlich.length + darstellung.length + herkunft.length, 13);
+		assert.strictEqual(fachlich.length + darstellung.length + herkunft.length, 10);
 	});
 
 	test('jeder Spec-Eintrag steht genau einmal (keine Duplikate, keine Kategorie-Ueberschneidung)', () => {
