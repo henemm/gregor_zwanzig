@@ -89,3 +89,10 @@ Ladezustand und Fehler ⇒ „—", nie „Allgemein" geraten. Die aufgelöste A
 - Fix-Loop 1: F001 HIGH (Verdrahtung ungetestet) und F002 LOW (Entdopplung) behoben; Runde 2: 10 von 12 Verfälschungen gefangen, 1 gleichwertig.
 - **Offen für S2 (F003 LOW):** Dass AlarmeTab das richtige Abo (`trip ?? preset`) an `erstelleAboVorlageId` übergibt, prüft kein Test (Verfälschung `abo: null` bleibt grün). In S2 einen Fall ergänzen.
 - Gate-Hinweis: Der Checklisten-Gate kennt nur [x]/[ ]; Kriterien späterer Scheiben stehen im Dialog-Protokoll als eigener Abschnitt ohne Checkbox, sie werden in ihrer eigenen Scheibe nachgewiesen.
+
+## S1 ausgeliefert (2026-11-26), nächster Schritt S2
+
+- Live und Selbsttest bestanden auf ff6140d45 (PR #3407); Staging-Nachweis DE und EN je 3/3 (Live-Test rework-3399-alarme.spec.ts). Issue bleibt bis S4 offen.
+- Auf Branch `rework-3399-s1-e2e-en`: Live-Test sprachneutral (Trip-Reiter über `data-testid="trip-new-tab-<id>"` statt deutschem Label); mit S2 ausliefern.
+- **S2 (AC-5) Mitnahmen:** F003 LOW (AlarmeTab übergibt `trip ?? preset`, kein Laufzeittest), AC-6-Beobachtung LOW: gleichzeitig mountende Komponenten senden denselben POST doppelt (laufende Anfragen im Lader zusammenführen), Kommentar in `aboVorlageId.svelte.ts` („sofort null") stimmt erst nach dem Effekt; Spec-Dateitabelle S1 nennt `aboVorlageId.svelte.ts` und Test-Prop `vorlageIdOverride` nicht (bei S2-Spec-Rücksprung nachtragen).
+- Ablauf-Hinweise: `.claude/gate-events.jsonl` (untracked) treibt das Adversary-Risiko auf „hoch"; `staging_gate.py --write-verdict` per ssh wurde für die Sitzung von der Rechteprüfung gesperrt, der PO hat ihn selbst ausgeführt.
