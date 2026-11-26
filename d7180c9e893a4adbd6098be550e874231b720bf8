@@ -2,44 +2,37 @@
   "verified_commit": "d7180c9e893a4adbd6098be550e874231b720bf8",
   "findings": [
     {
-      "ac": "AC-1",
+      "ac": "AC-8",
       "status": "PASS",
-      "url": "staging_mail_pruefen --typ beide (de)",
-      "evidence": "Trip- und Compare-Mail echt zugestellt, Validatoren Exit 0, Wegwerf-Nutzer geloescht",
+      "url": "staging.gregor20.henemm.com/compare/cp-cc798e8ca9d34a15:AC-8",
+      "evidence": "DE+EN Hub-Reiter laden, 0 Konsolenfehler, Screenshots ac-tab-de-en-pass.png",
       "workflow": "feat-3298-altfeld-typen-sperre"
     },
     {
-      "ac": "AC-1-en",
+      "ac": "AC-10",
       "status": "PASS",
-      "url": "staging_mail_pruefen --typ beide --lang en",
-      "evidence": "Trip- und Compare-Mail (Nutzer en) zugestellt, Validatoren Exit 0",
+      "url": "staging.gregor20.henemm.com/compare/cp-cc798e8ca9d34a15:AC-10",
+      "evidence": "Wetter 39/39 Checkboxen hydratiert, Zustellung Zeiten Kanaele Cooldown gefuellt (DE+EN)",
       "workflow": "feat-3298-altfeld-typen-sperre"
     },
     {
-      "ac": "Alarm-Pfade",
+      "ac": "AC-5",
       "status": "PASS",
-      "url": "send_gate_test_mails official/radar de+en",
-      "evidence": "official_alert und radar_alert Validator je Sprache Exit 0",
+      "url": "staging.gregor20.henemm.com/compare/cp-cc798e8ca9d34a15:AC-5",
+      "evidence": "Stundenverlauf und Cooldown geaendert, nach Reload erhalten, Ausgangswert wiederhergestellt",
       "workflow": "feat-3298-altfeld-typen-sperre"
     },
     {
-      "ac": "Windrichtung",
+      "ac": "AC-4",
       "status": "PASS",
-      "url": "send_gate_test_mails briefing/compare de+en",
-      "evidence": "briefing_mail_validator und email_spec_validator mit --windrichtung je Sprache Exit 0",
-      "workflow": "feat-3298-altfeld-typen-sperre"
-    },
-    {
-      "ac": "Altfelder-API",
-      "status": "PASS",
-      "url": "/api/trips, /api/compare/presets",
-      "evidence": "Trip (Nutzer en) und Ortsvergleich gespeichert, GET und Liste ohne show_outlook, multi_day_trend_reports, outlook_enabled; aufgeraeumt. Hinweis: Go reicht report_config unveraendert durch, mitgeschickte Altschluessel kommen als Echo zurueck (Bestandsverhalten).",
+      "url": "staging.gregor20.henemm.com/compare/new:AC-4",
+      "evidence": "Anlegen-Pfad DE+EN ohne Konsolenfehler, nichts gespeichert",
       "workflow": "feat-3298-altfeld-typen-sperre"
     }
   ],
-  "verified_at": "2026-11-26T12:22:40.625268+00:00",
+  "verified_at": "2026-11-26T12:23:14.275205+00:00",
   "environment": "staging",
-  "staging_verdict": "VERIFIED: 4/4 UI-ACs gruen (6 Struktur-ACs out-of-scope)",
+  "staging_verdict": "VERIFIED: 4/4 UI-ACs gruen (Struktur-ACs out-of-scope)",
   "scope": "frontend-only",
   "langs": [
     "de",
@@ -55,13 +48,13 @@
   ],
   "verdicts": {
     "feat-3298-altfeld-typen-sperre": {
-      "verdict": "VERIFIED: 4/4 UI-ACs gruen (6 Struktur-ACs out-of-scope)",
+      "verdict": "VERIFIED: 4/4 UI-ACs gruen (Struktur-ACs out-of-scope)",
       "scope": "frontend-only",
       "langs": [
         "de",
         "en"
       ],
-      "at": "2026-11-26T12:22:40.625268+00:00",
+      "at": "2026-11-26T12:23:14.275205+00:00",
       "frontend_pages_checked": [
         "/",
         "/trips",
