@@ -605,7 +605,7 @@ const NEU_IN_FOLGEPAKETEN = [
 	'wetter.grenzen.fehler_unten',
 	'wetter.grenzen.fehler_kreuz',
 	'wetter.grenzen.fehler_zahl',
-	'wetter.grenzen.fehler_ungueltig',
+	// #2988 S4: 'wetter.grenzen.fehler_ungueltig' entfaellt mit dem Spiegel `ampelFehler` (einziger Verwender).
 	'wetter.nicht_im_briefing.titel',
 	'wetter.nicht_im_briefing.hinzufuegen',
 	'wetter.nicht_im_briefing.hinzugefuegt',

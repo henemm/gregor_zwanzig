@@ -2,7 +2,7 @@
 // Spec: docs/specs/modules/feat_2794_s3a_teil3_wetter.md, Implementation Details §1/§2.
 //
 // Reine Funktionen, EIN Code fuer Trip (`route`) und Orts-Briefing (`vergleich`).
-// Spiegel von src/app/ampel.py (`_verschmelzen`, `validate_ampel`).
+// Kein Spiegel von src/app/ampel.py: die Aufloesung kommt vom Server (#2988, ampelAufloesung.ts).
 // Vorlagen-Ampeln kommen aus `/api/templates`, Metrik-Eigenschaften aus `/api/metrics`;
 // keine Frontend-Kopie. Texte liefert das Modell nie: nur Katalogschluessel (Bereich
 // `wetter`) und Platzhalter-Werte.
@@ -52,9 +52,6 @@ const OBEN = ['yellow', 'orange', 'red'] as const; // aufsteigend: gelb < orange
 const ALARM_AB: readonly AlarmAb[] = ['never', 'yellow', 'orange', 'red'];
 const ALARM_AB_GEWITTER: readonly AlarmAb[] = ['never', 'orange', 'red'];
 const RANG: Record<string, number> = { yellow: 1, orange: 2, red: 3 };
-/** #3222 (ADR-0126): Windrichtung, gleiche Mengen wie Python `services.windrichtung`. */
-const WIND_MODI = ['aus', 'gegenwind', 'sektoren'];
-const WIND_SEKTOREN = ['N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW'];
 /** Gruppenfolge der Zeilen (Gesamt-Spec §4); welche Metrik in welche Gruppe gehoert, sagt `/api/metrics`. */
 const GRUPPEN_FOLGE = ['temperature', 'wind', 'precip_thunder', 'sky_visibility', 'snow_height'];
 
@@ -97,36 +94,9 @@ export function eigenschaftenAusKatalog(apiMetrics: Record<string, Record<string
 	return aus;
 }
 
-/** Vorlagen-ID eines Abos: `ampel.template`, unbekannt oder fehlend -> „allgemein“. */
-export function vorlageIdVon(abo: Ampel | null | undefined, vorlagen: VorlagenAmpeln): string {
-	const tid = abo?.template;
-	return tid && tid in vorlagen ? tid : STANDARD_VORLAGE;
-}
-
-// ── Aufloesung und Abweichungen ──────────────────────────────────────────────
-
-/** Spiegel von `app.ampel._verschmelzen`: Vorlage + Abo-Abweichungen, mutiert nichts.
- *  Eine ungueltige Abo-Ampel wird wie in Python ignoriert (Vorlage greift). */
-export function verschmelzen(vorlage: Ampel, abo?: Ampel | null): Ampel {
-	const res = klon(vorlage);
-	res.metrics = res.metrics ?? {};
-	res.thunder = res.thunder ?? {};
-	if (!abo || ampelFehler(abo).length > 0) return res;
-	for (const [mid, e] of Object.entries(abo.metrics ?? {})) {
-		const ziel = (res.metrics[mid] = res.metrics[mid] ?? ohneZeile());
-		for (const k of ['lower', 'upper'] as const) {
-			if (k in e) ziel[k] = klon(e[k]) ?? {}; // null = Seite bewusst offen
-		}
-		if (e.enabled !== undefined && e.enabled !== null) ziel.enabled = e.enabled;
-		if (e.alarm_ab !== undefined && e.alarm_ab !== null) ziel.alarm_ab = e.alarm_ab;
-		if (e.modus !== undefined && e.modus !== null) ziel.modus = e.modus;
-		if (e.sektoren !== undefined && e.sektoren !== null) ziel.sektoren = [...e.sektoren];
-	}
-	for (const [k, v] of Object.entries(abo.thunder ?? {})) {
-		if (v !== undefined && v !== null) (res.thunder as Record<string, AmpelFarbe>)[k] = v;
-	}
-	return res;
-}
+// ── Grenzen vergleichen ──────────────────────────────────────────────────────
+// Die Aufloesung (Vorlage + Abweichungen, Gueltigkeit) rechnet allein Python (#2988,
+// POST /api/ampel/aufloesung, `app.ampel.resolve_entwurf`).
 
 /** Seite ohne offene (null) Grenzen. */
 function ohneOffene(seite: AmpelSeite | null | undefined): Record<string, number> {
@@ -141,41 +111,6 @@ export function gleicheSeite(a: AmpelSeite | null | undefined, b: AmpelSeite | n
 	const y = ohneOffene(b);
 	const kx = Object.keys(x);
 	return kx.length === Object.keys(y).length && kx.every((k) => k in y && x[k] === y[k]);
-}
-
-/** Weicht eine Abo-Zeile von der Vorlagen-Zeile ab? (Grenzen, enabled, alarm_ab) */
-function zeileWeichtAb(e: AmpelMetrik, v: AmpelMetrik): boolean {
-	const grenzen = (['lower', 'upper'] as const).some((k) => k in e && !gleicheSeite(e[k], v[k]));
-	const werte = (['enabled', 'alarm_ab'] as const).some((k) => e[k] !== undefined && e[k] !== null && e[k] !== v[k]);
-	return grenzen || werte || richtungWeichtAb(e, v);
-}
-
-/** #3222: `modus` (fehlend = "aus") und `sektoren` (Menge, fehlend = leer). */
-function richtungWeichtAb(e: AmpelMetrik, v: AmpelMetrik): boolean {
-	const modus = e.modus !== undefined && e.modus !== null && e.modus !== (v.modus || 'aus');
-	const soll = new Set(v.sektoren ?? []);
-	const ist = new Set(e.sektoren ?? []);
-	const sektoren = e.sektoren !== undefined && e.sektoren !== null && (ist.size !== soll.size || [...ist].some((k) => !soll.has(k)));
-	return modus || sektoren;
-}
-
-/** Abweichungen einer Abo-Ampel gegen eine gegebene Vorlagen-Ampel. */
-export function zaehleAbweichungenGegen(vorlage: Ampel, abo: Ampel | null | undefined): number {
-	if (!abo) return 0;
-	let n = 0;
-	for (const [mid, e] of Object.entries(abo.metrics ?? {})) {
-		if (zeileWeichtAb(e ?? {}, vorlage.metrics?.[mid] ?? ohneZeile())) n++;
-	}
-	const v = vorlage.thunder ?? {};
-	const gewitter = { ...v, ...ohneOffene(abo.thunder as AmpelSeite) } as Record<string, unknown>;
-	const geaendert = Object.keys(gewitter).some((k) => gewitter[k] !== (v as Record<string, unknown>)[k]);
-	return n + (geaendert ? 1 : 0);
-}
-
-/** Abweichungen einer Abo-Ampel von ihrer Vorlage (`abo.template`, sonst „allgemein“). */
-export function zaehleAbweichungen(abo: Ampel | null | undefined, vorlagen: VorlagenAmpeln): number {
-	if (!abo) return 0;
-	return zaehleAbweichungenGegen(vorlagen[vorlageIdVon(abo, vorlagen)], abo);
 }
 
 // ── Regeln: Grenzen (AC-17) und Gewitter (AC-18) ─────────────────────────────
@@ -220,44 +155,6 @@ export function gewitterFehler(thunder: unknown): string[] {
 	if (hoch !== undefined && hoch !== null && !gewitterFarben('hoch').includes(hoch as Farbe)) fehler.push('wetter.gewitter.fehler_hoch_gelb');
 	if (String(mittel) in RANG && String(hoch) in RANG && RANG[String(hoch)] < RANG[String(mittel)]) fehler.push('wetter.gewitter.fehler_hoch_schwaecher');
 	return fehler;
-}
-
-function metrikFehler(mid: string, e: unknown): string[] {
-	if (!istObjekt(e)) return ['wetter.grenzen.fehler_ungueltig'];
-	const fehler = grenzenFehler(e as AmpelMetrik);
-	const a = e.alarm_ab;
-	if (a !== undefined && a !== null && !(mid === GEWITTER ? ALARM_AB_GEWITTER : ALARM_AB).includes(a as AlarmAb)) {
-		fehler.push('wetter.grenzen.fehler_ungueltig');
-	}
-	if (e.enabled !== undefined && e.enabled !== null && typeof e.enabled !== 'boolean') fehler.push('wetter.grenzen.fehler_ungueltig');
-	if (windrichtungUngueltig(mid, e)) fehler.push('wetter.grenzen.fehler_ungueltig');
-	return fehler;
-}
-
-/** #3222: Regeln fuer `modus`/`sektoren` (Spiegel `_windrichtung_grund`, Trip-Kontext). */
-function windrichtungUngueltig(mid: string, e: Record<string, unknown>): boolean {
-	const modus = e.modus ?? null;
-	const sektoren = e.sektoren ?? null;
-	if (modus === null && sektoren === null) return false;
-	if (mid !== 'wind_direction') return true;
-	if (modus !== null && !WIND_MODI.includes(modus as string)) return true;
-	if (sektoren === null) return false;
-	if (!Array.isArray(sektoren) || sektoren.some((k) => !WIND_SEKTOREN.includes(k as string))) return true;
-	return new Set(sektoren).size !== sektoren.length || (sektoren.length > 0 && modus !== 'sektoren');
-}
-
-/** Ganze Ampel pruefen, regelgleich mit Python `validate_ampel` und Go `validateAmpel`.
- *  Liefert Katalogschluessel (ohne Doppelte), leer = gueltig. */
-export function ampelFehler(ampel: unknown): string[] {
-	if (ampel === null || ampel === undefined) return [];
-	if (!istObjekt(ampel)) return ['wetter.grenzen.fehler_ungueltig'];
-	const fehler: string[] = [];
-	if (ampel.template !== undefined && ampel.template !== null && typeof ampel.template !== 'string') fehler.push('wetter.grenzen.fehler_ungueltig');
-	const metrics = ampel.metrics;
-	if (metrics !== undefined && metrics !== null && !istObjekt(metrics)) fehler.push('wetter.grenzen.fehler_ungueltig');
-	else for (const [mid, e] of Object.entries(metrics ?? {})) fehler.push(...metrikFehler(mid, e));
-	if (ampel.thunder !== undefined && ampel.thunder !== null) fehler.push(...gewitterFehler(ampel.thunder));
-	return [...new Set(fehler)];
 }
 
 /** Waehlbare Farben je Gewitter-Stufe (ADR-0106: „keins“ gruen, „leicht“ fest gelb). */
@@ -546,23 +443,6 @@ const AUSWAHL_QUELLE: Record<Kontext, (dc: AuswahlQuelle | null | undefined, alt
 export function ausgebbarTeilen(context: Kontext, auswahl: string[], katalogIds: Set<string>): { zeilen: string[]; gesperrt: string[] } {
 	const ok = ANGEBOTS_FILTER[context];
 	return { zeilen: auswahl.filter((id) => ok(id, katalogIds)), gesperrt: auswahl.filter((id) => !ok(id, katalogIds)) };
-}
-
-/** Vollstaendige Ampel einer eigenen Vorlage; Bestand ohne `ampel`: „allgemein“ mit `enabled`
- *  aus den Metriken der Vorlage (Spec §6 a, AC-39). */
-export function eigeneVorlageAmpel(
-	preset: { metrics?: { metric_id: string; enabled?: boolean }[]; ampel?: Ampel | null },
-	vorlagen: VorlagenAmpeln
-): Ampel {
-	if (preset?.ampel) return verschmelzen(vorlagen[vorlageIdVon(preset.ampel, vorlagen)], preset.ampel);
-	const a = verschmelzen(vorlagen[STANDARD_VORLAGE], null);
-	for (const e of Object.values(a.metrics ?? {})) e.enabled = false;
-	for (const m of preset?.metrics ?? []) {
-		if (m?.enabled !== true) continue;
-		a.metrics![m.metric_id] = a.metrics![m.metric_id] ?? ohneZeile();
-		a.metrics![m.metric_id].enabled = true;
-	}
-	return a;
 }
 
 /** Vorlagenwechsel/Zuruecksetzen: Kopie der fertigen Vorlagen-Ampel und Auswahl aus ihrem `enabled`. */

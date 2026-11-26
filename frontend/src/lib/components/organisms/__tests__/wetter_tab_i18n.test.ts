@@ -216,7 +216,9 @@ const GEAENDERT_FREIGEGEBEN: Record<string, Record<string, string>> = {
 // ersatzlos. Bewusst entfernt; jede andere Entfernung bleibt rot.
 // #3111 (Mockup Fassung 4): einzeilige Grenzen-Titel und einteilige Rückfrage entfallen, ersetzt durch
 // unten_1/_2, oben_1/_2 bzw. frage_titel + ersetzt_*.
+// #2988 S4: wetter.grenzen.fehler_ungueltig entfällt mit dem Spiegel `ampelFehler` (einziger Verwender).
 const ENTFERNT_FREIGEGEBEN = new Set([
+	'wetter.grenzen.fehler_ungueltig',
 	'wetter.wsw.sms.plus_je_ort',
 	'wetter.grenzen.unten',
 	'wetter.grenzen.oben',

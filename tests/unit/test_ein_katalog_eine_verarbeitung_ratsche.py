@@ -36,7 +36,7 @@ from tests.helpers.katalog_verarbeitung_scan import (
 )
 
 #: Festgeschriebener Hoechststand (Regel d). Wird nur gesenkt, nie erhoeht.
-HOECHSTSTAND = 422  # #3384 S4: -8 (alertMetricCatalogIds 2, weatherEmoji 6 geloescht); #3383 S1: -3
+HOECHSTSTAND = 421  # #2988 S4: -1 (windrichtungUngueltig im Ampel-Spiegel geloescht); #3384 S4: -8 (alertMetricCatalogIds 2, weatherEmoji 6 geloescht); #3383 S1: -3
 
 #: Arten ohne Fund im heutigen Bestand. Ihre Wirksamkeit belegen allein die
 #: Gegenproben unten (Go haelt heute keinen festen Messwert-Vergleich).

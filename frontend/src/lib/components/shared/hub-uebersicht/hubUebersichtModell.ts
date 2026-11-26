@@ -26,14 +26,12 @@ import {
 import { get } from 'svelte/store';
 import { locale, tr, trn, type MessageKey } from '../../../i18n/index.ts';
 import { aboVorlagenName } from '../wetter-tab/vorlageName.ts';
-import { vorlageIdFuer } from '../../alerts-tab/alarmAbAnzeige.ts';
 import type { Aufgeloest } from '../wetter-tab/ampelAufloesung.ts';
 import {
 	alarmZaehler,
+	auswahlLesen,
 	ausgebbarTeilen,
-	STANDARD_VORLAGE,
 	vergleichsKatalogIds,
-	verschmelzen,
 	type Ampel,
 	type AltSchluessel,
 	type MetrikEigenschaften,
@@ -141,35 +139,28 @@ export function tripAlertKanaele(trip: Trip): Kanal[] {
 	return (['email', 'telegram', 'sms', 'premium_sms'] as const).filter((k) => ac[k] === true);
 }
 
-/** Übergang bis #2988 S4: die Übersichten lösen noch lokal auf (S4 löscht diese Funktion). */
-function lokalAufgeloest(abo: AboSicht, vorlagen: VorlagenAmpeln): Aufgeloest {
-	const dc = (abo.display_config ?? {}) as { ampel?: Ampel | null; preset_name?: string };
-	const vorlage_id = vorlageIdFuer(dc.ampel, dc.preset_name, abo.profil as string | undefined, vorlagen);
-	return { vorlage_id, ampel: verschmelzen(vorlagen[vorlage_id] ?? vorlagen[STANDARD_VORLAGE], dc.ampel) };
-}
-
 /** „Alarm ab"-Zähler des Reiters Wetter auf der aufgelösten Ampel des Trips (Issue #2794 U4):
- *  dieselbe Funktion `alarmZaehler` auf `standAusAbo`, kein zweites Rechenmodell.
- *  `null` = Vorlagen oder Metrik-Katalog nicht geladen. */
+ *  dieselbe Funktion `alarmZaehler` auf `standAusAbo`, kein zweites Rechenmodell. Die Ampel
+ *  löst allein der Server auf (#2988, POST /api/ampel/aufloesung).
+ *  `null` = Auflösung oder Metrik-Katalog nicht geladen. */
 function tripAlarmZaehler(
 	trip: Trip,
-	vorlagen: VorlagenAmpeln | null | undefined,
+	aufgeloest: Aufgeloest | null | undefined,
 	eig: Record<string, MetrikEigenschaften> | null | undefined
 ): ReturnType<typeof alarmZaehler> | null {
-	if (!vorlagen || !eig || Object.keys(vorlagen).length === 0) return null;
+	if (!aufgeloest || !eig) return null;
 	// #3047 p5c: mit `eig` wie der Reiter — „nie eingestellt" = Register-Standard der Mail, nicht die Vorlage.
-	const abo = trip as unknown as AboSicht;
-	const stand = standAusAbo('route', abo, lokalAufgeloest(abo, vorlagen), {}, { eig });
+	const stand = standAusAbo('route', trip as unknown as AboSicht, aufgeloest, {}, { eig });
 	return alarmZaehler(stand.ampel, stand.auswahl, eig);
 }
 
 /** Text der Alarm-Zeile der Trip-Übersicht = Zähler des Reiters Wetter; Ladefehler ⇒ „—". */
 export function tripAlarmAbText(
 	trip: Trip,
-	vorlagen: VorlagenAmpeln | null | undefined,
+	aufgeloest: Aufgeloest | null | undefined,
 	eig: Record<string, MetrikEigenschaften> | null | undefined
 ): string {
-	const z = tripAlarmZaehler(trip, vorlagen, eig);
+	const z = tripAlarmZaehler(trip, aufgeloest, eig);
 	if (!z) return '—';
 	return tr(z.schluessel as MessageKey, z.werte);
 }
@@ -179,10 +170,10 @@ export function tripAlarmAbText(
  *  report_config.alert_on_changes; fehlendes Feld lädt src/app/loader.py als True)
  *  ODER Ampel-Alarmquelle (`ampel_alarmquelle_aktiv`: nur mit `display_config.ampel`,
  *  mindestens eine gewählte, alarmfähige Metrik mit „Alarm ab" ≠ nie auf der aufgelösten Ampel).
- *  Ohne geladene Vorlagen/Katalog zählen nur die bisherigen Quellen. Amtliche Warnungen zählen nicht. */
+ *  Ohne Auflösung/Katalog zählen nur die bisherigen Quellen. Amtliche Warnungen zählen nicht. */
 export function tripWetterAlarmAktiv(
 	trip: Trip,
-	vorlagen?: VorlagenAmpeln | null,
+	aufgeloest?: Aufgeloest | null,
 	eig?: Record<string, MetrikEigenschaften> | null
 ): boolean {
 	const dc = trip.display_config;
@@ -194,7 +185,7 @@ export function tripWetterAlarmAktiv(
 	if (hatPreset || hatStufen || hatRegel || beiAenderung) return true;
 	// Wie der Server: die Ampel-Alarmquelle greift nur, wenn das Abo den Schlüssel `ampel` trägt.
 	if ((dc as { ampel?: unknown } | undefined)?.ampel == null) return false;
-	const z = tripAlarmZaehler(trip, vorlagen, eig);
+	const z = tripAlarmZaehler(trip, aufgeloest, eig);
 	return z?.art === 'zaehler' && Number(z.werte.ausloesend) > 0;
 }
 
@@ -308,18 +299,18 @@ function orteKarte(aufgeloesteOrte: Array<{ rank: number; loc?: { name: string }
 	};
 }
 
-/** Karte „Wetter" (#2794 Fix-Loop B4): Zahl der Metriken im Briefing aus `standAusAbo`
+/** Karte „Wetter" (#2794 Fix-Loop B4): Zahl der Metriken im Briefing aus `auswahlLesen`
  *  (dieselbe Auswahl wie der Reiter Wetter), nicht aus den alten `ideal_ranges`.
  *  #3047 p5c: mit dem Vergleichs-Katalog (`alt`) — „nie eingestellt" = alle Groessen des Katalogs wie
- *  die Mail; gezaehlt werden nur ausgebbare Groessen (Zeilen der Vergleichstabelle).
+ *  die Mail; gezaehlt werden nur ausgebbare Groessen (Zeilen der Vergleichstabelle). Bei geladenem
+ *  Katalog greift die Ampel dort nie (#2988 S4), daher keine Auflösung.
  *  Vorlagen oder Katalog nicht geladen (fehlt/null/leer) ⇒ „—" statt einer erfundenen Zahl. Liest nur. */
+const OHNE_AMPEL: Ampel = {};
 function wertebereicheKarte(preset: ComparePreset, vorlagen: VorlagenAmpeln | null | undefined, alt: AltSchluessel | null | undefined): Karte {
-	const abo = preset as unknown as AboSicht;
+	const dc = preset.display_config as Parameters<typeof auswahlLesen>[1];
 	const katalog = new Set(vergleichsKatalogIds(alt ?? {}));
 	const geladen = !!vorlagen && Object.keys(vorlagen).length > 0 && katalog.size > 0;
-	const anzahl = geladen
-		? ausgebbarTeilen('vergleich', standAusAbo('vergleich', abo, lokalAufgeloest(abo, vorlagen), alt ?? {}).auswahl, katalog).zeilen.length
-		: null;
+	const anzahl = geladen ? ausgebbarTeilen('vergleich', auswahlLesen('vergleich', dc, OHNE_AMPEL, alt ?? {}), katalog).zeilen.length : null;
 	return {
 		eyebrow: tr('aktionen.reiter.wetter'),
 		// #2796 S4a (ADR-0108 P3): Name der aufgeloesten Vorlage statt des Profils.

@@ -19,8 +19,8 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { aufgeloestVon, live } from './wetterTabDaten.ts';
-import { aktiveMetriken, auswahlLesen, eigenschaftenAusKatalog, registerStandard, verschmelzen, vorlagenAusTemplates } from '../ampelModell.ts';
+import { aufgeloestVon, live, pythonAufloesung } from './wetterTabDaten.ts';
+import { aktiveMetriken, auswahlLesen, eigenschaftenAusKatalog, registerStandard, vorlagenAusTemplates } from '../ampelModell.ts';
 import { mitMetrik, standAusAbo, type AboSicht } from '../wetterZustand.ts';
 import { tripNutzlast } from '../wetterTabSpeicherung.ts';
 import { DERIVED_METRIC_RULES } from '../../../trip-detail/metricsEditor.ts';
@@ -44,8 +44,7 @@ describe('F007 (#3047 E1): Trip mit metrics: [] zeigt den Mail-Standard, keine l
 	});
 
 	test('auswahlLesen(route, {metrics: []}) = Register-Standard', () => {
-		const v = vorlagen();
-		const a = verschmelzen(v.wandern, { template: 'wandern' });
+		const a = pythonAufloesung([{ ampel: { template: 'wandern' } }])[0].ampel;
 		assert.deepEqual(auswahlLesen('route', { metrics: [] }, a, {}, { eig: EIG }), STANDARD);
 	});
 
@@ -76,8 +75,7 @@ describe('F007 (#3047 E1): Trip mit metrics: [] zeigt den Mail-Standard, keine l
 	});
 
 	test('Abgrenzung: eine Liste nur mit abgewaehlten Eintraegen bleibt eine leere Auswahl', () => {
-		const v = vorlagen();
-		const a = verschmelzen(v.wandern, null);
+		const a = pythonAufloesung([{ ampel: { template: 'wandern' } }])[0].ampel;
 		assert.deepEqual(auswahlLesen('route', { metrics: [{ metric_id: 'wind', enabled: false }] }, a, {}, { eig: EIG }), []);
 	});
 });

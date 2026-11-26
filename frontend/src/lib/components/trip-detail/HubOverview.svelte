@@ -3,12 +3,12 @@
 	import FullProfile from './FullProfile.svelte';
 	import TripStageRow from './TripStageRow.svelte';
 	import ReportLine from './ReportLine.svelte';
-	import type { Ampel, Trip } from '$lib/types';
+	import type { Trip } from '$lib/types';
 	// Issue #2682: echte Briefing-/Alert-Kanäle (EINE Regel mit der Kanäle-Kennzahl der Übersicht).
 	import { tripAlarmAbText, tripAlertKanaele, tripBriefingKanaele, tripWetterAlarmAktiv } from '../shared/hub-uebersicht/hubUebersichtModell.ts';
 	// Issue #2794 U4: Alarm-Zeile = „Alarm ab"-Zähler des Reiters Wetter (aufgelöste Ampel).
-	import { eigenschaftenAusKatalog, vorlagenAusTemplates, type VorlagenAmpeln } from '../shared/wetter-tab/ampelModell.ts';
-	import { onMount } from 'svelte';
+	import { eigenschaftenAusKatalog } from '../shared/wetter-tab/ampelModell.ts';
+	import { erstelleTripAufloesung, type TripAufloesung } from '../shared/hub-uebersicht/tripAufloesung.ts';
 	import { fetchStageRisk, type StageRisk } from '$lib/utils/stageRisk';
 	// Feature #1435 Etappe E3a: Block Wetter. `metricsCatalog` kommt
 	// ausschließlich als Prop aus der Server-Naht (+page.server.ts) — kein
@@ -53,18 +53,17 @@
 	// Issue #2682 (AC-9/AC-10): tatsaechlich eingestellte Kanaele statt fester Liste.
 	const briefingKanaele = $derived(tripBriefingKanaele(trip));
 	const alertKanaele = $derived(tripAlertKanaele(trip));
-	// Issue #2794 U4: Vorlagen-Ampeln clientseitig (wie der Reiter Wetter); Ladefehler ⇒ null ⇒ „—".
-	let vorlagen = $state<VorlagenAmpeln | null>(null);
-	onMount(() => {
-		api.get<{ id: string; ampel?: Ampel | null }[]>('/api/templates').then(
-			(liste) => (vorlagen = vorlagenAusTemplates(liste)),
-			() => (vorlagen = null)
-		);
+	// Issue #2988 S4: aufgelöste Ampel des Trips vom Server (beim Öffnen und bei jeder Änderung von
+	// `trip`; veraltete Antworten verwirft der Lader). Ausstehend oder gescheitert ⇒ null ⇒ „—".
+	let aufloesung = $state<TripAufloesung>({ zustand: 'laedt', aufgeloest: null });
+	const aufloesungLader = erstelleTripAufloesung(api, (s) => (aufloesung = s));
+	$effect(() => {
+		void aufloesungLader.laden(trip);
 	});
 	const eig = $derived(metricsCatalog ? eigenschaftenAusKatalog(metricsCatalog as unknown as Record<string, Record<string, unknown>[]>) : null);
 	// AC-15 + #2794 U4: Alarm-Zeile aktiv, wenn der Trip eine Wetter-Alarm-Quelle hat (inkl. Ampel wie der Server).
-	const wetterAlarmAktiv = $derived(tripWetterAlarmAktiv(trip, vorlagen, eig));
-	const alarmAbText = $derived((void $locale, tripAlarmAbText(trip, vorlagen, eig)));
+	const wetterAlarmAktiv = $derived(tripWetterAlarmAktiv(trip, aufloesung.aufgeloest, eig));
+	const alarmAbText = $derived((void $locale, tripAlarmAbText(trip, aufloesung.aufgeloest, eig)));
 
 	// i18n F9: die Namensliste kommt sprachabhaengig aus F5 — `$locale` haelt sie reaktiv.
 	const metricsState = $derived.by(() =>

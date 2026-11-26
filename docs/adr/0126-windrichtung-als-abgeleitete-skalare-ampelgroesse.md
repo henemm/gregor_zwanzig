@@ -46,3 +46,10 @@ fachlich bedeutungslos: leichter Wind aus der „falschen" Richtung stört nicht
 - **Negativ / Preis:** Luftlinien-Peilung ist bei Serpentinen und langen Segmenten grob; Stundenfeinheit über den GPX-Track folgt später.
 - **Folgepflichten:** Neue Felder der Ampel müssen in `_verschmelzen`, `deviation_count`, Go-Validierung und TS-Spiegel gleichzeitig
   ergänzt werden. Winkel werden nie arithmetisch gemittelt, nur vektoriell.
+
+## Nachtrag (2026-11-26, #2988)
+
+Die Folgepflicht schrumpft: `deviation_count` (Python, #2988 S1) und der TS-Spiegel (`verschmelzen`, `ampelFehler`,
+`zaehleAbweichungen`, #2988 S4) gibt es nicht mehr; die Auflösung rechnet allein Python (`POST /api/ampel/aufloesung`).
+Neue Ampel-Felder müssen weiter in `_verschmelzen` und in der Go-Validierung ergänzt werden. Die Entscheidung selbst bleibt
+unverändert.

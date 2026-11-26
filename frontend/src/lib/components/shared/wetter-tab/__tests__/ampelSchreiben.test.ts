@@ -27,7 +27,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { ampelModell, ampelSchreiben, amtlicheWarnungen, live, ohneOffene, type Json } from './wetterTabDaten.ts';
+import { ampelModell, ampelSchreiben, amtlicheWarnungen, live, ohneOffene, pythonAufloesung, type Json } from './wetterTabDaten.ts';
 
 async function umgebung(): Promise<{ m: Json; s: Json; w: Json; vorlagen: Json; eig: Json }> {
 	const m = await ampelModell();
@@ -41,6 +41,11 @@ const enabledIds = (ampel: Json): string[] =>
 	Object.entries(ampel.metrics as Record<string, Json>).filter(([, e]) => e.enabled === true).map(([id]) => id).sort();
 
 const sortiert = (a: string[]) => [...a].sort();
+
+/** Rueckweg-Orakel (#2988 S4): Vorlage + Menge wie der Server aufloest (echtes Python, POST /api/ampel/aufloesung). */
+const aufl = (vorlageId: string, ampel: Json): Json => pythonAufloesung([{ ampel: { ...(ampel ?? {}), template: vorlageId } }])[0].ampel;
+/** Zahl der Abweichungen einer Menge, wie der Reiter sie zaehlt (#2988 S1: Eintraege plus Gewitter einmal). */
+const zahl = (menge: Json): number => Object.keys(menge.metrics ?? {}).length + (menge.thunder ? 1 : 0);
 
 /** Jeder Eintrag der Menge ist eine echte Abweichung (sonst ist sie nicht minimal). */
 function pruefeMinimal(m: Json, vorlage: Json, menge: Json, wo: string): void {
@@ -85,7 +90,7 @@ describe('AC-37/AC-38: ampel ist die vollstaendige minimale Abweichungsmenge', (
 		assert.deepEqual(menge.metrics.gust, { enabled: false }, 'entfernte Metrik: nur enabled=false');
 		assert.deepEqual(menge.metrics.dewpoint, { enabled: true }, 'hinzugefuegte Metrik: nur enabled=true');
 		assert.equal('wind' in menge.metrics, false, 'unveraenderte Metrik steht in der Menge');
-		assert.equal(m.zaehleAbweichungen(menge, vorlagen), 2);
+		assert.equal(zahl(menge), 2);
 		pruefeMinimal(m, v, menge, 'gust−/dewpoint+');
 	});
 
@@ -97,7 +102,7 @@ describe('AC-37/AC-38: ampel ist die vollstaendige minimale Abweichungsmenge', (
 			const rein = Object.keys(vorlagen[id].metrics).find((x) => !r.auswahl.includes(x))!;
 			const auswahl = [...r.auswahl.filter((x: string) => x !== raus), rein];
 			const menge = s.abweichungsMenge(vorlagen[id], r.ampel, auswahl);
-			const zurueck = m.verschmelzen(vorlagen[id], menge);
+			const zurueck = aufl(id, menge);
 			assert.deepEqual(sortiert(m.aktiveMetriken(zurueck)), sortiert(auswahl), `${id}: aufgeloeste Auswahl ≠ Auswahlliste`);
 			pruefeMinimal(m, vorlagen[id], menge, id);
 		}
@@ -115,8 +120,8 @@ describe('AC-37/AC-38: ampel ist die vollstaendige minimale Abweichungsmenge', (
 		assert.deepEqual(ohneOffene(menge).metrics.gust, { lower: {}, upper: { yellow: 36, orange: 50, red: 70 } });
 		assert.deepEqual(menge.metrics.uv_index, { alarm_ab: 'red' });
 		assert.deepEqual(menge.thunder, { mittel: 'red' });
-		assert.equal(m.zaehleAbweichungen(menge, vorlagen), 3, 'AC-11-Ausgang: 3 Abweichungen von Alpen-Trekking');
-		const zurueck = m.verschmelzen(v, menge);
+		assert.equal(zahl(menge), 3, 'AC-11-Ausgang: 3 Abweichungen von Alpen-Trekking');
+		const zurueck = aufl('alpen-trekking', menge);
 		assert.deepEqual(ohneOffene(zurueck), ohneOffene({ ...a, template: 'alpen-trekking' }), 'Menge ergibt aufgeloest nicht den Bearbeitungsstand');
 	});
 
@@ -127,7 +132,7 @@ describe('AC-37/AC-38: ampel ist die vollstaendige minimale Abweichungsmenge', (
 		a.metrics.gust.upper = { yellow: null, orange: null, red: null };
 		const menge = s.abweichungsMenge(vorlagen.wandern, a, r.auswahl);
 		assert.ok('upper' in menge.metrics.gust, 'geleerte Seite fehlt in der Menge — die Vorlagen-Grenze kaeme zurueck');
-		const zurueck = m.verschmelzen(vorlagen.wandern, menge);
+		const zurueck = aufl('wandern', menge);
 		assert.deepEqual(ohneOffene(zurueck).metrics.gust.upper, {}, 'geleerte Seite ist nach dem Aufloesen nicht offen');
 	});
 });
@@ -152,7 +157,7 @@ const TRIP_RC = { enabled: true, morning_enabled: true, morning_time: '06:00:00'
 async function tripFall(auswahlAenderung: (a: string[]) => string[], warnungenAn = true, radarAn = true): Promise<{ p: Json; menge: Json; auswahl: string[]; u: Json }> {
 	const u = await umgebung();
 	const v = u.vorlagen.wandern;
-	const aufgeloest = u.m.verschmelzen(v, TRIP_DC.ampel);
+	const aufgeloest = aufl('wandern', TRIP_DC.ampel);
 	const auswahl = auswahlAenderung(u.m.auswahlLesen('route', TRIP_DC, aufgeloest));
 	const eingabe = {
 		vorlage: v,
@@ -192,7 +197,7 @@ describe('AC-37/AC-38: Trip-Payload (metrics[] + ampel + Warnungen + Tagesfenste
 		assert.deepEqual(p.weatherConfig.ampel, menge);
 		assert.deepEqual(p.weatherConfig.ampel.metrics.wind, { alarm_ab: 'red' }, 'bestehende Abweichung (wind Alarm ab Rot) ging verloren');
 		assert.deepEqual(p.weatherConfig.ampel.metrics.gust, { enabled: false });
-		const aktiv = u.m.aktiveMetriken(u.m.verschmelzen(u.vorlagen.wandern, p.weatherConfig.ampel));
+		const aktiv = u.m.aktiveMetriken(aufl('wandern', p.weatherConfig.ampel));
 		const liste = (p.weatherConfig.metrics as Json[]).filter((x) => x.enabled).map((x) => x.metric_id);
 		assert.deepEqual(sortiert(aktiv), sortiert(liste), 'AC-37: Ampel-Auswahl und metrics[] laufen auseinander');
 	});
@@ -253,7 +258,7 @@ const VGL_ERLAUBT = ['display_config', 'official_alerts_enabled', 'official_warn
 async function vergleichFall(dc: Json, auswahlAenderung: (a: string[]) => string[], radarAn = true): Promise<{ p: Json; menge: Json; u: Json; auswahl: string[] }> {
 	const u = await umgebung();
 	const v = u.vorlagen.allgemein;
-	const aufgeloest = u.m.verschmelzen(v, dc.ampel ?? null);
+	const aufgeloest = aufl('allgemein', dc.ampel);
 	const auswahl = auswahlAenderung(u.m.auswahlLesen('vergleich', dc, aufgeloest));
 	const p = u.s.vergleichSpeicherPayload({
 		vorlage: v,
@@ -284,7 +289,7 @@ describe('AC-37/AC-38/AC-39: Vergleichs-Payload (active_metrics + ampel + Radar 
 		const { p, menge, u } = await vergleichFall(VGL_DC, (a) => [...a.filter((x) => x !== 'gust'), 'dewpoint']);
 		assert.deepEqual(p.display_config.ampel, menge);
 		assert.deepEqual(ohneOffene(p.display_config.ampel).metrics.gust, { enabled: false, lower: {}, upper: { yellow: 35, orange: 50, red: 65 } }, 'bestehende Grenzen-Abweichung ging verloren');
-		const aktiv = u.m.aktiveMetriken(u.m.verschmelzen(u.vorlagen.allgemein, p.display_config.ampel));
+		const aktiv = u.m.aktiveMetriken(aufl('allgemein', p.display_config.ampel));
 		const liste = [...new Set((p.display_config.active_metrics as Json[]).map((x) => x.metric_id))];
 		assert.deepEqual(sortiert(aktiv), sortiert(liste), 'AC-37: Ampel-Auswahl und active_metrics laufen auseinander');
 	});
@@ -325,7 +330,8 @@ describe('AC-11/AC-12: Vorlagenwechsel ersetzt Auswahl, Grenzen, Alarmstufen —
 	test('ac11_trip_wechsel_auf_wandern', async () => {
 		const u = await umgebung();
 		const vorher = { ...structuredClone(TRIP_DC), ampel: { template: 'alpen-trekking', metrics: { gust: { alarm_ab: 'red' }, uv_index: { alarm_ab: 'red' } }, thunder: { mittel: 'red' } } };
-		assert.equal(u.m.zaehleAbweichungen(vorher.ampel, u.vorlagen), 3, 'Messaufbau: 3 Abweichungen von Alpen-Trekking');
+		const vorherAufgeloest = aufl('alpen-trekking', vorher.ampel);
+		assert.equal(zahl(u.s.abweichungsMenge(u.vorlagen['alpen-trekking'], vorherAufgeloest, u.m.aktiveMetriken(vorherAufgeloest))), 3, 'Messaufbau: 3 Abweichungen von Alpen-Trekking');
 		const neu = u.m.zuruecksetzen('wandern', u.vorlagen);
 		const p = u.s.tripSpeicherPayload({
 			vorlage: u.vorlagen.wandern,
@@ -374,6 +380,6 @@ describe('AC-11/AC-12: Vorlagenwechsel ersetzt Auswahl, Grenzen, Alarmstufen —
 		const u = await umgebung();
 		const r = u.m.zuruecksetzen('allgemein', u.vorlagen);
 		const menge = u.s.abweichungsMenge(u.vorlagen.allgemein, r.ampel, r.auswahl);
-		assert.equal(u.m.zaehleAbweichungen(menge, u.vorlagen), 0);
+		assert.equal(zahl(menge), 0);
 	});
 });
