@@ -8,10 +8,11 @@ const unter = (ordner: string, namen: string): string[] =>
 		.map((n) => `${ordner}/${n}`);
 
 /**
- * Restbestand, den R2 löscht. Die Spec nennt 42 Dateien; 16 davon haben die Waisen-Scheiben #3383 (S1) und #3384 (S4)
- * schon auf main entfernt (compare: layoutPreviewRows, versandPropsAus, wetterMetrikenPropsAus; molecules:
+ * Restbestand, den R2 löscht. Die Spec nennt 42 Dateien; 23 davon haben die Waisen-Scheiben #3383 (S1), #3384 (S4)
+ * und #3385 (S3) schon entfernt (compare: layoutPreviewRows, versandPropsAus, wetterMetrikenPropsAus; molecules:
  * GrundauswahlLeerHinweis; shared: reportConfigDirty; shared/weather-metrics-tab: neun Dateien; trip-detail:
- * WeatherV2Kanaele, weatherSaveGate). Sie stehen hier nicht mehr: ihre Löschung und Importfreiheit bewacht
+ * WeatherV2Kanaele, weatherSaveGate; shared/versand-tab: VTBriefingChannels, VTLaufzeitRoute, VTLaufzeitVergleich,
+ * VTNextBriefing, VTSchedulePlan, channelContactLabel, vtBriefingChannelsText). Sie stehen hier nicht mehr: ihre Löschung und Importfreiheit bewacht
  * trip_pfad_altfeld_loeschnachweis_3297.test.ts, dessen Wortscan (F004) den Namen eines dieser Bauteile überall verbietet.
  */
 export const RESTBESTAND: string[] = [
@@ -19,11 +20,6 @@ export const RESTBESTAND: string[] = [
 	...unter('organisms', 'AlertsCard.svelte MetricOffShelf.svelte OutboxCard.svelte PresetRail.svelte'),
 	...unter('shared', 'OutputLayoutEditor.svelte'),
 	...unter('shared/layout-tab', 'LTCapNote.svelte LTChannelPicker.svelte LTCutLine.svelte LayoutTab.svelte channelLayoutsDirty.ts ltIdealRange.ts'),
-	...unter(
-		'shared/versand-tab',
-		`VTBriefingChannels.svelte VTLaufzeitRoute.svelte VTLaufzeitVergleich.svelte VTNextBriefing.svelte
-		 VTSchedulePlan.svelte channelContactLabel.ts vtBriefingChannelsText.ts`
-	),
 	...unter(
 		'trip-detail',
 		`ActiveMetricRow.svelte BucketSection.svelte BucketSectionOff.svelte ChannelLimitMarkers.svelte PresetRow.svelte
@@ -33,10 +29,10 @@ export const RESTBESTAND: string[] = [
 
 /** In der Spec genannte Länge (Vakuum-Schutz, AC-7). */
 export const SPEC_ANZAHL = 42;
-/** Davon schon durch #3383/#3384 entfernt (siehe oben). */
-export const DURCH_WAISEN_ENTFERNT = 16;
+/** Davon schon durch #3383/#3384/#3385 entfernt (siehe oben). */
+export const DURCH_WAISEN_ENTFERNT = 23;
 /** Verbleibender Restbestand für R2. */
-export const RESTBESTAND_ANZAHL = 26;
+export const RESTBESTAND_ANZAHL = 19;
 
 /** Barrel-Zeilen, die mit R2 fallen: [Barrel, Name]. */
 export const BARREL: readonly (readonly [string, string])[] = [

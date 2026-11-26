@@ -266,21 +266,13 @@ const EINGEFROREN: readonly string[] = [
 	// #3196: -7, s. o.; #3190: +18 (Speichern-Karte unter die Profil-Karte oberhalb verschoben,
 	// Umschalter-Props am Auslöser), Bedingung unveraendert, nachgemessen, unten gefesselt.
 	// #3276: -129 (zusaetzlich die Mounts Stundenverlauf/Ausblick des Vergleichs entfernt).
-	// #2655 (F6): beide nur verschoben (Katalog-Import, Satz je Kontext aus
-	// dem Katalog statt Konkatenation); Bedingungen unveraendert, nachgemessen.
-	'versand-tab/vtBriefingChannelsText.ts:22',
-	'versand-tab/vtBriefingChannelsText.ts:29',
+	// #3385: `versand-tab/vtBriefingChannelsText.ts:22/:29` mit der Waise geloescht (Soll 13 → 10).
 	// #2794 S3a Teil-PR 4a (AC-31): die 22 Corridor-Eintraege (CorridorEditor.svelte 11,
 	// CorridorEditorMobile.svelte 11) entfallen mit der entfernten Oberflaeche — eine
 	// ENTFERNTE Verzweigung, keine verschobene. Die Logik-Weiche der Korridor-Logik zog mit
 	// dem Modul nach wetter-tab/ um (Zeile unveraendert, nur der Pfad). Soll 48 → 26.
 	'wetter-tab/corridorEditorState.ts:331',
-	// #2655 (F6): verschoben (zwei Katalog-Importe, Zeitplan-Hinweis einzeilig);
-	// Bedingungen `context === 'route'` / `{#if context === 'vergleich'}` unveraendert.
-	// #3155 (B4): die Weiche `isRoute = context === 'route'` (:57) ist mit der Karte
-	// „Mehrtages-Trend" ENTFERNT (Soll 26 → 25); `{#if context === 'vergleich'}`
-	// verschoben :84 → :72 (Trend-Props/Kommentar entfallen), Bedingung unveraendert.
-	'versand-tab/VTSchedulePlan.svelte:72',
+	// #3385: `versand-tab/VTSchedulePlan.svelte:72` mit der Waise geloescht (Soll 13 → 10).
 	'alarme-tab/alarmeTabSections.ts:27',
 	'alarme-tab/alarmeTabSections.ts:38',
 	// #3276: -5 (Durchreicher hourly_/outlook_* und Import entfernt), Weiche unveraendert.
@@ -321,7 +313,9 @@ const EINGEFROREN: readonly string[] = [
 // #3276: Vergleichs-Weiche `COMPARE_ONLY_SECTIONS` in weatherMetricsTabSections.ts entfernt. Soll 25 → 24.
 // #3297/#3020: VersandTab (3), WeatherMetricsTab (6), weatherMetricsTabSections.ts (1) und
 // WetterMetrikenVersandPanel (1) geloescht — 11 ENTFERNTE Verzweigungen. Soll 24 → 13.
-const EINGEFROREN_SOLL_ANZAHL = 13;
+// #3385: vtBriefingChannelsText.ts (2) und VTSchedulePlan.svelte (1) als Waisen geloescht —
+// 3 ENTFERNTE Verzweigungen. Soll 13 → 10.
+const EINGEFROREN_SOLL_ANZAHL = 10;
 
 /**
  * S6c: die vier ueberlebenden AlarmeTab-Eintraege, GEGEN IHREN INHALT gefesselt.

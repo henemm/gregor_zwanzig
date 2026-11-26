@@ -155,25 +155,15 @@ const NEU_IN_F4 = [
 	'nav.speicherfehler_mit'
 ];
 /** #2655 (F6) Versand-Reiter: versand.json und telegram_kurzstil.checkbox (bausteine.json). */
+// #3385: versand.kanaele.*, versand.kanal.*, versand.briefing.*, versand.zeitplan.*,
+// versand.laufzeit.* und versand.naechstes.titel entfallen mit den geloeschten Bausteinen.
 const NEU_IN_F6 = [
-	'versand.kanaele.titel', 'versand.kanal.email_fehlt', 'versand.kanal.telegram_fehlt',
-	'versand.kanal.nummer_fehlt', 'versand.kanal.im_account_einrichten', 'versand.kanal.nummer_unbestaetigt',
-	'versand.kanal.code_eingeben', 'versand.kanal.sms_ab_standard', 'versand.kanal.bald_verfuegbar',
 	'versand.status.nicht_verbunden', 'versand.status.bestaetigt', 'versand.status.nicht_bestaetigt',
 	'versand.status.verbunden', 'versand.status.hinterlegt', 'versand.status.eingetragen_unbestaetigt',
 	'versand.premium_sms.nicht_verfuegbar', 'versand.premium_sms.hinweis.nicht_verfuegbar',
 	'versand.premium_sms.gelernt', 'versand.premium_sms.hinweis.gelernt', 'versand.premium_sms.verfallen',
 	'versand.premium_sms.hinweis.verfallen', 'versand.premium_sms.hinweis.nie_gemeldet',
-	'versand.premium_sms.zuletzt_gemeldet', 'versand.briefing.lead.route', 'versand.briefing.lead.vergleich',
-	'versand.briefing.sub.email', 'versand.briefing.sub.telegram', 'versand.briefing.sub.telegram_kurzform',
-	'versand.briefing.sub.sms', 'versand.zeitplan.titel', 'versand.zeitplan.kein_kanal',
-	'versand.zeitplan.kein_kanal_text', 'versand.zeitplan.vergleich_intro', 'versand.zeitplan.morgen',
-	'versand.zeitplan.morgen_sub', 'versand.zeitplan.abend', 'versand.zeitplan.abend_sub',
-	'versand.zeitplan.aktiv', 'versand.zeitplan.uhrzeit', 'versand.zeitplan.morgens', 'versand.zeitplan.abends',
-	// #3155: versand.zeitplan.trend/_trend_sub/im_morgen/im_abend entfallen mit der Karte „Mehrtages-Trend".
-	'versand.laufzeit.titel', 'versand.laufzeit.route',
-	'versand.laufzeit.route_sub', 'versand.laufzeit.etappen_oeffnen', 'versand.laufzeit.offen',
-	'versand.laufzeit.bis_datum', 'versand.laufzeit.ohne_ende', 'versand.naechstes.titel',
+	'versand.premium_sms.zuletzt_gemeldet',
 	'versand.naechstes.pausiert', 'versand.naechstes.pausiert_bis', 'versand.naechstes.beendet.route',
 	'versand.naechstes.beendet.vergleich', 'versand.naechstes.grund.manual', 'versand.naechstes.grund.disabled',
 	'versand.naechstes.grund.none', 'versand.naechstes.uebersprungen', 'versand.naechstes.nachgeholt',
@@ -239,7 +229,8 @@ const NEU_IN_FOLGEPAKETEN = [
 	// #2966 Warnung im Reiter Wetter als zwei Absätze (Satz 1 | Sätze 2 und 3, Wortlaut unverändert)
 	'wetter.kopf.fehler_verbindung',
 	// #3047 R8 (AC-24): Orts-Vergleich-Telegram — alle Zeilen, ab Platz 8 zweite Zeile je Ort.
-	'layout.kappung.zeilen_umbruch', 'layout.kappung.zeilen_eine', 'versand.briefing.sub.telegram_vergleich',
+	// #3385: 'versand.briefing.sub.telegram_vergleich' entfaellt mit vtBriefingChannelsText.ts.
+	'layout.kappung.zeilen_umbruch', 'layout.kappung.zeilen_eine',
 	// #3047 H1 / #3276: 'vergleich.stundenverlauf.nicht_in_grundauswahl' ist mit
 	// CompareHourlyLayoutControls entfallen (stand als Anker in F10_ANKER).
 	// #2999 Datumsfeld: Meldung bei einem Datum, das es nicht gibt

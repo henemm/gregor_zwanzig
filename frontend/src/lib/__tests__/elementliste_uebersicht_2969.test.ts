@@ -124,7 +124,11 @@ const ALT_ANZAHL = ALT_ANZAHL_3251 + 184 - 180 + 174;
 // „Eigene“ wertebereiche.preset.eigene → wetter.vorlage.eigene (EN „Custom“ → „Your own“, der Wortlaut der App).
 // Dazu 20 „Telegram“ wetter.wsw.spalte.telegram → level.zeile.telegram (DE/EN gleich): Altstand ohne S1-Bezug,
 // der Schlüssel level.zeile.telegram (funktionen.json, #3319) sortiert davor und fehlte in der vorigen Erzeugung.
-const ALT_SHA = '1a6ffdba5ecb7bd462f28080d8a44c7e251558837139ad36534d90283de02666';
+// #3385 S3 (26.11.; vorher 1a6ffdba…83de02666): Liste mit dem Generator neu erzeugt, Mockup-Hash und Anzahl
+// gleich, keine ID entfallen, Reihenfolge gleich. Nur i18n_key ändert sich, weil die versand.laufzeit.*-Schlüssel
+// der gelöschten Waisen entfielen: 20 Einträge „Laufzeit“/„Etappen öffnen →“/„Bis auf Weiteres“/„Bis Datum“
+// versand.laufzeit.* → zustellung.laufzeit.* (DE/EN gleich).
+const ALT_SHA = '2e9246ec7ccf617dc25c516e864ecb57417ec207d789948e1447d1a54d0e73ce';
 const MOCKUP_HASH = 'sha256:fbb04f549d974116e70c0e89facac657cf5ab13a31e267eb00882ad7e6496ec6';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {

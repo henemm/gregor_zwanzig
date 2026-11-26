@@ -44,7 +44,8 @@ function probe(args: string[]): Promise<{ code: number | null; aus: string }> {
 const skript = (code: string) => probe(['--input-type=module', '-e', code]);
 
 describe('Selbsttest: die Probe verbirgt genau die toten Dateien', () => {
-	const tot = join(KOMP, 'shared/versand-tab/vtBriefingChannelsText.ts');
+	// Tote Beispieldatei aus dem Restbestand, die noch existiert (#3385 hat die versand-tab-Dateien schon gelöscht).
+	const tot = join(KOMP, 'organisms/OutboxCard.svelte');
 	const lebend = join(KOMP, 'shared/layout-tab/ltChannels.ts');
 	const url = (p: string) => JSON.stringify(pathToFileURL(p).href);
 
@@ -68,8 +69,8 @@ describe('Selbsttest: die Probe verbirgt genau die toten Dateien', () => {
 				`console.log('ERGEBNIS' + JSON.stringify([readdirSync(d), readdirSync(d, { withFileTypes: true }).map((e) => e.name)]))`
 		);
 		for (const namen of JSON.parse(r.aus.match(/ERGEBNIS(.*)/)?.[1] ?? '[[],[]]') as string[][]) {
-			assert.ok(namen.includes('reportConfigPayload.ts'), 'lebende Datei fehlt in der Liste');
-			assert.ok(!namen.includes('vtBriefingChannelsText.ts'), 'tote Datei steht noch in der Liste');
+			assert.ok(namen.includes('ListTable.svelte'), 'lebende Datei fehlt in der Liste');
+			assert.ok(!namen.includes('OutboxCard.svelte'), 'tote Datei steht noch in der Liste');
 		}
 	});
 	// Barrels (Spec Nr. 4): wie probeloeschung.py fallen NUR Re-Export-Zeilen auf tote Dateien in index.ts.

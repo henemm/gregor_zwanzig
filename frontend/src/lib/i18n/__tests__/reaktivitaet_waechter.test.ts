@@ -12,9 +12,10 @@
 //
 //   cd frontend && npm test -- src/lib/i18n/__tests__/reaktivitaet_waechter.test.ts
 
-import { test, describe } from 'node:test';
+import { test, describe, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { scanneKomponente, scanneEintraege, type Fund } from './reaktivitaet_scan.ts';
@@ -40,10 +41,9 @@ const BEREICHE: Record<string, string[]> = {
 		'lib/components/ui/sidebar/',
 		'lib/components/ui/SaveIndicator.svelte'
 	],
-	'F6 #2655 Versand-Reiter': [
-		'lib/components/shared/TelegramKurzstilToggle.svelte',
-		'lib/components/shared/versand-tab/'
-	],
+	// #3385: Bereich „F6 #2655 Versand-Reiter" gestrichen — versand-tab/ enthaelt nach dem
+	// Loeschen der Waisen keine .svelte-Datei mehr; TelegramKurzstilToggle.svelte steht
+	// ausdruecklich in der Dateiliste von Bereich F7 (der Scan folgt keinen Importen).
 	'F5 #2654 Wertebereiche-Reiter': [
 		'lib/components/shared/StandardwerteSpeichernKnopf.svelte',
 		'lib/components/shared/weather-metrics-tab/'
@@ -68,6 +68,7 @@ const BEREICHE: Record<string, string[]> = {
 	'F7 #2656 Alarme-Reiter, Alarm-Kanal-Picker, alerts-tab': [
 		'lib/components/shared/AlarmeTab.svelte',
 		'lib/components/shared/AlertChannelPicker.svelte',
+		'lib/components/shared/TelegramKurzstilToggle.svelte',
 		'lib/components/alerts-tab/'
 	],
 	'F10 #2659 Ortsvergleich-Hub, Anlegen, Orte, transponierte Uebersicht': [
@@ -114,8 +115,20 @@ const ausgenommen = (f: Fund) => AUSNAHMEN.some((a) => a.pfad === f.pfad && f.te
 
 /** Beispielquelltext im Ordner des Versand-Reiters (fuer die Import-Aufloesung). */
 const BEISPIEL_DATEI = join(SRC, 'lib', 'components', 'shared', 'versand-tab', 'Beispiel_2655.svelte');
-const beispiel = (skript: string, markup = '') =>
-	scanneKomponente(`<script lang="ts">\n${skript}\n</script>\n${markup}`, BEISPIEL_DATEI, SRC, 'Beispiel').map((f) => `${f.zeile} ${f.art}`);
+const beispiel = (skript: string, markup = '', datei = BEISPIEL_DATEI) =>
+	scanneKomponente(`<script lang="ts">\n${skript}\n</script>\n${markup}`, datei, SRC, 'Beispiel').map((f) => `${f.zeile} ${f.art}`);
+
+// #3385: erfundene Mini-Module statt der geloeschten channelContactLabel.ts und
+// vtBriefingChannelsText.ts. Der Scanner loest relative Importe auf echte Dateien auf,
+// deshalb liegen sie als Dateien in einem temporaeren Ordner; `$lib/i18n` loest er ueber SRC.
+const MINI = mkdtempSync(join(tmpdir(), 'reaktivitaet-mini-'));
+writeFileSync(join(MINI, 'sprachfrei.ts'), "export function sprachfrei(p: unknown): string {\n\treturn p ? 'ja' : 'nein';\n}\n");
+writeFileSync(
+	join(MINI, 'textHelfer.ts'),
+	"import { tr } from '$lib/i18n';\nexport function leadText(context: string): string {\n\treturn context ? tr('beispiel.mini.text') : '';\n}\n"
+);
+const MINI_DATEI = join(MINI, 'Beispiel_3385.svelte');
+after(() => rmSync(MINI, { recursive: true, force: true }));
 
 describe('Selbsttest an Beispielquelltexten', () => {
 	const IMPORT = "import { premiumSmsChannelState } from './premiumSmsChannelState';\nimport { t, locale, tr } from '$lib/i18n';";
@@ -127,9 +140,10 @@ describe('Selbsttest an Beispielquelltexten', () => {
 		assert.deepEqual(beispiel(`${IMPORT}\nconst a = $derived($t('versand.kanaele.titel'));`), []);
 	});
 	test('transitiv: sendTargetLabel (ruft tr) und lokale Helfer zaehlen, sprachfreie Exporte nicht', () => {
-		const imp = "import { sendTargetLabel } from './sendTargetLabel';\nimport { channelContactLabel } from './channelContactLabel';";
+		const imp = "import { sendTargetLabel } from './sendTargetLabel';\nimport { t } from '$lib/i18n';";
+		const impMini = "import { sendTargetLabel } from '$lib/components/shared/versand-tab/sendTargetLabel';\nimport { sprachfrei } from './sprachfrei';";
 		assert.deepEqual(beispiel(`${imp}\nlet p = $state(null);\nconst a = $derived(sendTargetLabel(p, null));`), ['5 derived']);
-		assert.deepEqual(beispiel(`${imp}\nlet p = $state(null);\nconst a = $derived(channelContactLabel(p));`), []);
+		assert.deepEqual(beispiel(`${impMini}\nlet p = $state(null);\nconst a = $derived(sprachfrei(p));`, '', MINI_DATEI), []);
 		assert.deepEqual(beispiel(`${imp}\nlet p = $state(null);\nfunction ziel() { return sendTargetLabel(p, null).text; }\nconst a = $derived(ziel());`), ['6 derived']);
 	});
 	test('Markup-Ausdruck ohne $locale ist rot; Ereignis-Handler und $t sind gruen', () => {
@@ -140,11 +154,11 @@ describe('Selbsttest an Beispielquelltexten', () => {
 		assert.deepEqual(beispiel(imp, '<button onclick={weiter}>x</button>'), []);
 	});
 	test('Startwerte frieren ein: Konstante, $state-Start, $props-Standardwert', () => {
-		const imp = "import { vtBriefingLeadText } from './vtBriefingChannelsText';";
-		assert.deepEqual(beispiel(`${imp}\nconst a = vtBriefingLeadText('route');`), ['3 eingefroren']);
-		assert.deepEqual(beispiel(`${imp}\nlet a = $state(vtBriefingLeadText('route'));`), ['3 eingefroren']);
-		assert.deepEqual(beispiel(`${imp}\nlet { a = vtBriefingLeadText('route') } = $props();`), ['3 eingefroren']);
-		assert.deepEqual(beispiel(`${imp}\nconst f = () => vtBriefingLeadText('route');`), []);
+		const imp = "import { leadText } from './textHelfer';";
+		assert.deepEqual(beispiel(`${imp}\nconst a = leadText('route');`, '', MINI_DATEI), ['3 eingefroren']);
+		assert.deepEqual(beispiel(`${imp}\nlet a = $state(leadText('route'));`, '', MINI_DATEI), ['3 eingefroren']);
+		assert.deepEqual(beispiel(`${imp}\nlet { a = leadText('route') } = $props();`, '', MINI_DATEI), ['3 eingefroren']);
+		assert.deepEqual(beispiel(`${imp}\nconst f = () => leadText('route');`, '', MINI_DATEI), []);
 	});
 });
 
@@ -162,18 +176,8 @@ describe('Bestand: Sprachwechsel ohne Neuladen erreicht jede Anzeige', () => {
 		});
 	}
 
-	test('Messaufbau: der Versand-Reiter hat sprachabhaengige Ableitungen (Waechter nicht vakuum)', () => {
-		// Ohne die $locale-Lesung wuerden die fuenf $derived des Reiters gemeldet:
-		// dieselbe Quelle mit entferntem `void $locale` muss rot sein.
-		const { dateien } = scanneEintraege(SRC, BEREICHE['F6 #2655 Versand-Reiter']);
-		let gezaehlt = 0;
-		for (const rel of dateien) {
-			const q = readFileSync(join(SRC, rel), 'utf8') as string;
-			const ohne = q.replace(/\$derived\.by\(\(\) => \(void \$locale, ([^\n]*)\)\);/g, '$derived($1);');
-			gezaehlt += scanneKomponente(ohne, join(SRC, rel), SRC, rel).filter((f) => f.art === 'derived').length;
-		}
-		assert.equal(gezaehlt, 5);
-	});
+	// #3385: der Messaufbau des Bereichs F6 (Zaehlung 5) entfaellt mit dem Bereich; die fuenf
+	// $derived gehoerten zu den geloeschten Bausteinen des Versand-Reiters.
 
 	test('Messaufbau F8: ohne die $locale-Lesung bleibt keine Ableitung (Zaehlung nach #3366: 0)', () => {
 		// LTCapNote (1) entfaellt mit #3366 (Waise geloescht, 1 → 0); MailInhaltCard (1) und der

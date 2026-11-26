@@ -24,9 +24,6 @@ formatNextBriefing(abgeschaltet, route) → "Briefings abgeschaltet"
 formatNextBriefing(kein_termin, route) → "kein Termin geplant"
 formatNextBriefing(kaputt, route) → "—"
 formatNextBriefing(nicht_geladen, route) → "—"
-vtBriefingLeadText(route) → "Das Trip-Briefing ist eine Etappen-Tabelle — E-Mail trägt alle Spalten, Telegram die ersten 7, SMS kein Raster, Fließtext."
-vtBriefingSubTexts(route, rich) → {"email":"Layout · volle Tabelle","telegram":"Layout · 7 Spalten","sms":"Layout · kein Raster, 160 Zeichen"}
-vtBriefingSubTexts(route, kurzform) → {"email":"Layout · volle Tabelle","telegram":"folgt der SMS-Auswahl","sms":"Layout · kein Raster, 160 Zeichen"}
 formatNextBriefing(termin, vergleich) → "Mi 28.10. 07:00 (CET)"
 formatNextBriefing(uebersprungen, vergleich) → "Mi 28.10. 07:00 (CET) — Do 29.10. 07:00 wird übersprungen"
 formatNextBriefing(ueberfaellig, vergleich) → "Mi 28.10. 07:00 (CET) — läuft jetzt / wird nachgeholt"
@@ -38,6 +35,3 @@ formatNextBriefing(abgeschaltet, vergleich) → "Briefings abgeschaltet"
 formatNextBriefing(kein_termin, vergleich) → "kein Termin geplant"
 formatNextBriefing(kaputt, vergleich) → "—"
 formatNextBriefing(nicht_geladen, vergleich) → "—"
-vtBriefingLeadText(vergleich) → "Der Orts-Vergleich ist eine breite Tabelle — E-Mail trägt alle Spalten, Telegram alle Zeilen (ab Platz 8 in einer zweiten Zeile je Ort), SMS kein Raster, Fließtext."
-vtBriefingSubTexts(vergleich, rich) → {"email":"Layout · volle Tabelle","telegram":"Layout · alle Zeilen, ab Platz 8 zweite Zeile je Ort","sms":"Layout · kein Raster, 153 Zeichen"}
-vtBriefingSubTexts(vergleich, kurzform) → {"email":"Layout · volle Tabelle","telegram":"folgt der SMS-Auswahl","sms":"Layout · kein Raster, 153 Zeichen"}

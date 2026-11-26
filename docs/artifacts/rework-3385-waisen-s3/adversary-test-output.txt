@@ -1,0 +1,18 @@
+# Adversary-Testlauf #3385
+## cd frontend && npm test (ganze Suite)
+# tests 11515
+# suites 2104
+# pass 11512
+# fail 0
+# cancelled 0
+# skipped 2
+# todo 1
+# duration_ms 477761.898258
+
+[exited with code 0]
+11512 passed, 0 failed
+## npm run build: exit 0
+## svelte-check: COMPLETED 2223 FILES 32 ERRORS 70 WARNINGS (Baseline 32/71)
+## pytest benannt (-o addopts=)
+355 passed, 3 xfailed, 0 failed
+## Mutationen: 18, siehe adversary-dialog.md

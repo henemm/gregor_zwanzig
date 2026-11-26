@@ -4,7 +4,7 @@
 // Kurzstil" ist EINE geteilte Komponente (shared/TelegramKurzstilToggle.svelte),
 // die in BEIDEN Editor-Kontexten mit demselben Baustein + derselben Beschriftung
 // gerendert wird:
-//   - context="route"     → shared/versand-tab/VTBriefingChannels.svelte (Trip)
+//   - context="route"     → (#3385: der Trip-Baustein ist als Waise geloescht)
 //   - context="vergleich" → shared/AlarmeTab.svelte (amtliche Compare-Warnungen)
 //
 // SCHICHT-EINORDNUNG (Test-Politik, CLAUDE.md): Dies ist eine STRUKTURELLE
@@ -42,7 +42,6 @@ const SHARED_DIR = join(here, '..');
 const SRC_DIR = join(here, '..', '..', '..', '..');
 
 const SHARED_TOGGLE = join(SHARED_DIR, 'TelegramKurzstilToggle.svelte');
-const VT_BRIEFING_CHANNELS = join(SHARED_DIR, 'versand-tab', 'VTBriefingChannels.svelte');
 const ALARME_TAB = join(SHARED_DIR, 'AlarmeTab.svelte');
 
 const LABEL = 'Telegram im SMS-Kurzstil';
@@ -83,13 +82,9 @@ describe('AC-11: geteilte Komponente existiert und traegt die eine Beschriftung'
 	});
 });
 
-describe('AC-11: DIESELBE Komponente wird in route UND vergleich eingebunden', () => {
-	test('route: VTBriefingChannels importiert + mountet TelegramKurzstilToggle', () => {
-		const src = read(VT_BRIEFING_CHANNELS);
-		assert.ok(src.includes(IMPORT_SPECIFIER), 'VTBriefingChannels muss die geteilte Komponente importieren');
-		assert.match(src, /<TelegramKurzstilToggle\b/, 'VTBriefingChannels muss <TelegramKurzstilToggle> rendern');
-	});
-
+// #3385: die route-Mount-Stelle (VTBriefingChannels, Waise ohne Aufrufer) ist geloescht;
+// mit ihr entfallen der route-Fall und der Vergleich beider Mount-Stellen.
+describe('AC-11: DIESELBE Komponente wird eingebunden', () => {
 	test('vergleich: AlarmeTab importiert + mountet TelegramKurzstilToggle mit context="vergleich"', () => {
 		const src = read(ALARME_TAB);
 		assert.ok(src.includes(IMPORT_SPECIFIER), 'AlarmeTab muss die geteilte Komponente importieren');
@@ -98,11 +93,6 @@ describe('AC-11: DIESELBE Komponente wird in route UND vergleich eingebunden', (
 			/<TelegramKurzstilToggle[\s\S]*?context="vergleich"/,
 			'AlarmeTab muss <TelegramKurzstilToggle context="vergleich"> rendern'
 		);
-	});
-
-	test('beide Mount-Stellen referenzieren die IDENTISCHE Modul-Spezifikation (keine Divergenz)', () => {
-		assert.ok(read(VT_BRIEFING_CHANNELS).includes(IMPORT_SPECIFIER));
-		assert.ok(read(ALARME_TAB).includes(IMPORT_SPECIFIER));
 	});
 });
 

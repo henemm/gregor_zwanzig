@@ -4,8 +4,9 @@
 // mit svelte/server; Zone Europe/Berlin (Meldedatum der Premium-SMS-Rueckadresse).
 // Nutzer `golden-de`, Profile laut Spec Implementation Details 7:
 // „alles gekoppelt", „Premium-SMS verfallen", „nur E-Mail".
-// Golden: tests/golden/f6_versand_tab/<fall>.de.(html|txt) = Ist-Stand VOR der
-// Umstellung (nie neu schreiben); <fall>.en.* = Review-Hilfe, aktualisiert mit
+// Golden: tests/golden/f6_versand_tab/funktionen.de.txt = Ist-Stand VOR der
+// Umstellung (#3385: die HTML-Goldens der geloeschten Bausteine entfallen);
+// funktionen.en.txt = Review-Hilfe, aktualisiert mit
 //   cd frontend && GZ_GOLDEN_SCHREIBEN=en npm test -- src/lib/components/shared/versand-tab/__tests__/versand_tab_sprache.test.ts
 // Spec: docs/specs/modules/i18n_f6_versand_tab_2655.md
 // Pfadregel #1409: alles relativ zu DIESER Datei.
@@ -24,27 +25,19 @@ export const VT = path.resolve(HERE, '..');
 export const GOLDEN_DIR = path.resolve(FRONTEND, '..', 'tests', 'golden', 'f6_versand_tab');
 register(pathToFileURL(path.join(FRONTEND, 'test-svelte-ssr-hooks.mjs')).href, pathToFileURL(FRONTEND + '/').href);
 
-const { render } = await import('svelte/server');
 const imp = async (datei: string) => await import(pathToFileURL(datei).href);
-const komp = async (datei: string) => (await imp(datei)).default;
 
 export const { locale, trFor, tr } = await imp(path.join(FRONTEND, 'src/lib/i18n/index.ts'));
 export const { premiumSmsChannelState } = await imp(path.join(VT, 'premiumSmsChannelState.ts'));
 export const { channelConnectionStatus } = await imp(path.join(VT, 'channelConnectionStatus.ts'));
 export const { sendTargetLabel } = await imp(path.join(VT, 'sendTargetLabel.ts'));
 export const { formatNextBriefing } = await imp(path.join(VT, 'nextBriefingText.ts'));
-export const { vtBriefingLeadText, vtBriefingSubTexts } = await imp(path.join(VT, 'vtBriefingChannelsText.ts'));
 export const { baueReportConfigPayload, ladeReportZustand } = await imp(path.join(VT, 'reportConfigPayload.ts'));
 
-const VTBriefingChannels = await komp(path.join(VT, 'VTBriefingChannels.svelte'));
-const VTSchedulePlan = await komp(path.join(VT, 'VTSchedulePlan.svelte'));
-const VTLaufzeitRoute = await komp(path.join(VT, 'VTLaufzeitRoute.svelte'));
-const VTLaufzeitVergleich = await komp(path.join(VT, 'VTLaufzeitVergleich.svelte'));
-const VTNextBriefing = await komp(path.join(VT, 'VTNextBriefing.svelte'));
-const TelegramKurzstilToggle = await komp(path.join(VT, '..', 'TelegramKurzstilToggle.svelte'));
+// #3385: die Bausteine des Versand-Reiters (Kanaele, Zeitplan, Laufzeit, Naechstes Briefing)
+// sind als Waisen geloescht; mit ihnen entfallen die HTML-Goldens. Es bleibt die Funktionstabelle.
 
 export type Kontext = 'route' | 'vergleich';
-const nix = () => {};
 
 /** Profile wie GET /api/auth/profile (Nutzer golden-de). */
 export const PROFILE: Record<string, Record<string, unknown>> = {
@@ -103,73 +96,6 @@ export const NB: Record<string, Record<string, unknown> | null> = {
 	nicht_geladen: null
 };
 
-const ohneKommentare = (html: string) => html.replace(/<!--[\s\S]*?-->/g, '');
-const html = (k: unknown, props: Record<string, unknown>) => ohneKommentare(render(k as never, { props } as never).body);
-
-/** Kanal-Block mit Profil (wie VersandTab ihn je Kontext verdrahtet). */
-export function kanaeleRendern(context: Kontext, profil: Record<string, unknown> | null, ohnePremium = false): string {
-	const props: Record<string, unknown> = {
-		context,
-		channels: { email: true, telegram: true, sms: false, premium_sms: false },
-		onEmailChange: nix,
-		onTelegramChange: nix,
-		onSmsChange: nix,
-		telegramStyle: 'rich',
-		profileOverride: profil
-	};
-	if (!ohnePremium) props.onPremiumSmsChange = nix;
-	if (context === 'route') props.onTelegramStyleChange = nix;
-	return html(VTBriefingChannels, props);
-}
-
-// #3297/#3020: `tabRendern` (der ganze Reiter shared/VersandTab) entfaellt — die Datei ist geloescht.
-
-/** #2869: nur der Baustein „Nächstes Briefing" (VTNextBriefing) mit einem Backend-Wert. */
-export function naechstesBriefingRendern(nextBriefing: Record<string, unknown> | null, context: Kontext): string {
-	return html(VTNextBriefing, { nextBriefing, context });
-}
-
-/** Restliche Zustaende, die der Reiter nur in Sonderfaellen zeigt. */
-export function bausteineRendern(): string {
-	const plan = (context: Kontext, aktiv: boolean) =>
-		html(VTSchedulePlan, {
-			context,
-			hasActiveChannel: aktiv,
-			morning_enabled: true,
-			morning_time: '07:00',
-			evening_enabled: false,
-			evening_time: '18:00',
-			onMorningToggle: nix,
-			onEveningToggle: nix,
-			onMorningTime: nix,
-			onEveningTime: nix
-		});
-	return [
-		plan('route', false),
-		plan('vergleich', true),
-		kanaeleRendern('route', {}),
-		kanaeleRendern('vergleich', { mail_to: 'x@example.org', email_verified: false, sms_to: '+4915', sms_allowed: true, premium_sms_allowed: true, premium_sms_reply_state: 'none' }),
-		kanaeleRendern('vergleich', null, true),
-		html(TelegramKurzstilToggle, { style: 'kurzform', onchange: nix, disabled: false }),
-		html(TelegramKurzstilToggle, { style: 'rich', onchange: nix, disabled: true }),
-		html(VTLaufzeitRoute, { tripEnd: null, onOpenStages: nix }),
-		html(VTLaufzeitVergleich, { value: '2026-11-15', onChange: nix }),
-		...Object.keys(NB).map((k) => html(VTNextBriefing, { nextBriefing: NB[k], context: k === 'beendet' ? 'vergleich' : 'route' }))
-	].join('\n');
-}
-
-/** Golden-Faelle HTML: drei Profile x zwei Kontexte, plus Sonderzustaende. */
-export function htmlFaelle(): Record<string, () => string> {
-	const f: Record<string, () => string> = {};
-	for (const name of Object.keys(PROFILE)) {
-		for (const context of ['route', 'vergleich'] as const) {
-			f[`${name}_${context}`] = () => kanaeleRendern(context, PROFILE[name]);
-		}
-	}
-	f.bausteine = bausteineRendern;
-	return f;
-}
-
 const PREMIUM_EINGABEN: Record<string, Record<string, unknown> | null> = {
 	ohne_profil: null,
 	nicht_verfuegbar: { premium_sms_allowed: false },
@@ -197,8 +123,6 @@ export function funktionsTabelle(): string {
 	for (const [k, p, s] of ZIEL_EINGABEN) z.push(`sendTargetLabel(${k}) → ${j(sendTargetLabel(p, s))}`);
 	for (const context of ['route', 'vergleich'] as const) {
 		for (const [k, nb] of Object.entries(NB)) z.push(`formatNextBriefing(${k}, ${context}) → ${j(formatNextBriefing(nb, context))}`);
-		z.push(`vtBriefingLeadText(${context}) → ${j(vtBriefingLeadText(context))}`);
-		for (const stil of ['rich', 'kurzform'] as const) z.push(`vtBriefingSubTexts(${context}, ${stil}) → ${j(vtBriefingSubTexts(context, stil))}`);
 	}
 	return z.join('\n');
 }
@@ -208,7 +132,6 @@ export function schreibeGolden(lang: 'de' | 'en'): void {
 	mkdirSync(GOLDEN_DIR, { recursive: true });
 	locale.set(lang);
 	try {
-		for (const [fall, f] of Object.entries(htmlFaelle())) writeFileSync(path.join(GOLDEN_DIR, `${fall}.${lang}.html`), f() + '\n');
 		writeFileSync(path.join(GOLDEN_DIR, `funktionen.${lang}.txt`), funktionsTabelle() + '\n');
 	} finally {
 		locale.set('de');

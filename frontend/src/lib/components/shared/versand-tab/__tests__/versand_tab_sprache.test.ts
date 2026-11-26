@@ -2,8 +2,8 @@
 // Versand-Reiter (Trip UND Ortsvergleich, EIN Baustein) spricht die Sprache des
 // angemeldeten Nutzers. Echte SSR-Renders (svelte/server, Pruefstand f6VersandSsr.ts):
 //   * AC-6: Deutsch ist byte-gleich zur Ausgabe VOR der Umstellung
-//     (tests/golden/f6_versand_tab/*.de.html und funktionen.de.txt),
-//   * AC-1: beide Kontexte englisch, Kanalnamen unveraendert,
+//     (tests/golden/f6_versand_tab/funktionen.de.txt; #3385: HTML-Goldens und AC-1
+//     entfallen mit den geloeschten Bausteinen),
 //   * AC-2: premiumSmsChannelState je Zustand in beiden Sprachen,
 //   * AC-3: formatNextBriefing (pausiert, manuell, beendet, Termin, uebersprungen),
 //   * AC-4: zwei Nutzer (en/de) durch den ECHTEN Layout-Loader (+layout.server.ts);
@@ -33,10 +33,6 @@ import {
 	formatNextBriefing,
 	baueReportConfigPayload,
 	ladeReportZustand,
-	kanaeleRendern,
-	naechstesBriefingRendern,
-
-	htmlFaelle,
 	funktionsTabelle,
 	schreibeGolden
 } from './f6VersandSsr.ts';
@@ -55,13 +51,6 @@ before(() => {
 });
 afterEach(() => locale.set('de'));
 
-// Einzige Normalisierung: jede Leerraumfolge wird EIN Leerzeichen (mehrzeilige
-// Fliesstexte standen vorher mit Zeilenumbruch+Tabs im Markup). Sonst byte-gleich.
-const leerraum = (s: string) => s.replace(/\s+/g, ' ');
-const sichtbar = (html: string) =>
-	leerraum(html.replace(/<style[\s\S]*?<\/style>/g, ' ').replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&')).trim();
-const hat = (text: string, teil: string) => assert.ok(text.includes(teil), `fehlt: „${teil}"\nin: ${text}`);
-
 /** Erst de rendern, dann OHNE Neuladen auf en schalten. */
 function deDannEn<T>(f: () => T): { de: T; en: T } {
 	locale.set('de');
@@ -71,107 +60,15 @@ function deDannEn<T>(f: () => T): { de: T; en: T } {
 	return { de, en };
 }
 
-/** Deutsche Festteile (>= 4 Buchstaben) der Paket-Schluessel, die im englischen Text stehen. */
-function deutscheReste(text: string): string[] {
-	const reste: string[] = [];
-	for (const [k, de, en] of F6_ANKER) {
-		if (de === en) continue;
-		const enTeile = new Set(en.split(/<[a-z0-9_]+>/).map((s) => s.trim()));
-		for (const teil of de.split(/<[a-z0-9_]+>/).map((s) => s.trim())) {
-			if ((teil.match(/[A-Za-zÄÖÜäöüß]/g) ?? []).length < 4 || enTeile.has(teil)) continue;
-			if (text.includes(teil)) reste.push(`${k}: ${teil}`);
-		}
-	}
-	return reste;
-}
-
+// #3385: die HTML-Golden-Faelle, der Messaufbau, AC-1 und #2869 rendern die geloeschten
+// Bausteine (VTBriefingChannels, VTSchedulePlan, VTLaufzeit*, VTNextBriefing) und entfallen.
 describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)', () => {
-	const FAELLE = htmlFaelle();
-	for (const fall of Object.keys(FAELLE)) {
-		test(`${fall}.de.html`, () => {
-			const golden = readFileSync(path.join(GOLDEN_DIR, `${fall}.de.html`), 'utf-8');
-			const { de } = deDannEn(() => FAELLE[fall]());
-			locale.set('de');
-			assert.equal(leerraum(FAELLE[fall]() + '\n'), leerraum(golden));
-			assert.equal(leerraum(de + '\n'), leerraum(golden));
-		});
-	}
 	test('funktionen.de.txt: Funktionsergebnisse unveraendert (byte-gleich, ohne Normalisierung)', () => {
 		const golden = readFileSync(path.join(GOLDEN_DIR, 'funktionen.de.txt'), 'utf-8');
 		locale.set('en');
 		funktionsTabelle();
 		locale.set('de');
 		assert.equal(funktionsTabelle() + '\n', golden);
-	});
-	test('Messaufbau: Golden enthaelt die deutschen Texte aller Bausteine', () => {
-		const alle = Object.keys(FAELLE).map((f) => readFileSync(path.join(GOLDEN_DIR, `${f}.de.html`), 'utf-8')).join('');
-		for (const s of ['Geplantes Briefing · Kanäle', 'Briefing-Zeitplan', 'Nächstes Briefing', 'Läuft mit der Trip', 'Bis auf Weiteres', 'Telegram im SMS-Kurzstil', 'Kein Kanal aktiv.', 'bald verfügbar', 'zuletzt gemeldet am 20.09.2026'])
-			assert.ok(alle.includes(s), s);
-	});
-});
-
-describe('AC-1: Versand-Reiter englisch in Trip und Ortsvergleich, Kanalnamen unveraendert', () => {
-	for (const context of ['route', 'vergleich'] as const) {
-		test(`${context}: erst de, dann ohne Neuladen en`, () => {
-			const { de, en } = deDannEn(() => sichtbar(kanaeleRendern(context, PROFILE.alles_gekoppelt)));
-			// #3297/#3020: Zeitplan, Laufzeit und „Naechstes Briefing" kamen aus dem ganzen Reiter
-			// shared/VersandTab (geloescht); geprueft wird der Kanal-Baustein.
-			for (const s of ['Geplantes Briefing · Kanäle']) hat(de, s);
-			for (const s of ['Planned briefing · channels']) hat(en, s);
-			for (const s of ['Telegram (987654321)', 'SMS (+491511234567)', 'Premium-SMS (Garmin inReach) (+15551234567)', 'E-Mail (golden@example.org)']) {
-				hat(de, s);
-				hat(en, s);
-			}
-			hat(en, 'confirmed');
-			hat(en, 'connected');
-			hat(en, 'learned');
-			hat(en, 'last reported on Tue 27 Oct');
-			assert.deepEqual(deutscheReste(en), []);
-		});
-	}
-	test('Trip: Einleitung, Unterzeilen, Laufzeit und Kurzstil-Schalter englisch', () => {
-		const { de, en } = deDannEn(() => sichtbar(kanaeleRendern('route', PROFILE.alles_gekoppelt)));
-		hat(en, 'The trip briefing is a stage table — email carries all columns, Telegram the first 7, SMS has no grid, plain text.');
-		hat(en, 'Layout · full table');
-		hat(en, 'Layout · 7 columns');
-		hat(en, 'Layout · no grid, 160 characters');
-		hat(en, 'Telegram in SMS compact style');
-		// #3155 (Spec feat_3155 Entscheidung 4/7, AC-7/AC-11): die Karte „Mehrtages-Trend"
-		// ist aus dem Versand-Reiter entfernt -- der Ausblick wird allein in der Karte
-		// „Was steht wo" gesteuert; weder ihr Titel noch ihre Unterzeile stehen noch da.
-		for (const alt of ['Mehrtages-Trend', '3–7-Tage-Ausblick', 'Sonntags ·']) assert.ok(!de.includes(alt), `de: „${alt}" steht noch im Versand-Reiter`);
-		for (const alt of ['Multi-day trend', '3–7-day outlook']) assert.ok(!en.includes(alt), `en: „${alt}" steht noch im Versand-Reiter`);
-	});
-	test('Ortsvergleich: Einleitung, Zeitplan-Hinweis mit Hervorhebung, Laufzeit englisch', () => {
-		const { en } = deDannEn(() => kanaeleRendern('vergleich', PROFILE.nur_email));
-		const text = sichtbar(en);
-		// #3047 R8 (AC-24): Orts-Vergleich-Telegram kappt nicht.
-		hat(text, 'The location comparison is a wide table — email carries all columns, Telegram all rows (from position 8 in a second line per location), SMS has no grid, plain text.');
-		hat(text, 'Layout · no grid, 153 characters');
-		hat(text, 'Premium SMS is available from the Premium level');
-		hat(text, 'SMS is available from the Standard level');
-		hat(text, 'Telegram chat ID missing — set it up in your account');
-		assert.match(en, /Telegram chat ID missing — <a href="\/account">set it up in your account<\/a>/);
-		assert.deepEqual(deutscheReste(text), []);
-	});
-	test('Sonderzustaende: kein Kanal, fehlende Adresse, Platzhalter, Kurzstil inaktiv', () => {
-		const { en } = deDannEn(() => sichtbar(htmlFaelle().bausteine()));
-		for (const s of [
-			'No channel active. Turn on at least one briefing channel above to see schedule options here.',
-			'Email address missing — set it up in your account',
-			'Mobile number missing — set it up in your account',
-			'Number not confirmed yet — enter the code in your account',
-			'not confirmed',
-			'entered, unconfirmed',
-			'coming soon',
-			'Only active when Telegram is switched on as a channel.',
-			'The device has never reported in — the reply address is learned on first receipt.',
-			'Runs with the trip · ends —',
-			'Next briefing paused until Wed 28 Oct',
-			'Next briefing Location comparison ended'
-		])
-			hat(en, s);
-		assert.deepEqual(deutscheReste(en), []);
 	});
 });
 
@@ -236,43 +133,6 @@ describe('AC-3: formatNextBriefing in beiden Sprachen', () => {
 	});
 });
 
-// Issue #2869 — „Nächster Versand" zeigt immer das Datum (Spec fix_2869_naechster_versand_datum.md).
-// Echter SSR-Render des geteilten Bausteins VTNextBriefing in BEIDEN Kontexten, sichtbarer Text.
-describe('#2869 AC-1/AC-2/AC-3/AC-11: Versand-Reiter zeigt Wochentag + Datum + Uhrzeit + Kürzel', () => {
-	const SEED_TRIP = { at: '2027-08-01T06:00:00+02:00', local_date: '2027-08-01', local_time: '06:00', tz: 'Europe/Paris', tz_abbr: 'CEST', slot: 'morning' };
-	const VERGLEICH = { at: '2026-11-08T06:00:00+01:00', local_date: '2026-11-08', local_time: '06:00', tz: 'Europe/Vienna', tz_abbr: 'CET', slot: 'morning' };
-	const zeile = (nb: Record<string, unknown> | null, context: 'route' | 'vergleich') => sichtbar(naechstesBriefingRendern(nb, context));
-
-	test('AC-1: Trip (route), de → „Nächstes Briefing So 01.08. 06:00 (CEST)"', () => {
-		locale.set('de');
-		assert.equal(zeile(SEED_TRIP, 'route'), 'Nächstes Briefing So 01.08. 06:00 (CEST)');
-	});
-	test('AC-2: Ortsvergleich (vergleich), de → „Nächstes Briefing So 08.11. 06:00 (CET)"', () => {
-		locale.set('de');
-		assert.equal(zeile(VERGLEICH, 'vergleich'), 'Nächstes Briefing So 08.11. 06:00 (CET)');
-	});
-	test('AC-2: route und vergleich zeigen bei identischem Backend-Wert denselben Text', () => {
-		for (const nb of [SEED_TRIP, VERGLEICH]) {
-			const { de, en } = deDannEn(() => [zeile(nb, 'route'), zeile(nb, 'vergleich')]);
-			assert.equal(de[0], de[1]);
-			assert.equal(en[0], en[1]);
-		}
-	});
-	test('AC-3: en (erst de, dann ohne Neuladen en) → „Sun 1 Aug 06:00 (CEST)" / „Sun 8 Nov 06:00 (CET)"', () => {
-		const { en } = deDannEn(() => [zeile(SEED_TRIP, 'route'), zeile(VERGLEICH, 'vergleich')]);
-		assert.equal(en[0], 'Next briefing Sun 1 Aug 06:00 (CEST)');
-		assert.equal(en[1], 'Next briefing Sun 8 Nov 06:00 (CET)');
-	});
-	for (const context of ['route', 'vergleich'] as const) {
-		test(`AC-11: Prüfstand-Termin Mi 28.10.2026 (+01:00) → „Mi 28.10. 07:00 (CET)", nie (CEST) — ${context}`, () => {
-			const { de, en } = deDannEn(() => zeile(NB.termin, context));
-			assert.equal(de, 'Nächstes Briefing Mi 28.10. 07:00 (CET)');
-			assert.equal(en, 'Next briefing Wed 28 Oct 07:00 (CET)');
-			assert.ok(!de.includes('CEST') && !en.includes('CEST'), `Kürzel passt nicht zum Offset: ${de} / ${en}`);
-		});
-	}
-});
-
 describe('AC-4: zwei Nutzer, zwei Sprachen, eigene Kanaele, gleiche report_config', () => {
 	const ANNA = { ...PROFILE.alles_gekoppelt, id: 'anna', mail_to: 'anna@example.org', telegram_chat_id: '111222333', sms_to: '', sms_verified: false, premium_sms_allowed: false, language: 'en' };
 	const BERT = { id: 'bert', mail_to: 'bert@example.org', email_verified: true, sms_allowed: false, premium_sms_allowed: false, language: 'de' };
@@ -304,9 +164,10 @@ describe('AC-4: zwei Nutzer, zwei Sprachen, eigene Kanaele, gleiche report_confi
 		locale.set(lang);
 		const kanaele = { send_telegram: true, send_sms: true, send_premium_sms: true };
 		const zustand = { ...ladeReportZustand({ send_email: true, send_telegram: true, morning_time: '07:00:00' }), telegram_style: 'rich' };
+		// #3385: der Kanal-Baustein (VTBriefingChannels) ist geloescht; geprueft werden
+		// Sende-Ziel, Dialog und Nutzlast.
 		return {
 			lang,
-			text: sichtbar(kanaeleRendern('route', profil)),
 			ziel: sendTargetLabel(profil, kanaele).text,
 			dialog: sendConfirmModel('trip', profil, kanaele).beschreibung,
 			nutzlast: baueReportConfigPayload({ live: { send_email: true }, zustand })
@@ -323,14 +184,8 @@ describe('AC-4: zwei Nutzer, zwei Sprachen, eigene Kanaele, gleiche report_confi
 		assert.equal(a.dialog, a.ziel);
 		assert.equal(b.ziel, 'Geht an E-Mail (bert@example.org).');
 		assert.equal(b.dialog, b.ziel);
-		hat(a.text, 'Planned briefing · channels');
-		hat(a.text, 'Telegram (111222333)');
-		hat(a.text, 'connected');
-		hat(b.text, 'Geplantes Briefing · Kanäle');
-		hat(b.text, 'E-Mail (bert@example.org)');
-		assert.ok(!a.text.includes('bert') && !a.ziel.includes('bert'), 'A sieht Daten von B');
-		assert.ok(!b.text.includes('anna') && !b.text.includes('111222333') && !b.ziel.includes('Telegram'), 'B sieht Daten/Kanaele von A');
-		assert.deepEqual(deutscheReste(a.text), []);
+		assert.ok(!a.ziel.includes('bert'), 'A sieht Daten von B');
+		assert.ok(!b.ziel.includes('anna') && !b.ziel.includes('Telegram'), 'B sieht Daten/Kanaele von A');
 		assert.deepEqual(a.nutzlast, b.nutzlast);
 		assert.equal(JSON.stringify(a.nutzlast), JSON.stringify(b.nutzlast));
 	});

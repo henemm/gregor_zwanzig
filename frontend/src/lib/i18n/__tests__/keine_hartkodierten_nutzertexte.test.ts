@@ -369,14 +369,9 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 
 	// Issue #2655 (i18n F6, AC-7): Versand-Reiter und Telegram-Kurzstil-Schalter.
 	test('F6: kein Allowlist-Eintrag deckt den Versand-Reiter oder den Kurzstil-Schalter', () => {
-		const F6 = [
-			'lib/components/shared/TelegramKurzstilToggle.svelte',
-			'lib/components/shared/versand-tab/VTBriefingChannels.svelte',
-			'lib/components/shared/versand-tab/VTSchedulePlan.svelte',
-			'lib/components/shared/versand-tab/VTLaufzeitRoute.svelte',
-			'lib/components/shared/versand-tab/VTLaufzeitVergleich.svelte',
-			'lib/components/shared/versand-tab/VTNextBriefing.svelte'
-		];
+		// #3385: die fuenf Versand-Bausteine (VTBriefingChannels, VTSchedulePlan, VTLaufzeitRoute,
+		// VTLaufzeitVergleich, VTNextBriefing) sind als Waisen geloescht.
+		const F6 = ['lib/components/shared/TelegramKurzstilToggle.svelte'];
 		const deckt = (a: string, p: string) => (a.endsWith('/') ? p.startsWith(a) : p === a);
 		assert.deepEqual(F6.filter((p) => ALLOWLIST.some((a) => deckt(a, p))), []);
 		for (const alt of ['lib/components/shared/', 'lib/components/shared/versand-tab/', 'lib/components/shared/TelegramKurzstilToggle.svelte'])
@@ -389,7 +384,8 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 	// F6 Adversary F002: auch die .ts-Helfer des Versand-Reiters stehen unter der TS-Ratsche.
 	test('F6: .ts-Module unter shared/versand-tab/ werden gescannt und sind ohne Treffer', () => {
 		const ts = scanneVerzeichnis(SRC).filter((e) => e.pfad.startsWith('lib/components/shared/versand-tab/') && e.pfad.endsWith('.ts'));
-		for (const p of ['sendTargetLabel.ts', 'premiumSmsChannelState.ts', 'nextBriefingText.ts', 'channelConnectionStatus.ts', 'vtBriefingChannelsText.ts'])
+		// #3385: vtBriefingChannelsText.ts als Waise geloescht.
+		for (const p of ['sendTargetLabel.ts', 'premiumSmsChannelState.ts', 'nextBriefingText.ts', 'channelConnectionStatus.ts'])
 			assert.ok(ts.some((e) => e.pfad === `lib/components/shared/versand-tab/${p}`), p);
 		assert.deepEqual(ts.filter((e) => e.treffer.length > 0).map((e) => e.pfad), []);
 		assert.equal(wirdGescanntTs('lib/components/shared/versand-tab/__tests__/f6VersandSsr.ts'), false);

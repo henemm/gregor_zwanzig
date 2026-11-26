@@ -24,6 +24,7 @@
 import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { buendelAus, fetchMitschnitt, vergleichEditor, zustellungsGeste } from './compareNeuEditorPruefstand.ts';
+import { derivedNeu } from './standardwerteEditorPruefstand.ts';
 
 // #2795 S3b Teilschritt 1b: im Hub ersetzt der neue Reiter Zustellung (EIN Speicherer fuer
 // Briefing und Alarme, Stand direkt aus dem Preset) beide Adapter. #3333 (D2 von #3307): auch im Anlegen
@@ -40,7 +41,9 @@ afterEach(() => {
 
 // #3384 S4: Block „AC-14: Cooldown/Ruhezeit — Versand und Alarme zeigen denselben Wert“ (Adapter-Ebene
 // über versandPropsAus) mit der Waise versandPropsAus.ts gelöscht; die Zusicherung „ein Feldsatz für
-// beide Reiter“ misst der Block unten am echten Editor.
+// beide Reiter“ misst der Block unten am echten Editor, in beiden Richtungen: Zustellung → Alarme und
+// (#3385 AC-4, Finding F002 aus #3384) Alarme → Zustellung, dort nur auf dem Schreibweg zum Speichern
+// (Prop `preset` des Reiters Zustellung und POST der Aktivierung).
 
 describe('AC-14 (Wirkort Anlegen, #3333): Reiter Zustellung und Reiter Alarme teilen DENSELBEN Feldsatz', () => {
 	test('Cooldown und Stille Stunden aus dem Reiter Zustellung kommen im Buendel des Reiters Alarme und im POST an', async () => {
@@ -57,5 +60,69 @@ describe('AC-14 (Wirkort Anlegen, #3333): Reiter Zustellung und Reiter Alarme te
 		assert.equal(b.alert_cooldown_minutes, 45);
 		assert.equal(b.alert_quiet_from, '23:00');
 		assert.equal(b.alert_quiet_to, '05:00');
+	});
+
+	// #3385 AC-4 (F002 aus #3384): Rückrichtung. Der Reiter Alarme schreibt über die Rückrufe seines
+	// Bündels; gemessen wird nur, was der Editor dem Reiter Zustellung übergibt und was er speichert.
+	const anlegen = () =>
+		vergleichEditor({
+			stateOverride: { activeTab: 'zustellung', isMobileViewport: false, metrikenVisited: true, zustellungVisited: true, name: 'AC-4', pickedIds: ['loc-a', 'loc-b'] }
+		});
+	type Editor = Awaited<ReturnType<typeof anlegen>>;
+	/** Geste im Reiter Alarme über den echten Rückruf seines Bündels; danach rechnet der Prüfstand die
+	 *  `$derived`-Werte neu (wie Svelte nach der Zustandsänderung), dann wird gemessen. */
+	const cooldown = (e: Editor, m: number | undefined) => {
+		(buendelAus(e, 'AlarmeTab').onCooldownChange as (m: number | undefined) => void)(m);
+		derivedNeu(e);
+	};
+	const stille = (e: Editor, von: string | undefined, bis: string | undefined) => {
+		(buendelAus(e, 'AlarmeTab').onQuietHoursChange as (v?: string, b?: string) => void)(von, bis);
+		derivedNeu(e);
+	};
+	const postKoerper = async (e: Editor) => {
+		await e.u.handleActivate();
+		const posts = netz.presetPosts();
+		assert.equal(posts.length, 1, 'genau ein POST der Aktivierung erwartet');
+		return posts[0].koerper as Record<string, unknown>;
+	};
+
+	test('#3385 AC-4: Cooldown 60 aus dem Reiter Alarme steht im Prop preset des Reiters Zustellung und im POST', async () => {
+		const e = await anlegen();
+		cooldown(e, 60);
+		assert.equal(buendelAus(e, 'ZustellungTab', 'preset').alert_cooldown_minutes, 60, 'Prop preset trägt den Cooldown aus dem Reiter Alarme nicht');
+		assert.equal((await postKoerper(e)).alert_cooldown_minutes, 60);
+	});
+
+	test('#3385 AC-4: Cooldown 60 und danach gelöscht: weder Prop preset noch POST enthalten 60', async () => {
+		const e = await anlegen();
+		cooldown(e, 60);
+		assert.equal(buendelAus(e, 'ZustellungTab', 'preset').alert_cooldown_minutes, 60);
+		cooldown(e, undefined);
+		assert.notEqual(buendelAus(e, 'ZustellungTab', 'preset').alert_cooldown_minutes, 60, 'gelöschter Cooldown steht noch im Prop preset');
+		assert.notEqual((await postKoerper(e)).alert_cooldown_minutes, 60, 'gelöschter Cooldown steht noch im POST');
+	});
+
+	test('#3385 AC-4: Stille Stunden 22:00–06:00 aus dem Reiter Alarme stehen im Prop preset und im POST', async () => {
+		const e = await anlegen();
+		stille(e, '22:00', '06:00');
+		const p = buendelAus(e, 'ZustellungTab', 'preset');
+		assert.equal(p.alert_quiet_from, '22:00', 'Prop preset trägt die Stillen Stunden aus dem Reiter Alarme nicht');
+		assert.equal(p.alert_quiet_to, '06:00');
+		const b = await postKoerper(e);
+		assert.equal(b.alert_quiet_from, '22:00');
+		assert.equal(b.alert_quiet_to, '06:00');
+	});
+
+	test('#3385 AC-4: Stille Stunden gesetzt und danach gelöscht: weder Prop preset noch POST enthalten sie', async () => {
+		const e = await anlegen();
+		stille(e, '22:00', '06:00');
+		assert.equal(buendelAus(e, 'ZustellungTab', 'preset').alert_quiet_from, '22:00');
+		stille(e, undefined, undefined);
+		const p = buendelAus(e, 'ZustellungTab', 'preset');
+		assert.notEqual(p.alert_quiet_from, '22:00', 'gelöschte Stille Stunden stehen noch im Prop preset');
+		assert.notEqual(p.alert_quiet_to, '06:00');
+		const b = await postKoerper(e);
+		assert.notEqual(b.alert_quiet_from, '22:00', 'gelöschte Stille Stunden stehen noch im POST');
+		assert.notEqual(b.alert_quiet_to, '06:00');
 	});
 });

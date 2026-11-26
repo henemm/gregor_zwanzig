@@ -4,27 +4,13 @@
 // Spec: docs/specs/modules/sms_nummer_verifikation.md — AC-14 (und der
 // kontextfreie Teil von AC-13).
 //
-// Zwei Naehte, beide echt gerendert bzw. echt gerufen:
-//   1. der kontextfreie Helfer `channelConnectionStatus` — die gemeinsame
-//      Quelle beider Aufrufer (VTBriefingChannels, die frühere Report-Config-Section (#2277 S5 entfernt));
-//   2. der context-bewusste Baustein `VTBriefingChannels.svelte`, gerendert
-//      EINMAL mit context="route" und EINMAL mit context="vergleich" — die
-//      Pendant-Regel (CLAUDE.md) verlangt identisches Verhalten in beiden
-//      Kontexten; eine Sonderbehandlung je Kontext waere ein Verstoss.
+// Naht: der kontextfreie Helfer `channelConnectionStatus`, echt gerufen.
+// #3385: die Render-Faelle am Kanal-Baustein (VTBriefingChannels, Waise ohne
+// Aufrufer) sind mit dem Baustein geloescht.
 //
-// Echtes serverseitiges Rendern der echten Komponente (svelte/server
-// `render`, Hooks: frontend/test-svelte-ssr-hooks.mjs). Keine Mocks, kein
-// Dateiinhalt-Grep.
-//
-// Anzeige-Vertrag fuer /50 (einzige Vorgabe an die Form): der Status-Text bei
-// `data-testid="channel-status-sms"` lautet bei unbestaetigter Nummer
+// Anzeige-Vertrag: der Status-Text lautet bei unbestaetigter Nummer
 // „eingetragen, unbestätigt"; „hinterlegt" bleibt der bestaetigten Nummer
-// vorbehalten. Die Checkbox `channel-sms` ist bei unbestaetigter Nummer
-// deaktiviert (sie verspricht sonst einen Versand, den die Sperre in
-// config.py ohnehin verhindert, AC-1).
-//
-// RED heute: `channelConnectionStatus` kennt `sms_verified` nicht und meldet
-// bei gesetztem `sms_to` „hinterlegt" (channelConnectionStatus.ts:60).
+// vorbehalten.
 //
 // Pfadregel #1409: alle Pfade relativ zu DIESER Datei.
 //
@@ -34,7 +20,6 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { register } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
@@ -42,19 +27,6 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 // __tests__ -> versand-tab -> shared -> components -> lib -> src -> frontend
 const FRONTEND = path.resolve(HERE, '../../../../../..');
 
-register(
-	pathToFileURL(path.join(FRONTEND, 'test-svelte-ssr-hooks.mjs')).href,
-	pathToFileURL(FRONTEND + '/').href
-);
-
-const { render } = await import('svelte/server');
-const VTBriefingChannels = (
-	await import(
-		pathToFileURL(
-			path.join(FRONTEND, 'src/lib/components/shared/versand-tab/VTBriefingChannels.svelte')
-		).href
-	)
-).default;
 const { channelConnectionStatus } = (await import(
 	pathToFileURL(
 		path.join(FRONTEND, 'src/lib/components/shared/versand-tab/channelConnectionStatus.ts')
@@ -76,61 +48,6 @@ const PROFIL_BESTAETIGT = {
 	sms_allowed: true,
 	sms_verified: true
 };
-
-function renderKanaele(profil: Record<string, unknown>, context: 'route' | 'vergleich'): string {
-	return render(VTBriefingChannels, {
-		props: {
-			context,
-			channels: { email: false, telegram: false, sms: false },
-			onEmailChange: () => {},
-			onTelegramChange: () => {},
-			onSmsChange: () => {},
-			profileOverride: profil
-		}
-	}).body;
-}
-
-/** Sichtbarer Text des Elements zum testid (SSR-Kommentare/Tags entfernt). */
-function textZuTestId(html: string, testid: string): string {
-	const marker = html.indexOf(`data-testid="${testid}"`);
-	assert.notEqual(marker, -1, `Testid "${testid}" nicht im gerenderten HTML gefunden.`);
-	const start = html.lastIndexOf('<', marker);
-	const tag = (html.slice(start).match(/^<([a-zA-Z0-9-]+)/) ?? [])[1];
-	assert.ok(tag, `Kein Tag-Name zu data-testid="${testid}".`);
-	const re = new RegExp(`<${tag}[\\s>]|</${tag}>`, 'g');
-	re.lastIndex = start;
-	let tiefe = 0;
-	let m: RegExpExecArray | null;
-	while ((m = re.exec(html))) {
-		if (m[0].startsWith('</')) {
-			tiefe -= 1;
-			if (tiefe === 0) {
-				return html
-					.slice(start, m.index + m[0].length)
-					.replace(/<!--[\s\S]*?-->/g, '')
-					.replace(/<[^>]+>/g, ' ')
-					.replace(/\s+/g, ' ')
-					.trim();
-			}
-		} else {
-			tiefe += 1;
-		}
-	}
-	assert.fail(`Element zu data-testid="${testid}" nicht geschlossen.`);
-}
-
-/** `<input …>`-Tag direkt hinter dem testid. */
-function inputTag(html: string, testid: string): string {
-	const markerIdx = html.indexOf(`data-testid="${testid}"`);
-	assert.notEqual(markerIdx, -1, `Testid "${testid}" nicht gefunden.`);
-	const inputStart = html.indexOf('<input', markerIdx);
-	assert.notEqual(inputStart, -1, `Kein <input> nach Testid "${testid}".`);
-	return html.slice(inputStart, html.indexOf('>', inputStart) + 1);
-}
-
-function istDeaktiviert(tag: string): boolean {
-	return /\bdisabled(=""|(?=[\s/>]))/.test(tag);
-}
 
 describe('#2406 AC-14 — unbestaetigte SMS-Nummer erscheint nicht als sendebereit', () => {
 	test('kontextfreier_helfer_meldet_unbestaetigt', () => {
@@ -162,82 +79,5 @@ describe('#2406 AC-14 — unbestaetigte SMS-Nummer erscheint nicht als sendebere
 			`AC-14 Gegenprobe: die bestaetigte Nummer bleibt „hinterlegt", bekommen „${status.label}".`
 		);
 		assert.equal(status.tone, 'good');
-	});
-
-	for (const context of ['route', 'vergleich'] as const) {
-		test(`baustein_zeigt_unbestaetigt_im_context_${context}`, () => {
-			const html = renderKanaele(PROFIL_UNBESTAETIGT, context);
-			assert.equal(
-				textZuTestId(html, 'channel-status-sms'),
-				UNBESTAETIGT_LABEL,
-				`AC-14 (${context}): der SMS-Status muss „${UNBESTAETIGT_LABEL}" zeigen.`
-			);
-			assert.equal(
-				istDeaktiviert(inputTag(html, 'channel-sms')),
-				true,
-				`AC-14 (${context}): die SMS-Checkbox muss bei unbestaetigter Nummer deaktiviert sein.`
-			);
-		});
-	}
-
-	test('beide_kontexte_verhalten_sich_identisch', () => {
-		// Pendant-Regel (CLAUDE.md): kein context-eigener Sonderweg.
-		const route = textZuTestId(renderKanaele(PROFIL_UNBESTAETIGT, 'route'), 'channel-status-sms');
-		const vergleich = textZuTestId(
-			renderKanaele(PROFIL_UNBESTAETIGT, 'vergleich'),
-			'channel-status-sms'
-		);
-		assert.equal(
-			route,
-			vergleich,
-			`AC-14: route („${route}") und vergleich („${vergleich}") muessen denselben SMS-Status zeigen.`
-		);
-		const routeB = textZuTestId(renderKanaele(PROFIL_BESTAETIGT, 'route'), 'channel-status-sms');
-		const vergleichB = textZuTestId(
-			renderKanaele(PROFIL_BESTAETIGT, 'vergleich'),
-			'channel-status-sms'
-		);
-		assert.equal(routeB, vergleichB, 'AC-14: auch der bestaetigte Fall muss identisch sein.');
-		assert.notEqual(
-			route,
-			routeB,
-			'AC-14: bestaetigt und unbestaetigt duerfen nicht denselben Text zeigen.'
-		);
-	});
-
-	// Uebernommen aus dem entfernten sms_unbestaetigt_trip_editor.test.ts (#2277 S5, AC-9):
-	// der Hinweis `channel-sms-hint` wird von drei Zweigen getragen — deshalb den TEXT pruefen.
-	for (const context of ['route', 'vergleich'] as const) {
-		test(`unbestaetigte_nummer_erklaert_den_grund_im_hinweis_${context}`, () => {
-			const hinweis = textZuTestId(renderKanaele(PROFIL_UNBESTAETIGT, context), 'channel-sms-hint');
-			assert.ok(
-				hinweis.includes('nicht bestätigt'),
-				`AC-14 (${context}): der Hinweis muss sagen, dass die Nummer nicht bestaetigt ist — bekommen: „${hinweis}".`
-			);
-			assert.ok(
-				!hinweis.includes('fehlt'),
-				`AC-14 (${context}): der Hinweis darf nicht behaupten, die Nummer fehle. Bekommen: „${hinweis}".`
-			);
-		});
-
-		test(`bestaetigte_nummer_zeigt_keinen_sms_hinweis_${context}`, () => {
-			const html = renderKanaele(PROFIL_BESTAETIGT, context);
-			assert.equal(
-				html.includes('data-testid="channel-sms-hint"'),
-				false,
-				`AC-14 Gegenprobe (${context}): bei bestaetigter Nummer darf kein SMS-Hinweis erscheinen.`
-			);
-		});
-	}
-
-	test('bestaetigte_nummer_bleibt_schaltbar', () => {
-		for (const context of ['route', 'vergleich'] as const) {
-			const html = renderKanaele(PROFIL_BESTAETIGT, context);
-			assert.equal(
-				istDeaktiviert(inputTag(html, 'channel-sms')),
-				false,
-				`AC-14 Gegenprobe (${context}): die bestaetigte Nummer muss schaltbar bleiben.`
-			);
-		}
 	});
 });

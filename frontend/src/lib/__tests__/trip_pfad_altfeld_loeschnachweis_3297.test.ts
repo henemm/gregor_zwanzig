@@ -351,6 +351,134 @@ describe('#3384 AC-5 (F004): Wortscan auf das gelöschte Bauteil über frontend/
 	});
 });
 
+// #3385 S3 (Spec rework_3385_waisen_s3.md, AC-1/AC-7): 7 Waisen der Gruppe S3 (versand-tab) gelöscht.
+// RED heute: alle 7 existieren, Tests und der Prüfstand f6 importieren oder lesen sie.
+// Importscan über frontend/src UND frontend/e2e, alle Dateien inklusive Tests (Kommentare ausgenommen):
+// kein Import-/Export-Spezifizierer, kein dynamisches import() und keine Pfad-Zeichenkette (auch in
+// join/resolve), die auf einen der 7 Basisnamen (mit oder ohne Endung) zeigt. Einzige Ausnahme ist diese
+// Datei, die die Pfade führt. EinstellTabelle.svelte und die lebenden versand-tab-Module bleiben.
+const GELOESCHT_3385 = [
+	'lib/components/shared/versand-tab/VTBriefingChannels.svelte',
+	'lib/components/shared/versand-tab/VTLaufzeitRoute.svelte',
+	'lib/components/shared/versand-tab/VTLaufzeitVergleich.svelte',
+	'lib/components/shared/versand-tab/VTNextBriefing.svelte',
+	'lib/components/shared/versand-tab/VTSchedulePlan.svelte',
+	'lib/components/shared/versand-tab/channelContactLabel.ts',
+	'lib/components/shared/versand-tab/vtBriefingChannelsText.ts'
+];
+
+const ERHALTEN_3385 = [
+	'lib/components/molecules/EinstellTabelle.svelte',
+	'lib/components/shared/versand-tab/channelConnectionStatus.ts',
+	'lib/components/shared/versand-tab/premiumSmsChannelState.ts',
+	'lib/components/shared/versand-tab/sendTargetLabel.ts',
+	'lib/components/shared/versand-tab/nextBriefingText.ts',
+	'lib/components/shared/versand-tab/nextBriefingLoad.ts',
+	'lib/components/shared/versand-tab/naechstesBriefingLader.svelte.ts',
+	'lib/components/shared/versand-tab/reportConfigPayload.ts',
+	'lib/components/shared/versand-tab/mergeReportConfig.ts',
+	'lib/components/shared/versand-tab/dayWindowClamp.ts'
+];
+
+const SCAN_3385_AUSNAHME = 'lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts';
+
+/** Alle Quelldateien unter frontend/src und frontend/e2e (inklusive Tests), relativ zu frontend/src. */
+function scanDateien3385(): string[] {
+	const aus: string[] = [];
+	const lauf = (dir: string) => {
+		if (!existsSync(dir)) return;
+		for (const name of readdirSync(dir)) {
+			const voll = join(dir, name);
+			if (statSync(voll).isDirectory()) {
+				if (name !== 'node_modules' && name !== 'test-results' && name !== 'playwright-report') lauf(voll);
+			} else if (/\.(ts|js|mjs|svelte)$/.test(name)) aus.push(relative(SRC, voll).split('\\').join('/'));
+		}
+	};
+	lauf(SRC);
+	lauf(join(SRC, '..', 'e2e'));
+	return aus;
+}
+
+/**
+ * Quelltext ohne Kommentare, zeilenweise: Kommentarzeilen (`//`, `*`, `/*`, `<!--`) entfallen, ein
+ * Zeilenende-Kommentar ` // …` wird abgeschnitten. Bewusst kein Block-Regex über die ganze Datei: Glob-
+ * Zeichenketten wie `'**\/*.ts'` enthalten `/*` und würden sonst echten Code bis zum nächsten `*\/` schlucken.
+ */
+function ohneKommentare(text: string): string {
+	return text
+		.split('\n')
+		.filter((z) => !/^\s*(\/\/|\/\*|\*|<!--)/.test(z))
+		.map((z) => z.replace(/\s\/\/\s.*$/, ''))
+		.join('\n');
+}
+
+/**
+ * Funde (`datei -> Basisname`) auf die #3385-Löschliste: (1) Import-/Export-Spezifizierer und dynamisches
+ * import(); (2) Pfad-Zeichenketten, die auf eine gelöschte Datei zeigen (letztes Pfadsegment = Basisname
+ * mit Endung, oder Basisname ohne Endung mit vorangestelltem Verzeichnis), wo immer sie stehen, also auch
+ * in join/resolve/path.join und in Lade-Helfern wie imp('src/…/X.svelte'). Bloße Namen ohne Endung und
+ * ohne Pfad (z. B. die Sperrliste VERBOTEN in s3b2795_zustellung_struktur.test.ts) sind kein Pfad.
+ */
+function funde3385(): string[] {
+	const namen = new Set(GELOESCHT_3385.map(basisname));
+	const trifftSpez = (spez: string) => {
+		const b = (spez.split('/').pop() ?? '').replace(/\.(svelte|ts|js)$/, '');
+		return namen.has(b) ? b : null;
+	};
+	const trifftPfad = (s: string) => {
+		const letzt = s.split('/').pop() ?? '';
+		const mitEndung = /\.(svelte|ts|js)$/.test(letzt);
+		const b = letzt.replace(/\.(svelte|ts|js)$/, '');
+		return namen.has(b) && (mitEndung || s.includes('/')) ? b : null;
+	};
+	const spezifizierer = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)['"`]([^'"`]+)['"`]/g;
+	const zeichenkette = /['"`]([^'"`\n]+)['"`]/g;
+	const funde: string[] = [];
+	for (const rel of scanDateien3385()) {
+		if (rel === SCAN_3385_AUSNAHME) continue;
+		const text = ohneKommentare(readFileSync(pfad(rel), 'utf8'));
+		for (const m of text.matchAll(spezifizierer)) {
+			const b = trifftSpez(m[1]);
+			if (b) funde.push(`${rel} -> ${b} (Import/Export)`);
+		}
+		for (const z of text.split('\n')) {
+			for (const s of z.matchAll(zeichenkette)) {
+				const b = trifftPfad(s[1]);
+				if (b) funde.push(`${rel} -> ${b} (Pfad)`);
+			}
+		}
+	}
+	return funde;
+}
+
+describe('#3385 AC-1/AC-7: Waisen S3 gelöscht, kein Import und kein Pfad mehr, Nachbarn erhalten', () => {
+	test('Löschliste #3385 hat genau 7 Einträge ohne Doppelte', () => {
+		assert.equal(new Set(GELOESCHT_3385).size, 7);
+		assert.equal(GELOESCHT_3385.length, 7);
+	});
+
+	for (const rel of GELOESCHT_3385) {
+		test(`gelöscht (#3385): ${rel}`, () => {
+			assert.equal(existsSync(pfad(rel)), false, `${rel} existiert noch`);
+		});
+	}
+
+	test('die Ausnahmedatei des Importscans existiert (sonst wäre die Ausnahme verwaist)', () => {
+		assert.equal(existsSync(pfad(SCAN_3385_AUSNAHME)), true);
+	});
+
+	test('Importscan frontend/src und frontend/e2e: kein Spezifizierer und keine Pfad-Zeichenkette auf die #3385-Löschliste', () => {
+		const funde = funde3385();
+		assert.deepEqual(funde, [], `Verweise auf die in #3385 gelöschten Dateien:\n${funde.join('\n')}`);
+	});
+
+	for (const rel of ERHALTEN_3385) {
+		test(`erhalten (Regressionsschutz, heute grün): ${rel}`, () => {
+			assert.equal(existsSync(pfad(rel)), true, `${rel} wurde mitgelöscht, wird aber noch gebraucht`);
+		});
+	}
+});
+
 describe('#3297 AC-8: show_outlook und multi_day_trend_reports aus dem Frontend-Produktionscode', () => {
 	test('keine Produktionsdatei unter frontend/src nennt einen der beiden Schlüssel', () => {
 		const funde: string[] = [];
