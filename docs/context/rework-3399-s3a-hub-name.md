@@ -74,3 +74,12 @@ Die Karte „Wetter" (Wertebereiche) in der Hub-Übersicht eines Ortsvergleichs 
 
 ### Open Questions
 - Keine PO-Frage; die Signatur-Abweichung ist technisch und in der Spec zu vermerken.
+
+## TDD RED (Stand)
+RED-Commit 9e7c19667: 7 neue Fälle rot in `hub_uebersicht_vorlagenrang_2988.test.ts` (AC-2, AC-9, Unit `vorlagenNameAusId`) und `hub_uebersicht_verdrahtung_laufzeit.test.ts` (POST, „—" beim Laden, 500 ⇒ „—"). Artefakt `docs/artifacts/rework-3399-s3a-hub-name/test-red-output.txt`.
+
+Hinweise für `/50-implement`:
+- `HubUebersicht.svelte` muss `erstelleAboVorlageId` genau so aus `../alarme-tab/aboVorlageId.svelte.ts` importieren (Prüfstand-Saat `LADER_SAAT` ersetzt diesen Namen).
+- Laufzeittest alt: `netz().uebrigeAbrufe()` + `deepEqual(['/api/templates'])` in „genau EIN Abruf /api/templates" und „Vorlagen-Abruf scheitert" werden durch den neuen POST rot ⇒ `uebrigeAbrufe` nimmt `/api/ampel/aufloesung` aus (eigene Fälle prüfen ihn).
+- Nachziehen: `vorlage_statt_profil_2796.test.ts:51-71` (Titel über ID aus `aufgeloestVon`; Listenkarte und `aboVorlagenName`-Unit bleiben bis S3b), `compare_hub_fidelity.test.ts:86-90` (auf `vorlagenNameAusId(`), prüfen: `vergleich_hub_sprache.test.ts:294`, `feat3298_vergleich_ohne_altfelder.test.ts:259`, `f10Pruefstand.ts:354`, `wertebereiche_karte_2988`, `s3a2794_teil4b_uebersicht`, `s3a2794_teil4b_befunde`, `p5c_ableitung_hub_orte_ausgabe`, `hub_uebersicht_modell`.
+- Git: Commit-Hook verlangt einfachen `git commit` ohne `cd` davor.
