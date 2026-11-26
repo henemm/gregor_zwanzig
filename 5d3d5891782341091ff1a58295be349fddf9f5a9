@@ -1,0 +1,59 @@
+{
+  "verified_commit": "5d3d5891782341091ff1a58295be349fddf9f5a9",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "staging",
+      "evidence": "Zuordnung aus Katalog; Staging auf 5d3d589, Compare-Mail DE (GZM 262156-adbe4c1d Vergleich) und EN (GZM 262156-1a84c583 Vergleich) echt zugestellt, email_spec_validator Exit 0",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "staging",
+      "evidence": "Vergleichsmail-Satz unveraendert: Compare-Validator DE/EN Exit 0; lokal byte-gleich ueber 512 Teilmengen gegen 97853c3",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "staging",
+      "evidence": "temp_min-Filter auf Renderer-ID per Test + Mutation belegt; Staging-Compare-Mail DE/EN Validator Exit 0",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "staging",
+      "evidence": "ValueError bei fehlendem Katalog-Paar (Kerntest); Staging-Versand ohne Fehler, beide Mails zugestellt",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "staging",
+      "evidence": "Metrik-Listen-Ratsche gruen, CI 6/6 gruen; Trip-Briefing DE (GZM 262156-adbe4c1d) und EN (GZM 262156-1a84c583) briefing_mail_validator Exit 0",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-26T21:57:08.695720+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Trip- und Vergleichsmail DE/EN auf Staging 5d3d589 echt zugestellt, alle Validatoren Exit 0",
+  "scope": "backend",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Trip- und Vergleichsmail DE/EN auf Staging 5d3d589 echt zugestellt, alle Validatoren Exit 0",
+      "scope": "backend",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-26T21:57:08.695720+00:00"
+    }
+  }
+}
