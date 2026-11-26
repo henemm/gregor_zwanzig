@@ -104,9 +104,9 @@ Diese Scheibe:
 
 | Datei:Zeile | Grund |
 |---|---|
-| `AlarmeTab.svelte:268` | Ableitung `unalertableSelectedMetricNames` — route liefert strukturell immer `[]` (#1435 AC-7) |
-| `AlarmeTab.svelte:553` | Anzeige-Zwilling der fachlichen Zusicherung aus `:268` |
-| `AlarmeTab.svelte:604` | Beispielwarnung: Ort- statt Etappen-Subjekt, zwei verschiedene Komponenten |
+| `AlarmeTab.svelte:272` | Ableitung `unalertableSelectedMetricNames` — route liefert strukturell immer `[]` (#1435 AC-7) |
+| `AlarmeTab.svelte:557` | Anzeige-Zwilling der fachlichen Zusicherung aus `:272` |
+| `AlarmeTab.svelte:608` | Beispielwarnung: Ort- statt Etappen-Subjekt, zwei verschiedene Komponenten |
 | `alarme-tab/alarmeTabSections.ts:27` | Radar-Abschnitt nur im Vergleich |
 | `wetter-tab/corridorEditorState.ts:331` | Markieren-Schalter bei Tages-Summen nur im Trip gesperrt |
 
@@ -114,7 +114,7 @@ Diese Scheibe:
 
 | Datei:Zeile | Grund |
 |---|---|
-| `AlarmeTab.svelte:571` | Kurzstil-Schalter — im Trip steht derselbe Schalter im Versand-Reiter (#1260 S5), reine Platzierung |
+| `AlarmeTab.svelte:575` | Kurzstil-Schalter — im Trip steht derselbe Schalter im Versand-Reiter (#1260 S5), reine Platzierung |
 | `alarme-tab/alarmeTabSections.ts:38` | nur Überschrifttext |
 
 ### HERKUNFT (3 — AC-2-Abweichung, bleibt bestehen, siehe Begründung oben)
@@ -132,6 +132,8 @@ Abgleich der `context ===`-Zweige gegen die Soll-Liste bestanden, kein Zweig ent
 Corridor-Editor auf 14 / 3 / 9 = 26; #3155 entfernte die `isRoute`-Weiche in `VTSchedulePlan.svelte`: 13 / 3 / 9 = 25; #3297/#3020 löschten den Alt-Editor samt Versand-Baustein: 7 / 3 / 3 = 13; #3385 löschte die Waisen `vtBriefingChannelsText.ts` und `VTSchedulePlan.svelte`: 5 / 2 / 3 = 10).
 
 ## Changelog
+
+- 2026-11-26: #3399 S1: AlarmeTab-Zeilen +4 nachgezogen (268→272, 553→557, 571→575, 604→608).
 
 - 2026-11-25: #3297/#3020 (Rückbau Alt-Editor) — `VersandTab.svelte`, `WeatherMetricsTab.svelte`,
   `weatherMetricsTabSections.ts` und `WetterMetrikenVersandPanel.svelte` gelöscht; ihre elf Einträge

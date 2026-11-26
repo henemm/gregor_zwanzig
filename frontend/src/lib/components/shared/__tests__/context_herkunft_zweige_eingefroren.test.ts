@@ -210,10 +210,12 @@ const EINGEFROREN: readonly string[] = [
 	// Zustand (d3) und die Einbettung des Blocks unter der Tabelle; keine neue Weiche, nachgemessen.
 	// 🔴 Issue #1895 S3b2 (AC-74): +1/+3/+3/+3 Zeilen durch den Typ-Import ConnectionProfile und
 	// die zwei Block-Props profil/schwellen; keine neue Weiche, nachgemessen.
-	'AlarmeTab.svelte:268',
-	'AlarmeTab.svelte:553',
-	'AlarmeTab.svelte:571',
-	'AlarmeTab.svelte:604',
+	// 🔴 Issue #3399 S1: +4 Zeilen je Eintrag durch Lader-Import, Prop vorlageIdOverride und die
+	// Vorlagen-ID-Verdrahtung (aboVorlageId.svelte.ts); keine neue Weiche, nachgemessen.
+	'AlarmeTab.svelte:272',
+	'AlarmeTab.svelte:557',
+	'AlarmeTab.svelte:575',
+	'AlarmeTab.svelte:608',
 	// S6e: alle DREI VersandTab-Eintraege bleiben (0 gestrichen) — sie sind
 	// Wirkort-/Darstellungs-Weichen, kein `wiz`-Symptom. Ihre Zeilennummern
 	// verschoben sich durch die elf neuen Prop-Zeilen im Skript-Teil; die neuen
@@ -331,22 +333,22 @@ const EINGEFROREN_SOLL_ANZAHL = 10;
  */
 const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: string }[] = [
 	{
-		eintrag: 'AlarmeTab.svelte:268',
+		eintrag: 'AlarmeTab.svelte:272',
 		zeile: "context === 'vergleich'",
 		folgt: 'deriveUnalertableSelectedMetricNames('
 	},
 	{
-		eintrag: 'AlarmeTab.svelte:553',
+		eintrag: 'AlarmeTab.svelte:557',
 		zeile: "{#if context === 'vergleich' && unalertableSelectedMetricNames.length > 0}",
 		folgt: 'alarme-unalertable-metrics-hint'
 	},
 	{
-		eintrag: 'AlarmeTab.svelte:571',
+		eintrag: 'AlarmeTab.svelte:575',
 		zeile: "{#if context === 'vergleich'}",
 		folgt: 'TelegramKurzstilToggle'
 	},
 	{
-		eintrag: 'AlarmeTab.svelte:604',
+		eintrag: 'AlarmeTab.svelte:608',
 		zeile: "{#if context === 'vergleich'}",
 		// #2283 S5: VTAlertSample durch echte AlertPreviewCard ersetzt (AC-21).
 		// Anker samt `kind="vergleich"`: das FENSTER (8 Zeilen) reicht bis in den
