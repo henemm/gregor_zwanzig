@@ -1037,8 +1037,8 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.normal.-.vorlage.df0c0ec4ee",
-			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Text „▾ unverändert“ ist ein Knoten; live sind Auswahlpfeil „▾“ und Stand „unverändert“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"id": "trip.wetter.normal.-.vorlage.dd7c0bde22",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Text „▾ 1 Abweichung“ ist ein Knoten; live sind Auswahlpfeil „▾“ und Stand „1 Abweichung“ eigene Elemente (#3419: Seed-Trip weicht wie das Soll-Bild in Bewölkung von „Alpen-Trekking“ ab); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
 			"verweis": "#2913"
 		},
 		{
@@ -1157,8 +1157,8 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.luecken.-.vorlage.12ebbbb75e",
-			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Text „▾ unverändert“ ist ein Knoten; live sind Auswahlpfeil „▾“ und Stand „unverändert“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"id": "trip.wetter.luecken.-.vorlage.5c3e5320bc",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Text „▾ 1 Abweichung“ ist ein Knoten; live sind Auswahlpfeil „▾“ und Stand „1 Abweichung“ eigene Elemente (#3419: Seed-Trip weicht wie das Soll-Bild in Bewölkung von „Alpen-Trekking“ ab); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
 			"verweis": "#2913"
 		},
 		{
@@ -1486,6 +1486,22 @@
 			"text": "▾",
 			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Auswahlpfeil der Vorlage-Karte, im Mockup Teil des Textknotens „▾ unverändert“; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
 			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"text": "1 Abweichung",
+			"grund": "Stand der Vorlage-Karte, im Mockup Teil des Textknotens „▾ 1 Abweichung“ (Element trip.wetter.normal.-.vorlage.dd7c0bde22); Seed-Trip weicht wie das Soll-Bild in Bewölkung von „Alpen-Trekking“ ab",
+			"verweis": "#3419"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"text": "1 change",
+			"grund": "EN-Stand der Vorlage-Karte (wetter.vorlage.abweichungen.one), im Mockup Teil des Textknotens „▾ 1 Abweichung“ (Element trip.wetter.normal.-.vorlage.dd7c0bde22)",
+			"verweis": "#3419"
 		},
 		{
 			"art": "zusaetzlich",

@@ -42,6 +42,9 @@ import {
 	type HubAnker,
 	istGegenrichtung,
 	werteGegenrichtungAus,
+	angenommeneWerte,
+	namenPaareAus,
+	grenzenAusMockup,
 	ladeRegeln,
 	ladeKontoTexte,
 	metrikNamenAusRegister,
@@ -81,6 +84,11 @@ const LISTE = join(FRONTEND, '..', 'docs/context/einstellungen_neu/elementliste.
 const FREIGABEN = join(FRONTEND, '..', 'docs/context/einstellungen_neu/elementliste_freigaben.json');
 // Ganzseiten-Abgleich (feat_2913_abgleich_ganzseite): Besitzer je Abweichung und Ausnahmen der Gegenrichtung.
 const BESITZER = join(FRONTEND, '..', 'docs/context/einstellungen_neu/elementliste_besitzer.json');
+// #3421: Grenzwerte des Soll-Bilds (TRIP_METRICS / ORTE_METRICS) für den Grenzen-Prüfdatensatz.
+const MOCKUP = join(FRONTEND, '..', 'docs/context/einstellungen_neu/seiten/mockup-hub-fassung4.html');
+// #3422: Namenspaare DE → EN (Schnappschuss + Server-Katalog vergleich.zeile.*) für die EN-Gegenrichtung.
+const METRIK_NAMEN = join(FRONTEND, '..', 'docs/context/einstellungen_neu/daten/metrik_namen.json');
+const KATALOG_VERGLEICH = (sprache: 'de' | 'en') => join(FRONTEND, '..', `src/i18n/messages/${sprache}/vergleich.json`);
 const BERICHT_DIR = process.env.ELEMENTLISTE_BERICHT_DIR ?? join(FRONTEND, 'test-results', 'elementliste-abgleich');
 
 /**
@@ -281,9 +289,11 @@ async function wetterPruefDaten(api: APIRequestContext, liste: ListenElement[], 
 		datum: new Date().toISOString().slice(0, 10)
 	};
 
+	// #3421: Grenzen-Datensatz mit den Grenzwerten des Soll-Bilds je Kontext (auch Minuswerte).
+	const mockup = readFileSync(MOCKUP, 'utf8');
 	for (const d of WETTER_DATENSAETZE) {
 		const id = wetterTripId(d);
-		const trip = await api.post('/api/trips', { data: wetterPruefPayload('trip', d, quelle) });
+		const trip = await api.post('/api/trips', { data: wetterPruefPayload('trip', d, { ...quelle, grenzen: grenzenAusMockup(mockup, 'trip') }) });
 		if (trip.ok()) {
 			ids.trip![d] = id;
 			aufraeumen.push(() => api.delete(`/api/trips/${id}`));
@@ -300,7 +310,7 @@ async function wetterPruefDaten(api: APIRequestContext, liste: ListenElement[], 
 	}
 	if (quelle.ortIds.length === MOCKUP_LAGE.orte.orte) {
 		for (const d of WETTER_DATENSAETZE) {
-			const v = await api.post('/api/compare/presets', { data: wetterPruefPayload('orte', d, quelle) });
+			const v = await api.post('/api/compare/presets', { data: wetterPruefPayload('orte', d, { ...quelle, grenzen: grenzenAusMockup(mockup, 'orte') }) });
 			if (v.ok()) {
 				const vid = String((await v.json()).id);
 				ids.orte![d] = vid;
@@ -377,6 +387,8 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 	const ohneHub: OhneHubEintrag[] = [];
 	// Freigaben, Besitzer und Ausnahmen zuerst lesen: ein ungültiger Eintrag bricht ab, bevor eine Seite lädt.
 	const regeln = ladeRegeln({ freigaben: FREIGABEN, besitzer: BESITZER }, alle);
+	const lies = (pfad: string): unknown => JSON.parse(readFileSync(pfad, 'utf8'));
+	const namenDeEn = namenPaareAus(lies(METRIK_NAMEN), lies(KATALOG_VERGLEICH('de')), lies(KATALOG_VERGLEICH('en')));
 	const api = page.request;
 
 	if (process.env.GZ_AUTH_USER && process.env.GZ_AUTH_PASS) {
@@ -492,7 +504,9 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 				if (istGegenrichtung(k)) {
 					const hub = await texteUnterHub(page);
 					// Fehlt Kopf oder Reiterfläche, ist die Seite nur teilweise gelesen: nie still „kein zusaetzlich“, sondern Befund ohneHub.
-					const gegen = werteGegenrichtungAus({ ctx: k.ctx, reiter: k.reiter, anker: hub.anker, texte: hub.texte }, alle, regeln.ausnahmen, konto, plan.sprache, metrikNamen);
+					// #3419 Nr. 6: Beispielwerte, die die Hinrichtung dieser Seite angenommen hat, gelten als erklärt.
+					const angenommen = angenommeneWerte(el, ergebnisse, plan.sprache);
+					const gegen = werteGegenrichtungAus({ ctx: k.ctx, reiter: k.reiter, anker: hub.anker, texte: hub.texte }, alle, regeln.ausnahmen, konto, plan.sprache, metrikNamen, { namenDeEn, angenommen });
 					zusaetzlich.push(...gegen.zusaetzlich);
 					if (gegen.ohneHub) ohneHub.push(gegen.ohneHub);
 				}

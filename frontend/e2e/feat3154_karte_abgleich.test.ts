@@ -332,7 +332,8 @@ describe('#3154 AC-6: Orte-SMS als Token-Zeile (ADR-0125)', () => {
 		const zeichen = es.find((e) => /\d+ von \d+ Zeichen/.test(e.text_de));
 		assert.ok(zeichen);
 		const sms = es[es.indexOf(zeichen) - 1];
-		assert.match(sms.text_de, /^O1 D\d+ /, 'Token-Zeile beginnt mit O1 D…');
+		// #3419: Temperatur als Bereichs-Token Tagestiefst/Tageshöchst wie live („O1 D15/19 …“, #3284).
+		assert.match(sms.text_de, /^O1 D\d+\/\d+ /, 'Token-Zeile beginnt mit O1 D…/…');
 	});
 });
 

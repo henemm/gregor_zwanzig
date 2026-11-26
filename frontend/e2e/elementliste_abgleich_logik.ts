@@ -491,13 +491,62 @@ export function datensatzFuerAbschnitt(abschnitt: string): 'mit_abweichung' | 'o
 
 type AmpelSeite = { red: number; orange: number; yellow: number };
 export type AmpelMetrik = { lower?: AmpelSeite; upper?: AmpelSeite };
+/** #3421: Grenzwerte des Soll-Bilds je Metrik, Reihenfolge wie Mockup: lower [rot, orange, gelb], upper [gelb, orange, rot]. */
+export type SollGrenzen = Record<string, { lower?: Array<number | null> | null; upper?: Array<number | null> | null } | undefined>;
+
+/** Ersatz ohne jeden Soll-Wert (bisheriger Prüfdatensatz): lower 1/2/3, upper 10/20/30. */
+const ERSATZ_LOWER = [1, 2, 3];
+const ERSATZ_UPPER = [10, 20, 30];
+
+/**
+ * #3421: Lücken einer aufsteigenden Folge füllen, Soll-Werte bleiben stehen. Zwischen zwei Werten linear, am Rand
+ * im Abstand 1; ganz ohne Wert der Ersatz. Ergebnis streng aufsteigend, solange die Soll-Werte es sind.
+ */
+function fuelleAufsteigend(werte: Array<number | null>, ersatz: number[]): number[] {
+	const bekannt = werte.map((w, i) => (typeof w === 'number' && Number.isFinite(w) ? i : -1)).filter((i) => i >= 0);
+	if (bekannt.length === 0) return [...ersatz];
+	return werte.map((w, i) => {
+		if (typeof w === 'number' && Number.isFinite(w)) return w;
+		const l = [...bekannt].reverse().find((k) => k < i);
+		const r = bekannt.find((k) => k > i);
+		if (l !== undefined && r !== undefined) return (werte[l] as number) + (((werte[r] as number) - (werte[l] as number)) * (i - l)) / (r - l);
+		return l !== undefined ? (werte[l] as number) + (i - l) : (werte[r as number] as number) - ((r as number) - i);
+	});
+}
+
+/**
+ * #3421: Grenzwerte des Soll-Bilds aus dem Mockup (`TRIP_METRICS` bzw. `ORTE_METRICS` in mockup-hub-fassung4.html):
+ * Spalte 6 = lower [rot, orange, gelb], Spalte 7 = upper [gelb, orange, rot]. Nicht lesbar ⇒ {} (Ersatzwerte).
+ */
+export function grenzenAusMockup(html: string, ctx: 'trip' | 'orte'): SollGrenzen {
+	const name = ctx === 'trip' ? 'TRIP_METRICS' : 'ORTE_METRICS';
+	const block = new RegExp(`const ${name}=\\[([\\s\\S]*?)\\n\\];`).exec(html);
+	if (!block) return {};
+	try {
+		const zeilen = JSON.parse('[' + block[1].replace(/'/g, '"') + ']') as unknown[][];
+		const out: SollGrenzen = {};
+		for (const z of zeilen) {
+			if (typeof z[0] === 'string') out[z[0]] = { lower: z[5] as Array<number | null> | null, upper: z[6] as Array<number | null> | null };
+		}
+		return out;
+	} catch {
+		return {};
+	}
+}
+
+const drei = (x: Array<number | null> | null | undefined): Array<number | null> => [0, 1, 2].map((i) => x?.[i] ?? null);
+
 /**
  * #3192 (AC-1): gültiger Grenzen-Override je Metrik gemäß `allowed_sides` (lower aufsteigend rot<orange<gelb,
  * upper aufsteigend gelb<orange<rot, lower unter upper); Gewitter (`level`) über `thunder`.
+ * #3421: mit `soll` (Grenzwerte des Mockups, auch Minuswerte) stehen diese Werte im Datensatz, damit die Grenzen-
+ * Abschnitte live dieselben Zahlen zeigen wie das Soll-Bild; Lücken bekommen einen gültigen Ersatz. lower und
+ * upper bilden zusammen eine aufsteigende Folge (rot, orange, gelb | gelb, orange, rot).
  */
 export function wetterOverrides(
 	metriken: string[],
-	eig: Record<string, { allowed_sides: string | null } | undefined>
+	eig: Record<string, { allowed_sides: string | null } | undefined>,
+	soll: SollGrenzen = {}
 ): { metrics: Record<string, AmpelMetrik>; thunder?: { mittel: string; hoch: string } } {
 	const metrics: Record<string, AmpelMetrik> = {};
 	let thunder: { mittel: string; hoch: string } | undefined;
@@ -507,9 +556,13 @@ export function wetterOverrides(
 			thunder = { mittel: 'yellow', hoch: 'orange' };
 			continue;
 		}
+		const unten = seiten === 'both' || seiten === 'lower';
+		const oben = seiten === 'both' || seiten === 'upper';
+		const folge = [...(unten ? drei(soll[id]?.lower) : []), ...(oben ? drei(soll[id]?.upper) : [])];
+		const w = fuelleAufsteigend(folge, [...(unten ? ERSATZ_LOWER : []), ...(oben ? ERSATZ_UPPER : [])]);
 		const e: AmpelMetrik = {};
-		if (seiten === 'both' || seiten === 'lower') e.lower = { red: 1, orange: 2, yellow: 3 };
-		if (seiten === 'both' || seiten === 'upper') e.upper = { yellow: 10, orange: 20, red: 30 };
+		if (unten) e.lower = { red: w[0], orange: w[1], yellow: w[2] };
+		if (oben) e.upper = unten ? { yellow: w[3], orange: w[4], red: w[5] } : { yellow: w[0], orange: w[1], red: w[2] };
 		if (e.lower || e.upper) metrics[id] = e;
 	}
 	return thunder ? { metrics, thunder } : { metrics };
@@ -639,6 +692,37 @@ export function seitenIdFuer(abschnitt: string, ctx: string, wetterIds: WetterId
 	return wetterIds[ctx]?.[datensatzFuerAbschnitt(abschnitt)] ?? null;
 }
 
+type VorlagenSeite = { red?: number | null; orange?: number | null; yellow?: number | null } | null | undefined;
+type VorlagenZeile = { lower?: VorlagenSeite; upper?: VorlagenSeite };
+
+/** Grenzen je Metrik einer Systemvorlage aus der Antwort von /api/templates ({} ohne Vorlage). */
+function vorlageAmpel(vorlagen: Record<string, unknown>[], vid: string): Record<string, VorlagenZeile | undefined> {
+	return ((vorlagen.find((v) => v.id === vid)?.ampel ?? {}) as { metrics?: Record<string, VorlagenZeile> }).metrics ?? {};
+}
+
+const gleicheSeite = (a: AmpelSeite | undefined, b: VorlagenSeite): boolean =>
+	!a || (!!b && a.red === b.red && a.orange === b.orange && a.yellow === b.yellow);
+
+/**
+ * #3419 (Fix-Loop, AC-2/AC-7): Der Grenzen-Datensatz „mit Abweichung“ entspricht dem Soll-Zustand des Mockups, in dem
+ * jede Metrik „Abweichend von der Vorlage …“ zeigt. Live erscheint der Satz nur, wenn eine Seite von der Vorlage
+ * abweicht (WetterTabInhalt grenzenAbweichend, ampelSchreiben.abweichungsMenge). Stimmt eine Metrik mit den
+ * Mockup-Werten ganz mit der Vorlage überein, rückt darum Rot der ersten Seite um 1 nach außen (lower −1,
+ * upper +1): Vorzeichen und Form der Mockup-Zahlen bleiben, die Reihenfolge (#3192 AC-1) bleibt gültig.
+ */
+export function weichtVonVorlageAb<T extends { metrics: Record<string, AmpelMetrik> }>(o: T, vorlage: Record<string, VorlagenZeile | undefined>): T {
+	const metrics: Record<string, AmpelMetrik> = {};
+	for (const [id, e] of Object.entries(o.metrics)) {
+		const v = vorlage[id];
+		const gleich = v !== undefined && gleicheSeite(e.lower, v.lower) && gleicheSeite(e.upper, v.upper);
+		if (!gleich) metrics[id] = e;
+		else if (e.lower) metrics[id] = { ...e, lower: { ...e.lower, red: e.lower.red - 1 } };
+		else if (e.upper) metrics[id] = { ...e, upper: { ...e.upper, red: e.upper.red + 1 } };
+		else metrics[id] = e;
+	}
+	return { ...o, metrics };
+}
+
 /** Aktive Metriken (`ampel.metrics[*].enabled === true`) einer Systemvorlage aus der Antwort von /api/templates. */
 export function aktiveMetrikenDerVorlage(vorlagen: Record<string, unknown>[], vid: string): string[] {
 	const m = ((vorlagen.find((v) => v.id === vid)?.ampel ?? {}) as { metrics?: Record<string, { enabled?: boolean }> }).metrics ?? {};
@@ -655,6 +739,8 @@ export type WetterPruefQuelle = {
 	ortIds: string[];
 	/** Datum der Etappe (YYYY-MM-DD, nur ctx trip). */
 	datum: string;
+	/** #3421: Grenzwerte des Soll-Bilds je Metrik (Mockup TRIP_METRICS / ORTE_METRICS); ohne = Ersatzwerte. */
+	grenzen?: SollGrenzen;
 };
 
 /**
@@ -665,7 +751,10 @@ export type WetterPruefQuelle = {
 export function wetterPruefPayload(ctx: 'trip' | 'orte', d: WetterDatensatz, q: WetterPruefQuelle): Record<string, unknown> {
 	const vorlage = MOCKUP_LAGE[ctx].aktiv;
 	const metriken = d === 'mit_abweichung' ? wetterPruefMetriken(q.liste, ctx) : aktiveMetrikenDerVorlage(q.vorlagen, vorlage);
-	const ampel = d === 'mit_abweichung' ? { template: vorlage, ...wetterOverrides(metriken, q.eig) } : { template: vorlage };
+	const ampel =
+		d === 'mit_abweichung'
+			? { template: vorlage, ...weichtVonVorlageAb(wetterOverrides(metriken, q.eig, q.grenzen), vorlageAmpel(q.vorlagen, vorlage)) }
+			: { template: vorlage };
 	if (ctx === 'trip') {
 		const id = wetterTripId(d);
 		return {
@@ -898,20 +987,59 @@ function gegenMuster(muster: string, metrik: string): RegExp {
  * Text (sonst wird ein Eintrag `muster: "{zahl}"` zu `^.+?$` und erklärt jeden Live-Text), und `{metrik}`
  * nur einen bekannten Metriknamen (#3011, `metrik` aus `metrikText`). Die Hinrichtung nutzt weiter `erwartung`.
  */
-function erwartungGegenrichtung(e: ListenElement, sprache: Sprache, metrik: string): RegExp | null {
+function erwartungGegenrichtung(e: ListenElement, sprache: Sprache, metrik: string, namenDeEn: NamensPaar[] = []): RegExp | null {
 	const vorlage = sprache === 'en' ? e.text_en : e.muster;
 	if (sprache === 'en' && (e.luecke || !vorlage)) return null;
 	// #3154: ein Beispieltext (`{wert}`) erklärt in der Gegenrichtung nur Text in der Form seines Mockup-Beispiels
 	// (Zahlen beliebig, wie `{zahl}`), nie beliebigen Text und nie einen Zellennamen.
-	if (vorlage && vorlage.includes('{wert}')) return beispielForm(e.text_de);
+	// #3422: im EN-Lauf zusätzlich die Form mit englischem Metriknamen (je Namenspaar eine Form).
+	if (vorlage && vorlage.includes('{wert}')) return beispielForm(sprache === 'en' ? enFormen(e.text_de, namenDeEn) : [e.text_de]);
 	if (vorlage && HAT_PLATZHALTER.test(vorlage)) return gegenMuster(vorlage, metrik);
 	return erwartung(e, sprache);
 }
 
-/** #3154: Form eines Beispieltexts für die Gegenrichtung: der Text wörtlich, jede Zahl als `{zahl}`. */
-function beispielForm(text: string): RegExp {
-	const quelle = normalisiere(text).split(/\d+(?:[.,:]\d+)*/).map(esc).join(ZAHL_TEXT);
-	return new RegExp('^(?!' + ZELLEN_QUELLE + '|' + MARKEN_QUELLE + ')' + quelle + '$');
+/** #3422: DE-Name → EN-Name (Schnappschuss metrik_namen.json und Server-Katalog `vergleich.zeile.*`). */
+export type NamensPaar = { de: string; en: string };
+
+/**
+ * #3422: Namenspaare DE → EN aus dem Schnappschuss `metrik_namen.json` ({namen: [{de, en}]}) und den Zeilennamen
+ * des Server-Katalogs `vergleich.zeile.*` (src/i18n/messages/{de,en}/vergleich.json); die Kurz-Namen der
+ * Beispielzeilen („Gusts“, „Rain“, „Sun“) stehen nur dort. Ungültige Quellen tragen nichts bei.
+ */
+export function namenPaareAus(schnappschuss: unknown, katalogDe: unknown, katalogEn: unknown): NamensPaar[] {
+	const out: NamensPaar[] = [];
+	const namen = istObjekt(schnappschuss) && Array.isArray(schnappschuss.namen) ? schnappschuss.namen : [];
+	for (const n of namen) if (istObjekt(n) && nichtLeer(n.de) && nichtLeer(n.en)) out.push({ de: n.de, en: n.en });
+	if (istObjekt(katalogDe) && istObjekt(katalogEn)) {
+		for (const [k, de] of Object.entries(katalogDe)) {
+			const en = katalogEn[k];
+			if (k.startsWith('vergleich.zeile.') && nichtLeer(de) && nichtLeer(en)) out.push({ de, en });
+		}
+	}
+	return out;
+}
+
+/**
+ * #3422: Formen eines DE-Beispieltexts für den EN-Lauf: der Text selbst und je Namenspaar, dessen DE-Name als
+ * ganzes Wort im Text steht, der Text mit dem EN-Namen an dieser Stelle. Ohne Paar nur der Text (fail-closed).
+ */
+function enFormen(text: string, namenDeEn: NamensPaar[]): string[] {
+	const t = normalisiere(text);
+	const formen = new Set([t]);
+	for (const p of namenDeEn) {
+		const de = normalisiere(p.de ?? '');
+		const en = normalisiere(p.en ?? '');
+		if (!de || !en) continue;
+		const re = new RegExp('(?<!\\p{L})' + esc(de) + '(?!\\p{L})', 'gu');
+		if (re.test(t)) formen.add(t.replace(re, () => en));
+	}
+	return [...formen];
+}
+
+/** #3154: Form eines Beispieltexts für die Gegenrichtung: der Text wörtlich, jede Zahl als `{zahl}` (je Form). */
+function beispielForm(texte: string[]): RegExp {
+	const quellen = texte.map((text) => normalisiere(text).split(/\d+(?:[.,:]\d+)*/).map(esc).join(ZAHL_TEXT));
+	return new RegExp('^(?!' + ZELLEN_QUELLE + '|' + MARKEN_QUELLE + ')(?:' + quellen.join('|') + ')$');
 }
 
 /**
@@ -1090,6 +1218,24 @@ export function sammleKontoTexte(daten: unknown): string[] {
 	return [...out];
 }
 
+/** Angenommener Beispielwert der Hinrichtung (#3419 Nr. 6): Live-Text eines gefundenen `{wert}`-Elements je Seite. */
+export type Angenommen = { ctx: string; reiter: string; text: string };
+/** Zusatz der Gegenrichtung: EN-Namenspaare (#3422) und angenommene Beispielwerte (#3419 Nr. 6). */
+export type GegenZusatz = { namenDeEn?: NamensPaar[]; angenommen?: Angenommen[] };
+
+/**
+ * #3419 Nr. 6: angenommene Beispielwerte aus den Ergebnissen der Hinrichtung: `ist` jedes gefundenen
+ * `{wert}`-Elements (Muster in der Laufsprache), mit ctx und Reiter des Elements.
+ */
+export function angenommeneWerte(liste: ListenElement[], ergebnisse: Map<string, Ergebnis>, sprache: Sprache): Angenommen[] {
+	const out: Angenommen[] = [];
+	for (const e of liste) {
+		const r = ergebnisse.get(e.id);
+		if (r?.status === 'gefunden' && typeof r.ist === 'string' && istWert(e, sprache)) out.push({ ctx: e.ctx, reiter: e.reiter, text: r.ist });
+	}
+	return out;
+}
+
 /**
  * Gegenrichtung: sichtbare Texte einer Kombination (ctx × Reiter, Zustand normal), die weder zu einem
  * Eintrag des Reiters bzw. zu kopf/reiterleiste desselben ctx (DE/EN), noch zu einem Konto-Text, noch zu
@@ -1101,16 +1247,19 @@ export function findeZusaetzliche(
 	ausnahmen: Ausnahme[],
 	kontoTexte: string[],
 	sprache: Sprache,
-	metrikNamen: string[] = []
+	metrikNamen: string[] = [],
+	zusatz: GegenZusatz = {}
 ): ZusaetzlichEintrag[] {
 	const { ctx, reiter } = befund;
 	// #3011: `{metrik}` erklärt nur Register-Namen (metrikNamen) und DE-Namen der Elementliste.
 	const metrik = metrikText([...metrikNamen, ...metrikNamenAusListe(liste)]);
 	const regeln = liste
 		.filter((e) => e.ctx === ctx && e.zustand === 'normal' && (e.reiter === reiter || REITERUEBERGREIFEND.has(e.abschnitt)))
-		.map((e) => erwartungGegenrichtung(e, sprache, metrik))
+		.map((e) => erwartungGegenrichtung(e, sprache, metrik, zusatz.namenDeEn ?? []))
 		.filter((re): re is RegExp => re !== null);
-	const konto = new Set(kontoTexte.map(normalisiere));
+	// #3419 Nr. 6: von der Hinrichtung angenommene Beispielwerte erklären nur auf derselben Seite (ctx und Reiter).
+	const angenommen = (zusatz.angenommen ?? []).filter((a) => a.ctx === ctx && a.reiter === reiter).map((a) => normalisiere(a.text));
+	const konto = new Set([...kontoTexte.map(normalisiere), ...angenommen]);
 	const out = new Map<string, ZusaetzlichEintrag>();
 	for (const roh of befund.texte) {
 		const t = normalisiere(roh);
@@ -1134,12 +1283,13 @@ export function werteGegenrichtungAus(
 	ausnahmen: Ausnahme[],
 	kontoTexte: string[],
 	sprache: Sprache,
-	metrikNamen: string[] = []
+	metrikNamen: string[] = [],
+	zusatz: GegenZusatz = {}
 ): { zusaetzlich: ZusaetzlichEintrag[]; ohneHub: OhneHubEintrag | null } {
 	const { ctx, reiter } = befund;
 	const grund = pruefeHubAnker(befund.anker);
 	if (grund !== null) return { zusaetzlich: [], ohneHub: { ctx, reiter, grund } };
-	return { zusaetzlich: findeZusaetzliche({ ctx, reiter, texte: befund.texte }, liste, ausnahmen, kontoTexte, sprache, metrikNamen), ohneHub: null };
+	return { zusaetzlich: findeZusaetzliche({ ctx, reiter, texte: befund.texte }, liste, ausnahmen, kontoTexte, sprache, metrikNamen, zusatz), ohneHub: null };
 }
 
 /** Besitzer einer Abweichung: ein Element (id), ein ganzer Abschnitt oder ein zusätzlicher Text (Text/Muster). */
@@ -1361,17 +1511,89 @@ export function bewerteKontoChips(
 	return out;
 }
 
-/**
- * Bewertung eines Abschnitts aus dem DOM-Befund (sichtbare Texte in DOM-Reihenfolge, Abschnitt-Haken
- * `data-abschnitt` vorhanden?): gefunden nur mit Haken und in Reihenfolge; ohne Haken abweichend;
- * Script-Abschnitt ohne Haken nicht_pruefbar; EN-Lücke nicht_pruefbar.
- */
 /** #3154: Element ist ein Beispieltext (Muster mit `{wert}` in der Sprache des Laufs). */
 function istWert(e: ListenElement, sprache: Sprache): boolean {
 	const vorlage = sprache === 'en' ? e.text_en : e.muster;
 	return typeof vorlage === 'string' && vorlage.includes('{wert}');
 }
 
+/** #3420: Zellmuster `{metrik} in|im <Stelle>` (DE-Muster der Elementliste). */
+const ZELLMUSTER = /^\{metrik\} (?:in|im) /;
+
+/**
+ * #3420: Zeile eines Zellmuster-Elements im Soll (Metrikteil von `text_de`, die Liste ist DE-erzeugt) und die
+ * Vorlage der Laufsprache, aus der der Metrikteil eines Live-Treffers gelesen wird; null = kein Zellmuster.
+ */
+function zellZeile(e: ListenElement, sprache: Sprache): { zeile: string; vor: string; nach: string } | null {
+	if (!e.muster || !ZELLMUSTER.test(e.muster)) return null;
+	const suffix = normalisiere(e.muster).slice('{metrik}'.length);
+	const text = normalisiere(e.text_de);
+	const vorlage = normalisiere((sprache === 'en' ? e.text_en : e.muster) ?? '');
+	const pos = vorlage.indexOf('{metrik}');
+	if (!text.endsWith(suffix) || pos < 0) return null;
+	return { zeile: text.slice(0, text.length - suffix.length), vor: vorlage.slice(0, pos), nach: vorlage.slice(pos + '{metrik}'.length) };
+}
+
+/** #3420: Metrikteil eines Live-Treffers nach der Vorlage (Präfix/Suffix abgeschnitten). */
+function metrikteil(t: string, z: { vor: string; nach: string }): string {
+	return t.slice(z.vor.length, t.length - z.nach.length);
+}
+
+/** Zustand der Bewertung: Cursor und zuletzt gefundene Zelle (#3420 Zeilenbindung). */
+type Lauf = { norm: string[]; marker: boolean; abschnitt: string; zuletzt: number; zelle: { zeile: string; metrik: string } | null };
+
+/** Treffer übernehmen: gefunden (mit Haken) bzw. abweichend ohne Haken; der Cursor rückt in beiden Fällen vor. */
+function nimmTreffer(lauf: Lauf, treffer: number, ist?: string): Ergebnis {
+	lauf.zuletzt = treffer;
+	if (lauf.marker) return ist === undefined ? { status: 'gefunden' } : { status: 'gefunden', ist };
+	return { status: 'abweichend', grund: `Abschnitt-Haken data-abschnitt="${lauf.abschnitt}" fehlt`, ist: 'nur seitenweit gefunden' };
+}
+
+/**
+ * #3154 (AC-9): ein Beispieltext (`{wert}`) gehört zum Block direkt hinter dem Cursor; gesucht wird nur bis zum
+ * nächsten Zellennamen. Fehlt er, ist genau dieses Element abweichend, der Cursor bleibt stehen.
+ * #3419 Nr. 6: gefunden trägt den angenommenen Live-Text in `ist` (Quelle der Gegenrichtung `angenommen`).
+ */
+function bewerteWert(lauf: Lauf, re: RegExp): Ergebnis {
+	const { norm, zuletzt } = lauf;
+	const grenze = norm.findIndex((t, i) => i > zuletzt && ZELLENNAME.test(t));
+	const bis = grenze < 0 ? norm.length : grenze;
+	const treffer = norm.findIndex((t, i) => i > zuletzt && i < bis && re.test(t));
+	if (treffer >= 0) return nimmTreffer(lauf, treffer, norm[treffer]);
+	return { status: 'abweichend', grund: 'Text nicht sichtbar', ist: 'kein Beispieltext vor dem nächsten Zellennamen' };
+}
+
+/**
+ * #3420 Zeilenbindung: ist das vorige Zellmuster-Element derselben Soll-Zeile gefunden, muss der Live-Treffer
+ * denselben Metrikteil tragen wie dessen Live-Treffer; sonst „Text nicht sichtbar“ für genau dieses Element,
+ * der Cursor bleibt stehen (keine Kaskade „Reihenfolge im Abschnitt“ über die Folgezeilen).
+ */
+function bewerteZelle(lauf: Lauf, re: RegExp, z: { zeile: string; vor: string; nach: string }, ordnung: number): Ergebnis {
+	const gebunden = lauf.zelle !== null && lauf.zelle.zeile === z.zeile ? lauf.zelle.metrik : null;
+	if (gebunden === null) {
+		const vorher = lauf.zuletzt;
+		const erg = bewerteFrei(lauf, re, ordnung);
+		lauf.zelle = lauf.zuletzt !== vorher ? { zeile: z.zeile, metrik: metrikteil(lauf.norm[lauf.zuletzt], z) } : null;
+		return erg;
+	}
+	const treffer = lauf.norm.findIndex((t, i) => i > lauf.zuletzt && re.test(t) && metrikteil(t, z) === gebunden);
+	if (treffer >= 0) return nimmTreffer(lauf, treffer);
+	return { status: 'abweichend', grund: 'Text nicht sichtbar', ist: `kein Treffer mit Metrik „${gebunden}“ in der Zeile` };
+}
+
+/** Freie Suche hinter dem Cursor (Reihenfolge), sonst seitenweit (Reihenfolge) bzw. nicht sichtbar. */
+function bewerteFrei(lauf: Lauf, re: RegExp, ordnung: number): Ergebnis {
+	const nachher = lauf.norm.findIndex((t, i) => i > lauf.zuletzt && re.test(t));
+	if (nachher >= 0) return nimmTreffer(lauf, nachher);
+	if (lauf.norm.some((t) => re.test(t))) return { status: 'abweichend', grund: 'Reihenfolge im Abschnitt', ist: `vor Element Nr. ${ordnung - 1}` };
+	return { status: 'abweichend', grund: 'Text nicht sichtbar', ist: 'nicht gefunden' };
+}
+
+/**
+ * Bewertung eines Abschnitts aus dem DOM-Befund (sichtbare Texte in DOM-Reihenfolge, Abschnitt-Haken
+ * `data-abschnitt` vorhanden?): gefunden nur mit Haken und in Reihenfolge; ohne Haken abweichend;
+ * Script-Abschnitt ohne Haken nicht_pruefbar; EN-Lücke nicht_pruefbar; Zellmuster an ihre Zeile gebunden (#3420).
+ */
 export function bewerteAbschnitt(
 	liste: ListenElement[],
 	befund: { marker: boolean; texte: string[] },
@@ -1386,43 +1608,15 @@ export function bewerteAbschnitt(
 	const norm = befund.texte.map(normalisiere);
 	const chips = liste.filter(istKontoChip);
 	for (const [i, e] of bewerteKontoChips(chips, { marker: befund.marker, texte: norm }, sprache, abschnitt)) out.set(i, e);
-	let zuletzt = -1;
+	const lauf: Lauf = { norm, marker: befund.marker, abschnitt, zuletzt: -1, zelle: null };
 	for (const e of liste.filter((x) => !istKontoChip(x)).sort((a, b) => a.ordnung - b.ordnung)) {
 		const re = erwartung(e, sprache);
 		if (!re) {
 			out.set(e.id, { status: 'nicht_pruefbar', grund: 'EN-Lücke: kein Katalogtext' });
 			continue;
 		}
-		// #3154 (AC-9): ein Beispieltext (`{wert}`) gehört zum Block direkt hinter dem Cursor; gesucht wird nur
-		// bis zum nächsten Zellennamen. Fehlt er, ist genau dieses Element abweichend, der Cursor bleibt stehen.
-		if (istWert(e, sprache)) {
-			const grenze = norm.findIndex((t, i) => i > zuletzt && ZELLENNAME.test(t));
-			const bis = grenze < 0 ? norm.length : grenze;
-			const treffer = norm.findIndex((t, i) => i > zuletzt && i < bis && re.test(t));
-			if (treffer >= 0 && befund.marker) {
-				out.set(e.id, { status: 'gefunden' });
-				zuletzt = treffer;
-			} else if (treffer >= 0) {
-				out.set(e.id, { status: 'abweichend', grund: `Abschnitt-Haken data-abschnitt="${abschnitt}" fehlt`, ist: 'nur seitenweit gefunden' });
-				zuletzt = treffer;
-			} else {
-				out.set(e.id, { status: 'abweichend', grund: 'Text nicht sichtbar', ist: 'kein Beispieltext vor dem nächsten Zellennamen' });
-			}
-			continue;
-		}
-		const nachher = norm.findIndex((t, i) => i > zuletzt && re.test(t));
-		const irgendwo = norm.findIndex((t) => re.test(t));
-		if (nachher >= 0 && befund.marker) {
-			out.set(e.id, { status: 'gefunden' });
-			zuletzt = nachher;
-		} else if (nachher >= 0) {
-			out.set(e.id, { status: 'abweichend', grund: `Abschnitt-Haken data-abschnitt="${abschnitt}" fehlt`, ist: 'nur seitenweit gefunden' });
-			zuletzt = nachher;
-		} else if (irgendwo >= 0) {
-			out.set(e.id, { status: 'abweichend', grund: 'Reihenfolge im Abschnitt', ist: `vor Element Nr. ${e.ordnung - 1}` });
-		} else {
-			out.set(e.id, { status: 'abweichend', grund: 'Text nicht sichtbar', ist: 'nicht gefunden' });
-		}
+		const z = zellZeile(e, sprache);
+		out.set(e.id, istWert(e, sprache) ? bewerteWert(lauf, re) : z ? bewerteZelle(lauf, re, z, e.ordnung) : bewerteFrei(lauf, re, e.ordnung));
 	}
 	return out;
 }

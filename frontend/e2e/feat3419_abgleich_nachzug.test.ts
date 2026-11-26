@@ -109,15 +109,17 @@ const zusaetzlicheTexte = (z: ZusaetzlichEintrag[]) => z.map((e) => e.text).sort
 const elementliste = (): ListenElement[] =>
 	(JSON.parse(readFileSync(join(EINST, 'elementliste.json'), 'utf8')) as { elemente: ListenElement[] }).elemente;
 
-/** Namenspaare DE -> EN: Schnappschuss metrik_namen.json + Server-Katalog vergleich.zeile.* (siehe Kopf). */
+/**
+ * Namenspaare DE -> EN über die Produktfunktion `namenPaareAus` (dieselbe, die der Staging-Lauf nutzt) aus den
+ * echten Dateien: Schnappschuss metrik_namen.json + Server-Katalog vergleich.zeile.* (siehe Kopf).
+ */
+const liesJson = (...teile: string[]): unknown => JSON.parse(readFileSync(join(...teile), 'utf8'));
 function namenPaare(): Array<{ de: string; en: string }> {
-	const schnapp = (JSON.parse(readFileSync(join(EINST, 'daten', 'metrik_namen.json'), 'utf8')) as { namen: Array<{ de: string; en: string }> }).namen;
-	const de = JSON.parse(readFileSync(join(REPO, 'src', 'i18n', 'messages', 'de', 'vergleich.json'), 'utf8')) as Record<string, string>;
-	const en = JSON.parse(readFileSync(join(REPO, 'src', 'i18n', 'messages', 'en', 'vergleich.json'), 'utf8')) as Record<string, string>;
-	const zeilen = Object.keys(de)
-		.filter((k) => k.startsWith('vergleich.zeile.') && typeof en[k] === 'string')
-		.map((k) => ({ de: de[k], en: en[k] }));
-	return [...schnapp.map((n) => ({ de: n.de, en: n.en })), ...zeilen];
+	return L.namenPaareAus(
+		liesJson(EINST, 'daten', 'metrik_namen.json'),
+		liesJson(REPO, 'src', 'i18n', 'messages', 'de', 'vergleich.json'),
+		liesJson(REPO, 'src', 'i18n', 'messages', 'en', 'vergleich.json')
+	);
 }
 
 // ------------------------------------------------------------------ AC-1 (#3420) Zeilenbindung

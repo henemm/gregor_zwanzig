@@ -132,8 +132,18 @@ const ALT_ANZAHL = ALT_ANZAHL_3251 + 184 - 180 + 174;
 // keine ID entfallen, Reihenfolge gleich. Nur i18n_key ändert sich, weil wertebereiche.kategorie.* mit
 // BucketSectionOff/MetricOffShelf entfiel: 24 Einträge „Temperatur“/„Wind“ (metriken/was-steht-wo, trip und orte)
 // wertebereiche.kategorie.temperature/wind → wetter.gruppe.temperature/wind (DE/EN gleich).
-const ALT_SHA = 'a532b75cd58bbc9ea6130d6629b7d8c0b351493401fc3ec09fd9e1d661084290';
-const MOCKUP_HASH = 'sha256:fbb04f549d974116e70c0e89facac657cf5ab13a31e267eb00882ad7e6496ec6';
+// #3419 (26.11.; vorher a532b75c…e1d661084290, Mockup-Hash fbb04f54…657cf5ab13a31e267eb00882ad7e6496ec6, Anzahl
+// 2934): Mockup Fassung 4 an den Live-Stand der Karte „Was steht wo“ angeglichen (Temperatur in SMS gesperrt „kein
+// Kürzel“ mit Bereichs-Token, SMS-Zeile in Live-Form „E1 …“, Legende Tiefst/Höchst zusammengeführt #3284, Trip-Blöcke
+// Kurz-Zusammenfassung und Großwetterlage #3036, E-Mail-Format auch bei Orten #3059, Ausblick-Beschriftungen
+// Morgen-/Abend-Briefing, Orte-SMS-Temperatur „D{tief}/{hoch}“, Trip-Vorlage „▾ 1 Abweichung“ mit Zurücksetzen).
+// Liste neu erzeugt: 24 IDs entfallen, 46 neu, 4 Inhalt (Zeichenzahl der SMS-Zeile), 154 nur ordnung — alles nur in
+// den Abschnitten was-steht-wo und vorlage (trip/orte, je Zustand normal/luecken). Diff je ID geprüft.
+// #3419 Fix-Loop: Generator nimmt Wetter-Symbole (Emoji) als Beispielwert einer Zelle auf („🌥️“, Tiefe Wolken in
+// E-Mail, trip normal/luecken): +2 Einträge, nur ordnung im Abschnitt was-steht-wo verschoben.
+const ALT_ANZAHL_3419 = ALT_ANZAHL - 24 + 46 + 2;
+const ALT_SHA = '8bcd3c3167782251c576357de89168e2b9318915dc56a91312464554bbaa30d1';
+const MOCKUP_HASH = 'sha256:946e69c0f185fc66133b3b8c820d87b61ef3a3f52834f621c1c76505c7f81a0b';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {
 	const e = uebersicht();
@@ -166,7 +176,7 @@ test('AC-2: Die Mockup-Notiz „Im Mockup nicht ausgearbeitet.“ ist kein Soll-
 test('AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert', () => {
 	const l = liste();
 	const rest = l.elemente.filter((x) => x.reiter !== 'uebersicht');
-	assert.equal(rest.length, ALT_ANZAHL);
+	assert.equal(rest.length, ALT_ANZAHL_3419);
 	assert.equal(createHash('sha256').update(JSON.stringify(rest)).digest('hex'), ALT_SHA);
 	assert.equal(l.mockup_hash, MOCKUP_HASH);
 	assert.ok(uebersicht().length > 0, 'neue Übersicht-Einträge fehlen');

@@ -1,31 +1,32 @@
 ---
 spec_file: docs/specs/modules/feat_3419_elementliste_nachzug.md
-spec_sha256: cd101ffcc05f16ee67275148c20e12db88a87f66a34d3aacaacc109f0efc452b
-spec_frozen_sha256: a655fd29cf37de29a582a166b90ce624b7af9775acfc5b0f6f983ad6fea37a5b
+spec_sha256: 5fae9f9cbb87c14af77b723d5dc24a68e5a61bf0d523e193c7caeca7997a4fad
+spec_frozen_sha256: 8c6384e357b3860db541f17ae9c40fc72e3227a74a9b8082a7648e7a2de83f80
 ---
 
 # PO-Briefing: paket-3419-elementliste-nachzug
 
 - **Spec:** docs/specs/modules/feat_3419_elementliste_nachzug.md
-- **Issue:** #3419 (mit #3420, #3421, #3422)
+- **Issue:** #3419 (Paket #3419–#3422)
 - **Erstellt:** 2026-11-26
 
 ## Was gebaut wird
 
-Der Abgleich von Soll-Bild und Live-Seite „Was steht wo“ meldet in Deutsch und Englisch keine ungeklärten Abweichungen mehr.
+Das Soll-Bild und die Abnahme-Prüfung von „Was steht wo“ werden an die ausgelieferten Entscheidungen angepasst; die Live-Seite bleibt unverändert.
 
 ## Definition of Done
 
-Der Abnahme-Lauf auf dem Testsystem zeigt in beiden Sprachen null Abweichungen ohne Besitzer, statt bisher 185 beziehungsweise 173.
+Der Abnahme-Lauf auf Staging meldet in Deutsch und Englisch null Abweichungen ohne Besitzer, statt bisher 185 bzw. 173.
 
 ## Wie geprüft wird
 
-Automatische Tests belegen die Prüfregeln, Seed-Daten und Soll-Bild; der Abnahme-Lauf auf dem Testsystem belegt das Gesamtergebnis. Die Live-Seite bleibt unberührt.
+Automatische Tests belegen die Prüfregeln und den Prüfkonto-Seed; das Soll-Bild prüft ein Bildvergleich, nicht nachgewiesen wird die Live-Seite selbst.
 
 ## Kritische Anmerkungen
 
-- Das Soll-Bild zeigt im Trip künftig „1 Abweichung“ statt „unverändert“ (Bewölkung); Metrik-Auswahl bleibt unverändert, Tech-Lead-Entscheid.
-- Der Abgleich erklärt echte Prognosewerte als Beispieltexte nur seitenweise und nur nach Treffer; das lockert die Prüfung bewusst.
+- „Nur morgens/abends“ wird im Soll-Bild nicht abgebildet, weil es im Prüfkonto nie sichtbar ist; bewusst gekürzt.
+- Das Soll-Bild zeigt im Trip nun „1 Abweichung“ (Bewölkung) statt die Vorlage zu ändern; Tech-Lead-Entscheid.
+- Grenzwerte werden nur als Zahlenmuster geprüft, nicht auf exakte Werte.
 
 ## Freigabe-Frage
 

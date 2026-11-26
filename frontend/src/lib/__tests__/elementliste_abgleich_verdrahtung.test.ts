@@ -476,7 +476,10 @@ describe('Ganzseite F001: Regeln, Konto-Texte und Auswertung (strict + abnahme) 
 		assert.match(spec, /const regeln = ladeRegeln\(\{ freigaben: FREIGABEN, besitzer: BESITZER \}, alle\);/);
 		assert.match(spec, /const konto = await ladeKontoTexte\(\(pfad\) => api\.get\(pfad\), ids\);/);
 		// Fix-Loop 2/3 (Befund 1, F002): beide Hub-Anker werden mitgegeben, der Befund ohne Hub landet in ohneHub und geht an werteLaufAus.
-		assert.match(spec, /werteGegenrichtungAus\(\{ ctx: k\.ctx, reiter: k\.reiter, anker: hub\.anker, texte: hub\.texte \}, alle, regeln\.ausnahmen, konto, plan\.sprache, metrikNamen\)/);
+		// #3419/#3422: EN-Namenspaare und angenommene Beispielwerte (aus der Hinrichtung dieser Seite) gehen mit.
+		assert.match(spec, /werteGegenrichtungAus\(\{ ctx: k\.ctx, reiter: k\.reiter, anker: hub\.anker, texte: hub\.texte \}, alle, regeln\.ausnahmen, konto, plan\.sprache, metrikNamen, \{ namenDeEn, angenommen \}\)/);
+		assert.match(spec, /const angenommen = angenommeneWerte\(el, ergebnisse, plan\.sprache\);/);
+		assert.match(spec, /const namenDeEn = namenPaareAus\(lies\(METRIK_NAMEN\), lies\(KATALOG_VERGLEICH\('de'\)\), lies\(KATALOG_VERGLEICH\('en'\)\)\);/);
 		// #3011: Metriknamen aus dem Register werden geladen und an die Gegenrichtung durchgereicht.
 		assert.match(spec, /const metrikNamen = register\?\.ok\(\) \? metrikNamenAusRegister\(/);
 		assert.match(spec, /api\.get\('\/api\/metrics'\)/);
@@ -591,8 +594,10 @@ describe('#3192 F003: Staging-Spec setzt die Logik dort ein, wo sie wirkt (doc-c
 		// doc-compliance-test: Verdrahtung; Inhalt der Payloads prüft der Unit-Test von wetterPruefPayload/eigeneVorlagePayload.
 		const spec = SPEC();
 		const f = funktion(spec, 'wetterPruefDaten');
-		assert.match(f, /for \(const d of WETTER_DATENSAETZE\) \{\s*const id = wetterTripId\(d\);\s*const trip = await api\.post\('\/api\/trips', \{ data: wetterPruefPayload\('trip', d, quelle\) \}\);/);
-		assert.match(f, /for \(const d of WETTER_DATENSAETZE\) \{\s*const v = await api\.post\('\/api\/compare\/presets', \{ data: wetterPruefPayload\('orte', d, quelle\) \}\);/);
+		assert.match(f, /for \(const d of WETTER_DATENSAETZE\) \{\s*const id = wetterTripId\(d\);\s*const trip = await api\.post\('\/api\/trips', \{ data: wetterPruefPayload\('trip', d, \{ \.\.\.quelle, grenzen: grenzenAusMockup\(mockup, 'trip'\) \}\) \}\);/);
+		assert.match(f, /for \(const d of WETTER_DATENSAETZE\) \{\s*const v = await api\.post\('\/api\/compare\/presets', \{ data: wetterPruefPayload\('orte', d, \{ \.\.\.quelle, grenzen: grenzenAusMockup\(mockup, 'orte'\) \}\) \}\);/);
+		// #3421: die Grenzwerte kommen aus dem Soll-Bild (Mockup), nicht aus der Spec.
+		assert.match(f, /const mockup = readFileSync\(MOCKUP, 'utf8'\);/);
 		assert.equal((f.match(/wetterPruefPayload\(/g) ?? []).length, 2, 'genau zwei Aufrufe (trip, orte)');
 		assert.match(f, /for \(const kind of \['route', 'vergleich'\] as const\) \{\s*const p = await api\.post\('\/api\/metric-presets', \{ data: eigeneVorlagePayload\(kind\) \}\);/);
 		assert.ok(!/description\s*:/.test(spec), 'Spec überschreibt die Beschreibung der eigenen Vorlage');

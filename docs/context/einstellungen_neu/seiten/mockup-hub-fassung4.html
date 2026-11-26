@@ -377,8 +377,11 @@ function konto(){const l=zst==='luecken';return {
   'Premium-SMS':l?{ok:false,dot:'warn',st:'inReach · Rückadresse verfallen',why:'Schick eine Nachricht vom Gerät, dann ist die Rückadresse wieder gültig.',fix:'prüfen',lock:'Rückadresse verfallen'}:{ok:true,dot:'ok',st:'inReach · Rückadresse gelernt 28.10. · zuletzt gemeldet 1.11. 18:04',menu:'inReach · über Satellit'}
 };}
 const st={}; // pro Kontext: metric on/alarm
-function S(){ if(!st[ctx]){st[ctx]={};CTX[ctx].metrics.forEach(m=>st[ctx][m[0]]={on:m[8],alarm:m[7],lo:m[5]?m[5].slice():null,hi:m[6]?m[6].slice():null,mittel:'orange',hoch:'rot'});
-  st[ctx].sw={official:true,radar:true,morning:true,evening:ctx==='trip',quiet:true,tgkurz:false,outM:false,outA:true,std:true,mailfmt:'Ausführlich (HTML)',stats:true,yday:true,night:true,
+// #3419 (AC-6): Der Trip weicht in Bewölkung von „Alpen-Trekking“ ab (Vorlage: im Briefing, hier: „Nicht im Briefing“),
+// der Picker zeigt darum wie live „1 Abweichung“. „Auf … zurücksetzen“ hebt sie auf (bis zum Neuladen).
+const basisDevs={trip:1};
+function S(){ if(!st[ctx]){st[ctx]={devs:basisDevs[ctx]||0};CTX[ctx].metrics.forEach(m=>st[ctx][m[0]]={on:m[8],alarm:m[7],lo:m[5]?m[5].slice():null,hi:m[6]?m[6].slice():null,mittel:'orange',hoch:'rot'});
+  st[ctx].sw={official:true,radar:true,morning:true,evening:ctx==='trip',quiet:true,tgkurz:false,outM:false,outA:true,std:true,mailfmt:'Ausführlich (HTML)',stats:true,yday:true,night:true,kurz:true,gwl:true,
     ch:{'E-Mail':{b:true,a:true,s:'gering'},'Telegram':{b:true,a:true,s:'gering'},'SMS':{b:false,a:true,s:'mittel'},'Premium-SMS':{b:false,a:true,s:'hoch'}}};}
   return st[ctx]; }
 
@@ -545,7 +548,7 @@ const OD={
  'Telgte':{tmax:12,tmin:3,wind:33,gust:57,rain:'3.3',th:'–',pr:70,ct:65,su:'2.0'},
  'Tecklenburg':{tmax:11,tmin:2,wind:36,gust:63,rain:'4.8',th:'mittel',pr:80,ct:60,su:'1.0'}};
 const OF={
- temperature:{mail:[['Temperatur Maximum',d=>d.tmax+'°C'],['Temperatur Minimum',d=>d.tmin+'°C']],tg:d=>`Temp max ${d.tmax}°C · Temp min ${d.tmin}°C`,sms:d=>`D${d.tmax}`},
+ temperature:{mail:[['Temperatur Maximum',d=>d.tmax+'°C'],['Temperatur Minimum',d=>d.tmin+'°C']],tg:d=>`Temp max ${d.tmax}°C · Temp min ${d.tmin}°C`,sms:d=>`D${d.tmin}/${d.tmax}`},
  wind:{mail:[['Wind',d=>d.wind+' km/h']],tg:d=>`Wind ${d.wind} km/h`,sms:d=>`W${d.wind}@10(${d.wind+13}@16)`},
  gust:{mail:[['Böen',d=>d.gust+' km/h']],tg:d=>`Böen ${d.gust} km/h`,sms:d=>`G${d.gust-21}@9(${d.gust}@16)`},
  precipitation:{mail:[['Niederschlag',d=>d.rain+' mm']],tg:d=>`Regen ${d.rain} mm`,sms:d=>`R${d.rain}@15(${(+d.rain+0.3).toFixed(1)}@16)`},
@@ -555,8 +558,11 @@ const OF={
  sunshine:{mail:[['Sonnenstunden',d=>d.su+' h']],tg:d=>`Sonne ${d.su}h`,sms:d=>`SU${Math.round(d.su)}`}};
 // Trip: m = Zelle der Stundentabelle der Mail um 14 Uhr, tg = Zeile der Kurzübersicht in Telegram, sms = Token der SMS.
 // Ein leeres Feld heißt: Der Renderer gibt für diese Metrik an dieser Stelle nichts aus.
+// #3373: Temperatur hat in der SMS kein eigenes Kürzel; die gesperrte Zelle zeigt das Bereichs-Token ihrer Kinder
+// (zeile:'' = kein eigenes Token in der SMS-Zeile), das Token selbst sendet der Tageshöchstwert (zeile, Reihenfolge wie live).
 const TF={
- temperature:{m:'14.4',tg:'T 9.6-15.2',sms:'D10/15'},
+ temperature:{m:'14.4',tg:'T 9.6-15.2',sms:'D10/15',zeile:''},
+ temperature_day_high:{m:'',tg:'',sms:'',zeile:'D10/15'},
  temperature_night:{m:'',tg:'',sms:'N10'},
  wind_chill:{m:'11.0',tg:'TF 6.8-11.7',sms:'TF- FN7 FD7/12'},
  wind:{m:'36',tg:'W 20-38@15',sms:'W30@10(38@15)'},
@@ -582,8 +588,9 @@ const hatF=(stelle,id)=>HASF.includes(id)&&(!FSTELLEN[id]||FSTELLEN[id].includes
 // Gesperrte Stellen mit Grund (metric_catalog.py stellen_sperre, Spec #3122 Nr. 5): Nacht-, Tages- und gefühlte
 // Fensterwerte haben in der Stundentabelle der Trip-Mail keine eigene Spalte und im Ausblick keinen Tageswert.
 const FENSTER=['temperature_night','temperature_day_low','temperature_day_high','wind_chill_night','wind_chill_day_low','wind_chill_day_high'];
-const sperre=(stelle,id)=>!O()&&FENSTER.includes(id)?(stelle==='E-Mail'?'keine eigene Spalte':stelle==='ausblick'?'kein Tageswert':''):'';
-const sperrZelle=(grund,xc)=>`<span class="kc${xc?' xc':''}"><span class="nix">–</span><em class="cutn soft">${grund}</em></span>`;
+// #3373: Temperatur hat im Trip kein eigenes SMS-Kürzel (metric_catalog.py karten_sperre, Katalog wetter.wsw.grund.kein_kuerzel).
+const sperre=(stelle,id)=>!O()&&id==='temperature'&&stelle==='SMS'?'kein Kürzel':!O()&&FENSTER.includes(id)?(stelle==='E-Mail'?'keine eigene Spalte':stelle==='ausblick'?'kein Tageswert':''):'';
+const sperrZelle=(grund,xc,bsp)=>`<span class="kc${xc?' xc':''}"><span class="nix">–</span><em class="cutn soft">${grund}</em>${bsp?`<span class="kex" data-beispiel="zelle">${esc(bsp)}</span>`:''}</span>`;
 const defFmt=id=>['wind_direction','thunder','cloud_total','cloud_low','cloud_mid','cloud_high','sunshine'].includes(id)?'Einfach':'Roh';
 const fmtK=(ch,id)=>K().fmtK[ch][id]||defFmt(id);
 const mailName=()=>!O()?'Stundentabelle':'Übersicht';
@@ -591,8 +598,10 @@ const mailName=()=>!O()?'Stundentabelle':'Übersicht';
 function smsCalc(){
   const ms=onMs().filter(m=>isSel('SMS',m[0]));
   if(!O()){
-    const rows=ms.filter(m=>TF[m[0]]&&TF[m[0]].sms); let keep=rows.length;
-    const build=k=>'GR221 E2: '+rows.slice(0,k).map(m=>TF[m[0]].sms).join(' ');
+    // Live-Form (#3174, #3373): Kopf „E1“ (erste Etappe), ohne Trip-Namen und Doppelpunkt.
+    const tok=id=>TF[id]&&(TF[id].zeile??TF[id].sms);
+    const rows=ms.filter(m=>tok(m[0])); let keep=rows.length;
+    const build=k=>'E1 '+rows.slice(0,k).map(m=>tok(m[0])).join(' ');
     let line=build(keep); while(line.length>160&&keep>1){keep--;line=build(keep);}
     return {line,len:line.length,cutIds:rows.slice(keep).map(m=>m[0])};
   }
@@ -611,7 +620,7 @@ function exCell(ch,m){
 function ckBox(ch,m,dis){const on=isSel(ch,m[0]);return `<label class="ck"><input type="checkbox" id="ck-${ch}-${m[0]}" data-ck="${ch}:${m[0]}" ${on?'checked':''} ${dis?'disabled':''} aria-label="${m[1]} in ${ch}"><i></i></label>`;}
 function kanalEinst(){
   const s=S().sw, r=[];
-  if(!O()) r.push(`<div class="lrow"><div class="t"><b>E-Mail: Format</b><small>Ausführlich mit Tabellen und Farben, oder Kompakt als reiner Text für schwache Verbindungen.</small></div><div class="r">${seg('mailfmt',['Ausführlich (HTML)','Kompakt (Nur-Text)'],s.mailfmt)}</div></div>`);
+  r.push(`<div class="lrow"><div class="t"><b>E-Mail: Format</b><small>Ausführlich mit Tabellen und Farben, oder Kompakt als reiner Text für schwache Verbindungen.</small></div><div class="r">${seg('mailfmt',['Ausführlich (HTML)','Kompakt (Nur-Text)'],s.mailfmt)}</div></div>`);
   r.push(`<div class="lrow"><div class="t"><b>Telegram: Kurzstil</b><small>Telegram bekommt denselben kurzen Text wie die SMS, ohne Knöpfe. Gilt für Briefing und Alarme. Die Telegram-Spalte ruht dann, es gilt die SMS-Spalte.</small></div><div class="r">${sw('tgkurz',s.tgkurz,'Telegram im Kurzstil',!konto()['Telegram'].ok)}</div></div>`);
   r.push(`<div class="lrow"><div class="t"><b>Premium-SMS</b><small>Bekommt vorerst denselben Text wie die SMS. Eine eigene Auswahl kommt später.</small></div></div>`);
   return r.join('');
@@ -625,8 +634,10 @@ function budgetZeile(sm){
 // #3258: Block „Kürzel erklärt“ wie live (WasStehtWoKarte, legendeAus): erst je Metrik mit SMS-Haken Kürzel und
 // Bedeutung in Tabellenreihenfolge, dann die festen Einträge; jedes Paar nur einmal. Kürzel und Bedeutung der
 // Metriken wie die Server-Antwort legend.metrics (Trip: Symbole des Trip-SMS-Renderers, Orte: Auswertung der
-// Zeile, Temperatur = Tageshöchstwert), Bedeutung aus kuerzel_bedeutung_de. Feste Einträge: Katalog wetter.wsw.legende.*,
-// bei Orten zusätzlich O1 (Server-Katalog vergleich.sms.ort_nummer).
+// Zeile, Temperatur = Tagestiefst- und Tageshöchstwert), Bedeutung aus kuerzel_bedeutung_de. Feste Einträge: Katalog
+// wetter.wsw.legende.*, bei Orten zusätzlich O1 (Server-Katalog vergleich.sms.ort_nummer).
+// #3284: Stehen Tiefst- und Höchstwert eines Paares (L/D, FL/FD) beide in der Liste, sendet die SMS nur das
+// Bereichs-Token unter dem Höchstwert-Kürzel; die Legende führt dann einen Eintrag „Tiefst/Höchst“ (BEREICH_PAARE).
 const LEG_TRIP={
  temperature_night:[['N','Nacht']],
  temperature_day_low:[['L','Tagestiefstwert']],
@@ -647,7 +658,7 @@ const LEG_TRIP={
  freezing_level:[['FZ','Nullgradgrenze m']],
  snowfall_limit:[['SL','Schneefallgrenze m']]};
 const LEG_ORTE={
- temperature:[['D','Tageshöchstwert']],
+ temperature:[['L','Tagestiefstwert'],['D','Tageshöchstwert']],
  wind:[['W','Wind km/h']],
  gust:[['G','Böen']],
  precipitation:[['R','Regen mm']],
@@ -658,9 +669,12 @@ const LEG_ORTE={
 const LEG_FEST=[['@14','ab 14 Uhr gelb oder schlechter'],['!TS:H@14','amtliche Warnung: Gewitter, Stufe hoch, ab 14 Uhr'],
  ['L','Stufe gelb'],['M','Stufe orange'],['H','Stufe rot'],['WG','Warnung Wind'],['RA','Warnung Starkregen'],
  ['AV4','Lawinenstufe'],['X?','Warnquelle nicht erreichbar']];
+const BEREICH_PAARE=[['L','D'],['FL','FD']];
 function legendeBlock(){
   const leg=O()?LEG_ORTE:LEG_TRIP;
-  const met=onMs().filter(m=>isSel('SMS',m[0])).flatMap(m=>leg[m[0]]||[]);
+  let met=onMs().filter(m=>isSel('SMS',m[0])).flatMap(m=>(leg[m[0]]||[]).map(p=>p.slice()));
+  BEREICH_PAARE.forEach(([tief,hoch])=>{const t=met.find(p=>p[0]===tief), h=met.find(p=>p[0]===hoch);
+    if(t&&h){h[1]=t[1]+'/'+h[1]; met=met.filter(p=>p!==t);}});
   const fest=O()?[...LEG_FEST,['O1','Ort 1 in der Reihenfolge des Abos']]:LEG_FEST;
   const gesehen=new Set();
   const paare=[...met,...fest].filter(([k,b])=>{const s=k+'\u0000'+b; if(gesehen.has(s)) return false; gesehen.add(s); return true;});
@@ -671,10 +685,12 @@ function legendeBlock(){
 function blockEinst(){
   const s=S().sw, r=[];
   if(O()) r.push(`<div class="lrow"><div class="t"><b>Stundenverlauf</b><small>Stunden-Tabelle ${EIN()?'':'je Ort '}unter der Übersicht, nur in der E-Mail.</small></div><div class="r">${sw('std',s.std,'Stundenverlauf')}</div></div>`);
-  r.push(`<div class="lrow"><div class="t"><b>3-Tages-Ausblick</b><small>Tageswerte der nächsten drei ${O()?'Tage':'Etappen'}, in E-Mail und Telegram. Vorbelegt: nur im Abend-Briefing.</small></div><div class="r"><span class="chk">${sw('outM',s.outM,'Ausblick im Morgen-Briefing')}<span aria-hidden="true">Morgen-Briefing</span></span><span class="chk">${sw('outA',s.outA,'Ausblick im Abend-Briefing')}<span aria-hidden="true">Abend-Briefing</span></span></div></div>`);
+  r.push(`<div class="lrow"><div class="t"><b>3-Tages-Ausblick</b><small>Tageswerte der nächsten drei ${O()?'Tage':'Etappen'}, in E-Mail und Telegram. Vorbelegt: nur im Abend-Briefing.</small></div><div class="r"><span class="chk">${sw('outM',s.outM,'Ausblick im Morgen-Briefing')}<span aria-hidden="true" data-beschriftung="sichtbar">Morgen-Briefing</span></span><span class="chk">${sw('outA',s.outA,'Ausblick im Abend-Briefing')}<span aria-hidden="true" data-beschriftung="sichtbar">Abend-Briefing</span></span></div></div>`);
   if(!O()) r.push(`<div class="lrow"><div class="t"><b>Etappen-Kennzahlen</b><small>Länge, Höhenmeter und Gehzeit je Etappe, nur in der E-Mail</small></div><div class="r">${sw('stats',s.stats,'Etappen-Kennzahlen')}</div></div>
       <div class="lrow"><div class="t"><b>Vortag-Vergleich</b><small>was sich seit dem letzten Briefing geändert hat, nur in der E-Mail</small></div><div class="r">${sw('yday',s.yday,'Vortag-Vergleich')}</div></div>
-      <div class="lrow"><div class="t"><b>Nacht-Stundentabelle</b><small>die Stunden der Nacht am Etappenziel, nur in der E-Mail</small></div><div class="r">${sw('night',s.night,'Nacht-Stundentabelle')}</div></div>`);
+      <div class="lrow"><div class="t"><b>Nacht-Stundentabelle</b><small>die Stunden der Nacht am Etappenziel, nur in der E-Mail</small></div><div class="r">${sw('night',s.night,'Nacht-Stundentabelle')}</div></div>
+      <div class="lrow"><div class="t"><b>Kurz-Zusammenfassung</b><small>die Lage des Tages in wenigen Sätzen am Anfang, nur in der ausführlichen E-Mail</small></div><div class="r">${sw('kurz',s.kurz,'Kurz-Zusammenfassung')}</div></div>
+      <div class="lrow"><div class="t"><b>Großwetterlage</b><small>wie stabil das Wetter der nächsten Tage ist, nur in der ausführlichen E-Mail</small></div><div class="r">${sw('gwl',s.gwl,'Großwetterlage')}</div></div>`);
   return r.join('');
 }
 function wasStehtWo(){
@@ -690,7 +706,7 @@ function wasStehtWo(){
   const head=`<div class="kx kxh ${cls}"><span></span><span>Metrik</span>${KAN.map(ch=>`<span class="kc"><span class="lg">${ch}</span><span class="sh">${kurzn[ch]}</span><small>${sub[ch]}</small></span>`).join('')}${ext.map(x=>`<span class="kc xc"><span class="lg">${XH[x][0]}</span><span class="sh">${XH[x][1]}</span><small>${XH[x][2]}</small></span>`).join('')}</div>`;
   const fix=s.sw.official?`<div class="kx fix ${cls}"><span></span><span class="kn">Amtliche Warnungen<small>immer dabei: in E-Mail und Telegram zuerst, in der SMS am Ende</small></span>${KAN.map(()=>`<span class="kc"><span class="lockck" title="immer dabei">✓</span></span>`).join('')}${ext.map(()=>'<span class="kc xc"></span>').join('')}</div>`:'';
   const rows=ms.map(m=>{const id=m[0];
-    const cell=ch=>{if(sperre(ch,id)) return sperrZelle(sperre(ch,id),false);
+    const cell=ch=>{if(sperre(ch,id)) return sperrZelle(sperre(ch,id),false,ch==='SMS'?exCell(ch,m):'');
       const on=isSel(ch,id), dis=ch==='Telegram'&&kurz;
       const note=ch==='SMS'&&on&&sm.cutIds.includes(id)?'<em class="cutn">passt nicht mehr</em>':ch==='Telegram'&&on&&!dis&&tgCut.includes(id)?'<em class="cutn soft">nur Tageswert</em>':'';
       const f=ch!=='SMS'&&on&&!dis&&hatF(ch,id)?`<button class="mini" type="button" data-fk="${ch}:${id}" aria-label="Darstellung ${m[1]} in ${ch}: ${fmtK(ch,id)}"><span class="lg">${fmtK(ch,id)}</span><span class="sh">${fmtK(ch,id)==='Roh'?'Roh':'Einf.'}</span></button>`:'';
@@ -822,7 +838,7 @@ document.addEventListener('click',e=>{
   if(t.dataset.vorlage){if(t.dataset.vorlage===CTX[ctx].vorlage){pickerOpen=false;renderContent();return;}pending=t.dataset.vorlage;renderContent();return;}
   if(t.dataset.cancel){pending=null;pickerOpen=false;renderContent();return;}
   if(t.dataset.apply){const v=pending;delete st[ctx];CTX[ctx].vorlage=v;pending=null;pickerOpen=false;render();flash('Vorlage „'+v+'“ übernommen (Mockup: Werte bleiben die Beispielwerte)');return;}
-  if(t.dataset.reset){delete st[ctx];render();flash('Auf Vorlage zurückgesetzt');return;}
+  if(t.dataset.reset){basisDevs[ctx]=0;delete st[ctx];render();flash('Auf Vorlage zurückgesetzt');return;}
   if(t.dataset.rm){const s=S();s[t.dataset.rm].on=false;s.devs=(s.devs||0)+1;openEdit=null;renderContent();return;}
   if(t.dataset.add){const s=S();s[t.dataset.add].on=true;s.devs=(s.devs||0)+1;renderContent();const m=CTX[ctx].metrics.find(x=>x[0]===t.dataset.add);flash(m[1]+' ist jetzt im Briefing und in jedem Kanal angehakt. Unter „Was steht wo“ kannst du sie für einzelne Kanäle abwählen.');return;}
   if(t.dataset.addx){flash(t.dataset.addx+' würde mit den Grenzen der Vorlage hinzugefügt (Mockup)');return;}

@@ -82,7 +82,8 @@ const METRIK: Record<string, Array<[string, string]>> = {
 	trip: [
 		['TF', 'gefühlt'],
 		['FN', 'N gefühlt'],
-		['FD', 'D gefühlt'],
+		// #3284/#3419: Tiefst- und Höchstwert-Paar als ein Eintrag unter FD (live legend.metrics).
+		['FD', 'L gefühlt/D gefühlt'],
 		['W', 'Wind km/h'],
 		['FZ', 'Nullgradgrenze m'],
 		['SL', 'Schneefallgrenze m'],

@@ -481,7 +481,10 @@ export function legendeEn(rolle: string, textDe: string, katalog: Katalog, bedeu
 	const en = ermittleEn(textDe, katalog);
 	if (en.i18n_key?.startsWith(LEGENDE_PRAEFIX)) return en;
 	const server = bedeutungen.get(norm(textDe));
-	return server ? { i18n_key: null, text_en: server, muster: null, luecke: false } : luecke();
+	if (server) return { i18n_key: null, text_en: server, muster: null, luecke: false };
+	// #3284: Bereichs-Paar „Tiefst/Höchst“ (placements_view_service._legende fügt beide Bedeutungen mit „/“ zusammen).
+	const teile = norm(textDe).split('/').map((x) => bedeutungen.get(x.trim()));
+	return teile.length === 2 && teile.every((x) => x) ? { i18n_key: null, text_en: teile.join('/'), muster: null, luecke: false } : luecke();
 }
 
 /** Katalogschlüssel der „+ Metrik“-Chips in „Nicht im Briefing“. */
@@ -511,7 +514,9 @@ type AusleseArg = { wurzeln: string[]; abschnitt: string | null; nur: string | n
  * Abschnitte werden aus den stabilen Haken des Mockups abgeleitet (data-*, Klassen), nicht aus Positionen.
  */
 function ausleseImBrowser(arg: AusleseArg): Roh[] {
-	const SKIP = '.tag,.frame,.fb,[data-fb],script,style,[aria-hidden="true"]';
+	// #3419: sichtbare Beschriftung, die live für Screenreader verborgen ist (aria-hidden, z. B. „Morgen-Briefing“ neben
+	// dem Ausblick-Schalter), trägt im Mockup data-beschriftung="sichtbar" und gehört ins Soll (der Abgleich liest sie).
+	const SKIP = '.tag,.frame,.fb,[data-fb],script,style,[aria-hidden="true"]:not([data-beschriftung="sichtbar"])';
 	const hatInhalt = (s: string) => /[\p{L}\p{N}]/u.test(s);
 	const n = (s: string | null) => String(s || '').replace(/\s+/g, ' ').trim();
 	function abschnittVon(el: Element): string {
@@ -599,7 +604,10 @@ function ausleseImBrowser(arg: AusleseArg): Roh[] {
 					out.push({ abschnitt, rolle: rolleVon(el), text: n(el.getAttribute('aria-label')) });
 					continue;
 				}
-				if (hatInhalt(eigen)) out.push({ abschnitt, rolle: rolleVon(el), text: eigen });
+				// #3419: ein Wetter-Symbol (Emoji) als Beispielwert einer Zelle ist Inhalt („🌥️“, Tiefe Wolken Einfach),
+				// live liest der Abgleich es als eigenen Text; ein Ampelpunkt („●“) ist Grafik und bleibt draußen.
+				const symbolBeispiel = /\p{Extended_Pictographic}/u.test(eigen) && el.closest('[data-beispiel]') !== null;
+				if (hatInhalt(eigen) || symbolBeispiel) out.push({ abschnitt, rolle: rolleVon(el), text: eigen });
 			}
 		}
 	}
@@ -748,6 +756,12 @@ export async function erzeugeElementliste(opt: { mockupPfad: string; messagesDir
 				document.querySelectorAll('#content details').forEach((d) => ((d as HTMLDetailsElement).open = true));
 			}, null);
 		const da = async (sel: string) => (await page.locator(sel).count()) > 0;
+		// #3419 (AC-6): Der Trip des Mockups startet mit einer Vorlagen-Abweichung (wie der Seed). Die Vorlagen-Zustände
+		// (Auswahl, Bestätigung, Abweichung) prüft der Abgleich auf dem Prüf-Datensatz ohne Abweichung; der Generator
+		// liest sie darum nach „Auf … zurücksetzen“ (devs = 0, wie dort).
+		const ohneAbweichung = async () => {
+			if (await da('[data-reset]')) await page.click('[data-reset]');
+		};
 
 		for (const ctx of KONTEXTE) {
 			const zweiter = ctx === 'trip' ? 'etappen' : 'orte';
@@ -767,6 +781,7 @@ export async function erzeugeElementliste(opt: { mockupPfad: string; messagesDir
 					}
 				}
 				await frisch(ctx, zustand);
+				await ohneAbweichung();
 				if (await da('[data-picker]')) {
 					await page.click('[data-picker]');
 					wetter.push(...(await lies(['.vmenu'], { nur: 'vorlage-auswahl' })));
@@ -776,6 +791,7 @@ export async function erzeugeElementliste(opt: { mockupPfad: string; messagesDir
 				// #3251: Abweichungszustand der Vorlagenkarte (devs>0) — eine Metrik abwählen, dann Picker-Zahl
 				// und Zurücksetzen-Zeile lesen. Nur Zustand normal (Bedienzustand, kein globaler Seiten-Zustand).
 				await frisch(ctx, zustand);
+				await ohneAbweichung();
 				if (zustand === 'normal' && (await da('[data-rm]'))) {
 					await page.click('[data-rm]');
 					wetter.push(...(await lies(['[data-picker] small', '[data-reset]'], { abschnitt: 'vorlage-abweichung' })).map(ohneAuswahlpfeil));
