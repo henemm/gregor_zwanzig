@@ -1,0 +1,87 @@
+{
+  "verified_commit": "9956402242f7af1fadb7731479a43a2e37cac178",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "Hub Reiter Wetter",
+      "evidence": "Staging 995640224: kanal-grenzen-und-hinweise.staging.spec.ts #3375 AC-1/AC-2 gruen - nur Tageswert genau in Telegram-Zellen uv_index/sunshine (DOM + Server-Antwort)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "/api/briefings/{id}/placements",
+      "evidence": "Server-Marken == Browser-Marken uv_index/telegram, sunshine/telegram",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "Hub Reiter Wetter",
+      "evidence": "7 Metriken: keine nur-Tageswert-Marke, Telegram-Zellen an und bedienbar",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "Hub Reiter Wetter",
+      "evidence": "kuerzel-marken-sichtbar #3375 AC-4/AC-5 Trip gruen ueber 14 Aufloesungen: sichtbar (Stil), unbeschnitten",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "Hub Reiter Wetter",
+      "evidence": "jede Marke in Zeile und Sichtfenster, Seite ohne seitlichen Ueberlauf, 14 Aufloesungen",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "Vergleich Hub Reiter Wetter",
+      "evidence": "Vergleich 3 Orte, 14 Aufloesungen gruen; faellt bei 0 Marken",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "lokaler Stack",
+      "evidence": "Mutationen Telegram 8->9 und Abschneide-CSS rot, visibility/opacity/transparent rot (Adversary Runde 2)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-8",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "Kopfkommentare und rework_3020-Spec aktualisiert, kein Produktcode",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "EN-Smoke",
+      "status": "PASS",
+      "url": "/",
+      "evidence": "e2e_browser_test --lang en auf Staging: Startseite laedt (nur Testcode geaendert, kein Produkttext)",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-26T10:40:21.038457+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: neue Browser-Pr\u00fcfungen #3375 gegen Staging 995640224 gr\u00fcn (10/10), nur Testcode",
+  "scope": "backend",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: neue Browser-Pr\u00fcfungen #3375 gegen Staging 995640224 gr\u00fcn (10/10), nur Testcode",
+      "scope": "backend",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-26T10:40:21.038457+00:00"
+    }
+  }
+}
