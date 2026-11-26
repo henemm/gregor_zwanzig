@@ -2,23 +2,37 @@
   "verified_commit": "e1864c22549b98ac407014bc5eaee341c6950e28",
   "findings": [
     {
-      "ac": "AC-1",
+      "ac": "AC-5",
       "status": "PASS",
-      "url": "https://staging.gregor20.henemm.com:AC-1",
-      "evidence": "60/60 Seitenpr\u00fcfungen gr\u00fcn (DE Pr\u00fcfkonto, EN E2E-EN-Konto; je Desktop 1440 und Handy 390): Trip-Liste, Trip-Hub Reiter \u00dcbersicht/Etappen/Wetter/Zustellung, Orte-Liste, Vergleich-Liste, Vergleich-Hub Reiter \u00dcbersicht/Orte/Wetter/Zustellung, /trips/new, /compare/new. Keine Konsolenfehler, keine rohen Schl\u00fcssel (layout.ausgabe./wertebereiche.kategorie./bausteine.), Wetter-Reiter zeigt Temperatur/Wind bzw. Temperature/Wind. Screenshots docs/artifacts/rework-3020-r2-restbestand/",
+      "url": "/compare/new?from=<id>",
+      "evidence": "DE-Nutzer: e2e/rework-3399-kopie.spec.ts gruen auf 2fb432e5d - aktive Vorlage im Schritt Wetter == POST /api/ampel/aufloesung der Quelle (profil wintersport), != allgemein",
       "workflow": "unknown"
     },
     {
-      "ac": "AC-7..AC-12",
-      "status": "SKIPPED",
-      "url": "https://staging.gregor20.henemm.com:AC-7",
-      "evidence": "out-of-scope: Struktur-ACs durch Tests/CI belegt",
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "/compare/new?from=<id>",
+      "evidence": "EN-Nutzer (GZ_E2E_EN_USER, gz_lang=en): rework-3399-kopie.spec.ts gruen auf 2fb432e5d",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/trips/new, /compare/new",
+      "evidence": "Regression S1: rework-3399-alarme.spec.ts route+vergleich gruen, DE-Nutzer",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/trips/new, /compare/new",
+      "evidence": "Regression S1: rework-3399-alarme.spec.ts route+vergleich gruen, EN-Nutzer",
       "workflow": "unknown"
     }
   ],
-  "verified_at": "2026-11-26T13:53:10.661240+00:00",
+  "verified_at": "2026-11-26T14:10:09.329417+00:00",
   "environment": "staging",
-  "staging_verdict": "VERIFIED: 1/1 UI-AC gr\u00fcn (R2 R\u00fcckbau, DE+EN, Desktop+Handy, 60/60 Seitenpr\u00fcfungen)",
+  "staging_verdict": "VERIFIED: AC-5 Kopie und AC-1 Regression je DE+EN gruen auf Staging (2fb432e5d)",
   "scope": "frontend-only",
   "langs": [
     "de",
@@ -34,13 +48,13 @@
   ],
   "verdicts": {
     "unknown": {
-      "verdict": "VERIFIED: 1/1 UI-AC gr\u00fcn (R2 R\u00fcckbau, DE+EN, Desktop+Handy, 60/60 Seitenpr\u00fcfungen)",
+      "verdict": "VERIFIED: AC-5 Kopie und AC-1 Regression je DE+EN gruen auf Staging (2fb432e5d)",
       "scope": "frontend-only",
       "langs": [
         "de",
         "en"
       ],
-      "at": "2026-11-26T13:53:10.661240+00:00",
+      "at": "2026-11-26T14:10:09.329417+00:00",
       "frontend_pages_checked": [
         "/",
         "/trips",
