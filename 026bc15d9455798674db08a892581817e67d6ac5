@@ -1,0 +1,39 @@
+{
+  "verified_commit": "026bc15d9455798674db08a892581817e67d6ac5",
+  "findings": [],
+  "verified_at": "2026-11-26T19:18:17.119384+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: 3/3 ACs gruen",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: 3/3 ACs gruen",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-26T19:18:17.119384+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
