@@ -634,11 +634,11 @@
    "kontext": "orte",
    "format": "editor",
    "pruefung": "grundauswahl",
-   "test": "frontend/src/lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_nutzlast_verliert_keine_daten.test.ts::Kanal-Auswahl geändert → der Rumpf trägt nur Eigenfelder, keinen Altschluessel (#3276)",
+   "test": "frontend/src/lib/components/shared/wetter-tab/__tests__/editor_standard_gleich_ausgabe_3020.test.ts::frontend_seite_orte_vergleichstabelle_gespeichert gespeichert_kanal_totalschnitt",
    "ac": "AC-10",
    "befund": "#3047 N1",
    "status": "ausnahme",
-   "verweis": "ADR-0124 Nr. 3 (keine Liste je Kanal, also kein Totalschnitt); Altfeld channel_active_metrics entfallen mit #3276/#3298/#3351 (#3020 R1b)",
+   "verweis": "ADR-0124 Nr. 3 (keine Liste je Kanal, also kein Totalschnitt); Altfeld channel_active_metrics entfallen mit #3276/#3298/#3351 (#3020 R1b); Testverweis umgehängt mit #3389",
    "seite": "frontend",
    "zustand": "totalschnitt_aus_wirkt"
   },

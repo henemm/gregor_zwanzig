@@ -848,7 +848,7 @@
 	     ersatzlos entfallen. Seine einzige wirksame Einstellung (Stundenverlauf)
 	     liegt jetzt im Reiter "Wetter-Metriken" oben — inklusive ihres
 	     Bubble-Wrappers `.hub-layout-hourly-wrap`, damit der Speicherweg
-	     (Round-Trip-Spread ueber flushPendingLayoutSave) mitwandert. Alles
+	     (damals der Layout-Speicherer, mit #3389 entfernt) mitwandert. Alles
 	     uebrige (Karte "Übersicht pro Kanal", Limit-Pillen, CompareLayoutRow)
 	     war bedienlose Attrappe mit sachlich falscher Kappungs-Aussage. -->
 

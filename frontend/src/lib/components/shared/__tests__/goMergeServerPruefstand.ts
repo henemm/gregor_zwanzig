@@ -257,32 +257,12 @@ export const EIGENFELDER = {
 		],
 		display: ['metric_alert_levels', 'telegram_style']
 	},
-	versand: {
-		top: [
-			'end_date',
-			'evening_enabled',
-			'evening_time',
-			'morning_enabled',
-			'morning_time',
-			'send_premium_sms',
-			'send_sms',
-			'send_telegram'
-		],
-		display: null
-	},
 	wertebereiche: {
 		top: ['corridors', 'display_config'],
 		display: ['active_metrics', 'ideal_ranges', 'metric_alert_levels']
-	},
-	// #2794 S3a Teil 3 (F006, AC-38): Auswahl, Amtliche Warnungen und Tagesfenster gehoeren
-	// dem Reiter Wetter (WetterTab), nicht mehr dem Zustellungs-Speicherer von WeatherMetricsTab.
-	// Issue #3276 (Spec-AC-38): `channel_active_metrics`, `hourly_metrics`, `outlook_metrics`,
-	// `outlook_metric_formats` sind Altschluessel — der Zustellungs-Speicherer sendet kein
-	// display_config mehr. Issue #3298: auch der Ausblick-Schalter entfaellt (ADR-0124 Nr. 6).
-	wetterMetriken: {
-		top: ['hourly_enabled'],
-		display: null
 	}
+	// Issue #3389: die Eintraege `versand` und `wetterMetriken` entfielen mit ihren toten
+	// Speicherern; die Eigenfelder der Zustellung prueft zustellungSpeicherung.test.ts.
 } as const;
 
 export function schluessel(o: unknown): string[] {

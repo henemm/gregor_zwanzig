@@ -27,11 +27,7 @@ import { hydrateAlarmFieldsFromPreset } from '../compareHubHydration.ts';
 import { alarmePropsAus } from '../alarmePropsAus.ts';
 import { toCompareSelectionEntries } from '../../shared/weather-metrics-tab/compareMetricSelection.ts';
 import { materializeActiveMetricKeys } from '../../shared/weather-metrics-tab/compareMetricOrder.ts';
-import {
-	flushPendingWetterMetrikenSave,
-	hydrateLayoutFieldsFromPreset,
-	wetterMetrikenSnapshotAus
-} from '../../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
+import { hydrateLayoutFieldsFromPreset } from '../../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
 import { deriveActiveAlertMetricsFromCatalog } from '../../shared/alarme-tab/activeAlertMetricsFromCatalog.ts';
 import { COMPARE_METRIC_KEYS } from '../../shared/wetter-tab/corridorEditorState.ts';
 import {
@@ -217,26 +213,18 @@ describe('#3061 AC-3 am Wirkort: Altbestand (activeMetricKeys=null) zeigt Alarm-
 });
 
 describe('#3061 Speichern und Trip bleiben unveraendert', () => {
-	test('AC-4: Altbestand oeffnen und ohne Aenderung speichern -- kein PUT, kein active_metrics', async () => {
+	// #3389: die Speicherer-Anteile (Snapshot/Diff-Nutzlast des toten Wetter-Metriken-Speicherers)
+	// entfielen; AC-4 prueft jetzt nur noch die Hydration beim Oeffnen.
+	test('AC-4: Altbestand oeffnen laesst activeMetricKeys null', async () => {
 		const s: Record<string, unknown> = {};
 		await wetterHydrierer(s, ALTBESTAND());
 		alarmHydrierer(s, ALTBESTAND());
+		assert.equal('hourly_enabled' in ALTBESTAND(), false, 'Messaufbau: der Altbestand traegt kein hourly_enabled');
 		const layout = hydrateLayoutFieldsFromPreset(ALTBESTAND());
 		Object.assign(s, layout);
-		// Baseline wie im Hub: Stand nach BEIDEN Hydrationen.
-		const vorher = wetterMetrikenSnapshotAus(s);
 		// #3276: der Ausblick-Block des Vergleichs ist entfernt; „Oeffnen" mountet ihn nicht mehr.
 		assert.equal(s.activeMetricKeys, null, 'activeMetricKeys nach dem Oeffnen nicht mehr „nie eingestellt"');
-		const nachher = wetterMetrikenSnapshotAus(s);
-		assert.equal(flushPendingWetterMetrikenSave(ALTBESTAND(), nachher, vorher), null, 'Scheindifferenz nach reinem Oeffnen');
-		// Auch eine spaetere Speicherung (andere Geste) schreibt kein active_metrics.
-		const mitGeste = { ...nachher, hourlyEnabled: !nachher.hourlyEnabled }; // #3298: einziger eigener Schalter
-		const nutzlast = flushPendingWetterMetrikenSave(ALTBESTAND(), mitGeste, vorher);
-		assert.ok(nutzlast, 'Messaufbau: echte Geste muss eine Nutzlast liefern');
-		const dc = (nutzlast!.body.display_config ?? {}) as Record<string, unknown>;
-		assert.equal('active_metrics' in dc, false, `Nutzlast schreibt active_metrics: ${JSON.stringify(dc.active_metrics)}`);
-		// #3276: kein Altschluessel, auch nicht als Bestand.
-		assert.equal('outlook_metrics' in dc, false, `Nutzlast schreibt outlook_metrics: ${JSON.stringify(dc.outlook_metrics)}`);
+		assert.deepEqual(layout, { hourlyEnabled: true }, 'Altbestand ohne hourly_enabled: Stundenverlauf an (Standard)');
 	});
 
 	// #3297/#3020: AC-5 (Trip-Einbettung von OutlookLayoutControls in WeatherMetricsTab) entfaellt — beide Dateien geloescht.

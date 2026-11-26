@@ -29,7 +29,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { baueAlarmNutzlast, type AlarmSnapshot } from '../alarmeVergleichSpeicherung.ts';
-import { baueVersandNutzlast, type VersandSnapshot } from '../versandVergleichSpeicherung.ts';
 import { buildNewComparePresetPayload, type NewComparePresetFields } from '../../compare/compareEditorSave.ts';
 import type { ComparePreset } from '../../../types.ts';
 
@@ -62,16 +61,6 @@ const ALARM_SNAPSHOT: AlarmSnapshot = {
 	channelThresholds: {}
 };
 
-const VERSAND_SNAPSHOT: VersandSnapshot = {
-	sendTelegram: true,
-	sendSms: false,
-	morningEnabled: true,
-	morningTime: '07:00',
-	eveningEnabled: false,
-	eveningTime: '18:00',
-	endDate: null
-};
-
 describe('AC-10: die Alarm-Nutzlast enthaelt NIE send_telegram/send_sms/send_premium_sms', () => {
 	test('auch wenn `original` (veraltet) diese Felder gesetzt hat, fehlen sie im Alarm-Body', () => {
 		// `original` traegt Briefing-Kanal-Werte, die inzwischen (im selben Tab)
@@ -92,20 +81,8 @@ describe('AC-10: die Alarm-Nutzlast enthaelt NIE send_telegram/send_sms/send_pre
 	});
 });
 
-describe('AC-10: die Versand-Nutzlast enthaelt NIE alert_channels', () => {
-	test('auch wenn `original` (veraltet) alert_channels gesetzt hat, fehlt es im Versand-Body', () => {
-		const stalePreset = _preset({
-			alert_channels: { email: true, telegram: true, sms: true, premium_sms: true }
-		} as Partial<ComparePreset>);
-		const { body } = baueVersandNutzlast(stalePreset, VERSAND_SNAPSHOT);
-		const b = body as unknown as Record<string, unknown>;
-		assert.ok(
-			!('alert_channels' in b),
-			`AC-10: die Versand-Nutzlast darf \`alert_channels\` NIE enthalten (Same-Tab-Race-Schutz), ` +
-				`gefunden: ${JSON.stringify(b.alert_channels)}`
-		);
-	});
-});
+// #3389: der Block „Versand-Nutzlast enthaelt NIE alert_channels“ entfiel mit dem toten
+// Versand-Speicherer; die Zusicherung belegt zustellungSpeicherung.test.ts (NIE-Liste).
 
 describe('AC-1: die Alarm-Nutzlast traegt alle vier alert_channels-Booleans', () => {
 	test('E-Mail aus, Telegram an (AC-1-Szenario) landet vollstaendig im Alarm-Body', () => {

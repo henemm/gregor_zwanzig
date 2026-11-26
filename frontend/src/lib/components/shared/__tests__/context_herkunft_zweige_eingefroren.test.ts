@@ -226,15 +226,6 @@ const EINGEFROREN: readonly string[] = [
 	// 🔴 Issue #3155 (B4): Karte „Mehrtages-Trend" entfernt (Trend-State, Props
 	// und Haken weg, Vorbelegungs-Konstante neu) — `:360/:370/:406` ->
 	// `:359/:369/:401`, Bedingungen byte-identisch, unten inhaltlich gefesselt.
-	// 🔴 Issue #2293 Scheibe S2: `versandVergleichSpeicherung.ts:221` verschob
-	// sich auf `:235` (+14 Zeilen VOR dieser Stelle: `sendPremiumSms` in zwei
-	// Interfaces, zwei Snapshot-/Hydrations-Funktionen und der Payload-Trennung
-	// in `baueVersandNutzlast`, s. Implementation Details Abschnitt 4/5) — fuer
-	// sie gilt AB JETZT der neue positionsbasierte Vertrag auf `:235`.
-	// #3276: -7 (Durchreicher hourly_/outlook_* an buildComparePresetSavePayload entfernt
-	// oberhalb), Weiche unveraendert, nachgemessen.
-	// #3298: -1 (Durchreicher outlookEnabled oberhalb entfernt), Weiche unveraendert, nachgemessen.
-	'versandVergleichSpeicherung.ts:236',
 	// Bug #2454 Fix-Loop 1 (Rebase auf origin/main 2026-09-30, ueberlagert
 	// #2422 S2a): initFromTrip()-Bucket-Zerlegung als computeInitialBuckets()
 	// nach metricsEditor.ts ausgelagert, die Markup-Weiche zusaetzlich durch
@@ -280,20 +271,6 @@ const EINGEFROREN: readonly string[] = [
 	// #3276: -5 (Durchreicher hourly_/outlook_* und Import entfernt), Weiche unveraendert.
 	// #3298: -1 (Durchreicher outlookEnabled entfernt), Weiche unveraendert.
 	'wetter-tab/wertebereicheVergleichSpeicherung.ts:203',
-	// #2931 (Rueckbau DayWindowCard): beide um 5 Zeilen nach oben verschoben (Kommentarblock
-	// zum entfallenen Abschnitt 'tagesfenster' geloescht); Bedingungen unveraendert, nachgemessen.
-	// #3276: die Vergleichs-Weiche (:68, `COMPARE_ONLY_SECTIONS` = 'stundenverlauf') ist
-	// ENTFERNT (Soll 25 → 24); die Trip-Weiche (:67) nimmt 'ausblick' mit auf und rutscht
-	// auf :53 (Kommentarblock zu Stundenverlauf/Ausblick gekuerzt), Bedingung unveraendert.
-	// #2794 Teil 3 Fix-Loop F006: dieselbe Weiche (`wetterMetrikenVergleichSpeicherungAktiv`),
-	// nur um 5 Zeilen verschoben (Wetter-Felder aus dem Zustellungs-Speicherer entfernt).
-	// #3061/#3047 J5: der eigene null-Hydrierer ist in hydrateWeatherMetricsFromPreset
-	// aufgegangen (+0 netto), Text unveraendert.
-	// #3097: +15 (Feld `hourlyMetricFormats` in Snapshots/Nutzlast oberhalb), Text unveraendert.
-	// #3276: -53 (Altschluessel aus Nutzlast, Vergleich, Kanal-Diff und Rollback oberhalb entfernt), Text unveraendert.
-	// #3276 Fix-Loop F005: -79 (flushPendingWeatherMetricsSave + WeatherMetricsSnapshot oberhalb entfernt), Text unveraendert.
-	// #3298: -75 (Lese-Naht Kanal-Auswahl, Layout-Altfelder und Ausblick-Schalter oberhalb entfernt), Text unveraendert.
-	'weather-metrics-tab/weatherMetricsCompareSave.ts:364',
 	// Issue #1743: der geteilte Baustein „Wetter-Metriken + Versand" waehlt den
 	// Versand-Inhalt nach Herkunft — Trip-Hub ueber BriefingScheduleTab (route ohne
 	// createMode), Vergleich und Trip-Anlegen ueber den EINEN VersandTab. Diese Weiche
@@ -317,7 +294,9 @@ const EINGEFROREN: readonly string[] = [
 // WetterMetrikenVersandPanel (1) geloescht — 11 ENTFERNTE Verzweigungen. Soll 24 → 13.
 // #3385: vtBriefingChannelsText.ts (2) und VTSchedulePlan.svelte (1) als Waisen geloescht —
 // 3 ENTFERNTE Verzweigungen. Soll 13 → 10.
-const EINGEFROREN_SOLL_ANZAHL = 10;
+// #3389: `versandVergleichSpeicherung.ts:236` und `weatherMetricsCompareSave.ts:364` (die beiden
+// `…SpeicherungAktiv`-Weichen) mit den toten Exporten gelöscht — 2 ENTFERNTE Verzweigungen. Soll 10 → 8.
+const EINGEFROREN_SOLL_ANZAHL = 8;
 
 /**
  * S6c: die vier ueberlebenden AlarmeTab-Eintraege, GEGEN IHREN INHALT gefesselt.

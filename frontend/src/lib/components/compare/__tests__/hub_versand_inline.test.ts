@@ -47,12 +47,7 @@ import type { ComparePreset } from '../../../types.ts';
 // `hubActivationBanner` bleibt in der Klebeschicht — die Aktivierungs-Karte
 // gehört dem Hub, nicht dem Versand-Reiter.
 import { hubActivationBanner } from '../compareHubPersistenz.ts';
-import {
-	hydrateVersandFieldsFromPreset,
-	flushPendingVersandSave,
-	rollbackVersandSnapshot,
-	type VersandSnapshot
-} from '../../shared/versandVergleichSpeicherung.ts';
+import { hydrateVersandFieldsFromPreset } from '../../shared/versandVergleichSpeicherung.ts';
 
 function makePreset(overrides: Partial<ComparePreset> = {}): ComparePreset {
 	return {
@@ -87,24 +82,6 @@ function makePreset(overrides: Partial<ComparePreset> = {}): ComparePreset {
 			active_metrics: ['snow_depth_cm', 'wind_gust'],
 			metric_alert_levels: { snow_depth_cm: 'warn', wind_gust: 'mark' }
 		},
-		...overrides
-	};
-}
-
-function makeSnapshot(overrides: Partial<VersandSnapshot> = {}): VersandSnapshot {
-	return {
-		sendTelegram: true,
-		sendSms: false,
-		// Issue #2293 Scheibe S2 (#2448): neuntes Klasse-A-Feld im Snapshot.
-		sendPremiumSms: false,
-		morningEnabled: true,
-		morningTime: '06:30',
-		eveningEnabled: true,
-		eveningTime: '19:15',
-		endDate: '2026-08-01',
-		alertCooldownMinutes: 90,
-		alertQuietFrom: '22:00',
-		alertQuietTo: '06:00',
 		...overrides
 	};
 }
@@ -156,111 +133,9 @@ describe('AC-36 (Basis): hydrateVersandFieldsFromPreset — Versand-Felder aus d
 	});
 });
 
-describe('AC-35/AC-36: flushPendingVersandSave — Event-diskretisierte PUT-Persistenz', () => {
-	test('liefert null, wenn sich der Versand-Snapshot nicht geaendert hat (Waechter gegen No-Op-PUTs)', () => {
-		const preset = makePreset();
-		const snap = makeSnapshot();
-		assert.strictEqual(flushPendingVersandSave(preset, snap, makeSnapshot()), null);
-		// before=null → Baseline ist current selbst → ebenfalls kein PUT
-		assert.strictEqual(flushPendingVersandSave(preset, snap, null), null);
-	});
-
-	test('AC-35: Kanal-Toggle (sendTelegram → false) landet im PUT-Body', () => {
-		const preset = makePreset();
-		const payload = flushPendingVersandSave(
-			preset,
-			makeSnapshot({ sendTelegram: false }),
-			makeSnapshot()
-		);
-		assert.ok(payload, 'geaenderter Kanal muss einen PUT-Payload liefern');
-		assert.strictEqual(payload.url, '/api/compare/presets/cmp-42');
-		assert.strictEqual(payload.body.send_telegram, false);
-		assert.strictEqual(payload.body.send_sms, false);
-	});
-
-	test('AC-36: geaenderte Briefing-Uhrzeit wird als HH:MM:SS persistiert', () => {
-		const payload = flushPendingVersandSave(
-			makePreset(),
-			makeSnapshot({ morningTime: '07:15' }),
-			makeSnapshot()
-		);
-		assert.ok(payload);
-		assert.strictEqual(payload.body.morning_time, '07:15:00');
-		assert.strictEqual(payload.body.evening_time, '19:15:00');
-	});
-
-	test('endDate-Sentinel: null ("bis auf Weiteres") sendet end_date="" (Loesch-Sentinel aus #1232)', () => {
-		const payload = flushPendingVersandSave(
-			makePreset(),
-			makeSnapshot({ endDate: null }),
-			makeSnapshot()
-		);
-		assert.ok(payload);
-		assert.strictEqual(payload.body.end_date, '');
-	});
-
-	test('Teilfeld (#1257-Kontext, seit #2375): Nicht-Versand-Felder stehen NICHT im Body — der Server bewahrt sie', () => {
-		const preset = makePreset();
-		const payload = flushPendingVersandSave(
-			preset,
-			makeSnapshot({ sendSms: true }),
-			makeSnapshot()
-		);
-		assert.ok(payload);
-		const body = payload.body as unknown as Record<string, unknown>;
-		for (const fremd of ['corridors', 'display_config', 'empfaenger', 'schedule', 'name', 'location_ids']) {
-			assert.ok(!(fremd in body), `Fremdfeld ${fremd} darf im Versand-PUT nicht stehen`);
-		}
-		assert.strictEqual(body.send_sms, true);
-	});
-});
-
-// Issue #2276 Scheibe S5 (Epic #2345), AC-3: der Rollback nach einem
-// gescheiterten Versand-PUT ist diff-basiert statt unbedingt. Bisher setzte
-// `handleVersandCommit` ALLE 10 Felder bedingungslos auf den Vor-Zustand
-// zurück — weil `sendTelegram`/`sendSms` auch vom Alarme-Reiter geschrieben
-// werden, konnte das eine zwischenzeitlich erfolgreich gespeicherte
-// Nachbar-Änderung still zurücknehmen (Klasse BUG-DATALOSS-GR221).
-//
-// Mutations-Gegenprobe (Spec AC-3): unbedingter Full-Overwrite-Rollback ⇒ rot.
-describe('S5-AC-3: rollbackVersandSnapshot setzt nur Felder zurück, die noch den GESENDETEN Wert tragen', () => {
-	test('ein vom Nachbar-Reiter geänderter Kanal-Schalter überlebt den Rollback', () => {
-		const before = makeSnapshot({ sendTelegram: false, morningTime: '06:30' });
-		const attempted = makeSnapshot({ sendTelegram: false, morningTime: '07:15' });
-		// Zustand NACH dem gescheiterten PUT: der Alarme-Reiter hat Telegram
-		// zwischenzeitlich eingeschaltet und erfolgreich gespeichert.
-		const state: Record<string, unknown> = { ...attempted, sendTelegram: true };
-
-		rollbackVersandSnapshot(state as unknown as VersandSnapshot, before, attempted);
-
-		assert.strictEqual(state.sendTelegram, true, 'der Wert stammt nicht aus diesem Vorgang — er darf nicht zurückgesetzt werden');
-		assert.strictEqual(state.morningTime, '06:30', 'das eigene, gescheiterte Feld MUSS zurückgesetzt werden');
-	});
-
-	test('unveränderte Felder bleiben unangetastet', () => {
-		const before = makeSnapshot();
-		const attempted = makeSnapshot({ eveningTime: '20:00' });
-		const state: Record<string, unknown> = { ...attempted };
-
-		rollbackVersandSnapshot(state as unknown as VersandSnapshot, before, attempted);
-
-		assert.strictEqual(state.eveningTime, '19:15', 'das geänderte Feld wird zurückgesetzt');
-		assert.strictEqual(state.sendTelegram, before.sendTelegram);
-		assert.strictEqual(state.morningTime, before.morningTime);
-		assert.strictEqual(state.endDate, before.endDate);
-	});
-
-	test('auch die drei Legacy-Restfelder werden nur bei Übereinstimmung zurückgesetzt', () => {
-		const before = makeSnapshot({ alertCooldownMinutes: 90 });
-		const attempted = makeSnapshot({ alertCooldownMinutes: 90 });
-		// Der Alarme-Reiter hat den Cooldown währenddessen auf 30 gesetzt.
-		const state: Record<string, unknown> = { ...attempted, alertCooldownMinutes: 30 };
-
-		rollbackVersandSnapshot(state as unknown as VersandSnapshot, before, attempted);
-
-		assert.strictEqual(state.alertCooldownMinutes, 30, 'der Versand-Rollback darf keine Alarm-Zustellungsfelder zurückdrehen');
-	});
-});
+// #3389: die Blöcke „AC-35/AC-36: Diff-Wächter und Nutzlast“ (5 Fälle) und „S5-AC-3: diff-basierter
+// Rollback“ (3 Fälle) des toten Versand-Speicherers entfielen. Teilfeld-PUT, Uhrzeit-Format,
+// end_date-Sentinel und Rollback der Zustellung belegt zustellungSpeicherung.test.ts.
 
 describe('AC-17/AC-18: hubActivationBanner — Aktivierungs-Karten-Modell (Soll: screen-compare-detail.jsx:273-277)', () => {
 	test('AC-17: status=active → Label "Aktiv", CTA "Pausieren"', () => {

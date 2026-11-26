@@ -113,9 +113,11 @@ describe('AC-1 / Teil B: Typ-Alias, tote Bedingung und Kommentar-Leichen sind we
 
 	const speicherModule: Array<[string[], string]> = [
 		[['shared', 'alarmeVergleichSpeicherung.ts'], 'buildComparePresetSavePayload'],
-		[['shared', 'versandVergleichSpeicherung.ts'], 'buildComparePresetSavePayload'],
+		// #3389: in den beiden Hydrations-Modulen steht buildComparePresetSavePayload nicht mehr;
+		// die Positivkontrolle ist ein lebender Name derselben Datei.
+		[['shared', 'versandVergleichSpeicherung.ts'], 'hydrateVersandFieldsFromPreset'],
 		[['shared', 'wetter-tab', 'wertebereicheVergleichSpeicherung.ts'], 'context'],
-		[['shared', 'weather-metrics-tab', 'weatherMetricsCompareSave.ts'], 'buildComparePresetSavePayload']
+		[['shared', 'weather-metrics-tab', 'weatherMetricsCompareSave.ts'], 'hydrateWeatherMetricsFromPreset']
 	];
 
 	for (const [pfad, positivKontrolle] of speicherModule) {

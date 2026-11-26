@@ -30,13 +30,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'svelte/compiler';
-import {
-	baueVersandNutzlast,
-	hydrateVersandFieldsFromPreset,
-	versandSnapshotAus,
-	rollbackVersandSnapshot,
-	type VersandSnapshot
-} from '../versandVergleichSpeicherung.ts';
+import { hydrateVersandFieldsFromPreset } from '../versandVergleichSpeicherung.ts';
 import { findeKomponenten, attributAusdruck, type Knoten } from './svelteInstanzPruefstand.ts';
 import type { ComparePreset } from '../../../types.ts';
 
@@ -76,49 +70,9 @@ describe('AC-8/AC-14 (Persistenz): sendPremiumSms laeuft durch den ganzen Versan
 		);
 	});
 
-	test('versandSnapshotAus fuehrt sendPremiumSms', () => {
-		const target = { sendPremiumSms: true } as unknown as Parameters<typeof versandSnapshotAus>[0];
-		const snap = versandSnapshotAus(target) as unknown as Record<string, unknown>;
-		assert.strictEqual(snap.sendPremiumSms, true);
-	});
-
-	test('rollbackVersandSnapshot setzt sendPremiumSms auf den vorherigen Wert zurueck', () => {
-		const state = { sendPremiumSms: true } as unknown as Parameters<typeof rollbackVersandSnapshot>[0];
-		const before = { sendPremiumSms: false } as unknown as VersandSnapshot;
-		const attempted = { sendPremiumSms: true } as unknown as VersandSnapshot;
-		rollbackVersandSnapshot(state, before, attempted);
-		assert.strictEqual(
-			(state as unknown as Record<string, unknown>).sendPremiumSms,
-			false,
-			'AC-8: ein gescheiterter PUT muss sendPremiumSms auf den Vorwert zuruecksetzen.'
-		);
-	});
-
-	test('baueVersandNutzlast sendet send_premium_sms aus current.sendPremiumSms', () => {
-		const preset = _preset({ send_premium_sms: false } as Partial<ComparePreset>);
-		const current = { sendPremiumSms: true } as unknown as VersandSnapshot;
-		const { body } = baueVersandNutzlast(preset, current);
-		assert.strictEqual(
-			(body as unknown as Record<string, unknown>).send_premium_sms,
-			true,
-			'AC-8: baueVersandNutzlast muss send_premium_sms aus current.sendPremiumSms in den Body schreiben.'
-		);
-	});
-
-	test('AC-14 (Persistenz-Teil): baueVersandNutzlast sendet NIEMALS alert_channels (Payload-Trennung)', () => {
-		// preset traegt einen (moeglicherweise veralteten) alert_channels-Wert —
-		// der Versand-Reiter darf ihn nie zurueckschreiben (Abschnitt 4 der Spec).
-		const preset = _preset({
-			alert_channels: { email: true, telegram: true, sms: false, premium_sms: true }
-		} as Partial<ComparePreset>);
-		const current = { sendPremiumSms: true } as unknown as VersandSnapshot;
-		const { body } = baueVersandNutzlast(preset, current);
-		assert.ok(
-			!('alert_channels' in body),
-			'AC-14/Abschnitt 4: die Versand-Nutzlast darf alert_channels (Alarm-Feld) NIE enthalten — ' +
-				`gefunden: ${JSON.stringify((body as unknown as Record<string, unknown>).alert_channels)}`
-		);
-	});
+	// #3389: die Fälle zu Snapshot, Rollback und Nutzlast des toten Versand-Speicherers entfallen.
+	// `send_premium_sms` im PUT und „Versand sendet nie alert_channels“ belegen
+	// zustellungSpeicherung.test.ts (ac33, NIE-Liste) und rework_3020_premium_sms_schaltbar.test.ts.
 });
 
 // ─── VersandTab.svelte: Premium-SMS-Schalter im vergleich-Zweig freigeschaltet ─

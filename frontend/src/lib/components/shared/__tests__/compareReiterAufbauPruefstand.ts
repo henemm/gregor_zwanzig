@@ -1,5 +1,5 @@
-// Gemeinsamer Prüfstand: baut für JEDEN der vier selbst speichernden
-// Ortsvergleich-Reiter (Alarme, Versand, Wertebereiche, Wetter-Metriken) den
+// Gemeinsamer Prüfstand: baut für JEDEN der zwei selbst speichernden
+// Ortsvergleich-Reiter (Alarme, Wertebereiche; Versand und Wetter-Metriken seit #3389 entfernt) den
 // echten Speicherweg auf — echtes `erstelle…Speicherung`, echte Hydration,
 // echter SaveStatus-Controller mit Kennung {typ:'vergleich', id}, echte
 // Hub-Queue, Transport über `api` (Issue #2375). KEINE Testdatei.
@@ -23,24 +23,17 @@ import { createPutQueue } from '../../compare/compareHubPersistenz.ts';
 import { hydrateAlarmFieldsFromPreset } from '../../compare/compareHubHydration.ts';
 import type { PutClient } from '../tripSpeicherung.ts';
 import { erstelleAlarmeVergleichSpeicherung } from '../alarmeVergleichSpeicherung.ts';
-import {
-	erstelleVersandVergleichSpeicherung,
-	hydrateVersandFieldsFromPreset
-} from '../versandVergleichSpeicherung.ts';
 import { erstelleWertebereicheVergleichSpeicherung } from '../wetter-tab/wertebereicheVergleichSpeicherung.ts';
-import { erstelleWetterMetrikenVergleichSpeicherung } from '../weather-metrics-tab/weatherMetricsCompareSave.ts';
 import { createController } from './versandVergleichPruefstand.ts';
 import {
 	hydrierterWs as hydrierterWertebereicheWs,
 	wertebereicheBedienung
 } from '../wetter-tab/__tests__/wertebereicheVergleichPruefstand.ts';
-import {
-	hydrierterWs as hydrierterWetterWs,
-	wetterMetrikenBedienung
-} from '../weather-metrics-tab/__tests__/wetterMetrikenVergleichPruefstand.ts';
 
-export type Reiter = 'alarme' | 'versand' | 'wertebereiche' | 'wetterMetriken';
-export const REITER: Reiter[] = ['alarme', 'versand', 'wertebereiche', 'wetterMetriken'];
+// Issue #3389: die Reiter `versand` und `wetterMetriken` entfielen mit ihren toten
+// Speicherern; gespeichert wird dort über den Zustellungs-Speicherer.
+export type Reiter = 'alarme' | 'wertebereiche';
+export const REITER: Reiter[] = ['alarme', 'wertebereiche'];
 
 export interface ReiterAufbau {
 	zustand: Record<string, unknown>;
@@ -91,60 +84,22 @@ export function reiterAufbau(
 			}
 		};
 	}
-	if (reiter === 'versand') {
-		const zustand = hydrateVersandFieldsFromPreset(start) as unknown as Record<string, unknown>;
-		const speicherung = erstelleVersandVergleichSpeicherung({ ...gemeinsam, zustand });
-		return {
-			zustand,
-			ctl,
-			speicherung,
-			basis: () => basis,
-			aendern() {
-				zustand.morningTime = '07:15';
-			},
-			leeren() {
-				// „Bis auf Weiteres" — reiner Button-Klick
-				zustand.endDate = null;
-			}
-		};
-	}
-	if (reiter === 'wertebereiche') {
-		const zustand = hydrierterWertebereicheWs(start);
-		const bedienung = wertebereicheBedienung(zustand);
-		const speicherung = erstelleWertebereicheVergleichSpeicherung({ ...gemeinsam, zustand });
-		return {
-			zustand,
-			ctl,
-			speicherung,
-			basis: () => basis,
-			aendern() {
-				bedienung.patch('wind_max_kmh', { max: 55 });
-			},
-			leeren() {
-				// Korridor-Leerung: alle Korridore entfernt ⇒ auch keine Ideal-Ranges
-				for (const c of (zustand.corridors as Array<{ metric: string }>).map((k) => k.metric)) {
-					bedienung.remove(c);
-				}
-			}
-		};
-	}
-	const zustand = hydrierterWetterWs(start);
-	const bedienung = wetterMetrikenBedienung(zustand);
-	const speicherung = erstelleWetterMetrikenVergleichSpeicherung({ ...gemeinsam, zustand });
+	const zustand = hydrierterWertebereicheWs(start);
+	const bedienung = wertebereicheBedienung(zustand);
+	const speicherung = erstelleWertebereicheVergleichSpeicherung({ ...gemeinsam, zustand });
 	return {
 		zustand,
 		ctl,
 		speicherung,
 		basis: () => basis,
-		// #2794 S3a Teil 3 (F006): die Metrikauswahl gehoert dem Reiter Wetter.
-		// Issue #3276/#3298: Stundenverlauf/Ausblick-Listen und der Ausblick-Schalter sind
-		// Altfelder; einzige Geste dieses Reiters ist der Stundenverlauf-Schalter. Leeren =
-		// Stundenverlauf aus (damit ueberhaupt ein PUT entsteht).
 		aendern() {
-			bedienung.hourlyEnabledToggle();
+			bedienung.patch('wind_max_kmh', { max: 55 });
 		},
 		leeren() {
-			bedienung.hourlyEnabledToggle();
+			// Korridor-Leerung: alle Korridore entfernt ⇒ auch keine Ideal-Ranges
+			for (const c of (zustand.corridors as Array<{ metric: string }>).map((k) => k.metric)) {
+				bedienung.remove(c);
+			}
 		}
 	};
 }

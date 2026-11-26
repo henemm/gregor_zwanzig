@@ -1,20 +1,8 @@
-// Gemeinsamer Prüfstand der Versand-Speichertests im Ortsvergleich
-// (Issue #2276 Scheibe S5, Epic #2345). KEINE Testdatei (kein `.test.ts`) —
-// nur Aufbauhilfen.
-//
-// Bewusst OHNE Import der NEUEN Exporte aus
-// `shared/versandVergleichSpeicherung.ts` (erstelleVersandVergleichSpeicherung,
-// baueVersandNutzlast, versandSnapshotAus, rollbackVersandSnapshot, …) — der
-// Prüfstand muss auch HEUTE laden, damit das Rot der Tests an den fehlenden
-// neuen Exporten liegt und nicht hier (Muster wetterMetrikenVergleich-
-// Pruefstand.ts, S4).
-//
-// Bewusst OHNE Umweg über `hydrateVersandFieldsFromPreset`: die Funktion zieht
-// in dieser Scheibe gerade aus der Klebeschicht in das neue Modul um; ein
-// Import würde den Prüfstand an die Seite binden, die er nicht prüft. Für die
-// hier geprüften Snapshot-/Diff-/PUT-Mechanismen zählt nur, dass die Werte
-// deterministisch aus dem Preset ableitbar sind (Defaults identisch zur
-// Edit-Routen-Hydration; eigenes Testnetz: hub_versand_inline.test.ts).
+// Gemeinsamer Prüfstand der Ortsvergleich-Speichertests (Issue #2276 Scheibe S5,
+// Epic #2345). KEINE Testdatei (kein `.test.ts`) — nur zwei Aufbauhilfen:
+// `makePreset` (ein voller Vergleich als Ausgangsbestand) und `createController`
+// (echte `SaveStatus`-Instanz mit Kennung {typ:'vergleich', id}). Die früheren
+// Versand-Hilfen entfielen mit dem toten Versand-Speicherer (#3389).
 //
 // Transport: echtes `api` gegen `fakeTripServer.ts`. Echte `SaveStatus`-Instanz.
 
@@ -87,62 +75,4 @@ export function createController(id: string): SaveStatus {
 	f._tripId = id;
 	f._resourceKind = 'vergleich';
 	return inst;
-}
-
-/** Wizard-Zustand, wie CompareTabs ihn nach der Versand-Hydration hält (die 10
- *  Snapshot-Felder + `sendEmail`, das `ComparePreset` nicht kennt). */
-export function hydrierterWiz(preset: ComparePreset): Record<string, unknown> {
-	return {
-		sendEmail: true,
-		sendTelegram: preset.send_telegram ?? false,
-		sendSms: preset.send_sms ?? false,
-		morningEnabled: preset.morning_enabled ?? true,
-		morningTime: (preset.morning_time ?? '06:00').slice(0, 5),
-		eveningEnabled: preset.evening_enabled ?? false,
-		eveningTime: (preset.evening_time ?? '18:00').slice(0, 5),
-		endDate: preset.end_date ?? null,
-		alertCooldownMinutes: preset.alert_cooldown_minutes ?? undefined,
-		alertQuietFrom: preset.alert_quiet_from ?? undefined,
-		alertQuietTo: preset.alert_quiet_to ?? undefined
-	};
-}
-
-/**
- * Nachbau der Bedienlogik von VersandTab.svelte im vergleich-Zweig OHNE
- * Svelte: direkte Feld-Mutation, wie die realen Handler
- * (makeWizChannelHandler/makeTimeHandler/makeToggleHandler, VTLaufzeit-
- * Vergleich-onChange) am Ende auch tun. Das Melden an die Speicherung
- * (`aenderungMelden()`) macht der Test selbst — genau das übernimmt nach der
- * Implementierung der reaktive `$effect`.
- */
-export function versandBedienung(wiz: Record<string, unknown>) {
-	return {
-		toggleTelegram(): void {
-			wiz.sendTelegram = !(wiz.sendTelegram as boolean);
-		},
-		toggleSms(): void {
-			wiz.sendSms = !(wiz.sendSms as boolean);
-		},
-		setMorgenZeit(hhmm: string): void {
-			wiz.morningTime = hhmm;
-		},
-		setAbendZeit(hhmm: string): void {
-			wiz.eveningTime = hhmm;
-		},
-		toggleAbendBriefing(): void {
-			wiz.eveningEnabled = !(wiz.eveningEnabled as boolean);
-		},
-		/** „Bis auf Weiteres" im Laufzeit-Control — reiner Button-Klick, ohne
-		 *  begleitendes change-/focusout-Ereignis (AC-5). */
-		bisAufWeiteres(): void {
-			wiz.endDate = null;
-		},
-		setEnddatum(datum: string): void {
-			wiz.endDate = datum;
-		}
-	};
-}
-
-export function dc(body: unknown): Record<string, unknown> {
-	return ((body as Record<string, unknown>).display_config as Record<string, unknown>) ?? {};
 }

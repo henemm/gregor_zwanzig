@@ -225,11 +225,8 @@ describe('F101 (Regel 1/2) am Hub: die zuletzt gesehene und gespeicherte Eingabe
 });
 
 describe('F101 (imWiederholen): scheitert der Retry mit 500, behaelt JEDER Compare-Reiter seine Eingabe und sendet sie erneut', () => {
-	const faelle = [
-		['versand', 'Versand'],
-		['wertebereiche', 'Wertebereiche'],
-		['wetterMetriken', 'Wetter-Metriken']
-	] as const;
+	// #3389: die Zeilen `versand` und `wetterMetriken` entfielen mit ihren toten Speicherern.
+	const faelle = [['wertebereiche', 'Wertebereiche']] as const;
 	for (const [reiter, titel] of faelle) {
 		test(`${titel}: 500 beim Retry setzt die Anzeige nicht zurueck; der naechste Versuch schreibt die Eingabe auf den Server`, async () => {
 			server.fremdSchreiben(ID, { name: 'Fremder 1' });
@@ -258,13 +255,14 @@ describe('F101 (imWiederholen): scheitert der Retry mit 500, behaelt JEDER Compa
 });
 
 describe('F501 / F502 (Fix-Loop 5): gescheiterter Retry laesst keinen Save mit veraltetem Reiterstand durch', () => {
-	test('Teil-Erfolg: Alarme ok, Wertebereiche scheitert ⇒ ein NIE gespeicherter, veralteter Versand-Reiter bekommt 412; Fremdwert bleibt, Eingabe nicht still geschrieben', async () => {
-		server.fremdSchreiben(ID, { name: 'Fremder 1', morning_time: '06:30' });
+	// #3389: der veraltete, nie gespeicherte Reiter ist ein zweiter Alarme-Aufbau (der Versand-Speicherer war tot).
+	test('Teil-Erfolg: Alarme ok, Wertebereiche scheitert ⇒ ein NIE gespeicherter, veralteter Alarme-Reiter bekommt 412; Fremdwert bleibt, Eingabe nicht still geschrieben', async () => {
+		server.fremdSchreiben(ID, { name: 'Fremder 1', alert_cooldown_minutes: 15 });
 		const geteilt = { ctl: createController(ID), queue: createPutQueue() };
 		const start = vollerVergleich(ID) as unknown as ComparePreset;
 		const al = reiterAufbau('alarme', start, api, geteilt);
 		const we = reiterAufbau('wertebereiche', start, api, geteilt);
-		const ve = reiterAufbau('versand', start, api, geteilt); // veraltet, nie gespeichert
+		const ve = reiterAufbau('alarme', start, api, geteilt); // veraltet, nie gespeichert
 		const ctl = geteilt.ctl;
 		al.aendern();
 		al.speicherung.aenderungMelden();
@@ -282,13 +280,18 @@ describe('F501 / F502 (Fix-Loop 5): gescheiterter Retry laesst keinen Save mit v
 		assert.equal(istKonflikt(ID), true);
 
 		const vorher = puts().length;
-		ve.aendern(); // morningTime = 07:15
+		// Der erfolgreiche Wiederholungs-PUT von `al` traegt alle Alarmfelder (auch den Cooldown);
+		// gemessen wird deshalb der Server-Stand unmittelbar vor dem Save des veralteten Reiters.
+		const standVorVe = JSON.stringify(server.stand(ID));
+		ve.zustand.alertCooldownMinutes = 77;
 		ve.speicherung.aenderungMelden();
 		await fertig(ctl);
 		const neue = puts().slice(vorher);
 		assert.ok(neue.length > 0, 'Messaufbau: der Save wurde gesendet');
 		assert.ok(neue.every((e) => e.status === 412), 'der Save des veralteten Reiters wird abgelehnt');
-		assert.equal(server.stand(ID).morning_time, '06:30', 'Fremdwert bleibt, Eingabe nicht still geschrieben');
+		assert.notEqual(server.stand(ID).alert_cooldown_minutes, 77, 'Eingabe des veralteten Reiters nicht still geschrieben');
+		assert.equal(JSON.stringify(server.stand(ID)), standVorVe, 'Server-Stand unveraendert durch den abgelehnten Save');
+		assert.equal(server.stand(ID).name, 'Fremder 1', 'Fremdwert bleibt');
 		assert.equal(ctl.state, 'conflict');
 	});
 

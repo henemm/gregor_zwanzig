@@ -558,7 +558,8 @@ fünf `WeatherMetricsTab.svelte`-Einträge gestrichen** — sie wurden von `:545
 `:602`/`:1323` auf die neu gemessenen Zeilen `:590`/`:605`/`:634`/`:647`/`:1439` nachgeführt und in
 `BLEIBT_MIT_INHALT` inhaltlich gefesselt; `weatherMetricsCompareSave.ts:534` blieb dabei
 unverändert an Position, ohne neue Fesselung (alter, positionsbasierter Vertrag, wie bei
-`versandVergleichSpeicherung.ts:221` in S6e)) aller produktiven
+`versandVergleichSpeicherung.ts:221` in S6e) (beide Einträge mit #3389 entfernt, zusammen mit
+den toten `…SpeicherungAktiv`-Exporten; die Ratsche führt danach 8 Einträge)) aller produktiven
 `context ===`/`context !==`-Verzweigungen unter `shared/` und vergleicht sie zur Testlaufzeit
 gegen den eingefrorenen Zählbefehl (`grep -rn 'context ===\|context !=='`, ohne Tests und
 Kommentare). Die Liste ist **nicht** aus dem Verzeichnis abgeleitet, sondern als Array im

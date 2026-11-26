@@ -1,0 +1,57 @@
+== #3389 GREEN-Lauf nach Gegenprüfung (F001-F004 in Tests behoben), Arbeitsstand nicht committet, 2026-11-26 ==
+
+== 1) Gesamte Frontend-Suite (alle *.test.ts unter frontend/src) ==
+cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test $(find src -name "*.test.ts" | sort)
+# tests 11718
+# suites 2088
+# pass 11701
+# fail 0
+# cancelled 0
+# skipped 2
+# todo 15
+exit 0
+(enthält alle in den ACs genannten Tests, die Dateien mit compare|vergleich|versand|hub|wetter|reiter|waisen|context
+ im Namen, weather_metrics_hydration_tagesfenster (5 Fälle), trip_pfad_altfeld_loeschnachweis_3297,
+ endbilanz_summenzeile_stimmt und rework_3020_rueckbau_waechter)
+
+== 2) Mutations-Gegenproben der Gegenprüfung (String-Ersetzung, externe Sicherung, Wiederherstellung, cmp) ==
+== F001: src/lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts: 'return { hourlyEnabled: preset.hourly_enabled ?? true };' -> 'return { hourlyEnabled: true };'
+   Test src/lib/components/shared/weather-metrics-tab/__tests__/weather_metrics_hydration_tagesfenster.test.ts: Exit 1 (ROT)
+       not ok 1 - Preset mit hourly_enabled: false ⇒ Schalter nach dem Hydrieren aus
+   # pass 4
+   # fail 1
+   Wiederherstellung cmp identisch: True
+   nach Wiederherstellung: Exit 0 (GRUEN)
+== F002: src/lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts: 'catalog: CompareSelectionEntry[] = registeredCompareMetricCatalog()' -> 'catalog: CompareSelectionEntry[] = []'
+   Test src/lib/components/shared/weather-metrics-tab/__tests__/weather_metrics_hydration_tagesfenster.test.ts: Exit 1 (ROT)
+       not ok 1 - gespeicherte Auswahl im Neuformat wird ohne Katalog-Argument auf Auswahl-Schlüssel zurückgeführt
+   # pass 4
+   # fail 1
+   Wiederherstellung cmp identisch: True
+   nach Wiederherstellung: Exit 0 (GRUEN)
+== F003: src/lib/components/shared/__tests__/versandVergleichPruefstand.ts: zusätzlicher Export 'export const zusatzExport = 1;'
+   Test src/lib/__tests__/trip_pfad_altfeld_loeschnachweis_3297.test.ts: Exit 1 (ROT)
+       not ok 3 - Exportmenge versandVergleichPruefstand: genau makePreset und createController
+   # pass 118
+   # fail 1
+   Wiederherstellung cmp identisch: True
+   nach Wiederherstellung: Exit 0 (GRUEN)
+F004: nur Testtitel (endbilanz_summenzeile_stimmt.test.ts:63 „nennt 1 HERKUNFT“), Beleg E024 in
+rework_3020_testtabelle.md nachgezogen; rework_3020_rueckbau_waechter grün.
+Produktionsdateien nach den Gegenproben ohne ungestagete Änderung (git diff leer).
+
+== 3) svelte-check --threshold error ==
+vorher:  COMPLETED 2255 FILES 32 ERRORS 70 WARNINGS 49 FILES_WITH_PROBLEMS
+nachher: COMPLETED 2233 FILES 32 ERRORS 70 WARNINGS 49 FILES_WITH_PROBLEMS (Fehlerliste identisch;
+die Gegenprüfungs-Korrekturen betreffen nur Testdateien)
+
+== 4) Python (benannt, -o addopts="") ==
+uv run pytest tests/tdd/test_einstellung_gleich_mail_fallliste.py tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py tests/unit/test_2243_playwright_loeschscheibe.py tests/unit/test_e2e_positivliste_ratschen_bindung.py -o addopts=""
+======================= 124 passed, 2 warnings in 44.77s =======================
+
+== 5) AC-9 ==
+git diff --quiet origin/main -- frontend/e2e .github .claude/hooks  -> exit 0
+git diff --name-only origin/main -- frontend/src ':(exclude)*/__tests__/*' ':(exclude)*.test.ts' ->
+frontend/src/lib/components/compare/CompareTabs.svelte
+frontend/src/lib/components/shared/versandVergleichSpeicherung.ts
+frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsCompareSave.ts
