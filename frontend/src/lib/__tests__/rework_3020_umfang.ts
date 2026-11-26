@@ -90,3 +90,26 @@ export const LEBENDE_HELFER_NUTZER: string[] = [
 	'routes/gpx-upload/__tests__/gpx_upload_sprache.test.ts',
 	'routes/trips/[id]/__tests__/trip_hub_loeschen.test.ts'
 ];
+
+/**
+ * R2 (Nachtrag 2026-11-26): Testdateien, die die Probe-Löschung der 11 Restdateien rot gemacht hat (Differenz zur
+ * Baseline derselben Umgebung), plus ein Python-Fall. Pfade ab Repo-Wurzel; je Eintrag ein Entscheid in der Testtabelle (AC-8).
+ */
+export const ROT_R2: string[] = [
+	...[
+		'components/molecules/issue_578_molecules_organisms.test.ts',
+		'components/shared/__tests__/OutputLayoutEditor.test.ts',
+		'components/trip-detail/bug_499_skala_label.test.ts',
+		'components/shared/layout-tab/__tests__/layout_korridor_sprache.test.ts',
+		'components/trip-detail/__tests__/trip_hub_sprache.test.ts',
+		'components/__tests__/bausteine_sprache.test.ts',
+		'i18n/__tests__/katalog_schluessel_haben_verwender.test.ts',
+		'i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts',
+		'i18n/__tests__/reaktivitaet_waechter.test.ts',
+		'__tests__/bausteine_waechter.test.ts',
+		'__tests__/ink4_waechter.test.ts',
+		'__tests__/rework_3020_rueckbau_waechter.test.ts',
+		'__tests__/rework_3020_probe_loeschung.test.ts'
+	].map((p) => `frontend/src/lib/${p}`),
+	'tests/tdd/test_issue_289_surface_tokens.py::test_preset_row_color_mix_uses_surface0'
+];
