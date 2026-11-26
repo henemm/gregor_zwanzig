@@ -1,0 +1,99 @@
+{
+ "lat": 50.1106444,
+ "lon": 8.6820917,
+ "zeitzone": "Europe/Berlin",
+ "konvektiv": false,
+ "hagel": false,
+ "quelle": "minutely_15",
+ "ueber_horizont_hinaus": true,
+ "laeuft_bereits": false,
+ "beginn_min": 30,
+ "ende_min": 75,
+ "intensitaet": "maessig",
+ "max_mm_h_erste_stunde": 4.0,
+ "summe_erste_stunde_mm": 1.5,
+ "reichweite_min": 180,
+ "gedrosselt": false,
+ "nicht_verfuegbar": false,
+ "trocken": false,
+ "frames": [
+  {
+   "zeit": "2026-11-26T14:00:00+01:00",
+   "mm_h": 0.0,
+   "konvektiv": false,
+   "hagel": false
+  },
+  {
+   "zeit": "2026-11-26T14:15:00+01:00",
+   "mm_h": 0.0,
+   "konvektiv": false,
+   "hagel": false
+  },
+  {
+   "zeit": "2026-11-26T14:30:00+01:00",
+   "mm_h": 2.0,
+   "konvektiv": false,
+   "hagel": false
+  },
+  {
+   "zeit": "2026-11-26T14:45:00+01:00",
+   "mm_h": 4.0,
+   "konvektiv": false,
+   "hagel": false
+  },
+  {
+   "zeit": "2026-11-26T15:00:00+01:00",
+   "mm_h": 1.0,
+   "konvektiv": false,
+   "hagel": false
+  },
+  {
+   "zeit": "2026-11-26T15:15:00+01:00",
+   "mm_h": 0.0,
+   "konvektiv": false,
+   "hagel": false
+  },
+  {
+   "zeit": "2026-11-26T15:30:00+01:00",
+   "mm_h": 0.0,
+   "konvektiv": false,
+   "hagel": false
+  },
+  {
+   "zeit": "2026-11-26T15:45:00+01:00",
+   "mm_h": 0.0,
+   "konvektiv": false,
+   "hagel": false
+  },
+  {
+   "zeit": "2026-11-26T16:00:00+01:00",
+   "mm_h": 0.0,
+   "konvektiv": false,
+   "hagel": false
+  },
+  {
+   "zeit": "2026-11-26T16:15:00+01:00",
+   "mm_h": 0.0,
+   "konvektiv": false,
+   "hagel": false
+  },
+  {
+   "zeit": "2026-11-26T16:30:00+01:00",
+   "mm_h": 0.0,
+   "konvektiv": false,
+   "hagel": false
+  },
+  {
+   "zeit": "2026-11-26T16:45:00+01:00",
+   "mm_h": 0.0,
+   "konvektiv": false,
+   "hagel": false
+  },
+  {
+   "zeit": "2026-11-26T17:00:00+01:00",
+   "mm_h": 0.0,
+   "konvektiv": false,
+   "hagel": false
+  }
+ ]
+}

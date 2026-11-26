@@ -37,6 +37,7 @@
   "api.fehler.mcp_zeitpunkt_ungueltig": "Die Zeitangabe für {parameter} ist ungültig. Erwartet wird ISO 8601, zum Beispiel 2026-11-22T14:00.",
   "api.fehler.mcp_bis_vor_von": "Das Ende des Zeitraums (bis) muss nach dem Beginn (von) liegen.",
   "api.fehler.mcp_zeitraum_ausserhalb": "Der Zeitraum liegt außerhalb der Vorhersage, für ihn gibt es keine Stundenwerte.",
+  "api.fehler.mcp_feld_unbekannt": "Das Feld „{feld}“ gibt es nicht. Gültige Feldnamen: {gueltig}.",
   "api.skala.wind.schwach": "schwach",
   "api.skala.wind.maessig": "mäßig",
   "api.skala.wind.stark": "stark",

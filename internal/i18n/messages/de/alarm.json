@@ -1,0 +1,8 @@
+{
+  "alarm.radar.intensitaet.trocken": "Kein Niederschlag",
+  "alarm.radar.intensitaet.leicht": "Leichter Regen",
+  "alarm.radar.intensitaet.maessig": "Mäßiger Regen",
+  "alarm.radar.intensitaet.stark": "Starker Regen",
+  "alarm.radar.intensitaet.gewitter": "Gewitter",
+  "alarm.radar.intensitaet.hagel_gewitter": "Starker Hagel/Gewitter"
+}
