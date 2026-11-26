@@ -82,3 +82,10 @@ Ladezustand und Fehler ⇒ „—", nie „Allgemein" geraten. Die aufgelöste A
 
 ### Open Questions
 - keine (kein Produkt-Zielkonflikt; „—" bei Laden/Fehler folgt dem bestehenden Muster)
+
+## S1 umgesetzt (2026-11-26), Adversary VERIFIED nach Fix-Loop 1
+
+- Neu: `shared/wetter-tab/vorlagenIdLader.ts` (Cache je Eintrag, Entdopplung, Pakete à 32, Ticket), `shared/alarme-tab/aboVorlageId.svelte.ts` (Verdrahtung Abo → ID, null beim Laden, bei Fehler und nach Abo-Wechsel). AlarmeTab: Test-Prop `vorlageIdOverride`.
+- Fix-Loop 1: F001 HIGH (Verdrahtung ungetestet) und F002 LOW (Entdopplung) behoben; Runde 2: 10 von 12 Verfälschungen gefangen, 1 gleichwertig.
+- **Offen für S2 (F003 LOW):** Dass AlarmeTab das richtige Abo (`trip ?? preset`) an `erstelleAboVorlageId` übergibt, prüft kein Test (Verfälschung `abo: null` bleibt grün). In S2 einen Fall ergänzen.
+- Gate-Hinweis: Der Checklisten-Gate kennt nur [x]/[ ]; Kriterien späterer Scheiben stehen im Dialog-Protokoll als eigener Abschnitt ohne Checkbox, sie werden in ihrer eigenen Scheibe nachgewiesen.
