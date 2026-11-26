@@ -1,0 +1,54 @@
+{
+  "verified_commit": "e1864c22549b98ac407014bc5eaee341c6950e28",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com:AC-1",
+      "evidence": "60/60 Seitenpr\u00fcfungen gr\u00fcn (DE Pr\u00fcfkonto, EN E2E-EN-Konto; je Desktop 1440 und Handy 390): Trip-Liste, Trip-Hub Reiter \u00dcbersicht/Etappen/Wetter/Zustellung, Orte-Liste, Vergleich-Liste, Vergleich-Hub Reiter \u00dcbersicht/Orte/Wetter/Zustellung, /trips/new, /compare/new. Keine Konsolenfehler, keine rohen Schl\u00fcssel (layout.ausgabe./wertebereiche.kategorie./bausteine.), Wetter-Reiter zeigt Temperatur/Wind bzw. Temperature/Wind. Screenshots docs/artifacts/rework-3020-r2-restbestand/",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-7..AC-12",
+      "status": "SKIPPED",
+      "url": "https://staging.gregor20.henemm.com:AC-7",
+      "evidence": "out-of-scope: Struktur-ACs durch Tests/CI belegt",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-26T13:53:10.661240+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: 1/1 UI-AC gr\u00fcn (R2 R\u00fcckbau, DE+EN, Desktop+Handy, 60/60 Seitenpr\u00fcfungen)",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: 1/1 UI-AC gr\u00fcn (R2 R\u00fcckbau, DE+EN, Desktop+Handy, 60/60 Seitenpr\u00fcfungen)",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-26T13:53:10.661240+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
