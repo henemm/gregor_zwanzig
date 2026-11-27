@@ -90,7 +90,8 @@ class _Postfach:
         roh = self._roh[int(mid) - 1]
         if "HEADER" in teil:
             # #2035: Server-Zeit (frisch) im Praefix, wie ein echter IMAP-Server
-            import imaplib, time
+            import imaplib
+            import time
             jetzt = imaplib.Time2Internaldate(time.time()).encode()
             return "OK", [(b"1 (INTERNALDATE " + jetzt + b" BODY[HEADER] {1}",
                            roh.split(b"\n\n", 1)[0] + b"\n\n")]
