@@ -122,13 +122,13 @@ def _gruen_xml() -> str:
 
 
 def _nachweis(ordner: Path, datei_sha: str, *, commit: str | None = None,
-              skipped=0, failures=0, errors=0, tests=None) -> Path:
+              skipped=0, failures=0, errors=0, tests=None, passed=None) -> Path:
     ordner.mkdir(parents=True, exist_ok=True)
     namen = sorted(SOLL) if tests is None else list(tests)
     pfad = ordner / f"{datei_sha}.json"
     pfad.write_text(json.dumps({
         "commit": commit if commit is not None else datei_sha,
-        "passed": len(namen),
+        "passed": len(namen) if passed is None else passed,
         "skipped": skipped,
         "failures": failures,
         "errors": errors,
@@ -418,6 +418,11 @@ _GATE_FAELLE = {
     "failures_gt_0": (lambda d: _nachweis(d, SHA_A, failures=1), {}, 1),
     "errors_gt_0": (lambda d: _nachweis(d, SHA_A, errors=1), {}, 1),
     "soll_test_fehlt": (lambda d: _nachweis(d, SHA_A, tests=sorted(SOLL)[1:]), {}, 1),
+    # Doppelschutz einzeln bewacht (F002): Namens- und Zaehlerpruefung je allein
+    "passed_6_fremdname_statt_soll": (
+        lambda d: _nachweis(d, SHA_A, tests=sorted(SOLL)[1:] + ["test_fremd_live"]), {}, 1),
+    "passed_5_mit_allen_6_namen": (
+        lambda d: _nachweis(d, SHA_A, passed=5), {}, 1),
     "datei_fehlt": (lambda d: d.mkdir(parents=True, exist_ok=True), {}, 1),
     "kaputtes_json": (lambda d: (d.mkdir(parents=True, exist_ok=True),
                                  (d / f"{SHA_A}.json").write_text("{kaputt")), {}, 1),
@@ -546,6 +551,116 @@ def test_fingerabdruck_erkennt_jede_aenderung_am_zweiten_nutzer(tmp_path):
     d, fp = _neu("geloescht")
     (d / "trips" / "gr20.json").unlink()
     assert mod.fingerabdruck(d) != fp
+
+
+# ---------------------------------------------------------------------------
+# main() bis durch den pytest-Lauf (F001): Fake-Staging + Fake-uv
+# ---------------------------------------------------------------------------
+
+def _fake_staging(basis: Path) -> tuple[Path, str]:
+    """Echtes git-Repo mit Commit, Platzhalter-.env und vorhandenem
+    zweiten Test-Nutzer (Name aus dem Werkzeug: tg-live-e2e-zweiter)."""
+    staging = basis / "staging"
+    staging.mkdir(parents=True)
+    _git(staging, "init")
+    _git(staging, "config", "user.email", "test@example.com")
+    _git(staging, "config", "user.name", "Test")
+    (staging / "README.md").write_text("staging\n")
+    _git(staging, "add", "README.md")
+    _git(staging, "commit", "-m", "init")
+    (staging / ".env").write_text(
+        f"GZ_TELEGRAM_BOT_TOKEN={BOT_TOKEN}\nGZ_TELEGRAM_TEST_CHAT_ID={CHAT_ID}\n")
+    zweiter = staging / "data" / "users" / "tg-live-e2e-zweiter"
+    (zweiter / "trips").mkdir(parents=True)
+    (zweiter / "user.json").write_text('{"id": "tg-live-e2e-zweiter", "language": "de"}')
+    (zweiter / "trips" / "gr20.json").write_text('{"name": "GR20"}')
+    return staging, _git(staging, "rev-parse", "HEAD")
+
+
+def _fake_uv(basis: Path, *, junit_xml: str | None, beruehre_zweiten: bool = False) -> Path:
+    """Echtes ausfuehrbares Ersatz-uv (Python-Skript): schreibt die vorgegebene
+    junit-XML an den per --junitxml uebergebenen Pfad (None = keine Datei),
+    gibt Geheimnisse auf stdout/stderr aus (muessen verworfen werden), legt
+    die empfangene Umgebung ab und veraendert optional den zweiten Nutzer."""
+    vorlage = basis / "fake_junit.xml"
+    if junit_xml is not None:
+        vorlage.write_text(junit_xml)
+    env_ablage = basis / "fake_uv_env.json"
+    uv = basis / "fake_bin" / "uv"
+    uv.parent.mkdir(parents=True, exist_ok=True)
+    uv.write_text(
+        f"#!{sys.executable}\n"
+        "import json, os, shutil, sys\n"
+        f"print('token {BOT_TOKEN} chat {CHAT_ID}')\n"
+        f"print('E RuntimeError {FREMD_TOKEN}', file=sys.stderr)\n"
+        f"json.dump(dict(os.environ), open({str(env_ablage)!r}, 'w'))\n"
+        "junit = [a.split('=', 1)[1] for a in sys.argv if a.startswith('--junitxml=')][0]\n"
+        f"if {junit_xml is not None!r}:\n"
+        f"    shutil.copyfile({str(vorlage)!r}, junit)\n"
+        f"if {beruehre_zweiten!r}:\n"
+        "    p = os.path.join('data', 'users', 'tg-live-e2e-zweiter', 'trips', 'gr20.json')\n"
+        "    open(p, 'w').write('{\"name\": \"GR21\"}')\n"
+        "sys.exit(0)\n")
+    uv.chmod(uv.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    return uv
+
+
+_SKIP_XML = _junit(
+    [_case(n) for n in SOLL_686]
+    + [_case(SOLL_ZWEISPRACHIG[0],
+             '<skipped type="pytest.skip" message="nicht gesetzt">skip</skipped>')],
+    skipped=1)
+
+_MAIN_FAELLE = {
+    # fall: (junit_xml, beruehre_zweiten, erwarteter Exit, Schluss-Zeile)
+    "ok": (_gruen_xml(), False, 0, "BESTANDEN"),
+    "zweiter_nutzer_veraendert": (_gruen_xml(), True, 1, "BEFUND"),
+    "keine_junit_datei": (None, False, 2, "UMGEBUNGSFEHLER"),
+    "soll_test_skipped": (_SKIP_XML, False, 1, "BEFUND"),
+}
+
+
+@pytest.mark.parametrize("fall", list(_MAIN_FAELLE))
+def test_main_durch_pytest_lauf_mit_ersatz_uv(fall, tmp_path, capfd, monkeypatch):
+    mod = _werkzeug()
+    junit_xml, beruehre, erwartet, schluss = _MAIN_FAELLE[fall]
+    staging, sha = _fake_staging(tmp_path)
+    uv = _fake_uv(tmp_path, junit_xml=junit_xml, beruehre_zweiten=beruehre)
+    nachweis_dir = tmp_path / "nachweis"
+    monkeypatch.setenv("GZ_TELEGRAM_BOT_TOKEN", "aufrufer-wert-2541")
+
+    rc = mod.main(["--staging-dir", str(staging), "--nachweis-dir", str(nachweis_dir),
+                   "--uv", str(uv)])
+    out = capfd.readouterr()
+    text = out.out + out.err
+
+    assert (tmp_path / "fake_uv_env.json").exists(), f"{fall}: Ersatz-uv wurde nicht gestartet"
+    assert rc == erwartet, f"{fall}: Exit {rc}, erwartet {erwartet}\n{text}"
+    assert out.out.strip().splitlines()[-1] == schluss, f"{fall}: {out.out!r}"
+    assert CHAT_ID not in text and BOT_TOKEN not in text and FREMD_TOKEN not in text
+    assert not TOKEN_RE.search(text), f"{fall}: Token-Muster in der Ausgabe"
+
+    empfangen = json.loads((tmp_path / "fake_uv_env.json").read_text())
+    tg = {k: v for k, v in empfangen.items() if k.startswith("GZ_TELEGRAM_")}
+    assert tg == {"GZ_TELEGRAM_LIVE": "1"}, f"{fall}: Aufrufer-Werte erreichen pytest: {tg}"
+
+    nachweis = nachweis_dir / f"{sha}.json"
+    if erwartet == 0:
+        daten = json.loads(nachweis.read_text())
+        assert daten["commit"] == sha and daten["passed"] == 6
+        assert SOLL <= set(daten["tests"])
+        roh = nachweis.read_text()
+        assert CHAT_ID not in roh and BOT_TOKEN not in roh
+    else:
+        assert not nachweis.exists(), f"{fall}: Nachweis trotz Exit {rc}"
+        assert not nachweis_dir.exists() or list(nachweis_dir.iterdir()) == []
+
+    zeile_zweiter = [z for z in out.out.splitlines() if "zweiter Nutzer veraendert" in z]
+    if fall == "zweiter_nutzer_veraendert":
+        assert zeile_zweiter and zeile_zweiter[0].startswith("FAIL"), (
+            f"Bericht weist die Fingerabdruck-Abweichung nicht aus: {out.out!r}")
+    else:
+        assert not zeile_zweiter, f"{fall}: falscher Befund zweiter Nutzer: {out.out!r}"
 
 
 # ---------------------------------------------------------------------------

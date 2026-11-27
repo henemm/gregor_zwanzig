@@ -273,33 +273,30 @@ python3 .claude/tools/staging_befehl_pruefen.py --szenario alle          # A, B,
 ## Schritt 3c: Telegram-Scope — funktionaler Live-Test
 
 Wenn der Change den Telegram-Pfad berührt (geänderte Dateien mit `telegram` /
-`inbound_telegram` / `trip_command_processor` im Pfad), MUSS mit gesetzter
-`GZ_TELEGRAM_TEST_CHAT_ID` (+ `GZ_TELEGRAM_BOT_TOKEN`) UND explizitem
-`GZ_TELEGRAM_LIVE=1` (Opt-in-Gate, Issue #1014) der funktionale Live-Test
-laufen — AC-3/AC-4 dürfen NICHT skippen:
+`inbound_telegram` / `trip_command_processor` im Pfad, dazu `src/i18n/`), läuft der
+funktionale Live-Test mit genau einem Aufruf (#2541), sobald der Staging-Checkout
+auf dem zu prüfenden Commit steht:
 
 ```bash
-GZ_TELEGRAM_LIVE=1 GZ_TELEGRAM_TEST_CHAT_ID=<test-chat-id> GZ_TELEGRAM_BOT_TOKEN=<staging-bot-token> \
-  uv run pytest -m live tests/tdd/test_issue_686_telegram_functional_live.py -v
-# zweisprachig (Issue #2681): hilfe auf Englisch, dann wieder Deutsch
-GZ_TELEGRAM_LIVE=1 GZ_TELEGRAM_TEST_CHAT_ID=<test-chat-id> GZ_TELEGRAM_BOT_TOKEN=<staging-bot-token> \
-  uv run pytest -m live tests/tdd/test_telegram_live_zweisprachig.py -v
+python3 .claude/tools/staging_telegram_live.py
 ```
 
-**`-m live` ist Pflicht (#2813):** `pyproject.toml` schliesst per `addopts` alle
-`live`-Tests aus. Ohne `-m live` meldet pytest `0 selected` bzw. nur die Offline-Tests,
-und das ist **kein** Bestanden. Erst eine Ausgabe mit den Live-Tests als PASSED zaehlt.
-Die Live-Tests setzen `data/users/tg-live-e2e` nach jedem Test auf den Ausgangszustand
-zurueck (Fixture `tg_live_datenwurzel_zuruecksetzen`); der Waechter #2226 darf am
-Sessionende keinen Teardown-Error melden.
+Das Werkzeug liest die Zugangsdaten selbst aus der Staging-`.env` (der Agent braucht
+und liest sie nicht), startet beide Live-Dateien mit `-m live` und `GZ_TELEGRAM_LIVE=1`
+im Staging-Checkout und gibt nur Testnamen, Zähler und Fehlerklasse aus.
 
-Aenderungen unter `src/i18n/` zaehlen als Telegram-Scope (die Texte kommen aus den Katalogen).
+- **Exit 0:** alle Soll-Live-Tests PASSED, nichts übersprungen, zweiter Test-Nutzer
+  unverändert. Der Nachweis `.claude/e2e_telegram_live/<staging-HEAD>.json` liegt vor.
+- **Exit 1:** Befund (0 Tests, SKIPPED, Failure, Teardown-Error des Wächters #2226,
+  fehlender Soll-Test oder veränderte Daten des zweiten Test-Nutzers). Kein Nachweis.
+- **Exit 2:** Umgebungsfehler (Checkout, `uv` oder `.env` fehlt, pytest startet nicht).
+  Kein Nachweis.
 
 Ein SKIPPED Telegram-Live-Test zählt **nicht** als grün. Das
-`staging_gate.py --write-verdict`-Gate erzwingt das automatisch: berührt der
-committete Scope (HEAD~1..HEAD) Telegram und `GZ_TELEGRAM_TEST_CHAT_ID` fehlt,
-verweigert es das Verdict (Exit ≠ 0) und blockiert damit das Issue-Close-Gate
-(Issue #686, AC-5).
+`staging_gate.py --write-verdict`-Gate erzwingt das: berührt der committete Scope
+(HEAD~1..HEAD) Telegram und fehlt ein gültiger Nachweis für genau diesen Commit,
+verweigert es das Verdict (Exit ≠ 0). Eine Chat-ID im Environment ersetzt den
+Nachweis nicht (#686 AC-5, #2541).
 
 ## Schritt 4: Test-Trip aufraeumen
 

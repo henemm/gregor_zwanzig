@@ -239,9 +239,10 @@ def prune_old_attestations(tagged_dir: Path, retention: int = ATTESTATION_RETENT
 
 def _telegram_live_gate() -> int:
     """Issue #686 AC-5: Verweigert das Verdict, wenn der committete Scope den
-    Telegram-Pfad berührt, aber GZ_TELEGRAM_TEST_CHAT_ID fehlt (SKIPPED ≠ grün).
+    Telegram-Pfad berührt, aber kein gültiger Nachweis
+    ``.claude/e2e_telegram_live/<HEAD>.json`` vorliegt (SKIPPED ≠ grün, #2541).
 
-    Returns: 0 = ok (kein Telegram-Scope ODER Test-Chat-ID gesetzt), 1 = blocken.
+    Returns: 0 = ok (kein Telegram-Scope ODER gültiger Nachweis), 1 = blocken.
     Import-Fehler des dependency-armen Hooks sind fail-soft (Warnung + 0).
     """
     import importlib.util
@@ -268,11 +269,16 @@ def _telegram_live_gate() -> int:
             "HEAD~1", "HEAD", _verified_repo_dir(), p),
     ):
         return 0
-    if mod.gate(scope_touches_telegram=True, env=dict(os.environ)) != 0:
+    # #2541 AC-6: commit-gebundener Nachweis statt Env-Präsenz der Chat-ID.
+    repo = _verified_repo_dir()
+    commit = _e2e_paths.head_sha(repo)
+    nachweis_dir = Path(repo) / ".claude" / "e2e_telegram_live"
+    if mod.gate(True, commit=commit, nachweis_dir=nachweis_dir) != 0:
         _log(
-            "FEHLER: Change berührt den Telegram-Pfad, aber GZ_TELEGRAM_TEST_CHAT_ID "
-            "fehlt — funktionaler Telegram-Live-Test (AC-5, Issue #686) nicht bestanden. "
-            "Verdict verweigert.",
+            "FEHLER: Change berührt den Telegram-Pfad, aber es fehlt ein gültiger "
+            f"Telegram-Live-Nachweis für Commit {commit} — bitte "
+            "`python3 .claude/tools/staging_telegram_live.py` ausführen "
+            "(Issue #2541, AC-6). Verdict verweigert.",
             stream=sys.stderr,
         )
         return 1

@@ -3,46 +3,103 @@ e2e_telegram_live.py — Verankerung für funktionale Telegram-Live-Tests (Issue
 
 Dependency-arm: nur stdlib, läuft unter System-python3 ohne App-Deps (siehe #685-Lehre).
 
-Zweck: Wenn ein Change den Telegram-Pfad berührt und GZ_TELEGRAM_TEST_CHAT_ID fehlt,
-blockt dieser Hook das Close-Gate (Exit != 0). Ein SKIPPED im Telegram-Live-Pfad
-zählt nicht als grün.
+Zweck: Wenn ein Change den Telegram-Pfad berührt, verlangt dieser Hook einen
+commit-gebundenen Nachweis des Telegram-Live-Laufs
+(``.claude/e2e_telegram_live/<sha>.json``, geschrieben von
+``python3 .claude/tools/staging_telegram_live.py``), sonst blockt er das
+Close-Gate (Exit != 0). Ein SKIPPED im Telegram-Live-Pfad zählt nicht als grün;
+die bloße Anwesenheit von GZ_TELEGRAM_TEST_CHAT_ID im Environment genügt nicht
+(Issue #2541, AC-6). Restrisiko: die Herkunft der Datei wird nicht geprüft.
 """
 from __future__ import annotations
 
-import os
+import json
 import re
 import sys
+from pathlib import Path
+
+#: Ordnername des Nachweises unter ``<repo>/.claude/`` (eigener Ordner, damit
+#: prune_old_attestations ihn nicht erfasst).
+NACHWEIS_ORDNER = "e2e_telegram_live"
+#: Soll-Live-Tests (einzige Quelle; das Werkzeug
+#: .claude/tools/staging_telegram_live.py übernimmt diese Liste).
+SOLL_TESTS = (
+    "test_ac3_all_seven_commands_produce_meaningful_content",
+    "test_ac4_live_delivery_and_cleanup",
+    "test_ac25_live_menu_entspricht_der_vollstaendigen_ac21_liste",
+    "test_ac24_hilfe_bei_trip_und_vergleich_antwortet_sofort_live",
+    "test_heute_ohne_namen_bei_trip_und_vergleich_fragt_live_zurueck",
+    "test_hilfe_englisch_dann_deutsch_live",
+)
+WERKZEUG_AUFRUF = "python3 .claude/tools/staging_telegram_live.py"
+_SHA_RE = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 
 
-def gate(scope_touches_telegram: bool, env: dict) -> int:
+def _ist_null(wert) -> bool:
+    return isinstance(wert, int) and not isinstance(wert, bool) and wert == 0
+
+
+def nachweis_mangel(commit, nachweis_dir) -> "str | None":
+    """Prüft den Nachweis für genau ``commit``. None = gültig, sonst Grund."""
+    if not isinstance(commit, str) or not _SHA_RE.match(commit):
+        return f"verifizierter Commit unbekannt oder ungültig ({commit!r})"
+    if nachweis_dir is None:
+        return "kein Nachweis-Ordner angegeben"
+    pfad = Path(nachweis_dir) / f"{commit}.json"
+    try:
+        daten = json.loads(pfad.read_text())
+    except FileNotFoundError:
+        return f"kein Nachweis für Commit {commit} ({pfad})"
+    except (OSError, ValueError) as exc:
+        return f"Nachweis nicht lesbar ({exc})"
+    if not isinstance(daten, dict):
+        return "Nachweis ist kein JSON-Objekt"
+    if daten.get("commit") != commit:
+        return f"Nachweis gehört zu Commit {daten.get('commit')!r}, nicht {commit}"
+    for feld in ("skipped", "failures", "errors"):
+        if not _ist_null(daten.get(feld)):
+            return f"Nachweis meldet {feld}={daten.get(feld)!r} (muss 0 sein)"
+    tests = daten.get("tests")
+    if not isinstance(tests, list):
+        return "Nachweis ohne Testliste"
+    fehlend = [t for t in SOLL_TESTS if t not in tests]
+    if fehlend:
+        return f"Soll-Live-Tests fehlen im Nachweis: {', '.join(fehlend)}"
+    passed = daten.get("passed")
+    if (not isinstance(passed, int) or isinstance(passed, bool)
+            or passed < len(SOLL_TESTS)):
+        return f"Nachweis meldet passed={passed!r} (mindestens {len(SOLL_TESTS)})"
+    return None
+
+
+def gate(scope_touches_telegram: bool, commit=None, nachweis_dir=None,
+         env=None) -> int:
     """Prüft ob der Telegram-Live-Test als bestanden gewertet werden darf.
 
     Args:
         scope_touches_telegram: True wenn der Change-Scope Telegram-Code berührt.
-        env: Umgebungsvariablen (dict, z.B. dict(os.environ)).
+        commit: verifizierter Commit (SHA), für den der Nachweis gelten muss.
+        nachweis_dir: Ordner mit ``<sha>.json``-Nachweisen.
+        env: wird bewusst ignoriert — eine Chat-ID im Environment ersetzt den
+            Nachweis nicht (#2541, AC-6).
 
     Returns:
         0  — bestanden oder sauberer Skip (Scope berührt Telegram nicht)
-        1  — Nicht-bestanden (Telegram-Scope, aber kein Test-Chat konfiguriert)
+        1  — Nicht-bestanden (Telegram-Scope, kein gültiger Nachweis)
     """
+    del env  # absichtlich ungenutzt
     if not scope_touches_telegram:
-        # Sauberer Skip: Change berührt Telegram nicht → kein Live-Test nötig
         return 0
-
-    chat_id = env.get("GZ_TELEGRAM_TEST_CHAT_ID", "").strip()
-    if not chat_id:
-        # Telegram-Scope berührt, aber kein Test-Chat-ID → Nicht-bestanden
-        # SKIPPED zählt nicht als grün (AC-5)
-        print(
-            "ERROR: GZ_TELEGRAM_TEST_CHAT_ID ist nicht gesetzt.\n"
-            "Der Change-Scope berührt Telegram. Ein SKIPPED Telegram-Live-Test\n"
-            "gilt nicht als grün — bitte GZ_TELEGRAM_TEST_CHAT_ID setzen.",
-            file=sys.stderr,
-        )
-        return 1
-
-    # Token + Chat-ID vorhanden → Live-Test kann laufen (wird via pytest AC-4 ausgeführt)
-    return 0
+    mangel = nachweis_mangel(commit, nachweis_dir)
+    if mangel is None:
+        return 0
+    print(
+        f"ERROR: Telegram-Live-Nachweis fehlt oder ist ungültig: {mangel}.\n"
+        "Der Change-Scope berührt Telegram. Ein SKIPPED Telegram-Live-Test\n"
+        f"gilt nicht als grün — bitte auf Staging ausführen: {WERKZEUG_AUFRUF}",
+        file=sys.stderr,
+    )
+    return 1
 
 
 def _scope_touches_telegram(changed_files: list[str] | None = None,
@@ -148,9 +205,22 @@ def _is_neutral_path(path: str) -> bool:
 
 if __name__ == "__main__":
     # Standalone-Aufruf: python3 e2e_telegram_live.py [file1 file2 ...]
+    import subprocess
+
     files = sys.argv[1:] if len(sys.argv) > 1 else None
     touches = _scope_touches_telegram(files)
-    rc = gate(scope_touches_telegram=touches, env=dict(os.environ))
+
+    def _git(*args) -> "str | None":
+        try:
+            r = subprocess.run(["git", *args], capture_output=True, text=True, timeout=10)
+        except Exception:  # noqa: BLE001 — fail-closed: kein Commit => kein Nachweis
+            return None
+        return r.stdout.strip() if r.returncode == 0 else None
+
+    head = _git("rev-parse", "HEAD")
+    top = _git("rev-parse", "--show-toplevel")
+    ordner = Path(top) / ".claude" / NACHWEIS_ORDNER if top else None
+    rc = gate(scope_touches_telegram=touches, commit=head, nachweis_dir=ordner)
     if rc != 0:
         print(f"FAIL: Telegram-Live-Gate nicht bestanden (Exit {rc})", file=sys.stderr)
     sys.exit(rc)

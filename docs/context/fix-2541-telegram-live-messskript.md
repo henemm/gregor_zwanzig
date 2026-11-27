@@ -133,3 +133,14 @@ Attestation theoretisch handschreibbar; HMAC-Härtung bewusst außerhalb des Sco
 - Vertrag aus den Tests: `abschluss(exit_code, ordner, sha, ergebnis, geheimnisse)` → Datei nur bei 0, sonst None (vorhandener Nachweis bleibt byte-/mtime-gleich); `baue_befehl()[:3] == ["uv","run","pytest"]`; `gate(scope_touches_telegram=False)` ohne weitere Argumente aufrufbar; ungültiges XML ⇒ Exit 2; Umgebungsfehler-Meldungen nennen Checkout-Pfad, „uv“ bzw. „.env“ (auch `.env` als Verzeichnis); `fingerabdruck` ohne mtime; Testnamen mit Param-ID werden maskiert.
 - AC-9: `gates_und_ratschen.md` braucht einen `##`/`###`-Abschnitt mit `e2e_telegram_live`, `staging_telegram_live.py`, „Nachweis“, „Restrisiko“; `e2e-verify.md` ohne `GZ_TELEGRAM_TEST_CHAT_ID=<` und `GZ_TELEGRAM_BOT_TOKEN=<`.
 - Nebenbefund: `tests/tdd/test_telegram_live_zweisprachig.py:82` ruft `mod.gate(..., {})` positionell auf und erwartet 1 → Test auf `env={}` umstellen (oder Implementierung robust: kein gültiger Commit ⇒ 1).
+
+## Stand Phase 6 (erster Developer-Lauf, 2026-11-27)
+
+- Fertig (ungesichert im Worktree): `.claude/tools/staging_telegram_live.py` (neu), `.claude/commands/e2e-verify.md` 3c, `docs/reference/gates_und_ratschen.md` (Abschnitt Telegram-Live-Nachweis-Gate), `.gitignore` (`.claude/e2e_telegram_live/`). 15 grün, 12 rot – alle roten hängen an den Hooks.
+- Blocker: Edit-Gate Schritt 4 sperrt `.claude/hooks/*` bis der PO `override` tippt (1 h). Nicht umgehen.
+- Nach Override anzuwenden (Developer-Entwurf):
+  - `e2e_telegram_live.py`: `NACHWEIS_ORDNER="e2e_telegram_live"`, `SOLL_TESTS` (6 Namen), `_SHA_RE=^(?:[0-9a-f]{40}|[0-9a-f]{64})$`, `nachweis_mangel(commit, nachweis_dir)->str|None` (Commit str+SHA, Datei JSON-dict, commit-Feld gleich, skipped/failures/errors int (nicht bool) ==0, `tests` Liste ⊇ SOLL_TESTS, `passed` int ≥ len(SOLL_TESTS)); `gate(scope, commit=None, nachweis_dir=None, env=None)`: ohne Scope 0, Mangel ⇒ stderr mit Werkzeug-Aufruf + 1; env ignoriert. `__main__`: Commit/Ordner per git rev-parse.
+  - `staging_gate._telegram_live_gate()`: `repo=_verified_repo_dir(); commit=_e2e_paths.head_sha(repo)`; `mod.gate(True, commit=commit, nachweis_dir=repo/".claude"/"e2e_telegram_live")`; Meldung nennt `python3 .claude/tools/staging_telegram_live.py`.
+  - Folgeanpassung: `tests/tdd/test_staging_gate_sprachen.py::test_cli_write_verdict_langs_flag` verlässt sich auf `GZ_TELEGRAM_TEST_CHAT_ID` → gültigen Nachweis schreiben.
+  - Optional: Werkzeug übernimmt `SOLL_TESTS` per importlib aus dem Hook (eine Quelle).
+- `qa_gate.py --run` meldet „Kein Testbefehl konfiguriert“ (Konfigurationslücke, kein Code-Fehler).
