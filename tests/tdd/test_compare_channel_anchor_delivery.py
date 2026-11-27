@@ -26,10 +26,11 @@ zusaetzlich, dass ein Lauf von Nutzer A im Baum von Nutzer B nichts schreibt.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
+from tests.helpers.briefing_imminent_fixtures import write_user_tier
 from tests.helpers.alert_log_fixtures import (
     read_log,
     settings_email_and_failing_telegram,
@@ -37,17 +38,21 @@ from tests.helpers.alert_log_fixtures import (
 from tests.tdd._compare_channel_anchor_fixtures import (
     ANKER_MM,
     FRISCH_HOCH_MM,
+    FesteQuelle,
     FRISCH_NIEDRIG_MM,
     ORT_A,
     ORT_B,
     alarm_dateien,
     alarmlauf,
+    basis_mm,
+    basis_spion,
     briefing_anker,
     kanal_merker,
     lege_vergleich_an,
     letzter_eintrag,
     merker,
     nutzer,
+    punkt,
     snapshot_dir,
     telegram_gescheitert,
     verzeichnis_stand,
@@ -55,6 +60,15 @@ from tests.tdd._compare_channel_anchor_fixtures import (
 
 EMAIL_ALT_MM = 5.0
 TELEGRAM_ALT_MM = 6.0
+# Dringlichkeit eines Orts kommt aus der Ampel (Muster
+# test_compare_alert_channel_threshold.py): 13 mm -> gelb (LOW),
+# 30 mm -> rot (HIGH). Ohne Ampel waeren beide Orte HIGH -> nur EINE Gruppe.
+_AMPEL_GERING_HOCH = {
+    "template": "allgemein",
+    "metrics": {"precipitation": {
+        "upper": {"yellow": 10, "orange": 20, "red": 29}, "alarm_ab": "yellow",
+    }},
+}
 
 
 def _settings():
@@ -135,11 +149,21 @@ def test_ac2_merker_nur_fuer_orte_der_zugestellten_gruppe():
 
     HEUTE ROT: ``load_alarm_anchor`` existiert nicht (AttributeError).
     Mutation "Schreiben ueber ``delivered_all`` fuer alle Gruppen-Orte"
-    gaebe Ort B einen E-Mail-Merker -> rot.
+    gaebe Ort B einen E-Mail-Merker -> rot. Das greift nur, wenn die
+    zugestellte Gruppe {A} VOR der gescheiterten {A, B} laeuft; die
+    Gruppenfolge ist seit F001 (Fix-Loop 1) nach Ortsliste sortiert und
+    damit unabhaengig von PYTHONHASHSEED.
     """
     uid, pid = nutzer("ac2"), "cp-s2-ac2"
+    # Fixtur-Schutz Reihenfolge: der Versand sortiert die Gruppen nach ihrer
+    # sortierten Ortsliste -- {A} muss also vor {A, B} kommen, sonst liefe die
+    # gescheiterte Gruppe zuerst und die delivered_all-Mutation bliebe stumm.
+    assert (ORT_A[0],) < tuple(sorted((ORT_A[0], ORT_B[0]))), (
+        "Fixtur-Schutz: Gruppe {A} (E-Mail) muss vor Gruppe {A, B} (Telegram) laufen."
+    )
     lege_vergleich_an(uid, pid, orte=(ORT_A, ORT_B), send_telegram=True,
-                      alert_channel_thresholds={"email": "HIGH"})
+                      alert_channel_thresholds={"email": "HIGH"},
+                      display_config={"ampel": _AMPEL_GERING_HOCH})
     for loc in (ORT_A[0], ORT_B[0]):
         briefing_anker(uid, pid, loc, ANKER_MM, alter=timedelta(hours=2))
 
@@ -290,4 +314,78 @@ def test_ac9_merker_aendert_gedaechtnis_throttle_protokoll_nicht_und_schreibfehl
     em_a = merker(uid_a, pid, ORT_A[0], "email")
     assert em_a is not None and em_a.aggregated.precip_sum_mm == pytest.approx(FRISCH_HOCH_MM), (
         "AC-9: bei Nutzer A muss der E-Mail-Merker geschrieben sein."
+    )
+
+
+# ═══════════════════ Merker-Datum aus der Basis (F002) ═══════════════════════
+
+
+class _QuelleOhneDatum(FesteQuelle):
+    """Echte Unterklasse der festen Quelle (kein Mock): liefert den
+    Frischpunkt stets OHNE ``target_date`` -- wie eine Wetterquelle, die den
+    uebergebenen Tagesbezug nicht zurueckspiegelt."""
+
+    def fetch(self, point_id, lat, lon, start_hour=None, end_hour=None, **kw):
+        self.aufrufe.append({"point_id": point_id, **kw})
+        return punkt(point_id, self._werte.get(point_id, 0.0), target_date=None)
+
+
+def _lauf_mit(uid: str, quelle, mails: list) -> int:
+    from services.compare_alert import CompareAlertService
+
+    return CompareAlertService(
+        settings=_settings(), user_id=uid, weather_source=quelle,
+        mail_sink=lambda subject, body: mails.append((subject, body)),
+    ).check_all_compare_presets()
+
+
+def test_merker_uebernimmt_datum_der_basis_wenn_frischpunkt_keins_traegt(monkeypatch):
+    """Spec "Herkunft von target_date am geschriebenen Merker" (+ AC-6).
+
+    GIVEN ein Ortsvergleich nur mit E-Mail, ein DATIERTER Briefing-Anker, und
+          eine Wetterquelle, die den Frischpunkt ohne ``target_date`` liefert.
+    WHEN  ein Alarm per E-Mail zugestellt wird und danach ein zweiter
+          Alarmlauf (ohne neue Abweichung) die Basis bestimmt.
+    THEN  traegt der geschriebene E-Mail-Merker das Datum des Briefing-Ankers,
+          und der zweite Lauf vergleicht gegen DIESEN Merker (er ist neuer als
+          der Briefing-Anker und besteht den Tagesbezug-Guard).
+
+    Mutationen ``pass`` statt ``dataclasses.replace`` bzw. ``if False:``
+    liessen den Merker undatiert -> Guard verwirft ihn -> Basis waere der
+    Briefing-Anker (2 mm) -> rot.
+    """
+    uid, pid = nutzer("f002"), "cp-s2-f002"
+    tag = date.today() + timedelta(days=1)
+    lege_vergleich_an(uid, pid)
+    # Tageslimit aus: der Folgelauf soll die Basis auswerten, nicht am
+    # free-Limit (ein Abweichungsalarm je Tag) enden.
+    write_user_tier(uid, "premium")
+    briefing_anker(uid, pid, ORT_A[0], ANKER_MM, alter=timedelta(hours=4), target_date=tag)
+
+    mails: list = []
+    quelle = _QuelleOhneDatum({ORT_A[0]: FRISCH_HOCH_MM})
+    sent = _lauf_mit(uid, quelle, mails)
+
+    assert sent == 1 and mails, "Fixtur-Schutz: der Alarm muss per E-Mail zugestellt sein."
+    assert quelle.aufrufe and quelle.aufrufe[0].get("target_date") == tag, (
+        "Fixtur-Schutz: der Abruf muss den Tagesbezug des Briefing-Ankers erhalten haben."
+    )
+    em = merker(uid, pid, ORT_A[0], "email")
+    assert em is not None and em.aggregated.precip_sum_mm == pytest.approx(FRISCH_HOCH_MM), (
+        "Fixtur-Schutz: der E-Mail-Merker muss den zugestellten Frischstand tragen."
+    )
+    assert em.target_date == tag, (
+        f"Merker muss das Datum der Basis ({tag}) uebernehmen, traegt {em.target_date!r}."
+    )
+
+    # Sperrzeit des ersten Versands ueber die echte Store-API beenden, damit
+    # der Folgelauf die Basis tatsaechlich auswertet.
+    from services.throttle_store import ThrottleStore
+
+    ThrottleStore(uid).clear("compare_preset", pid)
+    gesehen = basis_spion(monkeypatch)
+    _lauf_mit(uid, _QuelleOhneDatum({ORT_A[0]: FRISCH_HOCH_MM}), [])
+    assert basis_mm(gesehen) == pytest.approx(FRISCH_HOCH_MM), (
+        "Folgelauf muss den datierten E-Mail-Merker als Basis nehmen, nicht den "
+        "aelteren Briefing-Anker."
     )

@@ -346,6 +346,8 @@ Annahme spiegelt). Dateien unter `tests/tdd/`:
 - Die Basis der gemeinsamen Auswertung berücksichtigt die rohe `config.channels`-Menge,
   nicht den Schwellenfilter (wie S1); ein gefilterter Kanal kann die Basis nur nach
   hinten ziehen.
+- Fehlt der Briefing-Anker, zählt ein Kanal-Merker allein nach seinem Alter (ohne
+  Tagesbezug, dem er widersprechen könnte); Tech-Lead-Entscheid im Fix-Loop 1.
 
 ## Definition of Done
 
@@ -361,3 +363,7 @@ Annahme spiegelt). Dateien unter `tests/tdd/`:
 - 2026-11-27: Initiale Spec für Scheibe S2 (Ortsvergleich), Variante B' aus der
   Analyse in `docs/context/fix-1987-compare-kanal-anker.md`; `target_date`-Herkunft des
   Merkers am Code geprüft und festgelegt.
+- 2026-11-27: Fix-Loop 1 nach Adversary-Befund: Versandgruppen laufen in fester,
+  sortierter Reihenfolge (reproduzierbar, unabhängig von der Set-Iteration); Kern-Test
+  für die Übernahme des Basis-Datums in den Merker ergänzt; Known Limitation "Merker
+  ohne Briefing-Anker zählt nach Alter" dokumentiert.
