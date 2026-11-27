@@ -277,3 +277,10 @@ hooks:
 herdr:
   auto_clear:
     enabled: true
+
+# Deploy (#2873): Phase 8 laeuft autonom (/70-deploy), die Seitenleiste zeigt den Stand
+deploy:
+  command: "bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh"
+  verify: "python3 .claude/hooks/prod_selftest.py"
+  rollback: "siehe docs/reference/operations_playbook.md (Rollback)"
+  autonomous: true
