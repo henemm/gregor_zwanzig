@@ -109,4 +109,31 @@ EIN gemeinsamer Lauf (ADR-0021). Er bekommt weiterhin genau eine Vergleichsbasis
 verlorengeht; gegen Wiederholungen schützt weiterhin das Melde-Gedächtnis (`alert_state`).
 
 Details und Akzeptanzkriterien: `docs/specs/modules/fix_1987_kanal_anker.md`.
-Der Ortsvergleichs-Δ-Anker bleibt kanalagnostisch (Scheibe S2, zurückgestellt).
+Der Ortsvergleichs-Δ-Anker ist seit Scheibe S2 ebenfalls kanalscharf (Amendment unten).
+
+## Amendment 2026-11-27 (Issue #1987 S2): Ortsvergleich kanalscharf und rollierend
+
+Bis S2 schob den Ortsvergleichs-Δ-Anker nur das Briefing, kanallos; ein zugestellter Alarm
+ließ ihn stehen. Ab S2 führt der Ortsvergleich zusätzlich je Ort und Kanal einen
+**Alarm-Merker** `{preset}__{loc}__alarm_{channel}.json` (gleiches Format wie der
+Briefing-Anker, Präfix `{preset}__` für `delete()` und Go-Cleanup). Geschrieben wird er nach
+dem Versand je Versandgruppe, nur für die Orte dieser Gruppe und nur für die Kanäle, die in
+dieser Gruppe tatsächlich **zugestellt** haben (`delivered_channels`); fail-soft, ohne
+Eingriff in Melde-Gedächtnis, Backoff, Protokoll, Throttle oder Tageslimit.
+
+**Basis-Regel (Variante B'):** je Kanal der rohen `config.channels` gilt der **neueste
+gültige** Stand aus {Briefing-Anker, Merker dieses Kanals}. Gültig heißt: höchstens 26 h alt
+(die **eine** Grenze `_MAX_ANCHOR_AGE` für beide Quellen) und — für den Merker — gleicher
+Tagesbezug (`target_date`) wie der Briefing-Anker (beide leer = gleich, #1661). Merker anderer
+Kanäle fließen nie ein. Der gemeinsame Lauf (ADR-0021) vergleicht gegen die **älteste**
+Kanal-Basis; die Alarm-Vorschau nutzt dieselbe Auflösung. Ohne gültigen Stand bleibt es beim
+bisherigen `too_old`/`missing`-Verhalten. Der Briefing-Anker bleibt unbedingt und
+kanalagnostisch (#1629).
+
+**Bewusste Abweichung vom Trip-Modell (S1):** S1 lässt den datierten Briefing-Anker immer
+gewinnen und verwirft Merker jenseits von 4 h. Das ignoriert an Briefing-Tagen eine spätere
+Zustellung und würde einen jüngeren, zugestellten Stand zugunsten eines älteren Briefing-Stands
+verwerfen. Der Ortsvergleich spiegelt das nicht; die Korrektur des Trip-Modells folgt in
+**#3481**. ADR-0021 bleibt unangetastet.
+
+Details und Akzeptanzkriterien: `docs/specs/modules/fix_1987_s2_compare_kanal_anker.md`.

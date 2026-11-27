@@ -50,8 +50,26 @@ class CompareWeatherSnapshotService:
     def _path(self, preset_id: str, location_id: str) -> Path:
         return self._dir / f"{self._key(preset_id, location_id)}.json"
 
+    def _alarm_path(self, preset_id: str, location_id: str, channel: str) -> Path:
+        """Issue #1987 S2: Kanal-Merker -- Praefix `{preset}__` bleibt, damit
+        `delete()` und der Go-Cleanup die Datei mit erfassen."""
+        return self._dir / f"{self._key(preset_id, location_id)}__alarm_{channel}.json"
+
     def save(self, preset_id: str, location_id: str, point: PointWeatherData) -> None:
         """Persist a single `PointWeatherData` as the Δ-anchor for this key."""
+        self._write(self._path(preset_id, location_id), point, f"{preset_id}/{location_id}")
+
+    def save_alarm_anchor(
+        self, preset_id: str, location_id: str, point: PointWeatherData, channel: str,
+    ) -> None:
+        """Issue #1987 S2: Alarm-Merker EINES Kanals (zugestellter Stand).
+        Gleiches Format wie `save()`; Schreibfehler fail-soft geloggt."""
+        self._write(
+            self._alarm_path(preset_id, location_id, channel), point,
+            f"{preset_id}/{location_id}/alarm_{channel}",
+        )
+
+    def _write(self, path: Path, point: PointWeatherData, label: str) -> None:
         try:
             self._dir.mkdir(parents=True, exist_ok=True)
             entry: dict = {
@@ -73,9 +91,9 @@ class CompareWeatherSnapshotService:
                 entry["hourly"] = [
                     _serialize_hourly_point(dp) for dp in point.timeseries.data
                 ]
-            atomic_write_json(self._path(preset_id, location_id), entry)
+            atomic_write_json(path, entry)
         except OSError as e:
-            logger.error(f"Failed to save compare snapshot {preset_id}/{location_id}: {e}")
+            logger.error(f"Failed to save compare snapshot {label}: {e}")
 
     def delete(self, preset_id: str) -> tuple[int, int]:
         """Entfernt alle Snapshots `"{preset_id}__*.json"` DIESES Nutzers
@@ -111,8 +129,19 @@ class CompareWeatherSnapshotService:
         """Return `[PointWeatherData]` (0 or 1 entries — list-Form, damit
         `DeviationAlertEngine.evaluate()` mit leerem `cached=[]` im
         Bootstrap-Fall (kein Snapshot) ohne Sonderfall auskommt)."""
-        path = self._path(preset_id, location_id)
-        if not path.exists():
+        return self._read(self._path(preset_id, location_id), f"{preset_id}/{location_id}")
+
+    def load_alarm_anchor(
+        self, preset_id: str, location_id: str, channel: str,
+    ) -> List[PointWeatherData]:
+        """Issue #1987 S2: Alarm-Merker EINES Kanals, 0/1 Eintraege wie `load()`."""
+        return self._read(
+            self._alarm_path(preset_id, location_id, channel),
+            f"{preset_id}/{location_id}/alarm_{channel}",
+        )
+
+    def _read(self, path: Path, label: str) -> List[PointWeatherData]:
+        if not path.is_file():
             return []
         try:
             data = json.loads(path.read_text())
@@ -126,8 +155,7 @@ class CompareWeatherSnapshotService:
                 target_date = date.fromisoformat(str(raw_target_date)) if raw_target_date else None
             except ValueError:
                 logger.warning(
-                    "Unlesbares target_date im Compare-Anker %s/%s: %r",
-                    preset_id, location_id, raw_target_date,
+                    "Unlesbares target_date im Compare-Anker %s: %r", label, raw_target_date,
                 )
                 target_date = None
             point = PointWeatherData(
@@ -140,5 +168,5 @@ class CompareWeatherSnapshotService:
             )
             return [point]
         except (json.JSONDecodeError, ValueError, KeyError, OSError) as e:
-            logger.warning(f"Corrupt compare snapshot {preset_id}/{location_id}: {e}")
+            logger.warning(f"Corrupt compare snapshot {label}: {e}")
             return []

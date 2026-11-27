@@ -478,7 +478,10 @@ für `ComparePreset`-Orte auf, ohne die Auswertungslogik zu duplizieren. Wetter-
 Δ-Anker (ADR-0009: Abweichung vom zuletzt **gemeldeten** Stand) wird pro Ort in
 `compare_weather_snapshot.py` persistiert (`data/users/<user_id>/compare_weather_snapshots/`)
 und beim Report-Versand (`send_one_compare_preset()`) aktualisiert; der 15-Minuten-Check liest
-nur. Versand ohne Trip-Bindung über `NotificationService.send_location_deviation_alert()`; der
+nur. Seit #1987 S2 (2026-11-27, ADR-0056 Amendment) führt der Ortsvergleich zusätzlich je Ort und
+Kanal einen Alarm-Merker (`{preset}__{ort}__alarm_{kanal}.json`), der nach zugestelltem Alarm
+geschrieben wird; die Vergleichsbasis je Kanal wählt `resolve_compare_anchor()` (`compare_alert.py`,
+reine Regel in `src/services/alarm_anchor_basis.py`). Versand ohne Trip-Bindung über `NotificationService.send_location_deviation_alert()`; der
 geteilte Alert-Renderer löst den Ortsbezug seit #1744 A1 in **einer** Funktion
 (`renderers/alert/segments.py::format_alert_location`) auf, seit **#2036** (2026-08-21) vier
 Stufen statt drei: gesetztes `location_label` → Ortsname (Ortsvergleich), sonst **gemessene**
@@ -835,11 +838,12 @@ _send_briefing_report() [trip_report_scheduler.py]
   ↓ bei Treffer: Hinweiszeile in E-Mail/Telegram + ThrottleStore("radar").record(trip_id) (s. Punkt 5 oben)
 
 check_all_compare_presets(user_id)  [CompareAlertService, Issue #1169]
-  ↓ pro Preset × Ort: compare_weather_snapshot.load(preset_id, location_id)  (Anker, ggf. leer)
+  ↓ pro Preset × Ort: resolve_compare_anchor(...) je Kanal  (Briefing-Anker vs. Alarm-Merker, #1987 S2; ggf. leer)
   ↓ compare_location_weather_source.fetch(location) → fresh PointWeatherData
   ↓ DeviationAlertEngine.evaluate(cached, fresh, AlertEvaluationConfig(defaults), alert_state)
   ↓ Cooldown-Check (preset_id-Store, 120 Min) + AlertStateService-Dedup ("preset_id:location_id")
   ↓ to_point_alert_message() → NotificationService.send_location_deviation_alert()
+  ↓ nach Zustellung: _schreibe_alarm_anker() → compare_weather_snapshot.save_alarm_anchor(...) je Ort × zugestelltem Kanal (#1987 S2)
 
 send_one_compare_preset() [scheduler_dispatch_service.py, nach Report-Versand]
   ↓ compare_weather_snapshot.save(preset_id, location_id, fresh)  je Ort im Preset (Δ-Anker-Update)

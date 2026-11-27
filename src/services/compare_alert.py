@@ -14,6 +14,7 @@ SPEC: docs/specs/modules/issue_1169_compare_alert_consumer.md
 """
 from __future__ import annotations
 
+import dataclasses
 import logging
 import time
 from datetime import datetime, timedelta, timezone
@@ -29,6 +30,7 @@ from services import alert_channel_threshold, alert_daily_limit, alert_log
 from services import alert_retry_backoff, parallel_fetch
 import services.alert_urgency as alert_urgency
 from services.alert_gate import check_briefing_imminent
+from services.alarm_anchor_basis import aelteste_basis, kanal_basis
 from services.alert_preset import _PRESET_TABLE
 from services.alert_check_state import report_unit_failure
 from services.briefing_slots import compare_slot_store
@@ -61,6 +63,27 @@ _DEFAULT_COOLDOWN_MINUTES = 120
 # Briefing-Stand gibt es keinen validen Vergleichspunkt (ADR-0009) — ein
 # aelterer Anker vergleicht gegen eine Vorhersage von vorgestern.
 _MAX_ANCHOR_AGE = timedelta(hours=26)
+
+
+def resolve_compare_anchor(snapshots, preset_id: str, location_id: str, channels) -> tuple:
+    """Issue #1987 S2 (ADR-0056): Vergleichsbasis eines Ortes ueber die
+    ROHEN Alarm-Kanaele -- je Kanal der neueste gueltige Stand aus
+    Briefing-Anker und Kanal-Merker, davon der aelteste. Rein lesend; auch
+    die Alarm-Vorschau nutzt genau diese Aufloesung (AC-10).
+
+    Rueckgabe `(basis, vorhanden)`: `basis` als 0/1-Liste (wie `load()`),
+    `vorhanden` alle geladenen Staende, Briefing-Anker zuerst."""
+    briefing = next(iter(snapshots.load(preset_id, location_id)), None)
+    merker = [
+        next(iter(snapshots.load_alarm_anchor(preset_id, location_id, c)), None)
+        for c in sorted(channels)
+    ] or [None]
+    now = datetime.now(timezone.utc)
+    basis = aelteste_basis(
+        kanal_basis(briefing, m, now=now, max_age=_MAX_ANCHOR_AGE) for m in merker
+    )
+    vorhanden = [p for p in (briefing, *merker) if p is not None]
+    return ([basis] if basis is not None else []), vorhanden
 
 # Bug #1191: Summary-Key (Compare-Editor `display_config.active_metrics`) →
 # Alarm-Katalog-ID (`display_config.metrics[].metric_id`, wie #961-Filter sie prüft).
@@ -441,7 +464,11 @@ class CompareAlertService:
         im_backoff = 0
         finalized_ids: set[str] = set()
         failed_ids: set[str] = set()
-        for ids_key, channels in groups_by_ids.items():
+        # Issue #1987 S2: deterministische Gruppenfolge (nicht Set-Iteration),
+        # damit Versand und Merker-Schreiben reproduzierbar sind.
+        for ids_key, channels in sorted(
+            groups_by_ids.items(), key=lambda kv: (kv[0], sorted(kv[1])),
+        ):
             group = [entity_by_id[eid] for eid in ids_key]
             # Issue #1405 S1 (ADR-0086): Backoff je EREIGNIS (Ort + Metrik/
             # Abschnitt), nicht je Gruppe -- eine Gruppe, die nach einer
@@ -495,6 +522,7 @@ class CompareAlertService:
                 },
             )
             delivered_all |= set(notif_result.delivered_channels)
+            self._schreibe_alarm_anker(preset_id, group, notif_result.delivered_channels)
             # Issue #1405 S4b (B21): Hinweis-Fehlschlag bei zugestelltem Alarm
             # -> notice_failed des Laufs; Backoff/Protokoll bleiben unberuehrt.
             if notif_result.delivered_channels:
@@ -692,9 +720,14 @@ class CompareAlertService:
     ) -> Optional[dict]:
         """Phase 1 (Hauptfaden): Anker laden, fehlende Basis protokollieren,
         Abruf-Parameter bilden. `None`, wenn der Ort ohne Abruf ausfaellt."""
-        cached = self._snapshot_service.load(preset_id, location_id)
-        if cached and self._anchor_too_old(cached[0], preset_id, location_id):
-            ankerzeit = cached[0].fetched_at
+        # Issue #1987 S2: Basis je Kanal der ROHEN `config.channels`, davon
+        # die aelteste; ohne gueltigen Stand wie bisher too_old/missing.
+        cached, vorhanden = resolve_compare_anchor(
+            self._snapshot_service, preset_id, location_id, config.channels,
+        )
+        if not cached and vorhanden:
+            self._anchor_too_old(vorhanden[0], preset_id, location_id)  # Warn-Log
+            ankerzeit = vorhanden[0].fetched_at
             if ankerzeit.tzinfo is None:  # Hausnorm #1345: naiv = UTC
                 ankerzeit = ankerzeit.replace(tzinfo=timezone.utc)
             self._protokolliere_fehlende_basis(
@@ -764,6 +797,27 @@ class CompareAlertService:
             # Issue #1737: die ALTE Reihe dieses Ortes fuer die Stundenzeilen.
             "anchor_point": cached[0] if cached else None,
         }
+
+    def _schreibe_alarm_anker(self, preset_id: str, group: list[dict], delivered) -> None:
+        """Issue #1987 S2: je Ort DIESER Gruppe und je in DIESER Gruppe
+        zugestelltem Kanal den Kanal-Merker schieben. Fail-soft und nach dem
+        Versand: Gedaechtnis, Backoff, Protokoll, Throttle bleiben unberuehrt.
+        `target_date`: das des Frischpunkts, sonst das der Basis (nie erfunden)."""
+        for t in group:
+            punkt = t["fresh_point"]
+            basis = t.get("anchor_point")
+            if punkt.target_date is None and basis is not None:
+                punkt = dataclasses.replace(punkt, target_date=basis.target_date)
+            for channel in sorted(delivered):
+                try:
+                    self._snapshot_service.save_alarm_anchor(
+                        preset_id, t["loc"].id, punkt, channel,
+                    )
+                except Exception as e:  # noqa: BLE001 -- Zustellung bleibt gueltig
+                    logger.error(
+                        "Compare-Alarm-Merker %s/%s/%s nicht geschrieben: %s",  # i18n-log
+                        preset_id, t["loc"].id, channel, e,
+                    )
 
     @staticmethod
     def _anchor_too_old(anchor, preset_id: str, location_id: str) -> bool:

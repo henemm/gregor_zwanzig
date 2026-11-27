@@ -46,6 +46,9 @@ func TestDeleteComparePreset_RaeumtSnapshotsAuf(t *testing.T) {
 	cleanupWrite(t, filepath.Join(sn, "cp-a__loc1.json"), `{"x":1}`)
 	cleanupWrite(t, filepath.Join(sn, "cp-a__loc2.json"), `{"x":2}`)
 	cleanupWrite(t, filepath.Join(sn, "cp-ab__loc1.json"), `{"x":3}`)
+	// Issue #1987 S2: Kanal-Merker des Alarms teilen den Praefix {preset}__.
+	cleanupWrite(t, filepath.Join(sn, "cp-a__loc1__alarm_email.json"), `{"x":4}`)
+	cleanupWrite(t, filepath.Join(sn, "cp-ab__loc1__alarm_email.json"), `{"x":5}`)
 	// Fremddatei mit passendem Praefix, aber ohne .json-Endung: kein Snapshot.
 	cleanupWrite(t, filepath.Join(sn, "cp-a__x.txt"), "fremd")
 
@@ -55,12 +58,16 @@ func TestDeleteComparePreset_RaeumtSnapshotsAuf(t *testing.T) {
 	for _, p := range []string{
 		filepath.Join(b, "cp-a.json"),
 		filepath.Join(sn, "cp-a__loc1.json"), filepath.Join(sn, "cp-a__loc2.json"),
+		filepath.Join(sn, "cp-a__loc1__alarm_email.json"),
 	} {
 		if cleanupExists(p) {
 			t.Errorf("sollte entfernt sein: %s", p)
 		}
 	}
-	for _, p := range []string{filepath.Join(sn, "cp-ab__loc1.json"), filepath.Join(b, "cp-ab.json")} {
+	for _, p := range []string{
+		filepath.Join(sn, "cp-ab__loc1.json"), filepath.Join(b, "cp-ab.json"),
+		filepath.Join(sn, "cp-ab__loc1__alarm_email.json"),
+	} {
 		if !cleanupExists(p) {
 			t.Errorf("fremdes Preset cp-ab darf nicht angefasst werden: %s", p)
 		}
