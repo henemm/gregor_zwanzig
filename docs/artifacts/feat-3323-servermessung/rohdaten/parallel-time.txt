@@ -1,0 +1,24 @@
+Command exited with non-zero status 1
+	Command being timed: "nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/"
+	User time (seconds): 1288.09
+	System time (seconds): 165.25
+	Percent of CPU this job got: 116%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 20:48.25
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 830520
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 11711
+	Minor (reclaiming a frame) page faults: 19094978
+	Voluntary context switches: 1744444
+	Involuntary context switches: 906879
+	Swaps: 0
+	File system inputs: 1967904
+	File system outputs: 3848760
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 1

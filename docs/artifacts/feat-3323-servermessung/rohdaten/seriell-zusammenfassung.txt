@@ -1,0 +1,8 @@
+
+tests/test_freezegun_stapel_reparatur.py::test_a_test_hinterlaesst_den_unterbrochenen_start_absichtlich
+  /home/hem/gregor_zwanzig/.claude/worktrees/messung-3323/tests/conftest.py:1559: RuntimeWarning: freezegun-Stapel nach tests/test_freezegun_stapel_reparatur.py::test_a_test_hinterlaesst_den_unterbrochenen_start_absichtlich bei Tiefe 1 statt 0 (unterbrochener freeze_time-Start, z. B. durch pytest-timeout) -- auf 0 repariert, damit die Folgetests eine gestellte Uhr behalten.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+17 failed, 26207 passed, 38 skipped, 708 deselected, 10 xfailed, 1412 warnings in 2096.35s (0:34:56)

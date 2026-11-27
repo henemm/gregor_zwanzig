@@ -1,0 +1,9 @@
+2026-11-27T13:54:22+00:00 COMMIT cf1a2db0d127b0e4b30696e0473cfd9410aa4eeb
+2026-11-27T13:54:22+00:00 selftest kontrolle-vorher exit=0
+2026-11-27T13:54:22+00:00 START seriell: uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+2026-11-27T14:29:30+00:00 ENDE seriell rc=1
+2026-11-27T14:29:30+00:00 START parallel: nice -n 10 uv run pytest -n 2 --dist loadgroup --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+2026-11-27T14:39:31+00:00 selftest parallel-10min exit=0
+2026-11-27T14:50:25+00:00 ENDE parallel rc=1
+2026-11-27T14:50:25+00:00 selftest kontrolle-nachher exit=0
+2026-11-27T14:50:25+00:00 FERTIG

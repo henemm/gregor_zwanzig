@@ -273,7 +273,7 @@ Ports, die der Testprozess selbst gebunden hat, und sperrt auch `connect_ex`. Da
 Rohstring exakt, vor jeder Shell-Zerlegung (Fix-Loop 6: fünf Runden Zerlegung fanden je eine neue
 Umgehung). Jede Abweichung blockt: Zusatz-Flags, andere Worker-Zahl oder Verteilung, anderes Präfix (`nohup`, `timeout`, `PYTEST_ADDOPTS=…`),
 `| tee`, `; echo`, Mehrzeilenform mit `\`, anderer Leerraum. Grenze: Ausgang aus Kindprozessen (curl, Go, Playwright) ist nicht
-erfasst. Seriell ca. 42 min; die Laufzeit der parallelen Form ist am Server noch nicht gemessen (#3323).
+erfasst. Am Server gemessen (2026-11-27, Commit cf1a2db0d, neben Prod/Staging, #3323): seriell 35:04 min, parallel 20:48 min; Spitzen-RSS parallel ca. 2,1 GB; Protokoll `docs/artifacts/feat-3323-servermessung/messprotokoll.md`.
 
 ## Parallele Kern-Suite in CI (#3209, seit 2026-11-22)
 
