@@ -271,6 +271,8 @@ export function standAusTrip(trip: Trip): ZustellungStand {
 
 /** Stand eines Orts-Briefings (Felder top-level); `send_email` fehlt = an (AC-22/AC-23). */
 export function standAusPreset(preset: ComparePreset): ZustellungStand {
+	// Briefing-Schalter aus der EINEN Flag-Regel (#3413), wie standAusTrip.
+	const b = leseBriefingStartwerte(preset as unknown as Record<string, unknown>);
 	const ac = preset.alert_channels;
 	// Bestandsregel wie compare/alarmePropsAus.ts (reconstructCompareAlertChannels): ohne
 	// alert_channels erben die Alarme die Briefing-Kanaele, E-Mail an.
@@ -282,12 +284,7 @@ export function standAusPreset(preset: ComparePreset): ZustellungStand {
 		morgenZeit: hhmm(preset.morning_time, MORGEN_STANDARD),
 		abendAn: preset.evening_enabled ?? false,
 		abendZeit: hhmm(preset.evening_time, ABEND_STANDARD),
-		briefing: {
-			email: preset.send_email !== false,
-			telegram: preset.send_telegram === true,
-			sms: preset.send_sms === true,
-			premium_sms: preset.send_premium_sms === true
-		},
+		briefing: { email: b.send_email, telegram: b.send_telegram, sms: b.send_sms, premium_sms: b.send_premium_sms },
 		alarme,
 		dringlichkeit: dringlichkeiten(preset.alert_channel_thresholds as Record<string, string | undefined> | undefined),
 		...stille(preset.alert_quiet_from, preset.alert_quiet_to),
