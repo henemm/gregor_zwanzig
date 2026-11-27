@@ -1,4 +1,5 @@
 {
-  "_hinweis": "Geteilter Wortlaut Python (src/services/send_outcomes.py) <-> Go (internal/handler/briefing_send.go), Issue #2280 F004. Beide Seiten pruefen per Verhalten gegen diese Datei.",
-  "kind_required": "Briefing-Art fehlt oder ist ungültig (erlaubt: route, vergleich)"
+  "_hinweis": "Verhaltenswaechter der HTTP-Ausgabe Python (src/services/send_outcomes.py) und Go (internal/handler/briefing_send.go), Issue #2280 F004. Der Text selbst kommt seit #3444 (ADR-0130) in beiden Schichten aus src/i18n/messages/de/geteilt.json; diese Datei haelt nur den erwarteten Wortlaut (de; en seit #3444 F001, Literal aus origin/main vor dem Umzug).",
+  "kind_required": "Briefing-Art fehlt oder ist ungültig (erlaubt: route, vergleich)",
+  "kind_required_en": "Briefing kind is missing or invalid (allowed: route, vergleich)"
 }

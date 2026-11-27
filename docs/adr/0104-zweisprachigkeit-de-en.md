@@ -3,7 +3,7 @@
 - **Status:** Akzeptiert (PO-Entscheidung 2026-10-30)
 - **Datum:** 2026-10-30
 - **Bezug:** Epic #2644, Plan `docs/features/epic-i18n-de-en.md`, Konventionen `docs/features/epic-i18n-de-en-konventionen.md`, Glossar `docs/reference/i18n_glossar.md`; löst die Streichung von #94 (2026-08-04) ab; ergänzt ADR-0042 (Namensform folgt der Platzgrenze), ADR-0095 (Kanal-Parität), ADR-0101 (Read-Modify-Write)
-- **Ergänzt durch:** — (Präzisierung 2026-10-31 unten: Kurzform nie sprachabhängig)
+- **Ergänzt durch:** [ADR-0130](0130-gemeinsamer-textkatalog-go-python.md) (gemeinsamer Bereich `geteilt` für Go und Python, Ausnahme von „je Schicht ein Katalog“); Präzisierung 2026-10-31 unten: Kurzform nie sprachabhängig
 
 ## Kontext
 

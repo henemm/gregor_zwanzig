@@ -554,3 +554,27 @@ func g3GoldenOhneT(name string) string {
 	data, _ := os.ReadFile(filepath.Join("testdata", "wortgleich_de", name+".txt"))
 	return string(data)
 }
+
+// #3444 AC-1 (F001): en-Nutzer, Versand ohne Briefing-Art -> 400 kind_required
+// mit dem unveraenderten englischen Wortlaut (Fixture-Literal, nicht Katalog).
+func TestBriefingSend_KindRequiredEnglischGleichFixture(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "tests", "fixtures", "send_detail_parity", "faelle.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var soll map[string]string
+	if err := json.Unmarshal(raw, &soll); err != nil {
+		t.Fatal(err)
+	}
+	if soll["kind_required_en"] == "" {
+		t.Fatal("Fixture ohne kind_required_en")
+	}
+	s := store.New(t.TempDir(), "")
+	c := g3Nutzer(t, s, "erin-en", "en", "premium")
+	w := g3Do(g3Router(s, ""), c, http.MethodPost, "/api/briefings/t1/send", "", "")
+	b := g3Body(t, w)
+	if w.Code != http.StatusBadRequest || b["code"] != "kind_required" ||
+		b["message"] != soll["kind_required_en"] || b["detail"] != soll["kind_required_en"] {
+		t.Errorf("Status %d Antwort %v, erwartet 400 kind_required mit %q", w.Code, b, soll["kind_required_en"])
+	}
+}

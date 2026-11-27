@@ -46,10 +46,11 @@ Auftraggeber eines Batches.
 | Frontend | `frontend/src/lib/i18n/messages/{de,en}/<bereich>.json` | `start`, `auth`, `nav`, `home`, `listen`, `konto`, `admin`, `wertebereiche`, `versand`, `alarme`, `layout`, `trip`, `vergleich`, `aktionen`, `bausteine`, `fehler`, `hilfe`, `wetter`, `zustellung`, `funktionen` (öffentliche Funktionsübersicht `/funktionen`, #3319) |
 | Python | `src/i18n/messages/{de,en}/<bereich>.json` | `allgemein`, `mail`, `vergleich`, `alarm`, `warnung`, `telegram`, `sms`, `versand`, `inbound`, `api` |
 | Go | `internal/i18n/messages/{de,en}/<bereich>.json` | `fehler`, `auth`, `konto`, `fach`, `mail`, `alarm` (Radar-Intensitätstexte `alarm.radar.intensitaet.*` für den MCP-Nowcast, #3398), `mcp` (MCP-Konnektor, #3281) |
+| Go + Python (gemeinsam, ADR-0130) | `src/i18n/messages/{de,en}/geteilt.json` | `geteilt` (Texte, die Go-API und Python-Core wortgleich ausgeben; Schlüssel `geteilt.<gruppe>.<element>`, z. B. `geteilt.fehler.kind_required`). **Nur in `src/i18n/messages` pflegen**, nie unter `internal/i18n/messages`; Go bettet die Datei über `src/i18n/embed.go` ein, ein Go-Wächtertest (`CheckNoSharedAreaInternal`) verhindert eine Kopie unter `internal/` |
 
 Die Ladelisten (`frontend/src/lib/i18n/messages/de/index.ts`, Python-Loader, Go-`embed`) sind vollständig
 angelegt. Ein Paket ergänzt Schlüssel in einer fremden Bereichsdatei nur, wenn der Text dorthin gehört;
-Schlüssel werden nie umbenannt oder gelöscht.
+Schlüssel werden nie umbenannt oder gelöscht; Ausnahme: beim Umzug in den Bereich `geteilt` wird der alte Schlüssel im selben Commit gelöscht (ADR-0130).
 
 ## 3. Schnittstellen je Schicht (Ist-Stand)
 

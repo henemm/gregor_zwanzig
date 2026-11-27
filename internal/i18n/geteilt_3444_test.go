@@ -108,4 +108,11 @@ func TestGeteiltWaechterInternalOhneGeteilt(t *testing.T) {
 	if err := CheckNoSharedAreaInternal(probe); err == nil {
 		t.Errorf("Negativprobe: geteilt.json unter internal nicht gemeldet")
 	}
+	probeEn := fstest.MapFS{
+		"messages/en/fehler.json":  {Data: []byte(`{}`)},
+		"messages/en/geteilt.json": {Data: []byte(`{}`)},
+	}
+	if err := CheckNoSharedAreaInternal(probeEn); err == nil {
+		t.Errorf("Negativprobe en: geteilt.json unter internal/en nicht gemeldet")
+	}
 }

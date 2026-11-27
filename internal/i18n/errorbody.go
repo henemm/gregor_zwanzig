@@ -2,7 +2,7 @@ package i18n
 
 // errorPrefixes ist die Suchkette fuer Fehlercodes (Konventionen Abschnitt 5).
 // Ein Code steht in hoechstens einem dieser Bereiche (Parity).
-var errorPrefixes = []string{"fehler.", "auth.fehler.", "konto.fehler.", "fach.fehler."}
+var errorPrefixes = []string{"fehler.", "auth.fehler.", "konto.fehler.", "fach.fehler.", "geteilt.fehler."}
 
 // ErrorBody baut das Fehlerobjekt {code, message, error, detail}.
 // message: erster Treffer im de-Katalog fuer <praefix><code>_<variante>, dann

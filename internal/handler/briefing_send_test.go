@@ -490,9 +490,11 @@ func TestBriefingSend_AnfrageNichtBaubar_500ProxyError(t *testing.T) {
 
 // ---------------------------------------------------------------------------
 // F004 (Adversary): kind_required-Wortlaut Go == Python. Beide Seiten pruefen
-// per Verhalten gegen die geteilte Fixture tests/fixtures/send_detail_parity/
+// per Verhalten gegen die Fixture tests/fixtures/send_detail_parity/
 // faelle.json (Python-Gegenstueck: test_ac2_kind_required_text_gleich_der_go_
-// fassung in tests/tdd/test_briefings_send_endpoint.py). Kein Quelltext-Read.
+// fassung in tests/tdd/test_briefings_send_endpoint.py). Der Text kommt seit
+// #3444 (ADR-0130) in beiden Schichten aus src/i18n/messages/*/geteilt.json;
+// die Fixture ist nur noch Verhaltenswaechter. Kein Quelltext-Read.
 // ---------------------------------------------------------------------------
 
 func bsRepoRoot(t *testing.T) string {
