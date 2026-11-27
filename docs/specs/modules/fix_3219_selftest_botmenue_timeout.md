@@ -117,7 +117,7 @@ Testansatz: echter lokaler HTTP-Socket-Server (Muster `test_issue_685_selftest_m
 
 ## Test Plan
 
-Neue Datei `tests/tdd/test_issue_3219_selftest_menu_retry.py`, echter lokaler HTTP-Socket-Server mit zählendem, skriptbarem Handler, Konstanten per monkeypatch klein:
+Neue Datei `tests/tdd/test_selftest_bot_menu_retry.py`, echter lokaler HTTP-Socket-Server mit zählendem, skriptbarem Handler, Konstanten per monkeypatch klein:
 - AC-1: erster Abruf hängt > Zeitlimit, zweiter liefert richtiges Menü → PASS, genau 2 Anfragen.
 - AC-2: alle Abrufe hängen → UNREACHABLE, Fazit-Zeile „nicht erreichbar“, kein „Regression in Produktion“, Exit-Mapping 0.
 - AC-3: dauerhaft 503/429 → UNREACHABLE; 502 dann 200 → PASS.

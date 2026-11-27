@@ -65,7 +65,7 @@ Begründung: gleiches Muster wie `SKIPPED_AUTH` (#1353/#1367): nicht belegbar �
   - Konstanten `MENU_TIMEOUT = 12`, `MENU_ATTEMPTS = 3`, `MENU_RETRY_PAUSE = 2` (Pause verdoppelt: 2 s, 4 s); per monkeypatch testbar.
   - `check_bot_menu`: Schleife nur um den Abruf. Wiederholen bei `OSError` und HTTP 429/5xx. Nach letztem Versuch: Transportfehler/429/5xx → `UNREACHABLE` (Detail: Versuchszahl + letzte Ursache, Wort „nicht erreichbar“). 200 + abweichendes Menü → FAIL ohne Retry. 200 mit nicht parsebarem Body / `ok:false`, 401/404 → FAIL ohne Retry.
   - `main`: `UNREACHABLE` setzt Verdict nicht auf FAIL; Bericht-Abschnitt Bot-Menü zeigt den Status; zusätzliche Fazit-Zeile „Telegram nicht erreichbar (nach 3 Versuchen) – Bot-Menü nicht belegt, keine Regression belegt …“, unabhängig vom Verdict.
-- `tests/tdd/test_issue_3219_selftest_menu_retry.py` — CREATE, echter lokaler Socket-Server: (1) erster Abruf hängt > Timeout, zweiter ok → PASS, genau 2 Requests; (2) hängt immer → UNREACHABLE, Exit-Mapping 0, Fazit ohne „Regression“; (3) 503 dauerhaft → UNREACHABLE; 502 dann 200 → PASS; (4) 200 falsches Menü → FAIL, genau 1 Request; (5) 401 → FAIL, 1 Request.
+- `tests/tdd/test_selftest_bot_menu_retry.py` — CREATE, echter lokaler Socket-Server: (1) erster Abruf hängt > Timeout, zweiter ok → PASS, genau 2 Requests; (2) hängt immer → UNREACHABLE, Exit-Mapping 0, Fazit ohne „Regression“; (3) 503 dauerhaft → UNREACHABLE; 502 dann 200 → PASS; (4) 200 falsches Menü → FAIL, genau 1 Request; (5) 401 → FAIL, 1 Request.
 - Bestehende Tests (`test_issue_685_selftest_menu_gate.py`, `test_selftest_auth_required.py`, `test_selftest_auth_redirect.py`, `test_issue_671_bot_menu_autoset.py`, `test_prod_selftest_1708c_dead_trips_guard.py`) müssen grün bleiben.
 
 ### Scope / Risk
