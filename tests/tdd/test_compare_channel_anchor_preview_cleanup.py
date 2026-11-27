@@ -149,7 +149,7 @@ def test_ac11_loeschen_entfernt_kanal_merker_nur_des_gewaehlten_presets_und_nutz
 
 
 def test_ac13_briefing_ausnahme_hinterlaesst_basis_aber_keine_kanal_merker(
-    compare_env, monkeypatch,
+    compare_env, monkeypatch,  # noqa: F811
 ):
     """AC-13.
 

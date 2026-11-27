@@ -815,7 +815,7 @@ class CompareAlertService:
                     )
                 except Exception as e:  # noqa: BLE001 -- Zustellung bleibt gueltig
                     logger.error(
-                        "Compare-Alarm-Merker %s/%s/%s nicht geschrieben: %s",
+                        "Compare-Alarm-Merker %s/%s/%s nicht geschrieben: %s",  # i18n-log
                         preset_id, t["loc"].id, channel, e,
                     )
 
