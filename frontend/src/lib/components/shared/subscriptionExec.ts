@@ -7,7 +7,7 @@
 
 import type { ComparePreset } from '../../types.js';
 import { statusZielNutzlast } from '../compare/compareHubPersistenz.ts';
-import { readErrorDetail, sendBriefing, type SendRunResult } from '../../utils/sendOutcome.ts';
+import { readErrorDetail, runSend, sendBriefing, type SendRunResult } from '../../utils/sendOutcome.ts';
 import type { SubscriptionKind } from './subscriptionTabs.ts';
 import type { KanalId } from './zustellung-tab/zustellungModell.ts';
 
@@ -103,4 +103,41 @@ export function sendSubscription(
 	return kind === 'trip'
 		? sendBriefing('route', id, { reportType: opts.reportType ?? 'morning', channel: opts.channel }, fetchFn)
 		: sendBriefing('vergleich', id, { channel: opts.channel }, fetchFn);
+}
+
+/** #3441: Kanal mit Grund in der Antwort des Test-Alarms (übersprungen bzw. fehlgeschlagen). */
+export type TestAlarmKanal = { channel: KanalId; reason: string };
+export type TestAlarmResult = SendRunResult & {
+	code?: string;
+	skippedChannels?: TestAlarmKanal[];
+	failedChannels?: TestAlarmKanal[];
+};
+
+function kanalListe(roh: unknown): TestAlarmKanal[] {
+	if (!Array.isArray(roh)) return [];
+	return roh.map((e) => ({ channel: String(e?.channel) as KanalId, reason: String(e?.reason ?? '') }));
+}
+
+/** Test-Alarm (#3441) über POST /api/briefings/{id}/test-alert?kind=route|vergleich, mit In-Flight-Schutz
+ *  je Abo. Der Fehlercode (`code`, z. B. keine_alarm_kanaele) wird mitgeliefert. */
+export async function sendTestAlarm(
+	kind: SubscriptionKind,
+	id: string,
+	fetchFn: typeof fetch = fetch
+): Promise<TestAlarmResult> {
+	const wort = kind === 'trip' ? 'route' : 'vergleich';
+	let body: Record<string, unknown> = {};
+	const r = await runSend(`test-alarm:${wort}:${id}`, async () => {
+		const res = await fetchFn(`/api/briefings/${enc(id)}/test-alert?kind=${wort}`, { method: 'POST' });
+		const roh = await antwort(res.clone());
+		if (roh && typeof roh === 'object') body = roh as Record<string, unknown>;
+		return res;
+	});
+	if (r.kind !== 'ok') return typeof body.code === 'string' ? { ...r, code: body.code } : r;
+	return {
+		...r,
+		sentChannels: Array.isArray(body.sent_channels) ? (body.sent_channels.map(String) as KanalId[]) : [],
+		skippedChannels: kanalListe(body.skipped_channels),
+		failedChannels: kanalListe(body.failed_channels)
+	};
 }

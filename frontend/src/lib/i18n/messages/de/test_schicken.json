@@ -10,5 +10,9 @@
 	"test_schicken.rueckmeldung.alle": "{briefing} geschickt: {liste}",
 	"test_schicken.rueckmeldung.gesendet": "{kanal} ✓",
 	"test_schicken.rueckmeldung.uebersprungen": "{kanal} übersprungen ({grund})",
-	"test_schicken.rueckmeldung.fehlgeschlagen": "{kanal} fehlgeschlagen"
+	"test_schicken.rueckmeldung.fehlgeschlagen": "{kanal} fehlgeschlagen",
+	"test_schicken.test_alarm.titel": "Test-Alarm",
+	"test_schicken.test_alarm.untertitel": "Beispiel-Alarm mit echten Werten an alle Alarm-Kanäle",
+	"test_schicken.test_alarm.leer": "Kein Alarm-Kanal eingerichtet, der Test-Alarm ging nirgends hin.",
+	"test_schicken.rueckmeldung.test_alarm": "Test-Alarm geschickt: {liste} · {zeit}"
 }

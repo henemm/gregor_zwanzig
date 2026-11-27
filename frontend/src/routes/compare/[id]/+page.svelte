@@ -12,13 +12,14 @@
 	import {
 		aboKanaele,
 		RUECKMELDUNG_MS,
+		testAlarmErgebnis,
 		testErgebnis,
 		type Berichtsart,
 		type TestKanal
 	} from '$lib/components/molecules/testSchickenModell';
 	import SubscriptionActionSheet from '$lib/components/mobile/SubscriptionActionSheet.svelte';
 	import { subscriptionActions } from '$lib/components/shared/subscriptionActions.js';
-	import { deleteSubscription, sendSubscription, setArchived, SubscriptionExecError } from '$lib/components/shared/subscriptionExec.js';
+	import { deleteSubscription, sendSubscription, sendTestAlarm, setArchived, SubscriptionExecError } from '$lib/components/shared/subscriptionExec.js';
 	import {
 		deriveStatusWithScheduleOverride,
 		isRuntimeExceeded,
@@ -288,6 +289,22 @@
 		sendTimer = setTimeout(() => { sendStatus = 'idle'; }, RUECKMELDUNG_MS);
 	}
 
+	// #3441: Eintrag „Test-Alarm“ wie im Trip-Hub (derselbe Weg, dieselbe Rückmeldung).
+	async function handleErweiterung(id: string): Promise<void> {
+		if (id !== 'test-alarm' || isSending) return;
+		clearTimeout(sendTimer);
+		isSending = true;
+		sendStatus = 'idle';
+		try {
+			const r = testAlarmErgebnis({ ergebnis: await sendTestAlarm('vergleich', currentPreset.id), jetzt: new Date() });
+			sendStatus = r.ok ? 'ok' : 'error';
+			sendMsg = r.text;
+		} finally {
+			isSending = false;
+		}
+		sendTimer = setTimeout(() => { sendStatus = 'idle'; }, RUECKMELDUNG_MS);
+	}
+
 	let isPausing = $state(false);
 	let pauseError = $state(false);
 
@@ -409,6 +426,8 @@
 		onSetup={() => { window.location.href = `?tab=zustellung#versand`; }}
 		onTest={handleTest}
 		testProfil={data.profile}
+		onErweiterung={handleErweiterung}
+		testAlarmLaeuft={isSending}
 		sendDisabled={isSending || lifecycle === 'archived'}
 		actions={hubAktionen}
 		onSelect={handleAction}

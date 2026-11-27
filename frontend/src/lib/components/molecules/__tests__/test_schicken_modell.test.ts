@@ -236,15 +236,14 @@ describe('#3440 AC-2 — Segment Morgen/Abend nur bei context="route"', () => {
 
 // ── AC-19: Erweiterungs-Slot, kein Test-Alarm ────────────────────────────────
 
-describe('#3440 AC-19 — Struktur mit Erweiterungs-Slot, kein „Test-Alarm“ in S5a', () => {
+// #3441 (S5b) stellt um: der Slot trägt jetzt genau den Eintrag „Test-Alarm“ (Details: test_alarm_3441.test.ts).
+describe('#3440 AC-19 / #3441 AC-1 — Erweiterungs-Slot nach „Alle“ trägt den Test-Alarm', () => {
 	for (const context of ['route', 'vergleich'] as const) {
-		test(`${context}: „Alle eingerichteten Kanäle“ + leerer Erweiterungs-Slot, nirgends „Test-Alarm“`, async () => {
+		test(`${context}: „Alle eingerichteten Kanäle“ + Erweiterung test-alarm`, async () => {
 			const { testMenueModell } = await modul();
 			const m = testMenueModell(profilNormal(), context);
 			assert.equal(m.alle.text, 'Alle eingerichteten Kanäle');
-			assert.ok(Array.isArray(m.erweiterungen), 'erweiterungen muss eine Liste sein (Slot für #3441)');
-			assert.equal(m.erweiterungen.length, 0);
-			assert.ok(!/Test-Alarm|test_alarm/i.test(JSON.stringify(m)), 'Test-Alarm darf in S5a nicht erscheinen');
+			assert.deepEqual(m.erweiterungen.map((e: Json) => e.id), ['test-alarm']);
 		});
 	}
 });

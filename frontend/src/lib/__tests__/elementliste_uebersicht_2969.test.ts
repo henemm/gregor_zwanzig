@@ -142,7 +142,9 @@ const ALT_ANZAHL = ALT_ANZAHL_3251 + 184 - 180 + 174;
 // #3419 Fix-Loop: Generator nimmt Wetter-Symbole (Emoji) als Beispielwert einer Zelle auf („🌥️“, Tiefe Wolken in
 // E-Mail, trip normal/luecken): +2 Einträge, nur ordnung im Abschnitt was-steht-wo verschoben.
 const ALT_ANZAHL_3419 = ALT_ANZAHL - 24 + 46 + 2;
-const ALT_SHA = '8bcd3c3167782251c576357de89168e2b9318915dc56a91312464554bbaa30d1';
+// #3441 (Test-Alarm): im Abschnitt test-menue tragen die 16 Zeilen „Test-Alarm“ und ihr Untertitel (alle Kontexte
+// und Zustände) jetzt i18n_key, text_en und luecke false. Keine ID neu oder entfallen, Anzahl gleich, sonst byte-gleich.
+const ALT_SHA = '3c90a5987c89aca2d6e7e9365701f03f4432b1be584bf2a930f0a3f4af2c22ae';
 const MOCKUP_HASH = 'sha256:946e69c0f185fc66133b3b8c820d87b61ef3a3f52834f621c1c76505c7f81a0b';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {

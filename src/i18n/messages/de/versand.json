@@ -50,5 +50,13 @@
   "versand.servicefehler.segmente": "Betroffene Segmente:",
   "versand.servicefehler.grund": "Diese E-Mail wurde automatisch gesendet, weil Ihr Trip nur SMS aktiviert hat und Anbieter-Fehler aufgetreten sind.",
   "versand.servicefehler.fusszeile": "automatischer Wetter-Service",
-  "versand.grund.orte_geloescht": "Das Orte-Abo '{preset_id}' verweist auf gelöschte Orte. Ersetze die Orte im Orte-Abo. (Orte {orte} nicht aufloesbar)"
+  "versand.grund.orte_geloescht": "Das Orte-Abo '{preset_id}' verweist auf gelöschte Orte. Ersetze die Orte im Orte-Abo. (Orte {orte} nicht aufloesbar)",
+  "versand.ergebnis.keine_alarm_kanaele": "Kein Alarm-Kanal eingerichtet, der Test-Alarm ging nirgends hin.",
+  "versand.ergebnis.trip_ohne_segmente": "Kein Test-Alarm versendet — der Trip hat noch keine Etappe mit Wegpunkten.",
+  "versand.ergebnis.vergleich_ohne_orte": "Kein Test-Alarm versendet — das Orte-Abo hat keine Orte.",
+  "versand.test_alarm.grund.nicht_bedienbar": "Kanal nicht eingerichtet",
+  "versand.test_alarm.grund.tarif": "nicht im Tarif",
+  "versand.test_alarm.grund.kontingent": "Tageskontingent erschöpft",
+  "versand.test_alarm.grund.gesperrt": "Empfänger fehlt",
+  "versand.test_alarm.grund.transport": "Zustellung fehlgeschlagen"
 }

@@ -33,6 +33,9 @@
 		sendLabel?: string;
 		onTest?: (wahl: { kanal: TestKanal; berichtsart: Berichtsart }) => void;
 		testProfil?: ZustellungProfil | null;
+		/** #3441: Erweiterung im Menü (Test-Alarm) und Sperre, solange er läuft. */
+		onErweiterung?: (id: string) => void;
+		testAlarmLaeuft?: boolean;
 		sendDisabled?: boolean;
 		actions?: Array<{ id: string; label: string; danger?: boolean }>;
 		onSelect?: (id: string) => void;
@@ -43,7 +46,7 @@
 
 	let {
 		trip, onTripUpdate, now = new Date(), saveController,
-		sendLabel, onTest, testProfil, sendDisabled = false, actions = [], onSelect, mobil = false, onSheetOpen, meldungen
+		sendLabel, onTest, testProfil, onErweiterung, testAlarmLaeuft = false, sendDisabled = false, actions = [], onSelect, mobil = false, onSheetOpen, meldungen
 	}: Props = $props();
 
 	// Issue #2284 S2 — Name und Region speichert der geteilte Baustein
@@ -97,6 +100,8 @@
 		sendLabel={sendLabel ?? $t('aktionen.kopf.test_schicken')}
 		{onTest}
 		{testProfil}
+		{onErweiterung}
+		{testAlarmLaeuft}
 		{sendDisabled}
 		{actions}
 		{onSelect}

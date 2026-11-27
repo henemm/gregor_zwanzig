@@ -25,7 +25,8 @@ from output.renderers.alert.model import AlertMessage
 from output.renderers.alert.project import onset_event_from_fields, to_alert_message
 from services.alert_channel_texts import (
     AlertChannelTexts, OfficialHeaderTexts, build_deviation_message, build_onset_message,
-    official_header_texts, official_telegram_text, plan_telegram, render_channel_texts,
+    TEST_PREFIX, official_header_texts, official_telegram_text, plan_telegram,
+    render_channel_texts,
 )
 from output.renderers.email.compact import _ascii as _ascii_hint
 from output.renderers.email.design_tokens import (
@@ -1185,8 +1186,12 @@ class NotificationService:
         telegram_style: str = "rich",
         reference_at: Optional[str] = None,
         anchor_weather: Optional[list["SegmentWeatherData"]] = None,
+        test: bool = False,
     ) -> NotificationResult:
         """Wetter-Änderungs-Alert: rendern und über konfigurierte Kanäle versenden.
+
+        Issue #3441: `test=True` (Test-Alarm) kennzeichnet Betreff, Telegram
+        und SMS mit `[TEST]`; der Versand selbst bleibt derselbe.
 
         Issue #1737: `anchor_weather` ist die ALTE Reihe (Anker, Quelle des
         Vergleichs) -- aus ihr und `weather` entstehen die Stundenzeilen; der
@@ -1239,6 +1244,7 @@ class NotificationService:
             official_notices=official_notices,
             alert_tz=alert_tz,
             telegram_style=telegram_style,
+            test=test,
         )
 
     def send_location_deviation_alert(
@@ -1277,6 +1283,7 @@ class NotificationService:
         anchor_points: Optional[dict] = None,
         *,
         preset: Optional[dict],
+        test: bool = False,
     ) -> NotificationResult:
         """Gebündelter Deviation-Alert-Versand für MEHRERE gleichzeitig
         betroffene Orte EINES Compare-Presets (Issue #1170, Adversary F001).
@@ -1336,6 +1343,7 @@ class NotificationService:
             telegram_groups=groups,
             sms_location_positions=location_positions,
             anchor_points=anchor_points,
+            test=test,
         )
 
     def send_multi_location_radar_alert(
@@ -2034,8 +2042,12 @@ class NotificationService:
         telegram_groups: Optional[list[tuple[str, list, object]]] = None,
         sms_location_positions: Optional[dict[str, int]] = None,
         anchor_points: Optional[dict] = None,
+        test: bool = False,
     ) -> NotificationResult:
         """Versendet eine kanonische AlertMessage über die konfigurierten Kanäle.
+
+        Issue #3441: `test=True` setzt `TEST_PREFIX` vor Betreff, Telegram und
+        SMS/Premium-SMS (SMS-Limit inklusive Praefix, Muster `sms_suffix`).
 
         Issue #1402: `alert_tz` ist PFLICHTPARAMETER — alle vier produktiven
         Aufrufer loesen ihn bereits vorher ueber `tz_for_coords()`/das
@@ -2087,6 +2099,7 @@ class NotificationService:
         texts = render_channel_texts(
             alert_msg, lang=lang, location_positions=sms_location_positions,
             sms_suffix=_AMTL_HINWEIS_SMS_SUFFIX if official_notices else "",
+            prefix=TEST_PREFIX if test else "",
         )
         if official_notices:
             texts = _embed_official_notices(
@@ -2158,6 +2171,7 @@ class NotificationService:
             plan = plan_telegram(
                 alert_msg, texts, style=telegram_style, groups=telegram_groups,
                 tz=alert_tz, anchor_points=anchor_points, lang=lang,
+                prefix=TEST_PREFIX if test else "",
             )
             try:
                 if plan.fan_out:
