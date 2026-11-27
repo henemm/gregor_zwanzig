@@ -479,11 +479,17 @@ class CompareOfficialAlertService:
         new_or_escalated: list = []
         per_location_new: dict = {}
         changed_locs: set = set()
+        # Issue #3470: Feed-Schluessel JE ORT (nie global) -- eine Periode im
+        # Feed von Ort X schuetzt den Eintrag von Ort Y nicht.
+        feed_keys_by_loc: dict = {}
+        for alert, loc_ids in deduped:
+            for loc_id in loc_ids:
+                feed_keys_by_loc.setdefault(loc_id, set()).add(official_alert_state_key(alert))
         for alert, loc_ids in deduped:
             is_new = False
             for loc_id in loc_ids:
                 should_report, stale_key, merged_entry = official_alert_revision_verdict(
-                    alert, state_by_loc[loc_id]
+                    alert, state_by_loc[loc_id], feed_keys=frozenset(feed_keys_by_loc[loc_id]),
                 )
                 if should_report:
                     is_new = True
@@ -491,7 +497,8 @@ class CompareOfficialAlertService:
                 elif merged_entry is not None:
                     # Issue #1685: stille Fenster-Revision -- Fortschreibung
                     # sofort, identisch zum Trip-Pfad (check_official_alert_triggers).
-                    del state_by_loc[loc_id][stale_key]
+                    if stale_key:
+                        state_by_loc[loc_id].pop(stale_key, None)
                     state_by_loc[loc_id][official_alert_state_key(alert)] = merged_entry
                     changed_locs.add(loc_id)
             if is_new:

@@ -525,6 +525,11 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
      (`+TS:H>L`, `+AV4>2`, `+TS:H>0`). Planmäßiger Ablauf und Quellenausfall sind keine
      Entwarnung; ein zugestelltes Briefing, das die Senkung schon zeigte, senkt das Gedächtnis
      ⇒ kein Entwarnungs-Alarm. Spec: `docs/specs/modules/feat_1441_s2_entwarnung.md`.
+     **Entdopplung seit #3470 (2026-11-27):** Entwarnungen derselben Warnung (Identität,
+     Gefahr, plus Ort/Quelle) werden im Notice-Builder (`build_official_allclear_notices`)
+     zu einer zusammengefasst: alte Stufe = Maximum, neue Stufe = Minimum. Trip vereinigt
+     die betroffenen Segmente, der Ortsvergleich je Ort. Das Gedächtnis senkt sich weiterhin
+     je Periode.
    - **Re-Alert-Logik (Änderungs-Raum):**
      - Neu (kein Eintrag): Alert sent, Eintrag angelegt
      - Stagnation (`|current - last| < threshold`): unterdrückt
@@ -551,6 +556,19 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
      der tatsächlichen Meldung); ohne diese Fortschreibung meldete das dritte Glied einer
      Revisionskette fälschlich erneut. Die **Anzeige** (`dedupe_official_alerts`) ist davon
      unberührt — beide Perioden bleiben in der Mail sichtbar.
+     **Seit #3470 (2026-11-27):** Liefert der Feed dieselbe Warnung als zwei gleichzeitig
+     gültige, aneinandergrenzende Perioden (A 12–16 Uhr, B 16–12 Uhr Folgetag), wurde sie im
+     Wechsel der Läufe immer wieder neu gemeldet (Ping-Pong). Jetzt gilt in
+     `official_alert_revision_verdict()`: (1) Steht der eigene Schlüssel exakt im Gedächtnis,
+     meldet nur eine Eskalation (höhere Stufe); der Eintrag bleibt unverändert. (2) Der
+     optionale Parameter `feed_keys` (Schlüssel der aktuellen Feed-Warnungen, je Ort im
+     Ortsvergleich) verhindert, dass ein Kandidat, der noch im Feed steht, verbraucht wird:
+     Rückgabe `stale_key=None`; der Aufrufer legt den neuen Eintrag nur daneben ab und löscht
+     nur bei gesetztem `stale_key`. (3) Reine Randberührung (Ende = Beginn) unterdrückt die
+     Vorverlegungs-Meldung, wenn der Kandidat im Feed steht; echte Innenüberlappung und
+     Kandidaten außerhalb des Feeds laufen wie bisher. Das schützt auch Bestandsgedächtnis
+     nach dem Deploy vor einem letzten Doppel-Alarm. Die Entscheidungen #1657 und #1685 bleiben
+     unverändert. Spec: `docs/specs/modules/fix_3470_amtlich_nachbarperioden.md`.
    - **Reset seit #1460 T1 (2026-08-03, ADR-0043):** beim Briefing-Versand wird nur noch der
      Änderungs-Raum (`<feld>:<segment>`) gelöscht — der amtliche Raum überlebt den Reset, damit
      dessen Entprellung nicht bei jedem Briefing verlorengeht.
