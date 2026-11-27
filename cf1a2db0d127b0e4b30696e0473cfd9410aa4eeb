@@ -1,0 +1,110 @@
+{
+  "verified_commit": "cf1a2db0d127b0e4b30696e0473cfd9410aa4eeb",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/trips/{id}, /compare/{id}",
+      "evidence": "Playwright gegen Staging cf1a2db0d, Pruefkonto: Eintrag 'Test-Alarm' mit Untertitel direkt nach 'Alle eingerichteten Kanaele' in Trip- und Orte-Hub, 1280 und 390 px (4/4). EN-Nutzer: 'Test alert' / 'Sample alert with real values to all alert channels' nach 'All set-up channels', beide Hubs, 1280+390 px (4/4).",
+      "workflow": "feat-3441-test-alarm"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "POST /api/briefings/{id}/test-alert",
+      "evidence": "Pruefkonto (E-Mail+Telegram+SMS+Premium-SMS eingerichtet, SMS ueber seven.io-Sandbox): Trip und Vergleich je HTTP 200, sent_channels=[email,telegram,sms,premium_sms]; Stalwart: je Klick genau 1 Mail X-GZ-Mail-Type=deviation-alert, Betreff '[TEST] [GR221 Mallorca] ...' bzw. '[TEST] [Muenster, Telgte, Tecklenburg] ...'; Staging-Log 'Telegram message sent' mit [TEST] (Vergleich: 3 Blasen je Ort, Fan-out wie Echtalarm) an den Staging-Testchat. Wegwerf-Nutzer de / Nutzer en (nur E-Mail): sent_channels=[email], je 1 Mail. Hinweis: eingecheckte Spec erwartet exakt [email,telegram] und scheitert am 4-Kanal-Pruefkonto (Testannahme, nicht Produkt); mit arrayContaining-Kopie 8/8 gruen.",
+      "workflow": "feat-3441-test-alarm"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "Stalwart-Test-Postfach",
+      "evidence": "Alle Test-Alarm-Mails (UID 15209-15219) Betreff beginnt mit [TEST]; Telegram-Texte im Log mit [TEST]. SMS/Premium-SMS nicht real geprueft (Kosten, nur Sandbox/pytest).",
+      "workflow": "feat-3441-test-alarm"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "POST /api/briefings/{id}/test-alert?kind=route",
+      "evidence": "Trip mit leerem Alarm-Kanal-Override ueber Go-API: HTTP 422 code=keine_alarm_kanaele, DE 'Kein Alarm-Kanal eingerichtet, der Test-Alarm ging nirgends hin.', EN 'No alert channel set up, the test alert went nowhere.', keine Mail. UI (Playwright, beide Hubs, DE+EN): test-schicken-fehler mit Leer-Text.",
+      "workflow": "feat-3441-test-alarm"
+    },
+    {
+      "ac": "AC-8",
+      "status": "PASS",
+      "url": "/trips/{id}, /compare/{id}",
+      "evidence": "test-schicken-ok 'Test-Alarm geschickt: E-Mail \u2713 \u00b7 Telegram \u2713 \u00b7 ... \u00b7 hh:mm' (DE) bzw. 'Test alert sent: Email \u2713 \u00b7 13:31' (EN), verschwindet nach 5 s, beide Hubs.",
+      "workflow": "feat-3441-test-alarm"
+    },
+    {
+      "ac": "AC-13",
+      "status": "PASS",
+      "url": "POST /api/briefings/{id}/test-alert",
+      "evidence": "Go-API mit Session: fremdes Abo (Pruefkonto-Trip) -> 404 not_found ohne Versand; kind=bogus -> 400 kind_required; ohne Session -> 401 unauthorized. Mails nur an eigene Plus-Adresse des jeweiligen Nutzers.",
+      "workflow": "feat-3441-test-alarm"
+    },
+    {
+      "ac": "AC-14",
+      "status": "PASS",
+      "url": "Stalwart-Test-Postfach",
+      "evidence": "Nutzer en (language=en): Mails X-GZ-Lang=en, To +en@, Betreff '[TEST] [...] Segment 1 \u00b7 \u2191 Gusts: 40 km/h\u219260 km/h' bzw. '... over threshold: Precip 8.4 mm'; DE-Nutzer X-GZ-Lang=de. UI-Texte EN aus Katalog.",
+      "workflow": "feat-3441-test-alarm"
+    },
+    {
+      "ac": "AC-17",
+      "status": "PASS",
+      "url": "/trips/{id}, /compare/{id}",
+      "evidence": "Doppelklick auf 'Test-Alarm' -> genau 1 Request (Playwright) und genau 1 Mail im Postfach je Hub; Bestandsspec hub-send-menue (#3440) 22/22 gruen.",
+      "workflow": "feat-3441-test-alarm"
+    },
+    {
+      "ac": "REGRESSION-MAIL",
+      "status": "PASS",
+      "url": "staging_mail_pruefen.py",
+      "evidence": "--typ beide: Trip+Compare Validator Exit 0 (de, en). send_gate_test_mails official+radar je de/en aus Staging-Checkout, Validatoren mit Token Exit 0 (4/4).",
+      "workflow": "feat-3441-test-alarm"
+    },
+    {
+      "ac": "TELEGRAM-LIVE",
+      "status": "PASS",
+      "url": "Telegram-Testchat",
+      "evidence": "Aus Staging-Checkout mit dessen .env, GZ_TELEGRAM_LIVE=1, -m live: test_issue_686_telegram_functional_live.py + test_telegram_live_zweisprachig.py -> 10 passed, 0 skipped, 0 failed (452 s).",
+      "workflow": "feat-3441-test-alarm"
+    }
+  ],
+  "verified_at": "2026-11-27T13:43:01.679126+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Test-Alarm auf Staging cf1a2db0d gemessen: Trip+Vergleich DE/EN echte [TEST]-Mail deviation-alert je Klick 1x, Telegram, 422 keine_alarm_kanaele, 400/401/404, UI beide Hubs DE/EN, Regression Mail/Alarm/Telegram-Live gruen",
+  "scope": "full-stack",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "feat-3441-test-alarm": {
+      "verdict": "VERIFIED: Test-Alarm auf Staging cf1a2db0d gemessen: Trip+Vergleich DE/EN echte [TEST]-Mail deviation-alert je Klick 1x, Telegram, 422 keine_alarm_kanaele, 400/401/404, UI beide Hubs DE/EN, Regression Mail/Alarm/Telegram-Live gruen",
+      "scope": "full-stack",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-27T13:43:01.679126+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
