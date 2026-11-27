@@ -1,0 +1,68 @@
+{
+  "verified_commit": "3fc952d55fa6dc93e39403e4ab59f73816970179",
+  "findings": [
+    {
+      "ac": "AC-1,2,3,4,6,10,11,12,15,17,18,20",
+      "status": "PASS",
+      "url": "/trips/gz2967-gr221-mallorca, /compare/cp-cc798e8ca9d34a15",
+      "evidence": "Playwright hub-send-menue.staging.spec.ts gegen Staging 3fc952d, Pr\u00fcfkonto: 22 passed (DE). Zwei Test-Anpassungen (Au\u00dfenklick erst nach 600 ms, ein Login je Lauf wegen Login-Bremse 30/h), Produktverhalten unver\u00e4ndert; Au\u00dfenklick auf Staging 10x nachgemessen, schlie\u00dft immer.",
+      "workflow": "feat-3440-test-schicken-menue"
+    },
+    {
+      "ac": "AC-16 (EN)",
+      "status": "PASS",
+      "url": "/trips/<seed>, /compare/<seed>",
+      "evidence": "Nutzer en: Knopf 'Send test \u25be', Men\u00fc aria 'Send test to', Zeilen Email/Telegram/SMS/Premium SMS mit englischen Sperrgr\u00fcnden, 'All set-up channels'; Fehlerr\u00fcckmeldung englisch (AC-12 EN).",
+      "workflow": "feat-3440-test-schicken-menue"
+    },
+    {
+      "ac": "Mailpfad",
+      "status": "PASS",
+      "url": "staging_mail_pruefen.py",
+      "evidence": "Trip- und Vergleichs-Mail DE und EN zugestellt, Validatoren Exit 0.",
+      "workflow": "feat-3440-test-schicken-menue"
+    },
+    {
+      "ac": "Telegram-Scope",
+      "status": "PASS",
+      "url": "tests/tdd/test_issue_686_telegram_functional_live.py, test_telegram_live_zweisprachig.py",
+      "evidence": "-m live aus dem Staging-Checkout: 10 passed.",
+      "workflow": "feat-3440-test-schicken-menue"
+    }
+  ],
+  "verified_at": "2026-11-27T10:24:40.201721+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Men\u00fc Test schicken auf Staging DE 22/22, EN gepr\u00fcft, Mail DE/EN und Telegram-Live gr\u00fcn",
+  "scope": "full-stack",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "feat-3440-test-schicken-menue": {
+      "verdict": "VERIFIED: Men\u00fc Test schicken auf Staging DE 22/22, EN gepr\u00fcft, Mail DE/EN und Telegram-Live gr\u00fcn",
+      "scope": "full-stack",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-27T10:24:40.201721+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
