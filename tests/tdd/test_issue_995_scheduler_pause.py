@@ -186,20 +186,25 @@ class TestAC8ManualTestSendUnaffected:
 
 
 # ---------------------------------------------------------------------------
-# AC-9: Alert-Dispatch bleibt vom Pause-Filter unberührt
-# (Contract-Test — erwartet bereits jetzt grün, kein RED-Beleg. Ein naiver
-#  Fix, der den Filter in load_all_trips() statt _get_active_trips()
-#  einbaut, würde DIESEN Test brechen.)
+# AC-9 (aufgehoben durch #3186 AC-8): Pause schweigt auch im Alarm-Dispatch.
+# Frueher hielt dieser Contract-Test fest, dass ein pausierter Trip weiter
+# Radar-Alarme bekommt. Seit #3186 gilt das Gegenteil: der Riegel
+# (`trip_pausiert`) sitzt in den Alarmlaeufen selbst, NICHT in
+# load_all_trips() — Anzeige und Listen sehen pausierte Trips weiter.
+# SPEC: docs/specs/modules/fix_3186_trip_pause_alarme.md (AC-8)
 # ---------------------------------------------------------------------------
 
 class TestAC9AlertDispatchUnaffected:
-    def test_paused_trip_still_triggers_radar_alert(self):
+    @staticmethod
+    def _radar_lauf(trip_id: str, paused_at: str | None) -> list[str]:
+        """Trip mit aktivem Segment und Regen im Anflug auf die Platte
+        schreiben (optional mit ``paused_at``) und den echten Radar-Lauf
+        (``load_all_trips``) ausfuehren; liefert die versendeten Betreffs."""
         from services.trip_alert import TripAlertService
         from services.radar_service import RadarNowcastService
         from providers.brightsky import RadarFrame
         from tests.helpers.nowcast_gate_fixtures import settings_email_only
 
-        trip_id = "ac9-paused-trip"
         now = datetime.now(timezone.utc)
         lat, lon = 47.0, 11.0
         # #1667 S1: der Helfer rechnet die Ortszeit selbst aus (der frühere
@@ -222,8 +227,9 @@ class TestAC9AlertDispatchUnaffected:
             }],
             "report_config": {"trip_id": trip_id, "send_email": True, "send_telegram": False,
                                "alert_on_changes": False},
-            "paused_at": now.isoformat(),
         }
+        if paused_at is not None:
+            data["paused_at"] = paused_at
         (trips_dir / f"{trip_id}.json").write_text(json.dumps(data), encoding="utf-8")
 
         # Issue #1133: trip_alert.py schreibt alert_log.json weiterhin über die
@@ -252,11 +258,26 @@ class TestAC9AlertDispatchUnaffected:
         )
         svc.clear_radar_throttle(trip_id)
         svc.check_radar_alerts()
+        return captured
 
+    def test_paused_trip_no_radar_alert(self):
+        """#3186 AC-8: pausierter Trip (``paused_at`` auf der Platte) ->
+        der Radar-Lauf versendet nichts."""
+        captured = self._radar_lauf(
+            "ac9-paused-trip", datetime.now(timezone.utc).isoformat(),
+        )
+        assert captured == [], (
+            "#3186 AC-8: ein pausierter Trip darf keinen Radar-Alarm mehr "
+            f"bekommen (hebt #995 AC-9 auf), versendet: {captured!r}"
+        )
+
+    def test_unpaused_trip_still_triggers_radar_alert(self):
+        """Gegenprobe: derselbe Aufbau ohne ``paused_at`` alarmiert — die
+        Stille im pausierten Fall kommt vom Riegel, nicht vom Aufbau."""
+        captured = self._radar_lauf("ac9-active-trip", None)
         assert captured, (
-            "Contract: Alert-Dispatch (load_all_trips()) muss den pausierten "
-            "Trip trotzdem prüfen und auslösen — der Pause-Filter gehört "
-            "ausschließlich in _get_active_trips(), nicht in load_all_trips()."
+            "Gegenprobe: ein nicht pausierter Trip mit Regen im Anflug muss "
+            "einen Radar-Alarm ausloesen."
         )
 
 
