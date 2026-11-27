@@ -1,0 +1,52 @@
+{
+  "verified_commit": "c1d098484c00a0fdd8fbff9fff2a6cc21ac21e5e",
+  "findings": [
+    {
+      "ac": "Smoke",
+      "status": "PASS",
+      "url": "/api/health",
+      "evidence": "Staging auf c1d098484 (Merge PR #3484), /api/health 200, python_core ok",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-8/AC-13",
+      "status": "PASS",
+      "url": "compare-preset send",
+      "evidence": "Ortsvergleich-Mail auf Staging zugestellt (Wegwerf-Nutzer, Preset manuell), email_spec_validator Exit 0, de: 'GZM 272030-cab94d78 Vergleich'; Briefing-Pfad unveraendert lauffaehig",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-8/AC-13 (en)",
+      "status": "PASS",
+      "url": "compare-preset send",
+      "evidence": "Nutzer en, '+en@', email_spec_validator --lang en Exit 0: 'GZM 272031-0badcc6a Vergleich'",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-1..AC-7, AC-9..AC-12",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "Kanalscharfe Merker/Basis-Aufloesung per Kern-Tests (18 neue + Regression, CI 6/6 gruen) und Adversary VERIFIED (3 Runden, Mutationen); auf Staging nicht gezielt ausloesbar (Alarm haengt an echter Wetteraenderung)",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-27T20:31:30.734256+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Staging c1d098484: Ortsvergleich-Mail de+en zugestellt und validiert (Exit 0); kanalscharfe Alarm-Anker-Logik per Kern-Tests und Adversary belegt",
+  "scope": "backend",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Staging c1d098484: Ortsvergleich-Mail de+en zugestellt und validiert (Exit 0); kanalscharfe Alarm-Anker-Logik per Kern-Tests und Adversary belegt",
+      "scope": "backend",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-27T20:31:30.734256+00:00"
+    }
+  }
+}
