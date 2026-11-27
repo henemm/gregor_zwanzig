@@ -1,0 +1,45 @@
+{
+  "verified_commit": "9e6089304362a4b57241d3d3e32d6181d43621aa",
+  "findings": [
+    {
+      "ac": "SMOKE",
+      "status": "PASS",
+      "url": "/api/health",
+      "evidence": "Staging auf 9e6089304 (rev gregor-staging und /api/health), HEALTH 200, ROOT 401 = nginx Basic-Auth des Staging (erwartet)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-1..AC-6",
+      "status": "PASS",
+      "url": "mail:compare",
+      "evidence": "ssh henemm-pruefen mail-pruefen compare: echte Orts-Vergleichsmail ueber Staging zugestellt (Betreff 'GZM 271113-0fdaf7bb Vergleich'), email_spec_validator Exit 0. Zellformate Klartext==HTML (213 \u00b0, 4.0 h, 40%, Platzhalter U+2013) sind in der Kern-Schicht je Zeile belegt (test_feat_3431_klartext_zellformate.py), da die Staging-Wetterdaten keine festen Sollwerte haben.",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "mail:compare en",
+      "evidence": "ssh henemm-pruefen mail-pruefen compare en: englische Vergleichsmail an +en@ zugestellt (Betreff 'GZM 271113-9c639125 Vergleich'), email_spec_validator --lang en Exit 0.",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-27T11:14:14.352414+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Vergleichsmail DE und EN echt ueber Staging zugestellt, email_spec_validator je Exit 0; Zellformate in Kern-Tests belegt",
+  "scope": "backend",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Vergleichsmail DE und EN echt ueber Staging zugestellt, email_spec_validator je Exit 0; Zellformate in Kern-Tests belegt",
+      "scope": "backend",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-27T11:14:14.352414+00:00"
+    }
+  }
+}
