@@ -11,25 +11,25 @@ Innsbruck
    Niederschlag: 0.0 mm
    Regenwahrscheinlichkeit: 10%
    Gewitter: –
-   Sonnenstunden: 6.0h
+   Sonnenstunden: 6.0 h
    Bewölkung: 35%
    UV-Index: 5
    Sichtweite: 9.0 km
-   Schneehöhe: -
-   Neuschnee: -
+   Schneehöhe: –
+   Neuschnee: –
    Böen: 19 km/h
-   Nullgradgrenze: -
-   Windrichtung: -
-   Gefühlte Temperatur Minimum: -
-   Gefühlte Temperatur Maximum: -
-   Tiefe Wolken: -
-   Mittelhohe Wolken: -
-   Hohe Wolken: -
-   Luftfeuchte: -
-   Taupunkt: -
-   Luftdruck: -
-   Niederschlagsart: -
-   Schneefallgrenze: -
+   Nullgradgrenze: –
+   Windrichtung: –
+   Gefühlte Temperatur Minimum: –
+   Gefühlte Temperatur Maximum: –
+   Tiefe Wolken: –
+   Mittelhohe Wolken: –
+   Hohe Wolken: –
+   Luftfeuchte: –
+   Taupunkt: –
+   Luftdruck: –
+   Niederschlagsart: –
+   Schneefallgrenze: –
 
 Bozen
    Temperatur Maximum: 27°C
@@ -38,25 +38,25 @@ Bozen
    Niederschlag: 0.0 mm
    Regenwahrscheinlichkeit: 10%
    Gewitter: –
-   Sonnenstunden: 6.0h
+   Sonnenstunden: 6.0 h
    Bewölkung: 35%
    UV-Index: 5
    Sichtweite: 9.0 km
-   Schneehöhe: -
-   Neuschnee: -
+   Schneehöhe: –
+   Neuschnee: –
    Böen: 19 km/h
-   Nullgradgrenze: -
-   Windrichtung: -
-   Gefühlte Temperatur Minimum: -
-   Gefühlte Temperatur Maximum: -
-   Tiefe Wolken: -
-   Mittelhohe Wolken: -
-   Hohe Wolken: -
-   Luftfeuchte: -
-   Taupunkt: -
-   Luftdruck: -
-   Niederschlagsart: -
-   Schneefallgrenze: -
+   Nullgradgrenze: –
+   Windrichtung: –
+   Gefühlte Temperatur Minimum: –
+   Gefühlte Temperatur Maximum: –
+   Tiefe Wolken: –
+   Mittelhohe Wolken: –
+   Hohe Wolken: –
+   Luftfeuchte: –
+   Taupunkt: –
+   Luftdruck: –
+   Niederschlagsart: –
+   Schneefallgrenze: –
 
 STUNDENVERLAUF
 ---------------

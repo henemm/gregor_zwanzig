@@ -58,7 +58,7 @@ from utils.timezone import (
     local_dt, local_fmt, local_stamp, location_tz, tz_abbrev,
 )
 from output.renderers.email.outlook import render_outlook_plain
-from output.metric_format import format_value
+from output.metric_format import NO_VALUE, format_value
 # Nicht-abrufbar-Marker der SMS (sms_format.md §3.4d, Issue #3047 B-L2).
 from output.tokens.builder import UNAVAILABLE_SYMBOL as _UNAVAILABLE_SYMBOL
 from output.renderers.alert.official_alerts import (
@@ -78,19 +78,19 @@ _HTML_TAG_RE = _re.compile(r"</?[a-zA-Z][a-zA-Z0-9]*[^<>]*>")
 # Zeilenmenge, Folge und Auswahl-Luecke kommen allein aus `CV2_METRICS` und
 # dem gemeinsamen Filter `select_cv2_rows` (compare_html.py), derselben
 # Quelle wie im HTML-Teil. Wert-Quelle bleibt `_metric_value` (HTML-Paritaet,
-# #1285); die Formate selbst sind bewusst Klartext-eigen (`213°`, `4.0h`,
-# Angleichung an HTML ist Folge-Issue #3425).
+# #1285); die Zellformate kommen aus dem zentralen Format-Katalog wie im
+# HTML-Teil (`213 °`, `4.0 h`, `40%`; Issue #3431, ADR-0095, #1481).
 _PLAIN_FMT: dict[str, object] = {
     "temp_max": lambda v: format_value("temperature", v, style="plain"),
     "wind_max": lambda v: format_value("wind", v, style="plain"),
     "temp_min": lambda v: format_value("temperature", v, style="plain"),
     "gust_max": lambda v: format_value("wind", v, style="plain"),
-    "wind_direction_avg": lambda v: f"{v}°",
+    "wind_direction_avg": lambda v: format_value("wind_direction", v, style="plain"),
     "wind_chill_min": lambda v: format_value("temperature", v, style="plain"),
     "wind_chill_max": lambda v: format_value("temperature", v, style="plain"),
-    "cloud_low_avg": lambda v: f"{v}%",
-    "cloud_mid_avg": lambda v: f"{v}%",
-    "cloud_high_avg": lambda v: f"{v}%",
+    "cloud_low_avg": lambda v: format_value("cloud_low", v, style="plain"),
+    "cloud_mid_avg": lambda v: format_value("cloud_mid", v, style="plain"),
+    "cloud_high_avg": lambda v: format_value("cloud_high", v, style="plain"),
     "precip_sum": lambda v: f"{v:.1f} mm",
     "pop_max": lambda v: f"{v:.0f}%",
     "thunder_max": _fmt_thunder,
@@ -102,7 +102,7 @@ _PLAIN_FMT: dict[str, object] = {
     "pressure_avg": lambda v: f"{v:.0f} hPa",
     "precip_type": _fmt_precip_type,
     "snowfall_limit": lambda v: f"{v:.0f} m",
-    "sunny_hours": lambda v: f"{format_value('sunshine', v, style='bare')}h",
+    "sunny_hours": lambda v: format_value("sunshine", v, style="plain"),
     "cloud_avg": lambda v: format_value("cloud_total", v, style="plain"),
     "snow_depth_cm": lambda v: format_value("snow_depth", v, style="plain"),
     "snow_new_cm": lambda v: f"{v:.0f} cm",
@@ -298,7 +298,7 @@ def render_comparison_text(
                     metric_id=metric_id,
                     friendly=bool((metric_formats or {}).get(metric_id)),
                 )
-                if value is not None else "-"
+                if value is not None else NO_VALUE
             )
             lines.append(f"   {row['label']}: {cell}")
 

@@ -14,21 +14,21 @@ Innsbruck
    Precipitation: 2.4 mm
    Rain probability: 70%
    Thunderstorm: –
-   Sunshine hours: 4.0h
+   Sunshine hours: 4.0 h
    Cloud cover: 45%
    UV index: 4
    Visibility: 10.0 km
-   Snow depth: -
-   Fresh snow: -
+   Snow depth: –
+   Fresh snow: –
    Temperature Minimum: 2°C
    Wind gusts: 38 km/h
    Freezing level: 2400 m
-   Wind direction: -
-   Feels-like temperature Minimum: -
-   Feels-like temperature Maximum: -
-   Low clouds: -
-   Mid-level clouds: -
-   High clouds: -
+   Wind direction: –
+   Feels-like temperature Minimum: –
+   Feels-like temperature Maximum: –
+   Low clouds: –
+   Mid-level clouds: –
+   High clouds: –
    Humidity: 72%
    Dew point: 1°C
    Air pressure: 1012 hPa
@@ -41,21 +41,21 @@ Lienz
    Precipitation: 5.4 mm
    Rain probability: 70%
    Thunderstorm: medium · CAPE, Lightning density · Hail: yes
-   Sunshine hours: 5.0h
+   Sunshine hours: 5.0 h
    Cloud cover: 45%
    UV index: 4
    Visibility: 10.0 km
-   Snow depth: -
-   Fresh snow: -
+   Snow depth: –
+   Fresh snow: –
    Temperature Minimum: 3°C
    Wind gusts: 39 km/h
    Freezing level: 2450 m
-   Wind direction: -
-   Feels-like temperature Minimum: -
-   Feels-like temperature Maximum: -
-   Low clouds: -
-   Mid-level clouds: -
-   High clouds: -
+   Wind direction: –
+   Feels-like temperature Minimum: –
+   Feels-like temperature Maximum: –
+   Low clouds: –
+   Mid-level clouds: –
+   High clouds: –
    Humidity: 72%
    Dew point: 2°C
    Air pressure: 1013 hPa
@@ -69,21 +69,21 @@ Kufstein
    Precipitation: 8.4 mm
    Rain probability: 70%
    Thunderstorm: –
-   Sunshine hours: 6.0h
+   Sunshine hours: 6.0 h
    Cloud cover: 45%
    UV index: 4
    Visibility: 10.0 km
-   Snow depth: -
-   Fresh snow: -
+   Snow depth: –
+   Fresh snow: –
    Temperature Minimum: 4°C
    Wind gusts: 40 km/h
    Freezing level: 2500 m
-   Wind direction: -
-   Feels-like temperature Minimum: -
-   Feels-like temperature Maximum: -
-   Low clouds: -
-   Mid-level clouds: -
-   High clouds: -
+   Wind direction: –
+   Feels-like temperature Minimum: –
+   Feels-like temperature Maximum: –
+   Low clouds: –
+   Mid-level clouds: –
+   High clouds: –
    Humidity: 72%
    Dew point: 3°C
    Air pressure: 1014 hPa
@@ -172,18 +172,18 @@ Innsbruck
 🟡 Heat · Thu 29 Oct · 01:00–23:59
 MeteoAlarm · Météo-France
    Temp max 11°C · Rain 2.4 mm · Thunderstorm – · Precipitation type Rain · Gusts 38 km/h · Rain probability 70% · Wind 26 km/h
-   Freezing level 2400 m · Humidity Ø 72% · Sun 4.0h
+   Freezing level 2400 m · Humidity Ø 72% · Sun 4.0 h
    … +1 selected weather value without data at this location
 Lienz
    Temp max 12°C · Rain 5.4 mm · Thunderstorm medium · CAPE, Lightning density · Hail: yes · Precipitation type Rain · Gusts 39 km/h · Rain probability 70% · Wind 26 km/h
-   Freezing level 2450 m · Humidity Ø 72% · Sun 5.0h
+   Freezing level 2450 m · Humidity Ø 72% · Sun 5.0 h
    … +1 selected weather value without data at this location
 Kufstein
    Kufstein · Warning level ORANGE (2/3)
 🟠 Wildfire risk
 Météo-France (wildfire)
    Temp max 13°C · Rain 8.4 mm · Thunderstorm – · Precipitation type Mixed precipitation · Gusts 40 km/h · Rain probability 70% · Wind 26 km/h
-   Freezing level 2500 m · Humidity Ø 72% · Sun 6.0h
+   Freezing level 2500 m · Humidity Ø 72% · Sun 6.0 h
    … +1 selected weather value without data at this location
 Brenner
    Error: Zeitueberschreitung beim Abruf

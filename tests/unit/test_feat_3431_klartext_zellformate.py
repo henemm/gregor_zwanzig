@@ -207,6 +207,9 @@ def test_kompakt_vergleichsmail_gleiches_format(lang):
     zeile = next(l for l in text.splitlines() if l.startswith("Innsbruck:"))
     assert "213.4" not in zeile, zeile
     assert re.search(r"WD 213(?![.\d])", zeile), zeile
+    # Gefaltetes `213 °` darf kein Doppel-Leerzeichen hinterlassen.
+    assert "WD 213 SU" in zeile, zeile
+    assert "  " not in zeile and zeile == zeile.rstrip(), zeile
     for teil in ("SU 4.0 h", "CL 40%", "CM 25%", "CH 10%"):
         assert teil in zeile, (teil, zeile)
 

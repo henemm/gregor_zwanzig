@@ -120,25 +120,25 @@ Innsbruck
    Precipitation: 0.6 mm
    Rain probability: 20%
    Thunderstorm: –
-   Sunshine hours: 4.0h
+   Sunshine hours: 4.0 h
    Cloud cover: 40%
    UV index: 2
    Visibility: 9.0 km
-   Snow depth: -
-   Fresh snow: -
+   Snow depth: –
+   Fresh snow: –
    Wind gusts: 25 km/h
-   Freezing level: -
-   Wind direction: -
-   Feels-like temperature Minimum: -
-   Feels-like temperature Maximum: -
-   Low clouds: -
-   Mid-level clouds: -
-   High clouds: -
-   Humidity: -
-   Dew point: -
-   Air pressure: -
-   Precipitation type: -
-   Snow line: -
+   Freezing level: –
+   Wind direction: –
+   Feels-like temperature Minimum: –
+   Feels-like temperature Maximum: –
+   Low clouds: –
+   Mid-level clouds: –
+   High clouds: –
+   Humidity: –
+   Dew point: –
+   Air pressure: –
+   Precipitation type: –
+   Snow line: –
 
 Stubai
    Temperature Maximum: 14°C
@@ -147,25 +147,25 @@ Stubai
    Precipitation: 0.6 mm
    Rain probability: 20%
    Thunderstorm: –
-   Sunshine hours: 4.0h
+   Sunshine hours: 4.0 h
    Cloud cover: 40%
    UV index: 2
    Visibility: 9.0 km
-   Snow depth: -
-   Fresh snow: -
+   Snow depth: –
+   Fresh snow: –
    Wind gusts: 25 km/h
-   Freezing level: -
-   Wind direction: -
-   Feels-like temperature Minimum: -
-   Feels-like temperature Maximum: -
-   Low clouds: -
-   Mid-level clouds: -
-   High clouds: -
-   Humidity: -
-   Dew point: -
-   Air pressure: -
-   Precipitation type: -
-   Snow line: -
+   Freezing level: –
+   Wind direction: –
+   Feels-like temperature Minimum: –
+   Feels-like temperature Maximum: –
+   Low clouds: –
+   Mid-level clouds: –
+   High clouds: –
+   Humidity: –
+   Dew point: –
+   Air pressure: –
+   Precipitation type: –
+   Snow line: –
 
 Zillertal
    Temperature Maximum: 14°C
@@ -174,25 +174,25 @@ Zillertal
    Precipitation: 0.6 mm
    Rain probability: 20%
    Thunderstorm: –
-   Sunshine hours: 4.0h
+   Sunshine hours: 4.0 h
    Cloud cover: 40%
    UV index: 2
    Visibility: 9.0 km
-   Snow depth: -
-   Fresh snow: -
+   Snow depth: –
+   Fresh snow: –
    Wind gusts: 25 km/h
-   Freezing level: -
-   Wind direction: -
-   Feels-like temperature Minimum: -
-   Feels-like temperature Maximum: -
-   Low clouds: -
-   Mid-level clouds: -
-   High clouds: -
-   Humidity: -
-   Dew point: -
-   Air pressure: -
-   Precipitation type: -
-   Snow line: -
+   Freezing level: –
+   Wind direction: –
+   Feels-like temperature Minimum: –
+   Feels-like temperature Maximum: –
+   Low clouds: –
+   Mid-level clouds: –
+   High clouds: –
+   Humidity: –
+   Dew point: –
+   Air pressure: –
+   Precipitation type: –
+   Snow line: –
 
 
 ── Reply commands ──
@@ -211,15 +211,15 @@ LOCATIONS — Tirol
 Date: 29 Oct 2026
 
 Innsbruck
-   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h
+   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0 h
    Clouds 40% · UV max 2 · Visibility min 9.0 km · Gusts 25 km/h
    … +14 selected weather values without data at this location
 Stubai
-   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h
+   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0 h
    Clouds 40% · UV max 2 · Visibility min 9.0 km · Gusts 25 km/h
    … +14 selected weather values without data at this location
 Zillertal
-   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h
+   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0 h
    Clouds 40% · UV max 2 · Visibility min 9.0 km · Gusts 25 km/h
    … +14 selected weather values without data at this location
 ----- vergleich.sms -----
@@ -254,15 +254,15 @@ LOCATIONS — Tirol
 Date: 29 Oct 2026
 
 Innsbruck
-   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h
+   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0 h
    Clouds 40% · UV max 2 · Visibility min 9.0 km · Gusts 25 km/h
    … +14 selected weather values without data at this location
 Stubai
-   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h
+   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0 h
    Clouds 40% · UV max 2 · Visibility min 9.0 km · Gusts 25 km/h
    … +14 selected weather values without data at this location
 Zillertal
-   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h
+   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0 h
    Clouds 40% · UV max 2 · Visibility min 9.0 km · Gusts 25 km/h
    … +14 selected weather values without data at this location
 ----- vorschau.sms -----

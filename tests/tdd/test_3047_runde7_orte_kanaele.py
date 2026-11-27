@@ -335,7 +335,7 @@ def test_k8_telegram_roh_einfach_je_zeile(mit, einfach):
             assert richtung == "Windrichtung W", f"Windrichtung Einfach: {richtung}"
         else:
             assert wolken == "Wolken 35%", f"Wolken Roh: {wolken}"
-            assert richtung == "Windrichtung 250°", f"Windrichtung Roh: {richtung}"
+            assert richtung == "Windrichtung 250 °", f"Windrichtung Roh: {richtung}"
 
 
 # ---------------------------------------------------------------------------

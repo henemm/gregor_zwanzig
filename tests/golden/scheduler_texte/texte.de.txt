@@ -120,25 +120,25 @@ Innsbruck
    Niederschlag: 0.6 mm
    Regenwahrscheinlichkeit: 20%
    Gewitter: –
-   Sonnenstunden: 4.0h
+   Sonnenstunden: 4.0 h
    Bewölkung: 40%
    UV-Index: 2
    Sichtweite: 9.0 km
-   Schneehöhe: -
-   Neuschnee: -
+   Schneehöhe: –
+   Neuschnee: –
    Böen: 25 km/h
-   Nullgradgrenze: -
-   Windrichtung: -
-   Gefühlte Temperatur Minimum: -
-   Gefühlte Temperatur Maximum: -
-   Tiefe Wolken: -
-   Mittelhohe Wolken: -
-   Hohe Wolken: -
-   Luftfeuchte: -
-   Taupunkt: -
-   Luftdruck: -
-   Niederschlagsart: -
-   Schneefallgrenze: -
+   Nullgradgrenze: –
+   Windrichtung: –
+   Gefühlte Temperatur Minimum: –
+   Gefühlte Temperatur Maximum: –
+   Tiefe Wolken: –
+   Mittelhohe Wolken: –
+   Hohe Wolken: –
+   Luftfeuchte: –
+   Taupunkt: –
+   Luftdruck: –
+   Niederschlagsart: –
+   Schneefallgrenze: –
 
 Stubai
    Temperatur Maximum: 14°C
@@ -147,25 +147,25 @@ Stubai
    Niederschlag: 0.6 mm
    Regenwahrscheinlichkeit: 20%
    Gewitter: –
-   Sonnenstunden: 4.0h
+   Sonnenstunden: 4.0 h
    Bewölkung: 40%
    UV-Index: 2
    Sichtweite: 9.0 km
-   Schneehöhe: -
-   Neuschnee: -
+   Schneehöhe: –
+   Neuschnee: –
    Böen: 25 km/h
-   Nullgradgrenze: -
-   Windrichtung: -
-   Gefühlte Temperatur Minimum: -
-   Gefühlte Temperatur Maximum: -
-   Tiefe Wolken: -
-   Mittelhohe Wolken: -
-   Hohe Wolken: -
-   Luftfeuchte: -
-   Taupunkt: -
-   Luftdruck: -
-   Niederschlagsart: -
-   Schneefallgrenze: -
+   Nullgradgrenze: –
+   Windrichtung: –
+   Gefühlte Temperatur Minimum: –
+   Gefühlte Temperatur Maximum: –
+   Tiefe Wolken: –
+   Mittelhohe Wolken: –
+   Hohe Wolken: –
+   Luftfeuchte: –
+   Taupunkt: –
+   Luftdruck: –
+   Niederschlagsart: –
+   Schneefallgrenze: –
 
 Zillertal
    Temperatur Maximum: 14°C
@@ -174,25 +174,25 @@ Zillertal
    Niederschlag: 0.6 mm
    Regenwahrscheinlichkeit: 20%
    Gewitter: –
-   Sonnenstunden: 4.0h
+   Sonnenstunden: 4.0 h
    Bewölkung: 40%
    UV-Index: 2
    Sichtweite: 9.0 km
-   Schneehöhe: -
-   Neuschnee: -
+   Schneehöhe: –
+   Neuschnee: –
    Böen: 25 km/h
-   Nullgradgrenze: -
-   Windrichtung: -
-   Gefühlte Temperatur Minimum: -
-   Gefühlte Temperatur Maximum: -
-   Tiefe Wolken: -
-   Mittelhohe Wolken: -
-   Hohe Wolken: -
-   Luftfeuchte: -
-   Taupunkt: -
-   Luftdruck: -
-   Niederschlagsart: -
-   Schneefallgrenze: -
+   Nullgradgrenze: –
+   Windrichtung: –
+   Gefühlte Temperatur Minimum: –
+   Gefühlte Temperatur Maximum: –
+   Tiefe Wolken: –
+   Mittelhohe Wolken: –
+   Hohe Wolken: –
+   Luftfeuchte: –
+   Taupunkt: –
+   Luftdruck: –
+   Niederschlagsart: –
+   Schneefallgrenze: –
 
 
 ── Antwort-Kommandos ──
@@ -211,15 +211,15 @@ ORTE — Tirol
 Datum: 29.10.2026
 
 Innsbruck
-   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Regen 0.6 mm · Regenwahrscheinlichkeit 20% · Gewitter – · Sonne 4.0h
+   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Regen 0.6 mm · Regenwahrscheinlichkeit 20% · Gewitter – · Sonne 4.0 h
    Wolken 40% · UV max 2 · Sicht min 9.0 km · Böen 25 km/h
    … +14 gewählte Wettergrößen ohne Wert an diesem Ort
 Stubai
-   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Regen 0.6 mm · Regenwahrscheinlichkeit 20% · Gewitter – · Sonne 4.0h
+   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Regen 0.6 mm · Regenwahrscheinlichkeit 20% · Gewitter – · Sonne 4.0 h
    Wolken 40% · UV max 2 · Sicht min 9.0 km · Böen 25 km/h
    … +14 gewählte Wettergrößen ohne Wert an diesem Ort
 Zillertal
-   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Regen 0.6 mm · Regenwahrscheinlichkeit 20% · Gewitter – · Sonne 4.0h
+   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Regen 0.6 mm · Regenwahrscheinlichkeit 20% · Gewitter – · Sonne 4.0 h
    Wolken 40% · UV max 2 · Sicht min 9.0 km · Böen 25 km/h
    … +14 gewählte Wettergrößen ohne Wert an diesem Ort
 ----- vergleich.sms -----
@@ -254,15 +254,15 @@ ORTE — Tirol
 Datum: 29.10.2026
 
 Innsbruck
-   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Regen 0.6 mm · Regenwahrscheinlichkeit 20% · Gewitter – · Sonne 4.0h
+   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Regen 0.6 mm · Regenwahrscheinlichkeit 20% · Gewitter – · Sonne 4.0 h
    Wolken 40% · UV max 2 · Sicht min 9.0 km · Böen 25 km/h
    … +14 gewählte Wettergrößen ohne Wert an diesem Ort
 Stubai
-   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Regen 0.6 mm · Regenwahrscheinlichkeit 20% · Gewitter – · Sonne 4.0h
+   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Regen 0.6 mm · Regenwahrscheinlichkeit 20% · Gewitter – · Sonne 4.0 h
    Wolken 40% · UV max 2 · Sicht min 9.0 km · Böen 25 km/h
    … +14 gewählte Wettergrößen ohne Wert an diesem Ort
 Zillertal
-   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Regen 0.6 mm · Regenwahrscheinlichkeit 20% · Gewitter – · Sonne 4.0h
+   Temp max 14°C · Temp min 4°C · Wind 12 km/h · Regen 0.6 mm · Regenwahrscheinlichkeit 20% · Gewitter – · Sonne 4.0 h
    Wolken 40% · UV max 2 · Sicht min 9.0 km · Böen 25 km/h
    … +14 gewählte Wettergrößen ohne Wert an diesem Ort
 ----- vorschau.sms -----

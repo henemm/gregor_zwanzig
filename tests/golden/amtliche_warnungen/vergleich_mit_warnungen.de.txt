@@ -14,21 +14,21 @@ Innsbruck
    Niederschlag: 2.4 mm
    Regenwahrscheinlichkeit: 70%
    Gewitter: –
-   Sonnenstunden: 4.0h
+   Sonnenstunden: 4.0 h
    Bewölkung: 45%
    UV-Index: 4
    Sichtweite: 10.0 km
-   Schneehöhe: -
-   Neuschnee: -
+   Schneehöhe: –
+   Neuschnee: –
    Temperatur Minimum: 2°C
    Böen: 38 km/h
    Nullgradgrenze: 2400 m
-   Windrichtung: -
-   Gefühlte Temperatur Minimum: -
-   Gefühlte Temperatur Maximum: -
-   Tiefe Wolken: -
-   Mittelhohe Wolken: -
-   Hohe Wolken: -
+   Windrichtung: –
+   Gefühlte Temperatur Minimum: –
+   Gefühlte Temperatur Maximum: –
+   Tiefe Wolken: –
+   Mittelhohe Wolken: –
+   Hohe Wolken: –
    Luftfeuchte: 72%
    Taupunkt: 1°C
    Luftdruck: 1012 hPa
@@ -41,21 +41,21 @@ Lienz
    Niederschlag: 5.4 mm
    Regenwahrscheinlichkeit: 70%
    Gewitter: mittel · CAPE, Blitzdichte · Hagel: ja
-   Sonnenstunden: 5.0h
+   Sonnenstunden: 5.0 h
    Bewölkung: 45%
    UV-Index: 4
    Sichtweite: 10.0 km
-   Schneehöhe: -
-   Neuschnee: -
+   Schneehöhe: –
+   Neuschnee: –
    Temperatur Minimum: 3°C
    Böen: 39 km/h
    Nullgradgrenze: 2450 m
-   Windrichtung: -
-   Gefühlte Temperatur Minimum: -
-   Gefühlte Temperatur Maximum: -
-   Tiefe Wolken: -
-   Mittelhohe Wolken: -
-   Hohe Wolken: -
+   Windrichtung: –
+   Gefühlte Temperatur Minimum: –
+   Gefühlte Temperatur Maximum: –
+   Tiefe Wolken: –
+   Mittelhohe Wolken: –
+   Hohe Wolken: –
    Luftfeuchte: 72%
    Taupunkt: 2°C
    Luftdruck: 1013 hPa
@@ -69,21 +69,21 @@ Kufstein
    Niederschlag: 8.4 mm
    Regenwahrscheinlichkeit: 70%
    Gewitter: –
-   Sonnenstunden: 6.0h
+   Sonnenstunden: 6.0 h
    Bewölkung: 45%
    UV-Index: 4
    Sichtweite: 10.0 km
-   Schneehöhe: -
-   Neuschnee: -
+   Schneehöhe: –
+   Neuschnee: –
    Temperatur Minimum: 4°C
    Böen: 40 km/h
    Nullgradgrenze: 2500 m
-   Windrichtung: -
-   Gefühlte Temperatur Minimum: -
-   Gefühlte Temperatur Maximum: -
-   Tiefe Wolken: -
-   Mittelhohe Wolken: -
-   Hohe Wolken: -
+   Windrichtung: –
+   Gefühlte Temperatur Minimum: –
+   Gefühlte Temperatur Maximum: –
+   Tiefe Wolken: –
+   Mittelhohe Wolken: –
+   Hohe Wolken: –
    Luftfeuchte: 72%
    Taupunkt: 3°C
    Luftdruck: 1014 hPa
@@ -172,18 +172,18 @@ Innsbruck
 🟡 Extreme Hitze · Do 29.10. · 01:00–23:59
 MeteoAlarm · Météo-France
    Temp max 11°C · Regen 2.4 mm · Gewitter – · Niederschlagsart Regen · Böen 38 km/h · Regenwahrscheinlichkeit 70% · Wind 26 km/h
-   Nullgradgrenze 2400 m · Luftfeuchte Ø 72% · Sonne 4.0h
+   Nullgradgrenze 2400 m · Luftfeuchte Ø 72% · Sonne 4.0 h
    … +1 gewählte Wettergrößen ohne Wert an diesem Ort
 Lienz
    Temp max 12°C · Regen 5.4 mm · Gewitter mittel · CAPE, Blitzdichte · Hagel: ja · Niederschlagsart Regen · Böen 39 km/h · Regenwahrscheinlichkeit 70% · Wind 26 km/h
-   Nullgradgrenze 2450 m · Luftfeuchte Ø 72% · Sonne 5.0h
+   Nullgradgrenze 2450 m · Luftfeuchte Ø 72% · Sonne 5.0 h
    … +1 gewählte Wettergrößen ohne Wert an diesem Ort
 Kufstein
    Kufstein · Warnstufe ORANGE (2/3)
 🟠 Waldbrand-Gefahr
 Météo-France (Waldbrand)
    Temp max 13°C · Regen 8.4 mm · Gewitter – · Niederschlagsart Mischniederschlag · Böen 40 km/h · Regenwahrscheinlichkeit 70% · Wind 26 km/h
-   Nullgradgrenze 2500 m · Luftfeuchte Ø 72% · Sonne 6.0h
+   Nullgradgrenze 2500 m · Luftfeuchte Ø 72% · Sonne 6.0 h
    … +1 gewählte Wettergrößen ohne Wert an diesem Ort
 Brenner
    Fehler: Zeitueberschreitung beim Abruf

@@ -12,21 +12,21 @@ Innsbruck
    Niederschlag: 2.4 mm
    Regenwahrscheinlichkeit: 70%
    Gewitter: –
-   Sonnenstunden: 4.0h
+   Sonnenstunden: 4.0 h
    Bewölkung: 45%
    UV-Index: 4
    Sichtweite: 10.0 km
-   Schneehöhe: -
-   Neuschnee: -
+   Schneehöhe: –
+   Neuschnee: –
    Temperatur Minimum: 2°C
    Böen: 38 km/h
    Nullgradgrenze: 2400 m
-   Windrichtung: -
-   Gefühlte Temperatur Minimum: -
-   Gefühlte Temperatur Maximum: -
-   Tiefe Wolken: -
-   Mittelhohe Wolken: -
-   Hohe Wolken: -
+   Windrichtung: –
+   Gefühlte Temperatur Minimum: –
+   Gefühlte Temperatur Maximum: –
+   Tiefe Wolken: –
+   Mittelhohe Wolken: –
+   Hohe Wolken: –
    Luftfeuchte: 72%
    Taupunkt: 1°C
    Luftdruck: 1012 hPa
@@ -39,21 +39,21 @@ Lienz
    Niederschlag: 5.4 mm
    Regenwahrscheinlichkeit: 70%
    Gewitter: mittel · CAPE, Blitzdichte · Hagel: ja
-   Sonnenstunden: 5.0h
+   Sonnenstunden: 5.0 h
    Bewölkung: 45%
    UV-Index: 4
    Sichtweite: 10.0 km
-   Schneehöhe: -
-   Neuschnee: -
+   Schneehöhe: –
+   Neuschnee: –
    Temperatur Minimum: 3°C
    Böen: 39 km/h
    Nullgradgrenze: 2450 m
-   Windrichtung: -
-   Gefühlte Temperatur Minimum: -
-   Gefühlte Temperatur Maximum: -
-   Tiefe Wolken: -
-   Mittelhohe Wolken: -
-   Hohe Wolken: -
+   Windrichtung: –
+   Gefühlte Temperatur Minimum: –
+   Gefühlte Temperatur Maximum: –
+   Tiefe Wolken: –
+   Mittelhohe Wolken: –
+   Hohe Wolken: –
    Luftfeuchte: 72%
    Taupunkt: 2°C
    Luftdruck: 1013 hPa
@@ -66,21 +66,21 @@ Kufstein
    Niederschlag: 8.4 mm
    Regenwahrscheinlichkeit: 70%
    Gewitter: –
-   Sonnenstunden: 6.0h
+   Sonnenstunden: 6.0 h
    Bewölkung: 45%
    UV-Index: 4
    Sichtweite: 10.0 km
-   Schneehöhe: -
-   Neuschnee: -
+   Schneehöhe: –
+   Neuschnee: –
    Temperatur Minimum: 4°C
    Böen: 40 km/h
    Nullgradgrenze: 2500 m
-   Windrichtung: -
-   Gefühlte Temperatur Minimum: -
-   Gefühlte Temperatur Maximum: -
-   Tiefe Wolken: -
-   Mittelhohe Wolken: -
-   Hohe Wolken: -
+   Windrichtung: –
+   Gefühlte Temperatur Minimum: –
+   Gefühlte Temperatur Maximum: –
+   Tiefe Wolken: –
+   Mittelhohe Wolken: –
+   Hohe Wolken: –
    Luftfeuchte: 72%
    Taupunkt: 3°C
    Luftdruck: 1014 hPa

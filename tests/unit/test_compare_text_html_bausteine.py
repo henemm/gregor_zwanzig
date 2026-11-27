@@ -293,17 +293,17 @@ def _uebersicht_result() -> ComparisonResult:
 def test_nicht_geteilte_teile_unveraendert():
     """AC-6 (Guard): Given die bewusst nicht geteilten Teile / When die Mail
     gerendert wird / Then bleiben Ort-Abschnittsform samt Ausblick-Ueberschrift,
-    Risiko-Legende nur im HTML und die Uebersichts-Zellformate je Medium wie
-    vorher (#3431 regelt deren Angleichung, nicht dieses Ticket)."""
+    Risiko-Legende nur im HTML wie vorher; die Uebersichts-Zellformate sind
+    seit #3431 in Klartext und HTML gleich (Format-Katalog)."""
     html, plain = _render(_uebersicht_result(),
                           enabled_metrics=["wind_direction_avg", "sunny_hours"])
     lines = plain.splitlines()
 
-    # Uebersichts-Zellformate: Klartext `213°`/`4.0h`/`-`, HTML `213 °`/`4.0 h`/`–`.
+    # Uebersichts-Zellformate (#3431): Klartext == HTML, `213 °`/`4.0 h`/`–`.
     idx = lines.index("Innsbruck")
     block = lines[idx:idx + 3]
-    assert any(l.endswith(": 213°") for l in block), block
-    assert any(l.endswith(": 4.0h") for l in block), block
+    assert any(l.endswith(": 213 °") for l in block), block
+    assert any(l.endswith(": 4.0 h") for l in block), block
     text_html = _plain_text(html)
     assert "213 °" in text_html and "4.0 h" in text_html
 
