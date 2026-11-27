@@ -259,3 +259,6 @@ Test-Versand soll immer funktionieren).
 - 2026-07-03: Initial spec erstellt — Issue #995, Bug-Bündel aus 3 Punkten (Segment-
   Startzeitpunkt, Zellhintergrund, Pausierte Trips), aufbauend auf
   `docs/context/fix-995-mail-bugs-bundle.md`
+- 2026-11-27: AC-9 (Alert-Dispatch bleibt vom Pause-Filter unberührt) aufgehoben durch #3186:
+  ein pausierter Trip unterdrückt jetzt auch Wetterabweichungs-, amtliche Warn- und Radar-Alarme
+  (Pause-Riegel in `src/services/trip_alert.py`). AC-Text unverändert; AC-7, AC-8, AC-10 gelten weiter.

@@ -1,0 +1,52 @@
+.................................                                        [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/feat-3431-klartext/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:130
+  /Users/hem/Developer/gregor_zwanzig/.claude/worktrees/feat-3431-klartext/tests/conftest.py:130: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+==================================== PASSES ====================================
+_ TestAC9AlertDispatchUnaffected.test_unpaused_trip_still_triggers_radar_alert _
+_________ test_alert_metric_channels_wirkt_nicht_bei_radar_und_amtlich _________
+=========================== short test summary info ============================
+PASSED tests/tdd/test_fix_3186_trip_pause_alarme.py::test_ac1_pausierter_trip_abweichung_kein_versand_kein_wetterabruf
+PASSED tests/tdd/test_fix_3186_trip_pause_alarme.py::test_ac2_pausierter_trip_amtliche_warnung_kein_versand_kein_abruf_state_unveraendert
+PASSED tests/tdd/test_fix_3186_trip_pause_alarme.py::test_ac3_pausierter_trip_radar_kein_nowcast_kein_versand
+PASSED tests/tdd/test_fix_3186_trip_pause_alarme.py::test_ac3_pausierter_trip_gilt_im_radarlauf_trotzdem_als_erreicht
+PASSED tests/tdd/test_fix_3186_trip_pause_alarme.py::test_ac4_paused_until_zukunft_schweigt_in_allen_drei_alarmarten
+PASSED tests/tdd/test_fix_3186_trip_pause_alarme.py::test_ac4_paused_until_vergangen_alarmiert_wieder
+PASSED tests/tdd/test_fix_3186_trip_pause_alarme.py::test_ac5_pause_aufgehoben_aktive_warnung_kommt_genau_einmal
+PASSED tests/tdd/test_fix_3186_trip_pause_alarme.py::test_ac6_nicht_pausiert_abweichung_auf_allen_vier_kanaelen
+PASSED tests/tdd/test_fix_3186_trip_pause_alarme.py::test_ac6_nicht_pausiert_amtliche_warnung_wird_zugestellt
+PASSED tests/tdd/test_fix_3186_trip_pause_alarme.py::test_ac6_nicht_pausiert_radar_auf_allen_vier_kanaelen
+PASSED tests/tdd/test_fix_3186_trip_pause_alarme.py::test_ac7_riegel_nutzt_trip_pausiert_still_und_ohne_loader_filter
+PASSED tests/tdd/test_fix_3186_trip_pause_alarme.py::test_ac7_debug_trigger_liefert_fuer_pausierten_trip_weiter
+PASSED tests/tdd/test_issue_995_scheduler_pause.py::TestAC7SchedulerExcludesPaused::test_paused_trip_excluded_active_trip_included_per_user
+PASSED tests/tdd/test_issue_995_scheduler_pause.py::TestAC9AlertDispatchUnaffected::test_paused_trip_no_radar_alert
+PASSED tests/tdd/test_issue_995_scheduler_pause.py::TestAC9AlertDispatchUnaffected::test_unpaused_trip_still_triggers_radar_alert
+PASSED tests/tdd/test_issue_995_scheduler_pause.py::TestAC10ReadModifyWritePreservesFields::test_paused_at_patch_preserves_other_fields_two_users
+PASSED tests/tdd/test_trip_radar_schalter.py::test_ac3_schalter_aus_kein_nowcast_abruf_und_kein_versand
+PASSED tests/tdd/test_trip_radar_schalter.py::test_ac3_schalter_aus_trip_gilt_trotzdem_als_erreicht
+PASSED tests/tdd/test_trip_radar_schalter.py::test_ac1_schalter_an_alarm_auf_allen_vier_kanaelen
+PASSED tests/tdd/test_trip_radar_schalter.py::test_ac4_bestandstrip_ohne_feld_alarmiert_weiter
+PASSED tests/tdd/test_trip_radar_schalter.py::test_ac4_direkt_konstruierter_trip_ohne_feld_alarmiert
+PASSED tests/tdd/test_trip_radar_schalter.py::test_ac4_gegenprobe_ortsvergleich_ohne_feld_bleibt_aus
+PASSED tests/tdd/test_trip_radar_schalter.py::test_ac5_stille_stunden_halten_radar_alarm_zurueck
+PASSED tests/tdd/test_trip_radar_schalter.py::test_ac3_schalter_aus_in_stillen_stunden_kein_protokolleintrag
+PASSED tests/tdd/test_trip_radar_schalter.py::test_debug_trigger_schalter_aus_meldet_disabled_ohne_versand
+PASSED tests/tdd/test_trip_radar_schalter.py::test_debug_trigger_ohne_feld_versendet_wie_bisher
+PASSED tests/tdd/test_trip_radar_schalter.py::test_loader_roundtrip_schalter_true_und_false
+PASSED tests/tdd/test_trip_radar_schalter.py::test_loader_none_wird_nicht_geschrieben
+PASSED tests/tdd/test_alarm_radar_kette.py::test_radar_kanalmatrix_und_schwelle_konsistent
+PASSED tests/tdd/test_alarm_radar_kette.py::test_alert_metric_channels_wirkt_nicht_bei_radar_und_amtlich
+PASSED tests/tdd/test_alarm_amtliche_warnungen_kette.py::test_official_warnings_enabled_hat_vorrang
+PASSED tests/tdd/test_alarm_amtliche_warnungen_kette.py::test_legacy_feld_traegt_bei_fehlendem_official_warnings_block
+PASSED tests/tdd/test_alarm_amtliche_warnungen_kette.py::test_bugfall_vorab_filter_blockiert_nicht_mehr_trotz_veraltetem_legacy_feld
+33 passed, 1 deselected, 2 warnings in 3.45s

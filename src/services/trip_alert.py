@@ -1196,6 +1196,11 @@ class TripAlertService:
                 try:
                     # Issue #1697: Ortstag dieses Trips — die Zone haengt vom Trip ab,
                     # deshalb erst HIER (je Trip), nicht einmal vor der Schleife.
+                    # Issue #3186: pausierter Trip schweigt still (Abweichung und
+                    # amtliche Warnung), VOR Wetter-/Warnungs-Abruf. Hebt #995 AC-9 auf.
+                    from services.trip_report_scheduler import trip_pausiert
+                    if trip_pausiert(trip, now_utc):
+                        continue
                     today = trip_local_today(trip, now_utc)
                     # Issue #222 W1: Trips with active alert_rules must be checked even if
                     # report_config is missing or alert_on_changes=False — alert_rules is the
@@ -2120,6 +2125,11 @@ class TripAlertService:
                 # ab (None = an, Bestandstrips). Pruefung VOR Segmentwahl, Kanal-
                 # Aufloesung und Nowcast-Abruf (ADR-0082-Budget).
                 if trip.radar_alert_enabled is False:
+                    continue
+                # Issue #3186: pausierter Trip schweigt still, NACH dem Stempel
+                # (Fairness #3085), VOR Segmentwahl und Nowcast-Abruf.
+                from services.trip_report_scheduler import trip_pausiert
+                if trip_pausiert(trip, now_utc):
                     continue
                 # Issue #1697: Ortstag dieses Trips statt Serverdatum (ADR-0044) —
                 # je Trip, die Zone haengt vom Trip ab.
