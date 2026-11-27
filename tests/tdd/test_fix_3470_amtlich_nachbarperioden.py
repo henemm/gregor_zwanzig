@@ -618,6 +618,32 @@ def test_ac8_beide_perioden_verschwinden_genau_eine_entwarnung_vergleich(monkeyp
     )
 
 
+@pytest.mark.parametrize("order", REIHENFOLGEN)
+def test_ac8_herabstufung_beider_perioden_genau_eine_entwarnung_vergleich(monkeypatch, order):
+    """AC-8 Herabstufung im Ortsvergleich: A und B (Stufe 3) gemeldet, dann
+    liefert der Feed beide mit Stufe 2. Ueber ``_detect`` mit echtem
+    Dateigedaechtnis: genau eine Entwarnung 3 -> 2 fuer Ort X."""
+    uhr = _VergleichsUhr(monkeypatch, COMPARE_FROZEN)
+    (a_vf, a_vt), (b_vf, b_vt) = _perioden(COMPARE_FROZEN)
+    loc_x = SavedLocation(id="loc-x-3470", name="Ort X", lat=LAT, lon=LON, elevation_m=60)
+    quelle = _FeedQuelle(f"quelle-3470-ac8d-{order}", LAT, LON,
+                         [_warnung(a_vf, a_vt, 3), _warnung(b_vf, b_vt, 3)])
+    user_id = _fresh_user(f"ac8d-{order}")
+    preset_id = "preset-3470-ac8d"
+    with _nur_quellen(quelle):
+        svc = _compare_service(user_id)
+        erst, _ = _vergleich_lauf(svc, preset_id, [loc_x], uhr)
+        assert len(erst) == 2, f"Vorbedingung: Erstauftritt meldet beide Perioden: {erst!r}"
+
+        quelle.alerts = _feed(order, _warnung(a_vf, a_vt, 2), _warnung(b_vf, b_vt, 2))
+        notices = [n for _ in range(LAEUFE) for n in _vergleich_lauf(svc, preset_id, [loc_x], uhr)[1]]
+
+    assert [(n.kind, n.old_rank, n.new_rank) for n in notices] == [("lowered", 3, 2)], (
+        f"Feed {order}: erwartet genau eine Entwarnung 3->2, erzeugt: "
+        f"{[(n.kind, n.scope_label, n.old_rank, n.new_rank) for n in notices]}"
+    )
+
+
 # ===========================================================================
 # AC-9 -- zwei Nutzer: Gedaechtnis und Meldungen getrennt (Regressionsschutz)
 # ===========================================================================
