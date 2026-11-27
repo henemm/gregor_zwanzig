@@ -1,0 +1,52 @@
+{
+  "verified_commit": "b46a4df76c1e2ac6780d6e77cc66ad27af275a8e",
+  "findings": [
+    {
+      "ac": "SMOKE",
+      "status": "PASS",
+      "url": "/api/health",
+      "evidence": "Staging auf b46a4df (Merge #3487), health 200, python_core ok",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-1/AC-3 (Regression Orts-Vergleich)",
+      "status": "PASS",
+      "url": "mail-pruefen compare de/en",
+      "evidence": "Wegwerf-Nutzer legt Orte+Compare-Preset ueber Go-API an (SaveComparePreset mit Roh-Merge), Versand zugestellt, email_spec_validator Exit 0 in de und en",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-2 (Regression Trip)",
+      "status": "PASS",
+      "url": "mail-pruefen trip de/en",
+      "evidence": "Test-Trip ueber Go-API angelegt (SaveTrip mit Roh-Merge), Briefing zugestellt, briefing_mail_validator Exit 0 in de und en",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-1..AC-9 (Dateiinhalt)",
+      "status": "PASS",
+      "url": "go test internal/store + internal/handler",
+      "evidence": "Erhalt unbekannter Felder auf der Platte ist in Store- und Handler-Tests gegen echte Dateien belegt (zwei Nutzer, CI go-test gruen); Staging-Dateien sind ueber den Pruefzugang nicht lesbar, daher dort nur Regressionsnachweis",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-27T20:19:41.877395+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Staging b46a4df: Trip- und Vergleichs-Anlage ueber Go-Speicherweg mit Roh-Merge, Mails de+en zugestellt und validiert; Feldererhalt per Go-Tests gegen echte Dateien belegt",
+  "scope": "backend",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Staging b46a4df: Trip- und Vergleichs-Anlage ueber Go-Speicherweg mit Roh-Merge, Mails de+en zugestellt und validiert; Feldererhalt per Go-Tests gegen echte Dateien belegt",
+      "scope": "backend",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-27T20:19:41.877395+00:00"
+    }
+  }
+}
