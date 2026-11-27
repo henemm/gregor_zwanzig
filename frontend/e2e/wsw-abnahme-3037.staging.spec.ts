@@ -4,15 +4,16 @@
 // Sprache DE, zweites Konto sieht das Wegwerf-Abo nicht).
 // Soll: docs/context/einstellungen_neu/seiten/mockup-hub-fassung4.html (Kontextknöpfe data-ctx trip/orte/ort1).
 //
-// Prüfkonto: Login per POST /api/auth/login (GZ_AUTH_USER/GZ_AUTH_PASS, Muster elementliste-abgleich.staging.spec.ts);
-// Trip = ELEMENTLISTE_TRIP_ID, Orte (drei Orte) = ELEMENTLISTE_ORTE_ID, ein Ort = Wegwerf-Abo mit Präfix „WSW-3037-“.
+// Prüfkonto: Login per POST /api/auth/login (e2e/pruefkontoZugang.ts: GZ_PRUEFKONTO_* vor GZ_AUTH_*);
+// Trip/Orte (drei Orte) = seedIds(): ELEMENTLISTE_TRIP_ID/ELEMENTLISTE_ORTE_ID, sonst Lookup des Seeds nach dem Login;
+// ein Ort = Wegwerf-Abo mit Präfix „WSW-3037-“.
 // Anmeldung genau EINMAL je Konto (beforeAll bzw. beim ersten Zweitkonto-Zugriff); die Cookies werden in jeden
 // Test-Kontext übernommen — wiederholte Logins liefen in HTTP 429 (Adversary F005).
 //
-// Zweitkonto (AC-9, PFLICHT): GZ_ZWEITKONTO_USER/GZ_ZWEITKONTO_PASS. Fehlen sie, schlägt der ort1-Test (und der
-// AC-9-Test) mit klarer Meldung fehl, es gibt keinen stillen Skip. Beim Lauf setzt der Orchestrator GZ_ZWEITKONTO_*
-// auf das geteilte Staging-Konto aus der Staging-.env (dort GZ_AUTH_USER/GZ_AUTH_PASS), weil GZ_AUTH_* in diesem
-// Lauf auf das Prüfkonto zeigt — beide Konten müssen verschieden sein (geprüft).
+// Zweitkonto (AC-9, PFLICHT): zweitkontoZugang() — GZ_ZWEITKONTO_USER/GZ_ZWEITKONTO_PASS, sonst GZ_AUTH_* (geteiltes
+// Staging-Konto, z. B. über spec-run), aber nie das Prüfkonto. Fehlt es, schlägt der ort1-Test (und der AC-9-Test)
+// mit klarer Meldung fehl, es gibt keinen stillen Skip. Zeigt GZ_AUTH_* auf das Prüfkonto (Server-Weg), muss
+// GZ_ZWEITKONTO_* gesetzt sein — beide Konten müssen verschieden sein (geprüft).
 // Kontexte über ABNAHME_KONTEXTE (Default "orte,ort1,trip"); der Trip kann so nach #3364 separat laufen.
 // Bilder nach $BILD_DIR (Default docs/artifacts/abnahme-3037-was-steht-wo/bilder): mockup-<ctx>-de-<breite>.png und
 // staging-<ctx>-<lang>-<breite>.png — passend zu scripts/soll_ist_bild.py.
@@ -26,6 +27,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ganzseite } from './ganzseitenaufnahme';
 import { oeffneKarte, seedAbo, type Abo, type HubKind, type Json } from './was-steht-wo.helpers';
+import { pruefkontoZugang, seedIds, zweitkontoZugang } from './pruefkontoZugang.ts';
 
 const HIER = path.dirname(fileURLToPath(import.meta.url));
 const MOCKUP = 'file://' + path.resolve(HIER, '..', '..', 'docs', 'context', 'einstellungen_neu', 'seiten', 'mockup-hub-fassung4.html');
@@ -104,16 +106,12 @@ async function einmalAnmelden(info: TestInfo, user: string | undefined, pass: st
 /** Cookies des Prüfkontos (beforeAll) und des Zweitkontos (beim ersten Zugriff). */
 let pruefkontoCookies: Cookies | null = null;
 let zweitkontoCookies: Cookies | null = null;
+/** Seed-IDs des Prüfkontos (beforeAll, seedIds). */
+let seed: { route: string; vergleich: string } | null = null;
 
 /** AC-9: Zugangsdaten des Zweitkontos — Pflicht, sonst klarer Fehler (F003, kein stiller Skip). */
 function zweitkontoDaten(): { user: string; pass: string } {
-	const user = process.env.GZ_ZWEITKONTO_USER;
-	const pass = process.env.GZ_ZWEITKONTO_PASS;
-	if (!user || !pass) {
-		throw new Error('#3037 AC-9: GZ_ZWEITKONTO_USER/GZ_ZWEITKONTO_PASS fehlen — ohne zweites Konto ist „das zweite Konto sieht das Wegwerf-Abo nie“ nicht prüfbar (Staging-.env: GZ_AUTH_USER/GZ_AUTH_PASS des geteilten Kontos übergeben)');
-	}
-	if (user === process.env.GZ_AUTH_USER) throw new Error('#3037 AC-9: Zweitkonto ist dasselbe Konto wie das Prüfkonto — die Prüfung wäre wertlos');
-	return { user, pass };
+	return zweitkontoZugang();
 }
 
 async function sprache(api: APIRequestContext, lang: Lang): Promise<void> {
@@ -123,10 +121,8 @@ async function sprache(api: APIRequestContext, lang: Lang): Promise<void> {
 
 /** Seed-ID des Kontexts; ort1 bekommt sein Wegwerf-Abo im Test. */
 function seedId(ctx: Ctx): string {
-	const name = ctx === 'trip' ? 'ELEMENTLISTE_TRIP_ID' : 'ELEMENTLISTE_ORTE_ID';
-	const id = process.env[name];
-	if (!id) throw new Error(`#3037: ${name} fehlt — ohne Seed-ID des Prüfkontos ist der Kontext ${ctx} nicht prüfbar`);
-	return id;
+	if (!seed) throw new Error(`#3037: Seed-IDs nicht bestimmt (beforeAll) — Kontext ${ctx} nicht prüfbar`);
+	return ctx === 'trip' ? seed.route : seed.vergleich;
 }
 
 /** Vor dem Anlegen: freie Quota für einen Vergleich und einen Ort, sonst klarer Abbruch. */
@@ -243,10 +239,17 @@ async function handySpalten(page: Page, karte: Locator): Promise<void> {
 // ── Vorbedingungen, Login, Aufräumen ────────────────────────────────────────
 
 test.beforeAll(async ({}, info) => {
-	if (!process.env.GZ_AUTH_USER || !process.env.GZ_AUTH_PASS) throw new Error('#3037: GZ_AUTH_USER/GZ_AUTH_PASS fehlen — Prüfkonto nicht anmeldbar');
-	for (const ctx of KONTEXTE) if (ctx !== 'ort1') seedId(ctx);
+	const konto = pruefkontoZugang();
 	// F005: einmal anmelden, Cookies in jeden Test-Kontext übernehmen (kein Login je Test → kein HTTP 429).
-	pruefkontoCookies ??= await einmalAnmelden(info, process.env.GZ_AUTH_USER, process.env.GZ_AUTH_PASS, 'Prüfkonto');
+	pruefkontoCookies ??= await einmalAnmelden(info, konto.user, konto.pass, 'Prüfkonto');
+	if (KONTEXTE.some((ctx) => ctx !== 'ort1')) {
+		const api = await neuerZugang(info, pruefkontoCookies);
+		try {
+			seed = await seedIds(api);
+		} finally {
+			await api.dispose();
+		}
+	}
 });
 
 test.beforeEach(async ({ context }) => {

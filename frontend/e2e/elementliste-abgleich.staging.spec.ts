@@ -5,7 +5,7 @@
 //   cd frontend && npm run elementliste:abgleich -- [--strict] [--abnahme] [--scope <reiter[/zustand]>] [--sprache en]
 // Direkt: npx playwright test --config playwright.elementliste.staging.config.ts
 //   (Umgebung: ELEMENTLISTE_SCOPE, ELEMENTLISTE_STRICT, ELEMENTLISTE_ABNAHME, ELEMENTLISTE_SPRACHE, ELEMENTLISTE_TRIP_ID,
-//    ELEMENTLISTE_ORTE_ID, ELEMENTLISTE_BERICHT_DIR; Login GZ_AUTH_USER/GZ_AUTH_PASS)
+//    ELEMENTLISTE_ORTE_ID, ELEMENTLISTE_BERICHT_DIR; Login über e2e/pruefkontoZugang.ts: GZ_PRUEFKONTO_* vor GZ_AUTH_*)
 //
 // Die ganze Entscheidungslogik (Prod-Schutz, Optionen, Scope, Route-Abfangen-Plan, Bewertung, Bericht,
 // Exit) liegt browserfrei in e2e/elementliste_abgleich_logik.ts und ist dort per Unit-Test bewacht.
@@ -16,13 +16,14 @@
 // Mockup-Daten im Prüfkonto (#2967): vorher auf dem Staging-Host scripts/staging_pruefkonto_mockupdaten.py
 // laufen lassen (Runbook docs/runbooks/staging_pruefkonto_seed.md); es gibt ELEMENTLISTE_TRIP_ID und
 // ELEMENTLISTE_ORTE_ID aus. Geschrieben wird nur dort, dieser Abgleich bleibt rein lesend.
-// Login dafür mit dem Prüfkonto: GZ_AUTH_USER/GZ_AUTH_PASS = GZ_PRUEFKONTO_USER/GZ_PRUEFKONTO_PASS aus der
-// Staging-.env (nicht das geteilte Konto „default“, sonst fehlen die Seed-IDs).
+// Login dafür mit dem Prüfkonto (GZ_PRUEFKONTO_* aus der Staging-.env, sonst GZ_AUTH_*); ohne ELEMENTLISTE_*
+// sucht seedIds() Trip und Vergleich des Seeds nach dem Login lesend (e2e/pruefkontoZugang.ts).
 import { test, expect, type Page, type APIRequestContext } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertNotProdBaseURL } from './prodUrlGuard.ts';
+import { pruefkontoZugangFallsGesetzt, seedTripId, seedVergleichId } from './pruefkontoZugang.ts';
 import {
 	STAGING_URL,
 	planeAbgleich,
@@ -391,11 +392,17 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 	const namenDeEn = namenPaareAus(lies(METRIK_NAMEN), lies(KATALOG_VERGLEICH('de')), lies(KATALOG_VERGLEICH('en')));
 	const api = page.request;
 
-	if (process.env.GZ_AUTH_USER && process.env.GZ_AUTH_PASS) {
-		const login = await api.post('/api/auth/login', { data: { username: process.env.GZ_AUTH_USER, password: process.env.GZ_AUTH_PASS } });
+	const konto = pruefkontoZugangFallsGesetzt();
+	if (konto) {
+		const login = await api.post('/api/auth/login', { data: { username: konto.user, password: konto.pass } });
 		expect(login.ok(), `Login HTTP ${login.status()}`).toBeTruthy();
 	}
-	const ids: Record<string, string | null> = { trip: process.env.ELEMENTLISTE_TRIP_ID ?? null, orte: process.env.ELEMENTLISTE_ORTE_ID ?? null };
+	// Je ID einzeln: eine gesetzte ELEMENTLISTE_*-ID bleibt erhalten, auch wenn der Lookup der anderen scheitert.
+	// Ohne Seed kein Abbruch: pruefDaten legt dann wie bisher kurzlebige E2E-GZ-Prüfdaten an (Kopfkommentar).
+	const ids: Record<string, string | null> = {
+		trip: await seedTripId(api).catch(() => null),
+		orte: await seedVergleichId(api).catch(() => null)
+	};
 	// C3: die Profilsprache überstimmt das Cookie. Sie wird für den Lauf gesetzt und im finally auf den
 	// vorherigen Wert zurückgestellt (geteiltes Staging-Hilfskonto — Zurückstellen ist Pflicht).
 	const profil = await api.get('/api/auth/profile');

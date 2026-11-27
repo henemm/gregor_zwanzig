@@ -3,9 +3,9 @@
 //
 // Läuft NICHT im PR-CI, sondern in /e2e-verify bzw. /60-validate nach Push und Staging-Deploy:
 //   cd frontend && npx playwright test --config playwright.3440-test-menue.staging.config.ts
-// Umgebung (nie im Klartext ausgeben): GZ_AUTH_USER/GZ_AUTH_PASS = Prüfkonto (GZ_PRUEFKONTO_* aus der Staging-.env),
-// ELEMENTLISTE_TRIP_ID / ELEMENTLISTE_ORTE_ID aus scripts/staging_pruefkonto_mockupdaten.py
-// (Runbook docs/runbooks/staging_pruefkonto_seed.md), optional GZ_VALIDATOR_* (nginx).
+// Umgebung (nie im Klartext ausgeben): Prüfkonto und Seed-IDs wählt e2e/pruefkontoZugang.ts (GZ_PRUEFKONTO_*
+// aus der Staging-.env vor GZ_AUTH_*; ELEMENTLISTE_TRIP_ID/ELEMENTLISTE_ORTE_ID optional, sonst Lookup des Seeds aus
+// scripts/staging_pruefkonto_mockupdaten.py, Runbook docs/runbooks/staging_pruefkonto_seed.md), optional GZ_VALIDATOR_* (nginx).
 //
 // Echter Versand NUR für E-Mail und Telegram (Prüfkonto: bestätigte Adresse, verbundener Chat; Staging leitet Mail
 // per force_test ins Stalwart-Test-Postfach). SMS und Premium-SMS werden nie real ausgelöst (Kosten seven.io):
@@ -19,14 +19,12 @@
 import { test, expect, type Page, type Locator, type Request, type Cookie } from '@playwright/test';
 import { KONTO_ABRUF, ersetzeKontoAntwort } from './elementliste_abgleich_logik.ts';
 import { HUB_KINDS, HUB_SEL, createTestLocation, hubApiPath, seedHub, type HubKind } from './helpers';
+import { pruefkontoZugang, seedIds } from './pruefkontoZugang.ts';
 
 test.describe.configure({ mode: 'serial' });
 
 const KNOPF = 'subscription-hub-send';
-const IDS: Record<HubKind, string> = {
-	route: process.env.ELEMENTLISTE_TRIP_ID ?? '',
-	vergleich: process.env.ELEMENTLISTE_ORTE_ID ?? ''
-};
+const IDS: Record<HubKind, string> = { route: '', vergleich: '' }; // befüllt in beforeAll (seedIds)
 const HUB_PFAD = (kind: HubKind, id: string) => (kind === 'route' ? `/trips/${id}` : `/compare/${id}`);
 const KANAL_NAMEN = ['E-Mail', 'Telegram', 'SMS', 'Premium-SMS'] as const;
 
@@ -42,19 +40,18 @@ let profil: Profil = {};
 let sitzung: Cookie[] = [];
 
 test.beforeAll(async ({ browser }) => {
-	const user = process.env.GZ_AUTH_USER;
-	const pass = process.env.GZ_AUTH_PASS;
-	expect(user && pass, 'Vorbedingung: GZ_AUTH_USER/GZ_AUTH_PASS (Prüfkonto) gesetzt').toBeTruthy();
+	const { user, pass } = pruefkontoZugang();
 	const ctx = await browser.newContext({ baseURL: test.info().project.use.baseURL, ignoreHTTPSErrors: true });
 	const login = await ctx.request.post('/api/auth/login', { data: { username: user, password: pass } });
 	expect(login.ok(), `Login HTTP ${login.status()}`).toBeTruthy();
+	Object.assign(IDS, await seedIds(ctx.request));
 	sitzung = (await ctx.storageState()).cookies as Cookie[];
 	await ctx.close();
 });
 
 test.beforeEach(async ({ page }) => {
 	await page.context().addCookies(sitzung);
-	for (const kind of HUB_KINDS) expect(IDS[kind], `Vorbedingung: Seed-ID für ${kind} (ELEMENTLISTE_*_ID)`).not.toBe('');
+	for (const kind of HUB_KINDS) expect(IDS[kind], `Vorbedingung: Seed-ID für ${kind}`).not.toBe('');
 	const res = await page.request.get('/api/auth/profile');
 	expect(res.ok(), `GET /api/auth/profile HTTP ${res.status()}`).toBeTruthy();
 	profil = (await res.json()) as Profil;
