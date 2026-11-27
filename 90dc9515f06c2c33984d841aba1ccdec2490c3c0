@@ -1,0 +1,59 @@
+{
+  "verified_commit": "90dc9515f06c2c33984d841aba1ccdec2490c3c0",
+  "findings": [
+    {
+      "ac": "Smoke",
+      "status": "PASS",
+      "url": "/api/health",
+      "evidence": "Staging auf 90dc9515 (Merge PR #3489), health 200, python_core ok",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "mail-pruefen trip de/en",
+      "evidence": "Trip-Briefing (enthaelt Starkregen-Hinweispfad) ueber Staging zugestellt, briefing_mail_validator Exit 0 in DE und EN",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-8",
+      "status": "PASS",
+      "url": "mail-pruefen compare de/en",
+      "evidence": "Orts-Vergleich-Mail ueber Staging zugestellt, email_spec_validator Exit 0 in DE und EN; kein Regressionsbefund im Mailpfad",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-1..AC-11",
+      "status": "PASS",
+      "url": "tests/tdd/test_onset_zeit_exakt_*.py",
+      "evidence": "Frame-genaue Uhrzeit nur mit kontrollierter Sekundenlage messbar (echte Radarlage auf Staging nicht herstellbar); 30 Kern-Tests + Golden Master gruen in CI (test/e2e gruen auf PR #3489), Adversary VERIFIED 30/32 Mutationen gefangen",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "staging_telegram_live.py",
+      "evidence": "Telegram-Live auf Staging 90dc9515 durch Server-Sitzung: Exit 0, 10 passed, 0 skipped, alle 6 Soll-Tests PASS",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-27T21:46:02.102196+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Staging 90dc951: Trip- und Vergleichsmail DE/EN validiert, Telegram-Live bestanden; Frame-Uhrzeit per Kern-Tests belegt",
+  "scope": "backend",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Staging 90dc951: Trip- und Vergleichsmail DE/EN validiert, Telegram-Live bestanden; Frame-Uhrzeit per Kern-Tests belegt",
+      "scope": "backend",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-27T21:46:02.102196+00:00"
+    }
+  }
+}
