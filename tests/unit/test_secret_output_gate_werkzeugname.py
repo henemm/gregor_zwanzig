@@ -98,6 +98,13 @@ def test_abbruchmeldung_zeigt_fragezeichen_wenn_keine_maskierung_moeglich(
     NICHT, sondern '?'."""
     monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(tmp_path))
     g = _gate()
+    # Plugin-Lage fest vorgeben (sonst haengt der Test davon ab, ob das Plugin auf
+    # der Maschine installiert ist, #1617 Kommentar 2026-11-27): Erkennung laedt,
+    # findet aber nichts — die Meldung darf den Namen trotzdem nicht roh nennen,
+    # solange der .env-Notbehelf nicht lesbar ist.
+    g.collect_secrets = lambda cfg, wurzel: []
+    g._is_secret_value = lambda wert, cfg: True
+    g._is_secret_key = lambda schluessel, cfg: True
 
     def env_unlesbar():
         raise OSError("env unlesbar")
@@ -108,3 +115,26 @@ def test_abbruchmeldung_zeigt_fragezeichen_wenn_keine_maskierung_moeglich(
     meldung = capsys.readouterr().err
     assert "Ergebnisses von ? NICHT abgeschlossen" in meldung, meldung
     assert "mcp__dienst__" not in meldung
+
+
+def test_werkzeugname_mit_env_wert_den_das_plugin_nicht_kennt_wird_maskiert(
+        tmp_path, monkeypatch, capsys):
+    """Given Plugin-Erkennung geladen, die den .env-Wert im Werkzeugnamen NICHT als
+    Geheimnis einstuft, waehrend ein anderer Wert gefunden wird / When main() den
+    Fund meldet / Then steht der Wert aus dem Namen trotzdem nicht in der Meldung."""
+    andere = "Qw3rTy7uIo1pAs5dFg9h"
+    (tmp_path / ".env").write_text(f"GZ_FAKE_TEST_PASS={WERT}\nGZ_FAKE_API_TOKEN={andere}\n")
+    monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(tmp_path))
+    g = _gate()
+    g.collect_secrets = _env_paare
+    g._is_secret_value = lambda wert, cfg: wert == andere   # Plugin kennt nur diesen
+    g._is_secret_key = lambda schluessel, cfg: True
+    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps({
+        "tool_name": f"mcp__dienst__{WERT}",
+        "tool_response": {"stdout": f"login {andere}"},
+    })))
+    assert g.main() == 0
+    aus = capsys.readouterr()
+    assert "maskiert" in aus.err, aus.err
+    assert WERT not in aus.err + aus.out, aus.err + aus.out
+    assert "mcp__dienst__" in aus.err, aus.err
