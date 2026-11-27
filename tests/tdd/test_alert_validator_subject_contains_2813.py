@@ -61,7 +61,11 @@ class _Postfach:
     def fetch(self, mid, teil):
         roh = self._roh[int(mid) - 1]
         if "HEADER" in teil:
-            return "OK", [(b"", roh.split(b"\n\n", 1)[0] + b"\n\n")]
+            # #2035: Server-Zeit (frisch) im Praefix, wie ein echter IMAP-Server
+            import imaplib, time
+            jetzt = imaplib.Time2Internaldate(time.time()).encode()
+            return "OK", [(b"1 (INTERNALDATE " + jetzt + b" BODY[HEADER] {1}",
+                           roh.split(b"\n\n", 1)[0] + b"\n\n")]
         self.vollabrufe.append(int(mid))
         return "OK", [(b"", roh)]
 

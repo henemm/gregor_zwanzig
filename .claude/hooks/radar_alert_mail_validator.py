@@ -257,13 +257,16 @@ def _message_matches(headers, lang: str = "de", to_contains: str | None = None,
 def fetch_latest_message(max_scan: int = 50, lang: str = "de",
                          to_contains: str | None = None, imap=None,
                          subject_contains: str | None = None,
-                         vertrauen=None) -> Message:
+                         vertrauen=None, max_age_minutes: float | None = None,
+                         ignore_mail_age_reason: str | None = None) -> Message:
     """Holt die neueste passende radar-alert-Mail aus dem Test-Postfach.
 
     ``imap``: fertige, angemeldete Verbindung (Test-Seam, #2681). #2961: nur
     Mails des Dienst-Absenders (``_mail_trust``); mit eigener Verbindung kommt
-    ``vertrauen`` aus der Konfiguration."""
+    ``vertrauen`` aus der Konfiguration. #2035: der Treffer muss frisch sein
+    (``_mail_trust.alter_erzwingen``, INTERNALDATE)."""
     _e2e_paths.betreff_fragment_pruefen(subject_contains)
+    _mail_trust.alter_pruefen_argumente(max_age_minutes, ignore_mail_age_reason)
     own_connection = imap is None
     if own_connection:
         imap = _open_test_imap()
@@ -278,13 +281,16 @@ def fetch_latest_message(max_scan: int = 50, lang: str = "de",
             raise ValueError("Keine E-Mails gefunden")
 
         for mid in reversed(all_ids[-max_scan:]):
-            _, hdr_data = imap.fetch(mid, "(BODY.PEEK[HEADER])")
+            _, hdr_data = imap.fetch(mid, _mail_trust.ALTER_FETCH)
             headers = email.message_from_bytes(hdr_data[0][1])
             if _message_matches(headers, lang, to_contains, subject_contains):
                 grund = _mail_trust.fehler(headers, vertrauen) if vertrauen else None
                 if grund:
                     verworfen.append(grund)
                     continue
+                _mail_trust.alter_erzwingen(
+                    hdr_data, _e2e_paths.betreff_text(headers),
+                    max_age_minutes, ignore_mail_age_reason)
                 _, msg_data = imap.fetch(mid, "(RFC822)")
                 return email.message_from_bytes(msg_data[0][1])
 
@@ -329,6 +335,7 @@ def main() -> None:
     parser.add_argument("--eml", metavar="PFAD", default=None,
                         help="Mail aus dieser .eml-Datei pruefen statt per IMAP (#2663)")
     _e2e_paths.sprach_argumente(parser)
+    _mail_trust.alter_argumente(parser)
     parser.add_argument("--subject-contains", default=None,
                         help="nur Mails, deren dekodierter Betreff diesen Text enthaelt (#2813)")
     args = parser.parse_args()
@@ -344,7 +351,9 @@ def main() -> None:
             msg = email.message_from_bytes(Path(args.eml).read_bytes())
         else:
             msg = fetch_latest_message(lang=args.lang or "de", to_contains=args.to_contains,
-                                       subject_contains=args.subject_contains)
+                                       subject_contains=args.subject_contains,
+                                       max_age_minutes=args.max_age_minutes,
+                                       ignore_mail_age_reason=args.ignore_mail_age)
         success, errors = validate_message(msg, warnungen=warnungen)
         if args.eml:  # #2681: --lang/--to-contains gelten auch fuer die Datei
             auswahl = _e2e_paths.eml_auswahl_fehler(msg, args.lang, args.to_contains)
