@@ -73,7 +73,7 @@ Meldungen nennen ausschliesslich Werkzeug- und Schluesselnamen — nie den Wert.
 
 Regel-Budget: schliesst einen Weg, ueber den in #1535 nachweislich ein aktiver Zugang
 ausgetreten ist. Schaltet sich deshalb nicht automatisch ab;
-Wirksamkeits-Pruefung: 2026-11-05.
+Wirksamkeits-Pruefung: 2027-02-25 (repariert, #1617/#1197).
 
 Exit-Code immer 0 — `PostToolUse` kann laut Hook-Vertrag ohnehin nicht blockieren.
 """
@@ -316,14 +316,24 @@ def _env_rohwerte() -> list[tuple[str, str]]:
 
 
 def _werkzeug_maskiert() -> str:
-    """Werkzeugname fuer die Notfallmeldung — maskiert (#1617). Ist keine
-    Maskierung moeglich, wird der Name NICHT gezeigt."""
-    for quelle in (_geheimnisse, _env_rohwerte):
-        try:
-            return _ersetze(_WERKZEUG, quelle(), set())
-        except Exception:  # noqa: BLE001 — naechste Quelle, zuletzt "?"
-            continue
-    return "?"
+    """Werkzeugname fuer JEDE Meldung — maskiert (#1617). Einzige Druckstelle-Quelle.
+
+    Vereinigung beider Quellen: Plugin-Erkennung (falls ladbar) UND der konservative
+    `.env`-Notbehelf. Nur so wird auch ein `.env`-Wert maskiert, den das Plugin nicht als
+    Geheimnis einstuft, und das Verhalten haengt nicht davon ab, ob das Plugin auf der
+    Maschine installiert ist. Ist der Notbehelf nicht lesbar, wird der Name NICHT gezeigt.
+    """
+    paare: list[tuple[str, str]] = []
+    try:
+        paare += _geheimnisse()
+    except Exception:  # noqa: BLE001 — Plugin fehlt/Stoerung: Notbehelf entscheidet
+        pass
+    try:
+        paare += _env_rohwerte()
+    except Exception:  # noqa: BLE001 — keine verlaessliche Maskierung -> "?"
+        return "?"
+    paare.sort(key=lambda p: len(p[1]), reverse=True)
+    return _ersetze(_WERKZEUG, paare, set())   # Wegwerf-set: Name ist kein Fund
 
 
 def _melde_abbruch(fehler: BaseException) -> None:
@@ -375,7 +385,7 @@ def main() -> int:
 
     # #1617: auch der Werkzeugname laeuft durch die Maskierung, bevor er in
     # eine Meldung gelangt (eigene Fundmenge — der Name ist kein Ergebnis-Fund).
-    werkzeug = _ersetze(_WERKZEUG, paare, set())
+    werkzeug = _werkzeug_maskiert()
     if gefunden:
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PostToolUse",
