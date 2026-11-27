@@ -144,4 +144,4 @@ Alle Tests: Go, ohne Mocks, echter Store auf `t.TempDir()`, Store-Ebene (`intern
 ## Changelog
 
 - 2026-11-27: Initial spec created (Issue #3092)
-- 2026-11-27: Umsetzung: Helper in neuer Datei `internal/store/raw_merge.go`; zusaetzlich `internal/store/raw_merge_test.go` (Unit-Test `jsonKeysOf`, Adversary F002) und Anpassung des Bestandstests `internal/store/trip_archive_fields_roundtrip_test.go` an AC-8 (Altfelder bleiben in der Datei, Modell zeigt sie nicht).
+- 2026-11-27: Umsetzung: Helper in neuer Datei `internal/store/raw_merge.go`; zusaetzlich `internal/store/raw_merge_test.go` (Unit-Test `jsonKeysOf`, Adversary F002) und Anpassung des Bestandstests `internal/store/trip_archive_fields_roundtrip_test.go` an AC-8/ADR-0101 (entfernte Analytics-Altfelder `accuracy_pct`, `headline`, `briefings_count`, `alerts_count` bleiben wie jedes Altfeld in der Datei, das geladene Modell zeigt sie nicht).

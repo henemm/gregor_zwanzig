@@ -665,7 +665,7 @@ einem gelöschten Nutzerverzeichnis und einer beschädigten JSON-Datei wird der 
 
 Prinzip (steht in `CLAUDE.md`): **Read-Modify-Write mit Merge — bestehendes Objekt laden, nur
 explizit veränderte Felder überschreiben, Rest erhalten.** Niemals Replace (Client-unbekannte
-Felder gehen sonst verloren). Hintergrund: BUG-DATALOSS-GR221 (#102), 3 von 4 Stages verloren.
+Felder gehen sonst verloren). Seit #3092 gilt das auch im Go-Store für Trip und Ortsvergleich: `SaveTrip` und `SaveComparePreset` übernehmen dem Modell unbekannte Top-Level-Felder aus der Datei (`internal/store/raw_merge.go`). Hintergrund: BUG-DATALOSS-GR221 (#102), 3 von 4 Stages verloren.
 
 **Schema-relevante Dateien** (aus `CLAUDE.md` ausgelagert, #2640): `src/app/models.py`,
 `src/app/trip.py`, `src/app/loader.py`, `internal/model/*.go`, `internal/store/store.go` — Edits
