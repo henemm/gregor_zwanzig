@@ -1,0 +1,3 @@
+[prod-selftest] WARN: weder OPENSPEC_ACTIVE_WORKFLOW noch GZ_ACTIVE_WORKFLOW gesetzt — Bericht wird unter docs/artifacts/unknown/prod-selftest.md abgelegt.
+[prod-selftest] PASS (Exakt): verified_commit=cf1a2db0 entspricht HEAD.
+[prod-selftest] Verdict=PASS (Bericht: /home/hem/gregor_zwanzig/docs/artifacts/unknown/prod-selftest.md)
