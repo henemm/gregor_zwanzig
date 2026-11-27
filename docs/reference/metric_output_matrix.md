@@ -578,6 +578,10 @@ bereits gedeckten Zeilen gegen stillen Verlust ihrer Testabdeckung.
 eine selbst gewählte Zusatz-Mutation exakt vom vorgesehenen Test gefangen.
 Details: `docs/specs/modules/fix_1703_s5_compare_zellwerte.md`.
 
+> **Korrektur (2026-11-27, #3431):** Die Klartext-Seite der Übersicht nutzt seit #3431 für fehlende
+> Werte `–` (U+2013, `NO_VALUE`) statt `-`; Windrichtung, Sonnenstunden und Wolkenschichten folgen dem
+> Format-Katalog wie im HTML. Die Charakterisierung oben beschreibt den Stand vor diesem Datum.
+
 ### Scheibe 6 — Form-Wächter über Grammatik-Klassen ✅ ERLEDIGT (2026-08-13)
 
 Eigener Wächter über `PRIORITY`/`POSITIONAL` (`tokens/builder.py:47`, `:78`) und
