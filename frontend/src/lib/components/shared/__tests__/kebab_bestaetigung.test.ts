@@ -86,13 +86,14 @@ describe('AC-3/AC-10: nur Archivieren und Löschen fragen nach', () => {
 		const m = await modul();
 		assert.equal(m.braucheRueckfrage('archive'), true);
 		assert.equal(m.braucheRueckfrage('delete'), true);
-		for (const id of ['pause', 'resume', 'unarchive', 'send', 'continue-setup', ''])
+		// #3443 AC-2: „Aktivieren“ fragt nicht nach (schreibt nichts, nennt nur, was fehlt).
+		for (const id of ['pause', 'resume', 'unarchive', 'send', 'continue-setup', 'activate', ''])
 			assert.equal(m.braucheRueckfrage(id), false, `${id || '(leer)'} darf keine Rückfrage haben`);
 	});
 
 	test('rueckfrage ohne Rückfrage-Aktion ist null (Reaktivieren, Pausieren)', async () => {
 		const m = await modul();
-		for (const id of ['unarchive', 'pause', 'resume']) assert.equal(m.rueckfrage(id, NAME), null, id);
+		for (const id of ['unarchive', 'pause', 'resume', 'activate']) assert.equal(m.rueckfrage(id, NAME), null, id);
 	});
 });
 
@@ -190,7 +191,12 @@ describe('Menülabels im Hub: Ellipse nur bei Aktionen mit Rückfrage; Listen un
 		assert.deepEqual(labels('active', 'hub'), ['Pausieren', 'Archivieren …', 'Löschen …']);
 		assert.deepEqual(labels('paused', 'hub'), ['Fortsetzen', 'Archivieren …', 'Löschen …']);
 		assert.deepEqual(labels('archived', 'hub'), ['Reaktivieren', 'Löschen …']);
-		assert.deepEqual(labels('draft', 'hub'), ['Löschen …']);
+		// Entwurf: „Löschen …“ steht unverändert am Ende; die neue Reihenfolge mit „Aktivieren“ prüft
+		// der Test „#3443 Hub DE Entwurf: …“ unten.
+		assert.equal(labels('draft', 'hub').at(-1), 'Löschen …');
+	});
+	test('#3443 Hub DE Entwurf: „Aktivieren“ (ohne Ellipse, keine Rückfrage) zuerst, dann „Löschen …“', () => {
+		assert.deepEqual(labels('draft', 'hub'), ['Aktivieren', 'Löschen …']);
 	});
 	test('Hub EN: „Archive …“ / „Delete …“', () => {
 		locale.set('en');

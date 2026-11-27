@@ -219,7 +219,9 @@ describe('AC-1: Trip-Hub englisch, Namen unveraendert', () => {
 describe('AC-2: Aktionsliste Trip == Ortsvergleich, Texte aus aktionen.*', () => {
 	const SCHLUESSEL: Record<string, string> = {
 		pause: 'aktionen.pause', resume: 'aktionen.resume', send: 'aktionen.senden', alarms: 'aktionen.alarms', weather: 'aktionen.weather',
-		edit: 'aktionen.edit', archive: 'aktionen.archive', unarchive: 'aktionen.unarchive', delete: 'aktionen.delete', 'continue-setup': 'aktionen.continue_setup'
+		edit: 'aktionen.edit', archive: 'aktionen.archive', unarchive: 'aktionen.unarchive', delete: 'aktionen.delete', 'continue-setup': 'aktionen.continue_setup',
+		// #3443: „Aktivieren“ im Hub-Entwurf — Menütext wie der Kopf-Knopf.
+		activate: 'aktionen.kopf.aktivieren'
 	};
 	const alle = () => {
 		const z: Record<string, unknown[]> = {};
@@ -402,7 +404,10 @@ describe('Anker: jeder F9-Katalogwert ist als festes de/en-Literal verankert', (
 			// #3442: Rückfrage im Kebab-Menü (Wortlaut verankert in shared/__tests__/kebab_bestaetigung.test.ts).
 			const neu3442 = Object.keys(JSON.parse(readFileSync(path.join(MSG, 'de', 'aktionen.json'), 'utf-8'))).filter((k) => k.startsWith('aktionen.kebab.'));
 			assert.ok(neu3442.length >= 10, 'aktionen.kebab.* fehlt');
-			assert.deepEqual(lies('aktionen').sort(), [...BESTAND_AKTIONEN, ...anker('aktionen.'), ...f10, ...neu2919, ...neu3442].sort(), `${lang}: aktionen.json`);
+			// #3443: Hinweise und Meldungen „Aktivieren“ (Wortlaut verankert in shared/__tests__/entwurf_aktivieren.test.ts).
+			const neu3443 = Object.keys(JSON.parse(readFileSync(path.join(MSG, 'de', 'aktionen.json'), 'utf-8'))).filter((k) => k.startsWith('aktionen.aktivieren.'));
+			assert.equal(neu3443.length, 6, 'aktionen.aktivieren.* fehlt');
+			assert.deepEqual(lies('aktionen').sort(), [...BESTAND_AKTIONEN, ...anker('aktionen.'), ...f10, ...neu2919, ...neu3442, ...neu3443].sort(), `${lang}: aktionen.json`);
 			assert.deepEqual(lies('vergleich').filter((k) => k.startsWith('vergleich.anlegen.')).sort(), anker('vergleich.anlegen.').sort(), `${lang}: vergleich.anlegen.*`);
 		}
 		assert.equal(new Set(F9_ANKER.map(([k]) => k)).size, F9_ANKER.length, 'doppelte Anker');

@@ -20,6 +20,8 @@
 	import { subscriptionActions } from '$lib/components/shared/subscriptionActions.js';
 	import { deleteSubscription, sendSubscription, sendTestAlarm, setArchived } from '$lib/components/shared/subscriptionExec.js';
 	import { erfolgsText, fehlerText } from '$lib/components/shared/kebabBestaetigung.js';
+	import { aktivierungsUebernahme, fehltFuerAktivierung, hinweisFuer, zielFuer } from '$lib/components/shared/entwurfAktivieren';
+	import { erstelleAktivierungsWechsel } from '$lib/components/shared/aktivierungsWechsel.svelte';
 	import {
 		deriveStatusWithScheduleOverride,
 		isRuntimeExceeded,
@@ -30,7 +32,7 @@
 	import { goto, beforeNavigate } from '$app/navigation';
 	import { createSaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { sichereAusstehendeSpeicherung } from '$lib/stores/ausstehendeSpeicherungSichern';
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onMount, untrack } from 'svelte';
 	import { AKTIVE_SPEICHERUNG, type SpeicherAnmeldestelle } from '$lib/stores/aktiveSpeicherung';
 	import {
 		inhaltsFassung,
@@ -122,10 +124,12 @@
 	// geholte Stand AELTER als der Stempel — dann KEIN Neuaufbau (nie nur eines von beiden;
 	// Muster `uebernehmeNachStatusAenderung` der Trip-Seite).
 	// #3442: liefert, ob der frische Stand übernommen wurde (Archivieren/Reaktivieren auf der Seite).
-	async function uebernehmeFrischenVergleich(): Promise<boolean> {
+	// #3443: `nurWenn` (Entwurf) übernimmt nur einen Stand, der die Aktivierung bewirkt.
+	async function uebernehmeFrischenVergleich(nurWenn: ((frisch: ComparePreset) => boolean) | null = null): Promise<boolean> {
 		try {
 			const frisch = await getMitFassung<ComparePreset>(`/api/compare/presets/${data.preset.id}`);
 			if (!frisch.inRegistry || hubSaveCtl.hasPending || hubSaveCtl.state !== 'idle') return false;
+			if (nurWenn && !nurWenn(frisch.daten)) return false;
 			tabNachUebernahme = new URL(window.location.href).searchParams.get('tab');
 			currentPreset = frisch.daten;
 			uebernommeneFassung += 1;
@@ -268,6 +272,26 @@
 		aktionMsg = text;
 		aktionOk = ok;
 	}
+	// #3443: Reiter wie Orte speichern am Seitenstand vorbei — im Entwurf nach jedem erfolgreichen Speichern
+	// den gespeicherten Stand prüfen und nur übernehmen, wenn er aktiviert (Pill, Knopf, „Aktiviert …“ ohne Neuladen).
+	$effect(() => {
+		if (hubSaveCtl.savedAt) untrack(() => { const pruefe = aktivierungsUebernahme(lifecycle); if (pruefe) void uebernehmeFrischenVergleich(pruefe); });
+	});
+	// #3443: Wechsel Entwurf → aktiv (nach dem Speichern der Orte) meldet „Aktiviert …“ mit dem ersten Briefing.
+	erstelleAktivierungsWechsel(
+		() => ({ context: 'vergleich', id: currentPreset.id, lifecycle: lifecycle }),
+		(p) => api.get(p),
+		(text) => meldung(text, true)
+	);
+	// #3443: „Aktivieren“ (Kopf-Knopf und Kebab) schreibt nichts — nennt, was fehlt, und öffnet den Reiter Orte.
+	function handleAktivieren(): void {
+		const teile = fehltFuerAktivierung('vergleich', currentPreset);
+		const hinweis = hinweisFuer(teile);
+		if (!hinweis) return;
+		meldung(hinweis, true);
+		const ziel = zielFuer('vergleich', teile);
+		if (ziel) void goto(ziel, { noScroll: true, keepFocus: true });
+	}
 	// Gewählte Menü-Aktion: Pausieren/Fortsetzen teilen den Toggle-Weg, die Meldung unterscheidet sie.
 	let gewaehlt = '';
 
@@ -347,7 +371,8 @@
 		// #3442: Archivieren/Loeschen kommen erst nach der Rueckfrage im Menue an.
 		gewaehlt = id;
 		meldung(null);
-		if (id === 'pause' || id === 'resume') {
+		if (id === 'activate') handleAktivieren();
+		else if (id === 'pause' || id === 'resume') {
 			// 'pause' und 'resume' sind dieselbe Toggle-Aktion.
 			void togglePause();
 		} else if (id === 'archive') {
@@ -446,7 +471,7 @@
 		status={statusBadge}
 		eyebrowText={kopfEyebrow}
 		{metaTeile}
-		aktivierenHref={status === 'draft' ? '?tab=zustellung#versand' : undefined}
+		onAktivieren={status === 'draft' ? handleAktivieren : undefined}
 	>
 		{#snippet meldungen()}
 			<!-- #2837 S1: Meldungen wie beim Trip in jeder Breite (keine Whitelist-Ausnahme). -->

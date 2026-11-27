@@ -196,3 +196,4 @@ Umgestellt statt gelöscht (alte Dialog-Testids):
 ## Changelog
 
 - 2026-11-27: Initial spec created (Issue #3442, Scheibe S5c von #2797, Epic #2791)
+- 2026-11-27: Fortschreibung durch #3443 (`feat_3443_entwurf_aktivieren.md`): im Hub-Entwurf steht „Aktivieren“ (ohne Rückfrage, ohne Ellipse) als erster Kebab-Eintrag vor „Löschen …“; Rückfragen für Archivieren und Löschen unverändert.
