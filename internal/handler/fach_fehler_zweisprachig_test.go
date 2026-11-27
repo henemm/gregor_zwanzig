@@ -578,3 +578,50 @@ func TestBriefingSend_KindRequiredEnglischGleichFixture(t *testing.T) {
 		t.Errorf("Status %d Antwort %v, erwartet 400 kind_required mit %q", w.Code, b, soll["kind_required_en"])
 	}
 }
+
+// #3444 AC-1: Vorschau und Platzierungen ohne oder mit ungueltiger
+// Briefing-Art -> 400 kind_required mit exaktem Fixture-Wortlaut fuer de und
+// en. Echte Kette Auth -> Lang -> Handler wie im Router (router.go).
+func TestKindRequiredVorschauUndPlatzierungenDeEn(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "tests", "fixtures", "send_detail_parity", "faelle.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var soll map[string]string
+	if err := json.Unmarshal(raw, &soll); err != nil {
+		t.Fatal(err)
+	}
+	texte := map[string]string{"de": soll["kind_required"], "en": soll["kind_required_en"]}
+	if texte["de"] == "" || texte["en"] == "" {
+		t.Fatalf("Fixture unvollstaendig: %v", texte)
+	}
+	faelle := []struct{ name, method, path, body string }{
+		{"Vorschau ohne kind", http.MethodPost, "/api/briefings/t1/alert-preview", "{}"},
+		{"Vorschau kind=trip", http.MethodPost, "/api/briefings/t1/alert-preview?kind=trip", "{}"},
+		{"Platzierungen GET ohne kind", http.MethodGet, "/api/briefings/t1/placements", ""},
+		{"Platzierungen PUT kind=compare", http.MethodPut, "/api/briefings/t1/placements?kind=compare", "{}"},
+		{"Platzierungs-Vorschau ohne kind", http.MethodPost, "/api/briefings/placements/vorschau", "{}"},
+		{"Platzierungs-Vorschau kind=ROUTE", http.MethodPost, "/api/briefings/placements/vorschau?kind=ROUTE", "{}"},
+	}
+	for _, lang := range []string{"de", "en"} {
+		for _, f := range faelle {
+			t.Run(lang+"/"+f.name, func(t *testing.T) {
+				s := store.New(t.TempDir(), "")
+				c := g3Nutzer(t, s, "kira-"+lang, lang, "premium")
+				r := chi.NewRouter()
+				r.Use(middleware.AuthMiddleware(g3Secret, s))
+				r.Use(middleware.Lang(s))
+				r.Post("/api/briefings/{id}/alert-preview", BriefingAlertPreviewHandler(""))
+				r.Get("/api/briefings/{id}/placements", BriefingPlacementsGetHandler(s, ""))
+				r.Put("/api/briefings/{id}/placements", BriefingPlacementsPutHandler(s, ""))
+				r.Post("/api/briefings/placements/vorschau", BriefingPlacementsPreviewHandler(""))
+				w := g3Do(r, c, f.method, f.path, f.body, "")
+				b := g3Body(t, w)
+				if w.Code != http.StatusBadRequest || b["code"] != "kind_required" ||
+					b["message"] != texte[lang] || b["detail"] != texte[lang] {
+					t.Errorf("Status %d Antwort %v, erwartet 400 kind_required mit %q", w.Code, b, texte[lang])
+				}
+			})
+		}
+	}
+}
