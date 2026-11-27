@@ -91,7 +91,7 @@ func WriteError(w http.ResponseWriter, r *http.Request, status int, code string,
 ```
 
 - `T` und `Tn` sind Paketfunktionen und zugleich Methoden von `Catalog`. `ErrorBody` (`internal/i18n/errorbody.go`) baut das Fehlerobjekt.
-- Fehlerobjekt der Go-API: `{"code", "message", "error", "detail"}`. `code` ist stabil (snake_case), `message` ist der Text in der Anfragesprache, `error` (= `code`) und `detail` sind Übergangsfelder für bestehende Clients. Suchkette: `fehler.<code>` → `auth.fehler.<code>` → `konto.fehler.<code>` → `fach.fehler.<code>`, unbekannte Codes ergeben `fehler.unbekannt`. Liste der Codes: `docs/reference/api_contract.md`.
+- Fehlerobjekt der Go-API: `{"code", "message", "error", "detail"}`. `code` ist stabil (snake_case), `message` ist der Text in der Anfragesprache, `error` (= `code`) und `detail` sind Übergangsfelder für bestehende Clients. Suchkette: `fehler.<code>` → `auth.fehler.<code>` → `konto.fehler.<code>` → `fach.fehler.<code>` → `geteilt.fehler.<code>` (ADR-0130), unbekannte Codes ergeben `fehler.unbekannt`. Liste der Codes: `docs/reference/api_contract.md`.
 - Python-Core (FastAPI): Fehlerobjekt `{"detail", "code"}` (`api/fehler.py`), `detail` bleibt Zeichenkette, `code` kommt hinzu.
 - Mails: je Zeile ein Schlüssel (`mail.verify.betreff` usw.). Keine `text/template`-Datei je Sprache. Empfängersprache ist die Kontosprache. Admin-Mails an den Betreiber bleiben `de`.
 - Logs bleiben deutsch und tragen bei Umlauten den Marker `// i18n-log` (Go) bzw. `# i18n-log` (Python).
