@@ -1,0 +1,115 @@
+{
+  "verified_commit": "621b8a160bf01547b2322c1ce363170755c72f94",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/trips/<id>, /compare/<id>",
+      "evidence": "Playwright gegen Staging 621b8a1: Entwurf zeigt Akzent-BUTTON 'Aktivieren'/'Activate' neben der Pill, kein href, DE/EN, Desktop 1280 und 390 px (8 Tests)",
+      "workflow": "feat-3443-entwurf-aktivieren"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "/trips/<id>, /compare/<id>",
+      "evidence": "Kebab im Entwurf: [Aktivieren, L\u00f6schen \u2026] Desktop-Men\u00fc und mobiles Blatt; aktives Men\u00fc unver\u00e4ndert [Pausieren, Archivieren \u2026, L\u00f6schen \u2026]",
+      "workflow": "feat-3443-entwurf-aktivieren"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "/trips/<id>",
+      "evidence": "Klick Kopf-Knopf im Trip-Entwurf: Hinweistext aus Katalog, ?tab=etappen aktiv, kein Schreibabruf, kein Neuladen, Etappen ohne Datum unver\u00e4ndert",
+      "workflow": "feat-3443-entwurf-aktivieren"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "/compare/<id>",
+      "evidence": "Klick im Vergleich-Entwurf: Hinweis, ?tab=orte aktiv, kein Schreibabruf, location_ids unver\u00e4ndert []",
+      "workflow": "feat-3443-entwurf-aktivieren"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "/trips/<id>, /compare/<id>",
+      "evidence": "Ziel-Reiter je fehlendem Teil wie Spec (etappen/orte), Hinweistexte DE/EN",
+      "workflow": "feat-3443-entwurf-aktivieren"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "/trips/<id>, /compare/<id>",
+      "evidence": "Men\u00fceintrag 'Aktivieren' liefert denselben Hinweis und dieselbe URL wie der Kopf-Knopf, kein Schreibabruf",
+      "workflow": "feat-3443-entwurf-aktivieren"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "/trips/<id>, /compare/<id>",
+      "evidence": "Entwurf \u00fcber die Oberfl\u00e4che vervollst\u00e4ndigt => Pill aktiv, Meldung 'Aktiviert. Das erste Briefing kommt \u2026', genau ein Abruf /api/next-briefings (Trip und Vergleich)",
+      "workflow": "feat-3443-entwurf-aktivieren"
+    },
+    {
+      "ac": "AC-8",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "Fallback 'Aktiviert.' ohne Termin bzw. bei Abruffehler: Kern-Laufzeittest aktivierungs_wechsel_laufzeit gr\u00fcn; auf Staging nicht herstellbar",
+      "workflow": "feat-3443-entwurf-aktivieren"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "/trips/<id>, /compare/<id>",
+      "evidence": "Aktiver Hub beim Laden: kein Aktivieren-Knopf, keine Aktiviert-Meldung nach 1,5 s, genau ein next-briefings-Abruf (\u00dcbersicht-Karte, Bestand), keiner vom Kopf",
+      "workflow": "feat-3443-entwurf-aktivieren"
+    },
+    {
+      "ac": "AC-10",
+      "status": "PASS",
+      "url": "/compare/<id>",
+      "evidence": "'Setup abschlie\u00dfen' bleibt im Vergleich-Entwurf auf dem Platz von 'Test schicken', DE/EN",
+      "workflow": "feat-3443-entwurf-aktivieren"
+    },
+    {
+      "ac": "AC-11",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "Alle Texte aus Katalog DE/EN, im Playwright-Lauf je Sprache gegen den Katalog verglichen",
+      "workflow": "feat-3443-entwurf-aktivieren"
+    },
+    {
+      "ac": "AC-12",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "Trip und Vergleich zeigen identisches Verhalten \u00fcber denselben Code (je 4 Varianten gr\u00fcn)",
+      "workflow": "feat-3443-entwurf-aktivieren"
+    },
+    {
+      "ac": "AC-13",
+      "status": "PASS",
+      "url": "/trips/<id>, /compare/<id>",
+      "evidence": "Elementliste: Kopf 'Aktivieren' neben der Pill, Kebab Ordnung 1 'Aktivieren', route/vergleich DE/EN",
+      "workflow": "feat-3443-entwurf-aktivieren"
+    }
+  ],
+  "verified_at": "2026-11-27T20:24:27.958772+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Staging-Abnahme #3443 18/18 gr\u00fcn (DE/EN, Desktop/mobil, Trip und Vergleich)",
+  "scope": "docs-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "feat-3443-entwurf-aktivieren": {
+      "verdict": "VERIFIED: Staging-Abnahme #3443 18/18 gr\u00fcn (DE/EN, Desktop/mobil, Trip und Vergleich)",
+      "scope": "docs-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-27T20:24:27.958772+00:00"
+    }
+  }
+}
