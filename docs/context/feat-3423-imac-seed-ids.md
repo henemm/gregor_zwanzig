@@ -91,3 +91,11 @@ die Spec-Änderungen sind mechanisch gleich; Aufteilen würde den Nachweis (Punk
 ### Open Questions
 
 Keine Produktfrage; rein technisch.
+
+## Stand Übergabe (2026-11-27, Phase 6)
+
+- Implementierung im Arbeitsbaum auf Branch `feat/3423-imac-seed-ids` (main-Ordner), **noch nicht committet** (Commit-Gate verlangt Adversary-Verdict): neu `frontend/e2e/pruefkontoZugang.ts`; geändert 4 Staging-Specs + `.claude/commands/e2e-verify.md`. Beide Testdateien grün (15/15 node-Tests, 1/1 Doku-Test), GREEN-Ausgabe `docs/artifacts/feat-3423-imac-seed-ids/test-green-output.txt`.
+- Tech-Lead-Entscheidung: `elementliste-abgleich` bricht bei fehlendem Seed NICHT ab (`seedIds(api).catch(() => null)`), sondern behält den dokumentierten E2E-GZ-Wegwerfdaten-Weg (`pruefDaten`). Die anderen drei Specs brechen laut AC-4 ab.
+- Bekannte Verhaltensänderungen wsw-abnahme-3037: Zweitkonto-Fehlertext ohne Präfix „#3037 AC-9“; fehlender Seed scheitert erst nach dem Prüfkonto-Login.
+- `qa_gate.py --run` scheitert: kein `qa_gate.test_command` in config.yaml. Klären, wie frühere Workflows (z. B. rework-3389) das gelöst haben.
+- Nächste Schritte: GREEN-Artefakt registrieren (falls noch nicht), `workflow.py auto-green` → Phase `phase6b_adversary` → Adversary-Dialog (implementation-validator, Mutations-Gegenprobe) → stamp/register → Commit → `/60-validate`.

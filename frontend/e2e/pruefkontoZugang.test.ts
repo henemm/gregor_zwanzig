@@ -17,9 +17,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
 	pruefkontoZugang,
+	pruefkontoZugangFallsGesetzt,
 	zweitkontoZugang,
 	vergleichAusPresets,
 	seedIds,
+	seedTripId,
+	seedVergleichId,
 	SEED_TRIP_ID,
 	SEED_VERGLEICH_NAME
 } from './pruefkontoZugang.ts';
@@ -74,6 +77,19 @@ test('AC-1: fehlen beide Variablenpaare, bricht die Wahl mit klarer Meldung ab',
 	assert.throws(() => pruefkontoZugang({}), /GZ_PRUEFKONTO_USER[\s\S]*GZ_AUTH_USER/);
 });
 
+test('AC-1: halb gesetztes GZ_PRUEFKONTO_*-Paar bricht ab statt still auf GZ_AUTH_* zu fallen', () => {
+	const nurUser = { GZ_PRUEFKONTO_USER: 'pruef', GZ_AUTH_USER: 'a', GZ_AUTH_PASS: 'b' };
+	const nurPass = { GZ_PRUEFKONTO_PASS: 'p', GZ_AUTH_USER: 'a', GZ_AUTH_PASS: 'b' };
+	assert.throws(() => pruefkontoZugang(nurUser), /GZ_PRUEFKONTO_PASS fehlt/);
+	assert.throws(() => pruefkontoZugang(nurPass), /GZ_PRUEFKONTO_USER fehlt/);
+	assert.throws(() => pruefkontoZugangFallsGesetzt(nurUser), /GZ_PRUEFKONTO_PASS fehlt/);
+});
+
+test('AC-1: ohne jedes Variablenpaar liefert pruefkontoZugangFallsGesetzt undefined (Login entfällt)', () => {
+	assert.equal(pruefkontoZugangFallsGesetzt({}), undefined);
+	assert.deepEqual(pruefkontoZugangFallsGesetzt({ GZ_AUTH_USER: 'a', GZ_AUTH_PASS: 'b' }), { user: 'a', pass: 'b' });
+});
+
 // --- AC-2: Zweitkonto -----------------------------------------------------
 
 test('AC-2: GZ_ZWEITKONTO_* wird genommen, wenn gesetzt', () => {
@@ -108,14 +124,20 @@ test('AC-2: Server-Weg ohne GZ_PRUEFKONTO_* und ohne GZ_ZWEITKONTO_* (GZ_AUTH_* 
 	assert.throws(() => zweitkontoZugang(env), /Zweitkonto/);
 });
 
+test('AC-2: halb gesetztes GZ_ZWEITKONTO_*-Paar bricht ab statt still auf GZ_AUTH_* zu fallen', () => {
+	const basis = { GZ_PRUEFKONTO_USER: 'pruef', GZ_PRUEFKONTO_PASS: 'p', GZ_AUTH_USER: 'default', GZ_AUTH_PASS: 'd' };
+	assert.throws(() => zweitkontoZugang({ ...basis, GZ_ZWEITKONTO_USER: 'zweit' }), /GZ_ZWEITKONTO_PASS fehlt/);
+	assert.throws(() => zweitkontoZugang({ ...basis, GZ_ZWEITKONTO_PASS: 'z' }), /GZ_ZWEITKONTO_USER fehlt/);
+});
+
 // --- AC-3 / AC-4: Vergleichs-Auswahl --------------------------------------
 
 test('AC-3: Vergleich „Münsterland" wird per Name aus der Preset-Liste gewählt', () => {
 	assert.equal(SEED_VERGLEICH_NAME, 'Münsterland');
 	const liste = [
 		{ id: 'a1', name: 'Alpen' },
-		{ id: 'm7', name: 'Münsterland' },
-		{ id: 'x9', name: 'Münsterland-Kopie' }
+		{ id: 'x9', name: 'Münsterland-Kopie' },
+		{ id: 'm7', name: 'Münsterland' }
 	];
 	assert.equal(vergleichAusPresets(liste), 'm7');
 });
@@ -158,4 +180,57 @@ test('AC-4: fehlender Vergleich bricht mit Seed-Hinweis ab, statt mit leerer ID 
 		'/api/compare/presets': { status: 200, body: [] }
 	});
 	await assert.rejects(() => seedIds(api, {}), SEED_HINWEIS);
+});
+
+test('AC-3: leere ELEMENTLISTE_TRIP_ID zählt als nicht gesetzt — der Trip wird gesucht', async () => {
+	const { api, aufrufe } = apiAttrappe({
+		'/api/trips/gz2967-gr221-mallorca': { status: 200, body: { id: 'gz2967-gr221-mallorca' } }
+	});
+	const ids = await seedIds(api, { ELEMENTLISTE_TRIP_ID: '', ELEMENTLISTE_ORTE_ID: 'o-env' });
+	assert.deepEqual(ids, { route: 'gz2967-gr221-mallorca', vergleich: 'o-env' });
+	assert.deepEqual(aufrufe, ['/api/trips/gz2967-gr221-mallorca']);
+});
+
+test('AC-3: Einzel-Lookups — gesetzte Env-ID bleibt, auch wenn der Lookup der anderen scheitert', async () => {
+	const { api } = apiAttrappe({});
+	assert.equal(await seedTripId(api, { ELEMENTLISTE_TRIP_ID: 't-env' }), 't-env');
+	await assert.rejects(() => seedVergleichId(api, { ELEMENTLISTE_TRIP_ID: 't-env' }), SEED_HINWEIS);
+	assert.equal(await seedVergleichId(api, { ELEMENTLISTE_ORTE_ID: 'o-env' }), 'o-env');
+	await assert.rejects(() => seedTripId(api, { ELEMENTLISTE_ORTE_ID: 'o-env' }), SEED_HINWEIS);
+});
+
+// --- Lücken aus der Mutations-Gegenprobe ------------------------------------
+
+test('AC-4: „Münsterland" ohne id oder mit leerer id bricht mit Seed-Hinweis ab statt leerer ID', () => {
+	assert.throws(() => vergleichAusPresets([{ name: 'Münsterland' }]), SEED_HINWEIS);
+	assert.throws(() => vergleichAusPresets([{ id: '', name: 'Münsterland' }]), SEED_HINWEIS);
+});
+
+test('AC-3: Namenssuche ist exakt — „münsterland" (klein) gilt als nicht gefunden', () => {
+	assert.throws(() => vergleichAusPresets([{ id: 'a', name: 'münsterland' }]), /nicht gefunden/);
+});
+
+test('AC-1: halb gesetztes Paar mit leerem Wert (GZ_PRUEFKONTO_USER="") bricht ab statt auf GZ_AUTH_* zu fallen', () => {
+	const env = { GZ_PRUEFKONTO_USER: '', GZ_PRUEFKONTO_PASS: 'x', GZ_AUTH_USER: 'a', GZ_AUTH_PASS: 'b' };
+	assert.throws(() => pruefkontoZugang(env), /GZ_PRUEFKONTO_USER fehlt/);
+	assert.throws(() => pruefkontoZugangFallsGesetzt(env), /GZ_PRUEFKONTO_USER fehlt/);
+});
+
+test('AC-1: halb gesetztes GZ_AUTH_*-Paar bleibt nachsichtig (kein Wurf), pruefkontoZugang meldet fehlenden Zugang', () => {
+	assert.equal(pruefkontoZugangFallsGesetzt({ GZ_AUTH_USER: 'u' }), undefined);
+	assert.throws(() => pruefkontoZugang({ GZ_AUTH_USER: 'u' }), /Prüfkonto-Zugang fehlt/);
+});
+
+test('AC-4: Vergleichsliste mit HTTP 500 bricht mit Status und Seed-Hinweis ab', async () => {
+	const { api } = apiAttrappe({
+		'/api/trips/gz2967-gr221-mallorca': { status: 200, body: { id: 'gz2967-gr221-mallorca' } },
+		'/api/compare/presets': { status: 500, body: [{ id: 'v2', name: 'Münsterland' }] }
+	});
+	for (const aufruf of [() => seedVergleichId(api, {}), () => seedIds(api, {})]) {
+		await assert.rejects(aufruf, (err: Error) => {
+			assert.match(err.message, /HTTP 500/);
+			assert.match(err.message, SEED_HINWEIS);
+			return true;
+		});
+	}
 });

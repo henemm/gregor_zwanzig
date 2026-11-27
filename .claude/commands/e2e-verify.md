@@ -391,6 +391,11 @@ ssh henemm-pruefen spec-run playwright.abnahme.staging.config.ts e2e/abnahme.sta
 ssh henemm-pruefen spec-run playwright.abnahme.staging.config.ts e2e/abnahme.staging.spec.ts --lang en
 ```
 
+Prüfkonto-Specs (`hub-test-alarm`, `hub-send-menue`, `elementliste-abgleich`, `wsw-abnahme-3037`)
+laufen über `spec-run` ohne `ELEMENTLISTE_*`-Variablen: sie wählen Prüfkonto und Seed-IDs selbst
+(`frontend/e2e/pruefkontoZugang.ts`, auch bei `--lang en`). Der Seed muss dafür einmalig auf dem
+Server gelaufen sein (Runbook `docs/runbooks/staging_pruefkonto_seed.md`), sonst bricht der Lauf mit Hinweis ab.
+
 **Schritt 3b (Mail):** Reihenfolge fest `<typ> [de|en] [morning|evening]`, mit `<typ>` =
 `trip`, `compare` oder `beide`. Den Report-Typ `morning|evening` nimmt der Prüfzugang nur
 nach einer Sprache an (`mail-pruefen trip evening` wird abgelehnt, richtig ist
