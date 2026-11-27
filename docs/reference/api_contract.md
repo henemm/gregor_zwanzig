@@ -5106,7 +5106,8 @@ Leerbefund statt Exception/HTTP 500.
   Ortsvergleich über `CompareWeatherSnapshotService`/`CompareLocationWeatherSource`, geteilter
   Helfer `src/services/alert_preview_hours.py`. Das ist ein lesender Frisch-Abruf, fail-soft:
   ohne Anker nur der neue Wert, bei Fehler/Zeitüberschreitung oder ohne Reihe unverändert wie
-  vorher, nie ein Fehler. Das Frontend (`alertPreviewHelpers.ts`) sendet `segment_id: "1"`
+  vorher, nie ein Fehler. Der Endpunkt ist seit #3458 (2026-11-27) kein Oberflächen-Bestandteil mehr (Prüfwerkzeug für
+  Validatoren und Staging); die frühere Oberfläche (`alertPreviewHelpers.ts`) sendete `segment_id: "1"`
   (erstes Segment des Tages); die Etappen-Kennung (z. B. „T01") lehnt der Kern mit `422` ab.
 - **Entitäts-ID-Guard (Issue #2140 S2):** Verletzt `trip_id` `VALID_ENTITY_ID_RE`, behandelt
   `_load_trip_raw` das wie „nicht gefunden" und der Endpoint antwortet mit dem regulären `404`

@@ -20,10 +20,10 @@ async function imSichtfenster(page: Page, el: Locator): Promise<boolean> {
 	return !!box && !!vp && box.y < vp.height && box.y + box.height > 0;
 }
 
-/** Text des Reiters ausserhalb des Beispiel-Alarms (#3036; der Alarm-Text darf Wettergroessen nennen). */
+/** Text aller Abschnitte des Reiters (#3458: der Beispiel-Alarm ist entfernt, MARKER fuehrt ihn nicht mehr). */
 async function textOhneUebergang(reiter: Locator): Promise<string> {
 	const teile: string[] = [];
-	for (const m of MARKER.filter((x) => x !== 'beispiel-alarm')) {
+	for (const m of MARKER) {
 		for (const el of await reiter.locator(`[data-abschnitt="${m}"]`).all()) teile.push(await el.innerText());
 	}
 	return teile.join('\n');
@@ -32,7 +32,7 @@ async function textOhneUebergang(reiter: Locator): Promise<string> {
 const reiterPanel = (page: Page, kind: HubKind) => page.locator(`[data-testid="${HUB_SEL[kind].panel}-zustellung"]:visible`).first();
 
 for (const kind of HUB_KINDS) {
-	test(`AC-1/AC-37/AC-30 (${kind}): Abschnitte in Mockup-Reihenfolge, Beispiel-Alarm am Ende (#3036)`, async ({ page }) => {
+	test(`AC-1/AC-37/AC-30 (${kind}): Abschnitte in Mockup-Reihenfolge, kein Beispiel-Alarm (#3458)`, async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
 		const hub = await seedZustellung(page.request, kind);
 		try {
@@ -46,10 +46,11 @@ for (const kind of HUB_KINDS) {
 			expect([...ys].sort((a, b) => a - b), `Reihenfolge ${MARKER.join(' → ')}`).toEqual(ys);
 
 			await expect(reiter.locator('[data-testid="zustellung-uebergang"]'), '#3036: kein Uebergangsblock mehr').toHaveCount(0);
-			const beispiel = reiter.getByTestId(ZT.beispielAlarm);
-			await expect(beispiel).toHaveAttribute('data-abschnitt', 'beispiel-alarm');
-			await expect(beispiel, 'Beispiel-Alarm als eigener Abschnitt').toContainText('Beispiel-Warnung');
-			await expect(beispiel.locator('#versand'), 'kein alter Versand-Abschnitt im Beispiel-Alarm').toHaveCount(0);
+			// #3458: Beispiel-Alarm entfernt (ersetzt durch den Test-Alarm #3441).
+			await expect(reiter.getByTestId(ZT.beispielAlarm), '#3458: kein Beispiel-Alarm').toHaveCount(0);
+			await expect(reiter.locator('[data-abschnitt="beispiel-alarm"]')).toHaveCount(0);
+			await expect(reiter, '#3458: Text „Beispiel-Warnung“ darf nicht vorkommen').not.toContainText('Beispiel-Warnung');
+			await expect(reiter.getByTestId('alert-preview-load-btn')).toHaveCount(0);
 		} finally {
 			await hub.aufraeumen();
 		}

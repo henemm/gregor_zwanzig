@@ -34,10 +34,12 @@ Seit Epic #2791 S3a Teil-PR 2 (2026-11-09) hat die Leiste **vier Reiter** (Trip 
   Stundenverlauf, Ausblick, Telegram-Kurzstil, 3-Tages-Ausblick (je Briefing, seit #3155), E-Mail-Format,
   Etappen-Kennzahlen, Vortag-Vergleich und Nacht-Stundentabelle allein im Reiter Wetter (Tabelle „Was steht wo“
   mit Schaltern darunter). Seit #3036 (2026-11-24) gibt es im Reiter Zustellung keinen Übergangsblock mehr: am
-  Ende steht nur der Beispiel-Alarm, beim Ortsvergleich steht die Aktivierungs-Karte (Pausieren/Aktivieren) vor den Briefing-Zeiten.
+  Ende steht die Stille-Stunden-Karte, beim Ortsvergleich steht die Aktivierungs-Karte (Pausieren/Aktivieren) vor den Briefing-Zeiten.
+  Seit #3458 (2026-11-27) gibt es dort keinen Beispiel-Alarm mehr; der Beispiel-Alarm läuft über „Test schicken ▾“ → Test-Alarm (#3441).
 - **Vorschau** entfällt ersatzlos (samt Endpoint `GET /api/briefings/{id}/preview` und den verwaisten Resten
-  `CompareChatBubble`/`CompareChannelSwitch`, PO-Entscheid 2026-10-22). Es bleibt nur die Alarm-Vorschau im Reiter
-  Alarme (`POST /api/briefings/{id}/alert-preview`); weitere Kanal-Vorschauen gibt es in der Oberfläche nicht mehr.
+  `CompareChatBubble`/`CompareChannelSwitch`, PO-Entscheid 2026-10-22). Die Alarm-Vorschau in der Oberfläche (Reiter
+  Alarme „Beispiel-Warnung“, Knopf „Vorschau laden“) ist seit #3458 (2026-11-27) entfernt. Der Endpunkt
+  `POST /api/briefings/{id}/alert-preview` bleibt als Prüfwerkzeug; weitere Kanal-Vorschauen gibt es in der Oberfläche nicht mehr.
 
 Alte Kennungen (`overview`, `stages`, `weather`, `alerts`, `briefings`, `preview`, `versand`, `vorschau`, `idealwerte`, `layout`,
 `wetter-metriken`, `wertebereiche`, `alarme`) werden weiter angenommen (Tabelle `LEGACY`; `weather`, `alerts`, `idealwerte`,

@@ -33,13 +33,11 @@
 	import TelegramKurzstilToggle from '$lib/components/shared/TelegramKurzstilToggle.svelte';
 	import AlertCooldownCard from '$lib/components/alerts-tab/AlertCooldownCard.svelte';
 	import AlertQuietHoursCard from '$lib/components/alerts-tab/AlertQuietHoursCard.svelte';
-	import AlertPreviewCard from '$lib/components/alerts-tab/AlertPreviewCard.svelte';
 	import AlertMetricLevelTable from '$lib/components/alerts-tab/AlertMetricLevelTable.svelte';
 	import { ladeVorlagenAmpeln, type VorlagenAmpeln } from '../alerts-tab/alarmAbAnzeige.ts';
 	import { erstelleAboVorlageId } from './alarme-tab/aboVorlageId.svelte.ts'; // #3399 S1: Vorlagen-ID allein vom Server
 	import AlertMetricChannelsBlock from '$lib/components/alerts-tab/AlertMetricChannelsBlock.svelte';
 	import { baueDiff, type KanalEintrag, type KanalMap } from './alarme-tab/alertMetricChannels.ts';
-	import { vergleichAlarmRegeln } from '$lib/components/alerts-tab/alertPreviewHelpers'; // #2283 S5: echte Alarm-Vorschau statt VTAlertSample
 	import AlertChannelPicker from './AlertChannelPicker.svelte'; import Infobox from '$lib/components/molecules/Infobox.svelte';
 	import {
 		alarmeTabSections, ZUSTELLUNG_IM_ANLEGEN_AUSGELAGERT,
@@ -604,13 +602,6 @@
 					onchange={(checked) => onRadarAlertChange?.(checked)}
 					testid="alarme-radar-toggle"
 				/>
-			{:else if id === 'sample'}
-				{#if context === 'vergleich'}
-					<Eyebrow style="margin: 4px 0 10px;">{$t('alarme.beispiel_warnung')}</Eyebrow><AlertPreviewCard kind="vergleich" id={preset?.id ?? ''} alertRules={vergleichAlarmRegeln(effectiveActiveMetrics, effectiveMetricLevels)} locationIds={preset?.location_ids ?? []} />
-				{:else}
-					<Eyebrow style="margin: 4px 0 10px;">{$t('alarme.beispiel_warnung')}</Eyebrow>
-					<AlertPreviewCard kind="route" id={trip?.id ?? ''} alertRules={trip?.alert_rules ?? []} stages={trip?.stages ?? []} />
-				{/if}
 			{/if}
 		</div>
 	{/each}

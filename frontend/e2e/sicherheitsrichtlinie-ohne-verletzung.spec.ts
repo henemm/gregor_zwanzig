@@ -7,15 +7,15 @@
 //   1. Die Seitenantwort traegt die Richtlinie (sonst waere „keine Verletzung"
 //      ein Bericht ueber nichts).
 //   2. Waehrend Laden und Bedienen meldet der Browser keine Verletzung — weder
-//      als `securitypolicyviolation`-Ereignis (in jedem Frame, auch im
-//      srcdoc-iframe der Alarm-Vorschau) noch als Konsolenmeldung.
+//      als `securitypolicyviolation`-Ereignis (in jedem Frame) noch als
+//      Konsolenmeldung. (Der srcdoc-iframe der Alarm-Vorschau entfiel mit #3458.)
 // Eine Positivkontrolle belegt, dass der Sammler eine echte Verletzung sieht.
 //
 // Ausfuehrung:
 //   cd frontend && npx playwright test e2e/sicherheitsrichtlinie-ohne-verletzung.spec.ts
 
 import { test, expect, type Page } from '@playwright/test';
-import { createTestComparePreset, createTestLocation, createTestTrip, registerForCleanup, oeffneEtappenEditor } from './helpers';
+import { createTestComparePreset, createTestLocation, createTestTrip, oeffneEtappenEditor } from './helpers';
 
 type Fenster = Window & { __gzCspVerletzungen?: string[] };
 
@@ -163,43 +163,6 @@ test.describe('AC-4: keine Verletzung der Richtlinie', () => {
 		expect(await verletzungen(page, konsole)).toEqual([]);
 	});
 
-	test('Alarm-Vorschau (Mail im srcdoc-iframe)', async ({ page }) => {
-		test.setTimeout(150_000);
-		const tripId = `e2e-gz-2961-csp-${Date.now()}`;
-		const res = await page.request.post('/api/trips', {
-			data: {
-				id: tripId,
-				name: 'E2E-GZ-2961 Richtlinie Alarm-Vorschau',
-				stages: [
-					{
-						id: `${tripId}-s1`,
-						name: 'Etappe 1',
-						date: new Date().toISOString().slice(0, 10),
-						// Issue #2069 (AC-8): die Vorschau braucht eine Etappe mit >= 2 Wegpunkten.
-						waypoints: [
-							{ id: `${tripId}-wp1`, name: 'Start', lat: 47.27, lon: 11.4, elevation_m: 600 },
-							{ id: `${tripId}-wp2`, name: 'Ziel', lat: 47.28, lon: 11.42, elevation_m: 900 }
-						]
-					}
-				],
-				display_config: { metrics: [{ metric_id: 'gust', enabled: true }] },
-				alert_rules: [
-					{ id: 'r1', kind: 'absolute', metric: 'wind_gust', threshold: 50, severity: 'warning', enabled: true }
-				]
-			}
-		});
-		expect([200, 201]).toContain(res.status());
-		registerForCleanup('trip', tripId);
-
-		const konsole = await sammlerAnhaengen(page);
-		await richtlinieAktiv(page, `/trips/${tripId}`);
-		await page.getByTestId('trip-detail-tab-zustellung').first().click();
-		const panel = page.getByTestId('trip-detail-panel-zustellung');
-		await panel.getByTestId('alert-preview-load-btn').click();
-		const iframe = panel.getByTestId('alert-preview-iframe');
-		await expect(iframe, 'Alarm-Vorschau kam nicht').toBeVisible({ timeout: 120_000 });
-		const inhalt = page.frameLocator('[data-testid="alert-preview-iframe"]').locator('body');
-		await expect(inhalt).not.toBeEmpty();
-		expect(await verletzungen(page, konsole)).toEqual([]);
-	});
+	// #3458: Fall „Alarm-Vorschau (Mail im srcdoc-iframe)“ entfaellt — der srcdoc-iframe existierte nur
+	// in der Vorschau-Karte, die mit der Alarm-Vorschau-Oberflaeche entfernt ist.
 });

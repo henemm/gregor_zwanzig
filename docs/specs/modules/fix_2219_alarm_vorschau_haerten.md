@@ -213,6 +213,7 @@ Trips im Test-Datenverzeichnis, kein `Mock`/`patch`) und `tests/tdd/test_fix_221
 
 ## Changelog
 
+- 2026-11-27: UI abgelöst durch #3458 — Vorschau-Karte, Knopf „Vorschau laden“ und Zeichenzähler in der Oberfläche sind entfernt (ersetzt durch den Test-Alarm #3441); der Backend-Teil (Endpunkt `alert-preview`, 422-Gründe, Beginn-Darstellung) gilt weiter.
 - 2026-11-13 (Phase 5, RED): C5-18 ist doch reproduzierbar. Der RED-Test zu AC-10 (Trip bei Garmisch, Etappe morgen,
   Abweichungszweig mit Stub-Segmenten, Beginn-Verschiebung) zeigt `Gewitter-Beginn: 00:00 → 22:00` in UTC, während
   `Stand:` in Berliner Zeit steht. Die Analyse-Annahme „kein Codefix" (Rückfall auf die Trip-Zone) trifft für diesen Zweig

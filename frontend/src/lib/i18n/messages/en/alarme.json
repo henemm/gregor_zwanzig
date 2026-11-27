@@ -3,7 +3,6 @@
 	"alarme.gruppe.amtlich_radar": "Official & radar warnings",
 	"alarme.amtlich.label": "Official warnings trigger an alert",
 	"alarme.radar.label": "Rain alert (radar)",
-	"alarme.beispiel_warnung": "Example warning",
 	"alarme.metriken.keine_gewaehlt": "Select metrics in the Weather tab to configure alert thresholds.",
 	"alarme.metriken.nur_ohne_alarm": "None of the selected metrics can trigger an alert: {namen}. They still appear in the briefing but do not trigger a warning.",
 	"alarme.metriken.ohne_alarm": "There is no alert for these metrics: {namen}. They still appear in the briefing but do not trigger a warning.",
@@ -76,17 +75,5 @@
 	"alarme.metrik.humidity": "Humidity",
 	"alarme.metrik.freezing_level": "Freezing level",
 	"alarme.metrik.thunder_onset": "Thunderstorm (onset)",
-	"alarme.metrik.precipitation_heavy_onset": "Heavy rain (onset)",
-	"alarme.vorschau.keine_metriken": "No alert-capable weather metrics active. First activate weather metrics (e.g. wind gusts, temperature) in the {link} tab.",
-	"alarme.vorschau.reiter_wetter_metriken": "Weather",
-	"alarme.vorschau.nach_speichern": "The preview with real data is available after saving.",
-	"alarme.vorschau.keine_orte": "No locations configured yet — add candidates in the {reiter} tab.",
-	"alarme.vorschau.reiter_orte": "Locations",
-	"alarme.vorschau.keine_etappen": "The trip has no stages with waypoints yet.",
-	"alarme.vorschau.regel_aktivieren": "Activate at least one alert rule to load the preview.",
-	"alarme.vorschau.laden": "Load preview",
-	"alarme.vorschau.lade": "Loading…",
-	"alarme.vorschau.berechnet": "Computing preview…",
-	"alarme.vorschau.fehler": "Preview could not be loaded",
-	"alarme.vorschau.iframe_titel": "Alert preview email"
+	"alarme.metrik.precipitation_heavy_onset": "Heavy rain (onset)"
 }

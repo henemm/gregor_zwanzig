@@ -33,9 +33,10 @@ test('#1371 AC-6: route-Kontext liefert Abschnittsreihenfolge OHNE korridor-summ
 		'metric-levels',
 		'channels',
 		'cooldown',
-		'quiet-hours',
-		'sample'
+		'quiet-hours'
 	]);
+	// #3458: Abschnitt 'sample' (Beispiel-Warnung) entfernt.
+	assert.equal(sections.includes('sample'), false);
 	assert.equal(sections.includes('radar'), false);
 	assert.equal(sections.includes('korridor-summary'), false);
 });
@@ -48,9 +49,9 @@ test('D3 AC-1/AC-4 + #1371 AC-6: vergleich-Kontext liefert radar DIREKT hinter o
 		'metric-levels',
 		'channels',
 		'cooldown',
-		'quiet-hours',
-		'sample'
+		'quiet-hours'
 	]);
+	assert.equal(sections.includes('sample'), false);
 	assert.equal(sections.includes('korridor-summary'), false);
 });
 

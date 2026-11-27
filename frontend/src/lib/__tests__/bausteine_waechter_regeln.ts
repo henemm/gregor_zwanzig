@@ -540,7 +540,6 @@ const BESTAND: string[] = [
 	'lib/components/alerts-tab/AlertMetricChannelsBlock.svelte',
 	'lib/components/alerts-tab/AlertMetricLevelRow.svelte',
 	'lib/components/alerts-tab/AlertMetricLevelTable.svelte',
-	'lib/components/alerts-tab/AlertPreviewCard.svelte',
 	'lib/components/alerts-tab/AlertQuietHoursCard.svelte',
 	'lib/components/compare-new/CompareNewEditor.svelte',
 	'lib/components/compare/CompareDetail.svelte',
@@ -703,7 +702,8 @@ const BESTAND: string[] = [
 // VTLaufzeitRoute, VTLaufzeitVergleich, VTNextBriefing, VTSchedulePlan) (167 → 162).
 // #3020 R2: Restbestand geloescht, davon in BESTAND OutputLayoutEditor, ActiveMetricRow, BucketSection,
 // BucketSectionOff, ChannelLimitMarkers, PresetRow, TablePreview (162 → 155).
-const BESTAND_OBERGRENZE = 155;
+// #3458: alerts-tab/AlertPreviewCard.svelte geloescht (Alarm-Vorschau-Oberflaeche) (155 → 154).
+const BESTAND_OBERGRENZE = 154;
 
 /** Token-Verstöße je Baustein-Datei (Ist-Stand 2026-11-10, ADR-0112). Darf nur sinken. */
 const AUSNAHMEN: Ausnahmen = {

@@ -28,7 +28,7 @@ export function alarmeTabSections(context: AlarmeContext, ohneZustellung = false
 		const officialIdx = sections.indexOf('official-warnings');
 		sections.splice(officialIdx + 1, 0, 'radar');
 	}
-	sections.push('sample');
+	// Issue #3458: Abschnitt 'sample' (Beispiel-Warnung) entfaellt — ersetzt durch den Test-Alarm (#3441).
 	return sections;
 }
 

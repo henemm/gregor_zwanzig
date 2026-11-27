@@ -160,9 +160,8 @@ const ALT = ['overview', 'stages', 'weather', 'alerts', 'briefings', 'preview', 
 
 // doc-compliance-test: hartkodierte href-/Handler-Literale haben keinen Funktionsaufruf.
 describe('AC-9 / AC-10 (Quelltext-Scan, doc-compliance-test): Trip-Sprunglinks nur mit neuen Trip-Kennungen', () => {
-	const ERWARTET: Record<string, string[]> = {
-		'lib/components/alerts-tab/AlertPreviewCard.svelte': ['wetter']
-	};
+	// #3458: einziger Eintrag `AlertPreviewCard.svelte` (Sprung 'wetter') entfaellt mit der Vorschau-Karte.
+	const ERWARTET: Record<string, string[]> = {};
 	for (const [rel, erwartet] of Object.entries(ERWARTET)) {
 		test(`${rel.split('/').pop()}: erzeugt genau ${JSON.stringify(erwartet)}`, () => {
 			const k = erzeugteKennungen(rel);
@@ -303,8 +302,8 @@ describe('AC-10 / AC-15 (Quelltext-Scan, doc-compliance-test): kein Alt-Literal,
 		'lib/components/trip-detail/HubOverview.svelte',
 		// #2682: geteilte Übersicht (Baustein + Modell)
 		'lib/components/shared/hub-uebersicht/HubUebersicht.svelte',
-		'lib/components/shared/hub-uebersicht/hubUebersichtModell.ts',
-		'lib/components/alerts-tab/AlertPreviewCard.svelte'
+		'lib/components/shared/hub-uebersicht/hubUebersichtModell.ts'
+		// #3458: AlertPreviewCard.svelte entfernt (Alarm-Vorschau-Oberflaeche).
 	];
 	for (const rel of DATEIEN) {
 		test(`${rel}: weder #weather noch ?tab=<Alt-Kennung> noch Alt-Kennung in Sprung-Literalen`, () => {

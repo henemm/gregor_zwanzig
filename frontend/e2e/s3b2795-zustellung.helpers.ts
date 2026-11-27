@@ -63,13 +63,15 @@ export const ZT = {
 	stilleUnterzeile: 'zustellung-stille-unterzeile',
 	anpassen: 'zustellung-anpassen', // <details>; summary = „Anpassen“
 	cooldown: 'zustellung-cooldown', // Minutenfeld (input)
-	// #3036: Uebergangsblock aufgeloest — Beispiel-Alarm als letzter Abschnitt, Pausieren/Aktivieren
-	// (nur Orte) als fester Abschnitt direkt unter dem Kopf.
+	// #3036: Uebergangsblock aufgeloest — Pausieren/Aktivieren (nur Orte) als fester Abschnitt direkt
+	// unter dem Kopf. #3458: der Beispiel-Alarm ist entfernt; die Kennung dient nur noch
+	// Abwesenheits-Zusicherungen (toHaveCount(0)).
 	beispielAlarm: 'zustellung-beispiel-alarm',
 	aktivierung: 'zustellung-aktivierung'
 } as const;
 
-export const MARKER = ['abschnittskopf', 'briefing-zeiten', 'laufzeit', 'kanaele', 'stille-stunden', 'beispiel-alarm'] as const;
+// #3458: 'beispiel-alarm' entfaellt — letzter Abschnitt ist Stille Stunden.
+export const MARKER = ['abschnittskopf', 'briefing-zeiten', 'laufzeit', 'kanaele', 'stille-stunden'] as const;
 
 export const tid = (wurzel: Page | Locator, id: string): Locator => wurzel.locator(`[data-testid="${id}"]:visible`).first();
 

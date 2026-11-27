@@ -157,3 +157,4 @@ Schichten: Frontend (`frontend/src/...`) und Python-Core (`src/services/placemen
 ## Changelog
 
 - 2026-11-24: Initial spec created
+- 2026-11-27: AC-7 (Beispiel-Alarm als letzter Abschnitt) abgelöst durch #3458 — der Beispiel-Alarm ist entfernt, der Reiter Zustellung endet bei Stille Stunden; der Rest dieser Spec gilt weiter.

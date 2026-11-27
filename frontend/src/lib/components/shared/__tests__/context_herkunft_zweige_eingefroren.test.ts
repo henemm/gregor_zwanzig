@@ -212,10 +212,12 @@ const EINGEFROREN: readonly string[] = [
 	// die zwei Block-Props profil/schwellen; keine neue Weiche, nachgemessen.
 	// 🔴 Issue #3399 S1: +4 Zeilen je Eintrag durch Lader-Import, Prop vorlageIdOverride und die
 	// Vorlagen-ID-Verdrahtung (aboVorlageId.svelte.ts); keine neue Weiche, nachgemessen.
-	'AlarmeTab.svelte:272',
-	'AlarmeTab.svelte:557',
-	'AlarmeTab.svelte:575',
-	'AlarmeTab.svelte:608',
+	// 🔴 Issue #3458: -2 Zeilen je Eintrag (Importe AlertPreviewCard und vergleichAlarmRegeln entfallen);
+	// die Weiche der Beispielwarnung (`:608`, AlertPreviewCard kind="vergleich"/"route") ist mit dem
+	// Abschnitt 'sample' ENTFERNT. Bedingungen der drei uebrigen unveraendert, nachgemessen.
+	'AlarmeTab.svelte:270',
+	'AlarmeTab.svelte:555',
+	'AlarmeTab.svelte:573',
 	// S6e: alle DREI VersandTab-Eintraege bleiben (0 gestrichen) — sie sind
 	// Wirkort-/Darstellungs-Weichen, kein `wiz`-Symptom. Ihre Zeilennummern
 	// verschoben sich durch die elf neuen Prop-Zeilen im Skript-Teil; die neuen
@@ -296,7 +298,9 @@ const EINGEFROREN: readonly string[] = [
 // 3 ENTFERNTE Verzweigungen. Soll 13 → 10.
 // #3389: `versandVergleichSpeicherung.ts:236` und `weatherMetricsCompareSave.ts:364` (die beiden
 // `…SpeicherungAktiv`-Weichen) mit den toten Exporten gelöscht — 2 ENTFERNTE Verzweigungen. Soll 10 → 8.
-const EINGEFROREN_SOLL_ANZAHL = 8;
+// #3458: AlarmeTab-Weiche der Beispielwarnung (AlertPreviewCard) mit dem Abschnitt 'sample' entfernt —
+// 1 ENTFERNTE Verzweigung. Soll 8 → 7.
+const EINGEFROREN_SOLL_ANZAHL = 7;
 
 /**
  * S6c: die vier ueberlebenden AlarmeTab-Eintraege, GEGEN IHREN INHALT gefesselt.
@@ -312,28 +316,22 @@ const EINGEFROREN_SOLL_ANZAHL = 8;
  */
 const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: string }[] = [
 	{
-		eintrag: 'AlarmeTab.svelte:272',
+		eintrag: 'AlarmeTab.svelte:270',
 		zeile: "context === 'vergleich'",
 		folgt: 'deriveUnalertableSelectedMetricNames('
 	},
 	{
-		eintrag: 'AlarmeTab.svelte:557',
+		eintrag: 'AlarmeTab.svelte:555',
 		zeile: "{#if context === 'vergleich' && unalertableSelectedMetricNames.length > 0}",
 		folgt: 'alarme-unalertable-metrics-hint'
 	},
 	{
-		eintrag: 'AlarmeTab.svelte:575',
+		eintrag: 'AlarmeTab.svelte:573',
 		zeile: "{#if context === 'vergleich'}",
 		folgt: 'TelegramKurzstilToggle'
 	},
-	{
-		eintrag: 'AlarmeTab.svelte:608',
-		zeile: "{#if context === 'vergleich'}",
-		// #2283 S5: VTAlertSample durch echte AlertPreviewCard ersetzt (AC-21).
-		// Anker samt `kind="vergleich"`: das FENSTER (8 Zeilen) reicht bis in den
-		// Trip-Zweig, dessen `<AlertPreviewCard kind="route">` sonst vakuum traefe.
-		folgt: 'AlertPreviewCard kind="vergleich"'
-	},
+	// #3458: Eintrag `AlarmeTab.svelte:608` (Beispielwarnung, `AlertPreviewCard kind="vergleich"`)
+	// entfaellt mit dem Abschnitt 'sample' (Vorschau-Karte entfernt, ersetzt durch Test-Alarm #3441).
 	// S6e (Issue #2276): die drei VersandTab-Eintraege — gemessen am Quelltext
 	// NACH dem Wertprop-Umbau. Der Wirkort-Guard im Effekt (:348) traegt seinen
 	// Text veraendert weiter (`!wiz` faellt weg, `!vergleichSpeicherung` bleibt);

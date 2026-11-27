@@ -192,18 +192,20 @@ test.describe('#3036 Karte „Was steht wo“: Kurz-Zusammenfassung und Großwet
 
 test.describe('#3036 Reiter Zustellung ohne Übergangsblock (AC-7)', () => {
 	for (const kind of ['route', 'vergleich'] as const) {
-		test(`B-5 (${kind}): kein „Vorübergehend hier“, Beispiel-Alarm am Ende${kind === 'vergleich' ? ', Pausieren oben und bedienbar' : ''}`, async ({ page }) => {
+		// #3458: B-5 umgedreht — der Beispiel-Alarm ist entfernt (Test-Alarm #3441), letzter Abschnitt ist Stille Stunden.
+		test(`B-5 (${kind}): kein „Vorübergehend hier“, kein Beispiel-Alarm, endet bei Stille Stunden${kind === 'vergleich' ? ', Pausieren oben und bedienbar' : ''}`, async ({ page }) => {
 			await page.setViewportSize(DESKTOP);
 			const abo = kind === 'route' ? await seedTrip(page.request) : await seedOrte(page.request);
 			try {
 				const z = await oeffneZustellung(page, abo.kind, abo.id);
 				await expect(z.getByTestId('zustellung-uebergang')).toHaveCount(0);
 				await expect(z).not.toContainText('Vorübergehend hier');
-				const beispiel = z.getByTestId('zustellung-beispiel-alarm');
-				await expect(beispiel).toBeVisible();
-				await expect(beispiel.getByTestId('alert-preview-card')).toBeVisible();
+				await expect(z.locator('[data-abschnitt="stille-stunden"]')).toBeVisible();
+				await expect(z.getByTestId('zustellung-beispiel-alarm')).toHaveCount(0);
+				await expect(z.getByTestId('alert-preview-card')).toHaveCount(0);
+				await expect(z.getByTestId('alert-preview-load-btn')).toHaveCount(0);
 				const abschnitte = await z.locator('[data-abschnitt]').evaluateAll((e) => e.map((x) => x.getAttribute('data-abschnitt')));
-				expect(abschnitte.at(-1), 'Beispiel-Alarm ist der letzte Abschnitt').toBe('beispiel-alarm');
+				expect(abschnitte.at(-1), 'Stille Stunden ist der letzte Abschnitt').toBe('stille-stunden');
 				if (kind === 'vergleich') {
 					const aktiv = z.getByTestId('zustellung-aktivierung');
 					await expect(aktiv.getByTestId('compare-hub-activation-card')).toBeVisible();

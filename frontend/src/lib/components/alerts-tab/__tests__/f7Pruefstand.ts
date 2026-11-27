@@ -3,9 +3,8 @@
 // den Alarm-Kanal-Picker und alle Bausteine unter alerts-tab/. Echte
 // Svelte-Komponenten, gerendert mit svelte/server; Vergleichs-Props baut die
 // ECHTE Funktion der drei Vergleichs-Mounts (compare/alarmePropsAus.ts).
-// Zustaende, die erst ein Klick setzt (Popover offen, Vorschau geladen/
-// laedt/Fehler), kommen ueber den Hook der F8 (f8VarianteHook.mjs: exakte
-// Umlenkung benannter `$state`-Startwerte) — Markup und Helfer bleiben echt.
+// #3458: die Vorschau-Zustaende (geladen/laedt/Fehler, ueber den F8-Hook
+// f8VarianteHook.mjs) entfielen mit der AlertPreviewCard.
 // Nutzer `golden-de`. Golden: tests/golden/f7_alarme_tab/<fall>.de.(html|txt)
 // = Ist-Stand VOR der Umstellung (nie neu schreiben); <fall>.en.* = Review-Hilfe:
 //   cd frontend && GZ_GOLDEN_SCHREIBEN=en npm test -- src/lib/components/alerts-tab/__tests__/alarme_tab_sprache.test.ts
@@ -25,19 +24,17 @@ export const SHARED = path.resolve(HERE, '../../shared');
 export const GOLDEN_DIR = path.resolve(FRONTEND, '..', 'tests', 'golden', 'f7_alarme_tab');
 const basis = pathToFileURL(FRONTEND + '/').href;
 register(pathToFileURL(path.join(FRONTEND, 'test-svelte-ssr-hooks.mjs')).href, basis);
-register(pathToFileURL(path.join(SHARED, 'layout-tab', '__tests__', 'f8VarianteHook.mjs')).href, basis);
+// #3458: der F8-Varianten-Hook (Vorschau-Zustaende der AlertPreviewCard) entfaellt mit der Karte.
 
 const { render } = await import('svelte/server');
 const imp = async (datei: string) => await import(pathToFileURL(datei).href);
 const komp = async (datei: string) => (await imp(datei)).default;
-const variante = async (datei: string, ersetzungen: [string, string][]) =>
-	(await import(`${pathToFileURL(datei).href}?f8variante=${Buffer.from(JSON.stringify(ersetzungen)).toString('base64url')}`)).default;
 
 export const { locale, tr, trFor } = await imp(path.join(FRONTEND, 'src/lib/i18n/index.ts'));
 /** Namensraum-Importe: ein fehlender Export ist ein roter Einzeltest, kein Ladefehler. */
 export const labels = await imp(path.join(FRONTEND, 'src/lib/utils/alertMetricLabels.ts'));
 export const amt = await imp(path.join(AT, 'alertMetricTable.ts'));
-export const vorschau = await imp(path.join(AT, 'alertPreviewHelpers.ts'));
+// #3458: `vorschau` (alertPreviewHelpers.ts) entfaellt mit der Alarm-Vorschau-Oberflaeche.
 export const sektionen = await imp(path.join(SHARED, 'alarme-tab', 'alarmeTabSections.ts'));
 export const kanal = await imp(path.join(SHARED, 'alarme-tab', 'alertChannelState.ts'));
 export const gate = await imp(path.join(SHARED, 'alarme-tab', 'premiumSmsAlarmGate.ts'));
@@ -50,20 +47,10 @@ const AlarmeTab = await komp(path.join(SHARED, 'AlarmeTab.svelte'));
 const AlertChannelPicker = await komp(path.join(SHARED, 'AlertChannelPicker.svelte'));
 const AlertMetricLevelTable = await komp(path.join(AT, 'AlertMetricLevelTable.svelte'));
 const AlertQuietHoursCard = await komp(path.join(AT, 'AlertQuietHoursCard.svelte'));
-const AlertPreviewCard = await komp(path.join(AT, 'AlertPreviewCard.svelte'));
-const VORSCHAU_ZUSTAND: [string, string][] = [
-	["let subject = $state('');", 'let subject = $state(globalThis.__F7_VORSCHAU.subject);'],
-	["let emailHtml = $state('');", 'let emailHtml = $state(globalThis.__F7_VORSCHAU.emailHtml);'],
-	["let telegram = $state('');", 'let telegram = $state(globalThis.__F7_VORSCHAU.telegram);'],
-	["let sms = $state('');", 'let sms = $state(globalThis.__F7_VORSCHAU.sms);'],
-	['let loading = $state(false);', 'let loading = $state(globalThis.__F7_VORSCHAU.loading);'],
-	['let error = $state<string | null>(null);', 'let error = $state<string | null>(globalThis.__F7_VORSCHAU.error);']
-];
-const VorschauZustand = await variante(path.join(AT, 'AlertPreviewCard.svelte'), VORSCHAU_ZUSTAND);
+// #3458: AlertPreviewCard (Beispiel-Warnung) samt Vorschau-Zustaenden entfernt.
 
 export type Kontext = 'route' | 'vergleich';
 const nix = () => {};
-const g = globalThis as unknown as Record<string, unknown>;
 const ohneKommentare = (h: string) => h.replace(/<!--[\s\S]*?-->/g, '');
 const html = (k: unknown, props: Record<string, unknown> = {}) => ohneKommentare(render(k as never, { props } as never).body);
 
@@ -179,36 +166,23 @@ export function alarmeVergleich(wiz: Record<string, unknown> = wizard(), over: R
 	});
 }
 
-/** Leer- und Sonderzustaende von Reiter, Kanal-Picker und Beispiel-Warnung. */
+/** Leer- und Sonderzustaende von Reiter und Kanal-Picker.
+ * #3458: die vier Leerzustaende der Beispiel-Warnung (AlertPreviewCard) entfallen mit der Karte. */
 export function zustaendeRendern(): string {
-	const regel = [{ ...REGELN[0] }];
-	const aus = [{ ...REGELN[0], enabled: false }];
 	return [
 		alarmeRoute({ activeMetrics: [], metricLevels: {}, profileOverride: { premium_sms_allowed: true } }),
 		alarmeVergleich(wizard({ activeMetricKeys: ['humidity_avg_pct', 'feels_min_c', 'feels_max_c'] }), { preset: { id: 'v2', location_ids: [] } }),
 		html(AlertChannelPicker, { channels: { telegram: false, sms: false, email: false, premium_sms: false }, onToggle: nix }),
 		html(AlertChannelPicker, { channels: { telegram: true, sms: true, email: false, premium_sms: false }, onToggle: nix, targets: { telegram: '987654321' }, dense: true }),
-		html(AlertPreviewCard, { kind: 'route', id: '', alertRules: regel }),
-		html(AlertPreviewCard, { kind: 'vergleich', id: 'v1', alertRules: regel, locationIds: [] }),
-		html(AlertPreviewCard, { kind: 'route', id: 't1', alertRules: aus, stages: ETAPPEN }),
-		html(AlertPreviewCard, { kind: 'route', id: 't1', alertRules: [] }),
 		html(AlertQuietHoursCard, {})
 	].join('\n');
-}
-
-function vorschauRendern(zustand: Record<string, unknown>): string {
-	g.__F7_VORSCHAU = { subject: '', emailHtml: '', telegram: '', sms: '', loading: false, error: null, ...zustand };
-	try {
-		return html(VorschauZustand, { kind: 'route', id: 't1', alertRules: REGELN, stages: ETAPPEN });
-	} finally {
-		delete g.__F7_VORSCHAU;
-	}
 }
 
 /** Bausteine unter alerts-tab/ ausserhalb des geteilten Reiters.
  * Issue #1895 S4: die toten Bausteine AlertsTab, AlertCard, AlertMetricTable und
  * AlertPresetSelector sind entfernt, ihre Renders fallen mit weg (die uebrigen
- * Golden-Abschnitte bleiben byte-gleich). */
+ * Golden-Abschnitte bleiben byte-gleich).
+ * #3458: die drei Vorschau-Zustaende (laedt/geladen/Fehler) der AlertPreviewCard entfallen mit der Karte. */
 export function bausteineRendern(): string {
 	const leveled = { wind_gust: 'standard', temperature_min: 'standard', cape: 'standard' };
 	// #2793 S2b: die Tabelle ist nur lesbar („Alarm ab" aus Abo-Ampel bzw. Vorlage).
@@ -217,10 +191,7 @@ export function bausteineRendern(): string {
 	return [
 		html(AlertMetricLevelTable, { activeMetrics: ['wind_gust', 'temperature_min', 'cape'], levels: leveled, vorlage }),
 		html(AlertMetricLevelTable, { activeMetrics: ['wind_gust', 'temperature_min'], levels: { wind_gust: 'off', temperature_min: 'sensibel' }, aboAmpel: abo, vorlage }),
-		html(AlertMetricLevelTable, { activeMetrics: [], levels: {} }),
-		vorschauRendern({ loading: true }),
-		vorschauRendern({ subject: '[GR20] Böen 75 km/h', emailHtml: '<p>Mail</p>', telegram: 'GR20 Böen 75', sms: 'GR20 G75' }),
-		vorschauRendern({ error: 'HTTP 503' })
+		html(AlertMetricLevelTable, { activeMetrics: [], levels: {} })
 	].join('\n');
 }
 

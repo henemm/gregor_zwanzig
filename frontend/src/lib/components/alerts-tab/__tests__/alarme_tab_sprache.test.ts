@@ -34,7 +34,6 @@ import {
 	trFor,
 	labels,
 	amt,
-	vorschau,
 	sektionen,
 	kanal,
 	gate,
@@ -97,8 +96,6 @@ function deutscheReste(text: string, ausnahmen: string[] = []): string[] {
 /** Vergleichs-Katalog ohne label_en (Luftfeuchtigkeit, Gefühlte Temperatur (Minimum/Maximum)):
  *  der deutsche Name ist Fallback (AC-3) und enthaelt die Wortlaute dieser Anker. */
 const OHNE_LABEL_EN = ['alarme.metrik.humidity', 'alarme.metrik.temperature_min', 'alarme.metrik.temperature_max'];
-/** Servertext der geladenen Beispiel-Warnung (Betreff/Telegram/SMS der Fixture) bleibt Server-Sprache. */
-const ohneServerVorschau = (text: string) => text.replaceAll('[GR20] Böen 75 km/h', '').replaceAll('GR20 Böen 75', '');
 
 /** Schwellen, Einheiten, Vergleichssymbole, Zeiten und Eingabewerte eines Renders. */
 function zahlenUndEinheiten(h: string): string[] {
@@ -136,8 +133,12 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 	});
 	test('Messaufbau: Golden enthaelt die deutschen Texte aller Bausteine', () => {
 		const alle = Object.keys(FAELLE).map((f) => readFileSync(path.join(GOLDEN_DIR, `${f}.de.html`), 'utf-8')).join('');
-		for (const s of ['Amtliche &amp; Radar-Warnungen', 'Radar-Alarm', 'Alert-Kanäle', 'Premium-SMS ab Level Premium verfügbar', 'Tarif wird geprüft', 'kein Kanal — Alerts gehen nirgends hin', 'sofortiger Push', '(Ortszeit des ersten Orts)', '(Ortszeit der Trip)', 'Stille Stunden über Mitternacht (22:00 bis 07:00 des nächsten Tages).', 'Für diese Größen gibt es keinen Alarm', 'Keine der gewählten Größen', 'Wähle im Reiter Wetter', 'Alarme folgen jetzt der Ampel.', 'Alarm ab: Orange', 'Alarm ab: Nie', 'Lade…', 'title="Alert-Vorschau E-Mail"', 'Noch keine Orte konfiguriert'])
+		for (const s of ['Amtliche &amp; Radar-Warnungen', 'Radar-Alarm', 'Alert-Kanäle', 'Premium-SMS ab Level Premium verfügbar', 'Tarif wird geprüft', 'kein Kanal — Alerts gehen nirgends hin', 'sofortiger Push', '(Ortszeit des ersten Orts)', '(Ortszeit der Trip)', 'Stille Stunden über Mitternacht (22:00 bis 07:00 des nächsten Tages).', 'Für diese Größen gibt es keinen Alarm', 'Keine der gewählten Größen', 'Wähle im Reiter Wetter', 'Alarme folgen jetzt der Ampel.', 'Alarm ab: Orange', 'Alarm ab: Nie'])
 			assert.ok(alle.includes(s), s);
+		// #3458: die Vorschau-Texte ('Lade…', 'title="Alert-Vorschau E-Mail"', 'Noch keine Orte konfiguriert',
+		// 'Beispiel-Warnung', 'Vorschau laden') sind mit der AlertPreviewCard aus Reiter und Golden entfernt.
+		for (const s of ['Beispiel-Warnung', 'Vorschau laden', 'Alert-Vorschau E-Mail', 'alert-preview-card'])
+			assert.ok(!alle.includes(s), `Golden enthaelt noch Vorschau-Text: ${s}`);
 	});
 });
 
@@ -175,11 +176,12 @@ describe('AC-1: Alarme-Reiter englisch in Trip und Ortsvergleich, Zahlen und Sym
 			'Do not send alerts in this period (local time of the trip) — queued alerts go out with the next morning briefing.',
 			'From',
 			'To',
-			'Quiet hours across midnight (22:00 to 07:00 of the next day).',
-			'Example warning',
-			'Load preview'
+			'Quiet hours across midnight (22:00 to 07:00 of the next day).'
 		])
 			hat(text, s);
+		// #3458: Beispiel-Warnung samt „Load preview“ entfernt.
+		hatNicht(text, 'Example warning');
+		hatNicht(text, 'Load preview');
 		// #2793 S2b: die Δ-Schwellwert-Spalte (samt CAPE-Richtwert-title) entfaellt.
 		hatNicht(en, 'title="Guide value — converted per weather model and area"');
 		hat(en, 'aria-label="Urgency threshold Telegram"');
@@ -204,15 +206,17 @@ describe('AC-1: Alarme-Reiter englisch in Trip und Ortsvergleich, Zahlen und Sym
 			'Alert channels',
 			'Quiet hours',
 			'Do not send alerts in this period (local time of the first location) — queued alerts go out with the next morning briefing.',
-			'Quiet hours across midnight (23:00 to 06:30 of the next day).',
-			'Example warning'
+			'Quiet hours across midnight (23:00 to 06:30 of the next day).'
 		])
 			hat(text, s);
+		hatNicht(text, 'Example warning'); // #3458
 		hatNicht(text, 'Ortszeit');
 		assert.deepEqual(deutscheReste(text, OHNE_LABEL_EN), []);
 		assert.deepEqual(zahlenUndEinheiten(en), zahlenUndEinheiten(de));
 	});
-	test('Leer- und Sonderzustaende englisch (Reiter, Kanal-Picker, Beispiel-Warnung, Stille Stunden)', () => {
+	// #3458: die Leerzustaende der Beispiel-Warnung (nach Speichern, keine Orte, Regel aktivieren,
+	// keine Metriken samt Sprung in den Reiter Wetter) entfallen mit der AlertPreviewCard.
+	test('Leer- und Sonderzustaende englisch (Reiter, Kanal-Picker, Stille Stunden)', () => {
 		const { en } = deDannEn(() => zustaendeRendern());
 		const text = sichtbar(en);
 		for (const s of [
@@ -223,33 +227,27 @@ describe('AC-1: Alarme-Reiter englisch in Trip und Ortsvergleich, Zahlen und Sym
 			'instant · ≤ 140 chars',
 			'satellite · works without mobile network',
 			'optional · slower than push',
-			'The preview with real data is available after saving.',
-			'No locations configured yet — add candidates in the Locations tab.',
-			'Activate at least one alert rule to load the preview.',
-			'No alert-capable weather metrics active. First activate weather metrics (e.g. wind gusts, temperature) in the Weather tab.',
 			'Do not send alerts in this period (local time of the trip)'
 		])
 			hat(text, s);
-		// #2794 S3a: Sprung in den Reiter Wetter.
-		hat(en, '<a href="?tab=wetter" data-testid="alert-preview-no-metrics-link"><strong>Weather</strong></a>');
+		hatNicht(en, 'alert-preview');
 		assert.deepEqual(deutscheReste(text, OHNE_LABEL_EN), []);
 	});
-	test('Bausteine unter alerts-tab/ englisch (Stufen-Tabelle, Vorschau)', () => {
+	// #3458: die Vorschau-Zustaende (Loading…, Load preview, iframe-Titel) entfallen mit der AlertPreviewCard.
+	test('Bausteine unter alerts-tab/ englisch (Stufen-Tabelle)', () => {
 		const { de, en } = deDannEn(() => bausteineRendern());
 		const text = sichtbar(en);
 		for (const s of [
 			// #2793 S2b: nur lesbar — Abo-Wert (Nie) vor Vorlage (Orange), kein Regler.
 			'Alert from: Never',
 			'Alert from: Orange',
-			'No alertable metrics active. Select metrics in the Weather tab.',
-			'Loading…',
-			'Load preview'
+			'No alertable metrics active. Select metrics in the Weather tab.'
 		])
 			hat(text, s);
-		hat(en, 'title="Alert preview email"');
+		hatNicht(text, 'Load preview');
 		// Issue #1895 S4: Texte und Optionswerte der toten Bausteine AlertsTab, AlertCard,
 		// AlertMetricTable und AlertPresetSelector sind mit ihnen entfallen.
-		assert.deepEqual(deutscheReste(ohneServerVorschau(text)), []);
+		assert.deepEqual(deutscheReste(text), []);
 		assert.deepEqual(zahlenUndEinheiten(en), zahlenUndEinheiten(de));
 	});
 });
@@ -319,17 +317,9 @@ describe('AC-2: alertMetricLabel je Sprache, unit/comparison unveraendert', () =
 		});
 		assert.equal(de.titel, 'Richtwert — wird je Wettermodell und Gebiet umgerechnet');
 	});
-	test('Vorschau-Fehler ohne Servertext: Rueckfall je Sprache, Servertext unveraendert', () => {
-		assert.equal(typeof (vorschauFehler()), 'function', 'vorschauFehlerText fehlt in alertPreviewHelpers.ts');
-		const f = vorschauFehler();
-		const { de, en } = deDannEn(() => [f(new Error('')), f({ error: 'HTTP 503' }), f(new Error('Zeitlimit')), f(42)]);
-		assert.deepEqual(de, ['Vorschau konnte nicht geladen werden', 'HTTP 503', 'Zeitlimit', 'Vorschau konnte nicht geladen werden']);
-		assert.deepEqual(en, ['Preview could not be loaded', 'HTTP 503', 'Zeitlimit', 'Preview could not be loaded']);
-	});
+	// #3458: Fall „Vorschau-Fehler ohne Servertext“ (alertPreviewHelpers.vorschauFehlerText) entfaellt
+	// mit dem Helfer.
 });
-
-/** alertPreviewHelpers.vorschauFehlerText (Namensraum-Import im Pruefstand). */
-const vorschauFehler = () => vorschau.vorschauFehlerText as (e: unknown) => string;
 
 describe('AC-3: Katalog-Namen ohne label_en bleiben deutsch, Doppelnamen bleiben getrennt', () => {
 	const MIT_EN = VERGLEICH_KATALOG.map((e) =>

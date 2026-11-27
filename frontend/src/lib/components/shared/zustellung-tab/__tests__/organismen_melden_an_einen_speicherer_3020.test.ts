@@ -37,7 +37,6 @@ async function instanz(context: 'route' | 'vergleich') {
 		{
 			context,
 			versandSprung: 0,
-			beispielAlarmRegeln: [],
 			activation: undefined,
 			onJump: undefined,
 			untrack: (fn: () => unknown) => fn(),

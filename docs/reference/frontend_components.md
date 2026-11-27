@@ -742,7 +742,7 @@ Reiter „Zustellung" (S3b Teilschritt 1b, #2795, 2026-11-13, neu gebaut): `shar
 (ein Code, `context="route"|"vergleich"`) setzt unter dem Kopf aus dem Baustein `molecules/Bereichskopf` (#3006) die Organismen in `organisms/zustellung-tab/` zusammen:
 `BriefingZeiten` (Viertelstunden-Raster), `LaufzeitKarte`, `KanalTabelle` (E-Mail/Telegram/SMS/Premium-SMS
 mit Briefing-/Alarm-Schalter und Dringlichkeit je Kanal), `StilleStunden` (inkl. Mindestabstand) und
-Beispiel-Alarm (`BeispielAlarm.svelte`, letzter Abschnitt, testid `zustellung-beispiel-alarm`) und bei Orten die Pausieren-Karte (fester Abschnitt `zustellung-aktivierung` vor den Briefing-Zeiten; seit #3036 ohne Rahmen „Vorübergehend hier“). Logik: `zustellungModell.ts`,
+Beispiel-Alarm (`BeispielAlarm.svelte`, testid `zustellung-beispiel-alarm`) war bis #3458 (2026-11-27) der letzte Abschnitt und ist entfernt; ersetzt durch den Test-Alarm im Menü „Test schicken ▾“ (#3441). Bei Orten die Pausieren-Karte (fester Abschnitt `zustellung-aktivierung` vor den Briefing-Zeiten; seit #3036 ohne Rahmen „Vorübergehend hier“). Logik: `zustellungModell.ts`,
 `zustellungSpeicherung.ts` (ein Speicherer, Owner `versand`/`alarme`, Profil nur einmal geladen). Seit #3154
 (#3122 B3b, Spec `feat_3122_was_steht_wo.md` Teil B Nr. 14) sind `KanalStil` und die Metrik-Oberfläche
 (`WetterMetrikenVersandPanel`, `bereich="zustellung"`) aus dem Reiter entfernt: Listen je Kanal, Stundenverlauf,

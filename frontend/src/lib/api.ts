@@ -289,8 +289,6 @@ export const api = {
  */
 /** Test-Versand (notify/test): Go-Proxy begrenzt auf 120 s (internal/handler/notify.go). */
 export const ZEITLIMIT_TEST_NACHRICHT_MS = 130_000;
-/** Alarm-Vorschau: Go-Proxy begrenzt auf 120 s (previewProxyTimeout, #1839). */
-export const ZEITLIMIT_ALARM_VORSCHAU_MS = 130_000;
 /**
  * Orts-Aufloesung (locations/resolve): Resolver gesamt bis ca. 30 s. Die beiden
  * Aufrufstellen (Step2Orte, LocationNewModal) rufen `api.post` direkt mit
@@ -304,19 +302,10 @@ export const ZEITLIMIT_ORT_AUFLOESEN_MS = 40_000;
 // Briefing-Vorschau (PO-Entscheid 2026-10-22).
 export const langlaeufer = {
 	testNachricht: <T>(channel: string) =>
-		api.post<T>('/api/notify/test', { channel }, { zeitlimitMs: ZEITLIMIT_TEST_NACHRICHT_MS }),
-	alarmVorschau: <T>(tripId: string, payload: unknown) =>
-		api.post<T>(`/api/trips/${tripId}/alert-preview`, payload, { zeitlimitMs: ZEITLIMIT_ALARM_VORSCHAU_MS })
+		api.post<T>('/api/notify/test', { channel }, { zeitlimitMs: ZEITLIMIT_TEST_NACHRICHT_MS })
 };
-
-export type BriefingKind = 'route' | 'vergleich';
-
-/** #2283: kind-neutrale Alarm-Vorschau (POST /api/briefings/{id}/alert-preview?kind=…), 130 s (#1839). */
-export function alarmVorschau<T>(kind: BriefingKind, id: string, payload: unknown): Promise<T> {
-	return api.post<T>(`/api/briefings/${encodeURIComponent(id)}/alert-preview?kind=${kind}`, payload, {
-		zeitlimitMs: ZEITLIMIT_ALARM_VORSCHAU_MS
-	});
-}
+// #3458: `alarmVorschau` (POST …/alert-preview) entfiel mit der Alarm-Vorschau-Oberflaeche;
+// der Server-Endpunkt bleibt als Pruefwerkzeug.
 
 /** #2317: ETag einer Antwort und ob die Registry ihn uebernommen hat. */
 export interface AntwortFassung {

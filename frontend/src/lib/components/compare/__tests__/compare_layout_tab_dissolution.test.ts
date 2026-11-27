@@ -80,8 +80,7 @@ const HUB_MODELL = join(here, '..', '..', 'shared', 'hub-uebersicht', 'hubUebers
 const NEW_EDITOR = join(here, '..', '..', 'compare-new', 'CompareNewEditor.svelte');
 
 const ZUSTELLUNG_TAB = join(here, '..', '..', 'shared', 'zustellung-tab', 'ZustellungTab.svelte');
-// #3036: Uebergangsblock aufgeloest — der Abschnitt am Ende ist der Beispiel-Alarm.
-const BEISPIEL_ALARM = join(here, '..', '..', 'organisms', 'zustellung-tab', 'BeispielAlarm.svelte');
+// #3458: der Beispiel-Alarm (BeispielAlarm.svelte) am Ende des Reiters ist entfernt.
 const WETTER_TAB_INHALT = join(here, '..', '..', 'organisms', 'wetter-tab', 'WetterTabInhalt.svelte');
 function ast(file: string): unknown {
 	return parse(readFileSync(file, 'utf-8'), { modern: true });
@@ -256,11 +255,8 @@ describe('Stundenverlauf-Steuerung: Heimat allein „Was steht wo“ (#3276)', (
 		assert.equal(findElementsWithClass(panel, 'hub-layout-hourly-wrap').length, 0, 'Der alte Bubble-Wrapper `.hub-layout-hourly-wrap` haette mit S4 verschwinden muessen');
 		assert.equal(findElementsWithClass(panel, 'hub-wetter-metriken-wrap').length, 0, 'Der alte Bubble-Wrapper `.hub-wetter-metriken-wrap` haette mit S4 verschwinden muessen');
 		assert.equal(findComponents(panel, 'ZustellungTab').length, 1, 'Das Panel mountet den geteilten Baustein ZustellungTab (context="vergleich")');
-		assert.equal(findComponents(ast(ZUSTELLUNG_TAB), 'BeispielAlarm').length, 1, 'ZustellungTab mountet genau einen Beispiel-Alarm');
-		for (const [datei, name] of [
-			[ZUSTELLUNG_TAB, 'ZustellungTab'],
-			[BEISPIEL_ALARM, 'BeispielAlarm']
-		] as const) {
+		assert.equal(findComponents(ast(ZUSTELLUNG_TAB), 'BeispielAlarm').length, 0, 'ZustellungTab mountet keinen Beispiel-Alarm mehr (#3458)');
+		for (const [datei, name] of [[ZUSTELLUNG_TAB, 'ZustellungTab']] as const) {
 			assert.equal(findComponents(ast(datei), 'WetterMetrikenVersandPanel').length, 0, `${name} mountet noch die Metrik-Oberflaeche (#3154)`);
 			assert.equal(findComponents(ast(datei), 'WeatherMetricsTab').length, 0, `${name} mountet noch WeatherMetricsTab (#3154)`);
 		}

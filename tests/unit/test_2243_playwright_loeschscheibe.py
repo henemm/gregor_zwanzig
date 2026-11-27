@@ -253,7 +253,7 @@ def test_ac7_positivliste_eintraege_und_alle_existieren():
 def test_ac7_ratschen_unveraendert():
     text = CI_YML.read_text("utf-8")
     assert re.search(r"^\s*E2E_MIN_SPECS: 85\b", text, re.M)
-    assert re.search(r"^\s*E2E_MIN_EXECUTED_HAUPT: 757\b", text, re.M)  # 716 + 1 (#2961 F003) + 4 (#2953) + 4 (#3007) + 13 (#3122 B3a) + 18 (#3122 B3b) + 5 (#3154: WS-13/WS-14/WS-16 je Trip/Orte, WS-15, minus kurzform S3/S4) + 5 (#3013: AX-1 bis AX-5) - 6 (#3196: Aktivitaet verlaesst den Trip-Kopf) - 3 (#3384)
+    assert re.search(r"^\s*E2E_MIN_EXECUTED_HAUPT: 752\b", text, re.M)  # 716 + 1 (#2961 F003) + 4 (#2953) + 4 (#3007) + 13 (#3122 B3a) + 18 (#3122 B3b) + 5 (#3154: WS-13/WS-14/WS-16 je Trip/Orte, WS-15, minus kurzform S3/S4) + 5 (#3013: AX-1 bis AX-5) - 6 (#3196: Aktivitaet verlaesst den Trip-Kopf) - 3 (#3384) - 5 (#3458: WS-16 x2, WS-neu-5, Zeitbudget- und Richtlinien-Fall der Alarm-Vorschau)
 
 
 def test_ac7_positivlisten_kopf_nennt_geloeschte_specs_nicht_mehr():

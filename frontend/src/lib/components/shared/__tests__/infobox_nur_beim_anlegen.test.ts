@@ -453,12 +453,12 @@ describe('AC-6 Verdrahtung: die Bearbeiten-Hubs und die Wertprop-Bündel setzen 
 	// UebergangBlock (die nicht mehr gemounteten Huellen AlarmeScheduleTab/BriefingScheduleTab
 	// gehoeren nicht mehr zur Bearbeiten-Flaeche; Abbau in Teilschritt 1c).
 	const ZUSTELLUNG_HUELLE = join(COMPONENTS, 'shared/zustellung-tab/ZustellungTab.svelte');
-	// #3036: der Uebergangsblock ist aufgeloest — die Kette endet am Beispiel-Alarm (BeispielAlarm).
-	const BEISPIEL = join(COMPONENTS, 'organisms/zustellung-tab/BeispielAlarm.svelte');
+	// #3036: der Uebergangsblock ist aufgeloest. #3458: der Beispiel-Alarm (BeispielAlarm) ist entfernt —
+	// die Kette endet an der Huelle ZustellungTab.
 	const HUB_ORGANISMEN = [...ORGANISMEN, 'WetterTab'];
 	for (const [name, dateien] of [
-		['Trip-Hub (TripTabs + Reiter Zustellung)', [join(COMPONENTS, 'trip-detail/TripTabs.svelte'), ZUSTELLUNG_HUELLE, BEISPIEL]],
-		['CompareTabs', [join(COMPONENTS, 'compare/CompareTabs.svelte'), ZUSTELLUNG_HUELLE, BEISPIEL]]
+		['Trip-Hub (TripTabs + Reiter Zustellung)', [join(COMPONENTS, 'trip-detail/TripTabs.svelte'), ZUSTELLUNG_HUELLE]],
+		['CompareTabs', [join(COMPONENTS, 'compare/CompareTabs.svelte'), ZUSTELLUNG_HUELLE]]
 	] as const) {
 		test(`${name}: mountet die Organismen (nicht vakuum) ohne showInfobox`, () => {
 			const alle: Record<string, Knoten[]> = Object.fromEntries(HUB_ORGANISMEN.map((o) => [o, []]));

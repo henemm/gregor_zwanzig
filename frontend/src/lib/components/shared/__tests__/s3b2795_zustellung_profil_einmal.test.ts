@@ -24,8 +24,7 @@ const HIER = dirname(fileURLToPath(import.meta.url));
 const KOMP = join(HIER, '..', '..');
 const DATEI = {
 	zustellung: join(KOMP, 'shared', 'zustellung-tab', 'ZustellungTab.svelte'),
-	// #3036: Uebergangsblock aufgeloest — der Beispiel-Alarm ist der Abschnitt am Ende.
-	beispiel: join(KOMP, 'organisms', 'zustellung-tab', 'BeispielAlarm.svelte'),
+	// #3458: BeispielAlarm.svelte (Abschnitt am Ende) entfernt.
 	panel: join(KOMP, 'shared', 'WetterMetrikenVersandPanel.svelte'),
 	wmt: join(KOMP, 'shared', 'WeatherMetricsTab.svelte')
 };
@@ -46,15 +45,13 @@ describe('AC-36 (F006): im Reiter Zustellung genau eine Profil-Ladestelle', () =
 	test('f006_zustellungtab_laedt_das_profil_genau_einmal', () => {
 		assert.equal(profilAbrufe(DATEI.zustellung), 1, 'ZustellungTab: nicht genau eine Profil-Ladestelle');
 		const { ast, quelle } = svelteAst(DATEI.zustellung);
-		assert.equal(einbettungenMitWeichen(ast, quelle, ['BeispielAlarm']).length, 1, 'Messaufbau: ZustellungTab bettet den Beispiel-Alarm nicht genau einmal ein');
+		// #3458: der Beispiel-Alarm ist entfernt — „genau einmal eingebettet“ wird zu „nicht eingebettet“.
+		assert.equal(einbettungenMitWeichen(ast, quelle, ['BeispielAlarm']).length, 0, 'ZustellungTab bettet noch den Beispiel-Alarm ein');
 		assert.equal(einbettungenMitWeichen(ast, quelle, ['WetterMetrikenVersandPanel', 'WeatherMetricsTab']).length, 0, 'ZustellungTab bettet die Metrik-Oberflaeche ein (zweite Profil-Ladestelle)');
 	});
 
-	test('f006_beispiel_alarm_laedt_kein_profil_und_traegt_keine_metrik_oberflaeche', () => {
-		assert.equal(profilAbrufe(DATEI.beispiel), 0, 'Beispiel-Alarm laedt das Profil selbst');
-		const { ast, quelle } = svelteAst(DATEI.beispiel);
-		assert.equal(einbettungenMitWeichen(ast, quelle, ['WetterMetrikenVersandPanel', 'WeatherMetricsTab']).length, 0, 'Beispiel-Alarm traegt die Metrik-Oberflaeche (#3154)');
-	});
+	// #3458: Fall „Beispiel-Alarm laedt kein Profil und traegt keine Metrik-Oberflaeche“ entfaellt
+	// mit BeispielAlarm.svelte.
 
 	// #3297/#3020: Fall WeatherMetricsTab-Profil entfaellt (Datei geloescht).
 });

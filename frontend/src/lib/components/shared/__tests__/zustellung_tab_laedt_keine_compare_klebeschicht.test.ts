@@ -42,7 +42,8 @@ describe('#3020 G17: ZustellungTab lädt keine Compare-Klebeschicht', () => {
 		assert.ok(body.includes('data-testid="zustellung-tab"'), 'Vorbedingung: der Reiter muss rendern');
 		for (const datei of ['zustellungSpeicherung.ts', 'zustellungModell.ts'])
 			assert.ok(HAUPTGRAPH.some((u) => u.endsWith(`/shared/zustellung-tab/${datei}`)), `Vorbedingung: der Protokoll-Haken muss ${datei} sehen`);
-		for (const organ of ['BriefingZeiten', 'LaufzeitKarte', 'KanalTabelle', 'StilleStunden', 'BeispielAlarm'])
+		// #3458: BeispielAlarm aus der Liste entfernt (Organismus geloescht).
+		for (const organ of ['BriefingZeiten', 'LaufzeitKarte', 'KanalTabelle', 'StilleStunden'])
 			assert.ok(HAUPTGRAPH.some((u) => u.endsWith(`/organisms/zustellung-tab/${organ}.svelte`)), `Vorbedingung: ${organ} im Ladegraphen`);
 		for (const pfad of KLEBESCHICHT) assert.ok(existsSync(path.join(FRONTEND, pfad)), `Vakuum-Schutz: ${pfad} muss existieren`);
 		assert.deepEqual(

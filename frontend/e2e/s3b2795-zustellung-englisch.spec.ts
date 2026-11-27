@@ -37,8 +37,12 @@ for (const kind of HUB_KINDS) {
 			await expect(reiter.getByTestId(ZT.kanaeleKopf)).not.toContainText('über');
 
 			const teile: string[] = [];
-			for (const m of MARKER.filter((x) => x !== 'beispiel-alarm')) for (const el of await reiter.locator(`[data-abschnitt="${m}"]`).all()) teile.push(await el.innerText());
+			for (const m of MARKER) for (const el of await reiter.locator(`[data-abschnitt="${m}"]`).all()) teile.push(await el.innerText());
 			const text = teile.join('\n');
+			// #3458 (AC-5): Beispiel-Alarm entfernt — weder „Example warning“ noch „Load preview“ im englischen Reiter.
+			await expect(reiter.getByTestId(ZT.beispielAlarm)).toHaveCount(0);
+			await expect(reiter).not.toContainText('Example warning');
+			await expect(reiter).not.toContainText('Load preview');
 			for (const [k, deutsch] of Object.entries(de)) {
 				if (englisch.has(deutsch) || deutsch.includes('{') || deutsch.length < 6) continue;
 				expect(text, `deutscher Katalogtext ${k} im englischen Reiter: „${deutsch}“`).not.toContain(deutsch);

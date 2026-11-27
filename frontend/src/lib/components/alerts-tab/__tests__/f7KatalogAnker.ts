@@ -20,7 +20,7 @@ export const F7_ANKER: [schluessel: string, de: string, en: string][] = [
 	['alarme.gruppe.amtlich_radar', 'Amtliche & Radar-Warnungen', 'Official & radar warnings'],
 	['alarme.amtlich.label', 'Amtliche Warnungen lösen Alert aus', 'Official warnings trigger an alert'],
 	['alarme.radar.label', 'Radar-Alarm', 'Rain alert (radar)'],
-	['alarme.beispiel_warnung', 'Beispiel-Warnung', 'Example warning'],
+	// #3458: 'alarme.beispiel_warnung' entfernt (Abschnitt Beispiel-Warnung entfaellt).
 	['alarme.metriken.keine_gewaehlt', 'Wähle im Reiter Wetter Metriken aus, um Alarm-Schwellen zu konfigurieren.', 'Select metrics in the Weather tab to configure alert thresholds.'], // #2794 S3a 4b (AC-33)
 	['alarme.metriken.nur_ohne_alarm', 'Keine der gewählten Größen kann einen Alarm auslösen: <namen>. Sie erscheinen weiterhin im Briefing, lösen aber keine Warnung aus.', 'None of the selected metrics can trigger an alert: <namen>. They still appear in the briefing but do not trigger a warning.'],
 	['alarme.metriken.ohne_alarm', 'Für diese Größen gibt es keinen Alarm: <namen>. Sie erscheinen weiterhin im Briefing, lösen aber keine Warnung aus.', 'There is no alert for these metrics: <namen>. They still appear in the briefing but do not trigger a warning.'],
@@ -106,20 +106,6 @@ export const F7_ANKER: [schluessel: string, de: string, en: string][] = [
 	['alarme.metrik.humidity', 'Luftfeuchte', 'Humidity'], // #2955: Mockup-Name
 	['alarme.metrik.freezing_level', 'Nullgradgrenze', 'Freezing level'],
 	['alarme.metrik.thunder_onset', 'Gewitter (Beginn)', 'Thunderstorm (onset)'],
-	['alarme.metrik.precipitation_heavy_onset', 'Starkregen (Beginn)', 'Heavy rain (onset)'],
-	// Beispiel-Warnung (AlertPreviewCard)
-	['alarme.vorschau.keine_metriken', 'Keine alert-fähigen Wetter-Metriken aktiv. Aktiviere zuerst Wetter-Metriken (z.B. Windböen, Temperatur) im Tab <link>.', 'No alert-capable weather metrics active. First activate weather metrics (e.g. wind gusts, temperature) in the <link> tab.'],
-	['alarme.vorschau.reiter_wetter_metriken', 'Wetter', 'Weather'], // #2794 S3a 4b (AC-33)
-	['alarme.vorschau.nach_speichern', 'Die Vorschau mit echten Daten ist nach dem Speichern verfügbar.', 'The preview with real data is available after saving.'],
-	['alarme.vorschau.keine_orte', 'Noch keine Orte konfiguriert — im Reiter <reiter> Kandidaten hinzufügen.', 'No locations configured yet — add candidates in the <reiter> tab.'],
-	['alarme.vorschau.reiter_orte', 'Orte', 'Locations'],
-	// Issue #2069 (AC-8): Hinweis bei Trip ohne Etappe mit Wegpunkten (neu, kein Bestandstext).
-	['alarme.vorschau.keine_etappen', 'Trip hat noch keine Etappen mit Wegpunkten.', 'The trip has no stages with waypoints yet.'],
-	['alarme.vorschau.regel_aktivieren', 'Aktiviere mindestens eine Alert-Regel, um die Vorschau zu laden.', 'Activate at least one alert rule to load the preview.'],
-	['alarme.vorschau.laden', 'Vorschau laden', 'Load preview'],
-	['alarme.vorschau.lade', 'Lade…', 'Loading…'],
-	// Issue #1839 AC-6: Ladehinweis waehrend der Berechnung (neu, kein Bestandstext).
-	['alarme.vorschau.berechnet', 'Vorschau wird berechnet…', 'Computing preview…'],
-	['alarme.vorschau.fehler', 'Vorschau konnte nicht geladen werden', 'Preview could not be loaded'],
-	['alarme.vorschau.iframe_titel', 'Alert-Vorschau E-Mail', 'Alert preview email']
+	['alarme.metrik.precipitation_heavy_onset', 'Starkregen (Beginn)', 'Heavy rain (onset)']
+	// #3458: die Anker der Beispiel-Warnung (AlertPreviewCard, alarme.vorschau.*) entfallen mit Karte und Schluesseln.
 ];

@@ -6,7 +6,7 @@
 //
 // Jeder Abruf ueber `send()` bekommt ein Standard-Zeitlimit von 25 s. Vier
 // bewusst lange Aktionen tragen ein eigenes, groesseres Budget:
-//   Test-Versand (Konto) 130 s · Alarm-Vorschau 40 s ·
+//   Test-Versand (Konto) 130 s · (Alarm-Vorschau 40 s: entfallen mit #3458) ·
 //   Orts-Aufloesung im Vergleichs-Editor 40 s · Orts-Aufloesung „Neuer Ort" 40 s.
 //
 // Messweg je Aufrufstelle (echter Klickpfad, Uhr der Seite gestellt):
@@ -26,8 +26,8 @@
 // Issue #1743 (docs/specs/modules/feat_1743_reiter_aufraeumen.md): der Reiter
 // „Vorschau" und GET /api/briefings/{id}/preview sind entfernt — der Fall
 // „Compare-Vorschau (70 s)" hat keine Aufrufstelle mehr und ist entfallen.
-// Alarm-Vorschau auf POST /api/briefings/{id}/alert-preview?kind=route
-// (#2283 AC-20/AC-21).
+// Issue #3458: die Alarm-Vorschau-Oberflaeche ist entfernt — der Fall
+// „Alarm-Vorschau (40 s)" hat keine Aufrufstelle mehr und ist entfallen.
 
 import { test, expect, type Page, type Route, type Request } from '@playwright/test';
 import { cleanupTracked, login, registerForCleanup } from './helpers.js';
@@ -100,60 +100,8 @@ test.describe('#2361 Langlaeufer-Budgets wirken an der Aufrufstelle', () => {
 		await expect(page.getByText('Gesendet', { exact: true })).toBeVisible({ timeout: 10_000 });
 	});
 
-	test('Alarm-Vorschau (40 s): laeuft nach 26 s noch und zeigt danach den Betreff', async ({ page }) => {
-		await login(page);
-		const tripId = `e2e-gz-2361-alarm-${Date.now()}`;
-		const res = await page.request.post('/api/trips', {
-			data: {
-				id: tripId,
-				name: 'E2E-GZ-2361 Alarm-Vorschau',
-				stages: [
-					{
-						id: `${tripId}-s1`,
-						name: 'Etappe 1',
-						date: '2026-08-01',
-						// Issue #2069 (AC-8): die Vorschau braucht eine Etappe mit >= 2 Wegpunkten.
-						waypoints: [
-							{ id: `${tripId}-wp1`, name: 'Start', lat: 42.1, lon: 9.0, elevation_m: 500 },
-							{ id: `${tripId}-wp2`, name: 'Ziel', lat: 42.11, lon: 9.02, elevation_m: 800 }
-						]
-					}
-				],
-				// Alarm-Regeln leitet der Server aus den aktiven Wetter-Metriken ab
-				// (SyncAlertRules) — ohne aktive Boeen-Metrik bliebe die Vorschau gesperrt.
-				display_config: { metrics: [{ metric_id: 'gust', enabled: true }] },
-				alert_rules: [
-					{ id: 'r1', kind: 'absolute', metric: 'wind_gust', threshold: 50, severity: 'warning', enabled: true }
-				]
-			}
-		});
-		expect([200, 201]).toContain(res.status());
-		registerForCleanup('trip', tripId);
-
-		await page.clock.install();
-		// Issue #2283 (AC-20/AC-21): kind-neutraler Weg POST /api/briefings/{id}/alert-preview?kind=route.
-		const abruf = await halteAbrufFest(page, new RegExp(`/api/briefings/${tripId}/alert-preview\\?kind=route$`), {
-			subject: 'Budget-Alarm-Betreff',
-			email_html: '<html><body>Alarm</body></html>',
-			email_plain: 'Alarm',
-			telegram: 'Alarm',
-			sms: 'Alarm'
-		});
-		await page.goto(`/trips/${tripId}`);
-		// #2794 S3a: die Alarme stehen im Reiter Zustellung.
-		await page.getByTestId('trip-detail-tab-zustellung').first().click();
-		const panel = page.getByTestId('trip-detail-panel-zustellung');
-		await expect(panel).toBeVisible();
-		const knopf = panel.getByTestId('alert-preview-load-btn');
-		await knopf.click();
-
-		await nachStandardLimitLaeuftNoch(page, abruf);
-		await expect(knopf).toHaveText('Lade…');
-		await expect(panel.getByTestId('alert-preview-error')).toHaveCount(0);
-
-		await abruf.freigeben();
-		await expect(panel.getByTestId('alert-preview-subject')).toHaveText('Budget-Alarm-Betreff', { timeout: 10_000 });
-	});
+	// #3458: Fall „Alarm-Vorschau (40 s)“ entfaellt — das Zeitbudget war nur ueber den Knopf
+	// „Vorschau laden“ erreichbar, der mit der Vorschau-Karte entfernt ist.
 
 	test('Orts-Aufloesung im Vergleichs-Editor (40 s): laeuft nach 26 s noch und zeigt danach den Treffer', async ({ page }) => {
 		await login(page);

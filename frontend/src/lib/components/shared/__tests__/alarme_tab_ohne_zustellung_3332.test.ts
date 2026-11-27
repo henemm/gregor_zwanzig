@@ -30,7 +30,8 @@ const { render } = await import('svelte/server');
 const AlarmeTab = (await import(pathToFileURL(path.join(FRONTEND, 'src/lib/components/shared/AlarmeTab.svelte')).href)).default;
 
 const ZUSTELLUNG = ['channels', 'cooldown', 'quiet-hours'];
-const BLEIBEN = ['official-warnings', 'metric-levels', 'sample'];
+// #3458: Abschnitt 'sample' (Beispiel-Warnung) entfernt — bleibt nicht mehr, fehlt.
+const BLEIBEN = ['official-warnings', 'metric-levels'];
 
 const TRIP = { id: '__new__', name: 'Neu-3332', stages: [], alert_rules: [], display_config: {}, report_config: undefined };
 
@@ -66,8 +67,8 @@ describe('#3332 Test 5 (AC-9): Abschnittsliste mit und ohne Zustellungs-Abschnit
 
 	test('ohne den Parameter bzw. mit false: Liste unverändert (Hub, Ortsvergleich)', () => {
 		const f = alarmeTabSections as (c: 'route' | 'vergleich', o?: boolean) => string[];
-		assert.deepEqual(f('route', false), ['official-warnings', 'metric-levels', 'channels', 'cooldown', 'quiet-hours', 'sample']);
-		assert.deepEqual(f('vergleich', false), ['official-warnings', 'radar', 'metric-levels', 'channels', 'cooldown', 'quiet-hours', 'sample']);
+		assert.deepEqual(f('route', false), ['official-warnings', 'metric-levels', 'channels', 'cooldown', 'quiet-hours']);
+		assert.deepEqual(f('vergleich', false), ['official-warnings', 'radar', 'metric-levels', 'channels', 'cooldown', 'quiet-hours']);
 		assert.deepEqual(f('route'), f('route', false));
 	});
 });
@@ -78,6 +79,7 @@ describe('#3332 Test 5 (AC-9): Wirkort — der gerenderte Reiter Alarme', () => 
 		assert.ok(ids.length > 0, 'Messaufbau: keine Abschnitte gerendert');
 		for (const s of ZUSTELLUNG) assert.ok(!ids.includes(s), `Trip-Anlegen: Abschnitt "${s}" hat eine zweite Bedienstelle (Reiter Zustellung besitzt ihn) — gerendert: ${JSON.stringify(ids)}`);
 		for (const s of BLEIBEN) assert.ok(ids.includes(s), `Trip-Anlegen: Abschnitt "${s}" fehlt`);
+		assert.ok(!ids.includes('sample'), `Trip-Anlegen: Abschnitt "sample" (Beispiel-Warnung) noch da (#3458)`);
 		assert.equal((renderRoute(true).match(/data-testid="alert-channel-threshold-telegram-HIGH"/g) ?? []).length, 0, 'alte Dringlichkeit-Wahl im Trip-Anlegen');
 	});
 

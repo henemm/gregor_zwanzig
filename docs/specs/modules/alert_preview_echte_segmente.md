@@ -161,5 +161,6 @@ Datei `tests/tdd/test_alert_preview_echte_segmente.py`, echter Endpoint mit echt
 
 ## Changelog
 
+- 2026-11-27: UI abgelöst durch #3458 — die Vorschau-Karte (Hinweis „keine Etappe“, Knopf „Vorschau laden“) ist entfernt (ersetzt durch den Test-Alarm #3441); der Backend-Teil (echte Segmente im Endpunkt `alert-preview`) gilt weiter.
 - 2026-11-13: Initial spec created (Issue #2069)
 - 2026-11-14: Fix-Loop 1 (Adversary F005): Bezugstag berücksichtigt nur auswertbare Etappen (mindestens 2 Wegpunkte), Implementation Details 1 ergänzt.

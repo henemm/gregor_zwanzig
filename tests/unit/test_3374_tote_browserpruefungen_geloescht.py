@@ -50,7 +50,8 @@ GELOESCHTE_CONFIGS = [
 ]
 
 ZIEL_FAELLE = {
-    "was-steht-wo-karte.spec.ts": ["WS-neu-1", "WS-neu-2", "WS-neu-3", "WS-neu-4", "WS-neu-5"],
+    # #3458: WS-neu-5 (Hinweis „keine Etappe“ der Vorschau-Karte) entfiel mit der Alarm-Vorschau-Oberflaeche.
+    "was-steht-wo-karte.spec.ts": ["WS-neu-1", "WS-neu-2", "WS-neu-3", "WS-neu-4"],
     "hub-anlegen-ablauf.spec.ts": ["AN-neu-1", "AN-neu-2"],
     "hub-konfliktschutz-zwei-kontexte.spec.ts": ["KS-neu-1", "KS-neu-2"],
     "design-system-trip-vergleich.spec.ts": ["DS-neu-1"],

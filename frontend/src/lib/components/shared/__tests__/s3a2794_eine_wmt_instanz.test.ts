@@ -60,8 +60,7 @@ const DATEI = {
 	tripNeu: join(KOMP, 'trip-new', 'TripNewEditor.svelte'),
 	vergleichNeu: join(KOMP, 'compare-new', 'CompareNewEditor.svelte'),
 	zustellung: join(KOMP, 'shared', 'zustellung-tab', 'ZustellungTab.svelte'),
-	// #3036: Uebergangsblock aufgeloest — der Abschnitt am Ende ist der Beispiel-Alarm.
-	beispiel: join(KOMP, 'organisms', 'zustellung-tab', 'BeispielAlarm.svelte'),
+	// #3458: BeispielAlarm.svelte (Abschnitt am Ende des Reiters) entfernt.
 	briefingZeiten: join(KOMP, 'organisms', 'zustellung-tab', 'BriefingZeiten.svelte'),
 	panel: join(KOMP, 'shared', 'WetterMetrikenVersandPanel.svelte'),
 	wmt: join(KOMP, 'shared', 'WeatherMetricsTab.svelte')
@@ -165,9 +164,8 @@ describe('§3: shared/zustellung-tab/ZustellungTab.svelte — Übergangsreiter',
 		assert.ok(existiert(DATEI.zustellung), 'ZustellungTab.svelte fehlt');
 		const z = traeger(DATEI.zustellung);
 		assert.deepEqual(z.e.map((x) => beschreibe(x, z.quelle)), [], 'ZustellungTab bettet direkt einen WMT-Traeger ein');
-		assert.equal(einbettungenMitWeichen(z.ast, z.quelle, ['BeispielAlarm']).length, 1, 'ZustellungTab: Beispiel-Alarm nicht genau einmal');
-		const u = traeger(DATEI.beispiel);
-		assert.deepEqual(u.e.map((x) => beschreibe(x, u.quelle)), [], 'Beispiel-Alarm traegt die Metrik-Oberflaeche (#3154)');
+		// #3458: der Beispiel-Alarm ist entfernt — „genau einmal eingebettet“ wird zu „nicht eingebettet“.
+		assert.equal(einbettungenMitWeichen(z.ast, z.quelle, ['BeispielAlarm']).length, 0, 'ZustellungTab: Beispiel-Alarm noch eingebettet');
 	});
 
 	// #2795 S3b 1b: Sprungziel #versand ist die Karte der Briefing-Zeiten (AC-40, „genau ein
@@ -179,9 +177,7 @@ describe('§3: shared/zustellung-tab/ZustellungTab.svelte — Übergangsreiter',
 		assert.equal(einbettungenMitWeichen(ast, quelle, ['BriefingZeiten']).length, 1, 'Zustellung: BriefingZeiten nicht genau einmal');
 		const b = svelteAst(DATEI.briefingZeiten);
 		assert.equal(elementeMitId(b.ast, b.quelle, 'div', 'versand').length, 1, 'Zustellung: kein Sprungziel id="versand" an den Briefing-Zeiten');
-		const u = svelteAst(DATEI.beispiel);
-		assert.equal(einbettungenMitWeichen(u.ast, u.quelle, ['WetterMetrikenVersandPanel', 'VersandTab', 'BriefingScheduleTab']).length, 0, 'Zustellung: der Beispiel-Alarm bringt einen Versand-Abschnitt mit (zweites #versand)');
-		assert.equal(elementeMitId(u.ast, u.quelle, 'section', 'versand').length + elementeMitId(u.ast, u.quelle, 'div', 'versand').length, 0, 'Zustellung: zweites id="versand" im Beispiel-Alarm');
+		// #3458: die Pruefung „Beispiel-Alarm bringt kein zweites #versand“ entfaellt mit BeispielAlarm.svelte.
 	});
 
 	// #2795 S3b 1b (Spec §4, AC-27/AC-33): die Alarm-Zustellung ist Teil des Reiters (Kanal-Tabelle,
