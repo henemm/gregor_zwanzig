@@ -37,10 +37,11 @@ from output.renderers.compare_metric_catalog import (
 )
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
 from output.renderers.email.compare_html import (
-    CV2_ZEILEN, _build_location_outlook_rows, _daily_summary, _hour_einfach_text, _hour_zeilen,
+    CV2_ZEILEN, _build_location_outlook_rows, _daily_summary, _hour_zeilen,
     _column_legend_text, _fmt_precip_type, _fmt_thunder,
     _fmt_visibility_overview, _metric_value, _should_merge_wind_dir,
     _units_legend_text, _visible_hour_metrics, derive_row_labels, fmt_word_cell,
+    hour_cell_texts, hourly_block_visible, legend_visible,
     loc_hail_flag, loc_thunder_signals, location_render_order, rowless_count,
     select_cv2_rows,
 )
@@ -53,7 +54,6 @@ from output.renderers.email.unavailable_hint import (
 from output.renderers.email.undelivered_hint import (
     has_undelivered, render_undelivered_plain,
 )
-from utils.geo import degrees_to_compass
 from utils.timezone import (
     local_dt, local_fmt, local_stamp, location_tz, tz_abbrev,
 )
@@ -337,18 +337,15 @@ def render_comparison_text(
     # Zweiter Staging-Fund (2026-07-26): `section_lines` ist ein GEMEINSAMER
     # Puffer fuer Stundentabelle UND 3-Tage-Ausblick. Die Ueberschrift an ihm
     # aufzuhaengen beschriftete bei leerer Stundenauswahl den Ausblick als
-    # "STUNDENVERLAUF". Sie haengt jetzt an tatsaechlich geschriebenen
-    # Stundenzeilen. Der HTML-Pfad hatte diese Kopplung nie: dort ist der
-    # Sektionskopf ein eigener Block direkt an `hourly_enabled`
-    # (compare_html.py:1139-1142), und der Ausblick wird getrennt davon in
-    # `per_location_html` erzeugt -- zwei Bausteine statt eines Puffers.
-    hour_rows_written = False
+    # "STUNDENVERLAUF". Sie haengt seit #3425 am gemeinsamen Praedikat
+    # `hourly_block_visible` (wie der HTML-Sektionskopf): nur wenn ein Ort
+    # ohne Fehler tatsaechlich Stundenzeilen schreibt.
     for loc_result in locations:
         if loc_result.error is not None:
             continue
         # hourly_enabled=False laesst die Tabelle entfallen -- der Ausblick
         # haengt NICHT an dieser Bedingung (Issue #1323, bleibt unabhaengig).
-        have_hourly = hourly_enabled and bool(loc_result.hourly_data)
+        have_hourly = hourly_block_visible([loc_result], hourly_enabled)
         outlook_rows = (
             # Issue #2049: dieselbe Zuordnung wie der HTML-Pfad -- der
             # Pflicht-Validator liest nur HTML und ist im Klartext blind
@@ -391,40 +388,14 @@ def render_comparison_text(
         if have_hourly:
             for dp in loc_result.hourly_data:
                 ts = local_fmt(dp.ts, tz) if hasattr(dp.ts, "astimezone") else str(dp.ts)
-                cells = []
-                for m in visible_hour_metrics:
-                    # Issue #3097: derselbe Einfach-Zweig wie in der HTML-Fassung.
-                    einfach = _hour_einfach_text(
-                        m, getattr(dp, m["key"], None), hourly_metric_formats,
-                        lang, html=False, ampel=ampel)
-                    # Issue #1475 Nachbesserung (AC-8, Klartext-Pendant der
-                    # Compare-Stundentabelle): Hagel als Text-Anhang, wie in
-                    # der HTML-Fassung -- nie als Ring (das ist nur Trip).
-                    if einfach is not None:
-                        text = einfach
-                    elif m["fmt"] is _fmt_thunder:
-                        # Issue #1680 S3 (Spec D4): die Herkunft der Stufe
-                        # DIESER Stunde, wie in der HTML-Fassung -- HTML und
-                        # Klartext derselben Mail haben zwei unabhaengige
-                        # Aufrufstellen und duerfen nicht auseinanderlaufen
-                        # (AC-4). Stufe und Traeger stammen aus DEMSELBEN `dp`.
-                        # KANAL: die Compare-SMS erreicht diese Schleife nie --
-                        # sie schreibt seit #3172 die Token-Zeile (`TH:M@15`,
-                        # ohne Herkunft, `output/renderers/orte_sms.py`).
-                        text = fmt_word_cell(
-                            m["fmt"], getattr(dp, m["key"], None), lang,
-                            getattr(dp, "hail_flag", None),
-                            getattr(dp, "thunder_level_signals", None),
-                        )
-                    else:
-                        text = fmt_word_cell(m["fmt"], getattr(dp, m["key"], None), lang)
-                    if merge_wind_dir and m["key"] == "wind10m_kmh":
-                        compass = degrees_to_compass(getattr(dp, "wind_direction_deg", None))
-                        if compass:
-                            text = f"{text} {compass}"
-                    cells.append(f"{m['label']} {text}")
+                # Issue #3425: dieselbe Zellkette wie die HTML-Fassung
+                # (`hour_cell_texts`, inkl. Hagel/Signale #1475/#1680 und
+                # Windrichtung #1335) -- nur das Zeitlabel ist je Medium.
+                cells = [f"{label} {text}" for label, text in hour_cell_texts(
+                    dp, visible_hour_metrics, merge_wind_dir, lang=lang,
+                    hourly_metric_formats=hourly_metric_formats, ampel=ampel,
+                    html=False)]
                 section_lines.append(f"   {ts}  " + "  ".join(cells))
-                hour_rows_written = True
         if outlook_rows:
             # Issue #1368: eigene Ueberschrift statt der Trip-Formulierung
             # "Nächste Etappen" (im Ortsvergleich gibt es keine Etappen) und
@@ -445,7 +416,7 @@ def render_comparison_text(
         section_lines.append("")
 
     if section_lines:
-        if hour_rows_written:
+        if hourly_block_visible(locations, hourly_enabled):
             lines.append(t("vergleich.stunden.klartext_titel", lang))
             lines.append("-" * 15)
         lines.extend(section_lines)
@@ -461,7 +432,7 @@ def render_comparison_text(
     # #2136/ADR-0068 (AC-5): dieselbe Bedingungserweiterung wie im HTML-Pfad
     # (`_render_legend`) -- die Spalten-Legende bleibt sichtbar, sobald der
     # Ausblick sichtbar ist, auch bei abgeschalteter Stundentabelle.
-    if hourly_enabled or outlook_enabled:
+    if legend_visible(hourly_enabled, outlook_enabled):
         for _legend in (
             _units_legend_text(visible_hour_metrics, lang),
             _column_legend_text(visible_hour_metrics, outlook_metrics, outlook_enabled, lang),

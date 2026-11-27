@@ -527,11 +527,14 @@ class TestPreviewParity:
             "'ORT'-Block."
         )
 
-    def test_hourly_enabled_true_shows_section_in_preview(self):
+    def test_hourly_enabled_true_ohne_stundendaten_kein_kopf_in_preview(self):
+        # Issue #3425 / feat_3122 AC-10: der Platzhalter-Ort der Vorschau hat
+        # keine Stundendaten -- wie im Versand entfaellt dann der Stundenblock
+        # samt Kopf (frueher stand hier eine nackte Ueberschrift ohne Zeilen).
         from services.validator_render_service import render_compare_email_preview
 
         html = render_compare_email_preview(self._body(hourly_enabled=True))
-        assert "STUNDEN" in html, (
-            "Regressionsschutz: hourly_enabled=True muss die Sektion in der "
-            "Vorschau weiterhin zeigen."
+        assert "STUNDEN" not in html, (
+            "Vorschau ohne Stundendaten darf keinen Stunden-Kopf zeigen "
+            "(#3425, feat_3122 AC-10, Versandweg-Paritaet)."
         )
