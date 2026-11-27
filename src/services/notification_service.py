@@ -160,9 +160,10 @@ class TripReportRequest:
     # die vorherigen Erweiterungen dieses Tupels. Ohne es kaeme die
     # Reichweite an DIESEM Pfad (dem einzigen ohne Vorlauf-Deckel, aus dem
     # der Ticket-Realfall stammt) nie beim Formatierer an.
-    starkregen_nowcast: (
-        tuple[str, int | None, int | None, bool, bool, int | None] | None
-    ) = None
+    # Issue #2063: optionale Glieder 7-9 = exakte Frame-Zeitpunkte (UTC)
+    # `onset_at`, `event_end_at`, `source_reach_at`; ein Sechs-Tupel bleibt
+    # gueltig (Fallback `jetzt + Minuten`).
+    starkregen_nowcast: tuple | None = None
 
 
 @dataclass
@@ -845,7 +846,11 @@ class NotificationService:
                 _intensity_label, _onset_minutes,
                 _event_end_minutes, _event_ongoing, _already_running,
                 _source_reach_minutes,
-            ) = request.starkregen_nowcast
+            ) = request.starkregen_nowcast[:6]
+            # Issue #2063: exakte Frame-Zeitpunkte, falls mitgeliefert.
+            _onset_at, _event_end_at, _source_reach_at = (
+                tuple(request.starkregen_nowcast[6:9]) + (None, None, None)
+            )[:3]
             starkregen_hint_text = format_starkregen_hint(
                 _intensity_label, _onset_minutes, tz=request.trip_tz,
                 # Issue #2051 S1: Ende und Waechter aus DEMSELBEN
@@ -859,6 +864,8 @@ class NotificationService:
                 # Ergebnis -- Adversary-Fund F002, der Pfad ohne Vorlauf-
                 # Deckel liess sie sonst nie beim Formatierer ankommen.
                 source_reach_minutes=_source_reach_minutes,
+                onset_at=_onset_at, event_end_at=_event_end_at,
+                source_reach_at=_source_reach_at,
             )
 
         # Issue #3128: der EINE Render-Weg des Trip-Briefings (gemeinsam mit

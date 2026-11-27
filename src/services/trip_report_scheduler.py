@@ -2232,10 +2232,9 @@ class TripReportSchedulerService:
         catchup_prefix: str | None,
         partial_outage_hint: str | None = None,
         render_options: Optional["ReportRenderOptions"] = None,
-        starkregen_nowcast: Optional[
-            Tuple[str, Optional[int], Optional[int], bool, bool, Optional[int]]
-        ] = None,  # Issue #2050 S2b: fuenftes Glied `already_running`;
-        # Issue #2051 S3: sechstes Glied `source_reach_minutes`
+        starkregen_nowcast: Optional[tuple] = None,  # Issue #2050 S2b: fuenftes
+        # Glied `already_running`; Issue #2051 S3: sechstes Glied
+        # `source_reach_minutes`; Issue #2063: Glieder 7-9 exakte Zeitpunkte
         restrict_to_channel: str | None = None,
     ) -> TripReportRequest:
         """Baut das DTO, das an den NotificationService übergeben wird (Issue #1022).
@@ -2294,9 +2293,7 @@ class TripReportSchedulerService:
         segments: List[TripSegment],
         now_utc: datetime,
         target_date: Optional[date] = None,
-    ) -> Optional[
-        Tuple[str, Optional[int], Optional[int], bool, bool, Optional[int]]
-    ]:
+    ) -> Optional[tuple]:
         """Starkregen-Kurzfristhinweis (Issue #1439): liefert die Rohdaten
         (``intensity_label``, ``onset_minutes``, seit Issue #2051 S1
         zusaetzlich ``event_end_minutes`` und
@@ -2447,6 +2444,10 @@ class TripReportSchedulerService:
             result.intensity_label, result.onset_minutes,
             result.event_end_minutes, result.event_ongoing_beyond_horizon,
             result.already_running, result.source_reach_minutes,
+            # Issue #2063: exakte Frame-Zeitpunkte (Glieder 7-9).
+            getattr(result, "onset_at", None),
+            getattr(result, "event_end_at", None),
+            getattr(result, "source_reach_at", None),
         )
 
     def _reset_alert_state_after_briefing(self, trip_id: str) -> None:

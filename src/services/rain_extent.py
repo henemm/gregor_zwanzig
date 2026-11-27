@@ -16,6 +16,7 @@ Zwei Entscheidungen der Spec wohnen hier (E2/E4):
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import TYPE_CHECKING, Sequence
 
 from services.radar_service import (
@@ -62,6 +63,13 @@ class RainZone:
     staerkste Intensitaetswert bzw. die rohe Quelle des km-kleinsten Punkts
     der Zone. Beide tragen den Default `""`, bestehende S2a/S2b-Konstruktionen
     (alle mit Keyword-Argumenten) bleiben unveraendert lauffaehig.
+
+    `onset_at`/`event_end_at` (Issue #2063) sind die exakten Frame-Zeitpunkte
+    (UTC) zu Beginn/Ende der Zone; `None`, wenn nicht jeder beteiligte Punkt
+    einen kennt -- dann rechnet die Anzeige wie bisher `jetzt + Minuten`.
+    BEWUSST keine Dataclass-Felder (ohne Annotation, gesetzt per
+    `with_exact_times`): Gleichheit, Serialisierung (Payload, Golden Master
+    #2982) und alle bestehenden Konstruktionen bleiben unveraendert.
     """
     km_from: float
     km_to: float
@@ -69,6 +77,25 @@ class RainZone:
     event_end_minutes: int | None
     intensity_label: str = ""
     source: str = ""
+
+    onset_at = None  # Issue #2063, kein Feld (s. Docstring)
+    event_end_at = None  # Issue #2063, kein Feld (s. Docstring)
+
+    def with_exact_times(
+        self, onset_at: datetime | None, event_end_at: datetime | None,
+    ) -> "RainZone":
+        """Exakte Frame-Zeitpunkte anheften (Issue #2063), gibt `self` zurueck."""
+        object.__setattr__(self, "onset_at", onset_at)
+        object.__setattr__(self, "event_end_at", event_end_at)
+        return self
+
+
+def _exakt(werte: list, waehle) -> datetime | None:
+    """Issue #2063: exakter Zonen-Zeitpunkt nur, wenn ALLE beteiligten Punkte
+    einen tragen -- sonst passte er nicht zur Minuten-Angabe der Zone."""
+    if not werte or any(w is None for w in werte):
+        return None
+    return waehle(werte)
 
 
 def derive_rain_zones(
@@ -82,31 +109,34 @@ def derive_rain_zones(
     uebersprungen, jeder uebrige trockene Punkt schliesst die laufende Zone.
     """
     zonen: list[RainZone] = []
-    laufend: list[tuple[float, int, int | None, str, str]] = []
+    laufend: list[tuple] = []  # (km, onset, ende, label, quelle, onset_at, ende_at)
 
     def _abschliessen() -> None:
         if not laufend:
             return
         zonen.append(
             RainZone(
-                km_from=min(k for k, _o, _e, _i, _s in laufend),
-                km_to=max(k for k, _o, _e, _i, _s in laufend),
-                onset_minutes=min(o for _k, o, _e, _i, _s in laufend),
+                km_from=min(p[0] for p in laufend),
+                km_to=max(p[0] for p in laufend),
+                onset_minutes=min(p[1] for p in laufend),
                 event_end_minutes=(
-                    max(e for _k, _o, e, _i, _s in laufend if e is not None)
-                    if any(e is not None for _k, _o, e, _i, _s in laufend)
+                    max(p[2] for p in laufend if p[2] is not None)
+                    if any(p[2] is not None for p in laufend)
                     else None
                 ),
                 # Issue #2051 S4 (E2): staerkster Wert unter den Punkten der
                 # Zone, unabhaengig von seiner Position.
                 intensity_label=max(
-                    (i for _k, _o, _e, i, _s in laufend),
+                    (p[3] for p in laufend),
                     key=lambda label: _INTENSITY_RANK.get(label, -1),
                 ),
                 # Issue #2051 S4 (E2): rohe Quelle des ERSTEN (km-kleinsten)
                 # Punkts -- `laufend` wird in Punkt-Reihenfolge (aufsteigende
                 # km) befuellt, kein Mehrheitsentscheid.
                 source=laufend[0][4],
+            ).with_exact_times(  # Issue #2063: exakte Frame-Zeitpunkte
+                _exakt([p[5] for p in laufend], min),
+                _exakt([p[6] for p in laufend if p[2] is not None], max),
             )
         )
         laufend.clear()
@@ -125,6 +155,8 @@ def derive_rain_zones(
                 getattr(ergebnis, "event_end_minutes", None),
                 getattr(ergebnis, "intensity_label", ""),
                 getattr(ergebnis, "source", ""),
+                getattr(ergebnis, "onset_at", None),  # Issue #2063
+                getattr(ergebnis, "event_end_at", None),  # Issue #2063
             )
         )
     _abschliessen()

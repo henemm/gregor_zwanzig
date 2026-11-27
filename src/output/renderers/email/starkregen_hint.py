@@ -27,6 +27,9 @@ def format_starkregen_hint(
     already_running: bool = False,
     source_reach_minutes: int | None = None,
     lang: Lang = "de",
+    onset_at: datetime | None = None,
+    event_end_at: datetime | None = None,
+    source_reach_at: datetime | None = None,
 ) -> str:
     """"Starker Regen ab ca. HH:MM (in ~N Min), letzter Regen gegen HH:MM." —
     identisches Format wie `RadarNowcastService.format_now_text()` fuer den
@@ -50,8 +53,14 @@ def format_starkregen_hint(
     -- dieser Baustein liegt in einem anderen Modul und bekommt schon heute
     nur Rohwerte, kein `OnsetEvent`). Die Guete-Grenze wird ueber die
     MODUL-Referenz auf `radar_service` gelesen, nie per Import gebunden
-    (AC-16, Laufzeit-Drift-Schutz)."""
+    (AC-16, Laufzeit-Drift-Schutz).
+
+    Issue #2063: `onset_at`/`event_end_at`/`source_reach_at` sind die exakten
+    Frame-Zeitpunkte (UTC); gesetzt gehen sie vor `jetzt + Minuten` (sonst
+    "17:59" statt Frame 18:00, weil zwischen Abfrage und Rendern Sekunden
+    vergehen). Default None -> bisherige Rechnung."""
     import services.radar_service as radar_service_mod
+    from services.radar_service import nowcast_moment
     from utils.timezone import local_dt
 
     now = datetime.now(timezone.utc)
@@ -62,13 +71,13 @@ def format_starkregen_hint(
         # bestimmbar). Die Ende-Angabe unten bleibt unveraendert.
         satz = t("mail.starkregen.laeuft", lang, label=intensity_label)
     else:
-        onset_time = now + timedelta(minutes=onset_minutes)
+        onset_time = nowcast_moment(onset_at, now, onset_minutes)
         time_str = local_dt(onset_time, tz).strftime("%H:%M")
         satz = t("mail.starkregen.beginn", lang, label=intensity_label,
                  zeit=time_str, min=onset_minutes)
     if event_end_minutes is not None:
         end_str = local_dt(
-            now + timedelta(minutes=event_end_minutes), tz,
+            nowcast_moment(event_end_at, now, event_end_minutes), tz,
         ).strftime("%H:%M")
         if event_ongoing_beyond_horizon:
             satz += t("mail.starkregen.ende_mindestens", lang, zeit=end_str)
@@ -79,7 +88,7 @@ def format_starkregen_hint(
     # bereits implizit.
     if source_reach_minutes is not None and not event_ongoing_beyond_horizon:
         reach_str = local_dt(
-            now + timedelta(minutes=source_reach_minutes), tz,
+            nowcast_moment(source_reach_at, now, source_reach_minutes), tz,
         ).strftime("%H:%M")
         satz += t("mail.starkregen.reichweite", lang, zeit=reach_str)
     # Issue #2051 S3 (E4): Guete-Grenze -- ausgeloest, wenn Beginn ODER Ende

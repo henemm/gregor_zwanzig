@@ -5,6 +5,29 @@
 >
 > Diese Datei bleibt als Detail-Referenz fuer Root-Cause-Analysen bestehen.
 
+## BUG-2063-ONSET-MINUTE: Radar-Uhrzeit (Beginn, Ende, Reichweite) eine Minute zu früh (z. B. 17:59 statt 18:00)
+
+**Status:** Fix umgesetzt 2026-11-27, Staging/Prod-Deploy ausstehend | **GitHub Issue:** #2063 (alle Kanäle betroffen, in rund jedem zweiten Lauf)
+
+### Symptom
+
+Der Radar-Alarm nannte den Regenbeginn in rund jedem zweiten Lauf eine Minute vor dem Zeitstempel der Radar-Quelle. Betroffen waren SMS, Premium-SMS, Telegram, E-Mail, die Wetter-Abfrage, der Briefing-Starkregenhinweis und die Strecken-Antwort. Seit #2051 galt das auch für das Ende und die Radar-Reichweite.
+
+### Root Cause
+
+1. **Verlust des exakten Zeitpunkts:** Der Nowcast-Dienst rundete den Beginn auf ganze Minuten und verwarf den exakten Frame-Zeitpunkt.
+2. **Rückrechnung in jedem Verbraucher:** Jeder Kanal rechnete aus `jetzt + Minuten` zurück und schnitt dabei Sekunden ab. Je nach Sekundenlage des Laufs ergab das 17:59 statt 18:00.
+
+### Fix (2026-11-27, Workflow `fix-2063-onset-minute`)
+
+`NowcastResult` trägt additiv die exakten UTC-Zeitpunkte `onset_at`, `event_end_at` und `source_reach_at`. Alle Verbraucher lesen sie; ohne Wert gilt weiterhin `jetzt + Minuten` (Replay, Vorschau, alte Daten). `onset_minutes`, Schwellen und Fälligkeit sind unverändert. Spec: `docs/specs/modules/fix_2063_onset_minute_exakt.md`.
+
+### Lessons Learned
+
+1. **Keine Uhrzeit aus Minuten zurückrechnen, wenn der exakte Zeitpunkt vorliegt.** Ein Ergebnis mit gerundeter Dauer und frischem `now` ist bei jeder Sekundenlage anders.
+
+---
+
 ## C1-83 / #2239: `load_all_trips` lieferte 0 Trips für `validator-issue110`, obwohl `load_trip` 8 Dateien lud — kein Defekt (Archiv-Filter #824 + Fehlmessung)
 
 **Status:** RESOLVED (2026-10-03) | **Severity:** Low (KEIN Datenverlust, kein Defekt) | **GitHub Issue:** #2239 (Eintrag C1-83 aus #1199)
