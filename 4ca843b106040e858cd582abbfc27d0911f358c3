@@ -1,0 +1,52 @@
+{
+  "verified_commit": "4ca843b106040e858cd582abbfc27d0911f358c3",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/trips/<seed>, /compare/<seed>",
+      "evidence": "hub-test-alarm.staging.spec.ts gegen Staging 4ca843b: DE-Versandfall route+vergleich gr\u00fcn; sent_channels enth\u00e4lt email+telegram (Pr\u00fcfkonto meldet zus\u00e4tzlich sms, premium_sms)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "/trips/<seed>, /compare/<seed>",
+      "evidence": "EN-Block 8/8 gr\u00fcn: Men\u00fczeile 'Test alert' nach 'All set-up channels', R\u00fcckmeldung 'Test alert sent: Email \u2713 \u00b7 Telegram \u2713 \u2026', englischer Leer-Text",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "Mutationen (Adversary): Antwort ohne telegram bzw. erweiterte Erwartung -> Versandfall rot",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "/api/auth/profile",
+      "evidence": "afterAll pr\u00fcft PUT ok + GET language == Ausgangswert; Lauf gr\u00fcn, Mutation ohne R\u00fccksetzung -> afterAll rot",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-27T23:58:11.682812+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Staging-Abnahme Test-Alarm DE+EN 16/16 gr\u00fcn gegen Staging 4ca843b, Mindestmenge E-Mail+Telegram, Sprache zur\u00fcckgesetzt",
+  "scope": "docs-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Staging-Abnahme Test-Alarm DE+EN 16/16 gr\u00fcn gegen Staging 4ca843b, Mindestmenge E-Mail+Telegram, Sprache zur\u00fcckgesetzt",
+      "scope": "docs-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-27T23:58:11.682812+00:00"
+    }
+  }
+}
