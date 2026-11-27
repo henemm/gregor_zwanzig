@@ -1,0 +1,61 @@
+{
+  "verified_commit": "3c28867ea81b0fb77a79128bdf37aff5348a261c",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/api/briefings/{id}/send, /alert-preview, /placements",
+      "evidence": "spec-run playwright.3444.staging.config.ts: Versand ohne kind, Alarm-Vorschau kind=trip, Platzierungen ohne kind liefern 400, code=kind_required, message=detail exakt Fixture-Wortlaut; Kontosprache de und en (3 passed)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "mail-pruefen beide (de, en)",
+      "evidence": "Python-Core l\u00e4dt Bereich geteilt; Trip- und Compare-Mail auf Staging zugestellt und Validator Exit 0 je de und en (Regression des Katalog-Ladens)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-2/AC-4/AC-5/AC-6/AC-7",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "Kern-Tests (CI test, go-test) gr\u00fcn auf PR #3451; Go-API startet auf Staging mit eingebettetem geteilt-Katalog und W\u00e4chter (health ok, commit 3c28867)",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-27T08:47:07.321479+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: kind_required de/en auf Staging gemessen (Versand, Vorschau, Platzierungen), Mailpfade de/en Exit 0",
+  "scope": "full-stack",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: kind_required de/en auf Staging gemessen (Versand, Vorschau, Platzierungen), Mailpfade de/en Exit 0",
+      "scope": "full-stack",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-27T08:47:07.321479+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
