@@ -25,18 +25,14 @@ from app.metric_catalog import get_metric
 from app.models import AlertMetric
 from services.weather_change_detection import (
     _ALERT_METRIC_TO_CATALOG_ID,
+    _ALERTABLE_METRIC_VALUES,
     catalog_id_to_alert_metrics,
 )
 
-# Go-side alertable vocabulary (AlertableMetrics), mirrored here to detect drift.
-_ALERTABLE_METRIC_VALUES = {
-    "wind_gust",
-    "precipitation_sum",
-    "temperature_min",
-    "temperature_max",
-    "snow_line",
-    "thunder_level",
-}
+# Issue #2994: das alarmfaehige Vokabular wird aus der Python-Quelle (Owner)
+# importiert, kein Handspiegel mehr. Go bettet die daraus generierte Datei
+# internal/model/alertable_metrics.generated.json ein; deren Drift faengt
+# test_generator_script_check_matches_python_source (check() prueft sie mit).
 
 
 def test_gust_maps_to_wind_gust():
@@ -106,9 +102,8 @@ def test_forward_mapping_is_exact_inverse_of_backward_mapping():
 # generierte Datei per `go:embed` ein (kein eigener Python-seitiger
 # Pruefschritt mehr noetig, s. Block weiter unten); das Frontend importiert
 # dieselbe generierte Datei direkt und zieht zwei benannte Ausnahmen ab.
-# Auch _ALERTABLE_METRIC_VALUES (Zeilen 31-39, Go-Vokabular AlertableMetrics)
-# bleibt bewusst ein von Hand gespiegeltes Python-Literal — anderes Vokabular,
-# nicht Teil dieser Etappe (s. Spec "Known Limitations").
+# Das Vokabular _ALERTABLE_METRIC_VALUES (Go: AlertableMetrics) ist seit
+# Issue #2994 ebenfalls generiert und eingebettet (oben importiert).
 #
 # Geprueft wird die BEDEUTUNG: die generierte Datei (minus Ausnahmen) gegen
 # catalog_id_to_alert_metrics() — kein blosser String-Presence-Check.

@@ -10,6 +10,12 @@ in zwei eingecheckte JSON-Dateien:
 - `frontend/src/lib/generated/alertMetricMapping.generated.json`
   (TypeScript, Vite-JSON-Import-Ziel)
 
+Issue #2994: zusaetzlich das alarmfaehige Vokabular `_ALERTABLE_METRIC_VALUES`
+(Python Owner) als sortierte Liste nach
+`internal/model/alertable_metrics.generated.json` (Go, `go:embed`-Ziel fuer
+`AlertableMetrics`); `check()` prueft auch diese Datei
+(Spec: docs/specs/modules/feat_2994_alertable_metrics_vocab.md).
+
 `write()` erzeugt/aktualisiert beide Dateien. `check()` vergleicht die frisch
 aus der Python-Quelle berechnete Abbildung gegen beide eingecheckten Dateien
 und meldet jede Abweichung konkret (Katalog-ID + erwarteter/gefundener Wert)
@@ -23,6 +29,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import services.weather_change_detection as _wcd
 from services.weather_change_detection import catalog_id_to_alert_metrics
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -31,6 +38,10 @@ MODEL_JSON_PATH = _REPO_ROOT / "internal" / "model" / "alert_metric_mapping.gene
 FRONTEND_JSON_PATH = (
     _REPO_ROOT / "frontend" / "src" / "lib" / "generated" / "alertMetricMapping.generated.json"
 )
+# Issue #2994: alarmfaehiges Vokabular `_ALERTABLE_METRIC_VALUES` (Python Owner)
+# als sortierte Liste, Go-`go:embed`-Ziel fuer `AlertableMetrics`.
+ALERTABLE_JSON_PATH = _REPO_ROOT / "internal" / "model" / "alertable_metrics.generated.json"
+
 
 def _targets() -> tuple[tuple[str, Path], ...]:
     """Liest MODEL_JSON_PATH/FRONTEND_JSON_PATH bei jedem Aufruf frisch aus
@@ -50,12 +61,52 @@ def _serialize(mapping: dict[str, list[str]]) -> str:
     return json.dumps(mapping, indent=2, sort_keys=True) + "\n"
 
 
+def _current_vocab() -> list[str]:
+    """Frisch gelesenes, sortiertes alarmfaehiges Vokabular (kein Caching)."""
+    return sorted(_wcd._ALERTABLE_METRIC_VALUES)
+
+
+def _serialize_vocab(vocab: list[str]) -> str:
+    return json.dumps(vocab, indent=2) + "\n"
+
+
 def write() -> None:
-    """Schreibt beide generierten JSON-Dateien aus der aktuellen Python-Quelle."""
+    """Schreibt alle generierten JSON-Dateien aus der aktuellen Python-Quelle."""
     content = _serialize(_current_mapping())
     for _label, path in _targets():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
+    vocab_path = ALERTABLE_JSON_PATH
+    vocab_path.parent.mkdir(parents=True, exist_ok=True)
+    vocab_path.write_text(_serialize_vocab(_current_vocab()), encoding="utf-8")
+
+
+def _check_vocab() -> list[str]:
+    """Vergleicht `_ALERTABLE_METRIC_VALUES` gegen die eingecheckte
+    Vokabular-Datei; meldet fehlende Datei, ungueltiges JSON sowie jeden
+    fehlenden bzw. zusaetzlichen Wert mit Wertname und Pfad."""
+    path = ALERTABLE_JSON_PATH
+    if not path.exists():
+        return [
+            f"vocab: generierte Datei fehlt ({path}) — "
+            "scripts/generate_alert_metric_mapping.py ausfuehren."
+        ]
+    try:
+        raw_actual = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return [f"vocab: {path} ist kein gueltiges JSON ({exc})."]
+    if not isinstance(raw_actual, list):
+        return [f"vocab: {path} ist keine JSON-Liste."]
+    expected = set(_current_vocab())
+    actual = set(raw_actual)
+    diffs = [
+        f"vocab [{value}]: erwartet, fehlt in {path}" for value in sorted(expected - actual)
+    ]
+    diffs += [
+        f"vocab [{value}]: nicht erwartet, gefunden in {path}"
+        for value in sorted(actual - expected)
+    ]
+    return diffs
 
 
 def check() -> list[str]:
@@ -93,6 +144,7 @@ def check() -> list[str]:
                     f"{label} [{catalog_id}]: erwartet {exp_values!r}, "
                     f"gefunden {act_values!r} ({path})"
                 )
+    diffs.extend(_check_vocab())
     return diffs
 
 

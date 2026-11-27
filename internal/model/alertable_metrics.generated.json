@@ -1,0 +1,8 @@
+[
+  "precipitation_sum",
+  "snow_line",
+  "temperature_max",
+  "temperature_min",
+  "thunder_level",
+  "wind_gust"
+]
