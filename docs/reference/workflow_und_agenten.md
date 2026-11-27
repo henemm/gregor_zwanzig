@@ -80,6 +80,7 @@ Main Context (Opus) ist reiner Orchestrierer und schreibt KEINEN Code. Implement
 | **LoC-Limit 250/Workflow** | `workflow.py status` zeigt `LoC-Delta: +N/250`. Überschritten → `workflow.py set-field loc_limit_override 500`. `docs/`/`*.md`/`.gitignore` und generierte Dateien zählen nicht. |
 | **Adversary-Verdict Gating** | `AMBIGUOUS` → `workflow.py override-ambiguous "<Grund>"` (TTL 1h); `None`/`BROKEN` → `qa_gate.py`. Commit blockt ohne Verdict. |
 | **State-Ablage** | `.claude/workflows/<name>.json` (laufend) / `_archive/<name>.json` (abgeschlossen) |
+| **Liefer-Stand (Seitenleiste, #2873)** | `ship_status` (`workflow.py ship-status running\|done\|failed <N>`) und `deploy_status` (`workflow.py deploy-status running\|done\|failed <N>`) setzt `/70-deploy` an den Schrittgrenzen. `ship-status done` archiviert den Workflow. Die Deploy-Zeile erscheint nur, wenn `openspec.yaml` den Block `deploy:` trägt (`autonomous: true`). Details: `docs/reference/operations_playbook.md` (Liefer-Workflow). |
 
 **Hooks erzwingen diesen Workflow** — Edit/Write auf geschützte Dateien ist blockiert. Blockiert ein Gate und die Meldung reicht nicht: `docs/reference/gates_und_ratschen.md`.
 

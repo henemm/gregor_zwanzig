@@ -275,6 +275,8 @@ Ausführlich (aus `CLAUDE.md` ausgelagert, #2640):
 
 **Ein Merge ist kein Prod-Deploy:** Produktion bekommt einen Stand erst mit `/e2e-verify`-Nachweis (`scripts/ci_prod_gate.sh` → `PROD_GATE=open`). Dann liefert der Server-Timer aus, sobald der Nachweis als Git-Note vorliegt (Pull-Deploy, unten), oder Schritt 4 (`/70-deploy`) direkt vom Server (#2047 S2, #3289). Die CI liefert seit #3394 nicht mehr aus.
 
+**Seitenleiste (#2873, 2026-11-27):** Die Plan-Ansicht des Plugins zeigt den Liefer-Stand aus zwei Feldern, die `/70-deploy` setzt: `ship-status` (Push/PR/Merge, Schritt 1) und `deploy-status` (Prod, Schritte 2 bis 4b; bei reiner Doku-/Werkzeug-Änderung `done` mit Notiz). Werte `running`, `done`, `failed`; jeder Aufruf trägt die Issue-Nummer. Die Projekt-Einstellung `deploy:` in `openspec.yaml` (Deploy-Skript, Selftest, Rollback-Verweis, `autonomous: true`) sagt der Leiste, dass Claude selbst deployt; ohne sie zeigt sie den Deploy als „nicht eingerichtet“. Ablauf und Befehle: `.claude/commands/70-deploy.md`.
+
 ### Pull-Deploy: Server liefert Prod selbst aus (#3289, ADR-0129)
 
 Damit ein Ticket auch von einer Sitzung außerhalb des Servers (iMac, Cloud) bis live läuft,
