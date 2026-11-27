@@ -516,14 +516,18 @@ const SEITEN_SCOPE: string[] = [
 	// organisms/funktionen/.
 	'lib/components/shared/LevelTabelle.svelte',
 	'routes/funktionen/+page.svelte',
-	'routes/funktionen/[thema]/+page.svelte'
+	'routes/funktionen/[thema]/+page.svelte',
+	// #3442: Rückfrage im Kebab-Menü bzw. Aktionsblatt — nur DropdownMenu.Item/Btn, Rahmen in app.css.
+	'lib/components/shared/KebabBestaetigungPanel.svelte'
 ];
 
 /** Freigegebene Kompositionen außerhalb der Baustein-Ordner (Import-Ausnahme für Regel (a)). */
 const FREIGEGEBENE_KOMPOSITIONEN: string[] = [
 	// #3190: reine Logik (Payload, Namensprüfung) ohne Markup, kein Baustein-Ersatz — SavePresetDialog
 	// (SEITEN_SCOPE) nutzt sie wie der Organismus WetterTabInhalt.
-	'lib/components/shared/wetter-tab/ampelSchreiben.ts'
+	'lib/components/shared/wetter-tab/ampelSchreiben.ts',
+	// #3442: reines Modell der Kebab-Rückfrage (Texte, kein Markup); KebabBestaetigungPanel nutzt nur den Typ.
+	'lib/components/shared/kebabBestaetigung.ts'
 ];
 
 /** Heutige Seiten/Komponenten außerhalb der Baustein-Ordner (Stand 2026-11-10). Darf nur sinken. */

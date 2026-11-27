@@ -184,34 +184,35 @@ describe('AC-1: Trip-Hub englisch, Namen unveraendert', () => {
 	test('Fehler ohne Server-Text: Flag/Schluessel wird beim Rendern aufgeloest (nicht eingefroren)', () => {
 		const { de, en } = deDannEn(() => sichtbar(P.fehlerFlagsRendern()));
 		// #3297/#3020: der Fall „Fehler beim Speichern" kam aus trip-detail/BriefingScheduleTab (geloescht).
-		for (const s of ['Speichern fehlgeschlagen', 'Versand-Historie konnte nicht geladen werden.', 'Aktion fehlgeschlagen, bitte später erneut versuchen.', 'Fehler beim Senden']) hat(de, s);
-		for (const s of ['Saving failed', 'Delivery history could not be loaded.', 'Action failed, please try again later.', 'Error while sending']) hat(en, s);
-		for (const s of ['Speichern fehlgeschlagen', 'Aktion fehlgeschlagen']) hatNicht(en, s);
+		// #3442: die Seite meldet Aktionsfehler mit dem Text aus kebabBestaetigung.fehlerText (Netzfehler beim Löschen).
+		for (const s of ['Speichern fehlgeschlagen', 'Versand-Historie konnte nicht geladen werden.', 'Löschen hat nicht geklappt: keine Verbindung zum Server. Versuch es gleich noch einmal.', 'Fehler beim Senden']) hat(de, s);
+		for (const s of ['Saving failed', 'Delivery history could not be loaded.', 'Delete failed: no connection to the server. Please try again in a moment.', 'Error while sending']) hat(en, s);
+		for (const s of ['Speichern fehlgeschlagen', 'hat nicht geklappt']) hatNicht(en, s);
 		// Wirkort je Baustein: die Meldung steht am Feld des Kopfes (nicht nur irgendwo im Render).
 		const kopf = deDannEn(() => P.fehlerFlagsRendern().split('\n')[0]);
 		assert.match(kopf.de, /data-testid="trip-name-save-error"[^>]*>Speichern fehlgeschlagen</);
 		assert.match(kopf.en, /data-testid="trip-name-save-error"[^>]*>Saving failed</);
 	});
 
-	test('Aktionsfehler der Seite: 5xx/4xx ohne Detail/Netz → Schluessel, 4xx mit Detail → Server-Text (echte Funktion)', async () => {
+	// #3442: die Seite meldet Aktionsfehler über kebabBestaetigung.fehlerText (Text in der aktuellen Sprache).
+	test('Aktionsfehler der Seite: 5xx/Netz → Text nach Fehlerklasse, 4xx mit Detail → Server-Text, sonst allgemein (echte Funktion)', async () => {
 		const { umgebungFuer } = await import(pathToFileURL(path.join(P.KOMP, 'shared/__tests__/svelteInstanzPruefstand.ts')).href);
 		const { SubscriptionExecError } = await import(pathToFileURL(path.join(P.KOMP, 'shared/subscriptionExec.ts')).href);
 		const seite = path.join(P.FRONTEND, 'src/routes/trips/[id]/+page.svelte');
-		const { u } = await umgebungFuer(seite, { data: { trip: P.tripLaufend() } }, { jsAlsTs: true });
-		const fall = (e: unknown) => {
-			u.setzeAktionsFehler(e);
-			return [u.errorKey, u.errorMsg];
+		const { u } = await umgebungFuer(seite, { data: { trip: P.tripLaufend() }, goto: () => Promise.resolve() }, { jsAlsTs: true });
+		const fall = async (e: unknown) => {
+			u.deleteSubscription = async () => {
+				throw e;
+			};
+			await u.loescheTrip();
+			return u.errorMsg;
 		};
-		const still = console.error;
-		console.error = () => {};
-		try {
-			assert.deepEqual(fall(new SubscriptionExecError('x', 503, 'kaputt')), ['aktionen.fehler.server', null]);
-			assert.deepEqual(fall(new SubscriptionExecError('x', 409)), ['aktionen.fehler.allgemein', null]);
-			assert.deepEqual(fall(new SubscriptionExecError('x', 409, 'Trip ist archiviert')), [null, 'Trip ist archiviert']);
-			assert.deepEqual(fall(new Error('offline')), ['aktionen.fehler.verbindung', null]);
-		} finally {
-			console.error = still;
-		}
+		assert.equal(await fall(new SubscriptionExecError('x', 503, 'kaputt')), 'Löschen hat nicht geklappt: Fehler auf dem Server. Versuch es später noch einmal.');
+		assert.equal(await fall(new SubscriptionExecError('x', 409)), 'Aktion fehlgeschlagen, bitte später erneut versuchen.');
+		assert.equal(await fall(new SubscriptionExecError('x', 409, 'Trip ist archiviert')), 'Trip ist archiviert');
+		assert.equal(await fall(new TypeError('Failed to fetch')), 'Löschen hat nicht geklappt: keine Verbindung zum Server. Versuch es gleich noch einmal.');
+		locale.set('en');
+		assert.equal(await fall(new TypeError('Failed to fetch')), 'Delete failed: no connection to the server. Please try again in a moment.');
 	});
 });
 
@@ -234,7 +235,9 @@ describe('AC-2: Aktionsliste Trip == Ortsvergleich, Texte aus aktionen.*', () =>
 			const deListe = de[fall] as { id: string; danger?: boolean }[];
 			assert.deepEqual((liste as { id: string }[]).map((a) => a.id), deListe.map((a) => a.id), fall);
 			for (const [i, a] of (liste as { id: string; label: string; danger?: boolean }[]).entries()) {
-				assert.equal(a.label, trFor('en', SCHLUESSEL[a.id]), `${fall}: ${a.id}`);
+				// #3442: im Hub tragen Archivieren/Löschen das Menülabel mit Ellipse (fragt nach).
+				const hubKey = fall.endsWith('/hub') && (a.id === 'archive' || a.id === 'delete') ? `aktionen.kebab.menue_${a.id}` : null;
+				assert.equal(a.label, trFor('en', (hubKey ?? SCHLUESSEL[a.id]) as Parameters<typeof trFor>[1]), `${fall}: ${a.id}`);
 				assert.equal(a.danger, deListe[i].danger, `${fall}: danger ${a.id}`);
 				gesehen.add(a.id);
 			}
@@ -243,7 +246,7 @@ describe('AC-2: Aktionsliste Trip == Ortsvergleich, Texte aus aktionen.*', () =>
 		}
 		assert.deepEqual([...gesehen].sort(), Object.keys(SCHLUESSEL).sort(), 'Messaufbau: jede Aktion kommt vor');
 		const hub = en['trip/active/hub'] as { label: string }[];
-		assert.deepEqual(hub.map((a) => a.label), ['Pause', 'Archive', 'Delete']);
+		assert.deepEqual(hub.map((a) => a.label), ['Pause', 'Archive …', 'Delete …']);
 	});
 	test('Reiter und Anlege-Kette englisch, Kennungen unveraendert; Sperr-Hinweise englisch', () => {
 		const { de, en } = deDannEn(() => ({ t: P.reiter.subscriptionTabs('trip'), v: P.reiter.subscriptionTabs('vergleich'), at: P.reiter.anlegeKette('trip'), av: P.reiter.anlegeKette('vergleich') }));
@@ -396,7 +399,10 @@ describe('Anker: jeder F9-Katalogwert ist als festes de/en-Literal verankert', (
 			const f10 = F10_ANKER.map(([k]) => k).filter((k) => k.startsWith('aktionen.'));
 			// #2919: Eyebrow des mobilen Aktionsblatts (Anker in en_restbegriffe_2919.test.ts).
 			const neu2919 = ['aktionen.sheet.eyebrow'];
-			assert.deepEqual(lies('aktionen').sort(), [...BESTAND_AKTIONEN, ...anker('aktionen.'), ...f10, ...neu2919].sort(), `${lang}: aktionen.json`);
+			// #3442: Rückfrage im Kebab-Menü (Wortlaut verankert in shared/__tests__/kebab_bestaetigung.test.ts).
+			const neu3442 = Object.keys(JSON.parse(readFileSync(path.join(MSG, 'de', 'aktionen.json'), 'utf-8'))).filter((k) => k.startsWith('aktionen.kebab.'));
+			assert.ok(neu3442.length >= 10, 'aktionen.kebab.* fehlt');
+			assert.deepEqual(lies('aktionen').sort(), [...BESTAND_AKTIONEN, ...anker('aktionen.'), ...f10, ...neu2919, ...neu3442].sort(), `${lang}: aktionen.json`);
 			assert.deepEqual(lies('vergleich').filter((k) => k.startsWith('vergleich.anlegen.')).sort(), anker('vergleich.anlegen.').sort(), `${lang}: vergleich.anlegen.*`);
 		}
 		assert.equal(new Set(F9_ANKER.map(([k]) => k)).size, F9_ANKER.length, 'doppelte Anker');

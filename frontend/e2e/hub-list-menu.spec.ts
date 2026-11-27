@@ -429,10 +429,11 @@ test.describe('Mobile Aktionen (390)', () => {
 
 				const blatt = page.locator('[data-snap="half"]:visible');
 				await expect(blatt).toBeVisible({ timeout: 5_000 });
+				// #3442: Ellipse = fragt im Blatt nach.
 				await expect(blatt.locator('[data-testid^="subscription-action-"]')).toHaveText([
 					'Fortsetzen',
-					'Archivieren',
-					'Löschen'
+					'Archivieren …',
+					'Löschen …'
 				]);
 				for (const fehlt of ['Senden', 'Vorschau', 'Bearbeiten']) {
 					await expect(blatt.getByText(fehlt, { exact: true }), `kein „${fehlt}" im Hub-Blatt`).toHaveCount(0);
@@ -468,12 +469,8 @@ test.describe('Mobile Aktionen (390)', () => {
 					{ timeout: 15_000 }
 				);
 				await blatt.locator('[data-testid^="subscription-action-"]', { hasText: 'Archivieren' }).click();
-				// Kind-Unterschied der Bedienung: der Trip-Hub fragt vor dem Archivieren nach
-				// (ConfirmDialog trip-detail-archive-confirm-dialog, routes/trips/[id]/+page.svelte),
-				// der Vergleichs-Hub archiviert sofort. Die Zusicherung (PATCH, Liste, Archiv) ist gleich.
-				if (kind === 'route') {
-					await page.getByTestId('trip-detail-archive-confirm-dialog').getByRole('button', { name: 'Archivieren' }).click();
-				}
+				// #3442: beide Hubs fragen im Blatt nach (Rückfrage kebab-rueckfrage), erst die Bestätigung schreibt.
+				await blatt.getByTestId('kebab-rueckfrage-bestaetigen').click();
 				const antwort = await schreibt;
 				expect(antwort.ok(), `LM-10b: PATCH ${pfad} HTTP ${antwort.status()}`).toBeTruthy();
 				expect(antwort.request().postDataJSON()).toEqual({ archived: true });

@@ -55,9 +55,7 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['aktionen.historie.morgen', 'Morgen', 'Morning'],
 	['aktionen.historie.abend', 'Abend', 'Evening'],
 	['aktionen.historie.von_hand', '· von Hand', '· sent manually'],
-	['aktionen.fehler.server', 'Aktion fehlgeschlagen — Serverfehler, bitte später erneut versuchen.', 'Action failed — server error, please try again later.'],
 	['aktionen.fehler.allgemein', 'Aktion fehlgeschlagen, bitte später erneut versuchen.', 'Action failed, please try again later.'],
-	['aktionen.fehler.verbindung', 'Aktion fehlgeschlagen — bitte Verbindung prüfen.', 'Action failed — please check your connection.'],
 	['aktionen.fehler.senden', 'Fehler beim Senden', 'Error while sending'],
 
 	// ── vergleich.anlegen.* — Anlege-Kopf des Ortsvergleichs (subscriptionTabs.ts) ──
@@ -89,12 +87,6 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['trip.tempo.etappen_zurueckgesetzt.other', 'Fortbewegung gewechselt: das eigene Tempo von <count> Etappen wurde zurückgesetzt.', 'Mode of travel changed: the own pace of <count> stages was reset.'],
 
 	// ── trip.hub.* — Seite /trips/[id], Reiterleiste ──────────────────────────
-	['trip.hub.loeschen_titel', 'Trip endgültig löschen?', 'Delete trip permanently?'],
-	['trip.hub.loeschen_text', '„<name>“ wird dauerhaft gelöscht. Dieser Schritt kann nicht rückgängig gemacht werden.', '“<name>” will be deleted permanently. This cannot be undone.'],
-	['trip.hub.reaktivieren_titel', 'Trip reaktivieren?', 'Reactivate trip?'],
-	['trip.hub.archivieren_titel', 'Trip archivieren?', 'Archive trip?'],
-	['trip.hub.reaktivieren_text', 'Der Trip wird aus dem Archiv zurückgeholt und ist wieder aktiv.', 'The trip is restored from the archive and is active again.'],
-	['trip.hub.archivieren_text', 'Archivierte Trips erhalten keine Briefings mehr.', 'Archived trips no longer receive briefings.'],
 	['trip.hub.nicht_gefunden', "Trip '<id>' nicht gefunden", "Trip '<id>' not found"],
 	['trip.hub.laden_fehler', 'Fehler beim Laden des Trips', 'Error loading the trip'],
 	['trip.hub.keine_etappen', 'Keine Etappen geplant', 'No stages planned'],

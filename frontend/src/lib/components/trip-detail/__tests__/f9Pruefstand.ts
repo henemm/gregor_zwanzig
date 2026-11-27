@@ -306,7 +306,8 @@ const FLAG = {
 	panel: await panelVariante([['let saveError = $state<string | null>(null);', "let saveError = $state<string | null>('');"]]),
 	historie: await variante(path.join(KOMP, 'shared', 'BriefingHistory.svelte'), [['let eigenError = $state(false);', 'let eigenError = $state(true);']]),
 	seite: await seitenVariante([
-		['let errorKey = $state<MessageKey | null>(null);', "let errorKey = $state<MessageKey | null>('aktionen.fehler.allgemein');"],
+		// #3442: die Seite hält die Meldung als Text aus kebabBestaetigung.fehlerText (Netzfehler beim Löschen).
+		['let errorMsg = $state<string | null>(null);', "let errorMsg = $state<string | null>(fehlerText('delete', null));"],
 		["let sendStatus = $state<'idle' | 'ok' | 'error'>('idle');", "let sendStatus = $state<'idle' | 'ok' | 'error'>('error');"]
 	])
 };

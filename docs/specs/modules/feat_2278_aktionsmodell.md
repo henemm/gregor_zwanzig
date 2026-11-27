@@ -213,6 +213,7 @@ Bündelt die `Test:`-Zeilen der ACs. Frontend-Unit über `node --test`, Playwrig
 
 ## Changelog
 
+- 2026-11-27: Fortschreibung durch #3442 (`feat_3442_kebab_rueckfragen.md`): AC-5 und AC-12 gelten für die Rückfrage bei Archivieren/Löschen nur noch für die Listen `/trips` und `/compare`. Im Trip-Hub und Orte-Hub fragt das Kebab-Menü (bzw. das mobile Aktionsblatt) selbst nach („Archivieren …“/„Löschen …“), ohne ConfirmDialog; Reaktivieren läuft ohne Rückfrage; der Orts-Vergleich bleibt nach Archivieren auf der Seite.
 - 2026-11-27: Fortschreibung durch #3440 (`feat_3440_test_schicken_menue.md`): AC-3, AC-4, AC-10 und der Dialog-Teil von AC-12 gelten nur noch für die Listen `/trips` und `/compare`. Im Trip-Hub und Orte-Hub ersetzt das Menü „Test schicken ▾“ den Dialog (Morgen/Abend als Segment im Menü, Ziel je Kanalzeile, kein Bestätigen-Schritt: der Klick auf die Kanalzeile ist die Auslösung). Die Hub-Anteile von AC-16 bleiben gültig.
 - 2026-10-22: AC-2 (Teil „Vorschau") durch #1743 abgelöst: Aktion Vorschau entfällt ersatzlos.
 - 2026-10-17: Initial spec created (#2278)

@@ -88,4 +88,5 @@ Beide Einstiege (Desktop-Kebab `CompareKebab` und Mobil-Pfad `onAction={handleAc
 
 ## Changelog
 
+- 2026-11-27: Fortschreibung durch #3442 (`feat_3442_kebab_rueckfragen.md`): im Orte-Hub ersetzt die Rückfrage im Kebab-Menü bzw. Aktionsblatt („Löschen?“ / „Endgültig löschen“) den ConfirmDialog; die Zusicherung (kein DELETE vor der Bestätigung) bleibt. Die Listen behalten ihren Dialog.
 - 2026-10-08: Initial spec created (#2214)

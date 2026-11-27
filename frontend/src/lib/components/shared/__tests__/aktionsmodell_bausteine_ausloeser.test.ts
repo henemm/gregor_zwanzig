@@ -28,13 +28,16 @@ const lade = (rel: string) => ladeSvelte(path.join(SRC, rel));
 const knoepfe = (ast: any) => collect(ast.fragment, (n) => n.type === 'RegularElement' && n.name === 'button');
 
 describe('F005: jeder Ausloeser ruft den Handler mit der richtigen Aktion', () => {
-	test('Kebab: die Menue-Auswahl ruft onSelect(action.id)', () => {
+	// #3442: Archivieren/Löschen fragen erst im Menü bzw. Blatt nach (KebabBestaetigungPanel); alle anderen
+	// Aktionen gehen sofort an den Handler. Das Verhalten beider Zweige (inkl. Blatt: onAction, danach Schließen)
+	// misst kebab_seiten_bindung.test.ts am echten Instanz-Skript (AC-1/AC-6/AC-9/AC-10).
+	test('Kebab: die Menue-Auswahl ruft onSelect(action.id), bei Rueckfrage-Aktionen erst das Panel', () => {
 		const items = collect(lade('lib/components/molecules/SubscriptionKebab.svelte').fragment, (n) => n.name === 'DropdownMenu.Item');
-		assert.deepEqual(items.map((i) => attrKurz(i, 'onSelect')), ['() => onSelect?.(action.id)']);
+		assert.deepEqual(items.map((i) => attrKurz(i, 'onSelect')), ['(e) => { if (!rueckfragen || !braucheRueckfrage(action.id)) return onSelect?.(action.id); e.preventDefault(); frage = action.id }']);
 	});
-	test('Aktionsblatt: der Klick ruft onAction(action.id), danach onClose()', () => {
+	test('Aktionsblatt: der Klick fragt im Hub bei Rueckfrage-Aktionen nach, sonst onAction(action.id) und Schliessen', () => {
 		const b = knoepfe(lade('lib/components/mobile/SubscriptionActionSheet.svelte'));
-		assert.deepEqual(b.map((x) => attrKurz(x, 'onclick')), ['() => { onAction(action.id); onClose() }']);
+		assert.deepEqual(b.map((x) => attrKurz(x, 'onclick')), ['() => { if (surface === "hub" && braucheRueckfrage(action.id)) frage = action.id }']);
 	});
 	test('Filter-Pille: der Klick ruft onSelect(f.value)', () => {
 		const b = knoepfe(lade('lib/components/molecules/StatusFilterPills.svelte'));

@@ -68,10 +68,6 @@ export const F10_ANKER: [schluessel: string, de: string, en: string][] = [
 	['vergleich.hub.keine_weiteren', 'Keine weiteren gespeicherten Orte verfügbar.', 'No other saved locations available.'],
 	['vergleich.hub.laufzeit_ueberschritten', 'Laufzeit überschritten', 'End date passed'],
 	['vergleich.hub.setup_abschliessen', 'Setup abschließen', 'Finish setup'],
-	['vergleich.hub.archivieren_fehler', 'Archivieren fehlgeschlagen.', 'Archiving failed.'],
-	['vergleich.hub.reaktivieren_fehler', 'Reaktivieren fehlgeschlagen.', 'Reactivating failed.'],
-	['vergleich.hub.delete_fehler', 'Löschen fehlgeschlagen.', 'Deleting failed.'],
-	['vergleich.hub.delete_titel', 'Vergleich endgültig löschen?', 'Delete comparison permanently?'],
 	['vergleich.hub.nicht_gefunden', 'Orts-Vergleich nicht gefunden', 'Location comparison not found'],
 
 	// Issue #3276: vergleich.stundenverlauf.* entfallen mit CompareHourlyLayoutControls.

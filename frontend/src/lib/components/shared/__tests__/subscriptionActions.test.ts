@@ -86,9 +86,11 @@ describe('AC-6: subscriptionActions = EINE Tabelle fuer beide Arten', () => {
 					const ist = subscriptionActions(kind, status, surface);
 					const ids = ist.map((a: any) => a.id);
 					assert.deepEqual(ids, ERWARTET[status][surface], `IDs/Reihenfolge weichen ab (${kind}/${status}/${surface})`);
+					// #3442: im Hub fragen Archivieren/Löschen im Menü nach — Label mit Ellipse („Archivieren …“).
+					const label = (id: string) => (surface === 'hub' && (id === 'archive' || id === 'delete') ? `${LABEL[id]} …` : LABEL[id]);
 					assert.deepEqual(
 						ist.map((a: any) => a.label),
-						ERWARTET[status][surface].map((id) => LABEL[id]),
+						ERWARTET[status][surface].map(label),
 						`Beschriftungen weichen ab (${kind}/${status}/${surface})`
 					);
 				});

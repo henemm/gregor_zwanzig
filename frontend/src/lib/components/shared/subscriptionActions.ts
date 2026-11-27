@@ -46,10 +46,17 @@ const A: Record<SubscriptionActionId, Omit<SubscriptionAction, 'label'> & { key:
 	'continue-setup': { id: 'continue-setup', key: 'aktionen.continue_setup' }
 };
 
-const ids = (...i: SubscriptionActionId[]): SubscriptionAction[] =>
+// #3442: im Hub fragen Archivieren und Löschen im Menü nach — Label mit Ellipse („Archivieren …“).
+const HUB_KEY: Partial<Record<SubscriptionActionId, MessageKey>> = {
+	archive: 'aktionen.kebab.menue_archive',
+	delete: 'aktionen.kebab.menue_delete'
+};
+
+const ids = (hub: boolean, ...i: SubscriptionActionId[]): SubscriptionAction[] =>
 	i.map((id) => {
 		const { key, ...rest } = A[id];
-		return { id: rest.id, label: tr(key), ...(rest.danger ? { danger: true } : {}) };
+		const label = tr((hub && HUB_KEY[id]) || key);
+		return { id: rest.id, label, ...(rest.danger ? { danger: true } : {}) };
 	});
 
 /**
@@ -65,17 +72,17 @@ export function subscriptionActions(
 	const hub = surface === 'hub';
 	switch (status) {
 		case 'draft':
-			return hub ? ids('delete') : ids('continue-setup', 'delete');
+			return hub ? ids(hub, 'delete') : ids(hub, 'continue-setup', 'delete');
 		case 'archived':
-			return ids('unarchive', 'delete');
+			return ids(hub, 'unarchive', 'delete');
 		case 'paused':
 			return hub
-				? ids('resume', 'archive', 'delete')
-				: ids('resume', 'send', 'alarms', 'weather', 'edit', 'delete');
+				? ids(hub, 'resume', 'archive', 'delete')
+				: ids(hub, 'resume', 'send', 'alarms', 'weather', 'edit', 'delete');
 		default:
 			return hub
-				? ids('pause', 'archive', 'delete')
-				: ids('pause', 'send', 'alarms', 'weather', 'edit', 'delete');
+				? ids(hub, 'pause', 'archive', 'delete')
+				: ids(hub, 'pause', 'send', 'alarms', 'weather', 'edit', 'delete');
 	}
 }
 

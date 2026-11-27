@@ -236,7 +236,8 @@
 						<EllipsisVerticalIcon size={18} />
 					</button>
 				{:else}
-					<SubscriptionKebab {actions} onSelect={(id) => onAction?.(id)} />
+					<!-- #3442 AC-16: die Liste fragt mit ihrem eigenen Dialog nach, nicht im Menü. -->
+					<SubscriptionKebab {actions} onSelect={(id) => onAction?.(id)} rueckfragen={false} />
 				{/if}
 			</div>
 		{/if}

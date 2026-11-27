@@ -97,3 +97,12 @@ beim Schließen (Escape, Außenklick) zurücksetzen. Panel-Knöpfe als `Dropdown
 5. Listen-Menüs (`/trips`, `/compare`) unverändert (nicht Teil des Mockup-Kopfs).
 
 **Open Questions:** keine (Wortlaut PO-entschieden in #2797 K14/K15; 5xx-Text ist Tech-Lead-Ergänzung im selben Ton).
+
+## Übergabe Phase 5 → 6 (Stand 27.11.)
+- RED-Commit `test(#3442): RED-Tests Kebab-Rückfragen`, 72 Tests rot (Artefakt `docs/artifacts/feat-3442-kebab-rueckfragen/test-red-output.txt`, nur lokal).
+- Vertrag Modell (`shared/kebabBestaetigung.ts`): `braucheRueckfrage(id)`, `rueckfrage(id, name)` → `{id, titel, text, bestaetigen, abbrechen, gefahr, abschnitt}` bzw. `null`, `erfolgsText(id)`, `fehlerText(id, e)`. Panel-Props `rueckfrage`, `onBestaetigen`, `onAbbrechen`, `data-abschnitt={rueckfrage.abschnitt}`. Kebab: `onOpenChange(false)` setzt Rückfrage zurück.
+- In GREEN mit anpassen: `shared/__tests__/subscriptionActions.test.ts` AC-6 (Hub-Labels „Archivieren …“/„Löschen …“); evtl. `i18n/__tests__/katalog_schluessel_haben_verwender.test.ts` (unbenutzte `trip.hub.*_titel/_text`), Sprachtests `trip_hub_sprache`/`vergleich_hub_sprache`; E2E-Specs laut Spec umstellen + neue `hub-kebab-rueckfragen.staging.spec.ts`.
+- Seiten speichern den Meldungs-TEXT aus `erfolgsText`/`fehlerText` im Zustand (Verhaltenstests suchen den Text).
+- Werkzeug: `frontend/node_modules` im Worktree als Symlink aufs Hauptrepo; `node --test` mit `[id]`-Pfaden als `'src/routes/trips/[[]id]/…'`.
+- LoC-Override (`loc_limit_override`) wurde von der Rechteprüfung abgelehnt: Produktivcode möglichst knapp halten; blockt das Scope-Gate, Meldung lesen und dem Workflow folgen.
+- Diese Notiz ist (wegen Commit-Sperre in Phase 6) noch nicht committet; sie liegt im Worktree `magical-hugging-sonnet`.

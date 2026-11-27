@@ -574,8 +574,9 @@ async function alarmNachStatuswechsel(page: Page, punkt: 'Pausieren' | 'Archivie
 
 		await kebabWaehle(page, punkt);
 		if (punkt === 'Archivieren') {
-			await expect(page.getByTestId('trip-detail-archive-confirm-dialog')).toBeVisible({ timeout: 10_000 });
-			await page.getByTestId('trip-detail-archive-confirm-yes').click();
+			// #3442: Rückfrage im Kebab-Menü statt Dialog.
+			await expect(page.getByTestId('kebab-rueckfrage')).toBeVisible({ timeout: 10_000 });
+			await page.getByTestId('kebab-rueckfrage-bestaetigen').click();
 		}
 		await expect.poll(() => status(schreiber.patches[0]), { timeout: 10_000, message: `${punkt}: Status-Abruf` }).toBe(200);
 		expect(gesetzt(await serverStand(page, 'route', hub.id)), `Vorbedingung: Trip ist nach „${punkt}" im neuen Status`).toBe(true);

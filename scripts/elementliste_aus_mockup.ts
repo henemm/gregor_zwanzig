@@ -516,7 +516,9 @@ type AusleseArg = { wurzeln: string[]; abschnitt: string | null; nur: string | n
 function ausleseImBrowser(arg: AusleseArg): Roh[] {
 	// #3419: sichtbare Beschriftung, die live für Screenreader verborgen ist (aria-hidden, z. B. „Morgen-Briefing“ neben
 	// dem Ausblick-Schalter), trägt im Mockup data-beschriftung="sichtbar" und gehört ins Soll (der Abgleich liest sie).
-	const SKIP = '.tag,.frame,.fb,[data-fb],script,style,[aria-hidden="true"]:not([data-beschriftung="sichtbar"])';
+	// #3442: die Zeile „Pausieren, Archivieren, Löschen“ unter dem Kebab-Menü (#kebabMenu .dis, Marke K14) ist
+	// Mockup-Anmerkung, kein UI-Text (Spec feat_3442_kebab_rueckfragen.md), wie die Übersicht-Notiz (#2969).
+	const SKIP = '.tag,.frame,.fb,[data-fb],#kebabMenu .dis,script,style,[aria-hidden="true"]:not([data-beschriftung="sichtbar"])';
 	const hatInhalt = (s: string) => /[\p{L}\p{N}]/u.test(s);
 	const n = (s: string | null) => String(s || '').replace(/\s+/g, ' ').trim();
 	function abschnittVon(el: Element): string {

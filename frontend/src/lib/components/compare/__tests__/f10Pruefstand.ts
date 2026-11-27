@@ -296,8 +296,9 @@ export function anlegenToastRendern(): string {
 const FLAG = {
 	// #3440: Meldungen der Lebenszyklus-Aktionen tragen `aktionKey` (vorher `sendKey`); der Schlüssel
 	// „Test-Briefing gesendet“ entfiel mit dem Dialog (Rückmeldung jetzt aus testErgebnis).
-	seite: await seitenVariante([['let aktionKey = $state<MessageKey | null>(null);', "let aktionKey = $state<MessageKey | null>('vergleich.hub.reaktivieren_fehler');"]]),
-	seiteFehler: await seitenVariante([['let aktionKey = $state<MessageKey | null>(null);', "let aktionKey = $state<MessageKey | null>('vergleich.hub.archivieren_fehler');"]]),
+	// #3442: Meldungen als Text aus kebabBestaetigung (fehlerText/erfolgsText), wie im Trip-Hub.
+	seite: await seitenVariante([['let aktionMsg = $state<string | null>(null);', "let aktionMsg = $state<string | null>(fehlerText('unarchive', null));"]]),
+	seiteFehler: await seitenVariante([['let aktionMsg = $state<string | null>(null);', "let aktionMsg = $state<string | null>(fehlerText('archive', null));"]]),
 	orte: await variante(cmp('steps/Step2Orte.svelte'), [['let resolveErrorKey = $state<MessageKey | null>(null);', "let resolveErrorKey = $state<MessageKey | null>('vergleich.orte.format_unbekannt');"]]),
 	ortNeu: await variante(cmp('LocationNewModal.svelte'), [['let saveError: string | null = $state(null);', "let saveError: string | null = $state('');"]])
 };
