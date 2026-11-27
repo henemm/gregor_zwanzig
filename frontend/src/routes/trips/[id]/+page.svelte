@@ -8,7 +8,6 @@
 	import { TripHeader } from '$lib/components/organisms';
 	import { TripTabs } from '$lib/components/trip-detail';
 	import { TopoBg } from '$lib/components/atoms';
-	import { ConfirmDialog } from '$lib/components/molecules';
 	import {
 		aboKanaele,
 		RUECKMELDUNG_MS,
@@ -19,15 +18,14 @@
 	} from '$lib/components/molecules/testSchickenModell';
 	import SubscriptionActionSheet from '$lib/components/mobile/SubscriptionActionSheet.svelte';
 	import { subscriptionActions, subscriptionLifecycle } from '$lib/components/shared/subscriptionActions';
+	import { erfolgsText, fehlerText } from '$lib/components/shared/kebabBestaetigung';
 	import {
 		deleteSubscription,
 		sendSubscription,
 		sendTestAlarm,
 		setArchived,
-		setPaused,
-		SubscriptionExecError
+		setPaused
 	} from '$lib/components/shared/subscriptionExec';
-	import { deriveTripStatus } from '$lib/utils/tripStatus';
 	import type { Trip } from '$lib/types';
 	import { createSaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { sichereAusstehendeSpeicherung } from '$lib/stores/ausstehendeSpeicherungSichern';
@@ -37,7 +35,7 @@
 	import { AKTIVE_SPEICHERUNG, type SpeicherAnmeldestelle } from '$lib/stores/aktiveSpeicherung';
 	import { starteNachladenNachEntladen, tripNachladeQuelle } from '$lib/stores/nachEntladenNachladen';
 	import { wendeNutzlastAn } from '$lib/stores/nutzlastStand';
-	import { t, locale, type MessageKey } from '$lib/i18n';
+	import { t, locale } from '$lib/i18n';
 
 	let { data } = $props();
 
@@ -139,14 +137,11 @@
 	const initialTab = $derived(page.url.searchParams.get('tab') ?? 'uebersicht');
 
 	const now = new Date();
-	const status = $derived(deriveTripStatus(trip, now));
 
-	let archiveDialogOpen = $state(false);
-	let deleteDialogOpen = $state(false);
 	let isLoading = $state(false);
+	// #3442: Meldung nach einer Menü-Aktion (Erfolg bzw. Fehler) als Text aus kebabBestaetigung, wie im Orts-Vergleich.
 	let errorMsg = $state<string | null>(null);
-	// i18n F9: eigene Fehlermeldungen als Schluessel (beim Rendern aufgeloest), Server-Detail als Text.
-	let errorKey = $state<MessageKey | null>(null);
+	let meldung = $state<string | null>(null);
 	let sendLoading = $state(false);
 	let sendStatus = $state<'idle' | 'ok' | 'error'>('idle');
 	let sendMessage = $state<string | null>(null);
@@ -182,8 +177,9 @@
 	}
 
 	async function sendStateUpdate(paused: boolean | undefined, archived: boolean | undefined): Promise<void> {
+		const id = paused !== undefined ? (paused ? 'pause' : 'resume') : archived ? 'archive' : 'unarchive';
 		errorMsg = null; // Issue #1059: alten Fehler beim Start eines neuen Versuchs zurücksetzen
-		errorKey = null;
+		meldung = null;
 		isLoading = true;
 		try {
 			// Issue #1433: offene Speichervorgaenge zuerst abschliessen — danach PATCH,
@@ -198,75 +194,28 @@
 					? await setPaused('trip', trip.id, paused)
 					: await setArchived('trip', trip.id, archived === true);
 			const updated = antwort as Trip;
-			errorMsg = null;
 			trip = await uebernehmeNachStatusAenderung(updated);
+			meldung = erfolgsText(id);
 		} catch (e) {
-			setzeAktionsFehler(e);
+			errorMsg = fehlerText(id, e); // #3442: Netz / Server-5xx / 4xx mit Server-Detail
 		} finally {
 			isLoading = false;
 		}
 	}
 
-	// Issue #1059/#1065: nutzerverstaendliche Meldung — 5xx generisch, 4xx mit Server-Detail, sonst Netzfehler.
-	// i18n F9: eigene Meldungen als Schluessel (errorKey), das Server-Detail bleibt Text (errorMsg).
-	function setzeAktionsFehler(e: unknown): void {
+	// #3442: Löschen kommt erst nach der Rückfrage im Menü hier an; danach zur Trip-Liste.
+	async function loescheTrip(): Promise<void> {
 		errorMsg = null;
-		errorKey = null;
-		if (e instanceof SubscriptionExecError) {
-			if (e.status >= 500) {
-				console.error(`Aktion fehlgeschlagen: HTTP ${e.status}`, e.detail); // i18n-log
-				errorKey = 'aktionen.fehler.server';
-			} else if (e.detail != null) errorMsg = e.detail;
-			else errorKey = 'aktionen.fehler.allgemein';
-			return;
-		}
-		console.error(e);
-		errorKey = 'aktionen.fehler.verbindung';
-	}
-
-	function handleArchiveClick(): void {
-		archiveDialogOpen = true;
-	}
-
-	function handleArchiveCancel(): void {
-		archiveDialogOpen = false;
-	}
-
-	function handleArchiveConfirm(): void {
-		const nextArchived = status !== 'archived';
-		archiveDialogOpen = false;
-		void sendStateUpdate(undefined, nextArchived);
-	}
-
-	function handleArchiveDialogOpenChange(open: boolean): void {
-		archiveDialogOpen = open;
-	}
-
-	function handleDeleteClick(): void {
-		deleteDialogOpen = true;
-	}
-
-	function handleDeleteCancel(): void {
-		deleteDialogOpen = false;
-	}
-
-	async function handleDeleteConfirm(): Promise<void> {
-		errorMsg = null; // Issue #1059: alten Fehler beim Start eines neuen Versuchs zurücksetzen
-		errorKey = null;
+		meldung = null;
 		isLoading = true;
 		try {
 			await deleteSubscription('trip', trip.id);
 			void goto('/trips');
 		} catch (e) {
-			setzeAktionsFehler(e);
+			errorMsg = fehlerText('delete', e);
 		} finally {
 			isLoading = false;
-			deleteDialogOpen = false;
 		}
-	}
-
-	function handleDeleteDialogOpenChange(open: boolean): void {
-		deleteDialogOpen = open;
 	}
 
 	function handleStatusChange(updated: Trip): void {
@@ -323,12 +272,14 @@
 	}
 
 	// Lebenszyklus-Menue (Desktop-Dropdown und mobiles Blatt): Pausieren/Fortsetzen schreiben ueber den
-	// Hub-Schreiber (flusht offene Speicherungen, ETag #1433); Archivieren/Loeschen fragen zurueck.
+	// Hub-Schreiber (flusht offene Speicherungen, ETag #1433). #3442: Archivieren/Loeschen kommen erst nach
+	// der Rueckfrage im Menue an; Reaktivieren ohne Rueckfrage.
 	function handleHubAction(id: string): void {
 		if (id === 'pause') void sendStateUpdate(true, undefined);
 		else if (id === 'resume') void sendStateUpdate(false, undefined);
-		else if (id === 'archive' || id === 'unarchive') handleArchiveClick();
-		else if (id === 'delete') handleDeleteClick();
+		else if (id === 'archive') void sendStateUpdate(undefined, true);
+		else if (id === 'unarchive') void sendStateUpdate(undefined, false);
+		else if (id === 'delete') void loescheTrip();
 	}
 </script>
 
@@ -361,8 +312,10 @@
 			{:else if sendStatus === 'error'}
 				<span data-testid="test-schicken-fehler" style="font-size: 12px; color: var(--g-error, #c62828);">{sendMessage ?? $t('aktionen.fehler.senden')}</span>
 			{/if}
-			{#if errorKey || errorMsg}
-				<span data-testid="trip-detail-action-error" style="font-size: 12px; color: var(--g-error, #c62828);">{errorKey ? $t(errorKey) : errorMsg}</span>
+			{#if errorMsg}
+				<span data-testid="trip-detail-action-error" style="font-size: 12px; color: var(--g-error, #c62828);">{errorMsg}</span>
+			{:else if meldung}
+				<span data-testid="hub-aktion-meldung" style="font-size: 12px; color: var(--g-success, #2e7d32);">{meldung}</span>
 			{/if}
 		{/snippet}
 	</TripHeader>
@@ -377,38 +330,6 @@
 		/>
 	{/key}
 </main>
-
-<ConfirmDialog
-	open={archiveDialogOpen}
-	title={status === 'archived' ? $t('trip.hub.reaktivieren_titel') : $t('trip.hub.archivieren_titel')}
-	description={status === 'archived'
-		? $t('trip.hub.reaktivieren_text')
-		: $t('trip.hub.archivieren_text')}
-	confirmLabel={status === 'archived' ? $t('aktionen.unarchive') : $t('aktionen.archive')}
-	confirmVariant="primary"
-	data-testid="trip-detail-archive-confirm-dialog"
-	cancelTestid="trip-detail-archive-confirm-cancel"
-	confirmTestid="trip-detail-archive-confirm-yes"
-	disabled={isLoading}
-	onConfirm={handleArchiveConfirm}
-	onCancel={handleArchiveCancel}
-	onOpenChange={handleArchiveDialogOpenChange}
-/>
-
-<ConfirmDialog
-	open={deleteDialogOpen}
-	title={$t('trip.hub.loeschen_titel')}
-	description={$t('trip.hub.loeschen_text', { name: trip.name })}
-	confirmLabel={$t('aktionen.delete')}
-	confirmVariant="destructive"
-	data-testid="trip-detail-delete-confirm-dialog"
-	cancelTestid="trip-detail-delete-confirm-cancel"
-	confirmTestid="trip-detail-delete-confirm-yes"
-	disabled={isLoading}
-	onConfirm={handleDeleteConfirm}
-	onCancel={handleDeleteCancel}
-	onOpenChange={handleDeleteDialogOpenChange}
-/>
 
 <SubscriptionActionSheet
 	open={sheetOpen}

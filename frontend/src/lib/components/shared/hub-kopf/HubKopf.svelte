@@ -112,7 +112,7 @@
 			</div>
 			<div class="hub-actions">
 				<!-- #2913 c2: Reihenfolge wie im Mockup (mockup-hub-fassung4.html Z. 270–274): erst Kebab, dann „Test schicken ▾“. -->
-				<SubscriptionKebab data-testid="subscription-kebab" {actions} {onSelect} {mobil} {onSheetOpen} />
+				<SubscriptionKebab data-testid="subscription-kebab" {actions} {onSelect} {mobil} {name} {onSheetOpen} />
 				{#if sendMode === 'setup'}
 					<Btn variant="primary" size="sm" onclick={() => onSetup?.()}>{sendLabel}</Btn>
 				{:else}

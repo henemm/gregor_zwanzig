@@ -224,7 +224,7 @@ for (const kind of ['trip', 'vergleich'] as const) {
 
 				// Lebenszyklus-Menue: Pausieren/Fortsetzen · Archivieren/Reaktivieren · Loeschen
 				await hubMenueOeffnen(page);
-				await expect.poll(() => hubLabels(page, viewport)).toEqual(['Pausieren', 'Archivieren', 'Löschen']);
+				await expect.poll(() => hubLabels(page, viewport)).toEqual(['Pausieren', 'Archivieren …', 'Löschen …']); // #3442: Ellipse = fragt nach
 				await page.keyboard.press('Escape');
 				if (viewport === 'mobil') await page.getByLabel('Schliessen').click().catch(() => {});
 
@@ -246,16 +246,16 @@ for (const kind of ['trip', 'vergleich'] as const) {
 				if (kind === 'trip') expect(rec.senden[0]).toContain('report_type=evening');
 				else expect(rec.senden[0]).not.toContain('report_type');
 
-				// Loeschen: Dialog mit Namen, erst Bestaetigen loest DELETE aus, danach Liste
-				const praefix = kind === 'trip' ? 'trip' : 'compare';
+				// #3442: Loeschen fragt im Menue bzw. Blatt nach (Rueckfrage mit Namen); „Abbrechen“ fuehrt zur
+				// Liste der Aktionen zurueck, erst „Endgültig löschen“ loest DELETE aus, danach Liste.
 				await hubMenueOeffnen(page);
-				await hubAktionWaehlen(page, viewport, 'delete', 'Löschen');
-				await expect(page.getByTestId(`${praefix}-detail-delete-confirm-dialog`)).toContainText(o.name);
-				await page.getByTestId(`${praefix}-detail-delete-confirm-cancel`).click();
+				await hubAktionWaehlen(page, viewport, 'delete', 'Löschen …');
+				const rueckfrage = page.locator('[data-testid="kebab-rueckfrage"]:visible');
+				await expect(rueckfrage).toContainText(o.name);
+				await rueckfrage.getByTestId('kebab-rueckfrage-abbrechen').click();
 				expect(rec.loeschen).toEqual([]);
-				await hubMenueOeffnen(page);
-				await hubAktionWaehlen(page, viewport, 'delete', 'Löschen');
-				await page.getByTestId(`${praefix}-detail-delete-confirm-yes`).click();
+				await hubAktionWaehlen(page, viewport, 'delete', 'Löschen …');
+				await page.locator('[data-testid="kebab-rueckfrage-bestaetigen"]:visible').click();
 				await expect.poll(() => rec.loeschen.length).toBe(1);
 				await expect(page).toHaveURL(kind === 'trip' ? /\/trips\/?$/ : /\/compare\/?$/);
 			});

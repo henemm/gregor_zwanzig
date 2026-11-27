@@ -97,11 +97,9 @@ def test_ac12_profil_texte_haengen_an_2796(daten, ctx, text):
         assert S4_GRUND in b["grund"], f"„{text}“ ({ctx}): Grund ohne „{S4_GRUND}“"
 
 
-MENUE_2797 = {
-    (ctx, "wetter", a)
-    for ctx in ("trip", "orte")
-    for a in ("kebab-bestaetigung-archivieren", "kebab-bestaetigung-loeschen", "kebab-menue", "test-menue")
-}
+# #3442 (AC-15): die Kebab-Abschnitte (kebab-menue, kebab-bestaetigung-*) sind gebaut, ihre Besitzer-Einträge
+# entfallen; bei #2797 bleibt nur noch das Menü „Test schicken ▾“.
+MENUE_2797 = {(ctx, "wetter", "test-menue") for ctx in ("trip", "orte")}
 
 
 # #3036 (24.11., AC-9): Beispiel-Alarm (Trip und Orte) und Pausieren/Aktivieren-Karte (Orte) bleiben bis #2797
@@ -114,9 +112,9 @@ ZUSTELLUNG_2797 = {
 }
 
 
-def test_ac12_acht_menue_eintraege_bleiben_bei_2797(daten):
+def test_ac12_menue_eintraege_bleiben_bei_2797(daten):
     eintraege = [b for b in daten["besitzer"] if b["verweis"] == "#2797" and b["art"] == "abschnitt"]
-    assert len(eintraege) == 8, f"#2797: {len(eintraege)} Abschnitt-Einträge (erwartet 8)"
+    assert len(eintraege) == 2, f"#2797: {len(eintraege)} Abschnitt-Einträge (erwartet 2, #3442)"
     assert {(b["ctx"], b["reiter"], b["abschnitt"]) for b in eintraege} == MENUE_2797
 
 
@@ -185,8 +183,9 @@ def test_ac12_eintraege_anderer_scheiben_unveraendert(daten):
     # Staging-Abnahmelauf DE+EN danach: Beispiel-Alarm und Pausieren/Aktivieren bleiben bis #2797 im Reiter
     # Zustellung (8 Texte, #2797 8 → 16); Kanalzeile E-Mail mit Prüfkonto-Adresse statt „henning@…“ ist
     # Kontodaten-Abhängigkeit (7 Elemente + 2 Zusatztexte → #3009, 2 → 11, #3202 ist geschlossen).
+    # #3442 (27.11., Spec feat_3442_kebab_rueckfragen.md AC-15): die sechs Kebab-Abschnitte sind gebaut: #2797 16 → 10.
     soll = {
-        "#2967": 0, "#2966": 0, "#2913-d": 0, "#2795": 36, "#2797": 16, "#2968": 0, "#3022": 62,
+        "#2967": 0, "#2966": 0, "#2913-d": 0, "#2795": 36, "#2797": 10, "#2968": 0, "#3022": 62,
         "#3111": 0, "#3194": 0, "#3241": 61, "#3009": 11, "#3151": 2, "#3122": 12, "#3202": 0, "#3203": 0, "#3204": 0,
         "#3205": 0, "#3145": 0, "#3258": 4,
     }

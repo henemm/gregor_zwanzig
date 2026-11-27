@@ -694,7 +694,9 @@ const NEU_IN_FOLGEPAKETEN = [
 	// #3440: neuer Bereich test_schicken.json (Menü „Test schicken ▾“) — vollständig neu.
 	...Object.keys(TEST_SCHICKEN_DE),
 	// #3364: Zeilenmarke der Karte „Was steht wo“ fuer Groessen, die nur ein Briefing fuehrt.
-	'wetter.wsw.nur_briefing.morning', 'wetter.wsw.nur_briefing.evening'
+	'wetter.wsw.nur_briefing.morning', 'wetter.wsw.nur_briefing.evening',
+	// #3442: Rückfrage im Kebab-Menü (aktionen.kebab.*) — Wortlaut verankert in kebab_bestaetigung.test.ts.
+	...Object.keys(de).filter((k) => k.startsWith('aktionen.kebab.'))
 ];
 
 test('AC-5: das Golden enthaelt die 112 Bestandsschluessel', () => {

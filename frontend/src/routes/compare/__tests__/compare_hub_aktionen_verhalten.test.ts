@@ -101,32 +101,52 @@ describe('F021: Pausieren/Fortsetzen erreichen den Schreibweg des Hubs', () => {
 	});
 });
 
-describe('F021: Archivieren, Reaktivieren, Loeschen', () => {
-	test('„archive" -> PATCH /state {archived:true}, danach zurueck in die Liste', async () => {
-		const { aktion } = await hub();
+// #3442 (feat_3442 AC-2/AC-5/AC-10/AC-11): die Rückfrage für Archivieren/Löschen sitzt im Kebab-Menü
+// (kebab_seiten_bindung.test.ts); handleAction kommt erst nach der Bestätigung an und wirkt direkt.
+// Archivieren und Reaktivieren bleiben auf der Seite (kein Sprung zur Liste, kein Neuladen) mit Meldung.
+/** Steht der Meldungstext im Zustand der Seite (gleich welche Variable ihn trägt)? */
+const meldet = (u: Record<string, any>, text: string) => Object.values(u).some((v) => v === text);
+
+describe('F021 → #3442: Archivieren, Reaktivieren, Loeschen', () => {
+	test('„archive" (im Menü bestätigt) -> PATCH /state {archived:true}, bleibt auf der Seite, Meldung „Archiviert. …“ (AC-5)', async () => {
+		const { aktion, u } = await hub();
 		aktion('archive');
-		await bis(() => nach('PATCH', '/state').length === 1 && fenster.location.href === '/compare', 'Archivieren');
+		await bis(() => nach('PATCH', '/state').length === 1, 'Archivieren');
+		await ruhe();
 		assert.deepEqual(nach('PATCH', '/state').map((a) => [a.url, a.body]), [['/api/compare/presets/c1/state', { archived: true }]]);
+		assert.equal(fenster.location.href, '', 'Archivieren springt in die Liste');
+		assert.equal(fenster.location.reloads, 0, 'Archivieren lädt die Seite neu');
+		assert.ok(meldet(u, 'Archiviert. Im Archiv kannst du es reaktivieren.'), 'Erfolgsmeldung „Archiviert. …“ fehlt');
 	});
 
-	test('„unarchive" -> PATCH /state {archived:false}, danach Neuladen', async () => {
-		const { aktion } = await hub();
+	test('„unarchive" -> PATCH /state {archived:false} ohne Rückfrage und ohne Neuladen, Meldung „Reaktiviert.“ (AC-10)', async () => {
+		const { aktion, u } = await hub();
 		aktion('unarchive');
-		await bis(() => nach('PATCH', '/state').length === 1 && fenster.location.reloads === 1, 'Reaktivieren');
+		await bis(() => nach('PATCH', '/state').length === 1, 'Reaktivieren');
+		await ruhe();
 		assert.deepEqual(nach('PATCH', '/state').map((a) => a.body), [{ archived: false }]);
 		assert.equal(fenster.location.href, '', 'Reaktivieren darf nicht in die Liste springen');
+		assert.equal(fenster.location.reloads, 0, 'Reaktivieren lädt die Seite neu');
+		assert.ok(meldet(u, 'Reaktiviert.'), 'Erfolgsmeldung „Reaktiviert.“ fehlt');
 	});
 
-	test('„delete" oeffnet nur den Dialog; erst die Bestaetigung loescht (DELETE) und fuehrt in die Liste', async () => {
+	test('„delete" (im Menü bestätigt) -> genau ein DELETE, danach in die Liste; kein Seitendialog (AC-2)', async () => {
 		const { aktion, u } = await hub();
 		aktion('delete');
+		await bis(() => nach('DELETE', '/c1').length === 1 && fenster.location.href === '/compare', 'Loeschen');
 		await ruhe();
-		assert.equal(u.deleteDialogOpen, true);
-		assert.equal(nach('DELETE', '/c1').length, 0, 'Loeschen ohne Rueckfrage');
-		await u.handleDeleteConfirm();
-		assert.equal(u.deleteDialogOpen, false);
 		assert.deepEqual(nach('DELETE', '/c1').map((a) => a.url), ['/api/compare/presets/c1']);
-		assert.equal(fenster.location.href, '/compare');
+		assert.notEqual(u.deleteDialogOpen, true, 'Seitendialog geöffnet statt gelöscht');
+	});
+
+	test('„pause"/„resume" melden bei Erfolg „Pausiert. …“ bzw. „Fortgesetzt. …“ (AC-11)', async () => {
+		const { aktion, toggles, u } = await hub();
+		aktion('pause');
+		await bis(() => toggles.length === 1 && u.isPausing === false, 'Ende von „pause"');
+		assert.ok(meldet(u, 'Pausiert. Bis ‚Fortsetzen‘ kommen keine Briefings und Alarme.'), 'Meldung „Pausiert. …“ fehlt');
+		aktion('resume');
+		await bis(() => toggles.length === 2 && u.isPausing === false, 'Ende von „resume"');
+		assert.ok(meldet(u, 'Fortgesetzt. Das nächste Briefing kommt wie geplant.'), 'Meldung „Fortgesetzt. …“ fehlt');
 	});
 });
 

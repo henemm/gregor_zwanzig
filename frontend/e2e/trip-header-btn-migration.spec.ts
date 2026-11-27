@@ -34,11 +34,11 @@ test.describe('Issue #215 Sprint 1 — TripHeader Button→Btn Migration', () =>
 		const sendBtn = page.getByTestId('subscription-hub-send');
 		await expect(sendBtn).toHaveAttribute('data-slot', 'btn');
 
-		// Dialog öffnen, dann Dialog-Buttons prüfen.
+		// #3442: Rückfrage im Kebab-Menü öffnen, dann ihre Knöpfe prüfen (Stil Btn).
 		await page.getByTestId('subscription-kebab').click();
 		await page.getByTestId('subscription-action-archive').click();
-		const cancelBtn = page.getByTestId('trip-detail-archive-confirm-cancel');
-		const confirmBtn = page.getByTestId('trip-detail-archive-confirm-yes');
+		const cancelBtn = page.getByTestId('kebab-rueckfrage-abbrechen');
+		const confirmBtn = page.getByTestId('kebab-rueckfrage-bestaetigen');
 		await expect(cancelBtn).toHaveAttribute('data-slot', 'btn');
 		await expect(confirmBtn).toHaveAttribute('data-slot', 'btn');
 	});

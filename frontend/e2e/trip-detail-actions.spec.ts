@@ -103,7 +103,8 @@ test.describe('Issue #153 — Trip-Detail Header (Breadcrumb + Status + Aktionen
 		await menueHat(page, { pause: false, resume: true });
 	});
 
-	test('AC-14: Klick auf "Archivieren" öffnet Confirm-Dialog, sendet noch nichts', async ({
+	// #3442: „Archivieren …“ fragt im Kebab-Menü selbst nach (Panel kebab-rueckfrage), kein Dialog mehr.
+	test('AC-14: Klick auf "Archivieren …" zeigt die Rückfrage im Menü, sendet noch nichts', async ({
 		page
 	}) => {
 		await page.goto(`/trips/${TRIP_ID}`);
@@ -111,21 +112,25 @@ test.describe('Issue #153 — Trip-Detail Header (Breadcrumb + Status + Aktionen
 
 		await hubAktion(page, 'archive');
 
-		const dialog = page.getByTestId('trip-detail-archive-confirm-dialog');
-		await expect(dialog).toBeVisible();
+		const rueckfrage = page.getByTestId('kebab-rueckfrage');
+		await expect(rueckfrage).toBeVisible();
+		await expect(rueckfrage).toContainText('Archivieren?');
+		await expect(page.getByRole('dialog')).toHaveCount(0);
 
 		// Badge ist NOCH unverändert (kein PATCH gesendet)
 		const badge = page.getByTestId('trip-detail-status-badge');
 		await expect(badge).not.toContainText('Archiviert');
 	});
 
-	test('AC-15: Cancel im Confirm-Dialog → keine Statusänderung', async ({ page }) => {
+	test('AC-15: „Abbrechen“ in der Rückfrage → zurück zur Menüliste, keine Statusänderung', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		await hubAktion(page, 'archive');
-		await page.getByTestId('trip-detail-archive-confirm-cancel').click();
+		await page.getByTestId('kebab-rueckfrage-abbrechen').click();
 
-		// Dialog geschlossen
-		await expect(page.getByTestId('trip-detail-archive-confirm-dialog')).not.toBeVisible();
+		// Rückfrage weg, Menüliste wieder da
+		await expect(page.getByTestId('kebab-rueckfrage')).toHaveCount(0);
+		await expect(page.getByTestId('subscription-action-archive')).toBeVisible();
+		await page.keyboard.press('Escape');
 
 		// Badge unverändert (nicht 'Archiviert')
 		const badge = page.getByTestId('trip-detail-status-badge');
@@ -133,16 +138,17 @@ test.describe('Issue #153 — Trip-Detail Header (Breadcrumb + Status + Aktionen
 		await menueHat(page, { archive: true, unarchive: false });
 	});
 
-	test('AC-16: Confirm im Dialog → PATCH gesendet + Badge "Archiviert" + kein Pausieren mehr im Menü', async ({
+	test('AC-16: Bestätigung in der Rückfrage → PATCH gesendet + Badge "Archiviert" + kein Pausieren mehr im Menü', async ({
 		page
 	}) => {
 		// #2278: ein archivierter Trip bietet im Lebenszyklus-Menue nur noch Reaktivieren/Löschen.
 		await page.goto(`/trips/${TRIP_ID}`);
 		await hubAktion(page, 'archive');
-		await page.getByTestId('trip-detail-archive-confirm-yes').click();
+		await page.getByTestId('kebab-rueckfrage-bestaetigen').click();
 
-		// Dialog geschlossen
-		await expect(page.getByTestId('trip-detail-archive-confirm-dialog')).not.toBeVisible();
+		// Menü geschlossen, Meldung erscheint (#3442 AC-4)
+		await expect(page.getByTestId('kebab-rueckfrage')).toHaveCount(0);
+		await expect(page.getByTestId('hub-aktion-meldung')).toHaveText('Archiviert. Im Archiv kannst du es reaktivieren.');
 
 		// Badge zeigt 'Archiviert'
 		const badge = page.getByTestId('trip-detail-status-badge');

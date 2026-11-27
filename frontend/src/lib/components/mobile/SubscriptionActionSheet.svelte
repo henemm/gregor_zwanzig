@@ -10,6 +10,8 @@
 		type SubscriptionSurface
 	} from '$lib/components/shared/subscriptionActions.js';
 	import type { SubscriptionKind } from '$lib/components/shared/subscriptionTabs.js';
+	import KebabBestaetigungPanel from '$lib/components/shared/KebabBestaetigungPanel.svelte';
+	import { braucheRueckfrage, rueckfrage } from '$lib/components/shared/kebabBestaetigung.js';
 
 	interface Props {
 		open: boolean;
@@ -25,9 +27,21 @@
 
 	// i18n F9: Aktionsnamen entstehen per tr() — `$locale` haelt die Liste reaktiv.
 	const actions = $derived.by(() => (void $locale, subscriptionActions(kind, status, surface)));
+
+	// #3442 (AC-9): Archivieren/Löschen fragen im Blatt nach (geteiltes Panel); das Blatt schließt erst
+	// nach Bestätigung oder beim Schließen (das die Rückfrage zurücksetzt).
+	let frage = $state<string | null>(null);
+	const rf = $derived.by(() => (void $locale, frage ? rueckfrage(frage, name ?? '') : null));
+	function schliessen(): void {
+		frage = null;
+		onClose();
+	}
 </script>
 
-<Sheet {open} {onClose} snap="half" title={name} eyebrow={$t('aktionen.sheet.eyebrow')}>
+<Sheet {open} onClose={schliessen} snap="half" title={name} eyebrow={$t('aktionen.sheet.eyebrow')}>
+	{#if rf}
+		<KebabBestaetigungPanel rueckfrage={rf} onBestaetigen={() => { onAction(rf.id); schliessen(); }} onAbbrechen={() => (frage = null)} />
+	{:else}
 	<div style:display="flex" style:flex-direction="column" style:gap="2px">
 		{#each actions as action (action.id)}
 			<button
@@ -41,10 +55,15 @@
 				style:font-size="15px"
 				style:color={action.danger ? 'var(--g-danger)' : 'var(--g-ink-1)'}
 				onclick={() => {
-					onAction(action.id);
-					onClose();
+					// Nur im Hub; die Listen fragen mit ihrem eigenen Dialog nach (AC-16).
+					if (surface === 'hub' && braucheRueckfrage(action.id)) frage = action.id;
+					else {
+						onAction(action.id);
+						schliessen();
+					}
 				}}
 			>{action.label}</button>
 		{/each}
 	</div>
+	{/if}
 </Sheet>

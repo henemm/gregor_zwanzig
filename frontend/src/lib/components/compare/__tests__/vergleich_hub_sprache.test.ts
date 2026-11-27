@@ -104,7 +104,8 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 	test('Messaufbau: jeder deutsche Anker-Text (Festteile) steht im Golden oder in der Funktionstabelle', () => {
 		const alle = leerraum([...Object.keys(FAELLE).map((f) => `${f}.de.html`), 'funktionen.de.txt'].map((f) => readFileSync(path.join(P.GOLDEN_DIR, f), 'utf-8')).join(' ')).replace(/&amp;/g, '&');
 		// Nicht im golden-de-Zustand erreichbar (nur Fehler-/Grenzfaelle), im Bestand je Datei nachgewiesen.
-		const UNERREICHT = new Set(['vergleich.relativ.diese_woche', 'vergleich.hub.archivieren_fehler', 'vergleich.hub.reaktivieren_fehler', 'vergleich.hub.delete_fehler', 'vergleich.hub.delete_titel', 'listen.dialog.unwiderruflich', 'vergleich.hub.nicht_gefunden', 'vergleich.orte.format_unbekannt', 'vergleich.orte.fehler_hinzufuegen', 'vergleich.gruppe.kein_profil','vergleich.neu.bereit_titel', 'vergleich.neu.bereit_zeile.one', 'vergleich.neu.bereit_zeile.other', 'vergleich.neu.bereit_text', 'vergleich.neu.alarme_zum_aktivieren_punkt', 'vergleich.neu.tab_gesperrt', 'vergleich.neu.ort_waehlen', 'vergleich.neu.kopie', 'vergleich.relativ.wochen.one', 'vergleich.orte.manuell', 'vergleich.orte.breitengrad', 'vergleich.orte.laengengrad', 'vergleich.orte.hinzufuegen', 'aktionen.kopf.aktivieren', 'vergleich.orte.viel_kurz',
+		// #3442: vergleich.hub.{archivieren,reaktivieren,delete}_fehler und delete_titel entfielen (kebabBestaetigung).
+		const UNERREICHT = new Set(['vergleich.relativ.diese_woche', 'listen.dialog.unwiderruflich', 'vergleich.hub.nicht_gefunden', 'vergleich.orte.format_unbekannt', 'vergleich.orte.fehler_hinzufuegen', 'vergleich.gruppe.kein_profil','vergleich.neu.bereit_titel', 'vergleich.neu.bereit_zeile.one', 'vergleich.neu.bereit_zeile.other', 'vergleich.neu.bereit_text', 'vergleich.neu.alarme_zum_aktivieren_punkt', 'vergleich.neu.tab_gesperrt', 'vergleich.neu.ort_waehlen', 'vergleich.neu.kopie', 'vergleich.relativ.wochen.one', 'vergleich.orte.manuell', 'vergleich.orte.breitengrad', 'vergleich.orte.laengengrad', 'vergleich.orte.hinzufuegen', 'aktionen.kopf.aktivieren', 'vergleich.orte.viel_kurz',
 			// #2794 Fix-Loop B4: die Karte „Wetter" zählt erst mit im Browser geladenen Vorlagen;
 			// im SSR-Golden steht „—". Die Zahl prüft shared/__tests__/s3a2794_teil4b_befunde.test.ts.
 			'vergleich.hub.wertebereiche_kurz.one', 'vergleich.hub.wertebereiche_kurz.other',
@@ -162,7 +163,7 @@ describe('AC-1: Ortsvergleich-Hub englisch, Namen unveraendert, Aktionen wie im 
 	test('Edit/Delete/Pause tragen im Vergleich denselben Text wie im Trip (gleicher Schluessel)', () => {
 		const { en: e } = deDannEn(() => ({ t: P.aktionen.subscriptionActions('trip', 'active', 'hub'), v: P.aktionen.subscriptionActions('vergleich', 'active', 'hub') }));
 		assert.deepEqual(e.v, e.t);
-		assert.deepEqual((e.v as { label: string }[]).map((a) => a.label), ['Pause', 'Archive', 'Delete']);
+		assert.deepEqual((e.v as { label: string }[]).map((a) => a.label), ['Pause', 'Archive …', 'Delete …']); // #3442: Ellipse = fragt nach
 		assert.equal(en('aktionen.edit'), 'Edit');
 	});
 	test('Fehler ohne Server-Text: Seite haelt nur Schluessel/Flag, Text entsteht beim Rendern', () => {
@@ -174,8 +175,9 @@ describe('AC-1: Ortsvergleich-Hub englisch, Namen unveraendert, Aktionen wie im 
 	test('Meldungen ohne Server-Text: Schluessel wird beim Rendern aufgeloest (Seite, Orte-Schritt, Neuer Ort)', () => {
 		const { de, en: e } = deDannEn(() => P.fehlerFlagsRendern().map(sichtbar));
 		// #3440: „Test-Briefing gesendet“ entfiel (Rückmeldung des Menüs); die Seite zeigt den Reaktivieren-Fehler.
-		const DE = ['Reaktivieren fehlgeschlagen.', 'Archivieren fehlgeschlagen.', 'Format nicht erkannt', 'Fehler beim Speichern'];
-		const EN = ['Reactivating failed.', 'Archiving failed.', 'Format not recognised', 'Error while saving'];
+		// #3442: Seitenmeldungen als Text aus kebabBestaetigung.fehlerText (Netzfehler) in der aktuellen Sprache.
+		const DE = ['Reaktivieren hat nicht geklappt: keine Verbindung zum Server.', 'Archivieren hat nicht geklappt: keine Verbindung zum Server.', 'Format nicht erkannt', 'Fehler beim Speichern'];
+		const EN = ['Reactivate failed: no connection to the server.', 'Archive failed: no connection to the server.', 'Format not recognised', 'Error while saving'];
 		DE.forEach((s, i) => hat(de[i], s));
 		EN.forEach((s, i) => {
 			hat(e[i], s);

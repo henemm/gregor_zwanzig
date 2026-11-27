@@ -706,7 +706,8 @@ export async function tripSeite(
 		},
 		async archivieren() {
 			const vorher = server.calls.length;
-			(inst.u.handleArchiveConfirm as () => void)();
+			// #3442: die Rückfrage sitzt im Kebab-Menü; der Seiten-Handler bekommt die bestätigte Aktion.
+			(inst.u.handleHubAction as (id: string) => void)('archive');
 			await abwarten(vorher);
 		},
 		trip: () => inst.u.trip as Record<string, unknown>

@@ -68,7 +68,8 @@ test.describe('Issue #1059 — Fehler-Feedback bei Pause/Fortsetzen/Archivieren'
 		const errorEl = page.getByTestId('trip-detail-action-error');
 		await expect(errorEl).toBeVisible();
 		await expect(errorEl).not.toHaveText('PATCH /state failed: 500');
-		await expect(errorEl).toHaveText(/Serverfehler|später erneut/i);
+		// #3442 AC-12: Text nach Fehlerklasse aus kebabBestaetigung.fehlerText.
+		await expect(errorEl).toHaveText('Fortsetzen hat nicht geklappt: Fehler auf dem Server. Versuch es später noch einmal.');
 	});
 
 	test('AC-2: Archivieren-Bestätigung bei HTTP-422 mit detail zeigt den Detail-Text', async ({
@@ -81,7 +82,8 @@ test.describe('Issue #1059 — Fehler-Feedback bei Pause/Fortsetzen/Archivieren'
 			route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ detail: 'Trip has active alerts' }) })
 		);
 
-		await page.getByTestId('trip-detail-archive-confirm-yes').click();
+		// #3442: die Bestätigung sitzt in der Rückfrage im Kebab-Menü.
+		await page.getByTestId('kebab-rueckfrage-bestaetigen').click();
 
 		const errorEl = page.getByTestId('trip-detail-action-error');
 		await expect(errorEl).toBeVisible();
@@ -136,7 +138,7 @@ test.describe('Issue #1059 — Fehler-Feedback bei Pause/Fortsetzen/Archivieren'
 		const errorEl = page.getByTestId('trip-detail-action-error');
 		await expect(errorEl).toBeVisible();
 		await expect(errorEl).not.toHaveText(/Failed to fetch/i);
-		await expect(errorEl).toHaveText(/Aktion fehlgeschlagen.*Verbindung/i);
+		await expect(errorEl).toHaveText('Fortsetzen hat nicht geklappt: keine Verbindung zum Server. Versuch es gleich noch einmal.');
 	});
 
 	test('AC-6 (Issue #1065): HTTP-4xx mit detail wird nicht von Netzwerkfehler-Übersetzung überschrieben', async ({

@@ -141,10 +141,15 @@ const ALT_ANZAHL = ALT_ANZAHL_3251 + 184 - 180 + 174;
 // den Abschnitten was-steht-wo und vorlage (trip/orte, je Zustand normal/luecken). Diff je ID geprüft.
 // #3419 Fix-Loop: Generator nimmt Wetter-Symbole (Emoji) als Beispielwert einer Zelle auf („🌥️“, Tiefe Wolken in
 // E-Mail, trip normal/luecken): +2 Einträge, nur ordnung im Abschnitt was-steht-wo verschoben.
-const ALT_ANZAHL_3419 = ALT_ANZAHL - 24 + 46 + 2;
+// #3442 (Kebab-Rückfragen, 27.11.; vorher 3c90a598…4af2c22ae): Liste mit dem Generator neu erzeugt, Mockup-Hash gleich.
+// 8 IDs entfallen: die K14-Anmerkung „Pausieren, Archivieren, Löschen“ (#kebabMenu .dis) ist kein UI-Text (Generator
+// überspringt sie wie die Übersicht-Notiz). Sonst nur Katalogfelder: kebab-bestaetigung-* (32) bekommen
+// aktionen.kebab.* samt text_en/muster {name} statt Lücke, kebab-menue (16) aktionen.kebab.menue_*, test-menue (14)
+// schließt EN-Lücken aus test_schicken.* (#3440), kanaele (8) „Briefing“ → test_schicken.briefing (DE/EN gleich).
+const ALT_ANZAHL_3419 = ALT_ANZAHL - 24 + 46 + 2 - 8;
 // #3441 (Test-Alarm): im Abschnitt test-menue tragen die 16 Zeilen „Test-Alarm“ und ihr Untertitel (alle Kontexte
 // und Zustände) jetzt i18n_key, text_en und luecke false. Keine ID neu oder entfallen, Anzahl gleich, sonst byte-gleich.
-const ALT_SHA = '3c90a5987c89aca2d6e7e9365701f03f4432b1be584bf2a930f0a3f4af2c22ae';
+const ALT_SHA = 'a227cb935f6563ac7990563d2de39e0ddbd83f7d47f4bd126925b7fe9a0d75c1';
 const MOCKUP_HASH = 'sha256:946e69c0f185fc66133b3b8c820d87b61ef3a3f52834f621c1c76505c7f81a0b';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {

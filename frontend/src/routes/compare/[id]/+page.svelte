@@ -6,7 +6,6 @@
 	// wird jetzt GENAU EINMAL gemountet und versorgt Desktop UND Mobile; die
 	// Viewport-Umschaltung (4-Stat-2×2 statt 5-Stat-Leiste, CorridorEditorMobile
 	// im Idealwerte-Tab) passiert INNERHALB von CompareTabs (matchMedia).
-	import { ConfirmDialog } from '$lib/components/molecules';
 	import CompareDetail from '$lib/components/compare/CompareDetail.svelte';
 	import StatusSchild from '$lib/components/shared/status-schild/StatusSchild.svelte';
 	import {
@@ -19,7 +18,8 @@
 	} from '$lib/components/molecules/testSchickenModell';
 	import SubscriptionActionSheet from '$lib/components/mobile/SubscriptionActionSheet.svelte';
 	import { subscriptionActions } from '$lib/components/shared/subscriptionActions.js';
-	import { deleteSubscription, sendSubscription, sendTestAlarm, setArchived, SubscriptionExecError } from '$lib/components/shared/subscriptionExec.js';
+	import { deleteSubscription, sendSubscription, sendTestAlarm, setArchived } from '$lib/components/shared/subscriptionExec.js';
+	import { erfolgsText, fehlerText } from '$lib/components/shared/kebabBestaetigung.js';
 	import {
 		deriveStatusWithScheduleOverride,
 		isRuntimeExceeded,
@@ -45,7 +45,7 @@
 	import type { TripStatus } from '$lib/utils/tripStatus';
 	// Issue #2659 (i18n F10): Texte aus dem Katalog — Aktionen/Senden wortgleich zum Trip-Hub
 	// (aktionen.*). Fehler ohne Server-Text halten nur den Schluessel (Sprachwechsel ohne Neuladen).
-	import { locale, t, tn, type MessageKey } from '$lib/i18n';
+	import { locale, t, tn } from '$lib/i18n';
 
 	let { data } = $props();
 
@@ -121,15 +121,18 @@
 	// Eingabe, anderer Speichervorgang ⇒ Stempel der Registry hat gewechselt), ist der
 	// geholte Stand AELTER als der Stempel — dann KEIN Neuaufbau (nie nur eines von beiden;
 	// Muster `uebernehmeNachStatusAenderung` der Trip-Seite).
-	async function uebernehmeFrischenVergleich(): Promise<void> {
+	// #3442: liefert, ob der frische Stand übernommen wurde (Archivieren/Reaktivieren auf der Seite).
+	async function uebernehmeFrischenVergleich(): Promise<boolean> {
 		try {
 			const frisch = await getMitFassung<ComparePreset>(`/api/compare/presets/${data.preset.id}`);
-			if (!frisch.inRegistry || hubSaveCtl.hasPending || hubSaveCtl.state !== 'idle') return;
+			if (!frisch.inRegistry || hubSaveCtl.hasPending || hubSaveCtl.state !== 'idle') return false;
 			tabNachUebernahme = new URL(window.location.href).searchParams.get('tab');
 			currentPreset = frisch.daten;
 			uebernommeneFassung += 1;
+			return true;
 		} catch {
 			/* kein Neuaufbau: der Reiter zeigt bereits die gespeicherte Eingabe */
+			return false;
 		}
 	}
 
@@ -164,10 +167,14 @@
 	// sich selbst, sobald `data` durch einen echten Reload (invalidateAll)
 	// neu ankommt — die dann gelieferten Server-Daten sind wieder autoritativ.
 	let scheduleOverride = $state<string | null>(null);
+	// #3442 (AC-5/AC-10): Archiv-Status nach Archivieren/Reaktivieren aus dem Menü, Muster wie scheduleOverride.
+	let archivOverride = $state<boolean | null>(null);
 	$effect(() => {
 		void data;
 		scheduleOverride = null;
+		archivOverride = null;
 	});
+	const archiviert = $derived(archivOverride ?? currentPreset.archived_at != null);
 	function handleScheduleChange(schedule: string): void {
 		scheduleOverride = schedule;
 	}
@@ -176,7 +183,7 @@
 	// #2913 Scheibe c2 (AC-5): Status-Pill mit allen fünf Zuständen wie beim Trip — archiviert
 	// (archived_at), fertig (Enddatum vor heute, Regel wie compareFilterStatus), sonst wie bisher.
 	let kopfStatus: TripStatus = $derived(
-		currentPreset.archived_at != null
+		archiviert
 			? 'archived'
 			: status !== 'draft' && compareFilterStatus(currentPreset) === 'fertig'
 				? 'finished'
@@ -238,7 +245,7 @@
 	let actionSheetOpen = $state(false);
 	// Issue #2278 AC-12: Lebenszyklus-Menue wie beim Trip — Desktop = Dropdown, Mobil = Aktionsblatt.
 	let mobil = $state(false);
-	const lifecycle = $derived(currentPreset.archived_at != null ? 'archived' : status);
+	const lifecycle = $derived(archiviert ? 'archived' : status);
 	// Issue #2659 (i18n F10): Aktionsliste je Sprache (wortgleich zum Trip-Hub, aktionen.*).
 	const hubAktionen = $derived.by(() => (void $locale, subscriptionActions('vergleich', lifecycle, 'hub')));
 	onMount(() => {
@@ -254,13 +261,15 @@
 	let sendStatus = $state<'idle' | 'ok' | 'error'>('idle');
 	let sendMsg = $state<string | null>(null);
 	let sendTimer: ReturnType<typeof setTimeout> | undefined = undefined;
-	// Meldung einer Lebenszyklus-Aktion unter dem Kopf: Server-Text (`text`) oder Katalogschluessel (`key`).
+	// #3442: Meldung einer Menü-Aktion als Text aus kebabBestaetigung (wie im Trip-Hub); `aktionOk` färbt sie.
 	let aktionMsg = $state<string | null>(null);
-	let aktionKey = $state<MessageKey | null>(null);
-	function meldung(text: string | null, key: MessageKey | null): void {
+	let aktionOk = $state(false);
+	function meldung(text: string | null, ok = false): void {
 		aktionMsg = text;
-		aktionKey = text ? null : key;
+		aktionOk = ok;
 	}
+	// Gewählte Menü-Aktion: Pausieren/Fortsetzen teilen den Toggle-Weg, die Meldung unterscheidet sie.
+	let gewaehlt = '';
 
 	// #3440: Menü „Test schicken ▾“ wie im Trip-Hub — der Klick auf eine Kanalzeile ist die Auslösung.
 	async function handleTest(wahl: { kanal: TestKanal; berichtsart: Berichtsart }): Promise<void> {
@@ -326,16 +335,18 @@
 		// Fehlerpfad zurueck statt still (ohne pauseError) zu enden.
 		const ok = (await compareDetailRef?.toggleActiveFromParent()) ?? false;
 		if (!ok) pauseError = true;
+		else meldung(erfolgsText(gewaehlt), true); // #3442 AC-11; Misserfolg bleibt die bisherige Meldung
 		isPausing = false;
 	}
 
-	// Issue #2214: Bestaetigungsdialog fuer 'Loeschen' (State analog trips/[id]).
-	let deleteDialogOpen = $state(false);
 	let isDeleting = $state(false);
 
 	function handleAction(id: string) {
 		// Epic #1273 S3: kein 'edit'/'setup' im Hub; die Aktionen stammen aus
 		// subscriptionActions('vergleich', status, 'hub') (Issue #2278).
+		// #3442: Archivieren/Loeschen kommen erst nach der Rueckfrage im Menue an.
+		gewaehlt = id;
+		meldung(null);
 		if (id === 'pause' || id === 'resume') {
 			// 'pause' und 'resume' sind dieselbe Toggle-Aktion.
 			void togglePause();
@@ -344,45 +355,37 @@
 		} else if (id === 'unarchive') {
 			void unarchivePreset();
 		} else if (id === 'delete') {
-			// Issue #2214: erst Rueckfrage (ConfirmDialog, wie Trip-Hub), kein Sofort-DELETE.
-			deleteDialogOpen = true;
+			void deletePreset();
 		}
 	}
 
-	function handleDeleteCancel(): void {
-		deleteDialogOpen = false;
-	}
-
-	function handleDeleteDialogOpenChange(open: boolean): void {
-		deleteDialogOpen = open;
-	}
-
-	async function handleDeleteConfirm(): Promise<void> {
-		deleteDialogOpen = false;
-		await deletePreset();
-	}
-
+	// #3442 (AC-5/AC-10): Archivieren/Reaktivieren bleiben auf der Seite. Offene Eingaben zuerst sichern,
+	// danach den frischen Stand samt Stempel übernehmen (kein Konflikt-Banner); scheitert das, nur den Status.
 	async function archivePreset() {
 		try {
 			await setArchived('vergleich', currentPreset.id, true);
-			window.location.href = '/compare';
+			nachArchivWechsel('archive');
 		} catch (e) {
-			fehlerMeldung(e, 'vergleich.hub.archivieren_fehler');
+			meldung(fehlerText('archive', e));
 		}
-	}
-
-	// Nutzerverstaendliche Meldung: 4xx mit Server-Detail, sonst der feste Text (5xx/Netz).
-	function fehlerMeldung(e: unknown, key: MessageKey): void {
-		meldung(e instanceof SubscriptionExecError && e.status < 500 && e.detail ? e.detail : null, key);
 	}
 
 	async function unarchivePreset() {
 		try {
 			await setArchived('vergleich', currentPreset.id, false);
-			window.location.reload();
+			nachArchivWechsel('unarchive');
 		} catch (e) {
-			fehlerMeldung(e, 'vergleich.hub.reaktivieren_fehler');
+			meldung(fehlerText('unarchive', e));
 		}
+	}
+
+	// Status sofort über `archivOverride` (kein neues `currentPreset`, das offene Eingaben der Reiter
+	// überschriebe); der GET holt den neuen Stempel (PATCH /state ändert ihn) und, wenn nichts offen ist,
+	// den frischen Stand — so entsteht beim nächsten Speichern kein Konflikt-Banner.
+	function nachArchivWechsel(id: 'archive' | 'unarchive'): void {
+		archivOverride = id === 'archive';
+		meldung(erfolgsText(id), true);
+		void uebernehmeFrischenVergleich();
 	}
 
 	async function deletePreset() {
@@ -391,7 +394,7 @@
 			await deleteSubscription('vergleich', currentPreset.id);
 			window.location.href = '/compare';
 		} catch (e) {
-			fehlerMeldung(e, 'vergleich.hub.delete_fehler');
+			meldung(fehlerText('delete', e));
 		} finally {
 			isDeleting = false;
 		}
@@ -453,8 +456,8 @@
 			{:else if sendStatus === 'error'}
 				<span data-testid="test-schicken-fehler" style="font-size: 12px; color: var(--g-bad)">{sendMsg}</span>
 			{/if}
-			{#if aktionMsg || aktionKey}
-				<span style="font-size: 12px; color: var(--g-ink-3)">{aktionKey ? $t(aktionKey) : aktionMsg}</span>
+			{#if aktionMsg}
+				<span data-testid={aktionOk ? 'hub-aktion-meldung' : 'compare-hub-aktion-fehler'} style="font-size: 12px; color: {aktionOk ? 'var(--g-success)' : 'var(--g-bad)'}">{aktionMsg}</span>
 			{/if}
 			{#if pauseError}
 				<span style="font-size: 12px; color: var(--g-bad)">{$t('listen.meldung.status_fehlgeschlagen')}</span>
@@ -488,20 +491,4 @@
 	surface="hub"
 	onAction={handleAction}
 	name={currentPreset.name}
-/>
-
-<!-- Issue #2214: Loeschen erst nach Bestaetigung (Muster trips/[id]/+page.svelte). -->
-<ConfirmDialog
-	open={deleteDialogOpen}
-	title={$t('vergleich.hub.delete_titel')}
-	description={$t('listen.dialog.unwiderruflich', { name: currentPreset.name })}
-	confirmLabel={$t('aktionen.delete')}
-	confirmVariant="destructive"
-	data-testid="compare-detail-delete-confirm-dialog"
-	cancelTestid="compare-detail-delete-confirm-cancel"
-	confirmTestid="compare-detail-delete-confirm-yes"
-	disabled={isDeleting}
-	onConfirm={handleDeleteConfirm}
-	onCancel={handleDeleteCancel}
-	onOpenChange={handleDeleteDialogOpenChange}
 />

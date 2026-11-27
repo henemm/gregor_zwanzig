@@ -610,6 +610,16 @@
     background-color: color-mix(in oklab, var(--g-danger) 18%, transparent);
   }
 
+  /* #3442: Rückfrage im Kebab-Menü bzw. Aktionsblatt (KebabBestaetigungPanel, SEITEN_SCOPE ohne eigene Stile). */
+  [data-slot="rueckfrage"] { padding: var(--g-s-3); max-width: 320px; white-space: normal; }
+  [data-slot="rueckfrage"] > [data-rolle="titel"] { margin: 0 0 var(--g-s-1); font-weight: 600; color: var(--g-ink); }
+  [data-slot="rueckfrage"] > [data-rolle="text"] { margin: 0 0 var(--g-s-3); font-size: var(--g-text-sm); color: var(--g-ink-2); }
+  [data-slot="rueckfrage"] > [data-rolle="knoepfe"] { display: flex; flex-wrap: wrap; gap: var(--g-s-2); }
+  @media (max-width: 899px) {
+    [data-slot="rueckfrage"] { max-width: none; }
+    [data-slot="rueckfrage"] [data-slot="btn"] { min-height: 44px; }
+  }
+
   [data-slot="btn"][data-variant="link"] {
     background-color: transparent;
     color: var(--g-accent-deep);

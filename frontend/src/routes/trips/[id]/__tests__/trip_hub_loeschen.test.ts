@@ -24,7 +24,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { umgebungFuer, werte, findeKomponenten, attributAusdruck, type Knoten } from '../../../../lib/components/shared/__tests__/svelteInstanzPruefstand.ts';
+import { umgebungFuer, werte, findeKomponenten, attributAusdruck, ohneTypen, type Knoten } from '../../../../lib/components/shared/__tests__/svelteInstanzPruefstand.ts';
 import { baum, einzig, liegtIn, mitTestid } from '../../../../lib/components/shared/hub-kopf/__tests__/htmlBaum.ts';
 import {
 	ladeSvelte,
@@ -42,6 +42,12 @@ const ast = ladeSvelte(SEITE);
 const KOMP = path.resolve(HERE, '../../../../lib/components');
 
 const attrWert = (a: any) => (a ? (Array.isArray(a.value) ? a.value : [a.value]) : []);
+/** #3442: Ausdrucksknoten des Attributs `name` (für ohneTypen + werte); scheitert laut, wenn er fehlt. */
+const ausdruckKnoten = (einbettung: any, name: string) => {
+	const tag = attrWert(attribut(einbettung, name))[0];
+	assert.ok(tag?.type === 'ExpressionTag', `<${einbettung.name}> hat kein Ausdrucks-Attribut ${name}`);
+	return tag.expression;
+};
 
 // #2837 S1 (ADR-0110): das Lebenszyklus-Menue (SubscriptionKebab) liegt im geteilten HubKopf, den
 // TripHeader einbettet. Die Seite reicht Aktionen und Auswahl-Handler an diese Kopf-Einbettung
@@ -53,7 +59,7 @@ const kopfEinbettung = () => {
 	return k[0];
 };
 
-describe('AC-5/#1064: Loeschen ist im Trip-Hub erreichbar und laeuft ueber den Bestaetigungsdialog', () => {
+describe('AC-5/#1064 → #3442: Loeschen ist im Trip-Hub erreichbar und laeuft ueber die Rueckfrage im Kebab-Menue', () => {
 	test('der Hub reicht das Lebenszyklus-Menue an den Kopf; seine Aktionen stammen aus subscriptionActions(…, "hub")', () => {
 		const kopf = kopfEinbettung();
 		assert.equal(kopf.name, 'TripHeader', 'die Kopf-Einbettung des Trip-Hubs ist nicht TripHeader');
@@ -65,55 +71,26 @@ describe('AC-5/#1064: Loeschen ist im Trip-Hub erreichbar und laeuft ueber den B
 		assert.ok(importe(ast).some((i) => /subscriptionActions/.test(i.quelle)), 'subscriptionActions nicht importiert');
 	});
 
-	test('"Loeschen" im Menue oeffnet den Dialog (setzt deleteDialogOpen) und loest NOCH keinen DELETE aus', () => {
+	// #3442 (feat_3442 AC-1/AC-2/AC-13): die Rückfrage („Löschen?“ mit dem Namen, „Endgültig löschen“) sitzt im
+	// Kebab-Menü selbst (KebabBestaetigungPanel, Name über HubKopf → SubscriptionKebab). onSelect der Seite kommt
+	// erst NACH der Bestätigung an — die Seite löscht dann direkt. Belegt in der Kette unten und in
+	// shared/__tests__/kebab_seiten_bindung.test.ts.
+	test('"Loeschen" kommt erst nach der Rueckfrage im Menue an: der Seiten-Handler loescht und navigiert auf /trips', () => {
 		const kebab = kopfEinbettung();
 		const onSelect = attribut(kebab, 'onSelect') ?? attribut(kebab, 'onAction');
 		assert.ok(onSelect, 'Kopf-Einbettung hat keinen Auswahl-Handler (onSelect/onAction)');
 		const r = erreichbar(ast, attrWert(onSelect));
 		assert.ok(r.literale.has('delete'), 'der Handler kennt die Aktion "delete" nicht');
-		assert.ok(r.bezeichner.has('deleteDialogOpen'), 'Handler erreicht deleteDialogOpen nicht — Dialog bleibt unerreichbar (#1064)');
-		assert.ok(!r.bezeichner.has('deleteSubscription'), 'DELETE haengt direkt am Menue — Rueckfrage umgangen');
-		assert.ok(!r.bezeichner.has('fetch'), 'Menue-Handler ruft fetch direkt (Rueckfrage umgangen)');
-	});
-
-	test('ConfirmDialog "Loeschen": Testids *-delete-confirm-{dialog,cancel,yes}, Name im Text', () => {
-		const dialoge = komponenten(ast, 'ConfirmDialog').filter((d) =>
-			literale(attribut(d, 'confirmTestid')?.value ?? []).has('trip-detail-delete-confirm-yes') ||
-			[...literale(attribut(d, 'confirmTestid')?.value ?? [])].some((l) => /delete-confirm-yes$/.test(l))
-		);
-		assert.equal(dialoge.length, 1, 'genau ein Loesch-ConfirmDialog erwartet');
-		const d = dialoge[0];
-		const dlg = [...literale(attribut(d, 'data-testid')?.value ?? [])][0] ?? '';
-		const cancel = [...literale(attribut(d, 'cancelTestid')?.value ?? [])][0] ?? '';
-		assert.match(dlg, /delete-confirm-dialog$/);
-		assert.match(cancel, /delete-confirm-cancel$/);
-		// "mit dem Namen": Titel oder Beschreibung referenziert den Namen (Ausdruck, kein reiner Literaltext).
-		const tb = [attribut(d, 'title')?.value, attribut(d, 'description')?.value];
-		const namensBezug = tb.some((v) =>
-			// Fix-Loop 1 (F008): exakt `trip.name`, nicht irgendein Bezeichner mit "name".
-			collect(
-				v ?? [],
-				(n) =>
-					n.type === 'MemberExpression' &&
-					n.object?.type === 'Identifier' &&
-					n.object.name === 'trip' &&
-					n.property?.name === 'name'
-			).length > 0
-		);
-		assert.ok(namensBezug, 'Dialogtext nennt den Trip-Namen nicht (AC-5: "mit dem Namen")');
-	});
-
-	test('erst die Bestaetigung ruft deleteSubscription und navigiert danach auf /trips', () => {
-		const d = komponenten(ast, 'ConfirmDialog').find((c) =>
-			[...literale(attribut(c, 'confirmTestid')?.value ?? [])].some((l) => /delete-confirm-yes$/.test(l))
-		);
-		assert.ok(d, 'Loesch-ConfirmDialog fehlt');
-		const onConfirm = attribut(d, 'onConfirm');
-		const r = erreichbar(ast, attrWert(onConfirm));
-		assert.ok(r.bezeichner.has('deleteSubscription'), 'Bestaetigen loest kein deleteSubscription aus');
+		assert.ok(!r.bezeichner.has('deleteDialogOpen'), 'Handler oeffnet noch einen Seitendialog (#3442: Rueckfrage im Menue)');
+		assert.ok(r.bezeichner.has('deleteSubscription'), 'der bestaetigte Menue-Weg loescht nicht');
 		assert.ok(r.literale.has('/trips'), 'nach dem Loeschen keine Navigation auf /trips');
-		const abbrechen = erreichbar(ast, attrWert(attribut(d, 'onCancel')));
-		assert.ok(!abbrechen.bezeichner.has('deleteSubscription'), 'Abbrechen darf nicht loeschen');
+	});
+
+	test('kein Loesch-ConfirmDialog mehr im Trip-Hub (die Rueckfrage nennt den Namen im Menue)', () => {
+		assert.equal(komponenten(ast, 'ConfirmDialog').length, 0, 'Trip-Hub bindet noch ConfirmDialog ein');
+		const kopf = collect(ladeSvelte(path.join(KOMP, 'shared/hub-kopf/HubKopf.svelte')).fragment, (n) => n.type === 'Component' && n.name === 'SubscriptionKebab');
+		assert.equal(kopf.length, 1);
+		assert.ok(attribut(kopf[0], 'name'), 'HubKopf gibt den Namen nicht an den Kebab (Rueckfrage ohne Namen)');
 	});
 });
 
@@ -187,20 +164,36 @@ describe('#2837 S1 Kette: die Loesch-Aktion kommt beim Kebab im HubKopf an und i
 		assert.equal(weiter(hubKopf, 'SubscriptionKebab', 'actions', { actions: imKopf }), liste);
 	});
 
-	test('„delete" im Kebab ausgeloest ⇒ Bestaetigungsdialog offen, noch kein DELETE', () => {
+	// #3442: „delete" im Kebab ⇒ Rückfrage im Menü (preventDefault, Panel), noch KEIN DELETE; erst „Endgültig löschen“
+	// im Panel (onBestaetigen) läuft über HubKopf ← TripHeader bis zur Seite und löscht genau einmal.
+	test('„delete" im Kebab ausgeloest ⇒ Rueckfrage im Menue, noch kein DELETE; Bestaetigen im Panel loescht genau einmal', () => {
 		const imKopf = weiter(tripHeader, 'HubKopf', 'onSelect', { onSelect: ausSeite('onSelect') });
 		const amKebab = weiter(hubKopf, 'SubscriptionKebab', 'onSelect', { onSelect: imKopf });
-		const eintrag = findeKomponenten(kebab.ast, 'DropdownMenu.Item');
-		assert.equal(eintrag.length, 1, 'Menue-Eintrag des Kebabs nicht gefunden');
-		const auswahl = werte(attributAusdruck(eintrag[0], kebab.quelle, 'onSelect')!, Object.assign(Object.create(kebab.u), { onSelect: amKebab, action: { id: 'delete' } })) as () => void;
-		assert.equal(seite.u.deleteDialogOpen, false, 'Vorbedingung: Dialog zu');
-		auswahl();
-		assert.equal(seite.u.deleteDialogOpen, true, '„delete" im Kebab oeffnet den Loesch-Dialog der Seite nicht');
+		const eintrag = findeKomponenten(kebab.ast, 'DropdownMenu.Item').filter((n) => /subscription-action-/.test(JSON.stringify(attribut(n, 'data-testid')?.value ?? '')));
+		assert.equal(eintrag.length, 1, 'Menue-Eintrag (subscription-action-…) des Kebabs nicht gefunden');
+		// Der Kebab-Zustand lebt in kebab.u (seine Funktionen sind dort gebunden) — Props direkt dort setzen.
+		Object.assign(kebab.u, { onSelect: amKebab, name: 'Trip Kette', mobil: false, action: { id: 'delete', label: 'Löschen …' } });
+		const neuHerleiten = () => {
+			for (const stmt of (kebab.ast.instance?.content?.body ?? []) as Knoten[])
+				if (stmt.type === 'VariableDeclaration')
+					for (const d of stmt.declarations as Knoten[])
+						if (d.id?.type === 'Identifier' && d.init && /^\$derived/.test(kebab.quelle.slice(d.init.start, d.init.end)))
+							kebab.u[d.id.name] = werte(ohneTypen(kebab.quelle, d.init), kebab.u);
+		};
+		const e = new Event('menu-select', { cancelable: true });
+		(werte(ohneTypen(kebab.quelle, ausdruckKnoten(eintrag[0], 'onSelect')), kebab.u) as (e: Event) => void)(e);
+		neuHerleiten();
+		assert.equal(e.defaultPrevented, true, '„delete" schliesst das Menue sofort (keine Rueckfrage im Menue)');
+		assert.notEqual(seite.u.deleteDialogOpen, true, '„delete" oeffnet einen Seitendialog statt der Rueckfrage im Menue');
 		assert.deepEqual(loeschAufrufe, [], 'DELETE ohne Rueckfrage ausgeloest');
-		seite.u.deleteDialogOpen = false;
+		const panel = findeKomponenten(kebab.ast, 'KebabBestaetigungPanel');
+		assert.equal(panel.length, 1, 'TDD RED: SubscriptionKebab bindet KebabBestaetigungPanel nicht ein');
+		(werte(ohneTypen(kebab.quelle, ausdruckKnoten(panel[0], 'onBestaetigen')), kebab.u) as () => void)();
+		assert.equal(loeschAufrufe.length, 1, 'Bestaetigen im Panel loescht nicht genau einmal');
+		assert.deepEqual(loeschAufrufe[0], ['trip', T.tripLaufend().id]);
 	});
 
-	test('mobil gerendert: Kebab in der Kopfleiste, Tippen oeffnet das Blatt, dort steht „delete" und loest den Dialog aus', async () => {
+	test('mobil gerendert: Kebab in der Kopfleiste, Tippen oeffnet das Blatt, dort steht „delete"; die bestaetigte Aktion loescht ueber denselben Handler', async () => {
 		const zustand = [['let mobil = $state(false);', 'let mobil = $state(true);'], ['let sheetOpen = $state(false);', 'let sheetOpen = $state(true);']];
 		const Seite = (await import(`${pathToFileURL(SEITE).href}?f8variante=${Buffer.from(JSON.stringify(zustand)).toString('base64url')}`)).default;
 		const w = baum(render(Seite, { props: { data: { trip: T.tripLaufend(), metricsCatalog: T.KATALOG, profile: null } } }).body);
@@ -214,11 +207,14 @@ describe('#2837 S1 Kette: die Loesch-Aktion kommt beim Kebab im HubKopf an und i
 		assert.equal(knopf.length, 1, 'mobiler Kebab-Knopf (onclick → onSheetOpen) nicht genau einmal');
 		(werte(attributAusdruck(knopf[0], kebab.quelle, 'onclick')!, Object.assign(Object.create(kebab.u), { onSheetOpen: amKebab })) as () => void)();
 		assert.equal(seite.u.sheetOpen, true, 'Tippen auf den Kebab oeffnet das Aktionsblatt der Seite nicht');
-		// Das Blatt loest ueber denselben Handler aus wie das Desktop-Menue.
+		// #3442: Das Blatt fragt selbst nach (kebab_seiten_bindung.test.ts AC-9) und meldet erst die BESTAETIGTE
+		// Aktion an denselben Seiten-Handler wie das Desktop-Menue — der loescht dann direkt, ohne Seitendialog.
 		const blatt = findeKomponenten(seite.ast, 'SubscriptionActionSheet');
 		assert.equal(blatt.length, 1);
+		assert.equal(attributAusdruck(blatt[0], seite.quelle, 'onAction'), attributAusdruck(kopfEinbettung(), seite.quelle, 'onSelect'), 'Blatt und Menue nutzen verschiedene Handler');
+		const vorher = loeschAufrufe.length;
 		(werte(attributAusdruck(blatt[0], seite.quelle, 'onAction')!, seite.u) as (id: string) => void)('delete');
-		assert.equal(seite.u.deleteDialogOpen, true, '„delete" im Blatt oeffnet den Loesch-Dialog nicht');
-		assert.deepEqual(loeschAufrufe, [], 'DELETE ohne Rueckfrage ausgeloest');
+		assert.notEqual(seite.u.deleteDialogOpen, true, '„delete" (bestaetigt im Blatt) oeffnet noch einen Seitendialog');
+		assert.equal(loeschAufrufe.length, vorher + 1, 'die bestaetigte Loeschung aus dem Blatt erreicht deleteSubscription nicht');
 	});
 });

@@ -3,21 +3,32 @@
 	// uebergebenen Aktionen und emittiert onSelect(id); API-Aufrufe/Dialoge liegen beim Aufrufer.
 	// #2837 S1 (ADR-0110): mobil ein eigener 44×44-Knopf, der das Aktionsblatt der Seite oeffnet
 	// (`onSheetOpen`); Desktop das Dropdown. Symbol immer vertikal.
+	// #3442: Archivieren/Löschen fragen im Menü nach (KebabBestaetigungPanel); onSelect erst nach Bestätigung.
 
 	import { DropdownMenu } from 'bits-ui';
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
-	import { t } from '$lib/i18n';
+	import { locale, t } from '$lib/i18n';
+	import KebabBestaetigungPanel from '$lib/components/shared/KebabBestaetigungPanel.svelte';
+	import { braucheRueckfrage, rueckfrage } from '$lib/components/shared/kebabBestaetigung';
 
 	interface Props {
 		actions: Array<{ id: string; label: string; danger?: boolean }>;
 		onSelect?: (id: string) => void;
 		mobil?: boolean;
+		/** #3442: Name des Abos für die Rückfrage. */
+		name?: string;
+		/** #3442: Rückfrage im Menü (Hub); die Listen-Karte fragt mit ihrem eigenen Dialog (AC-16) und schaltet sie ab. */
+		rueckfragen?: boolean;
 		onSheetOpen?: () => void;
 		class?: string;
 		'data-testid'?: string;
 	}
 
-	let { actions, onSelect, mobil = false, onSheetOpen, class: className = '', 'data-testid': testid }: Props = $props();
+	let { actions, onSelect, mobil = false, name = '', rueckfragen = true, onSheetOpen, class: className = '', 'data-testid': testid }: Props = $props();
+
+	// Offene Rückfrage (Aktions-Kennung); Schließen des Menüs setzt sie zurück (AC-7).
+	let frage = $state<string | null>(null);
+	const rf = $derived.by(() => (void $locale, frage ? rueckfrage(frage, name) : null));
 </script>
 
 {#if mobil}
@@ -25,7 +36,7 @@
 		<EllipsisVerticalIcon size={18} />
 	</button>
 {:else}
-<DropdownMenu.Root>
+<DropdownMenu.Root onOpenChange={(offen: boolean) => { if (!offen) frage = null; }}>
 	<DropdownMenu.Trigger>
 		{#snippet child({ props })}
 			<button
@@ -60,17 +71,27 @@
 			sideOffset={4}
 			class="z-50 min-w-[180px] rounded-md border bg-popover shadow-md py-1"
 		>
+			{#if rf}
+				<KebabBestaetigungPanel rueckfrage={rf} imMenue onBestaetigen={() => onSelect?.(rf.id)} onAbbrechen={() => (frage = null)} />
+			{:else}
+			<div data-abschnitt="kebab-menue" role="none">
 			{#each actions as action (action.id)}
 				<DropdownMenu.Item
 					data-testid="subscription-action-{action.id}"
 					class={'w-full text-left px-3 py-1.5 text-sm cursor-default outline-none hover:bg-muted ' +
 						(action.danger ? 'text-destructive' : '')}
-					onSelect={() => onSelect?.(action.id)}
+					onSelect={(e: Event) => {
+						if (!rueckfragen || !braucheRueckfrage(action.id)) return onSelect?.(action.id);
+						e.preventDefault();
+						frage = action.id;
+					}}
 					onclick={(e: MouseEvent) => e.stopPropagation()}
 				>
 					{action.label}
 				</DropdownMenu.Item>
 			{/each}
+			</div>
+			{/if}
 		</DropdownMenu.Content>
 	</DropdownMenu.Portal>
 </DropdownMenu.Root>
