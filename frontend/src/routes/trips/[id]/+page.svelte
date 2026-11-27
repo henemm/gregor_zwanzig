@@ -12,6 +12,7 @@
 	import {
 		aboKanaele,
 		RUECKMELDUNG_MS,
+		testAlarmErgebnis,
 		testErgebnis,
 		type Berichtsart,
 		type TestKanal
@@ -21,6 +22,7 @@
 	import {
 		deleteSubscription,
 		sendSubscription,
+		sendTestAlarm,
 		setArchived,
 		setPaused,
 		SubscriptionExecError
@@ -303,6 +305,23 @@
 		sendTimer = setTimeout(() => { sendStatus = 'idle'; }, RUECKMELDUNG_MS);
 	}
 
+	// #3441: Eintrag „Test-Alarm“ — Beispiel-Alarm an alle Alarm-Kanäle; während der Anfrage gesperrt,
+	// Rückmeldung über dieselben Meldungen wie #3440 (5 s, Client-Uhr).
+	async function handleErweiterung(id: string): Promise<void> {
+		if (id !== 'test-alarm' || sendLoading) return;
+		clearTimeout(sendTimer);
+		sendLoading = true;
+		sendStatus = 'idle';
+		try {
+			const r = testAlarmErgebnis({ ergebnis: await sendTestAlarm('trip', trip.id), jetzt: new Date() });
+			sendStatus = r.ok ? 'ok' : 'error';
+			sendMessage = r.text;
+		} finally {
+			sendLoading = false;
+		}
+		sendTimer = setTimeout(() => { sendStatus = 'idle'; }, RUECKMELDUNG_MS);
+	}
+
 	// Lebenszyklus-Menue (Desktop-Dropdown und mobiles Blatt): Pausieren/Fortsetzen schreiben ueber den
 	// Hub-Schreiber (flusht offene Speicherungen, ETag #1433); Archivieren/Loeschen fragen zurueck.
 	function handleHubAction(id: string): void {
@@ -328,6 +347,8 @@
 		sendLabel={sendLoading ? $t('aktionen.wird_gesendet') : $t('aktionen.kopf.test_schicken')}
 		onTest={handleTest}
 		testProfil={data.profile}
+		onErweiterung={handleErweiterung}
+		testAlarmLaeuft={sendLoading}
 		sendDisabled={sendLoading || lifecycle === 'archived' || lifecycle === 'draft'}
 		actions={hubAktionen}
 		onSelect={handleHubAction}

@@ -126,6 +126,25 @@ describe('#3441 AC-2 / AC-9 — sendTestAlarm: ein POST an test-alert, Ergebnis 
 		const r = await E.sendTestAlarm('trip', 'x', fn);
 		assert.deepEqual([r.kind, r.code], ['rejected', 'keine_alarm_kanaele']);
 	});
+	test('AC-17 Doppelklick: zwei parallele Aufrufe für dasselbe Abo ⇒ genau ein POST, der zweite läuft nicht', async () => {
+		let freigeben: () => void = () => {};
+		const tor = new Promise<void>((res) => { freigeben = res; });
+		const urls: string[] = [];
+		const fn = (async (url: Json) => {
+			urls.push(String(url));
+			await tor;
+			return new Response(JSON.stringify({ sent_channels: ['email'] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+		}) as typeof fetch;
+		const erster = E.sendTestAlarm('vergleich', 'dk', fn);
+		const zweiter = E.sendTestAlarm('vergleich', 'dk', fn);
+		freigeben();
+		const [r1, r2] = await Promise.all([erster, zweiter]);
+		assert.equal(urls.length, 1, `erwartet genau ein POST, waren ${urls.length}`);
+		assert.deepEqual([r1.kind, r2.kind], ['ok', 'already_running']);
+		const danach = await E.sendTestAlarm('vergleich', 'dk', fn);
+		assert.equal(danach.kind, 'ok', 'nach Ende des ersten Laufs ist der Test-Alarm wieder frei');
+		assert.equal(urls.length, 2);
+	});
 });
 
 describe('#3441 AC-1 — Verdrahtung: onErweiterung bis zum Menü, beide Seiten denselben Weg', () => {

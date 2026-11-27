@@ -46,8 +46,15 @@ export interface TestMenueModell {
 	segment: null | { wert: Berichtsart; optionen: { wert: Berichtsart; text: string }[] };
 	zeilen: TestZeile[];
 	alle: { text: string };
-	/** Slot nach dem Trenner unter „Alle“ (#3441 Test-Alarm); in dieser Scheibe leer (AC-19). */
-	erweiterungen: { id: string; text: string }[];
+	/** Slot nach dem Trenner unter „Alle“: der Test-Alarm (#3441); gesperrt, solange er läuft. */
+	erweiterungen: TestErweiterung[];
+}
+
+export interface TestErweiterung {
+	id: 'test-alarm';
+	text: string;
+	untertitel: string;
+	bedienbar: boolean;
 }
 
 const BERICHTSART_KEYS: Record<Berichtsart, MessageKey> = {
@@ -123,7 +130,8 @@ function zeileAus(profil: ZustellungProfil | null | undefined, s: KanalStatus): 
 export function testMenueModell(
 	profil: ZustellungProfil | null | undefined,
 	context: TestKontext,
-	berichtsart: Berichtsart = BERICHTSART_START
+	berichtsart: Berichtsart = BERICHTSART_START,
+	optionen: { alarmLaeuft?: boolean } = {}
 ): TestMenueModell {
 	const status = kanalStatus(profil);
 	return {
@@ -135,7 +143,14 @@ export function testMenueModell(
 			: null,
 		zeilen: KANAELE.map((k) => zeileAus(profil, status[k])),
 		alle: { text: tr('test_schicken.alle') },
-		erweiterungen: []
+		erweiterungen: [
+			{
+				id: 'test-alarm',
+				text: tr('test_schicken.test_alarm.titel'),
+				untertitel: tr('test_schicken.test_alarm.untertitel'),
+				bedienbar: optionen.alarmLaeuft !== true
+			}
+		]
 	};
 }
 
@@ -214,4 +229,37 @@ export function testErgebnis(p: {
 					jetzt: p.jetzt
 				});
 	return { ok: true, text: ergebnis.message ? `${text} · ${ergebnis.message}` : text };
+}
+
+/** Kanal mit Grund aus der Antwort des Test-Alarms (#3441). */
+type KanalGrund = { channel: string; reason: string };
+
+/** Rückmeldung des Test-Alarms (#3441, AC-7 bis AC-9) — Trip und Orte gleich, Vokabular von #3440:
+ *  „Test-Alarm geschickt: E-Mail ✓ · Telegram übersprungen ({Grund}) · SMS fehlgeschlagen · {hh:mm}“,
+ *  Kanäle in der Reihenfolge der Menüzeilen. Leere Kanalmenge ⇒ Leer-Text, sonst der Fehlertext. */
+export function testAlarmErgebnis(p: {
+	ergebnis: {
+		kind: string;
+		message: string;
+		code?: string;
+		sentChannels?: string[];
+		skippedChannels?: KanalGrund[];
+		failedChannels?: KanalGrund[];
+	};
+	jetzt: Date;
+}): { ok: boolean; text: string } {
+	const e = p.ergebnis;
+	if (e.kind !== 'ok') {
+		return { ok: false, text: e.code === 'keine_alarm_kanaele' ? tr('test_schicken.test_alarm.leer') : e.message };
+	}
+	const teile = KANAELE.flatMap((k) => {
+		const kanal = tr(KANAL_NAME_KEYS[k]);
+		if (e.sentChannels?.includes(k)) return [tr('test_schicken.rueckmeldung.gesendet', { kanal })];
+		const uebersprungen = e.skippedChannels?.find((s) => s.channel === k);
+		if (uebersprungen) return [tr('test_schicken.rueckmeldung.uebersprungen', { kanal, grund: uebersprungen.reason })];
+		if (e.failedChannels?.some((f) => f.channel === k)) return [tr('test_schicken.rueckmeldung.fehlgeschlagen', { kanal })];
+		return [];
+	});
+	const zeit = `${zweistellig(p.jetzt.getHours())}:${zweistellig(p.jetzt.getMinutes())}`;
+	return { ok: true, text: tr('test_schicken.rueckmeldung.test_alarm', { liste: teile.join(' · '), zeit }) };
 }

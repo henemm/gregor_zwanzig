@@ -36,6 +36,11 @@ SEND_OUTCOMES: dict[str, tuple[int, str]] = {
         # Testmail an unbestaetigte Adresse (ADR-0092).
         ("invalid_channel", 400),
         ("email_unverified", 422),
+        # Issue #3441: Test-Alarm -- kein bedienbarer Alarm-Kanal bzw. kein
+        # Beispiel moeglich (Trip ohne Segmente, Vergleich ohne Orte).
+        ("keine_alarm_kanaele", 422),
+        ("trip_ohne_segmente", 422),
+        ("vergleich_ohne_orte", 422),
     )
 }
 # ADR-0130 (#3444): Text gemeinsam mit der Go-API aus Bereich ``geteilt``.

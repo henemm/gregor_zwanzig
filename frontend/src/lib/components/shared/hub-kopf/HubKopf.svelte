@@ -37,6 +37,9 @@
 		onTest?: (wahl: { kanal: TestKanal; berichtsart: Berichtsart }) => void;
 		/** #3440: Konto-Profil (GET /api/auth/profile) für Ziele und Sperren der Kanalzeilen. */
 		testProfil?: ZustellungProfil | null;
+		/** #3441: Erweiterung im Menü gewählt (Test-Alarm); `testAlarmLaeuft` sperrt den Eintrag. */
+		onErweiterung?: (id: string) => void;
+		testAlarmLaeuft?: boolean;
 		sendDisabled?: boolean;
 		/** 'setup' nur im Vergleich-Entwurf: „Setup abschließen" (onSetup) auf dem Platz von „Senden". */
 		sendMode?: 'senden' | 'setup';
@@ -75,7 +78,7 @@
 	}
 
 	let {
-		context, parent, crumb, sendLabel, onTest, testProfil, sendDisabled = false, sendMode = 'senden', onSetup,
+		context, parent, crumb, sendLabel, onTest, testProfil, onErweiterung, testAlarmLaeuft = false, sendDisabled = false, sendMode = 'senden', onSetup,
 		actions = [], onSelect, mobil = false, onSheetOpen, leisteTestid,
 		name, region, profile, profileOptions = [], profileLabel = '', regionMaxLength = 60, testidPrefix,
 		titleTestid, titleSize = 38, saveController, onSaveField,
@@ -115,7 +118,7 @@
 				{:else}
 					<!-- #3440: „Test schicken ▾“ öffnet das Menü am Knopf (ADR-0109 Punkt 6), kein Dialog.
 					     #2980 AC-16 (ADR-0118): Akzent-Hauptaktion, Fläche --g-accent-deep (WCAG-AA statt Mockup-Orange). -->
-					<TestSchickenMenue {context} profil={testProfil} {mobil} bind:offen={testOffen} disabled={sendDisabled} {onTest}>
+					<TestSchickenMenue {context} profil={testProfil} {mobil} bind:offen={testOffen} disabled={sendDisabled} {onTest} {onErweiterung} alarmLaeuft={testAlarmLaeuft}>
 						{#snippet ausloeser({ props })}
 							<Btn {...props} variant="accent" size="sm" data-testid="subscription-hub-send" aria-haspopup="menu" aria-expanded={testOffen} disabled={sendDisabled}>{sendLabel}</Btn>
 						{/snippet}

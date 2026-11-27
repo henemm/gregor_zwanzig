@@ -53,6 +53,7 @@
 | Handversand / Test-Versand | send now / test send | |
 | Test schicken | Send test | Kopf-Knopf „Test schicken ▾“ / *Send test ▾* mit Menü (#3440) |
 | Alle eingerichteten Kanäle | All set-up channels | Letzte Zeile im Menü „Test schicken“ (#3440) |
+| Test-Alarm | test alert | Eintrag nach „Alle eingerichteten Kanäle“; Beispiel-Alarm mit echten Werten an alle Alarm-Kanäle, Kennung `[TEST]` in Betreff, Telegram und SMS (#3441) |
 | gesperrt (Menüzeile) | locked | „gesperrt: {Grund}“ / *locked: {reason}* in Menü und Zustellung (#3440, #2795) |
 | übersprungen | skipped | Rückmeldung „Telegram übersprungen (nicht verbunden)“ / *Telegram skipped (not connected)* (#3440) |
 | übersprungen (im Briefing aus) | skipped (off in this briefing) | „Alle“-Rückmeldung für einen bedienbaren Kanal, der im Abo ausgeschaltet ist; nie „fehlgeschlagen“ (#3440 F001) |

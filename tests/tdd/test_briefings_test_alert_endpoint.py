@@ -335,3 +335,60 @@ def test_ac14_englischer_nutzer_bekommt_englischen_betreff_sms_bleibt_sprachneut
     assert betreff[en].startswith("[TEST]") and betreff[de].startswith("[TEST]"), betreff
     assert betreff[en] != betreff[de], f"Betreff nicht in der Sprache des Nutzers: {betreff}"
     assert sms[en] == sms[de], f"SMS-Token dürfen nicht übersetzt werden: {sms}"
+
+
+# --------------------------------------------------------------------------- AC-5 Grenzlast (Fix-Loop F001)
+
+#: Alle Schwellen-Metriken mit großen Schwellen: die Trip-SMS ohne Kürzung läge weit über 140.
+VOLL_REGELN = [{"id": f"r-{m}", "kind": k, "metric": m, "threshold": t, "severity": "critical",
+                "enabled": True}
+               for m, k, t in (("wind_gust", "absolute", 120.0), ("wind_change", "delta", 90.0),
+                               ("precipitation_sum", "absolute", 95.0),
+                               ("precipitation_change", "delta", 80.0),
+                               ("temperature_max", "absolute", 38.0),
+                               ("temperature_min", "absolute", -25.0),
+                               ("temperature_change", "delta", 15.0),
+                               ("fresh_snow", "absolute", 85.0), ("cape", "absolute", 2500.0),
+                               ("snow_line", "absolute", 2800.0),
+                               ("freezing_level", "absolute", 3500.0),
+                               ("visibility", "absolute", 9000.0),
+                               ("thunder_level", "absolute", 2.0))]
+#: Zusätzliche Orte für den Vergleich: je Ort eine eigene Gruppe in der SMS.
+VIELE_ORTE = {f"loc-x{i}": (f"Ort Nummer {i} mit langem Namen", 47.0 + i / 10, 11.0 + i / 10)
+              for i in range(8)}
+
+
+def _vergleich_voll(uid: str) -> str:
+    from app.loader import save_location
+    from app.user import SavedLocation
+
+    for lid, (name, lat, lon) in VIELE_ORTE.items():
+        save_location(SavedLocation(id=lid, name=name, lat=lat, lon=lon, elevation_m=1000),
+                      user_id=uid)
+    vid = _vergleich(uid, override=ALLE_VIER)
+    pfad = get_data_dir(uid) / "briefings" / f"{vid}.json"
+    roh = json.loads(pfad.read_text())
+    roh["location_ids"] = list(roh["location_ids"]) + list(VIELE_ORTE)
+    pfad.write_text(json.dumps(roh))
+    return vid
+
+
+@pytest.mark.parametrize("kind", ["route", "vergleich"])
+def test_ac5_grenzlast_test_praefix_kuerzt_das_sms_limit_vor_dem_rendern(mit, c, kind):
+    """Fixture reizt das 140-Zeichen-Limit aus: ohne Abzug des „[TEST] "-Präfixes vom
+    Render-Limit läge die SMS darüber. Prüfung am Transport (SMS und Premium-SMS)."""
+    uid = nutzer_anlegen()
+    if kind == "route":
+        eid = _trip(uid, override=ALLE_VIER, rules=VOLL_REGELN)
+    else:
+        eid = _vergleich_voll(uid)
+
+    r = _ausloesen(c, eid, uid, kind)
+
+    assert r.status_code == 200, r.text
+    for kanal in ("sms", "premium_sms"):
+        sendungen = mit.sendungen(kanal)
+        assert len(sendungen) == 1, (kanal, mit)
+        body = sendungen[0]["body"]
+        assert body.startswith("[TEST] "), (kanal, body)
+        assert len(body) <= 140, (kanal, len(body), body)

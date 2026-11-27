@@ -10,5 +10,9 @@
 	"test_schicken.rueckmeldung.alle": "{briefing} sent: {liste}",
 	"test_schicken.rueckmeldung.gesendet": "{kanal} ✓",
 	"test_schicken.rueckmeldung.uebersprungen": "{kanal} skipped ({grund})",
-	"test_schicken.rueckmeldung.fehlgeschlagen": "{kanal} failed"
+	"test_schicken.rueckmeldung.fehlgeschlagen": "{kanal} failed",
+	"test_schicken.test_alarm.titel": "Test alert",
+	"test_schicken.test_alarm.untertitel": "Sample alert with real values to all alert channels",
+	"test_schicken.test_alarm.leer": "No alert channel set up, the test alert went nowhere.",
+	"test_schicken.rueckmeldung.test_alarm": "Test alert sent: {liste} · {zeit}"
 }

@@ -29,13 +29,16 @@
 		offen?: boolean;
 		disabled?: boolean;
 		onTest?: (wahl: { kanal: TestKanal; berichtsart: Berichtsart }) => void;
-		/** Erweiterungs-Slot nach dem Trenner unter „Alle“ (#3441); in dieser Scheibe ohne Eintrag. */
+		/** Erweiterungs-Slot nach dem Trenner unter „Alle“: der Test-Alarm (#3441). */
 		onErweiterung?: (id: string) => void;
+		/** #3441 AC-17: der Test-Alarm läuft — Eintrag gesperrt bis zur Antwort. */
+		alarmLaeuft?: boolean;
 		ausloeser: Snippet<[{ props: Record<string, unknown> }]>;
 	}
 
 	let {
-		context, profil, mobil = false, offen = $bindable(false), disabled = false, onTest, onErweiterung, ausloeser
+		context, profil, mobil = false, offen = $bindable(false), disabled = false, onTest, onErweiterung,
+		alarmLaeuft = false, ausloeser
 	}: Props = $props();
 
 	let berichtsart = $state<Berichtsart>(BERICHTSART_START);
@@ -45,7 +48,7 @@
 		berichtsart = berichtsartBeiOffen(offen, untrack(() => berichtsart));
 	});
 	// i18n F9: Texte entstehen per tr() — `$locale` hält das Modell reaktiv.
-	const modell = $derived.by(() => (void $locale, testMenueModell(profil, context, berichtsart)));
+	const modell = $derived.by(() => (void $locale, testMenueModell(profil, context, berichtsart, { alarmLaeuft })));
 
 	function waehle(kanal: KanalId | 'alle'): void {
 		offen = false;
@@ -105,9 +108,15 @@
 			<hr class="trenner" />
 			{#each modell.erweiterungen as e (e.id)}
 				{#if mobil}
-					<button type="button" class="zeile" role="menuitem" onclick={() => { offen = false; onErweiterung?.(e.id); }}>{e.text}</button>
+					<button type="button" class="zeile" role="menuitem" data-erweiterung={e.id} disabled={!e.bedienbar} onclick={() => { offen = false; onErweiterung?.(e.id); }}>
+						<span class="name">{e.text}</span>
+						<small>{e.untertitel}</small>
+					</button>
 				{:else}
-					<DropdownMenu.Item class="zeile" onSelect={() => onErweiterung?.(e.id)}>{e.text}</DropdownMenu.Item>
+					<DropdownMenu.Item class="zeile" data-erweiterung={e.id} disabled={!e.bedienbar} onSelect={() => onErweiterung?.(e.id)}>
+						<span class="name">{e.text}</span>
+						<small>{e.untertitel}</small>
+					</DropdownMenu.Item>
 				{/if}
 			{/each}
 		{/if}

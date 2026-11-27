@@ -255,6 +255,7 @@ Fehlerantworten der Go-API, die über `handler.WriteError`/`WriteErrorWith` lauf
 | `/api/briefings/{id}/placements` | PUT | — wie GET; Rumpf = vollständiges `placements`-Objekt (sonst 400 `bad_request`), `If-Match` wie beim Abo (veraltet 412 `precondition_failed`), schreibt nur `display_config.placements` (#3122 B2), beim ersten Speichern eines Trips ggf. zusätzlich `report_config.show_stability = false` (#3154)
 | `/api/briefings/placements/vorschau` | POST | — `?kind=route\|vergleich` Pflicht; Rumpf = Entwurf (JSON-Objekt, höchstens 256 KB); Antwort wie GET mit `stored: false`, ohne `ETag`, schreibt nichts (#3304)
 | `/api/briefings/{id}/send` | POST | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), Trip optional `&report_type=morning\|evening` (Default `morning`), optional `&channel=email\|telegram\|sms\|premium_sms` (Einzelkanal, unbekannt 400 `invalid_channel`, #3440), ungültige ID 400 `validation_error`, fremde ID 404; einheitlicher Handversand, Section 10.1 (#2280)
+| `/api/briefings/{id}/test-alert` | POST | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), ungültige ID 400 `validation_error`, fremde ID 404 `not_found`; Test-Alarm (Beispiel-Alarm mit echten Werten, `[TEST]` in Betreff/Telegram/SMS) an alle bedienbaren Alarm-Kanäle, kein Alarm-Zustand. 200 `{sent_channels, skipped_channels, failed_channels}` (beide letzten als `[{channel, reason}]`, Grund in der Nutzersprache); 422 `keine_alarm_kanaele` / `trip_ohne_segmente` / `vergleich_ohne_orte`, 429 `kontingent_erschoepft` (#3441)
 | `/api/cockpit/status` | GET |
 | `/api/compare` | GET |
 | `/api/compare/metrics` | GET |
@@ -332,7 +333,7 @@ nicht aktiv; bei `GZ_ENV=staging` gelten die zehnfachen Werte, auch für die Gle
 |---|---|---|
 | `POST /api/locations/resolve` | 30 je Minute | `rate_limit_exceeded_aufloesen` |
 | `POST /api/notify/test` | 10 je Stunde | `rate_limit_exceeded_testnachricht` |
-| `POST /api/briefings/{id}/send`, `POST /api/trips/{id}/send`, `POST /api/compare/presets/{id}/send` | zusammen 20 je Stunde | `rate_limit_exceeded_versand` |
+| `POST /api/briefings/{id}/send`, `POST /api/briefings/{id}/test-alert` (#3441), `POST /api/trips/{id}/send`, `POST /api/compare/presets/{id}/send` | zusammen 20 je Stunde | `rate_limit_exceeded_versand` |
 | `GET /api/compare`, `GET /api/trips/{id}/stages/weather`, Vorschau (`GET /api/preview/{trip_id}/sms`, `POST /api/trips/{id}/alert-preview`, `POST /api/briefings/{id}/alert-preview`) | je 60 je Minute (Vergleich, Etappenwetter und die drei Vorschau-Routen zusammen je ein Fenster) | `rate_limit_exceeded_abruf` |
 | dieselben fünf Routen | gemeinsam höchstens 4 gleichzeitig | `rate_limit_exceeded_parallel` (`Retry-After: 1`) |
 | `POST /api/gpx/parse` | 30 je Stunde | `rate_limit_exceeded_gpx` |

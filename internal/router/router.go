@@ -395,6 +395,8 @@ func New(deps Deps) chi.Router {
 	r.Post("/api/briefings/{id}/alert-preview", bremsen.Vorschau(handler.BriefingAlertPreviewHandler(deps.Config.PythonCoreURL)))
 	// Issue #2280: kind-neutraler Handversand (Alt-Routen oben sind Delegates).
 	r.Post("/api/briefings/{id}/send", bremsen.Versand(handler.BriefingSendHandler(deps.Config.PythonCoreURL)))
+	// Issue #3441: Test-Alarm teilt die Versand-Bremse mit dem Handversand.
+	r.Post("/api/briefings/{id}/test-alert", bremsen.Versand(handler.BriefingTestAlertHandler(deps.Config.PythonCoreURL)))
 	// Issue #393: Cockpit-Kacheln — Versandstatus + Alarm-Historie (read-only Logs)
 	r.Get("/api/cockpit/status", handler.CockpitStatusHandler(deps.Store))
 	// Issue #396: Archiv-Statistiken — Briefings + Alarme pro Tour (Gesamtzahl, kein Zeitfilter)

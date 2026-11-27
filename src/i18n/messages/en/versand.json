@@ -50,5 +50,13 @@
   "versand.servicefehler.segmente": "Affected segments:",
   "versand.servicefehler.grund": "This email was sent automatically because your trip only has SMS enabled and provider errors occurred.",
   "versand.servicefehler.fusszeile": "automatic weather service",
-  "versand.grund.orte_geloescht": "The locations subscription '{preset_id}' refers to deleted locations. Replace the locations in the subscription. (Locations {orte} cannot be resolved)"
+  "versand.grund.orte_geloescht": "The locations subscription '{preset_id}' refers to deleted locations. Replace the locations in the subscription. (Locations {orte} cannot be resolved)",
+  "versand.ergebnis.keine_alarm_kanaele": "No alert channel set up, the test alert went nowhere.",
+  "versand.ergebnis.trip_ohne_segmente": "No test alert sent — the trip has no stage with waypoints yet.",
+  "versand.ergebnis.vergleich_ohne_orte": "No test alert sent — the places subscription has no places.",
+  "versand.test_alarm.grund.nicht_bedienbar": "channel not set up",
+  "versand.test_alarm.grund.tarif": "not in your plan",
+  "versand.test_alarm.grund.kontingent": "daily quota used up",
+  "versand.test_alarm.grund.gesperrt": "recipient missing",
+  "versand.test_alarm.grund.transport": "delivery failed"
 }

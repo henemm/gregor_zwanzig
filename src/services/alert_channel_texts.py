@@ -30,6 +30,9 @@ from utils.timezone import local_fmt, resolve_location_tz, tz_for_coords
 # lazy Imports der Vorschau.
 
 SMS_LIMIT = 140  # Alarm-SMS-Limit -- die EINZIGE Stelle (#2986)
+#: Issue #3441: Kennung des Test-Alarms in Betreff, Telegram und SMS. Ein
+#: Protokoll-Token wie die SMS-Kuerzel, in jeder Sprache gleich.
+TEST_PREFIX = "[TEST] "
 
 
 @dataclass(frozen=True)
@@ -91,22 +94,27 @@ def build_onset_message(
 
 def render_channel_texts(
     msg: AlertMessage, *, lang: Lang, location_positions: Optional[dict[str, int]] = None,
-    sms_suffix: str = "",
+    sms_suffix: str = "", prefix: str = "",
 ) -> AlertChannelTexts:
     """Betreff, Mail, Telegram-Text und SMS (Limit `SMS_LIMIT`). Ein
     `sms_suffix` (amtlicher Hinweis, #2422 S4) kuerzt das Limit VOR dem
-    Rendern um seine Laenge und wird angehaengt."""
+    Rendern um seine Laenge und wird angehaengt. Ein `prefix` (Test-Alarm,
+    #3441) steht vor Betreff, Telegram-Text und SMS; er kuerzt das SMS-Limit
+    genauso VOR dem Rendern."""
     html, plain = render_email(msg, lang=lang)
     sms = render_sms(
-        msg, limit=SMS_LIMIT - len(sms_suffix), location_positions=location_positions,
+        msg, limit=SMS_LIMIT - len(sms_suffix) - len(prefix),
+        location_positions=location_positions,
     )
     return AlertChannelTexts(
-        subject=render_subject(msg, lang=lang), html=html, plain=plain,
-        telegram_body=render_telegram(msg, lang=lang), sms_body=sms + sms_suffix,
+        subject=prefix + render_subject(msg, lang=lang), html=html, plain=plain,
+        telegram_body=prefix + render_telegram(msg, lang=lang),
+        sms_body=prefix + sms + sms_suffix,
     )
 
 
-def _group_bubble(msg: AlertMessage, group: tuple, *, tz, anchor_points, lang) -> TelegramBubble:
+def _group_bubble(msg: AlertMessage, group: tuple, *, tz, anchor_points, lang,
+                  prefix: str = "") -> TelegramBubble:
     def render() -> str:
         # Genau eine Gruppe = die erprobte Einzel-Ort-Form (#1467 S2 AG3a).
         single = _project.to_multi_point_alert_message(
@@ -115,7 +123,7 @@ def _group_bubble(msg: AlertMessage, group: tuple, *, tz, anchor_points, lang) -
             format_modes=msg.format_modes, indicator_keys=msg.indicator_keys,
             ampel=msg.ampel,
         )
-        return render_telegram(single, lang=lang)
+        return prefix + render_telegram(single, lang=lang)
 
     return TelegramBubble(label=group[0], parse_mode="HTML", render=render)
 
@@ -123,16 +131,18 @@ def _group_bubble(msg: AlertMessage, group: tuple, *, tz, anchor_points, lang) -
 def plan_telegram(
     msg: AlertMessage, texts: AlertChannelTexts, *, style: str,
     groups: Optional[list[tuple]] = None, tz, anchor_points: Optional[dict] = None,
-    lang: Lang,
+    lang: Lang, prefix: str = "",
 ) -> TelegramPlan:
     """Kurzform hat VORRANG vor der Auffaecherung je Ort (#1467 K-6): genau
     EINE Blase = SMS-Text ohne parse_mode. Mit `groups` eine HTML-Blase je
-    Ort (lazy gerendert, Fehlerhaertung je Ort im Dispatcher), sonst eine."""
+    Ort (lazy gerendert, Fehlerhaertung je Ort im Dispatcher), sonst eine.
+    `prefix` (Test-Alarm, #3441) steht vor jeder Blase je Ort; die anderen
+    Blasen tragen ihn bereits ueber `texts`."""
     if style == "kurzform":
         return TelegramPlan(False, [TelegramBubble("", None, lambda: texts.sms_body)])
     if groups:
         return TelegramPlan(True, [
-            _group_bubble(msg, g, tz=tz, anchor_points=anchor_points, lang=lang)
+            _group_bubble(msg, g, tz=tz, anchor_points=anchor_points, lang=lang, prefix=prefix)
             for g in groups
         ])
     return TelegramPlan(False, [TelegramBubble("", "HTML", lambda: texts.telegram_body)])

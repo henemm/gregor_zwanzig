@@ -164,3 +164,92 @@ def test_ac9_kontingent_manueller_abruf_erschoepft_429_ohne_versand_b_unberuehrt
     rb = _test_alarm(b, tid_b)
     assert rb.status_code == 200, rb.text
     assert mit.empfaenger("email") == [f"{b}@example.invalid"], mit
+
+
+def _manuell_heute(uid: str) -> int:
+    from services.forecast_budget import ForecastBudgetGate
+
+    return ForecastBudgetGate(uid).snapshot()["user_manual_calls_today"]
+
+
+@pytest.mark.parametrize("kind", ["route", "vergleich"])
+def test_ac9_ein_klick_bucht_genau_eine_einheit_manueller_abruf(mit, monkeypatch, kind):
+    """Fix-Loop F002: ohne Stundenreihe (kein Anker) entsteht kein Wetterabruf; der Klick
+    selbst bucht genau EINE ``user_manual``-Einheit im echten Nutzerzähler (die
+    Vorab-Schätzung wird beim Verlassen bis auf diese Einheit erstattet)."""
+    engine_naht(monkeypatch)
+    uid = nutzer_anlegen()
+    eid = _trip(uid) if kind == "route" else _vergleich(uid)
+    vorher = _manuell_heute(uid)
+
+    r = hv.client().post(f"/api/briefings/{eid}/test-alert", params={"user_id": uid, "kind": kind})
+
+    assert r.status_code == 200, r.text
+    assert _manuell_heute(uid) - vorher == 1, (vorher, _manuell_heute(uid))
+    r = hv.client().post(f"/api/briefings/{eid}/test-alert", params={"user_id": uid, "kind": kind})
+    assert r.status_code == 200, r.text
+    assert _manuell_heute(uid) - vorher == 2, "jeder Klick zählt genau einmal"
+
+
+#: Mehr Anker-Segmente als die Schätzung des Zwei-Wegpunkt-Trips (7) Einheiten erlaubt.
+_VIELE_SEGMENTE = 9
+
+
+def _anker_mit_vielen_segmenten(uid: str, trip) -> None:
+    """Tages-Anker mit ``_VIELE_SEGMENTE`` verschiedenen Segmenten (echter Abruf über die
+    Fixture-Naht, wie ``_trip_anker_schreiben``): der Frisch-Abruf des Test-Alarms ruft jedes
+    davon einzeln ab und übersteigt damit die Vorab-Schätzung."""
+    from datetime import datetime, timedelta, timezone
+
+    from app.models import GPXPoint, TripSegment
+    from providers.base import get_provider
+    from services.segment_weather import SegmentWeatherService
+    from services.trip_day import trip_local_today
+    from services.weather_cache import reset_shared_weather_cache_for_tests
+    from services.weather_snapshot import WeatherSnapshotService
+    from tests.tdd.test_alert_hour_rows import _heute0
+
+    start, segmente = _heute0(), []
+    for i in range(_VIELE_SEGMENTE):
+        lat = TRIP_LAT + i * 0.01
+        seg = TripSegment(
+            segment_id=str(i + 1),
+            start_point=GPXPoint(lat=lat, lon=TRIP_LON, elevation_m=600, distance_from_start_km=0.0),
+            end_point=GPXPoint(lat=lat + 0.005, lon=TRIP_LON, elevation_m=700, distance_from_start_km=1.0),
+            start_time=start, end_time=start + timedelta(hours=23, minutes=59), duration_hours=23.98,
+            distance_km=1.0, ascent_m=100, descent_m=0,
+        )
+        w = SegmentWeatherService(get_provider("openmeteo")).fetch_segment_weather(
+            seg, enrich_ensemble=False, enrich_snow=False, priority="alert_check", user_id=uid,
+        )
+        assert not w.has_error and w.timeseries, "Vorbedingung: Anker-Abruf über die Fixture-Naht"
+        segmente.append(w)
+    WeatherSnapshotService(uid).save_dated(trip.id, trip_local_today(trip, datetime.now(timezone.utc)), segmente)
+    reset_shared_weather_cache_for_tests()
+
+
+def test_ac9_gedrosselter_segment_abruf_bricht_trip_test_alarm_ohne_versand_ab(
+    mittagsuhr, env, monkeypatch, tmp_path, mit,  # noqa: F811
+):
+    """Fix-Loop F003: die Vorab-Buchung passt genau noch ins Tageskontingent, der
+    Frisch-Abruf braucht aber mehr Einheiten; der erste nachgebuchte Abruf wird gedrosselt
+    (``melde_drosselung``) ⇒ 429 ``kontingent_erschoepft``, kein Kanal erhält etwas."""
+    from app.loader import load_all_trips
+    from services.manuelles_kontingent import schaetzung_trip
+    from tests.tdd.test_abruf_kontingent_manuell import GRENZE_JE_NUTZER, _schreibe_global, _schreibe_nutzer
+
+    a, b = nutzer_anlegen(), nutzer_anlegen()
+    tid = _stunden_trip(monkeypatch, tmp_path, a, anker=None)
+    trip = next(t for t in load_all_trips(user_id=a) if t.id == tid)
+    _anker_mit_vielen_segmenten(a, trip)
+    schaetzung = schaetzung_trip(trip)
+    assert _VIELE_SEGMENTE > schaetzung, "Vorbedingung: Abruf übersteigt die Schätzung"
+    stand = GRENZE_JE_NUTZER - schaetzung
+    _schreibe_global(calls=stand, aktive=[a, b], manuell=stand)
+    _schreibe_nutzer(a, stand)
+
+    r = _test_alarm(a, tid)
+
+    assert r.status_code == 429, r.text
+    assert hv.body(r).get("code") == "kontingent_erschoepft", r.text
+    assert mit.kanaele == [], mit
