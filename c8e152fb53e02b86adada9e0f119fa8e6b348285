@@ -1,0 +1,82 @@
+{
+  "verified_commit": "c8e152fb53e02b86adada9e0f119fa8e6b348285",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/<seed>, /compare/<seed> (Zustellung)",
+      "evidence": "DE+EN, Trip und Orte: kein beispiel-alarm/zustellung-beispiel-alarm, kein Text Beispiel-Alarm/Vorschau laden/Load preview; Abschnitte enden bei stille-stunden",
+      "workflow": "fix-3458-alarm-vorschau-entfernen"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/new, /compare/new",
+      "evidence": "Anlegen Schritt Zustellung DE+EN, Trip und Orte: keine Vorschau-Texte/Test-IDs",
+      "workflow": "fix-3458-alarm-vorschau-entfernen"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/new, /compare/new, Hub Reiter Wetter",
+      "evidence": "Alarm-Bereich (Reiter Wetter bzw. Anlege-Schritt Wetter) DE+EN ohne Beispiel-Warnung/Example warning/Vorschau laden",
+      "workflow": "fix-3458-alarm-vorschau-entfernen"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/trips/<seed>, /compare/<seed>",
+      "evidence": "hub-test-alarm AC-1 (4 Faelle, 1280/390 px) gruen: Test-Alarm im Menue Test schicken",
+      "workflow": "fix-3458-alarm-vorschau-entfernen"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com (EN-Nutzer, lang=en)",
+      "evidence": "Hub und Anlegen EN ohne Example warning/Load preview/Beispiel-Alarm-Abschnitt",
+      "workflow": "fix-3458-alarm-vorschau-entfernen"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/api/briefings/{id}/alert-preview",
+      "evidence": "kind-required-3444 staging spec 3/3 gruen",
+      "workflow": "fix-3458-alarm-vorschau-entfernen"
+    }
+  ],
+  "verified_at": "2026-11-27T22:11:47.051270+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: #3458 Alarm-Vorschau-Oberflaeche entfernt (DE/EN, Hub+Anlegen, Test-Alarm-Menue, Endpunkt unveraendert)",
+  "scope": "full-stack",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "fix-3458-alarm-vorschau-entfernen": {
+      "verdict": "VERIFIED: #3458 Alarm-Vorschau-Oberflaeche entfernt (DE/EN, Hub+Anlegen, Test-Alarm-Menue, Endpunkt unveraendert)",
+      "scope": "full-stack",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-27T22:11:47.051270+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
