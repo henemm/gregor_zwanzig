@@ -1315,7 +1315,7 @@ Ein gemeinsames Aktionsmodell für Liste, Detail-Hub und Mobil (Spec: `docs/spec
 | `/api/locations` | GET/POST | Location library (for compare) |
 | `/api/compare/presets` | GET/POST | Compare-Presets (Orts-Vergleich) |
 | `/api/compare/presets/{id}` | GET/PUT/DELETE | Einzelnes Compare-Preset (`PATCH …/state`, `POST …/send`) |
-| `/api/briefings/{id}/alert-preview?kind=route\|vergleich` | POST | Alarm-Vorschau Trip und Ortsvergleich (#2283) |
+| `/api/briefings/{id}/alert-preview?kind=route\|vergleich` | POST | Alarm-Vorschau Trip und Ortsvergleich (#2283); seit #3458 ohne Oberflächen-Knopf, nur noch Prüfwerkzeug |
 | `/api/briefings` | GET | Briefing-Subscriptions (Trip-Briefing-Abos, ADR-0023) |
 | `/api/preview/{id}/sms` | GET | SMS-Kurzform-Vorschau (demo mode optional); email/telegram/compare entfallen (#1743), `/signal` entfernt (#2283) |
 | `/api/account` | GET/PUT | User account |
