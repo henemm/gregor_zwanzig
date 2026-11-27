@@ -88,7 +88,7 @@ Bestandsdaten bleiben erhalten: **Read-Modify-Write mit Merge** (bestehendes Obj
 
 ## Backlog & Nebenbefunde
 
-**GitHub Issues ist die einzige Quelle für offene Arbeit** (`enhancement`/`bug`), nie Markdown-Planung. Nebenbefund-Triage (Sammel-Issue #1199) und Regel-Budget: jede neue Pflicht-Regel ersetzt eine alte oder trägt ein Prüfdatum (+90 Tage), siehe `docs/reference/workflow_und_agenten.md`.
+**GitHub Issues ist die einzige Quelle offener Arbeit**, nie Markdown-Planung; Einordnung (Ort, Art, Meilenstein, Epic, Priorität): `.github/einordnung.md`. Nebenbefunde (#1199) und Regel-Budget (neue Pflicht-Regel ersetzt eine alte oder hat Prüfdatum +90 T.): `docs/reference/workflow_und_agenten.md`.
 
 ## Betrieb
 
