@@ -3269,15 +3269,20 @@ class TripAlertService:
         new_or_escalated = []
         # Issue #1441 S2 (AC-9): abgelaufene Eintraege aufraeumen.
         state_changed = prune_expired_official(state, now_utc)
+        # Issue #3470: Nachbarperioden im Feed werden nicht verbraucht.
+        feed_keys = frozenset(official_alert_state_key(a) for a, _ in tagged_alerts)
         for a, segment_ids in tagged_alerts:
-            should_report, stale_key, merged_entry = official_alert_revision_verdict(a, state)
+            should_report, stale_key, merged_entry = official_alert_revision_verdict(
+                a, state, feed_keys=feed_keys,
+            )
             if should_report:
                 new_or_escalated.append((a, segment_ids))
             elif merged_entry is not None:
                 # Issue #1685: stille Fenster-Revision -- Fortschreibung sofort,
                 # sonst vergleicht ein drittes Kettenglied gegen das veraltete,
                 # erste Fenster und meldet faelschlich erneut.
-                del state[stale_key]
+                if stale_key:
+                    state.pop(stale_key, None)
                 state[official_alert_state_key(a)] = merged_entry
                 state_changed = True
         # Issue #1441 S2: Entwarnung auf dem fortgeschriebenen Gedaechtnis

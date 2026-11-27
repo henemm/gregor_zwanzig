@@ -693,3 +693,231 @@ def test_ac10_naive_zeitstempel_nachbarperioden_ohne_absturz_und_ohne_pingpong(o
     assert anzahl == [0] * LAEUFE, (
         f"Naive Zeitstempel, Feed {order}: erwartet 0 Meldungen in Lauf 1-{LAEUFE}, gemeldet je Lauf: {anzahl}"
     )
+
+
+# ===========================================================================
+# AC-8 Fix-Loop 1 (Adversary F001/F002) -- Entdopplung der Entwarnungen
+# ===========================================================================
+
+
+def _save_segmente(user_id: str, trip_id: str, segmente: list) -> None:
+    """Routen-Geometrie mit mehreren Segmenten: je Eintrag ``(id, lat, lon,
+    start, ende)`` -- jedes Segment bekommt sein eigenes Warnfenster."""
+    from services.weather_snapshot import WeatherSnapshotService
+
+    now = datetime.now(timezone.utc)
+    daten = []
+    for seg_id, lat, lon, start, ende in segmente:
+        segment = TripSegment(
+            segment_id=seg_id,
+            start_point=GPXPoint(lat=lat, lon=lon, elevation_m=1000, distance_from_start_km=0.0),
+            end_point=GPXPoint(lat=lat + 0.01, lon=lon + 0.01, elevation_m=1100, distance_from_start_km=4.0),
+            start_time=start, end_time=ende, duration_hours=2.0, distance_km=4.0,
+            ascent_m=100, descent_m=0,
+        )
+        daten.append(SegmentWeatherData(
+            segment=segment,
+            timeseries=NormalizedTimeseries(
+                meta=ForecastMeta(provider=Provider.OPENMETEO, model="test", grid_res_km=1.0), data=[],
+            ),
+            aggregated=SegmentWeatherSummary(precip_sum_mm=2.0),
+            fetched_at=now, provider="openmeteo",
+        ))
+    WeatherSnapshotService(user_id=user_id).save_dated(trip_id, ortstag(LAT, LON), daten)
+
+
+def _warnung_von(quelle: str, vf: datetime, vt: datetime, level: int) -> OfficialAlert:
+    return OfficialAlert(source=quelle, hazard=GEFAHR, level=level,
+                         label="Kaeltewarnung (#3470)", region_label=REGION,
+                         valid_from=vf, valid_to=vt)
+
+
+def _getrennte_perioden(t: datetime) -> tuple[tuple[datetime, datetime], tuple[datetime, datetime]]:
+    """A und B derselben Warnung mit einer Luecke dazwischen -- jede Periode
+    sieht beim Herabstufen nur ihre eigene neue Stufe."""
+    return (t - timedelta(hours=1), t + timedelta(hours=3)), (t + timedelta(hours=5), t + timedelta(hours=23))
+
+
+def _notice_bild(notices: list) -> list:
+    return [(n.kind, n.source, n.scope_label, n.old_rank, n.new_rank, n.old_level, n.new_level)
+            for n in notices]
+
+
+def test_ac8_perioden_auf_verschiedenen_segmenten_genau_eine_entwarnung_fuer_beide():
+    """AC-8 (Adversary F001): A beruehrt nur Segment 1, B nur Segment 2; beide
+    enden. Genau EINE Entwarnung, die beide Segmente nennt -- die Segmente
+    sind nur die Fundstellen derselben Warnung auf der Route."""
+    from output.renderers.alert.segments import format_segment_reference
+
+    t = _jetzt_minute()
+    (a_vf, a_vt), (b_vf, b_vt) = _perioden(t)
+    a, b = _warnung(a_vf, a_vt), _warnung(b_vf, b_vt)
+    quelle = _FeedQuelle("quelle-3470-ac8seg", LAT, LON, [a, b])
+    with _nur_quellen(quelle):
+        nutzer = _TripNutzer("ac8seg")
+        _save_segmente(nutzer.user_id, nutzer.trip.id, [
+            (1, LAT, LON, t - timedelta(hours=2), t + timedelta(hours=2)),
+            (2, LAT + 0.1, LON + 0.1, t + timedelta(hours=4), t + timedelta(hours=48)),
+        ])
+        erst, _ = nutzer.lauf()
+        assert len(erst) == 2, f"Vorbedingung: Erstauftritt meldet beide Perioden: {erst!r}"
+        scopes = {k: tuple(v.get("scope") or ()) for k, v in nutzer.eintraege().items()}
+        assert len(scopes) == 2, f"Vorbedingung: beide Perioden im Gedaechtnis: {scopes!r}"
+
+        quelle.alerts = []
+        notices = [n for _ in range(LAEUFE) for n in nutzer.lauf()[1]]
+
+    assert len(notices) == 1, f"Erwartet genau eine Entwarnung, erzeugt: {_notice_bild(notices)}"
+    assert notices[0].kind == "ended"
+    assert notices[0].scope_label == format_segment_reference(["1", "2"]), (
+        f"Entwarnung muss beide Segmente nennen: {notices[0].scope_label!r}"
+    )
+
+
+def test_ac8_herabstufung_mit_verschiedenen_alten_stufen_hoechste_alte_niedrigste_neue():
+    """AC-8 (Adversary F002): A war Stufe 3, B Stufe 4; der Feed senkt A auf 2
+    und B auf 3. Genau eine Entwarnung "4 -> 2" -- hoechste alte und
+    niedrigste neue Stufe, fuer Rang UND Stufe."""
+    t = _jetzt_minute()
+    (a_vf, a_vt), (b_vf, b_vt) = _getrennte_perioden(t)
+    quelle = _FeedQuelle("quelle-3470-ac8lv", LAT, LON,
+                         [_warnung(a_vf, a_vt, 3), _warnung(b_vf, b_vt, 4)])
+    with _nur_quellen(quelle):
+        nutzer = _TripNutzer("ac8lv")
+        erst, _ = nutzer.lauf()
+        assert len(erst) == 2, f"Vorbedingung: Erstauftritt meldet beide Perioden: {erst!r}"
+
+        quelle.alerts = [_warnung(a_vf, a_vt, 2), _warnung(b_vf, b_vt, 3)]
+        notices = [n for _ in range(LAEUFE) for n in nutzer.lauf()[1]]
+
+    assert [(n.kind, n.old_rank, n.new_rank, n.old_level, n.new_level) for n in notices] == [
+        ("lowered", 4, 2, 4, 2)
+    ], f"Erwartet genau eine Entwarnung 4->2, erzeugt: {_notice_bild(notices)}"
+
+
+def test_ac8_verschiedene_quellen_bleiben_getrennte_entwarnungen():
+    """AC-8 Gegenprobe: dieselbe Gefahr mit derselben Regionsbezeichnung,
+    aber von zwei verschiedenen Quellen (je eine zustaendig fuer ein Segment
+    der Route) gemeldet -- beide enden. Zwei Entwarnungen, je Quelle eine
+    (verschiedene Warnungen, nicht zwei Perioden einer)."""
+    t = _jetzt_minute()
+    (a_vf, a_vt), (b_vf, b_vt) = _getrennte_perioden(t)
+    q1 = _FeedQuelle("quelle-3470-ac8q1", LAT, LON, [_warnung_von("quelle-3470-ac8q1", a_vf, a_vt, 3)])
+    q2 = _FeedQuelle("quelle-3470-ac8q2", LAT_Y, LON_Y, [_warnung_von("quelle-3470-ac8q2", b_vf, b_vt, 3)])
+    with _nur_quellen(q1, q2):
+        nutzer = _TripNutzer("ac8q")
+        _save_segmente(nutzer.user_id, nutzer.trip.id, [
+            (1, LAT, LON, t - timedelta(hours=2), t + timedelta(hours=48)),
+            (2, LAT_Y, LON_Y, t - timedelta(hours=2), t + timedelta(hours=48)),
+        ])
+        erst, _ = nutzer.lauf()
+        assert len(erst) == 2, f"Vorbedingung: Erstauftritt meldet beide Warnungen: {erst!r}"
+        q1.alerts, q2.alerts = [], []
+        notices = [n for _ in range(LAEUFE) for n in nutzer.lauf()[1]]
+
+    assert sorted((n.kind, n.source) for n in notices) == [
+        ("ended", "quelle-3470-ac8q1"), ("ended", "quelle-3470-ac8q2"),
+    ], f"Je Quelle eine Entwarnung erwartet, erzeugt: {_notice_bild(notices)}"
+
+
+def test_ac8_beendet_und_gesenkt_im_selben_lauf_bleiben_getrennt():
+    """AC-8 Gegenprobe: A wird gesenkt, B ist beendet -- im selben Lauf. Zwei
+    Entwarnungen verschiedener Art, keine verschmilzt zur anderen."""
+    t = _jetzt_minute()
+    (a_vf, a_vt), (b_vf, b_vt) = _getrennte_perioden(t)
+    quelle = _FeedQuelle("quelle-3470-ac8art", LAT, LON,
+                         [_warnung(a_vf, a_vt, 3), _warnung(b_vf, b_vt, 3)])
+    with _nur_quellen(quelle):
+        nutzer = _TripNutzer("ac8art")
+        erst, _ = nutzer.lauf()
+        assert len(erst) == 2, f"Vorbedingung: Erstauftritt meldet beide Perioden: {erst!r}"
+        quelle.alerts = [_warnung(a_vf, a_vt, 3)]
+        _, vorlauf = nutzer.lauf()  # B fehlt zum ersten Mal: erst vermerkt
+        assert vorlauf == [], f"Vorbedingung: Zwei-Lauf-Bestaetigung: {_notice_bild(vorlauf)}"
+        quelle.alerts = [_warnung(a_vf, a_vt, 2)]
+        _, notices = nutzer.lauf()
+
+    assert sorted(n.kind for n in notices) == ["ended", "lowered"], (
+        f"Gesenkt und beendet im selben Lauf getrennt erwartet: {_notice_bild(notices)}"
+    )
+
+
+def test_ac8_vergleich_verschiedene_orte_bleiben_getrennte_entwarnungen(monkeypatch):
+    """AC-8 Gegenprobe Ortsvergleich: dieselbe Warnung an Ort X und Ort Y
+    endet. Jeder Ort hat ein eigenes Melde-Gedaechtnis (eigene alte Stufe) --
+    die Entdopplung fasst nur Perioden EINES Ortes zusammen, je Ort bleibt
+    eine eigene, benannte Entwarnung (Verhalten vor #3470)."""
+    uhr = _VergleichsUhr(monkeypatch, COMPARE_FROZEN)
+    (a_vf, a_vt), _b = _perioden(COMPARE_FROZEN)
+    loc_x = SavedLocation(id="loc-x-3470o", name="Ort X", lat=LAT, lon=LON, elevation_m=60)
+    loc_y = SavedLocation(id="loc-y-3470o", name="Ort Y", lat=LAT + 0.1, lon=LON + 0.1, elevation_m=60)
+    quelle = _FeedQuelle("quelle-3470-ac8orte", LAT, LON, [_warnung(a_vf, a_vt)])
+    with _nur_quellen(quelle):
+        svc = _compare_service(_fresh_user("ac8orte"))
+        erst, _ = _vergleich_lauf(svc, "preset-3470-ac8orte", [loc_x, loc_y], uhr)
+        assert len(erst) == 1, f"Vorbedingung: Erstauftritt meldet die Warnung: {erst!r}"
+        quelle.alerts = []
+        notices = [n for _ in range(LAEUFE)
+                   for n in _vergleich_lauf(svc, "preset-3470-ac8orte", [loc_x, loc_y], uhr)[1]]
+
+    assert sorted((n.kind, n.scope_label) for n in notices) == [("ended", "Ort X"), ("ended", "Ort Y")], (
+        f"Je Ort eine Entwarnung erwartet, erzeugt: {_notice_bild(notices)}"
+    )
+
+
+# ===========================================================================
+# AC-8 Fix-Loop 2 (Adversary F004) -- verschiedene Gefahren derselben Quelle
+# ===========================================================================
+
+
+def _warnung_gefahr(gefahr: str, vf: datetime, vt: datetime, level: int = 2) -> OfficialAlert:
+    return OfficialAlert(source="test-3470", hazard=gefahr, level=level,
+                         label=f"{gefahr}-Warnung (#3470)", region_label=REGION,
+                         valid_from=vf, valid_to=vt)
+
+
+def test_ac8_verschiedene_gefahren_derselben_quelle_bleiben_getrennte_entwarnungen_trip():
+    """AC-8 Gegenprobe (Adversary F004): Wind und Kaelte derselben Quelle und
+    Region wurden gemeldet und enden im selben Lauf. Zwei Entwarnungen, je
+    Gefahr eine -- verschiedene Warnungen verschmelzen nicht."""
+    t = _jetzt_minute()
+    (a_vf, a_vt), _b = _perioden(t)
+    quelle = _FeedQuelle("quelle-3470-ac8gef", LAT, LON,
+                         [_warnung_gefahr("wind", a_vf, a_vt), _warnung_gefahr(GEFAHR, a_vf, a_vt)])
+    with _nur_quellen(quelle):
+        nutzer = _TripNutzer("ac8gef")
+        erst, _ = nutzer.lauf()
+        assert sorted(a.hazard for a in erst) == sorted(["wind", GEFAHR]), (
+            f"Vorbedingung: Erstauftritt meldet beide Gefahren: {erst!r}"
+        )
+        quelle.alerts = []
+        notices = [n for _ in range(LAEUFE) for n in nutzer.lauf()[1]]
+
+    assert sorted((n.kind, n.hazard) for n in notices) == sorted([("ended", "wind"), ("ended", GEFAHR)]), (
+        f"Je Gefahr eine Entwarnung erwartet, erzeugt: "
+        f"{[(n.kind, n.hazard, n.source, n.scope_label) for n in notices]}"
+    )
+
+
+def test_ac8_vergleich_verschiedene_gefahren_an_einem_ort_bleiben_getrennte_entwarnungen(monkeypatch):
+    """AC-8 Gegenprobe Ortsvergleich (Adversary F004): Wind und Kaelte
+    derselben Quelle an Ort X enden im selben Lauf -- zwei Entwarnungen, je
+    Gefahr eine."""
+    uhr = _VergleichsUhr(monkeypatch, COMPARE_FROZEN)
+    (a_vf, a_vt), _b = _perioden(COMPARE_FROZEN)
+    loc_x = SavedLocation(id="loc-x-3470g", name="Ort X", lat=LAT, lon=LON, elevation_m=60)
+    quelle = _FeedQuelle("quelle-3470-ac8vgef", LAT, LON,
+                         [_warnung_gefahr("wind", a_vf, a_vt), _warnung_gefahr(GEFAHR, a_vf, a_vt)])
+    with _nur_quellen(quelle):
+        svc = _compare_service(_fresh_user("ac8vgef"))
+        erst, _ = _vergleich_lauf(svc, "preset-3470-ac8vgef", [loc_x], uhr)
+        assert sorted(a.hazard for a in erst) == sorted(["wind", GEFAHR]), (
+            f"Vorbedingung: Erstauftritt meldet beide Gefahren: {erst!r}"
+        )
+        quelle.alerts = []
+        notices = [n for _ in range(LAEUFE)
+                   for n in _vergleich_lauf(svc, "preset-3470-ac8vgef", [loc_x], uhr)[1]]
+
+    assert sorted((n.kind, n.hazard, n.scope_label) for n in notices) == sorted(
+        [("ended", "wind", "Ort X"), ("ended", GEFAHR, "Ort X")]
+    ), f"Je Gefahr eine Entwarnung erwartet, erzeugt: {[(n.kind, n.hazard, n.scope_label) for n in notices]}"

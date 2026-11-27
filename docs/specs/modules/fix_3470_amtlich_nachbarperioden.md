@@ -146,6 +146,8 @@ Neue Datei `tests/tdd/test_fix_3470_amtlich_nachbarperioden.py`. Echtes Dateiged
 
 - Erstauftritt mit leerem Gedaechtnis und beiden Perioden im selben Lauf liefert eine Meldung mit beiden Perioden (Ist-Verhalten, kein Ping-Pong).
 - Ein totes Gedaechtnis-Eintrag, der beruehrt, aber nicht mehr im Feed steht, verfaellt ueber `prune_expired_official`.
+- AC-8 "je Warnung" heisst im Trip: eine Entwarnung je Warnung ueber alle beruehrten Segmente (Segmente vereinigt). Im Ortsvergleich: eine Entwarnung je Warnung und Ort, weil jeder Ort ein eigenes Gedaechtnis mit eigener alter Stufe hat (Nachbarperioden innerhalb eines Ortes werden zusammengefasst).
+- Mischfall "eine Periode endet, die Nachbarperiode wird im selben Lauf herabgestuft" ergibt zwei Entwarnungen (beendet und gesenkt); nur bei einer Kette aus drei Perioden erreichbar.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -155,3 +157,4 @@ Neue Datei `tests/tdd/test_fix_3470_amtlich_nachbarperioden.py`. Echtes Dateiged
 ## Changelog
 
 - 2026-11-27: Initial spec created (Issue #3470)
+- 2026-11-27: Known Limitations um Auslegung AC-8 (Trip/Ortsvergleich) und Mischfall ergaenzt (Adversary F003/F005)
