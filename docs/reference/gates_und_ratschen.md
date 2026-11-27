@@ -898,6 +898,7 @@ liegen **nicht** in `.claude/hooks/`.
 | PreToolUse Bash | `renderer_mail_gate.py` | blockt Commit an Mail-Inhalts-Dateien ohne frischen Matrix-Test + Validator | oben „Renderer-Commit-Gate" |
 | PreToolUse Bash | `prod_send_gate.py` | blockt Bash-Kommandos, die einen echten Versand gegen Prod auslösen (Send-Pfad + Prod-Ziel Port 8000/8090 bzw. `gregor20.henemm.com` ohne `staging.` + kein reines GET) oder direkt `smtp.resend.com` ansprechen; eigener Notausgang: der PO tippt allein `prod-versand freigeben` → genau ein Prod-Versand in dieser Sitzung (an `session_id` gebunden, 1 h, Datei `<Haupt-Repo>/.claude/prod_send_release.json`); das allgemeine `override` öffnet dieses Gate nicht | #1148, #2125, Specs `gate_1148_prod_send_deny.md`, `gate_2125_prod_send_release.md` |
 | PreToolUse Bash | `broad_test_run_gate.py` | blockt `uv run pytest` ohne benannte Testdateien | oben „Breiter Testlauf gesperrt" |
+| PreToolUse Bash | `tmp_redirect_gate.py` | blockt Schreibziele (`>`, `>>`, `tee`, `--output`, `--junitxml`) in `/tmp`, `/var/tmp`, `/dev/shm` außerhalb des privaten Scratchpads `/tmp/claude-<uid>/`; Lesen, Projekt, `/dev/null` frei; fail-open; Prüfdatum 2027-02-25 | #1688 (Klartext-Lecks #1380 entstanden über `> /tmp/pytest_*.log`), `tests/tdd/test_tmp_redirect_gate.py` |
 | PreToolUse Bash | `touched_tests_gate.py` | blockt Commit, der einen Test der berührten Dateien rot macht | oben „#1481 A" |
 | PreToolUse Bash | `pendant_gate.py` | blockt Neuanlage einseitiger Trip-/Compare-Dateien | oben „Pendant-Sperre" |
 | PreToolUse Bash | `secret_in_repo_gate.py` | blockt `git commit`, wenn eine vorgemerkte Datei den Klartextwert eines `.env`-Geheimnisses (`*_PASS`/`_TOKEN`/`_KEY`/`_SECRET`, ≥ 10 Zeichen) enthält; schaltet sich **nicht** automatisch ab, Wirksamkeitsprüfung 2026-11-04 | #1537 S1 |
@@ -940,6 +941,7 @@ isoliert, Kollisionen zeigen sich als Merge-Konflikt im PR.
 |---|---|---|
 | Mutations-Gegenprobe | 2026-11-01 | #1448 (2 von 3 Scheiben), #1457 (6 Findings) |
 | Breiter Testlauf gesperrt | 2027-02-10 | #1477 (echter Telegram-Versand an Prod-Chat); `override` öffnet das Gate nicht mehr, Fang-Nachweis `tests/tdd/test_broad_test_run_gate_ignores_override.py` (#2227) |
+| Ausgabe-Umleitung nach /tmp gesperrt `tmp_redirect_gate.py` (#1688) | 2027-02-25 | fünf weltlesbare Testausgaben mit Klartext-Zugangsdaten in drei Tagen (#1380); Fang-Nachweis `tests/tdd/test_tmp_redirect_gate.py` |
 | CI-Ampel (eingeführt mit 5 Checks; seit #1771 S2 sechs, s. eigene Zeile `e2e`) | 2026-11-02 | 6 wochenlang unbemerkte test-Rote + ~5000 unbewachte tdd-Tests (#1196) |
 | Pendant-Sperre (#1481 B, erweitert #2346) | 2027-01-21 (verlängert 2026-10-23, PO (Spec #2346)) | 8 Paare außerhalb der alten Reichweite (Aufmaß 2026-10-23, nachgemessen Adversary F003; Spec #2346) |
 | Touched-Tests-Gate (#1481 A) | 2026-11-03 | — |
