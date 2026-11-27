@@ -1,0 +1,75 @@
+{
+  "verified_commit": "47355b55f5d273062d743901f68b98b62a1f734c",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "spec-run hub-send-menue (de, en)",
+      "evidence": "vom iMac per ssh henemm-pruefen spec-run ohne ELEMENTLISTE_*/Server-Env: Login ueber Pruefkonto, 22/22 gruen je Sprache",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "spec-run wsw-abnahme-3037",
+      "evidence": "Zweitkonto-Wahl ohne GZ_ZWEITKONTO_* auf Staging: 5/5 gruen",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "spec-run hub-test-alarm/hub-send-menue",
+      "evidence": "Trip gz2967-gr221-mallorca und Vergleich Muensterland lesend gefunden; AC-1-Tests von hub-test-alarm 4/4 gruen",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "ssh henemm-pruefen spec-run",
+      "evidence": "Pruefweg vom iMac ohne Rueckfrage nachgewiesen (menue 22/22 de+en, wsw 5/5). hub-test-alarm AC-2 rot aus eigener Ursache: Test erwartet sent_channels [email,telegram], Seed (#3151) hat alle vier Alarm-Kanaele (ADR-0095) - Folge-Issue, nicht #3423",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "spec-run --lang en",
+      "evidence": "--lang en nutzt Pruefkonto: hub-send-menue en 22/22, hub-test-alarm en AC-1 4/4",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-27T17:57:44.196443+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Pruefkonto-Specs laufen vom iMac per spec-run ohne Server-Env: Sende-Menue de/en 22/22, wsw 5/5, Seed-IDs gefunden; hub-test-alarm AC-2 rot aus separater Ursache (Folge-Issue)",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Pruefkonto-Specs laufen vom iMac per spec-run ohne Server-Env: Sende-Menue de/en 22/22, wsw 5/5, Seed-IDs gefunden; hub-test-alarm AC-2 rot aus separater Ursache (Folge-Issue)",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-27T17:57:44.196443+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
