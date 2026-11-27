@@ -122,11 +122,13 @@ _ALERT_METRIC_TO_CATALOG_ID: dict[AlertMetric, tuple[str, ...]] = {
 # _ALERT_METRIC_COMPARISON). Comparison wird nur für diese Metriken abgeleitet.
 _COMPARISON_EXCLUDED_METRICS: frozenset = frozenset({AlertMetric.VISIBILITY})
 
-# Issue #1257: Go-seitiges Alarm-Vokabular (AlertableMetrics in internal/model/trip.go),
-# gespiegelt hier als benannte Modul-Konstante, um die Vorwärts-Abbildung
-# (Katalog-ID → alarmfähige AlertMetric(s)) drift-sicher aus der bereits bestehenden
-# Rückwärts-Abbildung `_ALERT_METRIC_TO_CATALOG_ID` abzuleiten — keine hartcodierte
-# Zweit-Tabelle.
+# Issue #1257: alarmfähiges Vokabular als benannte Modul-Konstante, um die
+# Vorwärts-Abbildung (Katalog-ID → alarmfähige AlertMetric(s)) drift-sicher aus der
+# bestehenden Rückwärts-Abbildung `_ALERT_METRIC_TO_CATALOG_ID` abzuleiten.
+# Issue #2994: diese Konstante ist der Owner; Go liest die generierte Datei
+# `internal/model/alertable_metrics.generated.json` (`go:embed` → `AlertableMetrics`),
+# erzeugt von `scripts/generate_alert_metric_mapping.py`. Nach Änderung Generator laufen
+# lassen; der Ratchet in `tests/tdd/test_alert_metric_mapping_parity.py` wird sonst rot.
 _ALERTABLE_METRIC_VALUES: frozenset[str] = frozenset({
     "wind_gust",
     "precipitation_sum",

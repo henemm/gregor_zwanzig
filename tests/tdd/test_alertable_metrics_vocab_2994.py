@@ -73,6 +73,18 @@ def test_ac2_check_reports_invalid_json(monkeypatch, tmp_path):
     assert any(str(vocab) in d for d in diffs), diffs
 
 
+def test_ac2_check_reports_json_object_instead_of_list(monkeypatch, tmp_path):
+    """Gueltiges JSON, aber Objekt statt Liste (gleiche Werte als Schluessel)
+    -> Abweichung mit Pfad und Hinweis "keine JSON-Liste"."""
+    vocab = _redirect_all(monkeypatch, tmp_path)
+    vocab.write_text(
+        json.dumps({v: 1 for v in _EXPECTED_SIX}, indent=2) + "\n", encoding="utf-8"
+    )
+
+    diffs = gen.check()
+    assert any(str(vocab) in d and "keine JSON-Liste" in d for d in diffs), diffs
+
+
 @pytest.mark.parametrize(
     "mutate, value",
     [

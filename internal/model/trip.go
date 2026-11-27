@@ -247,17 +247,42 @@ type AlertChannelThresholdsConfig struct {
 	PremiumSms *string `json:"premium_sms,omitempty"`
 }
 
-// AlertableMetrics are metrics that can receive an alert rule (delta-based since #817).
-// Issue #817: thunder_level added — no meaningful absolute threshold, but
-// delta threshold (Δ≥1 level) is meaningful.
-// Excluded: *_change metrics (conceptually redundant after #817, Folge-Issue pending).
-var AlertableMetrics = map[AlertMetric]struct{}{
-	AlertMetricWindGust:         {},
-	AlertMetricPrecipitationSum: {},
-	AlertMetricTemperatureMin:   {},
-	AlertMetricTemperatureMax:   {},
-	AlertMetricSnowLine:         {},
-	AlertMetricThunderLevel:     {},
+// alertableMetricsJSON embeds the alertable AlertMetric vocabulary (metrics
+// that can receive an alert rule, delta-based since #817; *_change metrics
+// excluded). Issue #2994: the single source is `_ALERTABLE_METRIC_VALUES`
+// (src/services/weather_change_detection.py); this file is produced by
+// scripts/generate_alert_metric_mapping.py and kept in sync via the ratchet
+// test tests/tdd/test_alert_metric_mapping_parity.py. No Go hand literal.
+//
+//go:embed alertable_metrics.generated.json
+var alertableMetricsJSON []byte
+
+// AlertableMetrics are metrics that can receive an alert rule, parsed once at
+// package-init time from the embedded generated artifact above.
+var AlertableMetrics = mustParseAlertableMetrics(alertableMetricsJSON)
+
+// mustParseAlertableMetrics decodes the embedded alertable vocabulary. It is a
+// dedicated, testable function and panics loudly on invalid JSON, an empty
+// list (would silently drop every alert rule in SyncAlertRules) or an entry
+// without DefaultDeltaThreshold (would silently yield a zero threshold).
+func mustParseAlertableMetrics(raw []byte) map[AlertMetric]struct{} {
+	const file = "alertable_metrics.generated.json"
+	var parsed []string
+	if err := json.Unmarshal(raw, &parsed); err != nil {
+		panic(fmt.Sprintf("internal/model: embedded %s is invalid: %v", file, err))
+	}
+	if len(parsed) == 0 {
+		panic(fmt.Sprintf("internal/model: embedded %s is empty", file))
+	}
+	result := make(map[AlertMetric]struct{}, len(parsed))
+	for _, m := range parsed {
+		metric := AlertMetric(m)
+		if _, ok := DefaultDeltaThreshold[metric]; !ok {
+			panic(fmt.Sprintf("internal/model: %q from embedded %s has no DefaultDeltaThreshold", m, file))
+		}
+		result[metric] = struct{}{}
+	}
+	return result
 }
 
 // DefaultDeltaThreshold spiegelt Python metric_catalog.default_change_threshold
