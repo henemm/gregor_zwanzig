@@ -1,0 +1,61 @@
+{
+  "verified_commit": "5f12acff27db894b3d8d3171619262f8ca89a867",
+  "findings": [
+    {
+      "ac": "AC-1/AC-2",
+      "status": "PASS",
+      "url": "/trips/<id> Uebersicht",
+      "evidence": "Staging 5f12acff2: spec-run playwright.2794-s3a4b (s3a2794-teil4b) de 26/26 und en 26/26 gruen (en erster Lauf 17 passed + Cleanup-Timeout, Wiederholung 26/26); Trip-Uebersicht (HubOverview, tripBriefingKanaele -> ReportLine) rendert. Kanal-Gleichheit ueber alle 256 Flag-Kombinationen per node:test belegt.",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "/compare/<id> Uebersicht/Zustellung",
+      "evidence": "Gleicher Lauf: Vergleich-Uebersicht und Sprung in den Reiter Zustellung (AC-33) gruen in de/en; standAusPreset.briefing ueber alle Kombinationen per node:test gleich leseBriefingStartwerte.",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "Mutations-Gegenprobe im Adversary-Dialog: Verfaelschung der Flag-Regel in leseBriefingStartwerte macht Tests beider Funktionen rot.",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-27T11:49:52.101583+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Refactor ohne sichtbare Aenderung: Trip- und Vergleichs-Uebersicht samt Zustellung-Sprung auf Staging 5f12acff2 in de und en gruen (26/26), Gleichheit per Kombinationstest",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Refactor ohne sichtbare Aenderung: Trip- und Vergleichs-Uebersicht samt Zustellung-Sprung auf Staging 5f12acff2 in de und en gruen (26/26), Gleichheit per Kombinationstest",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-27T11:49:52.101583+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
