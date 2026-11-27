@@ -1,0 +1,52 @@
+{
+  "verified_commit": "831242a4a48f6488c9be9d79803c5ccd08f79bbf",
+  "findings": [
+    {
+      "ac": "SMOKE",
+      "status": "PASS",
+      "url": "/api/health",
+      "evidence": "Staging auf 831242a (Merge PR #3479), health 200, python_core ok",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "REGRESSION-DE",
+      "status": "PASS",
+      "url": "mail-pruefen trip",
+      "evidence": "Trip-Briefing auf Staging zugestellt, briefing_mail_validator Exit 0 (GZM 271751-c6ac092b)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "REGRESSION-EN",
+      "status": "PASS",
+      "url": "mail-pruefen trip en",
+      "evidence": "Trip-Briefing EN an +en@ zugestellt, Validator Exit 0 (GZM 271752-f98c39ba)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-1..AC-8",
+      "status": "PASS",
+      "url": "core-tests",
+      "evidence": "Alarm-Riegel per Kern-Tests mit echten Laeufen ueber load_all_trips belegt (42 passed), Adversary VERIFIED 7/7 Mutationen; Pause-Unterdrueckung von Alarmen ist auf Staging ueber den Pruefzugang nicht direkt ausloesbar (kein Alarm-Seed), CI 6/6 gruen",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-27T17:52:50.808846+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Staging 831242a: Smoke ok, Trip-Mail DE+EN zugestellt; Pause-Riegel per Kern-Tests belegt",
+  "scope": "backend",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Staging 831242a: Smoke ok, Trip-Mail DE+EN zugestellt; Pause-Riegel per Kern-Tests belegt",
+      "scope": "backend",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-27T17:52:50.808846+00:00"
+    }
+  }
+}
