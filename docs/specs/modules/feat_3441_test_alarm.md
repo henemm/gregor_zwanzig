@@ -116,6 +116,7 @@ Im Menü „Test schicken ▾“ (gebaut in #3440) kommt nach dem Trenner unter 
   - Test: pytest am Endpunkt mit Transport-Fake an der Grenze (Kontingentzähler vor/nach Versand +1; ausgeschöpftes Kontingent ⇒ Kanal in `skipped_channels`, E-Mail weiterhin in `sent_channels`); kein realer SMS-Versand (Kosten).
 
 - **AC-11:** Given ein Trip mit aktiven Alarm-Regeln, echten Etappen und einer Stundenreihe / When der Test-Alarm gerendert wird / Then enthält die Nachricht je Regel eine Beispiel-Änderung (neu = Schwelle×1.2, alt = Schwelle×0.8, bei Delta alt = 0), die echten Etappen des Bezugstags und die Stundenzeilen aus der echten Stundenreihe; im Ortsvergleich gilt dasselbe für aktive Alarm-Metriken mit Standardschwelle und die echten Orte.
+  - Beispiel-Formel abgelöst durch docs/specs/modules/fix_3462_testalarm_beispielwerte.md (#3462).
   - Test: pytest auf `alert_test_service` mit echten Trip-/Vergleichsdaten ohne Mock (Beispiel-Werte exakt aus Schwelle berechnet, Etappen- bzw. Ortsnamen und Stundenzeilen in der gerenderten Nachricht).
 
 - **AC-12:** Given Randfälle des Beispiels / When der Nutzer „Test-Alarm“ wählt / Then gilt: Trip ohne heutige Etappe nutzt den Bezugstag ohne Absturz bei fehlender Etappennummer; keine aktiven Alarm-Metriken ergeben eine Fallback-Beispielmetrik; fehlende Stundenreihe ergibt eine Nachricht ohne Stundenzeilen und keinen Fehler; ein Trip ohne Segmente antwortet mit 422 `trip_ohne_segmente`; ein Ortsvergleich ohne Orte antwortet mit 422 `vergleich_ohne_orte`; eine leere weather-Liste wird abgefangen.

@@ -3,10 +3,12 @@
 Spec: docs/specs/modules/feat_3441_test_alarm.md
 
 Baut je aktiver Alarm-Regel (Trip) bzw. aktiver Alarm-Metrik (Ortsvergleich)
-eine Beispiel-Aenderung (neu = Schwelle x 1.2, alt = Schwelle x 0.8, bei
-Delta-Regeln alt = 0; Vorbild ``alertPreviewHelpers.ts``) und versendet sie
-ueber den bestehenden Alarmweg (``send_deviation_alert`` bzw.
-``send_multi_location_deviation_alert``) mit ``test=True``. Echte Segmente
+eine Beispiel-Aenderung, die der Renderer als „ueber" der Schwelle beurteilt
+(#3462, docs/specs/modules/fix_3462_testalarm_beispielwerte.md): Richtung aus
+dem Katalog, Betrag 1.2 x |Schwelle|, Gewitter mindestens „maessig", Prozent
+hoechstens 100, je angezeigter Bezeichnung hoechstens eine Aenderung. Sie
+geht ueber den bestehenden Alarmweg (``send_deviation_alert`` bzw.
+``send_multi_location_deviation_alert``) mit ``test=True`` hinaus. Echte Segmente
 bzw. Orte und die echte Stundenreihe kommen aus ``alert_preview_hours``.
 
 Kanalmenge = ``effective_alert_channels`` geschnitten mit der Zustellbarkeit.
@@ -71,6 +73,36 @@ def _feld(metric: AlertMetric) -> str | None:
     return delta[0] if delta else _ALERT_METRIC_TO_SUMMARY_FIELD.get(metric)
 
 
+def _faellt(feld: str) -> bool:
+    """Richtung aus dem Katalog: ein Kandidat mit cmp "unter" ⇒ fallend (#3462)."""
+    from app.metric_catalog import _METRICS
+
+    return any(m.cmp == "unter" for m in _METRICS if feld in m.summary_fields.values())
+
+
+def _werte(regel: AlertRule, feld: str, richtung: str) -> tuple[float, float]:
+    """(alt, neu) mit |neu - alt| = 1.2·|S|, damit der Renderer „über" urteilt (#3462)."""
+    import math
+
+    from app.metric_catalog import get_metric
+    from output.renderers.alert.project import _resolve_metric_id
+
+    schwelle = float(regel.threshold)
+    betrag = 1.2 * abs(schwelle)
+    if feld == "thunder_level_max":
+        return 0.0, float(min(3, max(2, math.ceil(1.2 * schwelle))))
+    if richtung == "decrease":
+        neu = 0.8 * schwelle
+        alt = neu + betrag
+    else:
+        alt = 0.0 if AlertRuleKind(regel.kind) == AlertRuleKind.DELTA else 0.8 * schwelle
+        neu = alt + betrag
+    if get_metric(_resolve_metric_id(feld, richtung)).unit == "%":
+        neu = min(100.0, neu)
+        alt = max(0.0, neu - betrag)
+    return alt, neu
+
+
 def _beispiel(regel: AlertRule, segment_id: str) -> WeatherChange | None:
     try:
         feld = _feld(AlertMetric(regel.metric))
@@ -78,15 +110,29 @@ def _beispiel(regel: AlertRule, segment_id: str) -> WeatherChange | None:
         return None
     if feld is None:
         return None
-    schwelle = float(regel.threshold)
-    neu = schwelle * 1.2
-    alt = 0 if AlertRuleKind(regel.kind) == AlertRuleKind.DELTA else schwelle * 0.8
+    richtung = "decrease" if _faellt(feld) else "increase"
+    alt, neu = _werte(regel, feld, richtung)
     schwere = getattr(regel.severity, "value", regel.severity)
     return WeatherChange(
-        metric=feld, old_value=alt, new_value=neu, delta=neu - alt, threshold=schwelle,
+        metric=feld, old_value=alt, new_value=neu, delta=neu - alt, threshold=float(regel.threshold),
         severity=_SCHWERE.get(schwere, ChangeSeverity.MODERATE),
-        direction="increase" if neu >= alt else "decrease", segment_id=segment_id,
+        direction=richtung, segment_id=segment_id,
     )
+
+
+def _je_bezeichnung_einmal(changes: list[WeatherChange]) -> list[WeatherChange]:
+    """Je angezeigter Alarm-Bezeichnung höchstens eine Änderung, erste gewinnt (#3462)."""
+    from app.metric_catalog import get_alert_label
+    from output.renderers.alert.project import _resolve_metric_id
+
+    gesehen: set[str] = set()
+    ergebnis = []
+    for c in changes:
+        label = get_alert_label(_resolve_metric_id(c.metric, c.direction), "de")
+        if label not in gesehen:
+            gesehen.add(label)
+            ergebnis.append(c)
+    return ergebnis
 
 
 def _vergleich_regeln(preset: dict) -> list[AlertRule]:
@@ -142,7 +188,7 @@ class AlertTestService:
         else:
             regeln = [r for r in subscription.alert_rules or [] if r.enabled]
         changes = [c for c in (_beispiel(r, segment_id) for r in regeln) if c is not None]
-        return changes or [_beispiel(_RUECKFALL, segment_id)]
+        return _je_bezeichnung_einmal(changes) or [_beispiel(_RUECKFALL, segment_id)]
 
     def kanalmenge(self, subscription) -> tuple[set[str], dict[str, str]]:
         """(bedienbare Alarm-Kanaele, uebersprungene Kanaele -> Grund-Schluessel)."""

@@ -306,8 +306,7 @@ def test_ac3_gerenderte_mail_je_block_jede_bezeichnung_hoechstens_einmal(mit, ki
 # --------------------------------------------------------------------------- AC-4
 
 
-def test_ac4_gewitter_mindestens_maessig_sicht_faellt_prozent_in_0_bis_100():
-    from app.metric_catalog import get_metric
+def test_ac4_gewitter_mindestens_maessig_sicht_faellt():
     from app.models import AlertMetric
     from services.alert_preset import ONSET_METRICS
 
@@ -319,8 +318,45 @@ def test_ac4_gewitter_mindestens_maessig_sicht_faellt_prozent_in_0_bis_100():
     gewitter, sicht = je_feld["thunder_level_max"], je_feld["visibility_min_m"]
     assert gewitter.old_value == 0 and gewitter.new_value == 2, gewitter
     assert sicht.new_value < sicht.old_value and sicht.direction == "decrease", sicht
-    prozent = [c for c in changes if get_metric(_metrik(c)).unit == "%"]
-    assert all(0 <= c.old_value <= 100 and 0 <= c.new_value <= 100 for c in prozent), prozent
+
+
+def _modell_regel(metric: str, kind: str, threshold: float):
+    from app.models import AlertRule
+
+    return AlertRule(**_regel(metric, kind, threshold))
+
+
+@pytest.mark.parametrize("schwelle,neu", [(0.5, 2.0), (1.0, 2.0), (3.0, 3.0)])
+def test_ac4_gewitter_stufe_mindestens_maessig_hoechstens_3_und_ueber(schwelle, neu):
+    """Gewitter: neu = min(3, max(2, ceil(1.2·S))); S = 0.5 bleibt „mäßig" (nie Luftmasse),
+    S = 3 erreicht Stufe 3 mit Δ ≥ S (Renderer urteilt „über")."""
+    from output.renderers.alert.model import over_thr
+    from i18n import t
+    from output.renderers.alert.render import _deviation_label
+    from services.alert_test_service import _beispiel
+
+    c = _beispiel(_modell_regel("thunder_level", "absolute", schwelle), "seg-1")
+
+    assert (c.metric, c.old_value, c.new_value) == ("thunder_level_max", 0.0, neu), c
+    assert over_thr(_ereignis(c)), c
+    for lang in ("de", "en"):
+        label = _deviation_label(_ereignis(c), lang)
+        assert label != t("alarm.abweichung.luftmasse", lang), (lang, label, c)
+
+
+@pytest.mark.parametrize("schwelle,alt,neu", [(90.0, 0.0, 100.0), (60.0, 28.0, 100.0), (20.0, 16.0, 40.0)])
+def test_ac4_prozent_feld_deckel_100_und_alt_nie_negativ(schwelle, alt, neu):
+    """Einheit „%" (Katalog: ``humidity_avg_pct``): neu ≤ 100, alt = max(0, neu − 1.2·S)."""
+    from app.metric_catalog import get_metric
+    from output.renderers.alert.project import _resolve_metric_id
+    from services.alert_test_service import _werte
+
+    feld = "humidity_avg_pct"
+    assert get_metric(_resolve_metric_id(feld, "increase")).unit == "%"
+
+    werte = _werte(_modell_regel("wind_gust", "absolute", schwelle), feld, "increase")
+
+    assert werte == (pytest.approx(alt), pytest.approx(neu)), werte
 
 
 @pytest.mark.parametrize("lang", ["de", "en"])
