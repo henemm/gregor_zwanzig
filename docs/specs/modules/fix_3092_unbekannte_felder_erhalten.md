@@ -134,6 +134,7 @@ Alle Tests: Go, ohne Mocks, echter Store auf `t.TempDir()`, Store-Ebene (`intern
 - Nur Top-Level-Felder; unbekannte verschachtelte Felder (z. B. in `stages`, `display_config`) werden weiterhin vom Modell als Ganzes geschrieben.
 - Python-Schreibpfad (`save_trip`) und Python-Presets bleiben unveraendert.
 - Unbekannte Felder bleiben dauerhaft in der Datei, bis ein anderes System sie entfernt.
+- Altdatei mit Inhalt `null` unter einer Orts-Vergleich-ID: die vorbestehende Art-Pruefung (#2359, `idBelegtDurchFremdeArt`) wertet sie als Trip und `SaveComparePreset` lehnt mit `ErrKindConflict` ab, bevor der Merge laeuft. Kein Datenverlust, Verhalten unveraendert gegenueber vor #3092; AC-6 fuer `null` ist am Trip belegt.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -143,3 +144,4 @@ Alle Tests: Go, ohne Mocks, echter Store auf `t.TempDir()`, Store-Ebene (`intern
 ## Changelog
 
 - 2026-11-27: Initial spec created (Issue #3092)
+- 2026-11-27: Umsetzung: Helper in neuer Datei `internal/store/raw_merge.go`; zusaetzlich `internal/store/raw_merge_test.go` (Unit-Test `jsonKeysOf`, Adversary F002) und Anpassung des Bestandstests `internal/store/trip_archive_fields_roundtrip_test.go` an AC-8 (Altfelder bleiben in der Datei, Modell zeigt sie nicht).

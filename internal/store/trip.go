@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -329,7 +330,9 @@ func (s *Store) SaveTrip(trip *model.Trip) error {
 	// kind wird unbedingt gesetzt, unabhaengig vom Vorzustand des Aufrufers.
 	trip.Kind = "route"
 
-	data, err := json.MarshalIndent(trip, "", "  ")
+	// Issue #3092 (ADR-0101): unbekannte Top-Level-Felder bleiben erhalten.
+	path := filepath.Join(dir, trip.ID+".json")
+	data, err := mergeUnknownTopLevel(path, trip, jsonKeysOf(reflect.TypeOf(model.Trip{})))
 	if err != nil {
 		return err
 	}
@@ -337,7 +340,7 @@ func (s *Store) SaveTrip(trip *model.Trip) error {
 		return err
 	}
 
-	return writeFileLogged(filepath.Join(dir, trip.ID+".json"), data)
+	return writeFileLogged(path, data)
 }
 
 func (s *Store) DeleteTrip(id string) error {

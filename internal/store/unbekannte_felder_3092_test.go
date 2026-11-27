@@ -73,7 +73,7 @@ func uf3092Preset(id string, extra map[string]interface{}) map[string]interface{
 		"id": id, "name": "Vergleich", "kind": "vergleich",
 		"location_ids": []string{"loc-a", "loc-b"},
 		"schedule":     "daily", "profil": "ALLGEMEIN",
-		"created_at":   "2026-09-01T00:00:00Z",
+		"created_at": "2026-09-01T00:00:00Z",
 	}
 	for k, v := range extra {
 		m[k] = v
@@ -155,8 +155,13 @@ func TestUnbekannteFelder3092_AC4_PresetGeleertesFeldNichtWiederbelebt(t *testin
 }
 
 // AC-6: fehlende, leere oder kaputte Altdatei -> Speichern gelingt, Modellstand.
+// "null" und "[1,2]" sind gueltiges JSON, aber kein Objekt (Adversary F001):
+// ohne Guard waere die Merge-Map nil bzw. das Unmarshal fehlerhaft.
 func TestUnbekannteFelder3092_AC6_FehlendeOderKaputteAltdatei(t *testing.T) {
-	faelle := map[string]*string{"fehlt": nil, "leer": strPtr(""), "muell": strPtr("kein json {")}
+	faelle := map[string]*string{
+		"fehlt": nil, "leer": strPtr(""), "muell": strPtr("kein json {"),
+		"null": strPtr("null"), "array": strPtr("[1,2]"),
+	}
 	for name, inhalt := range faelle {
 		name, inhalt := name, inhalt
 		t.Run("trip_"+name, func(t *testing.T) {
@@ -181,7 +186,15 @@ func TestUnbekannteFelder3092_AC6_FehlendeOderKaputteAltdatei(t *testing.T) {
 			if len(raw) != len(wantMap) {
 				t.Errorf("Schluessel weichen vom Modellstand ab: %v vs %v", schluessel(raw), schluessel(wantMap))
 			}
+			uf3092GenauModellstand(t, s, "t1", trip)
 		})
+		if name == "null" {
+			// Orts-Vergleich: eine Altdatei "null" gilt schon vor dem Merge als
+			// Trip-Kennung (idBelegtDurchFremdeArt, #2359: kind fehlt) und wird
+			// mit ErrKindConflict abgewiesen -- vorbestehendes Verhalten, nicht
+			// Gegenstand von #3092. Der Merge-Guard wird ueber trip_null geprueft.
+			continue
+		}
 		t.Run("preset_"+name, func(t *testing.T) {
 			s := uf3092Store(t, "alice")
 			if inhalt != nil {
@@ -201,11 +214,30 @@ func TestUnbekannteFelder3092_AC6_FehlendeOderKaputteAltdatei(t *testing.T) {
 			if err != nil || got == nil || got.Name != "Vergleich" {
 				t.Errorf("Modellstand nicht lesbar: %+v %v", got, err)
 			}
+			NormalizeComparePreset(p)
+			uf3092GenauModellstand(t, s, "p1", p)
 		})
 	}
 }
 
 func strPtr(s string) *string { return &s }
+
+// uf3092GenauModellstand prueft, dass die Datei byte-genau dem serialisierten
+// Modell entspricht (kein Rest der Altdatei).
+func uf3092GenauModellstand(t *testing.T, s *Store, id string, model interface{}) {
+	t.Helper()
+	got, err := os.ReadFile(uf3092Pfad(s, id))
+	if err != nil {
+		t.Fatalf("Datei lesen: %v", err)
+	}
+	want, err := json.MarshalIndent(model, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, want) {
+		t.Errorf("Datei ist nicht genau der Modellstand:\n%s\nerwartet:\n%s", got, want)
+	}
+}
 
 // AC-8: Altfeld outlook_enabled (#3277) bleibt bei Go-Save erhalten.
 func TestUnbekannteFelder3092_AC8_AltfeldBleibt(t *testing.T) {
