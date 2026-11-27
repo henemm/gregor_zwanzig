@@ -181,7 +181,8 @@ for (const kind of HUB_KINDS) {
 		await expect(m).not.toContainText(profil.telegram_chat_id ?? '#');
 		await expect(m).not.toContainText('Empfänger');
 		await expect(m.getByRole('menuitem', { name: /Alle eingerichteten Kanäle/ })).toBeVisible();
-		await expect(m).not.toContainText('Test-Alarm');
+		// #3441 (S5b): nach dem Trenner unter „Alle“ steht jetzt der Test-Alarm (hub-test-alarm.staging.spec.ts).
+		await expect(m.getByRole('menuitem', { name: /Test-Alarm/ })).toBeVisible();
 	});
 }
 
