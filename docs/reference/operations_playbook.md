@@ -217,7 +217,8 @@ und parallele HTTP-Probes auf alle aus der Staging-Verifikation bekannten AC-Pfa
 2. Health-Check: `https://gregor20.henemm.com/api/health` muss HTTP 200 + `status=ok` antworten
 3. AC-Attestation: pro Staging-Finding (max 5 parallel) HTTP GET auf entsprechende Prod-URL (erwartet 200 oder 302; ein 302 auf `/login` gilt seit Fix #1353 NICHT mehr als inhaltlicher Nachweis, s.u.)
 4. Bericht: Markdown-Tabelle in `docs/artifacts/<workflow>/prod-selftest.md` mit pro-AC-Status
-5. Exit-Code: 0 = alle ACs bestätigt (PASS), alle ACs übersprungen (docs-only) oder alle Probes auf den Login-Redirect gelaufen (`SKIPPED_AUTH_REDIRECT`); 1 = Mismatch/Fehler
+5. Exit-Code: 0 = alle ACs bestätigt (PASS), alle ACs übersprungen (docs-only), alle Probes auf den Login-Redirect gelaufen (`SKIPPED_AUTH_REDIRECT`) oder auf die Anmelde-Schranke gelaufen (`SKIPPED_AUTH`); 1 = Mismatch/Fehler
+6. Bot-Menü-Check (#3219, Phase 4): `getMyCommands` gegen `BOT_COMMANDS` geprüft, eigenes Zeitlimit 12 s, bis zu 3 Versuche (Pausen 2 s und 4 s). Wiederholt wird nur bei Zeitüberschreitung, Netzfehler, HTTP 429 oder 5xx. Schlimmster Fall: ca. 42 s Laufzeit. Ein falsches Menü, HTTP 401/404, unlesbare Antwort oder `ok:false` ist FAIL ohne Wiederholung.
 
 **Verdict-Ableitung:**
 
@@ -225,6 +226,8 @@ und parallele HTTP-Probes auf alle aus der Staging-Verifikation bekannten AC-Pfa
 - **PARTIAL:** mind. ein PASS-Finding fehlt oder ist unerreichbar in Produktion
 - **FAIL:** Commit-Mismatch oder Health unreachable
 - **SKIPPED_ALL:** reiner Doku-Deploy (Scope `docs-only`) — dann wird ohne Nachweis übersprungen. Bei ausgeliefertem Programmcode **ohne** Nachweis wird seit #1382 blockiert statt übersprungen
+- **UNREACHABLE** (#3219, nur Bot-Menü-Check): Telegram ist nach 3 Versuchen stumm. Das Bot-Menü ist dann weder bestätigt noch widerlegt — nie PASS, nicht blockierend (Exit 0). Fazit-Zeile: „Telegram nicht erreichbar (nach 3 Versuchen) – Bot-Menü nicht belegt, keine Regression belegt“. Das ist kein Beweis für eine Regression; bei Bedarf Telegram-Erreichbarkeit separat prüfen.
+- **SKIPPED_AUTH** (Sammelstatus, #1367): Mischung aus Redirects und direkten Abweisungen durch die Anmelde-Schranke (je Probe `SKIPPED_AUTH_REQUIRED`). Wie `SKIPPED_AUTH_REDIRECT` zählt er zur Exit-0-Menge und ist kein inhaltlicher Prod-Nachweis.
 - **SKIPPED_AUTH_REDIRECT** (Fix #1353): ALLE geprobten Findings landeten unauthentifiziert auf `302 → /login`. Der Selbsttest läuft ohne Login — ein Auth-Redirect ist strukturell nicht per unauth-GET beweisbar, kein Defekt. Zählt zur Exit-0-Menge, blockiert den Deploy also nicht, ist aber **kein Ersatz für die Staging-Verifikation**: Es wurde in Prod kein einziger AC inhaltlich bestätigt, nur die Anmelde-Schranke gesehen.
 
 **Schutzwirkung:** Issue-Close erfolgt nur bei Exit 0. Bei PARTIAL/FAIL wird der Bericht
