@@ -145,6 +145,14 @@ async function oeffneMenue(page: Page): Promise<Locator> {
 	return behaelter;
 }
 
+/** Menü schließen: Desktop per Escape; das mobile Blatt hat keine Tastenbedienung, dort über „Schließen“. */
+async function schliesseMenue(page: Page): Promise<void> {
+	const mobil = (page.viewportSize()?.width ?? 1280) < 900;
+	if (mobil) await page.locator('[data-snap="half"]:visible').getByTestId('sheet-close').click();
+	else await page.keyboard.press('Escape');
+	await expect(page.locator('[data-snap="half"]:visible, [data-abschnitt="kebab-menue"]:visible')).toHaveCount(0);
+}
+
 /** Texte der Menü-Einträge in Reihenfolge. */
 async function eintraege(behaelter: Locator): Promise<string[]> {
 	return (await behaelter.locator('[data-testid^="subscription-action-"]').allInnerTexts()).map((t) => t.trim());
@@ -175,7 +183,7 @@ for (const kind of HUB_KINDS) {
 					// AC-2: Menü — „Aktivieren“ an erster Stelle, danach „Löschen …“
 					const menue = await oeffneMenue(page);
 					expect(await eintraege(menue), 'AC-2: Menü im Entwurf').toEqual([T.knopf, T.loeschen]);
-					await page.keyboard.press('Escape');
+					await schliesseMenue(page);
 
 					// AC-3/AC-4: Klick auf den Kopf-Knopf — Hinweis, Reiter, kein Schreibzugriff, kein Neuladen
 					await page.evaluate(() => ((window as unknown as { __gz3443: number }).__gz3443 = 1));
@@ -278,14 +286,16 @@ for (const kind of HUB_KINDS) {
 		const hub = await seedHub(page.request, kind, kind === 'route' ? { extra: { stages: [{ id: 's1', name: 'Tag 1', date: new Date().toISOString().slice(0, 10), waypoints: [wp('a', 42.0, 800), wp('b', 42.04, 1200)] }] } } : {});
 		try {
 			const abrufe = naechstesAbrufe(page);
-			// Reiter Wetter: dort lädt kein Baustein „nächstes Briefing“ (nur Übersicht und Versand tun das) —
-			// jeder Abruf käme also vom Kopf.
-			await openHub(page, kind, hub.id, { tab: 'wetter' });
+			// Reiter Übersicht: deren Karte lädt „nächstes Briefing“ genau einmal (Bestand, #1969). Jeder Reiter
+			// zeigt beim ersten Bild kurz die Übersicht (Startwert der Reiter), deshalb gibt es keinen Reiter ohne
+			// diesen einen Abruf. Ein zweiter Abruf käme vom Kopf (Aktivierungs-Wechsel) und ist der Fehler.
+			await openHub(page, kind, hub.id, { tab: 'uebersicht' });
 			await page.waitForLoadState('networkidle').catch(() => {});
 			await expect(pille(page)).toHaveAttribute('data-status', 'active');
 			await expect(page.locator('[data-testid="hub-kopf-aktivieren"]')).toHaveCount(0);
+			await page.waitForTimeout(1500);
 			await expect(meldung(page)).toHaveCount(0);
-			expect(abrufe, 'AC-9: Kopf ruft beim Laden „nächstes Briefing“ ab').toEqual([]);
+			expect(abrufe, 'AC-9: nur der Abruf der Übersicht-Karte, keiner vom Kopf').toHaveLength(1);
 			const menue = await oeffneMenue(page);
 			expect(await eintraege(menue), 'AC-2: aktives Menü unverändert').toEqual(['Pausieren', 'Archivieren …', 'Löschen …']);
 			await page.keyboard.press('Escape');
