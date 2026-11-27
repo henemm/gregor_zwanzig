@@ -3,7 +3,7 @@
 	// Trip-Hub und Orts-Briefing-Hub (`context="route"|"vergleich"`, ADR-0097).
 	// Spec: docs/specs/modules/feat_2795_s3b_teil1_zustellung.md (§1–§5).
 	// Reihenfolge: Kopf · Briefing-Zeiten (Anker #versand) · Laufzeit · Warnboxen + Kanal-Tabelle ·
-	// Stille Stunden/Anpassen · Beispiel-Alarm. Die Organismen liegen unter organisms/zustellung-tab/
+	// Stille Stunden/Anpassen. Die Organismen liegen unter organisms/zustellung-tab/
 	// und speichern nicht selbst: jede Aenderung geht als neuer Stand an den EINEN Speicherer
 	// (zustellungSpeicherung.ts, Owner 'versand' und 'alarme', AC-33). Das Profil wird hier EINMAL
 	// geladen und an die Kanal-Tabelle gereicht (AC-36).
@@ -12,18 +12,18 @@
 	// Issue #3154 (#3122 B3b, Spec Teil B Nr. 14): Telegram-Kurzstil, Mehrtages-Trend und die
 	// Metrik-Oberflaeche des Uebergangsblocks sind entfernt — sie bedient die Karte „Was steht wo“.
 	// Issue #3036: Uebergangsblock aufgeloest — Pausieren/Aktivieren (nur Orte, Snippet `activation`) steht
-	// als fester Abschnitt direkt unter dem Kopf, der Beispiel-Alarm als letzter Abschnitt (bis #2797).
+	// als fester Abschnitt direkt unter dem Kopf.
+	// Issue #3458: Beispiel-Alarm (Vorschau-Karte) entfernt — ersetzt durch den Test-Alarm in „Test schicken ▾“ (#3441).
 	import { onMount, untrack, type Snippet } from 'svelte';
 	import { api } from '$lib/api.js';
 	import { locale, t } from '$lib/i18n';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
-	import type { AlertRule, ComparePreset, Trip } from '$lib/types';
+	import type { ComparePreset, Trip } from '$lib/types';
 	import Bereichskopf from '$lib/components/molecules/Bereichskopf.svelte';
 	import BriefingZeiten from '../../organisms/zustellung-tab/BriefingZeiten.svelte';
 	import LaufzeitKarte from '../../organisms/zustellung-tab/LaufzeitKarte.svelte';
 	import KanalTabelle from '../../organisms/zustellung-tab/KanalTabelle.svelte';
 	import StilleStunden from '../../organisms/zustellung-tab/StilleStunden.svelte';
-	import BeispielAlarm from '../../organisms/zustellung-tab/BeispielAlarm.svelte';
 	import { kanalStatus, standAusPreset, standAusTrip, type ZustellungProfil, type ZustellungStand } from './zustellungModell.ts';
 	import { erstelleZustellungAnlegeSpeicherer, erstelleZustellungSpeicherung, type ZustellungAnlegeMeldung } from './zustellungSpeicherung.ts';
 
@@ -41,8 +41,6 @@
 		versandSprung?: number;
 		/** Orts-Briefing: Pausieren/Aktivieren-Karte des Hubs (fester Abschnitt direkt unter dem Kopf). */
 		activation?: Snippet;
-		/** Orts-Briefing: Regeln des Beispiel-Alarms (aus der Metrik-Auswahl des Hubs). */
-		beispielAlarmRegeln?: AlertRule[];
 		/** #3332: Anlege-Seite — kein Speichern, jede Aenderung geht als Meldung an den Editor. */
 		createMode?: boolean;
 		/** #3332: Startstand vom Editor (Neuaufbau beim Wechsel Desktop/Mobil, Schritte); sonst aus Trip/Preset. */
@@ -51,7 +49,7 @@
 		onAnlegeStand?: (m: ZustellungAnlegeMeldung) => void;
 	}
 
-	let { context, activation, beispielAlarmRegeln = [], versandSprung = 0, onJump, ...panel }: Props = $props();
+	let { context, activation, versandSprung = 0, onJump, ...panel }: Props = $props();
 
 	// ── Profil: EIN Abruf je Reiter-Aufruf ──────────────────────────────────────
 	let profil = $state<ZustellungProfil | null>(null);
@@ -112,9 +110,7 @@
 	<BriefingZeiten {context} {stand} onaendern={aendern} {versandSprung} />
 	<LaufzeitKarte {context} {stand} onaendern={aendern} stages={panel.trip?.stages ?? []} {onJump} />
 	<KanalTabelle {stand} {status} onaendern={aendern} />
-	<StilleStunden {stand} onaendern={aendern} />
-	<BeispielAlarm {context} trip={panel.trip} preset={panel.preset} {beispielAlarmRegeln} />
-</div>
+	<StilleStunden {stand} onaendern={aendern} /></div>
 
 <style>
 	.zustellung-tab {

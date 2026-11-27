@@ -46,7 +46,7 @@ const katalogDe = de as Record<string, string | undefined>;
 const UEBERGANGSTEXT = [katalogDe['zustellung.uebergang.titel'], katalogDe['zustellung.uebergang.hinweis']].filter(Boolean) as string[];
 
 for (const context of ['route', 'vergleich'] as const) {
-	describe(`#3036 AC-7 Reiter Zustellung (${context}): kein Übergangsblock, Beispiel-Alarm als eigener Abschnitt`, () => {
+	describe(`#3036 AC-7 Reiter Zustellung (${context}): kein Übergangsblock (Beispiel-Alarm entfernt, #3458)`, () => {
 		test('kein Element zustellung-uebergang, kein Abschnitt „uebergang“, kein „Vorübergehend hier“', async () => {
 			const h = await reiter(context, context === 'vergleich');
 			assert.ok(anzahl(h, 'data-testid="zustellung-tab"') === 1, 'Messaufbau: Reiter nicht gerendert');
@@ -57,17 +57,16 @@ for (const context of ['route', 'vergleich'] as const) {
 			assert.doesNotMatch(text, /Vorübergehend hier/);
 		});
 
-		test('Beispiel-Alarm genau einmal als Abschnitt zustellung-beispiel-alarm, letzter Abschnitt nach Stille Stunden', async () => {
+		// #3458: AC-7 „Beispiel-Alarm letzter Abschnitt“ abgeloest — der Beispiel-Alarm ist entfernt
+		// (ersetzt durch den Test-Alarm #3441); letzter Abschnitt ist Stille Stunden.
+		test('kein Abschnitt zustellung-beispiel-alarm, letzter Abschnitt ist Stille Stunden (#3458)', async () => {
 			const h = await reiter(context, context === 'vergleich');
-			assert.equal(anzahl(h, 'data-testid="zustellung-beispiel-alarm"'), 1, 'Abschnitt Beispiel-Alarm fehlt');
-			assert.match(h, /data-abschnitt="beispiel-alarm"/);
+			assert.equal(anzahl(h, 'data-testid="zustellung-beispiel-alarm"'), 0, 'Abschnitt Beispiel-Alarm noch im Reiter');
+			assert.doesNotMatch(h, /data-abschnitt="beispiel-alarm"/);
 			const reiterHtml = innen(h, 'zustellung-tab');
-			assert.ok(pos(reiterHtml, 'data-testid="zustellung-beispiel-alarm"') > pos(reiterHtml, 'data-abschnitt="stille-stunden"'),
-				'Beispiel-Alarm steht nicht am Ende des Reiters');
+			pos(reiterHtml, 'data-abschnitt="stille-stunden"');
 			const abschnitte = [...reiterHtml.matchAll(/data-abschnitt="([^"]+)"/g)].map((m) => m[1]);
-			assert.equal(abschnitte.at(-1), 'beispiel-alarm', `letzter Abschnitt ist ${abschnitte.at(-1)}`);
-			assert.ok(sichtbarerText(innen(h, 'zustellung-beispiel-alarm')).includes(de['alarme.beispiel_warnung']),
-				'Beispiel-Alarm ohne Überschrift');
+			assert.equal(abschnitte.at(-1), 'stille-stunden', `letzter Abschnitt ist ${abschnitte.at(-1)}`);
 		});
 	});
 }

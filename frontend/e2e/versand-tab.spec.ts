@@ -125,12 +125,14 @@ test.describe('Issue #1232 Scheibe 1 — VersandTab (context=route)', () => {
 
 		const panel = versandPanel(page);
 		await expect(panel).toBeVisible();
-		// Stille Stunden (AC-24) mit „Anpassen“ → Cooldown (AC-26), Beispiel-Alarm als eigener Abschnitt (AC-30, #3036).
+		// Stille Stunden (AC-24) mit „Anpassen“ → Cooldown (AC-26). #3458: kein Beispiel-Alarm, keine Vorschau-Karte.
 		await expect(panel.locator('[data-abschnitt="stille-stunden"]')).toBeVisible();
 		await expect(panel.getByTestId('zustellung-stille-schalter')).toBeVisible();
 		await panel.getByTestId('zustellung-anpassen').locator('summary').click();
 		await expect(panel.getByTestId('zustellung-cooldown')).toBeVisible();
-		await expect(panel.getByTestId('zustellung-beispiel-alarm').getByTestId('alert-preview-card')).toBeVisible();
+		await expect(panel.getByTestId('zustellung-beispiel-alarm')).toHaveCount(0);
+		await expect(panel.getByTestId('alert-preview-card')).toHaveCount(0);
+		await expect(panel.getByTestId('alert-preview-load-btn')).toHaveCount(0);
 	});
 
 	test('AC-14: „Etappen öffnen" bleibt im Versand-Panel sichtbar', async ({ page }) => {

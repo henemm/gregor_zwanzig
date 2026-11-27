@@ -134,7 +134,9 @@ for (const kind of HUB_KINDS) {
 			await page.locator(`[data-testid="${HUB_SEL[kind].reiter}-zustellung"]:visible`).first().click();
 			const reiter = page.locator(`[data-testid="${HUB_SEL[kind].panel}-zustellung"]:visible`).first().getByTestId(ZT.tab);
 			await expect(reiter.getByTestId(ZT.status('premium_sms'))).toBeVisible({ timeout: 15_000 });
-			await expect(reiter.getByTestId(ZT.beispielAlarm)).toBeVisible();
+			// #3458: Beispiel-Alarm entfernt — der Reiter ist fertig, wenn Stille Stunden steht.
+			await expect(reiter.locator('[data-abschnitt="stille-stunden"]')).toBeVisible();
+			await expect(reiter.getByTestId(ZT.beispielAlarm)).toHaveCount(0);
 			await expect.poll(() => anfragen, { message: 'GET /api/auth/profile je Reiter-Aufruf' }).toBe(1);
 		} finally {
 			await hub.aufraeumen();

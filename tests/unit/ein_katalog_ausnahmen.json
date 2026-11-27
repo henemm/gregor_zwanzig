@@ -19,9 +19,6 @@
       "FRONTEND_LISTE": 3,
       "FRONTEND_VERZWEIGUNG": 2
     },
-    "frontend/src/lib/components/alerts-tab/alertPreviewHelpers.ts": {
-      "FRONTEND_LISTE": 1
-    },
     "frontend/src/lib/components/molecules/AlertRow.svelte": {
       "FRONTEND_LISTE": 2
     },
@@ -222,5 +219,5 @@
       "VERARBEITUNG_AUSSEN": 1
     }
   },
-  "hoechststand": 412
+  "hoechststand": 411
 }

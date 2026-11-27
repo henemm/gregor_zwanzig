@@ -35,7 +35,6 @@ import {
 	attributAusdruck,
 	findeKomponenten,
 	umgebungFuer,
-	werte,
 	type Knoten
 } from '../../shared/__tests__/svelteInstanzPruefstand.ts';
 
@@ -144,7 +143,7 @@ describe('#3061 Hydrier-Reihenfolge (Ausblick-Block entfernt, #3276)', () => {
 			await wetterHydrierer(wetterZuerst, p());
 			alarmHydrierer(wetterZuerst, p());
 			assert.deepEqual(alarmZuerst.activeMetricKeys, wetterZuerst.activeMetricKeys);
-			// #1320: die Empfindlichkeits-Tabelle (CompareTabs `beispielAlarmRegeln`) materialisiert selbst.
+			// #1320: die Empfindlichkeits-Tabelle materialisiert selbst.
 			for (const s of [alarmZuerst, wetterZuerst]) {
 				const zeilen = deriveActiveAlertMetricsFromCatalog(
 					materializeActiveMetricKeys((s.activeMetricKeys as string[] | null | undefined) ?? null),
@@ -159,9 +158,7 @@ describe('#3061 Hydrier-Reihenfolge (Ausblick-Block entfernt, #3276)', () => {
 // Adversary F001 (Fix-Loop): der AC-3-Test oben materialisiert selbst. Hier wird die
 // Empfindlichkeits-Tabelle dort gemessen, wo sie WIRKT: am serverseitig gerenderten
 // AlarmeTab (context="vergleich", Prop-Buendel des echten `alarmePropsAus` aus dem vom
-// echten Hub-Hydrierer befuellten Zustand) und am Beispiel-Alarm des Hubs
-// (`beispielAlarmRegeln` aus dem ECHTEN Instanz-Skript von CompareTabs.svelte, gelesen
-// ueber den echten Attribut-Ausdruck der ZustellungTab-Einbettung).
+// echten Hub-Hydrierer befuellten Zustand). Der Beispiel-Alarm des Hubs ist entfernt (#3458).
 describe('#3061 AC-3 am Wirkort: Altbestand (activeMetricKeys=null) zeigt Alarm-Metriken', () => {
 	function renderAlarmeTab(wizardState: Record<string, unknown>): string {
 		return render(AlarmeTab as never, {
@@ -198,29 +195,19 @@ describe('#3061 AC-3 am Wirkort: Altbestand (activeMetricKeys=null) zeigt Alarm-
 		assert.ok(m![1].includes('Sonnenstunden'), `Hinweis nennt nicht die Vorgabemenge: ${m![1]}`);
 	});
 
-	test('Hub: Beispiel-Alarm (beispielAlarmRegeln an ZustellungTab) hat fuer Altbestand Regeln', async () => {
-		const s: Record<string, unknown> = {};
-		alarmHydrierer(s, ALTBESTAND());
-		assert.equal(s.activeMetricKeys, null, 'Messaufbau: Altbestand muss null tragen');
-		const { ast, quelle, u } = await umgebungFuer(HUB, {
+	// #3458: der Fall „Hub: Beispiel-Alarm (beispielAlarmRegeln an ZustellungTab) hat fuer Altbestand
+	// Regeln" entfaellt mit der Prop — der Beispiel-Alarm (Vorschau) ist aus dem Reiter Zustellung
+	// entfernt (ersetzt durch den Test-Alarm #3441). Die Hydrierer-Faelle oben bleiben.
+	test('#3458: Hub reicht keinen Beispiel-Alarm mehr an ZustellungTab', async () => {
+		const { ast, quelle } = await umgebungFuer(HUB, {
 			preset: ALTBESTAND(),
 			locations: [],
-			wizardState: s,
-			onScheduleChange: undefined,
-			alarmeCatalog: ALARM_KATALOG,
-			alarmeRegister: {}
+			wizardState: {},
+			onScheduleChange: undefined
 		});
 		const einbettungen = findeKomponenten(ast, 'ZustellungTab');
 		assert.equal(einbettungen.length, 1, 'Messaufbau: genau eine ZustellungTab-Einbettung im Hub erwartet');
-		const ausdruck = attributAusdruck(einbettungen[0], quelle, 'beispielAlarmRegeln');
-		assert.ok(ausdruck, 'Messaufbau: beispielAlarmRegeln-Attribut der ZustellungTab-Einbettung fehlt');
-		const regeln = werte(ausdruck!, u) as Array<{ metric: string }> | undefined;
-		assert.ok(Array.isArray(regeln), `Messaufbau: ${ausdruck} nicht herleitbar (${typeof regeln})`);
-		assert.deepEqual(
-			regeln!.map((r) => r.metric),
-			['wind_gust'],
-			'Beispiel-Alarm im Reiter Zustellung hat fuer Altbestand keine Metrik (#1320)'
-		);
+		assert.equal(attributAusdruck(einbettungen[0], quelle, 'beispielAlarmRegeln'), null, 'beispielAlarmRegeln wird noch weitergereicht');
 	});
 });
 

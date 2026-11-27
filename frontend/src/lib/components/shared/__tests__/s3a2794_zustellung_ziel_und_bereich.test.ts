@@ -37,8 +37,7 @@ register(
 const DATEI = {
 	tripNeu: join(KOMP, 'trip-new', 'TripNewEditor.svelte'),
 	zustellung: join(KOMP, 'shared', 'zustellung-tab', 'ZustellungTab.svelte'),
-	// #3036: Uebergangsblock aufgeloest — der Beispiel-Alarm ist der Abschnitt am Ende des Reiters.
-	beispiel: join(KOMP, 'organisms', 'zustellung-tab', 'BeispielAlarm.svelte'),
+	// #3458: BeispielAlarm.svelte (Abschnitt am Ende des Reiters) entfernt.
 	panel: join(KOMP, 'shared', 'WetterMetrikenVersandPanel.svelte')
 };
 

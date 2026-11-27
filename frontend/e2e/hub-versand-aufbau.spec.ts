@@ -62,7 +62,7 @@ for (const kind of HUB_KINDS) {
 		});
 
 		// VA-1 (Alt AC-1) — fängt: fehlender/vertauschter Block bzw. Alarm-Stufen je Metrik im Reiter.
-		test(`VA-1 (${kind}): Reiter Zustellung zeigt Kopf → (Orte: Aktivierung) → Briefing-Zeiten → Laufzeit → Kanäle → Stille Stunden → Beispiel-Alarm, keine Alarm-Stufen je Metrik`, async ({
+		test(`VA-1 (${kind}): Reiter Zustellung zeigt Kopf → (Orte: Aktivierung) → Briefing-Zeiten → Laufzeit → Kanäle → Stille Stunden (kein Beispiel-Alarm, #3458), keine Alarm-Stufen je Metrik`, async ({
 			page
 		}) => {
 			const hub = await seedHub(page.request, kind, { extra: va.metrikSeed });

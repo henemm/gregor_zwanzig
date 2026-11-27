@@ -496,8 +496,8 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 			'lib/components/alerts-tab/AlertMetricLevelTable.svelte',
 			'lib/components/alerts-tab/AlertMetricLevelRow.svelte',
 			'lib/components/alerts-tab/AlertQuietHoursCard.svelte',
-			'lib/components/alerts-tab/AlertCooldownCard.svelte',
-			'lib/components/alerts-tab/AlertPreviewCard.svelte'
+			'lib/components/alerts-tab/AlertCooldownCard.svelte'
+			// #3458: AlertPreviewCard.svelte entfernt (Alarm-Vorschau-Oberflaeche abgeloest durch Test-Alarm #3441).
 		];
 		const deckt = (a: string, p: string) => (a.endsWith('/') ? p.startsWith(a) : p === a);
 		assert.deepEqual(F7.filter((p) => ALLOWLIST.some((a) => deckt(a, p))), []);
@@ -514,7 +514,7 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 				e.pfad.endsWith('.ts') &&
 				(e.pfad.startsWith('lib/components/shared/alarme-tab/') || e.pfad.startsWith('lib/components/alerts-tab/') || e.pfad === 'lib/utils/alertMetricLabels.ts')
 		);
-		for (const p of ['shared/alarme-tab/premiumSmsAlarmGate.ts', 'shared/alarme-tab/alertChannelState.ts', 'shared/alarme-tab/alarmeTabSections.ts', 'shared/alarme-tab/activeAlertMetricsFromCatalog.ts', 'shared/alarme-tab/alarmeDeliveryPayload.ts', 'alerts-tab/alertMetricTable.ts', 'alerts-tab/alertPreviewHelpers.ts'])
+		for (const p of ['shared/alarme-tab/premiumSmsAlarmGate.ts', 'shared/alarme-tab/alertChannelState.ts', 'shared/alarme-tab/alarmeTabSections.ts', 'shared/alarme-tab/activeAlertMetricsFromCatalog.ts', 'shared/alarme-tab/alarmeDeliveryPayload.ts', 'alerts-tab/alertMetricTable.ts']) // #3458: alertPreviewHelpers.ts entfernt
 			assert.ok(ts.some((e) => e.pfad === `lib/components/${p}`), p);
 		assert.ok(ts.some((e) => e.pfad === 'lib/utils/alertMetricLabels.ts'), 'lib/utils/alertMetricLabels.ts');
 		assert.deepEqual(ts.filter((e) => e.treffer.length > 0).map((e) => `${e.pfad}: ${e.treffer.map((t) => t.text).join(' | ')}`), []);

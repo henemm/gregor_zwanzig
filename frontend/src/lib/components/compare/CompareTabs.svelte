@@ -37,10 +37,6 @@
 	import DragHandle from '$lib/components/shared/dnd/DragHandle.svelte';
 	// Issue #2795 S3b Teilschritt 1b: Reiter Zustellung (Neubau nach Mockup Fassung 3).
 	import ZustellungTab from '$lib/components/shared/zustellung-tab/ZustellungTab.svelte';
-	// Beispiel-Alarm im Uebergangsblock: Regeln aus der Metrik-Auswahl (wie bisher im AlarmeTab).
-	import { vergleichAlarmRegeln } from '$lib/components/alerts-tab/alertPreviewHelpers';
-	import { deriveActiveAlertMetricsFromCatalog } from '../shared/alarme-tab/activeAlertMetricsFromCatalog.ts';
-	import { materializeActiveMetricKeys } from '../shared/weather-metrics-tab/compareMetricOrder.ts';
 	// Issue #1311 (C1 von Epic #1301): geteilter Wetter-Metriken-Tab (Grundauswahl,
 	// vergleich-Kontext) — seit #1743 ueber WetterMetrikenVersandPanel (gelöscht, #3297) eingebettet.
 	import {
@@ -469,14 +465,6 @@
 	// blockierend nachgeladen; ohne Register bleiben die deutschen Namen der Vergleichs-Antwort.
 	let alarmeRegister = $state<Record<string, MetricLabelFields>>({});
 	const alarmeCatalogMitNamen = $derived(mitRegisterNamen(alarmeCatalog, alarmeRegister));
-	// #2795 S3b Teilschritt 1b: Beispiel-Alarm des Reiters Zustellung (Uebergangsblock) — dieselbe
-	// Ableitung wie bisher im AlarmeTab (aktive Alarm-Metriken aus Auswahl + Katalog, Stufen).
-	const beispielAlarmRegeln = $derived(
-		vergleichAlarmRegeln(
-			deriveActiveAlertMetricsFromCatalog(materializeActiveMetricKeys(wizardState.activeMetricKeys ?? null), alarmeCatalogMitNamen),
-			(wizardState.metricAlertLevels as Record<string, string> | undefined) ?? {}
-		)
-	);
 
 	async function hydrateAlarmeTab(): Promise<void> {
 		void loadMetricRegister().then((r) => (alarmeRegister = r), () => {});
@@ -821,14 +809,13 @@
 				     Versand-Abschnitt + AlarmeTab); mountet zusaetzlich erst nach der
 				     Alarm-Hydration (alarmeHydrated, wie bisher der Alarme-Reiter). -->
 				<!-- Issue #2795 S3b Teilschritt 1b: der neue Reiter speichert Briefing und Alarme ueber
-				     EINEN Speicherer; die Aktivierungs-Karte und der Beispiel-Alarm stehen bis auf
-				     Weiteres in seinem Uebergangsblock (kein AlarmeTab/VersandTab (gelöscht, #3297) mehr im Reiter).
+				     EINEN Speicherer; die Aktivierungs-Karte steht als fester Abschnitt darin
+				     (Beispiel-Alarm entfernt, #3458) (kein AlarmeTab/VersandTab (gelöscht, #3297) mehr im Reiter).
 				     Issue #3154: ohne Metrik-Oberflaeche — Listen, Stundenverlauf und Ausblick bedient die
 				     Karte „Was steht wo“ im Reiter Wetter (kein Wizard-Buendel mehr hier). -->
 				<ZustellungTab
 					context="vergleich"
 					activation={hubActivationCard}
-					beispielAlarmRegeln={beispielAlarmRegeln}
 					preset={currentPreset}
 					{saveController}
 					enqueueHubWrite={reiheHubSchreibvorgangEin}

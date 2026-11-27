@@ -98,15 +98,14 @@ Diese Scheibe:
   Zählbefehl) und prüft, dass die drei Kategorie-Summen 27/6/14 ergeben.
   Verhindert, dass diese Dokumentation und die Ratsche künftig auseinanderlaufen.
 
-## Anhang: AC-2-Endbilanz — alle 8 Ratschen-Einträge (seit #3389 ohne `versandVergleichSpeicherung.ts:236` und `weather-metrics-tab/weatherMetricsCompareSave.ts:364`; seit #3385 ohne `versand-tab/vtBriefingChannelsText.ts:22/:29` und `versand-tab/VTSchedulePlan.svelte:72` (Waisen gelöscht); seit #3297/#3020 ohne die elf Einträge von `VersandTab.svelte`, `WeatherMetricsTab.svelte`, `weatherMetricsTabSections.ts` und `WetterMetrikenVersandPanel.svelte` (Dateien gelöscht); Stand `3cece096`, S6g live; seit #2287 ohne `alarmeTabSections.ts:42`; seit #1743 mit `WetterMetrikenVersandPanel.svelte:66`; seit #1721 mit `WeatherMetricsTab.svelte:2042`; AlarmeTab-Zeilen seit #1895 S3b1 und S3b2 nachgemessen; seit #2794 S3a Teil-PR 4a ohne die 22 Einträge von `CorridorEditor.svelte`/`CorridorEditorMobile.svelte` (Oberfläche entfernt), Korridor-Logik unter `wetter-tab/`)
+## Anhang: AC-2-Endbilanz — alle 7 Ratschen-Einträge (seit #3458 ohne `AlarmeTab.svelte:608` (Beispielwarnung entfernt), AlarmeTab-Zeilen um 2 nachgerückt; seit #3389 ohne `versandVergleichSpeicherung.ts:236` und `weather-metrics-tab/weatherMetricsCompareSave.ts:364`; seit #3385 ohne `versand-tab/vtBriefingChannelsText.ts:22/:29` und `versand-tab/VTSchedulePlan.svelte:72` (Waisen gelöscht); seit #3297/#3020 ohne die elf Einträge von `VersandTab.svelte`, `WeatherMetricsTab.svelte`, `weatherMetricsTabSections.ts` und `WetterMetrikenVersandPanel.svelte` (Dateien gelöscht); Stand `3cece096`, S6g live; seit #2287 ohne `alarmeTabSections.ts:42`; seit #1743 mit `WetterMetrikenVersandPanel.svelte:66`; seit #1721 mit `WeatherMetricsTab.svelte:2042`; AlarmeTab-Zeilen seit #1895 S3b1 und S3b2 nachgemessen; seit #2794 S3a Teil-PR 4a ohne die 22 Einträge von `CorridorEditor.svelte`/`CorridorEditorMobile.svelte` (Oberfläche entfernt), Korridor-Logik unter `wetter-tab/`)
 
-### FACHLICH (5 — echter Sachunterschied, bleibt dauerhaft)
+### FACHLICH (4 — echter Sachunterschied, bleibt dauerhaft)
 
 | Datei:Zeile | Grund |
 |---|---|
-| `AlarmeTab.svelte:272` | Ableitung `unalertableSelectedMetricNames` — route liefert strukturell immer `[]` (#1435 AC-7) |
-| `AlarmeTab.svelte:557` | Anzeige-Zwilling der fachlichen Zusicherung aus `:272` |
-| `AlarmeTab.svelte:608` | Beispielwarnung: Ort- statt Etappen-Subjekt, zwei verschiedene Komponenten |
+| `AlarmeTab.svelte:270` | Ableitung `unalertableSelectedMetricNames` — route liefert strukturell immer `[]` (#1435 AC-7) |
+| `AlarmeTab.svelte:555` | Anzeige-Zwilling der fachlichen Zusicherung aus `:270` |
 | `alarme-tab/alarmeTabSections.ts:27` | Radar-Abschnitt nur im Vergleich |
 | `wetter-tab/corridorEditorState.ts:331` | Markieren-Schalter bei Tages-Summen nur im Trip gesperrt |
 
@@ -114,7 +113,7 @@ Diese Scheibe:
 
 | Datei:Zeile | Grund |
 |---|---|
-| `AlarmeTab.svelte:575` | Kurzstil-Schalter — im Trip steht derselbe Schalter im Versand-Reiter (#1260 S5), reine Platzierung |
+| `AlarmeTab.svelte:573` | Kurzstil-Schalter — im Trip steht derselbe Schalter im Versand-Reiter (#1260 S5), reine Platzierung |
 | `alarme-tab/alarmeTabSections.ts:38` | nur Überschrifttext |
 
 ### HERKUNFT (1 — AC-2-Abweichung, bleibt bestehen, siehe Begründung oben)
@@ -123,13 +122,15 @@ Diese Scheibe:
 |---|---|---|
 | `wetter-tab/wertebereicheVergleichSpeicherung.ts:203` | Erzeugungs-Prädikat für Wertebereiche: nur aktiv, wenn `context === 'vergleich'` | Gate für einen strukturell anderen Persistenz-Endpoint (Compare-Preset) |
 
-**Summe:** 5 FACHLICH + 2 DARSTELLUNG + 1 HERKUNFT = **8**, deckungsgleich
+**Summe:** 4 FACHLICH + 2 DARSTELLUNG + 1 HERKUNFT = **7**, deckungsgleich
 mit `EINGEFROREN_SOLL_ANZAHL` (Summenzeile in #2727 korrigiert — sie nannte 14 / 46;
 Abgleich der `context ===`-Zweige gegen die Soll-Liste bestanden, kein Zweig entfällt;
 #1721 hob danach FACHLICH 27 → 28; #2794 S3a Teil-PR 4a senkte sie mit dem entfernten
 Corridor-Editor auf 14 / 3 / 9 = 26; #3155 entfernte die `isRoute`-Weiche in `VTSchedulePlan.svelte`: 13 / 3 / 9 = 25; #3297/#3020 löschten den Alt-Editor samt Versand-Baustein: 7 / 3 / 3 = 13; #3385 löschte die Waisen `vtBriefingChannelsText.ts` und `VTSchedulePlan.svelte`: 5 / 2 / 3 = 10;
 #3389: 5 / 2 / 1 = 8 — `versandVergleichSpeicherung.ts:236` und `weatherMetricsCompareSave.ts:364`
-(die beiden `…SpeicherungAktiv`-Weichen) mit den toten Exporten gelöscht).
+(die beiden `…SpeicherungAktiv`-Weichen) mit den toten Exporten gelöscht;
+#3458: 4 / 2 / 1 = 7 — `AlarmeTab.svelte:608` (Beispielwarnung, `AlertPreviewCard`) mit dem Abschnitt
+`sample` entfernt).
 
 ## Changelog
 

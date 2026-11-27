@@ -103,6 +103,18 @@ Unit (`node --test`, unter `frontend/src/lib/…`):
 | `lib/__tests__/apiZeitlimit.test.ts` | angepasst | Zeitlimit-Fälle zu `alarmVorschau` entfallen mit der Funktion; übrige Zeitlimits bleiben |
 | `lib/__tests__/etagRegistryQueue.test.ts`, `lib/__tests__/bausteine_waechter_regeln.ts` | angepasst | Verweise auf entfernte Karte/Helfer streichen |
 | `i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts` | angepasst | Dateiliste ohne `AlertPreviewCard.svelte`, `alertPreviewHelpers.ts` |
+| `components/shared/__tests__/alarme_tab_sections.test.ts` | angepasst (Nachtrag GREEN) | Abschnittslisten route/vergleich ohne `sample`, zusätzlich Abwesenheit von `sample` zugesichert |
+| `components/shared/zustellung-tab/__tests__/organismen_melden_an_einen_speicherer_3020.test.ts` | angepasst (Nachtrag GREEN) | Prop `beispielAlarmRegeln` aus dem Messaufbau gestrichen (Prop entfällt) |
+| `components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts` | angepasst (Nachtrag GREEN) | zusätzlich entfällt die Prüfung „Beispiel-Alarm bringt kein zweites `#versand`“ mit `BeispielAlarm.svelte`; „genau ein `#versand` an den Briefing-Zeiten“ bleibt |
+| `components/shared/__tests__/s3b2795_zustellung_profil_einmal.test.ts` | angepasst (Nachtrag GREEN) | Fall `f006_beispiel_alarm_laedt_kein_profil_und_traegt_keine_metrik_oberflaeche` entfällt mit `BeispielAlarm.svelte`; „ZustellungTab lädt das Profil genau einmal“ bleibt |
+| `components/shared/__tests__/s3b2795_zustellung_struktur.test.ts` | angepasst (Nachtrag GREEN) | Fall `s3b2795_beispiel_alarm_ohne_inhalt_je_kanal` wird zu `s3b2795_kein_beispiel_alarm_und_kein_inhalt_je_kanal_im_reiter_baum`: „kein Inhalt je Kanal“ gilt jetzt für den ganzen Reiter-Baum statt nur für den Abschnitt |
+| `components/alerts-tab/__tests__/alarme_tab_sprache.test.ts` | angepasst (Ergänzung) | entfallen: Fall „Vorschau-Fehler ohne Servertext“ (prüfte nur `vorschauFehlerText` des gelöschten Helfers) sowie die englischen Vorschau-Leerzustände und -Ladezustände; neu: „Example warning“/„Load preview“ fehlen |
+| `tests/golden/f7_alarme_tab/*`, `tests/golden/f9_trip_flaechen/anlegen_*`, `tests/golden/f10_vergleich_flaechen/anlegen_weiter.*` | neu geschrieben (Nachtrag GREEN) | Golden-Ist-Stand ohne Vorschau; per Token-Diff gegen den alten Stand geprüft: ausschließlich Löschungen der Abschnitte `beispiel-alarm`/`sample` und der Vorschau-Renders, sonst byte-gleich (`alarme_tab_sprache`, `trip_hub_sprache`, `vergleich_hub_sprache`) |
+| `components/shared/__tests__/ac2_endbilanz_deckt_alle_47_ab.test.ts` + `docs/specs/modules/rework_2276_s6h_ac2_endbilanz.md` | angepasst (Nachtrag GREEN) | Endbilanz 8 → 7: Eintrag `AlarmeTab.svelte:608` (Beispielwarnung) entfällt, übrige AlarmeTab-Zeilen um 2 nachgerückt |
+| `lib/__tests__/bausteine_waechter_regeln.ts` | angepasst | zusätzlich `BESTAND_OBERGRENZE` 155 → 154 (Bestand darf nur sinken) |
+| `lib/__tests__/apiZeitlimit.test.ts` | angepasst (Ergänzung) | entfallen sind beide Blöcke: „Alarm-Vorschau 130 s“ (`langlaeufer.alarmVorschau`) und „#2283 alarmVorschau kind-neutral“ (2 Fälle); ersetzt durch Abwesenheits-Zusicherungen |
+| `lib/__tests__/etagRegistryQueue.test.ts` | geprüft, unverändert | Treffer ist nur die URL-Zuordnung des Server-Pfads `alert-preview`, der bleibt |
+| `docs/specs/modules/rework_3020_testtabelle.md` (Belege G45, E007, E017, E018) | angepasst (Nachtrag GREEN) | Belegnamen auf die umbenannten Fälle in `rework_3036_zustellung_ohne_uebergang`, `s3b2795_zustellung_struktur` und `ac2_endbilanz_deckt_alle_47_ab` (8 → 7) nachgeführt (Wächter `rework_3020_rueckbau_waechter`) |
 
 E2E (Playwright, `frontend/e2e/`):
 
@@ -118,7 +130,14 @@ E2E (Playwright, `frontend/e2e/`):
 | `langlaeufer-zeitbudget-wirkort.spec.ts` Fall „Alarm-Vorschau (40 s)“ (Z. 103-155) | entfällt | Zeitbudget war nur über den Knopf „Vorschau laden“ erreichbar; andere Zeitbudget-Fälle bleiben |
 | `sicherheitsrichtlinie-ohne-verletzung.spec.ts` Fall „Alarm-Vorschau (srcdoc-iframe)“ (Z. 166-201) | entfällt | der srcdoc-iframe existierte nur in der Vorschau-Karte; übrige Seiten-Fälle der Richtlinie bleiben |
 | `kind-required-3444.staging.spec.ts` | unberührt | prüft den Server-Endpunkt `alert-preview`, der bleibt |
-| `hub-test-alarm.staging.spec.ts`, `trip-outlook-metric-selection.staging.spec.ts` | geprüft | Treffer nur Test-Alarm-Untertitel bzw. Text; nur anpassen, falls sie die Vorschau-Karte erwarten |
+| `hub-test-alarm.staging.spec.ts` | geprüft, unverändert | Treffer nur Test-Alarm-Untertitel |
+| `trip-outlook-metric-selection.staging.spec.ts` AC-13 | angepasst (Nachtrag GREEN) | wartete auf `zustellung-beispiel-alarm` als Ladesignal; jetzt Stille Stunden sichtbar und Beispiel-Alarm `toHaveCount(0)` |
+| `wetter-metriken-vorschau-entfernt.staging.spec.ts` AC-1 | angepasst (Nachtrag GREEN) | dito (Ladesignal Beispiel-Alarm → Stille Stunden, Abwesenheit zugesichert) |
+| `s3b2795-zustellung-kanaele.spec.ts` AC-36 | angepasst (Nachtrag GREEN) | dito |
+| `was-steht-wo-karte.spec.ts` WS-13 | umgedreht (Nachtrag GREEN) | Beispiel-Alarm und Vorschau-Karte im Reiter Zustellung `toHaveCount(0)` |
+| `s3b2795-zustellung-bilder.staging.spec.ts` | unverändert | nutzt `MARKER` aus den Helfern, der ohne `beispiel-alarm` mitwandert |
+
+Ratschen (Nachtrag GREEN): `E2E_MIN_EXECUTED_HAUPT` in `.github/workflows/ci.yml` 757 → 752 (−5: WS-16 je Trip/Orte, WS-neu-5, Zeitbudget- und Richtlinien-Fall der Alarm-Vorschau; alle drei Dateien stehen auf der Positivliste), mitgezogen in `tests/unit/test_2243_playwright_loeschscheibe.py`; `tests/unit/test_3374_tote_browserpruefungen_geloescht.py` führt WS-neu-5 nicht mehr als übertragenen Fall. Ratsche „Ein Katalog“ (ADR-0127): Eintrag `alertPreviewHelpers.ts` aus `tests/unit/ein_katalog_ausnahmen.json` gestrichen, `HOECHSTSTAND` 412 → 411 (Liste und Konstante).
 
 Die genaue Zeilen- und Fallzählung ergibt sich in der Umsetzung per `grep`; jeder entfallende Fall wird im Pull-Request-Text einzeln mit dem Grund aus dieser Tabelle vermerkt.
 

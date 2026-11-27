@@ -25,8 +25,7 @@
 //   WS-14 Trip/Orte: Speichern im Reiter Zustellung (bei Orten auch die Pausieren-Karte im Übergangsblock) und
 //         in der Karte lässt gespeicherte fremde Einstellungen stehen (#3359: echte Felder statt Altfelder);
 //         das Abo eines zweiten Nutzers bleibt unberührt.
-//   WS-16 Trip/Orte: „Vorschau laden“ des Beispiel-Alarms im Übergangsblock lädt die Alarm-Vorschau DIESES Abos
-//         (eigene Kennung, eigene Regel bzw. eigene Orte), ein zweiter Nutzer sieht nichts Fremdes (Adversary F004).
+//   WS-16 entfallen mit #3458 (Beispiel-Alarm samt „Vorschau laden“ entfernt).
 //   WS-15 Trip: E-Mail-Format „Kompakt“ sperrt Etappen-Kennzahlen, Vortag-Vergleich und Nacht-Stundentabelle (sie
 //         wirken in der Kompakt-Mail nicht), gespeicherte Werte bleiben; „Ausführlich“ gibt sie mit altem Wert frei.
 //   Übertragen aus gelöschten Alt-Specs (#3374, Spec rework_3374_tote_browserpruefungen.md AC-1 bis AC-5):
@@ -34,7 +33,7 @@
 //   WS-neu-2 Trip: Klick auf Überschriften speichert nichts; Schalter per Tastatur speichert, bleibt nach Neuladen.
 //   WS-neu-3 Trip: Lesefehler der Karte -> Fehler + „Neu laden“, kein Schreibvorgang; „Neu laden“ holt die Tabelle.
 //   WS-neu-4 drei Orte: Stundenverlauf-Spalte nur „nur in der E-Mail“, keine Kanal-Kappung.
-//   WS-neu-5 Trip ohne Etappe mit zwei Wegpunkten: Beispiel-Alarm zeigt Hinweis, keine Vorschau, kein Abruf.
+//   WS-neu-5 entfallen mit #3458 (Vorschau-Karte entfernt).
 //
 //   cd frontend && npx playwright test e2e/was-steht-wo-karte.spec.ts --workers=1 --trace off
 
@@ -727,54 +726,9 @@ test.describe('Karte „Was steht wo“', () => {
 		}
 	});
 
-	for (const fall of [FAELLE[0], FAELLE[1]]) {
-		test(`WS-16 (${fall.name}): Beispiel-Alarm im Übergangsblock lädt die Vorschau dieses Abos, zweiter Nutzer sieht nichts Fremdes`, async ({ browser, page }) => {
-			test.setTimeout(300_000);
-			await page.setViewportSize(DESKTOP);
-			const abo = await seed(page.request, fall);
-			const zweit = await zweitNutzer(browser, page, { sprache: 'de', ip: `10.31.24.${fall.kind === 'route' ? 1 : 2}` });
-			const fremd = await seed(zweit.seite.request, fall);
-			try {
-				const name = (await stand(page.request, abo.kind, abo.id)).name as string;
-				const ortIds = fall.kind === 'vergleich' ? ((await stand(page.request, abo.kind, abo.id)).location_ids as string[]) : [];
-				const pruefe = async (seite: Page, a: Abo) => {
-					const z = await oeffneZustellung(seite, a.kind, a.id);
-					const karte = z.getByTestId(ZT.beispielAlarm).getByTestId('alert-preview-card');
-					await expect(karte.getByTestId('alert-preview-unsaved'), 'kein ungespeicherter Zustand').toHaveCount(0);
-					const anfrage = seite.waitForRequest((r) => r.method() === 'POST' && r.url().includes('/alert-preview'), { timeout: 20_000 });
-					await karte.getByTestId('alert-preview-load-btn').click();
-					const r = await anfrage;
-					const antwort = await r.response();
-					return { karte, pfad: new URL(r.url()).pathname, rumpf: r.postDataJSON() as Json, status: antwort?.status() };
-				};
-				const a = await pruefe(page, abo);
-				expect(a.pfad, 'Vorschau des richtigen Abos').toBe(`/api/briefings/${abo.id}/alert-preview`);
-				expect(a.status).toBe(200);
-				const changes = a.rumpf.changes as Json[];
-				expect(changes.length, 'Regeln des Abos kommen an').toBeGreaterThan(0);
-				if (fall.kind === 'route') {
-					const eigene = ((await stand(page.request, abo.kind, abo.id)).alert_rules as Json[]).filter((r) => r.enabled).map((r) => r.threshold).sort();
-					expect(eigene.length, 'Messaufbau: das Abo hat Regeln').toBeGreaterThan(0);
-					expect(changes.map((c) => c.threshold).sort(), 'die Regeln dieses Abos').toEqual(eigene);
-				} else expect([...new Set(changes.map((c) => c.location_id))].sort(), 'die eigenen Orte').toEqual([...ortIds].sort());
-				await expect(a.karte.getByTestId('alert-preview-error')).toHaveCount(0);
-				await expect(a.karte.getByTestId('alert-preview-subject')).not.toBeEmpty({ timeout: 130_000 });
-
-				// Zweiter Nutzer: eigene Vorschau, nichts vom Abo des ersten Nutzers.
-				const b = await pruefe(zweit.seite, fremd);
-				expect(b.pfad).toBe(`/api/briefings/${fremd.id}/alert-preview`);
-				await expect(b.karte.getByTestId('alert-preview-subject')).not.toBeEmpty({ timeout: 130_000 });
-				await expect(b.karte, 'fremder Abo-Name in der Vorschau').not.toContainText(name);
-				if (fall.kind === 'vergleich') for (const o of ortIds) expect(JSON.stringify(b.rumpf)).not.toContain(o);
-				const quer = await zweit.seite.request.post(`/api/briefings/${abo.id}/alert-preview?kind=${abo.kind}`, { data: a.rumpf });
-				expect(quer.status(), 'fremde Vorschau gesperrt').toBe(404);
-			} finally {
-				await fremd.aufraeumen().catch(() => {});
-				await zweit.aufraeumen();
-				await abo.aufraeumen();
-			}
-		});
-	}
+	// #3458: WS-16 (Trip/Orte, „Vorschau laden“ des Beispiel-Alarms laedt die Vorschau dieses Abos) entfaellt
+	// mit Karte und Knopf; die Mandantentrennung des Server-Wegs alert-preview bleibt ueber Staging-/Python-Tests
+	// abgedeckt (kind-required-3444.staging.spec.ts).
 
 	test('WS-15 (Trip): Kompakt sperrt die fünf Mail-Blöcke, gespeicherte Werte bleiben, Ausführlich gibt sie frei', async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
@@ -858,10 +812,9 @@ test.describe('Karte „Was steht wo“', () => {
 			const abo = await seed(page.request, fall);
 			try {
 				const z = await oeffneZustellung(page, abo.kind, abo.id);
-				// #3036: Beispiel-Alarm als eigener Abschnitt, Pausieren-Karte (Orte) im Abschnitt unter dem Kopf.
-				const beispiel = z.getByTestId(ZT.beispielAlarm);
-				await expect(beispiel).toBeVisible();
-				await expect(beispiel.getByTestId('alert-preview-card')).toBeVisible();
+				// #3036: Pausieren-Karte (Orte) im Abschnitt unter dem Kopf. #3458: kein Beispiel-Alarm mehr.
+				await expect(z.getByTestId(ZT.beispielAlarm)).toHaveCount(0);
+				await expect(z.getByTestId('alert-preview-card')).toHaveCount(0);
 				await expect(z.getByTestId(ZT.aktivierung).getByTestId('compare-hub-activation-card')).toHaveCount(abo.kind === 'vergleich' ? 1 : 0);
 				for (const id of [...ALT_TESTIDS, ...Object.keys(KARTE_EINMAL[abo.kind])]) await expect(z.getByTestId(id), `Reiter Zustellung: ${id}`).toHaveCount(0);
 				for (const w of ALT_TEXTE) await expect(z, `Reiter Zustellung: „${w}“`).not.toContainText(w);
@@ -1113,28 +1066,5 @@ test.describe('Karte „Was steht wo“ — #3374 übertragene Zusicherungen', (
 		}
 	});
 
-	test('WS-neu-5 (Trip): ohne Etappe mit zwei Wegpunkten zeigt der Beispiel-Alarm einen Hinweis statt einer Vorschau, kein Abruf', async ({ page }) => {
-		await page.setViewportSize(DESKTOP);
-		const abo = await seedMitGewitter(page.request, {
-			stages: [{ id: 's1', name: 'Tag 1', date: '2027-08-01', waypoints: [{ id: 'a', name: 'Start', lat: 47.0, lon: 11.0, elevation_m: 1000 }] }]
-		});
-		try {
-			const s = await stand(page.request, 'route', abo.id);
-			expect(((s.alert_rules as Json[] | undefined) ?? []).length, 'Messaufbau: das Abo hat Alarm-Regeln').toBeGreaterThan(0);
-			expect((s.stages as Json[]).every((e) => (e.waypoints?.length ?? 0) < 2), 'Messaufbau: keine Etappe mit zwei Wegpunkten').toBe(true);
-			const abrufe: string[] = [];
-			page.on('request', (r) => {
-				if (r.url().includes('/alert-preview')) abrufe.push(r.url());
-			});
-			const z = await oeffneZustellung(page, abo.kind, abo.id);
-			const karte = z.getByTestId(ZT.beispielAlarm).getByTestId('alert-preview-card');
-			await expect(karte.getByTestId('alert-preview-no-stages')).toBeVisible();
-			await expect(karte.getByTestId('alert-preview-no-metrics'), 'nicht der Hinweis „keine Metriken“').toHaveCount(0);
-			await expect(karte.getByTestId('alert-preview-load-btn'), 'keine Vorschau anzufordern').toHaveCount(0);
-			await expect(karte.getByTestId('alert-preview-error')).toHaveCount(0);
-			expect(abrufe, 'kein Abruf der Alarm-Vorschau').toEqual([]);
-		} finally {
-			await abo.aufraeumen();
-		}
-	});
+	// #3458: WS-neu-5 (Hinweis „keine Etappe“ in der Vorschau-Karte) entfaellt mit der Karte.
 });

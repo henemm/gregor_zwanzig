@@ -45,8 +45,9 @@ const PANEL = join(KOMP, 'shared', 'WetterMetrikenVersandPanel.svelte');
 const TRIP_HUB = join(KOMP, 'trip-detail', 'TripTabs.svelte');
 const VERGLEICH_HUB = join(KOMP, 'compare', 'CompareTabs.svelte');
 
-// #3036: der Uebergangsblock ist aufgeloest — der Beispiel-Alarm ist der letzte Abschnitt.
-const MARKER = ['abschnittskopf', 'briefing-zeiten', 'laufzeit', 'kanaele', 'stille-stunden', 'beispiel-alarm'];
+// #3036: der Uebergangsblock ist aufgeloest. #3458: der Beispiel-Alarm ist entfernt — letzter Abschnitt
+// ist Stille Stunden.
+const MARKER = ['abschnittskopf', 'briefing-zeiten', 'laufzeit', 'kanaele', 'stille-stunden'];
 
 /** Alt-Bausteine, die der neue Reiter NICHT mehr einbettet (Spec §7, AC-27, AC-31, §5). */
 const VERBOTEN = [
@@ -244,31 +245,23 @@ describe('AC-27/AC-31: keine Kanaele je Wettergroesse, keine amtlichen Warnungen
 	});
 });
 
-// ── Beispiel-Alarm (AC-30, §5; #3036 AC-7) ──────────────────────────────────
+// ── Kein Beispiel-Alarm mehr (AC-30, §5; #3036 AC-7 abgeloest durch #3458) ───
 
 // #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 14, AC-30): Inhalt je Kanal (Listen,
 // Stundenverlauf, Ausblick, Kurzstil, Mehrtages-Trend, Mail-Inhalt, Nacht-Block) bedient allein die Karte
-// „Was steht wo“ im Reiter Wetter. #3036: der Uebergangsblock ist aufgeloest; am Ende steht nur noch der
-// Abschnitt Beispiel-Alarm (die Pausieren-Karte der Orte steht unter dem Kopf).
-describe('AC-30: Beispiel-Alarm am Ende — Inhalt je Kanal in der Karte (#3154, #3036)', () => {
-	function beispielAlarm(): { knoten: Knoten; quelle: string } {
+// „Was steht wo“ im Reiter Wetter. #3458: der Abschnitt Beispiel-Alarm (Vorschau-Karte) ist entfernt —
+// ersetzt durch den Test-Alarm in „Test schicken ▾“ (#3441).
+describe('AC-30: kein Beispiel-Alarm am Ende — Inhalt je Kanal in der Karte (#3154, #3458)', () => {
+	test('s3b2795_kein_beispiel_alarm_und_kein_inhalt_je_kanal_im_reiter_baum', () => {
 		for (const d of baum()) {
 			const { ast, quelle } = svelteAst(d);
 			const k = alle(ast.fragment, (n) => istElement(n) && statisch(n, quelle, 'data-abschnitt') === 'beispiel-alarm');
-			if (k.length > 0) {
-				assert.equal(k.length, 1, `${basename(d)}: mehr als ein Abschnitt Beispiel-Alarm`);
-				return { knoten: k[0], quelle };
+			assert.equal(k.length, 0, `${basename(d)}: Abschnitt Beispiel-Alarm noch vorhanden`);
+			assert.ok(!enthaelt(ast.fragment, ['AlertPreviewCard', 'BeispielAlarm']), `${basename(d)}: bettet noch die Vorschau ein`);
+			for (const name of ['WetterMetrikenVersandPanel', 'WeatherMetricsTab', 'KanalStil', 'TelegramKurzstilToggle', 'MailInhaltCard']) {
+				assert.ok(!enthaelt(ast.fragment, [name]), `${basename(d)} enthaelt noch ${name} — die Einstellung steht sonst doppelt (Karte „Was steht wo“)`);
 			}
 		}
-		assert.fail('kein Element mit data-abschnitt="beispiel-alarm" im Reiter-Baum');
-	}
-
-	test('s3b2795_beispiel_alarm_ohne_inhalt_je_kanal', () => {
-		const { knoten } = beispielAlarm();
-		for (const name of ['WetterMetrikenVersandPanel', 'WeatherMetricsTab', 'KanalStil', 'TelegramKurzstilToggle', 'MailInhaltCard']) {
-			assert.ok(!enthaelt(knoten, [name]), `Abschnitt Beispiel-Alarm enthaelt noch ${name} — die Einstellung steht sonst doppelt (Karte „Was steht wo“)`);
-		}
-		assert.ok(enthaelt(knoten, ['AlertPreviewCard']), 'Abschnitt Beispiel-Alarm ohne AlertPreviewCard');
 	});
 
 	test('s3b2795_kein_alter_versand_abschnitt_im_reiter', () => {

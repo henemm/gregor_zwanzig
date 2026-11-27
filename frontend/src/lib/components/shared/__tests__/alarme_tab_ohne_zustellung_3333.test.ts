@@ -30,7 +30,8 @@ const { render } = await import('svelte/server');
 const AlarmeTab = (await import(pathToFileURL(path.join(FRONTEND, 'src/lib/components/shared/AlarmeTab.svelte')).href)).default;
 
 const ZUSTELLUNG = ['channels', 'cooldown', 'quiet-hours'];
-const BLEIBEN_VERGLEICH = ['official-warnings', 'radar', 'metric-levels', 'sample'];
+// #3458: Abschnitt 'sample' (Beispiel-Warnung) entfernt — bleibt nicht mehr, fehlt.
+const BLEIBEN_VERGLEICH = ['official-warnings', 'radar', 'metric-levels'];
 const TRIP = { id: '__new__', name: 'Neu-3333', stages: [], alert_rules: [], display_config: {}, report_config: undefined };
 
 function wizStub(): Record<string, unknown> {
@@ -65,18 +66,19 @@ describe('#3333 Test 5 (AC-10): Tabelle und Abschnittsliste', () => {
 	});
 
 	test('Hub-Listen (ohne ohneZustellung) unverändert', () => {
-		assert.deepEqual(alarmeTabSections('vergleich'), ['official-warnings', 'radar', 'metric-levels', 'channels', 'cooldown', 'quiet-hours', 'sample']);
-		assert.deepEqual(alarmeTabSections('route'), ['official-warnings', 'metric-levels', 'channels', 'cooldown', 'quiet-hours', 'sample']);
+		assert.deepEqual(alarmeTabSections('vergleich'), ['official-warnings', 'radar', 'metric-levels', 'channels', 'cooldown', 'quiet-hours']);
+		assert.deepEqual(alarmeTabSections('route'), ['official-warnings', 'metric-levels', 'channels', 'cooldown', 'quiet-hours']);
 	});
 });
 
 describe('#3333 Test 5 (AC-10): Wirkort — der gerenderte Reiter Alarme', () => {
-	test('Orte-Anlegen (vergleich, createMode): keine Abschnitte Kanäle, Cooldown, Stille Stunden; Warnungen, Radar, Metrik-Stufen, Beispiel bleiben', () => {
+	test('Orte-Anlegen (vergleich, createMode): keine Abschnitte Kanäle, Cooldown, Stille Stunden; Warnungen, Radar, Metrik-Stufen bleiben, Beispiel fehlt (#3458)', () => {
 		const html = renderVergleich(true);
 		const ids = abschnitte(html);
 		assert.ok(ids.length > 0, 'Messaufbau: keine Abschnitte gerendert');
 		for (const s of ZUSTELLUNG) assert.ok(!ids.includes(s), `Orte-Anlegen: Abschnitt "${s}" hat eine zweite Bedienstelle (Reiter Zustellung besitzt ihn) — gerendert: ${JSON.stringify(ids)}`);
 		for (const s of BLEIBEN_VERGLEICH) assert.ok(ids.includes(s), `Orte-Anlegen: Abschnitt "${s}" fehlt (keine andere Bedienstelle)`);
+		assert.ok(!ids.includes('sample'), 'Orte-Anlegen: Abschnitt "sample" (Beispiel-Warnung) noch da (#3458)');
 		assert.equal((html.match(/data-testid="alert-channel-threshold-telegram-HIGH"/g) ?? []).length, 0, 'alte Dringlichkeit-Wahl im Orte-Anlegen');
 	});
 
@@ -85,7 +87,7 @@ describe('#3333 Test 5 (AC-10): Wirkort — der gerenderte Reiter Alarme', () =>
 	});
 
 	test('Trip-Anlegen und Trip-Hub unverändert wie nach D1 (AC-15)', () => {
-		assert.deepEqual(abschnitte(renderRoute(true)), ['official-warnings', 'metric-levels', 'sample']);
+		assert.deepEqual(abschnitte(renderRoute(true)), ['official-warnings', 'metric-levels']);
 		assert.deepEqual(abschnitte(renderRoute(false)), alarmeTabSections('route'));
 	});
 });

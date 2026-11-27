@@ -338,7 +338,6 @@ describe('AC-7: PUT im Zeitlimit, Server hat ihn trotzdem angenommen', () => {
 // der Abruf scheitert schon beim ersten Vorruecken.
 type Langlaeufer = {
 	testNachricht: (channel: string) => Promise<unknown>;
-	alarmVorschau: (tripId: string, payload: unknown) => Promise<unknown>;
 };
 
 const flush = () => new Promise((r) => setImmediate(r));
@@ -396,13 +395,11 @@ describe('F002: Langlaeufer tragen ihr eigenes Budget (gestellte Uhr)', () => {
 		assert.deepEqual(JSON.parse(String(aufrufe[0].init?.body)), { channel: 'telegram' });
 	});
 
-	test('Alarm-Vorschau: 130 s (Go-Proxy 120 s, #1839), POST /api/trips/{id}/alert-preview', FRIST, async () => {
-		const aufrufe = await pruefeBudgetGrenze(
-			() => langlaeufer().alarmVorschau('t-1', { rules: [] }),
-			130_000
-		);
-		assert.equal(aufrufe[0].path, '/api/trips/t-1/alert-preview');
-		assert.deepEqual(JSON.parse(String(aufrufe[0].init?.body)), { rules: [] });
+	// #3458: die Alarm-Vorschau (POST /api/trips/{id}/alert-preview) entfiel mit der Oberflaeche;
+	// der Zeitlimit-Fall „Alarm-Vorschau 130 s“ entfaellt mit der Funktion (Server-Endpunkt bleibt).
+	test('Alarm-Vorschau ist entfernt: kein `langlaeufer.alarmVorschau`, kein ZEITLIMIT_ALARM_VORSCHAU_MS', () => {
+		assert.equal('alarmVorschau' in langlaeufer(), false);
+		assert.equal('ZEITLIMIT_ALARM_VORSCHAU_MS' in (modul as Record<string, unknown>), false);
 	});
 
 	test('Orts-Aufloesung (Step2Orte/LocationNewModal): `api.post` mit ZEITLIMIT_ORT_AUFLOESEN_MS laeuft 40 s', FRIST, async () => {
@@ -415,37 +412,12 @@ describe('F002: Langlaeufer tragen ihr eigenes Budget (gestellte Uhr)', () => {
 	});
 });
 
-// ── Issue #2283 (AC-21): kind-neutrale Alarm-Vorschau ──────────────────────
-// BENANNTER Export von `api.ts` (nicht in `langlaeufer`: dort heisst
-// `alarmVorschau(tripId, payload)` schon anders, s. F002 oben):
-//   * `alarmVorschau(kind, id, payload)` → POST
-//     /api/briefings/{id}/alert-preview?kind=route|vergleich, JSON-Koerper =
-//     payload, Budget 130 s (= ZEITLIMIT_ALARM_VORSCHAU_MS, unveraendert)
-// Die Briefing-Vorschau (GET /api/briefings/{id}/preview) entfiel mit #1743.
-type KindAbrufe = {
-	alarmVorschau?: (kind: string, id: string, payload: unknown) => Promise<unknown>;
-};
-
-describe('#2283: alarmVorschau (kind-neutral, gestellte Uhr)', () => {
-	function abrufe(): Required<Pick<KindAbrufe, 'alarmVorschau'>> {
-		const m = modul as unknown as KindAbrufe;
-		assert.equal(typeof m.alarmVorschau, 'function', 'api.ts muss `alarmVorschau(kind, id, payload)` exportieren');
-		return m as Required<Pick<KindAbrufe, 'alarmVorschau'>>;
-	}
-	const q = (url: string) => new URL(url, 'http://localhost');
-
-	for (const kind of ['vergleich', 'route']) {
-		test(`Alarm-Vorschau ${kind}: 130 s, POST /api/briefings/{id}/alert-preview?kind=${kind}`, FRIST, async () => {
-			const koerper =
-				kind === 'vergleich'
-					? { changes: [{ location_id: 'l-1', metric: 'gust_max_kmh', old_value: 25, new_value: 72, delta: 47, threshold: 60, severity: 'major', direction: 'increase' }] }
-					: { changes: [], segment_times: [] };
-			const aufrufe = await pruefeBudgetGrenze(() => abrufe().alarmVorschau(kind, 'e-1', koerper), 130_000);
-			const u = q(aufrufe[0].path);
-			assert.equal(u.pathname, '/api/briefings/e-1/alert-preview');
-			assert.deepEqual([...u.searchParams.entries()], [['kind', kind]]);
-			assert.equal(aufrufe[0].init?.method, 'POST');
-			assert.deepEqual(JSON.parse(String(aufrufe[0].init?.body)), koerper);
-		});
-	}
+// ── Issue #2283 (AC-21): kind-neutrale Alarm-Vorschau — entfernt mit #3458 ─────
+// Die Zeitlimit-Faelle zu `alarmVorschau(kind, id, payload)` (POST
+// /api/briefings/{id}/alert-preview?kind=…, 130 s) entfallen mit der Funktion;
+// der Server-Endpunkt bleibt als Pruefwerkzeug (kind-required-3444.staging.spec.ts).
+describe('#3458: alarmVorschau (kind-neutral) ist aus api.ts entfernt', () => {
+	test('kein benannter Export `alarmVorschau`', () => {
+		assert.equal('alarmVorschau' in (modul as Record<string, unknown>), false);
+	});
 });
