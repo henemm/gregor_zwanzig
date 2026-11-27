@@ -75,7 +75,7 @@
       "GO_LISTE": 1
     },
     "internal/model/trip.go": {
-      "GO_LISTE": 4
+      "GO_LISTE": 3
     },
     "internal/provider/openmeteo/models.go": {
       "GO_LISTE": 1
@@ -222,5 +222,5 @@
       "VERARBEITUNG_AUSSEN": 1
     }
   },
-  "hoechststand": 413
+  "hoechststand": 412
 }
