@@ -1,4 +1,4 @@
-// Issue #2647 (i18n S2) — vereinigt alle 18 Bereichsdateien (en) zu EINER flachen Karte.
+// Issue #2647 (i18n S2) — vereinigt alle Bereichsdateien (en) zu EINER flachen Karte.
 // Migrationspakete fassen nur ihre eigene Bereichsdatei an; diese Liste ist vollstaendig.
 import start from './start.json' with { type: 'json' };
 import auth from './auth.json' with { type: 'json' };
@@ -22,6 +22,8 @@ import wetter from './wetter.json' with { type: 'json' };
 import zustellung from './zustellung.json' with { type: 'json' };
 // Issue #3319 / #3320: oeffentliche Funktionsuebersicht und Level-Tabelle (funktionen.*, level.*).
 import funktionen from './funktionen.json' with { type: 'json' };
+// Issue #3440: Menü „Test schicken ▾“ im Hub-Kopf (test_schicken.*).
+import test_schicken from './test_schicken.json' with { type: 'json' };
 
 export const en: Record<string, string> = {
 	...start,
@@ -43,5 +45,6 @@ export const en: Record<string, string> = {
 	...hilfe,
 	...wetter,
 	...zustellung,
-	...funktionen
+	...funktionen,
+	...test_schicken
 };

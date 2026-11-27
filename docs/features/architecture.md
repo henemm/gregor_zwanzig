@@ -1231,7 +1231,7 @@ Editor-Muster (PO-Invariante, CLAUDE.md „Trip/Ortsvergleich-Code-Teilung“):
   in der Titelzeile (keine eigene Statuszeile). Kebab mobil vertikal (`SubscriptionKebab`).
   **Scheibe c2 (#2913, 2026-11-13, Spec `docs/specs/modules/feat_2913_c2_seitenkopf.md`):** Kopf nach
   Mockup Fassung 3 (seit 2026-11-17 Fassung 4). Der Sende-Knopf heißt „Test schicken ▾“ (Beschriftung per Prop `sendLabel`; das
-  Menü kommt mit #2797). In der Leiste steht das Kebab „Weitere Aktionen“ links vom Knopf (Reihenfolge nach Mockup). Eyebrow „Trip · Region" bzw. „Orte · Region" und Meta-Zeile („Datum · N Etappen ·
+  Menü dazu seit #3440, siehe Aktionsmodell unten). In der Leiste steht das Kebab „Weitere Aktionen“ links vom Knopf (Reihenfolge nach Mockup). Eyebrow „Trip · Region" bzw. „Orte · Region" und Meta-Zeile („Datum · N Etappen ·
   km · ↑m" bzw. „N Orte · Vergleichstabelle · Briefing HH:MM") sind reiner Text (Props `eyebrowText`,
   `metaTeile`). Im Entwurf steht neben der Status-Pill „Aktivieren" als Link (`aktivierenHref`: Trip
   zum Reiter Etappen, Vergleich zu Zustellung#versand). Reiter-Zähler „Etappen (N)" / „Orte (N)" über
@@ -1252,7 +1252,8 @@ Ein gemeinsames Aktionsmodell für Liste, Detail-Hub und Mobil (Spec: `docs/spec
 
 - **Tabelle:** `shared/subscriptionActions.ts` leitet die Aktionen aus Art (Trip/Ortsvergleich) × Status × Fläche (Liste/Hub/Mobil) ab.
 - **Ausführung:** `shared/subscriptionExec.ts` (Adapter); Pausieren/Fortsetzen per Read-Modify-Write.
-- **Senden:** nur nach Bestätigung im `SendConfirmDialog`. Er zeigt das Versandziel, sperrt ohne zustellbaren Kanal; Morgen/Abend gibt es nur beim Trip (Default Morgen). Das Profil lädt `lib/server/profileLoader.ts` serverseitig aus der Session, ohne Default-Fallback.
+- **Senden in den Listen (`/trips`, `/compare`):** nur nach Bestätigung im `SendConfirmDialog`. Er zeigt das Versandziel, sperrt ohne zustellbaren Kanal; Morgen/Abend gibt es nur beim Trip (Default Morgen). Das Profil lädt `lib/server/profileLoader.ts` serverseitig aus der Session, ohne Default-Fallback.
+- **Senden im Hub (#3440, 2026-11-27):** „Test schicken ▾“ öffnet das Menü `molecules/TestSchickenMenue.svelte` (ein Baustein für Trip und Orte, `context="route"|"vergleich"`; Desktop Dropdown, ≤899 px Sheet). Der Dialog entfällt dort. Zeilen je Kanal (E-Mail, Telegram, SMS, Premium-SMS) mit Ziel bzw. Sperrgrund aus `kanalStatus` (Zeilenmodell `testSchickenModell.ts`), Trip zusätzlich Segment Morgen/Abend, unten „Alle eingerichteten Kanäle“. Ein Klick auf eine Kanalzeile sendet an genau diesen Kanal (`channel`-Parameter, siehe `api_contract.md` §10.1), ohne Bestätigungsschritt. Rückmeldung 5 s (`test-schicken-ok` / `test-schicken-fehler`) in beiden Hubs gleich. Spec: `docs/specs/modules/feat_3440_test_schicken_menue.md`; Fortschreibung der Dialog-ACs in `feat_2278_aktionsmodell.md`.
 - **Hub:** Lebenszyklus-Kebab (Pausieren/Fortsetzen, Archivieren/Reaktivieren, Löschen mit Bestätigung); „Senden" ist der Primärknopf (seit #2837/ADR-0110 in der obersten Leiste rechts, Ink).
 - **Gemeinsame Bausteine:** `SubscriptionCard`, `SubscriptionActionSheet`, `SubscriptionKebab`, `StatusFilterPills`.
 - **Entfallen:** `CompareTile`, `MCompareActionSheet`, `ReportConfigDialog`, `TestReportDialog`, `tripListSend`. Alarme und Wetter-Metriken liegen auf den Editor-Reitern. Die Startseiten-Kachel hat nur „Bearbeiten"; archivierte Trips verschwinden aus der Liste.

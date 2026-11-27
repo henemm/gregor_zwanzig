@@ -254,7 +254,7 @@ Fehlerantworten der Go-API, die über `handler.WriteError`/`WriteErrorWith` lauf
 | `/api/briefings/{id}/placements` | GET | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), 401 ohne Nutzer, ungültige ID 400 `validation_error`, fremde/unbekannte ID oder andere Art 404; Go prüft Besitz und reicht an den Python-Kern weiter, `ETag` = Stempel des Abos; Tabelle „Was steht wo“, Abschnitt „Tabelle … Lese- und Schreib-Endpoint“ (#3122 B2)
 | `/api/briefings/{id}/placements` | PUT | — wie GET; Rumpf = vollständiges `placements`-Objekt (sonst 400 `bad_request`), `If-Match` wie beim Abo (veraltet 412 `precondition_failed`), schreibt nur `display_config.placements` (#3122 B2), beim ersten Speichern eines Trips ggf. zusätzlich `report_config.show_stability = false` (#3154)
 | `/api/briefings/placements/vorschau` | POST | — `?kind=route\|vergleich` Pflicht; Rumpf = Entwurf (JSON-Objekt, höchstens 256 KB); Antwort wie GET mit `stored: false`, ohne `ETag`, schreibt nichts (#3304)
-| `/api/briefings/{id}/send` | POST | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), Trip optional `&report_type=morning\|evening` (Default `morning`), ungültige ID 400 `validation_error`, fremde ID 404; einheitlicher Handversand, Section 10.1 (#2280)
+| `/api/briefings/{id}/send` | POST | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), Trip optional `&report_type=morning\|evening` (Default `morning`), optional `&channel=email\|telegram\|sms\|premium_sms` (Einzelkanal, unbekannt 400 `invalid_channel`, #3440), ungültige ID 400 `validation_error`, fremde ID 404; einheitlicher Handversand, Section 10.1 (#2280)
 | `/api/cockpit/status` | GET |
 | `/api/compare` | GET |
 | `/api/compare/metrics` | GET |
@@ -988,10 +988,23 @@ tatsächlich zugestellt hat.
 |---|---|---|
 | `kind` | ja | `route` (Trip) \| `vergleich` (Ortsvergleich); fehlt/ungültig → 400 `kind_required` |
 | `report_type` | nein, nur `route` | `morning` (Default) \| `evening`; bei `vergleich` ignoriert |
+| `channel` | nein (#3440) | `email` \| `telegram` \| `sms` \| `premium_sms`; fehlt er, werden alle eingerichteten Kanäle bedient (bisheriges Verhalten). Sonst geht der Versand nur an diesen einen Kanal. Unbekannter Wert ⇒ 400 `invalid_channel` (Go und Python, ohne Weiterreichen). |
+
+**Kanalwahl (#3440).** `channel` wählt nur den Kanal, nie einen Empfänger: Ziel bleibt die
+Konfiguration des angemeldeten Nutzers (`user_id` aus dem Auth-Kontext, ein Client-Wert wird
+verworfen). Der Einzelkanal überschreibt den Abo-Schalter des Kanals (ein im Abo ausgeschalteter,
+aber verbundener Kanal wird trotzdem bedient); das Tarif-Gate für SMS und Premium-SMS bleibt
+wirksam (sonst `channels_unreachable`). Das E-Mail-Gate (kein Empfänger konfiguriert ⇒
+`smtp_not_configured`) gilt nur, wenn `channel` fehlt oder `email` ist; ein Telegram-Test geht
+also auch ohne Mail-Konfiguration. Jeder Klick bucht das Kontingent `manueller_abruf` einmal, auch
+bei Einzelkanal. Der Sperrschutz (`already_in_progress`) gilt je Abo, nicht je Kanal.
 
 **Erfolg (200):** `{"status": "ok", "kind": "route"|"vergleich", "id": "<id>", "sent": true}`,
 bei `route` zusätzlich `report_type`, bei `vergleich` optional `fehlende_orte: [<ort_id>, …]`
 (gelöschte Orte, Versand lief mit den übrigen). `winner`/`empfaenger_count` entfallen.
+**Neu (#3440):** beide Arten liefern `sent_channels: [<kanal>, …]` mit den Kanälen, die tatsächlich
+zugestellt haben (Trip und Vergleich; Leerliste, wenn keiner). Das Menü im Hub wertet das für die
+Rückmeldung „Alle eingerichteten Kanäle“ aus (✓ je Kanal in `sent_channels`).
 
 **Fehler (Form A):** `{"detail": "<Text>", "code": "<maschinenlesbar>"}` mit 4xx/5xx.
 `detail` wird im Frontend unverändert angezeigt. Die Go-seitigen Fehler liefern seit #2677 das Fehlerobjekt (Abschnitt 0) mit `detail` = `message` in Nutzersprache (`fach.fehler.validation_error_kennung`, `proxy_error_versand`, `upstream_unreachable_versand`); Python-Antworten gehen unverändert durch.
@@ -999,16 +1012,18 @@ bei `route` zusätzlich `report_type`, bei `vergleich` optional `fehlende_orte: 
 | Status | `code` | Bedeutung |
 |---|---|---|
 | 400 | `kind_required` / `validation_error` | `kind` fehlt/ungültig bzw. ungültige ID |
+| 400 | `invalid_channel` | `channel` ist keiner der vier Kanalnamen (#3440); Go prüft zuerst, Python prüft erneut |
 | 404 | `not_found` | ID gehört nicht dem angemeldeten Nutzer oder existiert nicht |
-| 409 | `already_in_progress` | Versand für denselben Lock-Schlüssel läuft bereits |
+| 409 | `already_in_progress` | Versand für denselben Lock-Schlüssel läuft bereits (je Abo, unabhängig vom Kanal) |
 | 422 | `no_channels` | kein Kanal wirksam eingestellt |
-| 422 | `channels_unreachable` | alle eingestellten Kanäle sind gescheitert |
+| 422 | `channels_unreachable` | alle eingestellten Kanäle sind gescheitert, bzw. der gewählte Einzelkanal ist gesperrt (z. B. Tarif ohne SMS) |
+| 422 | `email_unverified` | `channel=email` bei nicht bestätigter Profil-Adresse (ADR-0092); es wird nichts gesendet, auch nicht über das Kontingent (#3440) |
 | 422 | `no_weather` | für keinen Ort/keine Etappe liegen Wetterdaten vor |
 | 500 | `send_failed` | unerwarteter Fehler im Versand (Ausnahme, Traceback im Python-Log) — das Frontend zeigt die generische Serverfehler-Meldung |
 | 500 | `proxy_error` | Go-API kann die Anfrage an den Python-Core nicht bauen |
 | 502 | `upstream_unreachable` | Go-API erreicht den Python-Core nicht (oder Zeitlimit 300 s überschritten) — Versandausgang unklar |
 
-Die Fehler mit `kind_required`, `validation_error` und `upstream_unreachable` (sowie 500
+Die Fehler mit `kind_required`, `validation_error`, `invalid_channel` und `upstream_unreachable` (sowie 500
 `proxy_error`) entstehen in der Go-API, alle übrigen im Python-Core (`src/services/send_outcomes.py`);
 beide in derselben Form A. Gilt auch für die Alt-Routen (gleiche Proxy-Funktion `forwardSend`).
 Die Vorschau-/CRUD-Routen unter `/api/briefings` antworten mit dem Fehlerobjekt (Abschnitt 0); `error` = `code` bleibt.
@@ -5433,6 +5448,7 @@ Ablage: `GZ_DATA_DIR/mcp/clients.json` (DCR-Clients) und `GZ_DATA_DIR/mcp/tokens
 
 ## Changelog
 
+- 2026-11-27: Issue #3440 (Spec `docs/specs/modules/feat_3440_test_schicken_menue.md`, Scheibe S5a von #2797) — `POST /api/briefings/{id}/send` nimmt optional `channel` (`email|telegram|sms|premium_sms`) und sendet dann nur an diesen Kanal; unbekannt ⇒ 400 `invalid_channel` (Go und Python). Neu: `422 email_unverified` (Einzelversand an E-Mail bei unbestätigter Adresse). Erfolgsantwort für Trip und Vergleich enthält `sent_channels`. Kein Schema-Bruch: ohne `channel` bleibt das bisherige Verhalten. Abschnitt 10.1.
 - 2026-11-26: Issue #2989 (Spec `docs/specs/modules/refactor_2989_compare_default_order_ssot.md`) — `GET /api/compare/metrics` liefert zusätzlich `default_order` (Standardfolge der wählbaren Ortsvergleich-Schlüssel aus dem Backend-Katalog, §15.1). `metrics` unverändert. Das Frontend liest die Standardmenge daraus; die Frontend-Liste `COMPARE_METRIC_KEYS` entfällt.
 - 2026-11-26: Issue #3398 (Spec `docs/specs/modules/mcp_wetter_vollstaendig.md`) — MCP-Werkzeug `wetter` liefert alle wählbaren Katalog-Metriken stündlich (inkl. `wind_chill_c`, Schnee im SNOWGRID-Gebiet) und nimmt `felder` an (422 `mcp_feld_unbekannt`). Neues Werkzeug `regen_nowcast` mit Core-Endpunkt `GET /api/_internal/mcp/nowcast` (Abschnitt 27). (Spec `docs/specs/modules/mcp_wetter_vollstaendig.md`) — MCP-Werkzeug `wetter` liefert alle wählbaren Katalog-Metriken stündlich (inkl. `wind_chill_c`, Schnee im SNOWGRID-Gebiet) und nimmt `felder` an (422 `mcp_feld_unbekannt`). Neues Werkzeug `regen_nowcast` mit Core-Endpunkt `GET /api/_internal/mcp/nowcast` (Abschnitt 27).
 - 2026-11-25: Issue #2988 S2 (Spec `docs/specs/modules/rework_2988_ampel_ableitung.md`) — neu `POST /api/ampel/aufloesung`: der Python-Kern löst bis zu 32 Entwürfe (Vorlage + Abweichungen, Altbestand eigener Vorlagen) zur vollständigen Ampel auf; zustandslos, noch ohne Aufrufer. §11 „Ampel auflösen“.

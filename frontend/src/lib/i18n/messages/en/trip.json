@@ -5,7 +5,6 @@
 	"trip.status.paused": "Paused",
 	"trip.status.finished": "Finished",
 	"trip.status.archived": "Archived",
-	"trip.hub.briefing_gesendet": "Briefing sent",
 	"trip.hub.loeschen_titel": "Delete trip permanently?",
 	"trip.hub.loeschen_text": "“{name}” will be deleted permanently. This cannot be undone.",
 	"trip.hub.reaktivieren_titel": "Reactivate trip?",

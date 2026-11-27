@@ -68,7 +68,6 @@ export const F10_ANKER: [schluessel: string, de: string, en: string][] = [
 	['vergleich.hub.keine_weiteren', 'Keine weiteren gespeicherten Orte verfügbar.', 'No other saved locations available.'],
 	['vergleich.hub.laufzeit_ueberschritten', 'Laufzeit überschritten', 'End date passed'],
 	['vergleich.hub.setup_abschliessen', 'Setup abschließen', 'Finish setup'],
-	['vergleich.hub.test_gesendet', 'Test-Briefing gesendet', 'Test briefing sent'],
 	['vergleich.hub.archivieren_fehler', 'Archivieren fehlgeschlagen.', 'Archiving failed.'],
 	['vergleich.hub.reaktivieren_fehler', 'Reaktivieren fehlgeschlagen.', 'Reactivating failed.'],
 	['vergleich.hub.delete_fehler', 'Löschen fehlgeschlagen.', 'Deleting failed.'],

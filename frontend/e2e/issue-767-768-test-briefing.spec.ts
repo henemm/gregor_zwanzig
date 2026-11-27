@@ -1,10 +1,9 @@
 // E2E — Issue #767 + #768: Test-Briefing — Fehlermeldungen + Abend/Morgen-Auswahl
 //
 // Spec: docs/specs/modules/issue_767_768_test_briefing.md
-// Issue #2278: Der Trip-Hub sendet jetzt ueber den Primaerknopf "Senden" (subscription-hub-send)
-// und den Sende-Dialog (SendConfirmDialog); Morgen/Abend sind Radio-Inputs im Dialog
-// (send-confirm-berichtsart-morning/-evening), gesendet wird mit "Senden" (send-confirm-yes).
-// Das Ergebnis erscheint weiter unter test-briefing-success / test-briefing-error.
+// Issue #3440: Der Trip-Hub sendet ueber das Menue „Test schicken ▾“ (subscription-hub-send):
+// Morgen/Abend im Segment (test-menue-berichtsart-morning/-evening), gesendet wird mit der Zeile
+// „Alle eingerichteten Kanäle“. Das Ergebnis erscheint unter test-schicken-ok / test-schicken-fehler.
 //
 // Verhaltenstests aus Nutzerperspektive: Server-Antworten werden via
 // Playwright-Route-Interception simuliert (kein Komponenten-Mock, echtes
@@ -15,7 +14,7 @@
 import { expect, type Page } from '@playwright/test';
 // Issue #2278 AC-10: ohne zustellbares Ziel ist "Senden" im Dialog gesperrt — die Specs laufen als
 // bestaetigter Zweitnutzer mit mail_to und eigenem Seed-Trip (helpers.ts, testMitZustellbaremZiel).
-import { login, testMitZustellbaremZiel as test } from './helpers.js';
+import { login, testSchicken, testMitZustellbaremZiel as test } from './helpers.js';
 
 const TRIP_ID = 'e2e-cockpit-test';
 const DESKTOP = { width: 1440, height: 900 };
@@ -46,11 +45,9 @@ async function openTripAndMenu(page: Page): Promise<void> {
 	await expect(page.getByTestId('trip-detail-breadcrumb-bar')).toBeVisible({ timeout: 8000 });
 }
 
-/** Hub: Primaerknopf "Senden" -> Berichtsart waehlen -> im Sende-Dialog bestaetigen. */
+/** Hub: Menue „Test schicken ▾“ -> Berichtsart waehlen -> „Alle eingerichteten Kanäle“ (#3440). */
 async function sendeBriefing(page: Page, berichtsart: 'morning' | 'evening'): Promise<void> {
-	await page.getByTestId('subscription-hub-send').click();
-	await page.getByTestId(`send-confirm-berichtsart-${berichtsart}`).check();
-	await page.getByTestId('send-confirm-yes').click();
+	await testSchicken(page, { berichtsart, kanal: 'alle' });
 }
 
 /** Erfolgsantwort abfangen und die angefragte URL festhalten. */
@@ -86,7 +83,7 @@ test.describe('Issue #767 — handlungsleitende Fehlermeldungen', () => {
 
 		await sendeBriefing(page, 'evening');
 
-		const err = page.getByTestId('test-briefing-error');
+		const err = page.getByTestId('test-schicken-fehler');
 		await expect(err).toBeVisible({ timeout: 8000 });
 		await expect(err).toContainText(/Serverfehler|später erneut/i);
 		await expect(err).not.toHaveText(/^Internal Server Error$/);
@@ -105,7 +102,7 @@ test.describe('Issue #767 — handlungsleitende Fehlermeldungen', () => {
 
 		await sendeBriefing(page, 'morning');
 
-		const err = page.getByTestId('test-briefing-error');
+		const err = page.getByTestId('test-schicken-fehler');
 		await expect(err).toBeVisible({ timeout: 8000 });
 		// Issue #2124 AC-2: 502 heisst „Ergebnis unklar" (Versand kann noch laufen),
 		// nicht „Serverfehler/fehlgeschlagen" — Erwartung an die Spec angepasst.
@@ -126,7 +123,7 @@ test.describe('Issue #767 — handlungsleitende Fehlermeldungen', () => {
 
 		await sendeBriefing(page, 'evening');
 
-		const err = page.getByTestId('test-briefing-error');
+		const err = page.getByTestId('test-schicken-fehler');
 		await expect(err).toBeVisible({ timeout: 8000 });
 		await expect(err).toContainText('SMTP not configured for this user');
 	});
@@ -146,7 +143,7 @@ test.describe('Issue #767 — handlungsleitende Fehlermeldungen', () => {
 		await stubSend(page, 500, { detail: 'Internal Server Error' });
 
 		await sendeBriefing(page, 'evening');
-		await expect(page.getByTestId('test-briefing-error')).toBeVisible({ timeout: 8000 });
+		await expect(page.getByTestId('test-schicken-fehler')).toBeVisible({ timeout: 8000 });
 
 		expect(consoleErrors.some((t) => t.includes('500'))).toBeTruthy();
 	});
@@ -165,7 +162,7 @@ test.describe('Issue #768 — Abend/Morgen-Auswahl', () => {
 
 		await sendeBriefing(page, 'morning');
 
-		await expect(page.getByTestId('test-briefing-success')).toBeVisible({ timeout: 8000 });
+		await expect(page.getByTestId('test-schicken-ok')).toBeVisible({ timeout: 8000 });
 		expect(gesendet.url()).toContain('report_type=morning');
 	});
 
@@ -175,7 +172,7 @@ test.describe('Issue #768 — Abend/Morgen-Auswahl', () => {
 
 		await sendeBriefing(page, 'evening');
 
-		await expect(page.getByTestId('test-briefing-success')).toBeVisible({ timeout: 8000 });
+		await expect(page.getByTestId('test-schicken-ok')).toBeVisible({ timeout: 8000 });
 		expect(gesendet.url()).toContain('report_type=evening');
 	});
 });

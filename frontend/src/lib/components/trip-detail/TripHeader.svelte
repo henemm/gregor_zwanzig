@@ -14,6 +14,8 @@
 	import { computeTripStats } from '$lib/utils/tripStats';
 	import { deriveTripStatus } from '$lib/utils/tripStatus';
 	import type { Trip } from '$lib/types';
+	import type { Berichtsart, TestKanal } from '$lib/components/molecules/testSchickenModell';
+	import type { ZustellungProfil } from '$lib/components/shared/zustellung-tab/zustellungModell';
 	import { baueTripSpeicherung, speichereKopfFeld } from '$lib/components/shared/tripSpeicherung';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { t, tn, locale } from '$lib/i18n';
@@ -27,9 +29,10 @@
 		now?: Date;
 		/** Issue #758: SaveStatus controller — der Speicher-Chip kommt seit #2284 S2 vom SubscriptionHeader. */
 		saveController?: SaveStatus;
-		/** #2837 S1: Leiste des HubKopf — Senden öffnet nur den Dialog der Seite. */
+		/** #2837 S1: Leiste des HubKopf. #3440: „Test schicken ▾“ öffnet das Menü, die Wahl geht an onTest. */
 		sendLabel?: string;
-		onSend?: () => void;
+		onTest?: (wahl: { kanal: TestKanal; berichtsart: Berichtsart }) => void;
+		testProfil?: ZustellungProfil | null;
 		sendDisabled?: boolean;
 		actions?: Array<{ id: string; label: string; danger?: boolean }>;
 		onSelect?: (id: string) => void;
@@ -40,7 +43,7 @@
 
 	let {
 		trip, onTripUpdate, now = new Date(), saveController,
-		sendLabel, onSend, sendDisabled = false, actions = [], onSelect, mobil = false, onSheetOpen, meldungen
+		sendLabel, onTest, testProfil, sendDisabled = false, actions = [], onSelect, mobil = false, onSheetOpen, meldungen
 	}: Props = $props();
 
 	// Issue #2284 S2 — Name und Region speichert der geteilte Baustein
@@ -92,7 +95,8 @@
 		parent={{ label: $t('listen.trips.titel'), href: '/trips' }}
 		crumb={trip.name}
 		sendLabel={sendLabel ?? $t('aktionen.kopf.test_schicken')}
-		{onSend}
+		{onTest}
+		{testProfil}
 		{sendDisabled}
 		{actions}
 		{onSelect}

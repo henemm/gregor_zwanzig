@@ -6,6 +6,7 @@
 // nginx-Grenze (330 s) laufen.
 
 import { tr } from '../i18n/index.ts';
+import type { KanalId } from '../components/shared/zustellung-tab/zustellungModell.ts';
 
 export type SendOutcomeKind = 'ok' | 'already_running' | 'unclear' | 'rejected' | 'failed';
 
@@ -84,6 +85,8 @@ export type SendRunResult = {
 	skipped: boolean;
 	/** #2216: IDs der Orte, die beim Ortsvergleich-Versand nicht mehr aufloesbar waren. */
 	fehlendeOrte?: string[];
+	/** #3440: tatsaechlich bediente Kanaele (`sent_channels` der Antwort), nur bei Erfolg. */
+	sentChannels?: KanalId[];
 };
 
 /**
@@ -113,10 +116,17 @@ export async function runSend(key: string, send: () => Promise<Response>): Promi
 /** Art des Briefings im Endpunkt-Vokabular (#2280): Trip = `route`, Ortsvergleich = `vergleich`. */
 export type SendBriefingKind = 'route' | 'vergleich';
 
-/** EINZIGE Stelle, die die Send-URL baut (#2280 AC-15). `reportType` gilt nur fuer `route`. */
-export function briefingSendUrl(kind: SendBriefingKind, id: string, reportType?: 'morning' | 'evening'): string {
+/** EINZIGE Stelle, die die Send-URL baut (#2280 AC-15). `reportType` gilt nur fuer `route`;
+ *  `channel` (#3440) waehlt genau einen Kanal, ohne ihn gehen alle eingerichteten. */
+export function briefingSendUrl(
+	kind: SendBriefingKind,
+	id: string,
+	reportType?: 'morning' | 'evening',
+	channel?: KanalId
+): string {
 	const rt = kind === 'route' && reportType ? `&report_type=${reportType}` : '';
-	return `/api/briefings/${encodeURIComponent(id)}/send?kind=${kind}${rt}`;
+	const ch = channel ? `&channel=${channel}` : '';
+	return `/api/briefings/${encodeURIComponent(id)}/send?kind=${kind}${rt}${ch}`;
 }
 
 /**
@@ -126,29 +136,33 @@ export function briefingSendUrl(kind: SendBriefingKind, id: string, reportType?:
 export async function sendBriefing(
 	kind: SendBriefingKind,
 	id: string,
-	opts: { reportType?: 'morning' | 'evening' } = {},
+	opts: { reportType?: 'morning' | 'evening'; channel?: KanalId } = {},
 	fetchFn: typeof fetch = fetch
 ): Promise<SendRunResult> {
 	let fehlende: string[] = [];
+	let gesendet: KanalId[] = [];
 	const key = kind === 'route' ? tripSendKey(id) : compareSendKey(id);
 	const r = await runSend(key, async () => {
-		const res = await fetchFn(briefingSendUrl(kind, id, opts.reportType), { method: 'POST' });
+		const res = await fetchFn(briefingSendUrl(kind, id, opts.reportType, opts.channel), { method: 'POST' });
 		if (res.ok) {
 			try {
-				const body = (await res.clone().json()) as { fehlende_orte?: unknown };
+				const body = (await res.clone().json()) as { fehlende_orte?: unknown; sent_channels?: unknown };
 				if (Array.isArray(body?.fehlende_orte)) fehlende = body.fehlende_orte.map(String);
+				if (Array.isArray(body?.sent_channels)) gesendet = body.sent_channels.map(String) as KanalId[];
 			} catch {
 				/* kein JSON-Body */
 			}
 		}
 		return res;
 	});
-	if (r.kind === 'ok' && fehlende.length > 0) {
+	if (r.kind !== 'ok') return r;
+	if (fehlende.length > 0) {
 		return {
 			...r,
+			sentChannels: gesendet,
 			fehlendeOrte: fehlende,
 			message: tr('fehler.versand.orte_fehlten', { anzahl: fehlende.length, orte: fehlende.join(', ') }),
 		};
 	}
-	return r;
+	return { ...r, sentChannels: gesendet };
 }

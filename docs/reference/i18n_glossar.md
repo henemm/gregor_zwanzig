@@ -51,6 +51,12 @@
 | Empfänger | recipient | |
 | Vorschau | preview | |
 | Handversand / Test-Versand | send now / test send | |
+| Test schicken | Send test | Kopf-Knopf „Test schicken ▾“ / *Send test ▾* mit Menü (#3440) |
+| Alle eingerichteten Kanäle | All set-up channels | Letzte Zeile im Menü „Test schicken“ (#3440) |
+| gesperrt (Menüzeile) | locked | „gesperrt: {Grund}“ / *locked: {reason}* in Menü und Zustellung (#3440, #2795) |
+| übersprungen | skipped | Rückmeldung „Telegram übersprungen (nicht verbunden)“ / *Telegram skipped (not connected)* (#3440) |
+| übersprungen (im Briefing aus) | skipped (off in this briefing) | „Alle“-Rückmeldung für einen bedienbaren Kanal, der im Abo ausgeschaltet ist; nie „fehlgeschlagen“ (#3440 F001) |
+| Ziel (eines Kanals) | target | Adresse, „verbunden“ oder Gerät je Kanalzeile; nie Chat-ID oder Telegram-Name (#3202) |
 | Pausieren / Fortsetzen | pause / resume | |
 | Archivieren | archive | Verb |
 | Löschen | delete | |

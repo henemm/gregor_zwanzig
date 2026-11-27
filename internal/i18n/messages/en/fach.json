@@ -10,6 +10,7 @@
   "fach.fehler.quota_exceeded_locations": "You already have {current} of {limit} locations on your plan. Delete a location to create a new one.",
   "fach.fehler.validation_error_kennung": "Invalid briefing ID",
   "fach.fehler.proxy_error_versand": "Sending could not be started. Please try again later.",
+  "fach.fehler.invalid_channel_versand": "Unknown channel (allowed: email, telegram, sms, premium_sms)",
   "fach.fehler.upstream_unreachable_versand": "The sending service is not reachable. Please try again later.",
   "fach.fehler.bad_request_input": "The field 'input' is missing.",
   "fach.fehler.upstream_unreachable": "The service is not reachable.",

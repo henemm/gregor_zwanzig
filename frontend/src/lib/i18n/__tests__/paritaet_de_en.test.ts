@@ -4,7 +4,7 @@
 // Issue #2647 (i18n S2) — AC-3: je Bereichsdatei sind Schluesselmenge und
 // Platzhaltermenge in `de` und `en` gleich. Die Pruefung laeuft erst gegen
 // absichtlich kaputte Katalog-Objekte (muss rot werden und Bereich + Schluessel
-// nennen) und dann gegen die echten 20 Bereichspaare (#2795: + zustellung, #3319: + funktionen) (muss gruen sein).
+// nennen) und dann gegen die echten 21 Bereichspaare (#2795: + zustellung, #3319: + funktionen, #3440: + test_schicken) (muss gruen sein).
 // Zusaetzlich: die Index-Dateien vereinigen GENAU die Bereichsdateien, und kein
 // Schluessel steht in zwei Bereichen (sonst ueberschriebe einer den anderen).
 // Spec: docs/specs/modules/i18n_s2_frontend_sprachkern_2647.md
@@ -27,7 +27,9 @@ export const BEREICHE = [
 	// Issue #2795 S3b Teilschritt 1b (AC-35): neuer Bereich des Reiters Zustellung.
 	'zustellung',
 	// Issue #3319: oeffentliche Funktionsseiten und Level-Tabelle (funktionen.*, level.*).
-	'funktionen'
+	'funktionen',
+	// Issue #3440: Menü „Test schicken ▾“ (test_schicken.*).
+	'test_schicken'
 ] as const;
 
 type Katalog = Record<string, string>;
@@ -85,8 +87,8 @@ describe('Gegenprobe: kaputte Kataloge sind rot und nennen Bereich und Schluesse
 	});
 });
 
-describe('AC-3: die echten 20 Bereichspaare (#2795: + zustellung, #3319: + funktionen)', () => {
-	test('je Sprache existieren genau die 20 Bereichsdateien', () => {
+describe('AC-3: die echten 21 Bereichspaare (#2795: + zustellung, #3319: + funktionen, #3440: + test_schicken)', () => {
+	test('je Sprache existieren genau die 21 Bereichsdateien', () => {
 		const soll = BEREICHE.map((b) => `${b}.json`).sort();
 		for (const lang of ['de', 'en']) {
 			const ist = readdirSync(join(MESSAGES, lang)).filter((f) => f.endsWith('.json')).sort();

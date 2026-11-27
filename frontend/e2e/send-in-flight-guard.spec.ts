@@ -35,7 +35,7 @@ import { expect, type Page, type Route } from '@playwright/test';
 // Issue #2278 AC-10: der Sende-Dialog sperrt "Senden" ohne zustellbares Ziel; der Seed-Admin des
 // CI-Stacks hat keins. Alle Faelle laufen deshalb als bestaetigter Zweitnutzer mit mail_to und
 // eigenem Seed-Trip `e2e-cockpit-test` (EIN Konto je Worker, helpers.ts).
-import { login, testMitZustellbaremZiel as test } from './helpers.js';
+import { login, testSchicken, testMitZustellbaremZiel as test } from './helpers.js';
 
 const TRIP_ID = 'e2e-cockpit-test';
 const DESKTOP = { width: 1440, height: 900 };
@@ -78,11 +78,9 @@ async function tripListeSenden(page: Page) {
 	await page.getByTestId('send-confirm-yes').click();
 }
 
-/** Issue #2278: Hub (Desktop) -> Primaerknopf "Senden" -> Sende-Dialog -> bestaetigen (Berichtsart wie angegeben). */
+/** Issue #3440: Hub (Desktop) -> Menue „Test schicken ▾“ -> Berichtsart -> „Alle eingerichteten Kanäle“. */
 async function hubSenden(page: Page, berichtsart: 'morning' | 'evening') {
-	await page.getByTestId('subscription-hub-send').click();
-	await page.getByTestId(`send-confirm-berichtsart-${berichtsart}`).check();
-	await page.getByTestId('send-confirm-yes').click();
+	await testSchicken(page, { berichtsart, kanal: 'alle' });
 }
 
 // ---------------------------------------------------------------------------
@@ -128,7 +126,7 @@ test.describe('#2124 Trip — geteilter Laufzustand', () => {
 			await expect(page.getByTestId('trip-detail-breadcrumb-bar')).toBeVisible({ timeout: 8000 });
 			await hubSenden(page, 'evening');
 
-			await expect(page.getByTestId('test-briefing-error')).toContainText(LAEUFT, { timeout: 8000 });
+			await expect(page.getByTestId('test-schicken-fehler')).toContainText(LAEUFT, { timeout: 8000 });
 			expect(halter.requests, 'zweiter Versand während des ersten').toHaveLength(1);
 		} finally {
 			await halter.freigeben();
@@ -146,7 +144,7 @@ test.describe('#2124 Trip — geteilter Laufzustand', () => {
 		await expect.poll(() => halter.requests.length).toBe(1);
 		await halter.freigeben(502, JSON.stringify({ error: 'upstream unreachable' }));
 
-		const err = page.getByTestId('test-briefing-error');
+		const err = page.getByTestId('test-schicken-fehler');
 		await expect(err).toBeVisible({ timeout: 8000 });
 		await expect(err).toContainText(UNCLEAR);
 		await expect(err).not.toContainText(/fehlgeschlagen/i);
@@ -184,10 +182,9 @@ async function seedPreset(page: Page): Promise<{ presetId: string; locIds: strin
 	return { presetId: (await presetRes.json()).id as string, locIds };
 }
 
-/** Issue #2278: Compare-Hub -> Primaerknopf "Senden" -> Sende-Dialog -> bestaetigen (Ortsvergleich: keine Berichtsart). */
+/** Issue #3440: Compare-Hub -> Menue „Test schicken ▾“ -> „Alle eingerichteten Kanäle“ (keine Berichtsart). */
 async function compareHubSenden(page: Page) {
-	await page.getByTestId('subscription-hub-send').click();
-	await page.getByTestId('send-confirm-yes').click();
+	await testSchicken(page, { kanal: 'alle' });
 }
 
 async function cleanup(page: Page, presetId: string, locIds: string[]) {

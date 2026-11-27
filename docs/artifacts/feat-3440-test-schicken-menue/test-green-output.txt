@@ -1,0 +1,39 @@
+# feat-3440 GREEN — 2026-11-27T07:35:51+00:00
+
+## Frontend-Kernsuite (npm test, node --test)
+# tests 11972
+# suites 2178
+# pass 11960
+# fail 0
+# cancelled 0
+# skipped 2
+# todo 10
+EXIT 0
+
+## Python Offline-Volllauf (nice -n 10 uv run pytest -n 2 --dist loadgroup ... --ignore=tests/red/) — vor Fix der Goldens/695
+tests/tdd/test_briefing_validator_noop_not_pass.py::test_noop_validation_log_marks_not_passed_and_skipped
+tests/tdd/test_issue_816_alert_deviation.py::test_ac9_deviation_alert_log_separates_failed_from_skipped
+FAILED tests/golden/test_inbound_golden.py::test_deutsch_byte_gleich[None] - ...
+FAILED tests/golden/test_inbound_golden.py::test_deutsch_byte_gleich[de] - As...
+FAILED tests/golden/test_inbound_golden.py::test_englische_referenz_byte_gleich
+FAILED tests/golden/test_versand_texte_golden.py::test_deutsch_byte_gleich - ...
+FAILED tests/golden/test_versand_texte_golden.py::test_englische_referenz_byte_gleich
+FAILED tests/tdd/test_issue_1014_live_optin.py::test_with_optin_gate_returns_true_and_sources_env
+FAILED tests/tdd/test_issue_695_test_briefing_send.py::TestFrontendFeedback::test_success_span_has_testid
+FAILED tests/tdd/test_issue_695_test_briefing_send.py::TestFrontendFeedback::test_error_span_has_testid
+FAILED tests/test_versand_zweisprachig.py::test_ac5_jeder_code_englisch_mit_platzhaltern[invalid_channel]
+FAILED tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py::test_liste_waechst_nicht_gegenueber_main
+FAILED tests/unit/test_secret_output_gate_werkzeugname.py::test_abbruchmeldung_zeigt_fragezeichen_wenn_keine_maskierung_moeglich
+11 failed, 26104 passed, 27 skipped, 10 xfailed, 1425 warnings in 1546.08s (0:25:46)
+
+## Nachlauf benannte Dateien nach Umstellung (Goldens neu, 695/zweisprachig umgestellt; 1014 nur im Parallel-Lauf flackernd)
+195 passed, 1 deselected, 19 warnings in 28.38s
+
+Nicht durch #3440: test_ein_katalog_eine_verarbeitung_ratsche (origin/main ist mit #3425 vorgelaufen, Liste dort gesenkt; Zweig basiert auf 16df7864b, comparison.py unberuehrt); test_secret_output_gate_werkzeugname (Hook-Test, unabhaengig).
+
+## Go
+go vet exit 0
+go test ./internal/...: 17 Pakete ok, 0 FAIL
+
+## svelte-check
+29 ERRORS 69 WARNINGS (CI-Baseline 34/132)

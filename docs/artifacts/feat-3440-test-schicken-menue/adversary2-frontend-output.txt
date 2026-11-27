@@ -1,0 +1,1183 @@
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/components/molecules/__tests__/test_schicken_modell.test.ts src/lib/components/shared/hub-kopf/__tests__/test_schicken_menue_bindung.test.ts src/lib/components/shared/hub-kopf/__tests__/hub_kopf_seiten_bindung.test.ts src/lib/components/shared/__tests__/aktionsmodell_seiten_bindung.test.ts src/routes/compare/__tests__/compare_hub_test_send_meldung.test.ts src/routes/compare/__tests__/compare_hub_versand_neuer_endpunkt.test.ts src/lib/i18n/__tests__/paritaet_de_en.test.ts src/lib/__tests__/elementliste_abgleich_bedienplan.test.ts
+
+TAP version 13
+# Subtest: \#2966 AC-6: bedienPlan — Grenzen-Dialog je Metrik
+    # Subtest: trip: grenzen-wind mit Wind im Briefing ⇒ klick (Ändern) · lesen · schliessen (Fertig)
+    ok 1 - trip: grenzen-wind mit Wind im Briefing ⇒ klick (Ändern) · lesen · schliessen (Fertig)
+      ---
+      duration_ms: 1.310682
+      type: 'test'
+      ...
+    # Subtest: orte: grenzen-wind mit Wind im Briefing ⇒ klick (Ändern) · lesen · schliessen (Fertig)
+    ok 2 - orte: grenzen-wind mit Wind im Briefing ⇒ klick (Ändern) · lesen · schliessen (Fertig)
+      ---
+      duration_ms: 0.16334
+      type: 'test'
+      ...
+    # Subtest: Metrik nicht im Briefing des Prüf-Datensatzes ⇒ nicht_herstellbar mit echtem Grund (Metrik-ID genannt)
+    ok 3 - Metrik nicht im Briefing des Prüf-Datensatzes ⇒ nicht_herstellbar mit echtem Grund (Metrik-ID genannt)
+      ---
+      duration_ms: 0.232261
+      type: 'test'
+      ...
+    # Subtest: der Plan hängt an der Metrik: grenzen-thunder öffnet thunder, nicht wind
+    ok 4 - der Plan hängt an der Metrik: grenzen-thunder öffnet thunder, nicht wind
+      ---
+      duration_ms: 0.10727
+      type: 'test'
+      ...
+    1..4
+ok 1 - \#2966 AC-6: bedienPlan — Grenzen-Dialog je Metrik
+  ---
+  duration_ms: 4.88713
+  type: 'suite'
+  ...
+# Subtest: \#2966 AC-6: bedienPlan — Vorlage-Dialoge (nichts wird übernommen oder gespeichert)
+    # Subtest: vorlage-auswahl ⇒ Picker öffnen, lesen, schließen; keine Option geklickt
+    ok 1 - vorlage-auswahl ⇒ Picker öffnen, lesen, schließen; keine Option geklickt
+      ---
+      duration_ms: 0.260701
+      type: 'test'
+      ...
+    # Subtest: vorlage-bestaetigung ⇒ Picker, eine ANDERE Systemvorlage, lesen, Abbrechen; nie Übernehmen
+    ok 2 - vorlage-bestaetigung ⇒ Picker, eine ANDERE Systemvorlage, lesen, Abbrechen; nie Übernehmen
+      ---
+      duration_ms: 0.245239
+      type: 'test'
+      ...
+    # Subtest: vorlage-bestaetigung ohne andere Systemvorlage ⇒ nicht_herstellbar mit Grund
+    ok 3 - vorlage-bestaetigung ohne andere Systemvorlage ⇒ nicht_herstellbar mit Grund
+      ---
+      duration_ms: 0.16213
+      type: 'test'
+      ...
+    # Subtest: vorlage-speichern ⇒ „Als eigene Vorlage speichern“ öffnen, lesen, schließen; nie absenden
+    ok 4 - vorlage-speichern ⇒ „Als eigene Vorlage speichern“ öffnen, lesen, schließen; nie absenden
+      ---
+      duration_ms: 0.296871
+      type: 'test'
+      ...
+    # Subtest: vorlage-speichern-fehler ⇒ öffnen, LEER absenden, lesen, schließen; kein Namensfeld befüllt
+    ok 5 - vorlage-speichern-fehler ⇒ öffnen, LEER absenden, lesen, schließen; kein Namensfeld befüllt
+      ---
+      duration_ms: 0.19426
+      type: 'test'
+      ...
+    1..5
+ok 2 - \#2966 AC-6: bedienPlan — Vorlage-Dialoge (nichts wird übernommen oder gespeichert)
+  ---
+  duration_ms: 1.544753
+  type: 'suite'
+  ...
+# Subtest: \#2966 AC-6: bedienPlan — nie still übergangen
+    # Subtest: Abschnitte ohne Bedienung (Kopf, laden, warnung, metriken) ⇒ ohne_bedienung
+    ok 1 - Abschnitte ohne Bedienung (Kopf, laden, warnung, metriken) ⇒ ohne_bedienung
+      ---
+      duration_ms: 0.26839
+      type: 'test'
+      ...
+    # Subtest: \#3440 AC-17: test-menue ⇒ Kopf-Knopf öffnen · lesen · Escape schließt (kein Kanal geklickt)
+    ok 2 - \#3440 AC-17: test-menue ⇒ Kopf-Knopf öffnen · lesen · Escape schließt (kein Kanal geklickt)
+      ---
+      duration_ms: 0.1455
+      type: 'test'
+      ...
+    # Subtest: \#3440 AC-17: echte Freigaben decken „an 2 Empfänger“ und „@henning“ im test-menue (Trip und Orte), sonst nichts
+    ok 3 - \#3440 AC-17: echte Freigaben decken „an 2 Empfänger“ und „@henning“ im test-menue (Trip und Orte), sonst nichts
+      ---
+      duration_ms: 1.035321
+      type: 'test'
+      ...
+    # Subtest: unbekannter Script-Abschnitt ⇒ nicht_herstellbar mit Grund, nie ohne_bedienung
+    ok 4 - unbekannter Script-Abschnitt ⇒ nicht_herstellbar mit Grund, nie ohne_bedienung
+      ---
+      duration_ms: 0.235249
+      type: 'test'
+      ...
+    # Subtest: jeder Abschnitt der Elementliste: Plan mit genau einem „lesen“, ohne_bedienung nur außerhalb SCRIPT_ABSCHNITT, sonst Grund
+    ok 5 - jeder Abschnitt der Elementliste: Plan mit genau einem „lesen“, ohne_bedienung nur außerhalb SCRIPT_ABSCHNITT, sonst Grund
+      ---
+      duration_ms: 1.248342
+      type: 'test'
+      ...
+    # Subtest: mit allen Metriken im Briefing ist jeder Wetter-Script-Abschnitt herstellbar (Plan)
+    ok 6 - mit allen Metriken im Briefing ist jeder Wetter-Script-Abschnitt herstellbar (Plan)
+      ---
+      duration_ms: 0.681261
+      type: 'test'
+      ...
+    1..6
+ok 3 - \#2966 AC-6: bedienPlan — nie still übergangen
+  ---
+  duration_ms: 3.819167
+  type: 'suite'
+  ...
+# Subtest: \#2966 AC-7: Schreib-Tripwire
+    # Subtest: nur lesende Anfragen ⇒ kein Befund
+    ok 1 - nur lesende Anfragen ⇒ kein Befund
+      ---
+      duration_ms: 0.20906
+      type: 'test'
+      ...
+    # Subtest: POST /api/ampel/aufloesung liest nur (\#2988) ⇒ kein Befund, PUT dorthin und jeder andere POST bleiben Befund
+    ok 2 - POST /api/ampel/aufloesung liest nur (\#2988) ⇒ kein Befund, PUT dorthin und jeder andere POST bleiben Befund
+      ---
+      duration_ms: 0.16333
+      type: 'test'
+      ...
+    # Subtest: PUT während der Bedienung ⇒ Befund nennt Methode und Pfad
+    ok 3 - PUT während der Bedienung ⇒ Befund nennt Methode und Pfad
+      ---
+      duration_ms: 0.13626
+      type: 'test'
+      ...
+    # Subtest: POST während der Bedienung ⇒ Befund nennt Methode und Pfad
+    ok 4 - POST während der Bedienung ⇒ Befund nennt Methode und Pfad
+      ---
+      duration_ms: 0.108681
+      type: 'test'
+      ...
+    # Subtest: PATCH während der Bedienung ⇒ Befund nennt Methode und Pfad
+    ok 5 - PATCH während der Bedienung ⇒ Befund nennt Methode und Pfad
+      ---
+      duration_ms: 0.0805
+      type: 'test'
+      ...
+    # Subtest: DELETE während der Bedienung ⇒ Befund nennt Methode und Pfad
+    ok 6 - DELETE während der Bedienung ⇒ Befund nennt Methode und Pfad
+      ---
+      duration_ms: 0.0807
+      type: 'test'
+      ...
+    # Subtest: post während der Bedienung ⇒ Befund nennt Methode und Pfad
+    ok 7 - post während der Bedienung ⇒ Befund nennt Methode und Pfad
+      ---
+      duration_ms: 0.15592
+      type: 'test'
+      ...
+    1..7
+ok 4 - \#2966 AC-7: Schreib-Tripwire
+  ---
+  duration_ms: 1.115982
+  type: 'suite'
+  ...
+# Subtest: \#2966 AC-6/AC-7: bedieneAbschnitt — Reload, Planreihenfolge, Schreib-Tripwire
+    # Subtest: Grenzen: erst neu laden, dann Ändern · lesen · Fertig, dann Nachlauf; Ergebnis ist der gelesene Bereich
+    ok 1 - Grenzen: erst neu laden, dann Ändern · lesen · Fertig, dann Nachlauf; Ergebnis ist der gelesene Bereich
+      ---
+      duration_ms: 0.41958
+      type: 'test'
+      ...
+    # Subtest: Speichern-Fehler: Karte öffnen, leer absenden, lesen, über Abbrechen schließen
+    ok 2 - Speichern-Fehler: Karte öffnen, leer absenden, lesen, über Abbrechen schließen
+      ---
+      duration_ms: 0.21666
+      type: 'test'
+      ...
+    # Subtest: Speichern: Karte öffnen, lesen, über Abbrechen schließen
+    ok 3 - Speichern: Karte öffnen, lesen, über Abbrechen schließen
+      ---
+      duration_ms: 0.165111
+      type: 'test'
+      ...
+    # Subtest: Metrik nicht im echten Briefing ⇒ nicht_pruefbar mit Grund, keine Bedienung
+    ok 4 - Metrik nicht im echten Briefing ⇒ nicht_pruefbar mit Grund, keine Bedienung
+      ---
+      duration_ms: 0.151359
+      type: 'test'
+      ...
+    # Subtest: schreibende Anfrage während der Bedienung ⇒ Schreibbefund; Anfragen beim Neuladen zählen nicht
+    ok 5 - schreibende Anfrage während der Bedienung ⇒ Schreibbefund; Anfragen beim Neuladen zählen nicht
+      ---
+      duration_ms: 0.256311
+      type: 'test'
+      ...
+    # Subtest: verzögerte Speicherung im Nachlauf ⇒ Schreibbefund
+    ok 6 - verzögerte Speicherung im Nachlauf ⇒ Schreibbefund
+      ---
+      duration_ms: 0.1746
+      type: 'test'
+      ...
+    # Subtest: Fehler in einem Schritt ⇒ nicht_pruefbar mit Grund, Nachlauf läuft trotzdem; Schreibbefund geht vor
+    ok 7 - Fehler in einem Schritt ⇒ nicht_pruefbar mit Grund, Nachlauf läuft trotzdem; Schreibbefund geht vor
+      ---
+      duration_ms: 0.302781
+      type: 'test'
+      ...
+    1..7
+ok 5 - \#2966 AC-6/AC-7: bedieneAbschnitt — Reload, Planreihenfolge, Schreib-Tripwire
+  ---
+  duration_ms: 1.886974
+  type: 'suite'
+  ...
+# Subtest: \#2966: ordneAbschnitte — vorab mit allen Metriken des Prüf-Datensatzes
+    # Subtest: Trip/Orte Wetter: jeder grenzen-/vorlage-Abschnitt wird bedient, Kopf gelesen, test-menue bedient (\#3440)
+    ok 1 - Trip/Orte Wetter: jeder grenzen-/vorlage-Abschnitt wird bedient, Kopf gelesen, test-menue bedient (\#3440)
+      ---
+      duration_ms: 6.989233
+      type: 'test'
+      ...
+    1..1
+ok 6 - \#2966: ordneAbschnitte — vorab mit allen Metriken des Prüf-Datensatzes
+  ---
+  duration_ms: 7.063613
+  type: 'suite'
+  ...
+# Subtest: \#2966 AC-8: mitAufraeumen — Aufräumen auch nach Fehlern
+    # Subtest: Fehler in der Arbeit: alle Aufräumschritte laufen, der Fehler bleibt
+    ok 1 - Fehler in der Arbeit: alle Aufräumschritte laufen, der Fehler bleibt
+      ---
+      duration_ms: 2.401314
+      type: 'test'
+      ...
+    # Subtest: Fehler beim Anlegen nach dem ersten Datensatz: der angelegte wird trotzdem gelöscht
+    ok 2 - Fehler beim Anlegen nach dem ersten Datensatz: der angelegte wird trotzdem gelöscht
+      ---
+      duration_ms: 0.18364
+      type: 'test'
+      ...
+    # Subtest: Erfolg: Ergebnis der Arbeit, danach aufgeräumt
+    ok 3 - Erfolg: Ergebnis der Arbeit, danach aufgeräumt
+      ---
+      duration_ms: 0.13183
+      type: 'test'
+      ...
+    1..3
+ok 7 - \#2966 AC-8: mitAufraeumen — Aufräumen auch nach Fehlern
+  ---
+  duration_ms: 3.198286
+  type: 'suite'
+  ...
+# Subtest: \#2966 AC-10: Besitzer-Einträge \#2966 abgeräumt, Restabweichungen neu zugeordnet
+    # Subtest: elementliste_besitzer.json ist gültig und enthält keinen Verweis \#2966 mehr
+    ok 1 - elementliste_besitzer.json ist gültig und enthält keinen Verweis \#2966 mehr
+      ---
+      duration_ms: 2.258223
+      type: 'test'
+      ...
+    1..1
+ok 8 - \#2966 AC-10: Besitzer-Einträge \#2966 abgeräumt, Restabweichungen neu zugeordnet
+  ---
+  duration_ms: 2.319684
+  type: 'suite'
+  ...
+# Subtest: \#3440 AC-3 — vier Kanalzeilen in fester Reihenfolge mit Zielen
+    # Subtest: alle verbunden: E-Mail, Telegram, SMS, Premium-SMS mit gekürzten Zielen, alle bedienbar
+    ok 1 - alle verbunden: E-Mail, Telegram, SMS, Premium-SMS mit gekürzten Zielen, alle bedienbar
+      ---
+      duration_ms: 25.839505
+      type: 'test'
+      ...
+    # Subtest: Telegram-Ziel nennt nie Chat-ID oder Namen (\#3202), E-Mail nie die volle Adresse
+    ok 2 - Telegram-Ziel nennt nie Chat-ID oder Namen (\#3202), E-Mail nie die volle Adresse
+      ---
+      duration_ms: 1.162473
+      type: 'test'
+      ...
+    # Subtest: EN: Kanalnamen und Ziele aus dem englischen Katalog, Premium-Ziel nicht deutsch
+    ok 3 - EN: Kanalnamen und Ziele aus dem englischen Katalog, Premium-Ziel nicht deutsch
+      ---
+      duration_ms: 0.951222
+      type: 'test'
+      ...
+    1..3
+ok 9 - \#3440 AC-3 — vier Kanalzeilen in fester Reihenfolge mit Zielen
+  ---
+  duration_ms: 28.876742
+  type: 'suite'
+  ...
+# Subtest: \#3440 AC-4 — gesperrte Kanäle: Grund und Konto-Verb aus kanalStatus
+    # Subtest: Lücken (de): Telegram/SMS/Premium gesperrt, Grund + Verb + Text identisch zu kanalStatus
+    ok 1 - Lücken (de): Telegram/SMS/Premium gesperrt, Grund + Verb + Text identisch zu kanalStatus
+      ---
+      duration_ms: 0.958051
+      type: 'test'
+      ...
+    # Subtest: Lücken (en): Telegram/SMS/Premium gesperrt, Grund + Verb + Text identisch zu kanalStatus
+    ok 2 - Lücken (en): Telegram/SMS/Premium gesperrt, Grund + Verb + Text identisch zu kanalStatus
+      ---
+      duration_ms: 0.73532
+      type: 'test'
+      ...
+    # Subtest: DE-Wortlaut wie Mockup: „gesperrt: Telegram-Chat fehlt.“ / „Im Konto verbinden →“ usw.
+    ok 3 - DE-Wortlaut wie Mockup: „gesperrt: Telegram-Chat fehlt.“ / „Im Konto verbinden →“ usw.
+      ---
+      duration_ms: 0.547601
+      type: 'test'
+      ...
+    # Subtest: Tarif ohne SMS/Premium: Sperre folgt kanalStatus (Verb „prüfen“), nicht eigener Logik
+    ok 4 - Tarif ohne SMS/Premium: Sperre folgt kanalStatus (Verb „prüfen“), nicht eigener Logik
+      ---
+      duration_ms: 0.689431
+      type: 'test'
+      ...
+    1..4
+ok 10 - \#3440 AC-4 — gesperrte Kanäle: Grund und Konto-Verb aus kanalStatus
+  ---
+  duration_ms: 3.249626
+  type: 'suite'
+  ...
+# Subtest: \#3440 AC-5 — E-Mail unbestätigt ist im Menü gesperrt (ADR-0092)
+    # Subtest: email_verified=false: „gesperrt: Adresse noch nicht bestätigt.“ + „Im Konto bestätigen →“
+    ok 1 - email_verified=false: „gesperrt: Adresse noch nicht bestätigt.“ + „Im Konto bestätigen →“
+      ---
+      duration_ms: 0.686052
+      type: 'test'
+      ...
+    # Subtest: ohne mail_to: E-Mail gesperrt mit dem Grund aus kanalStatus (Verb „verbinden“)
+    ok 2 - ohne mail_to: E-Mail gesperrt mit dem Grund aus kanalStatus (Verb „verbinden“)
+      ---
+      duration_ms: 3.739967
+      type: 'test'
+      ...
+    1..2
+ok 11 - \#3440 AC-5 — E-Mail unbestätigt ist im Menü gesperrt (ADR-0092)
+  ---
+  duration_ms: 4.585878
+  type: 'suite'
+  ...
+# Subtest: \#3440 AC-2 — Segment Morgen/Abend nur bei context="route"
+    # Subtest: route: Segment mit Vorauswahl Morgen und zwei Optionen aus dem Katalog
+    ok 1 - route: Segment mit Vorauswahl Morgen und zwei Optionen aus dem Katalog
+      ---
+      duration_ms: 3.715286
+      type: 'test'
+      ...
+    # Subtest: vergleich: kein Segment, auch nicht bei übergebener Berichtsart
+    ok 2 - vergleich: kein Segment, auch nicht bei übergebener Berichtsart
+      ---
+      duration_ms: 0.665611
+      type: 'test'
+      ...
+    # Subtest: beide Kontexte: dieselben vier Zeilen (ein Baustein, ADR-0097)
+    ok 3 - beide Kontexte: dieselben vier Zeilen (ein Baustein, ADR-0097)
+      ---
+      duration_ms: 2.621144
+      type: 'test'
+      ...
+    1..3
+ok 12 - \#3440 AC-2 — Segment Morgen/Abend nur bei context="route"
+  ---
+  duration_ms: 7.159853
+  type: 'suite'
+  ...
+# Subtest: \#3440 AC-19 — Struktur mit Erweiterungs-Slot, kein „Test-Alarm“ in S5a
+    # Subtest: route: „Alle eingerichteten Kanäle“ + leerer Erweiterungs-Slot, nirgends „Test-Alarm“
+    ok 1 - route: „Alle eingerichteten Kanäle“ + leerer Erweiterungs-Slot, nirgends „Test-Alarm“
+      ---
+      duration_ms: 4.366317
+      type: 'test'
+      ...
+    # Subtest: vergleich: „Alle eingerichteten Kanäle“ + leerer Erweiterungs-Slot, nirgends „Test-Alarm“
+    ok 2 - vergleich: „Alle eingerichteten Kanäle“ + leerer Erweiterungs-Slot, nirgends „Test-Alarm“
+      ---
+      duration_ms: 0.779012
+      type: 'test'
+      ...
+    1..2
+ok 13 - \#3440 AC-19 — Struktur mit Erweiterungs-Slot, kein „Test-Alarm“ in S5a
+  ---
+  duration_ms: 5.26719
+  type: 'suite'
+  ...
+# Subtest: \#3440 AC-11 — Einzel-Rückmeldung „{Briefing} an {Kanal} geschickt · {Ziel} · {hh:mm}“
+    # Subtest: Trip Morgen, E-Mail, Uhr 20:41
+    ok 1 - Trip Morgen, E-Mail, Uhr 20:41
+      ---
+      duration_ms: 3.940157
+      type: 'test'
+      ...
+    # Subtest: Trip Abend, Telegram, Uhr zweistellig aufgefüllt (07:05)
+    ok 2 - Trip Abend, Telegram, Uhr zweistellig aufgefüllt (07:05)
+      ---
+      duration_ms: 4.149547
+      type: 'test'
+      ...
+    # Subtest: Orte: neutrales „Briefing“ (nicht „Orts-Briefing“), Berichtsart ohne Wirkung
+    ok 3 - Orte: neutrales „Briefing“ (nicht „Orts-Briefing“), Berichtsart ohne Wirkung
+      ---
+      duration_ms: 0.63017
+      type: 'test'
+      ...
+    # Subtest: Uhr ist injiziert: andere Zeit ⇒ anderer Text (keine eingebaute Systemuhr)
+    ok 4 - Uhr ist injiziert: andere Zeit ⇒ anderer Text (keine eingebaute Systemuhr)
+      ---
+      duration_ms: 0.467111
+      type: 'test'
+      ...
+    # Subtest: EN: Text aus dem englischen Katalog, kein deutsches „geschickt“
+    ok 5 - EN: Text aus dem englischen Katalog, kein deutsches „geschickt“
+      ---
+      duration_ms: 0.491381
+      type: 'test'
+      ...
+    1..5
+ok 14 - \#3440 AC-11 — Einzel-Rückmeldung „{Briefing} an {Kanal} geschickt · {Ziel} · {hh:mm}“
+  ---
+  duration_ms: 9.851497
+  type: 'suite'
+  ...
+# Subtest: \#3440 AC-10 — „Alle“: ✓ / übersprungen ({Grund}) / fehlgeschlagen
+    # Subtest: Lücken-Profil, gesendet nur E-Mail: Telegram/Premium übersprungen mit Grund aus kanalStatus
+    ok 1 - Lücken-Profil, gesendet nur E-Mail: Telegram/Premium übersprungen mit Grund aus kanalStatus
+      ---
+      duration_ms: 8.855277
+      type: 'test'
+      ...
+    # Subtest: bedienbar, aber nicht gesendet ⇒ „fehlgeschlagen“; Orte mit neutralem „Briefing“
+    ok 2 - bedienbar, aber nicht gesendet ⇒ „fehlgeschlagen“; Orte mit neutralem „Briefing“
+      ---
+      duration_ms: 5.24046
+      type: 'test'
+      ...
+    # Subtest: Abend-Briefing, alles gesendet ⇒ vier Haken
+    ok 3 - Abend-Briefing, alles gesendet ⇒ vier Haken
+      ---
+      duration_ms: 0.625641
+      type: 'test'
+      ...
+    # Subtest: Reihenfolge folgt den Zeilen, nicht der Reihenfolge in sent_channels
+    ok 4 - Reihenfolge folgt den Zeilen, nicht der Reihenfolge in sent_channels
+      ---
+      duration_ms: 0.644551
+      type: 'test'
+      ...
+    # Subtest: EN: kein deutsches „übersprungen“/„fehlgeschlagen“
+    ok 5 - EN: kein deutsches „übersprungen“/„fehlgeschlagen“
+      ---
+      duration_ms: 0.535011
+      type: 'test'
+      ...
+    1..5
+ok 15 - \#3440 AC-10 — „Alle“: ✓ / übersprungen ({Grund}) / fehlgeschlagen
+  ---
+  duration_ms: 16.401548
+  type: 'suite'
+  ...
+# Subtest: \#3440 AC-10 — „Alle“: bedienbar, aber im Abo aus ⇒ übersprungen (im Briefing aus), nie fehlgeschlagen
+    # Subtest: aboKanaele liest den Abo-Stand aus derselben Quelle wie der Zustellung-Tab (Orte: Telegram standardmäßig aus)
+    ok 1 - aboKanaele liest den Abo-Stand aus derselben Quelle wie der Zustellung-Tab (Orte: Telegram standardmäßig aus)
+      ---
+      duration_ms: 0.793482
+      type: 'test'
+      ...
+    # Subtest: Ortsvergleich, Telegram verbunden aber im Abo aus, gesendet nur E-Mail ⇒ Telegram übersprungen (im Briefing aus)
+    ok 2 - Ortsvergleich, Telegram verbunden aber im Abo aus, gesendet nur E-Mail ⇒ Telegram übersprungen (im Briefing aus)
+      ---
+      duration_ms: 3.144987
+      type: 'test'
+      ...
+    # Subtest: im Abo an, bedienbar, nicht gesendet ⇒ fehlgeschlagen (Trip, gemischter Abo-Stand)
+    ok 3 - im Abo an, bedienbar, nicht gesendet ⇒ fehlgeschlagen (Trip, gemischter Abo-Stand)
+      ---
+      duration_ms: 2.170715
+      type: 'test'
+      ...
+    # Subtest: gesperrt geht vor „im Briefing aus“: Grund aus kanalStatus, auch wenn der Kanal im Abo aus ist
+    ok 4 - gesperrt geht vor „im Briefing aus“: Grund aus kanalStatus, auch wenn der Kanal im Abo aus ist
+      ---
+      duration_ms: 1.604624
+      type: 'test'
+      ...
+    # Subtest: Tarif ohne SMS/Premium (gesperrt laut kanalStatus) ⇒ übersprungen mit Tarif-Grund, nicht fehlgeschlagen
+    ok 5 - Tarif ohne SMS/Premium (gesperrt laut kanalStatus) ⇒ übersprungen mit Tarif-Grund, nicht fehlgeschlagen
+      ---
+      duration_ms: 1.271533
+      type: 'test'
+      ...
+    # Subtest: gesendet geht vor Abo-Stand: im Abo aus, aber in sent_channels ⇒ ✓
+    ok 6 - gesendet geht vor Abo-Stand: im Abo aus, aber in sent_channels ⇒ ✓
+      ---
+      duration_ms: 0.515301
+      type: 'test'
+      ...
+    # Subtest: EN: „skipped (off in this briefing)“, kein deutscher Rest
+    ok 7 - EN: „skipped (off in this briefing)“, kein deutscher Rest
+      ---
+      duration_ms: 0.545682
+      type: 'test'
+      ...
+    # Subtest: testErgebnis reicht den Abo-Stand an die „Alle“-Rückmeldung durch
+    ok 8 - testErgebnis reicht den Abo-Stand an die „Alle“-Rückmeldung durch
+      ---
+      duration_ms: 0.656531
+      type: 'test'
+      ...
+    1..8
+ok 16 - \#3440 AC-10 — „Alle“: bedienbar, aber im Abo aus ⇒ übersprungen (im Briefing aus), nie fehlgeschlagen
+  ---
+  duration_ms: 11.00317
+  type: 'suite'
+  ...
+# Subtest: \#3440 AC-2 / AC-11 — Vorauswahl Morgen beim Öffnen, Rückmeldedauer 5 s
+    # Subtest: berichtsartBeiOffen: Öffnen setzt auf Morgen zurück, Schließen lässt die Wahl stehen
+    ok 1 - berichtsartBeiOffen: Öffnen setzt auf Morgen zurück, Schließen lässt die Wahl stehen
+      ---
+      duration_ms: 1.093282
+      type: 'test'
+      ...
+    # Subtest: RUECKMELDUNG_MS ist 5 Sekunden
+    ok 2 - RUECKMELDUNG_MS ist 5 Sekunden
+      ---
+      duration_ms: 1.210992
+      type: 'test'
+      ...
+    1..2
+ok 17 - \#3440 AC-2 / AC-11 — Vorauswahl Morgen beim Öffnen, Rückmeldedauer 5 s
+  ---
+  duration_ms: 2.447084
+  type: 'suite'
+  ...
+# Subtest: F006: Dispatch der Listen — Aktion -> Zweig -> Wirkung
+    # Subtest: Trip-Liste: jede Aktion faellt in ihren Zweig mit der richtigen Wirkung
+    ok 1 - Trip-Liste: jede Aktion faellt in ihren Zweig mit der richtigen Wirkung
+      ---
+      duration_ms: 7.986103
+      type: 'test'
+      ...
+    # Subtest: \#1743 AC-27: Trip-Liste hat keinen Zweig 'preview' mehr
+    ok 2 - \#1743 AC-27: Trip-Liste hat keinen Zweig 'preview' mehr
+      ---
+      duration_ms: 0.559261
+      type: 'test'
+      ...
+    # Subtest: Compare-Liste: jede Aktion faellt in ihren Zweig mit der richtigen Wirkung
+    ok 3 - Compare-Liste: jede Aktion faellt in ihren Zweig mit der richtigen Wirkung
+      ---
+      duration_ms: 9.774268
+      type: 'test'
+      ...
+    # Subtest: \#1743 AC-27: Compare-Liste hat keinen Zweig 'preview' mehr
+    ok 4 - \#1743 AC-27: Compare-Liste hat keinen Zweig 'preview' mehr
+      ---
+      duration_ms: 0.503721
+      type: 'test'
+      ...
+    # Subtest: Trip-Hub: pausieren/fortsetzen schreiben den richtigen Zielzustand; Archivieren fragt, Loeschen fragt
+    ok 5 - Trip-Hub: pausieren/fortsetzen schreiben den richtigen Zielzustand; Archivieren fragt, Loeschen fragt
+      ---
+      duration_ms: 1.120902
+      type: 'test'
+      ...
+    # Subtest: Compare-Hub: archive/unarchive/delete in ihren eigenen Zweigen
+    ok 6 - Compare-Hub: archive/unarchive/delete in ihren eigenen Zweigen
+      ---
+      duration_ms: 5.559811
+      type: 'test'
+      ...
+    # Subtest: die Adapter-Aufrufe geben den Zielzustand `paused` unveraendert weiter
+    ok 7 - die Adapter-Aufrufe geben den Zielzustand `paused` unveraendert weiter
+      ---
+      duration_ms: 0.636481
+      type: 'test'
+      ...
+    # Subtest: mobiles Blatt und Zeilenmenue teilen einen Dispatch (kein toter Sheet-Handler)
+    ok 8 - mobiles Blatt und Zeilenmenue teilen einen Dispatch (kein toter Sheet-Handler)
+      ---
+      duration_ms: 12.750754
+      type: 'test'
+      ...
+    1..8
+ok 18 - F006: Dispatch der Listen — Aktion -> Zweig -> Wirkung
+  ---
+  duration_ms: 40.098252
+  type: 'suite'
+  ...
+# Subtest: F001: „Test schicken" oeffnet nur das Menue; gesendet wird erst beim Klick auf eine Kanalzeile
+    # Subtest: HubKopf: der Knopf sendet nicht selbst, das Menue meldet die Wahl an onTest; gesperrt an sendDisabled
+    ok 1 - HubKopf: der Knopf sendet nicht selbst, das Menue meldet die Wahl an onTest; gesperrt an sendDisabled
+      ---
+      duration_ms: 8.280274
+      type: 'test'
+      ...
+    # Subtest: Trip-Hub: Kopf meldet die Menue-Wahl an handleTest; kein Sende-Dialog mehr
+    ok 2 - Trip-Hub: Kopf meldet die Menue-Wahl an handleTest; kein Sende-Dialog mehr
+      ---
+      duration_ms: 0.958602
+      type: 'test'
+      ...
+    # Subtest: Compare-Hub: Kopf meldet die Menue-Wahl an handleTest; Kanal geht als channel in den Request
+    ok 3 - Compare-Hub: Kopf meldet die Menue-Wahl an handleTest; Kanal geht als channel in den Request
+      ---
+      duration_ms: 0.963701
+      type: 'test'
+      ...
+    # Subtest: F022: der Zeilen-Primaerknopf „Briefing senden" ist an die Liste gebunden (Trip UND Compare)
+    ok 4 - F022: der Zeilen-Primaerknopf „Briefing senden" ist an die Liste gebunden (Trip UND Compare)
+      ---
+      duration_ms: 4.533537
+      type: 'test'
+      ...
+    # Subtest: Listen: Dialog-Bestaetigung ist confirmSend, offen = Ziel gesetzt
+    ok 5 - Listen: Dialog-Bestaetigung ist confirmSend, offen = Ziel gesetzt
+      ---
+      duration_ms: 5.84344
+      type: 'test'
+      ...
+    1..5
+ok 19 - F001: „Test schicken" oeffnet nur das Menue; gesendet wird erst beim Klick auf eine Kanalzeile
+  ---
+  duration_ms: 20.853928
+  type: 'suite'
+  ...
+# Subtest: F002 (AC-10): jede Seite gibt Dialog bzw. Menue das Profil des angemeldeten Nutzers
+    # Subtest: Trip-Liste: profile = data.profile, kind = "trip"
+    ok 1 - Trip-Liste: profile = data.profile, kind = "trip"
+      ---
+      duration_ms: 2.656675
+      type: 'test'
+      ...
+    # Subtest: Compare-Liste: profile = data.profile, kind = "vergleich"
+    ok 2 - Compare-Liste: profile = data.profile, kind = "vergleich"
+      ---
+      duration_ms: 2.873436
+      type: 'test'
+      ...
+    # Subtest: Trip-Hub: testProfil = data.profile; HubKopf reicht es als profil an das Menue
+    ok 3 - Trip-Hub: testProfil = data.profile; HubKopf reicht es als profil an das Menue
+      ---
+      duration_ms: 7.539793
+      type: 'test'
+      ...
+    # Subtest: Compare-Hub: testProfil = data.profile; HubKopf reicht es als profil an das Menue
+    ok 4 - Compare-Hub: testProfil = data.profile; HubKopf reicht es als profil an das Menue
+      ---
+      duration_ms: 4.93053
+      type: 'test'
+      ...
+    1..4
+ok 20 - F002 (AC-10): jede Seite gibt Dialog bzw. Menue das Profil des angemeldeten Nutzers
+  ---
+  duration_ms: 18.152642
+  type: 'suite'
+  ...
+# Subtest: F003 (AC-4): die gewaehlte Berichtsart erreicht den Request
+    # Subtest: Trip-Liste und Trip-Hub: die gewaehlte Berichtsart geht als reportType in sendSubscription
+    ok 1 - Trip-Liste und Trip-Hub: die gewaehlte Berichtsart geht als reportType in sendSubscription
+      ---
+      duration_ms: 0.555621
+      type: 'test'
+      ...
+    # Subtest: Compare-Liste sendet ohne Berichtsart
+    ok 2 - Compare-Liste sendet ohne Berichtsart
+      ---
+      duration_ms: 0.175409
+      type: 'test'
+      ...
+    1..2
+ok 21 - F003 (AC-4): die gewaehlte Berichtsart erreicht den Request
+  ---
+  duration_ms: 0.813622
+  type: 'suite'
+  ...
+# Subtest: F007 (AC-11/AC-2): Archiv-Ausblendung, Filter und Pillenzaehler
+    # Subtest: Refetch der Trip-Liste blendet Archiviertes aus
+    ok 1 - Refetch der Trip-Liste blendet Archiviertes aus
+      ---
+      duration_ms: 0.21395
+      type: 'test'
+      ...
+    # Subtest: Mobilfilter wirkt und die Karten iterieren die GEFILTERTE Liste
+    ok 2 - Mobilfilter wirkt und die Karten iterieren die GEFILTERTE Liste
+      ---
+      duration_ms: 2.182074
+      type: 'test'
+      ...
+    # Subtest: jeder Pillenzaehler vergleicht gegen SEINEN Status
+    ok 3 - jeder Pillenzaehler vergleicht gegen SEINEN Status
+      ---
+      duration_ms: 0.21621
+      type: 'test'
+      ...
+    1..3
+ok 22 - F007 (AC-11/AC-2): Archiv-Ausblendung, Filter und Pillenzaehler
+  ---
+  duration_ms: 2.733596
+  type: 'suite'
+  ...
+# Subtest: F008 (AC-5/AC-12): Trip-Hub Loeschdialog, Navigation, Menue-Flaeche
+    # Subtest: Loeschdialog nennt trip.name; Bestaetigen loescht und navigiert auf /trips
+    ok 1 - Loeschdialog nennt trip.name; Bestaetigen loescht und navigiert auf /trips
+      ---
+      duration_ms: 0.679721
+      type: 'test'
+      ...
+    # Subtest: Archivieren/Reaktivieren laeuft ueber die Rueckfrage und schreibt erst bei Bestaetigung
+    ok 2 - Archivieren/Reaktivieren laeuft ueber die Rueckfrage und schreibt erst bei Bestaetigung
+      ---
+      duration_ms: 0.379702
+      type: 'test'
+      ...
+    # Subtest: beide Huebs: Kebab und Blatt zeigen die Hub-Aktionen (Flaeche "hub")
+    ok 3 - beide Huebs: Kebab und Blatt zeigen die Hub-Aktionen (Flaeche "hub")
+      ---
+      duration_ms: 3.291916
+      type: 'test'
+      ...
+    1..3
+ok 23 - F008 (AC-5/AC-12): Trip-Hub Loeschdialog, Navigation, Menue-Flaeche
+  ---
+  duration_ms: 4.443998
+  type: 'suite'
+  ...
+# Subtest: F011 (AC-17): Fehler und Erfolg des Versands/Pausierens werden angezeigt
+    # Subtest: Trip-Liste: Versandfehler und Pausierfehler landen in `error`, das gerendert wird
+    ok 1 - Trip-Liste: Versandfehler und Pausierfehler landen in `error`, das gerendert wird
+      ---
+      duration_ms: 1.775724
+      type: 'test'
+      ...
+    # Subtest: Compare-Liste: Versandfehler landet in `error`, das gerendert wird
+    ok 2 - Compare-Liste: Versandfehler landet in `error`, das gerendert wird
+      ---
+      duration_ms: 1.595023
+      type: 'test'
+      ...
+    # Subtest: Loeschen: DELETE ueber den Adapter, danach verschwindet der Eintrag aus der Liste
+    ok 3 - Loeschen: DELETE ueber den Adapter, danach verschwindet der Eintrag aus der Liste
+      ---
+      duration_ms: 0.370739
+      type: 'test'
+      ...
+    # Subtest: Trip-Hub: ok-Zweig setzt sendStatus "ok" (gerendert als test-schicken-ok), Fehler als "error" (test-schicken-fehler)
+    ok 4 - Trip-Hub: ok-Zweig setzt sendStatus "ok" (gerendert als test-schicken-ok), Fehler als "error" (test-schicken-fehler)
+      ---
+      duration_ms: 1.169612
+      type: 'test'
+      ...
+    # Subtest: Compare-Hub: ok-Zweig setzt sendStatus "ok" (gerendert als test-schicken-ok), Fehler als "error" (test-schicken-fehler)
+    ok 5 - Compare-Hub: ok-Zweig setzt sendStatus "ok" (gerendert als test-schicken-ok), Fehler als "error" (test-schicken-fehler)
+      ---
+      duration_ms: 1.399723
+      type: 'test'
+      ...
+    1..5
+ok 24 - F011 (AC-17): Fehler und Erfolg des Versands/Pausierens werden angezeigt
+  ---
+  duration_ms: 6.507642
+  type: 'suite'
+  ...
+# Subtest: F019/F015/F018: die Bindung steht UNTER DER ERWARTETEN Bedingung (kein toter Zweig)
+    # Subtest: Dialog (Listen) und Aktionsblatt aller vier Seiten stehen unbedingt
+    ok 1 - Dialog (Listen) und Aktionsblatt aller vier Seiten stehen unbedingt
+      ---
+      duration_ms: 17.870932
+      type: 'test'
+      ...
+    # Subtest: Hub-Kebab: Kopf-Einbettung auf beiden Seiten unbedingt; SubscriptionKebab im HubKopf unbedingt
+    ok 2 - Hub-Kebab: Kopf-Einbettung auf beiden Seiten unbedingt; SubscriptionKebab im HubKopf unbedingt
+      ---
+      duration_ms: 16.603051
+      type: 'test'
+      ...
+    # Subtest: Hub-Primaerknopf „Senden": Trip unbedingt, Compare nur ausserhalb des Entwurfs
+    ok 3 - Hub-Primaerknopf „Senden": Trip unbedingt, Compare nur ausserhalb des Entwurfs
+      ---
+      duration_ms: 13.736784
+      type: 'test'
+      ...
+    # Subtest: Schreib-/Sendeaufrufe der Handler stehen unbedingt (kein if (false), kein toter Zweig)
+    ok 4 - Schreib-/Sendeaufrufe der Handler stehen unbedingt (kein if (false), kein toter Zweig)
+      ---
+      duration_ms: 1.644403
+      type: 'test'
+      ...
+    1..4
+ok 25 - F019/F015/F018: die Bindung steht UNTER DER ERWARTETEN Bedingung (kein toter Zweig)
+  ---
+  duration_ms: 50.048689
+  type: 'suite'
+  ...
+# Subtest: F013 (AC-17): toter Code im Trip-Hub
+    # Subtest: handlePauseClick existiert nicht mehr
+    ok 1 - handlePauseClick existiert nicht mehr
+      ---
+      duration_ms: 0.130769
+      type: 'test'
+      ...
+    1..1
+ok 26 - F013 (AC-17): toter Code im Trip-Hub
+  ---
+  duration_ms: 0.19733
+  type: 'suite'
+  ...
+# Subtest: Fix-Loop 2 (AC-3/AC-12): Senden-Primaerknopf ist auf JEDER Breite erreichbar
+    # Subtest: HubKopf: kein Vorfahre des Senden-Knopfs ist unterhalb des Desktop-Breakpoints versteckt
+    ok 1 - HubKopf: kein Vorfahre des Senden-Knopfs ist unterhalb des Desktop-Breakpoints versteckt
+      ---
+      duration_ms: 7.656772
+      type: 'test'
+      ...
+    # Subtest: Trip-Hub: kein Vorfahre der Kopf-Einbettung (Senden) ist unterhalb des Desktop-Breakpoints versteckt
+    ok 2 - Trip-Hub: kein Vorfahre der Kopf-Einbettung (Senden) ist unterhalb des Desktop-Breakpoints versteckt
+      ---
+      duration_ms: 1.005471
+      type: 'test'
+      ...
+    # Subtest: Compare-Hub: kein Vorfahre der Kopf-Einbettung (Senden) ist unterhalb des Desktop-Breakpoints versteckt
+    ok 3 - Compare-Hub: kein Vorfahre der Kopf-Einbettung (Senden) ist unterhalb des Desktop-Breakpoints versteckt
+      ---
+      duration_ms: 3.705256
+      type: 'test'
+      ...
+    # Subtest: Compare-Hub: das Aktionsblatt bleibt mobil ueber den Kebab erreichbar (nicht doppelt gebaut)
+    ok 4 - Compare-Hub: das Aktionsblatt bleibt mobil ueber den Kebab erreichbar (nicht doppelt gebaut)
+      ---
+      duration_ms: 9.987247
+      type: 'test'
+      ...
+    1..4
+ok 27 - Fix-Loop 2 (AC-3/AC-12): Senden-Primaerknopf ist auf JEDER Breite erreichbar
+  ---
+  duration_ms: 22.54474
+  type: 'suite'
+  ...
+# Subtest: \#2837 S1 Entscheidung 6 / AC-7 — Kebab-Symbol: nur vertikal, nur in SubscriptionKebab
+    # Subtest: Trip-Hub: bindet kein Kebab-Symbol mehr selbst ein (weder horizontal noch eigener Mobil-Knopf)
+    ok 1 - Trip-Hub: bindet kein Kebab-Symbol mehr selbst ein (weder horizontal noch eigener Mobil-Knopf)
+      ---
+      duration_ms: 84.115361
+      type: 'test'
+      ...
+    # Subtest: Trip-Hub: baut weder „Senden" noch den Kebab selbst (beides liegt im geteilten HubKopf)
+    ok 2 - Trip-Hub: baut weder „Senden" noch den Kebab selbst (beides liegt im geteilten HubKopf)
+      ---
+      duration_ms: 29.339103
+      type: 'test'
+      ...
+    # Subtest: Compare-Hub: bindet kein Kebab-Symbol mehr selbst ein (weder horizontal noch eigener Mobil-Knopf)
+    ok 3 - Compare-Hub: bindet kein Kebab-Symbol mehr selbst ein (weder horizontal noch eigener Mobil-Knopf)
+      ---
+      duration_ms: 51.037391
+      type: 'test'
+      ...
+    # Subtest: Compare-Hub: baut weder „Senden" noch den Kebab selbst (beides liegt im geteilten HubKopf)
+    ok 4 - Compare-Hub: baut weder „Senden" noch den Kebab selbst (beides liegt im geteilten HubKopf)
+      ---
+      duration_ms: 26.073458
+      type: 'test'
+      ...
+    # Subtest: SubscriptionKebab: vertikales Symbol, kein horizontales
+    ok 5 - SubscriptionKebab: vertikales Symbol, kein horizontales
+      ---
+      duration_ms: 4.817548
+      type: 'test'
+      ...
+    # Subtest: HubKopf: kein horizontales Kebab-Symbol, bindet SubscriptionKebab mit actions/onSelect ein
+    ok 6 - HubKopf: kein horizontales Kebab-Symbol, bindet SubscriptionKebab mit actions/onSelect ein
+      ---
+      duration_ms: 11.581261
+      type: 'test'
+      ...
+    1..6
+ok 28 - \#2837 S1 Entscheidung 6 / AC-7 — Kebab-Symbol: nur vertikal, nur in SubscriptionKebab
+  ---
+  duration_ms: 207.994513
+  type: 'suite'
+  ...
+# Subtest: \#2837 S1 Entscheidungen 2/3 — Senden im HubKopf: Btn accent (\#2980), Bindung an die Props
+    # Subtest: genau ein Senden-Knopf: Btn variant="accent", Auslöser des Menüs (onTest), disabled = sendDisabled
+    ok 1 - genau ein Senden-Knopf: Btn variant="accent", Auslöser des Menüs (onTest), disabled = sendDisabled
+      ---
+      duration_ms: 11.125141
+      type: 'test'
+      ...
+    # Subtest: Senden steht nur außerhalb des Setup-Modus; „Setup abschließen" (Btn primary) im Setup-Zweig
+    ok 2 - Senden steht nur außerhalb des Setup-Modus; „Setup abschließen" (Btn primary) im Setup-Zweig
+      ---
+      duration_ms: 15.877888
+      type: 'test'
+      ...
+    # Subtest: ein Markup: kein {\#if} im Template verzweigt nach context
+    ok 3 - ein Markup: kein {\#if} im Template verzweigt nach context
+      ---
+      duration_ms: 8.801386
+      type: 'test'
+      ...
+    1..3
+ok 29 - \#2837 S1 Entscheidungen 2/3 — Senden im HubKopf: Btn accent (\#2980), Bindung an die Props
+  ---
+  duration_ms: 36.224655
+  type: 'suite'
+  ...
+# Subtest: \#3440 AC-1 — beide Hubs nutzen denselben Baustein TestSchickenMenue
+    # Subtest: Baustein existiert, trägt data-abschnitt="test-menue" und ruft keine API
+    ok 1 - Baustein existiert, trägt data-abschnitt="test-menue" und ruft keine API
+      ---
+      duration_ms: 55.542188
+      type: 'test'
+      ...
+    # Subtest: Trip-Hub: TestSchickenMenue genau einmal in der Kette [id]/+page.svelte → trip-detail/TripHeader.svelte → hub-kopf/HubKopf.svelte
+    ok 2 - Trip-Hub: TestSchickenMenue genau einmal in der Kette [id]/+page.svelte → trip-detail/TripHeader.svelte → hub-kopf/HubKopf.svelte
+      ---
+      duration_ms: 76.206106
+      type: 'test'
+      ...
+    # Subtest: Orte-Hub: TestSchickenMenue genau einmal in der Kette [id]/+page.svelte → hub-kopf/HubKopf.svelte
+    ok 3 - Orte-Hub: TestSchickenMenue genau einmal in der Kette [id]/+page.svelte → hub-kopf/HubKopf.svelte
+      ---
+      duration_ms: 28.547192
+      type: 'test'
+      ...
+    # Subtest: Trip-Hub: kein SendConfirmDialog mehr im Hub (weder eingebunden noch importiert)
+    ok 4 - Trip-Hub: kein SendConfirmDialog mehr im Hub (weder eingebunden noch importiert)
+      ---
+      duration_ms: 17.843752
+      type: 'test'
+      ...
+    # Subtest: Orte-Hub: kein SendConfirmDialog mehr im Hub (weder eingebunden noch importiert)
+    ok 5 - Orte-Hub: kein SendConfirmDialog mehr im Hub (weder eingebunden noch importiert)
+      ---
+      duration_ms: 20.468767
+      type: 'test'
+      ...
+    1..5
+ok 30 - \#3440 AC-1 — beide Hubs nutzen denselben Baustein TestSchickenMenue
+  ---
+  duration_ms: 199.527608
+  type: 'suite'
+  ...
+# Subtest: \#3440 AC-15 / AC-20 — Kopf-Knopf öffnet das Menü (aria), bleibt gesperrt bzw. im Setup ohne Menü
+    # Subtest: subscription-hub-send: Btn accent, aria-haspopup="menu", aria-expanded als Ausdruck, disabled = sendDisabled, kein onSend
+    ok 1 - subscription-hub-send: Btn accent, aria-haspopup="menu", aria-expanded als Ausdruck, disabled = sendDisabled, kein onSend
+      ---
+      duration_ms: 5.923311
+      type: 'test'
+      ...
+    # Subtest: Menü steht (falls im HubKopf) nur außerhalb des Setup-Modus — im Entwurf öffnet sich nichts
+    ok 2 - Menü steht (falls im HubKopf) nur außerhalb des Setup-Modus — im Entwurf öffnet sich nichts
+      ---
+      duration_ms: 52.620744
+      type: 'test'
+      ...
+    # Subtest: Trip-Seite reicht onTest an TripHeader, TripHeader an HubKopf; Orte-Seite reicht onTest an HubKopf
+    ok 3 - Trip-Seite reicht onTest an TripHeader, TripHeader an HubKopf; Orte-Seite reicht onTest an HubKopf
+      ---
+      duration_ms: 21.034818
+      type: 'test'
+      ...
+    1..3
+ok 31 - \#3440 AC-15 / AC-20 — Kopf-Knopf öffnet das Menü (aria), bleibt gesperrt bzw. im Setup ohne Menü
+  ---
+  duration_ms: 79.868133
+  type: 'suite'
+  ...
+# Subtest: \#3440 AC-11 / AC-12 — einheitliche Rückmeldung in beiden Hubs
+    # Subtest: Trip-Hub: Rückmeldung mit testids test-schicken-ok und test-schicken-fehler
+    ok 1 - Trip-Hub: Rückmeldung mit testids test-schicken-ok und test-schicken-fehler
+      ---
+      duration_ms: 8.752886
+      type: 'test'
+      ...
+    # Subtest: Orte-Hub: Rückmeldung mit testids test-schicken-ok und test-schicken-fehler
+    ok 2 - Orte-Hub: Rückmeldung mit testids test-schicken-ok und test-schicken-fehler
+      ---
+      duration_ms: 11.02486
+      type: 'test'
+      ...
+    1..2
+ok 32 - \#3440 AC-11 / AC-12 — einheitliche Rückmeldung in beiden Hubs
+  ---
+  duration_ms: 19.907415
+  type: 'suite'
+  ...
+# Subtest: \#3440 AC-10 / AC-11 — Seiten reichen Abo-Stand durch, Rückmeldedauer aus RUECKMELDUNG_MS
+    # Subtest: RUECKMELDUNG_MS ist 5000 ms (AC-11: Rückmeldung 5 s)
+    ok 1 - RUECKMELDUNG_MS ist 5000 ms (AC-11: Rückmeldung 5 s)
+      ---
+      duration_ms: 0.172469
+      type: 'test'
+      ...
+    # Subtest: Trip-Hub: handleTest übergibt testErgebnis den Abo-Stand aus aboKanaele und setzt den Timer mit RUECKMELDUNG_MS
+    ok 2 - Trip-Hub: handleTest übergibt testErgebnis den Abo-Stand aus aboKanaele und setzt den Timer mit RUECKMELDUNG_MS
+      ---
+      duration_ms: 8.075805
+      type: 'test'
+      ...
+    # Subtest: Orte-Hub: handleTest übergibt testErgebnis den Abo-Stand aus aboKanaele und setzt den Timer mit RUECKMELDUNG_MS
+    ok 3 - Orte-Hub: handleTest übergibt testErgebnis den Abo-Stand aus aboKanaele und setzt den Timer mit RUECKMELDUNG_MS
+      ---
+      duration_ms: 10.322869
+      type: 'test'
+      ...
+    1..3
+ok 33 - \#3440 AC-10 / AC-11 — Seiten reichen Abo-Stand durch, Rückmeldedauer aus RUECKMELDUNG_MS
+  ---
+  duration_ms: 18.689944
+  type: 'suite'
+  ...
+# Subtest: \#3440 AC-2 / AC-15 — Menü: Vorauswahl Morgen bei jedem Öffnen, Zeilen mobil mindestens 44 px
+    # Subtest: Startwert der Berichtsart ist BERICHTSART_START; $effect setzt sie über berichtsartBeiOffen(offen, …) zurück
+    ok 1 - Startwert der Berichtsart ist BERICHTSART_START; $effect setzt sie über berichtsartBeiOffen(offen, …) zurück
+      ---
+      duration_ms: 3.920996
+      type: 'test'
+      ...
+    # Subtest: CSS: in @media (max-width: 899px) trägt .zeile min-height: var(--g-tap-min), und --g-tap-min ist 44px
+    ok 2 - CSS: in @media (max-width: 899px) trägt .zeile min-height: var(--g-tap-min), und --g-tap-min ist 44px
+      ---
+      duration_ms: 3.865226
+      type: 'test'
+      ...
+    1..2
+ok 34 - \#3440 AC-2 / AC-15 — Menü: Vorauswahl Morgen bei jedem Öffnen, Zeilen mobil mindestens 44 px
+  ---
+  duration_ms: 7.886095
+  type: 'suite'
+  ...
+# Subtest: Gegenprobe: kaputte Kataloge sind rot und nennen Bereich und Schluessel
+    # Subtest: fehlender englischer Schluessel
+    ok 1 - fehlender englischer Schluessel
+      ---
+      duration_ms: 1.048912
+      type: 'test'
+      ...
+    # Subtest: zusaetzlicher englischer Schluessel
+    ok 2 - zusaetzlicher englischer Schluessel
+      ---
+      duration_ms: 0.15479
+      type: 'test'
+      ...
+    # Subtest: abweichende Platzhalter
+    ok 3 - abweichende Platzhalter
+      ---
+      duration_ms: 0.229981
+      type: 'test'
+      ...
+    # Subtest: gleiche Schluessel und Platzhalter sind gruen
+    ok 4 - gleiche Schluessel und Platzhalter sind gruen
+      ---
+      duration_ms: 0.17683
+      type: 'test'
+      ...
+    1..4
+ok 35 - Gegenprobe: kaputte Kataloge sind rot und nennen Bereich und Schluessel
+  ---
+  duration_ms: 2.378435
+  type: 'suite'
+  ...
+# Subtest: AC-3: die echten 21 Bereichspaare (\#2795: + zustellung, \#3319: + funktionen, \#3440: + test_schicken)
+    # Subtest: je Sprache existieren genau die 21 Bereichsdateien
+    ok 1 - je Sprache existieren genau die 21 Bereichsdateien
+      ---
+      duration_ms: 0.43924
+      type: 'test'
+      ...
+    # Subtest: Schluessel- und Platzhaltermengen sind je Bereich gleich
+    ok 2 - Schluessel- und Platzhaltermengen sind je Bereich gleich
+      ---
+      duration_ms: 9.321807
+      type: 'test'
+      ...
+    # Subtest: kein Schluessel steht in zwei Bereichsdateien
+    ok 3 - kein Schluessel steht in zwei Bereichsdateien
+      ---
+      duration_ms: 2.883836
+      type: 'test'
+      ...
+    # Subtest: index.ts vereinigt genau die Bereichsdateien (de und en)
+    ok 4 - index.ts vereinigt genau die Bereichsdateien (de und en)
+      ---
+      duration_ms: 4.830149
+      type: 'test'
+      ...
+    # Subtest: kein Katalogwert ist leer
+    ok 5 - kein Katalogwert ist leer
+      ---
+      duration_ms: 1.944913
+      type: 'test'
+      ...
+    1..5
+ok 36 - AC-3: die echten 21 Bereichspaare (\#2795: + zustellung, \#3319: + funktionen, \#3440: + test_schicken)
+  ---
+  duration_ms: 19.834805
+  type: 'suite'
+  ...
+# Subtest: ok mit Meldung -> Rückmeldung nennt zusätzlich die Meldung des Versands
+ok 37 - ok mit Meldung -> Rückmeldung nennt zusätzlich die Meldung des Versands
+  ---
+  duration_ms: 234.36253
+  type: 'test'
+  ...
+# Subtest: ok ohne Meldung -> Standardtext ist die Einzel-Rückmeldung
+ok 38 - ok ohne Meldung -> Standardtext ist die Einzel-Rückmeldung
+  ---
+  duration_ms: 61.437211
+  type: 'test'
+  ...
+# Subtest: Fehler -> Fehlermeldung (rot, test-schicken-fehler)
+ok 39 - Fehler -> Fehlermeldung (rot, test-schicken-fehler)
+  ---
+  duration_ms: 31.968697
+  type: 'test'
+  ...
+# Subtest: AC-15: Hub-Klick trifft den neuen Endpunkt
+    # Subtest: handleTest (Alle eingerichteten Kanäle) -> genau ein POST /api/briefings/c2280/send?kind=vergleich
+    ok 1 - handleTest (Alle eingerichteten Kanäle) -> genau ein POST /api/briefings/c2280/send?kind=vergleich
+      ---
+      duration_ms: 291.040712
+      type: 'test'
+      ...
+    # Subtest: \#3440: handleTest mit Einzelkanal -> genau ein POST mit channel
+    ok 2 - \#3440: handleTest mit Einzelkanal -> genau ein POST mit channel
+      ---
+      duration_ms: 60.856458
+      type: 'test'
+      ...
+    # Subtest: handleTest trifft NICHT den Alt-Pfad /api/compare/presets/{id}/send
+    ok 3 - handleTest trifft NICHT den Alt-Pfad /api/compare/presets/{id}/send
+      ---
+      duration_ms: 38.784499
+      type: 'test'
+      ...
+    1..3
+ok 40 - AC-15: Hub-Klick trifft den neuen Endpunkt
+  ---
+  duration_ms: 391.75398
+  type: 'suite'
+  ...
+# Versand compare:c2280 fehlgeschlagen: HTTP 422
+# Subtest: AC-16: Hub zeigt den konkreten Grund
+    # Subtest: 422 no_channels am neuen Endpunkt -> sendMsg ist der detail-Text
+    ok 1 - 422 no_channels am neuen Endpunkt -> sendMsg ist der detail-Text
+      ---
+      duration_ms: 26.530839
+      type: 'test'
+      ...
+# Versand compare:c2280 fehlgeschlagen: HTTP 422
+    # Subtest: 422 channels_unreachable am neuen Endpunkt -> sendMsg ist der detail-Text
+    ok 2 - 422 channels_unreachable am neuen Endpunkt -> sendMsg ist der detail-Text
+      ---
+      duration_ms: 33.683141
+      type: 'test'
+      ...
+# Versand compare:c2280 fehlgeschlagen: HTTP 422
+    # Subtest: 422 no_weather am neuen Endpunkt -> sendMsg ist der detail-Text
+    ok 3 - 422 no_weather am neuen Endpunkt -> sendMsg ist der detail-Text
+      ---
+      duration_ms: 33.31299
+      type: 'test'
+      ...
+    # Subtest: Erfolg mit fehlende_orte am neuen Endpunkt -> Meldung nennt die fehlenden Orte
+    ok 4 - Erfolg mit fehlende_orte am neuen Endpunkt -> Meldung nennt die fehlenden Orte
+      ---
+      duration_ms: 61.34663
+      type: 'test'
+      ...
+    1..4
+ok 41 - AC-16: Hub zeigt den konkreten Grund
+  ---
+  duration_ms: 155.502747
+  type: 'suite'
+  ...
+1..41
+# tests 150
+# suites 38
+# pass 150
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7355.506083

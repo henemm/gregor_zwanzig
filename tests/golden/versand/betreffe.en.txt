@@ -48,6 +48,10 @@ Etappe 3: Refuge d'Ortu di u Piobbu nach Refuge de Carrozzu — Evening — Cold
 500 send_failed Delivery failed — internal error, please try again later
 ----- fehler.kontingent_erschoepft -----
 429 kontingent_erschoepft No briefing sent — your daily request quota is used up. It resets at midnight (UTC); scheduled briefings and alerts continue.
+----- fehler.invalid_channel -----
+400 invalid_channel Unknown channel (allowed: email, telegram, sms, premium_sms)
+----- fehler.email_unverified -----
+422 email_unverified No briefing sent — your email address is not confirmed yet. Confirm it in your account.
 ----- briefing.betreff -----
 [GR20] Etappe 3 — Morning
 ----- briefing.header -----

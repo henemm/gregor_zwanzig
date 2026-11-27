@@ -45,11 +45,11 @@ const attrWert = (a: any) => (a ? (Array.isArray(a.value) ? a.value : [a.value])
 
 // #2837 S1 (ADR-0110): das Lebenszyklus-Menue (SubscriptionKebab) liegt im geteilten HubKopf, den
 // TripHeader einbettet. Die Seite reicht Aktionen und Auswahl-Handler an diese Kopf-Einbettung
-// (die Komponente mit `onSend`); die AST-Zusicherungen unten wirken dort. Dass die Loesch-Aktion
-// beim Kebab ANKOMMT (gerendert) und AUSGELOEST werden kann, belegt der Block „Kette" am Ende.
+// (die Komponente mit `onTest`, seit #3440 statt `onSend`); die AST-Zusicherungen unten wirken dort. Dass
+// die Loesch-Aktion beim Kebab ANKOMMT (gerendert) und AUSGELOEST werden kann, belegt der Block „Kette" am Ende.
 const kopfEinbettung = () => {
-	const k = collect(ast.fragment, (n) => n.type === 'Component' && (n.attributes ?? []).some((a: any) => a.name === 'onSend'));
-	assert.equal(k.length, 1, `genau eine Kopf-Einbettung (mit onSend) im Trip-Hub erwartet, gefunden ${k.length}`);
+	const k = collect(ast.fragment, (n) => n.type === 'Component' && (n.attributes ?? []).some((a: any) => a.name === 'onTest'));
+	assert.equal(k.length, 1, `genau eine Kopf-Einbettung (mit onTest) im Trip-Hub erwartet, gefunden ${k.length}`);
 	return k[0];
 };
 
@@ -117,7 +117,7 @@ describe('AC-5/#1064: Loeschen ist im Trip-Hub erreichbar und laeuft ueber den B
 	});
 });
 
-describe('AC-12: Lebenszyklus-Menue statt Breadcrumb-Aktionsleiste; Senden ist Primaerknopf mit Sende-Dialog', () => {
+describe('AC-12: Lebenszyklus-Menue statt Breadcrumb-Aktionsleiste; „Test schicken“ ist Primaerknopf mit Menue (#3440)', () => {
 	test('die Breadcrumb-Aktionsleiste (Pausieren/Archivieren/Test-Briefing) existiert nicht mehr', () => {
 		const leiste = collect(
 			ast.fragment,
@@ -130,11 +130,11 @@ describe('AC-12: Lebenszyklus-Menue statt Breadcrumb-Aktionsleiste; Senden ist P
 		assert.equal(leiste.length, 0, '<div class="breadcrumb-actions"> mit Einzelknoepfen besteht noch');
 	});
 
-	test('Senden: SendConfirmDialog eingebunden, nur seine Bestaetigung erreicht sendSubscription', () => {
-		const dlgs = komponenten(ast, 'SendConfirmDialog');
-		assert.equal(dlgs.length, 1, 'kein <SendConfirmDialog> im Trip-Hub');
-		const r = erreichbar(ast, attrWert(attribut(dlgs[0], 'onConfirm')));
-		assert.ok(r.bezeichner.has('sendSubscription'), 'Bestaetigen sendet nicht (sendSubscription)');
+	test('Senden: kein SendConfirmDialog mehr; nur die Menue-Wahl (onTest) erreicht sendSubscription', () => {
+		// #3440 (Fortschreibung feat_2278 AC-12): der Klick auf die Kanalzeile ist die Auslösung.
+		assert.equal(komponenten(ast, 'SendConfirmDialog').length, 0, '<SendConfirmDialog> steht noch im Trip-Hub');
+		const r = erreichbar(ast, attrWert(attribut(kopfEinbettung(), 'onTest')));
+		assert.ok(r.bezeichner.has('sendSubscription'), 'die Menue-Wahl sendet nicht (sendSubscription)');
 		const kebab = kopfEinbettung();
 		const vomMenue = erreichbar(ast, attrWert(attribut(kebab, 'onSelect') ?? attribut(kebab, 'onAction')));
 		assert.ok(!vomMenue.bezeichner.has('sendSubscription'), 'Menue sendet ohne Rueckfrage');

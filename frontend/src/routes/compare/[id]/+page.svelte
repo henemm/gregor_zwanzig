@@ -9,7 +9,13 @@
 	import { ConfirmDialog } from '$lib/components/molecules';
 	import CompareDetail from '$lib/components/compare/CompareDetail.svelte';
 	import StatusSchild from '$lib/components/shared/status-schild/StatusSchild.svelte';
-	import SendConfirmDialog from '$lib/components/molecules/SendConfirmDialog.svelte';
+	import {
+		aboKanaele,
+		RUECKMELDUNG_MS,
+		testErgebnis,
+		type Berichtsart,
+		type TestKanal
+	} from '$lib/components/molecules/testSchickenModell';
 	import SubscriptionActionSheet from '$lib/components/mobile/SubscriptionActionSheet.svelte';
 	import { subscriptionActions } from '$lib/components/shared/subscriptionActions.js';
 	import { deleteSubscription, sendSubscription, setArchived, SubscriptionExecError } from '$lib/components/shared/subscriptionExec.js';
@@ -231,7 +237,6 @@
 	let actionSheetOpen = $state(false);
 	// Issue #2278 AC-12: Lebenszyklus-Menue wie beim Trip — Desktop = Dropdown, Mobil = Aktionsblatt.
 	let mobil = $state(false);
-	let sendDialogOpen = $state(false);
 	const lifecycle = $derived(currentPreset.archived_at != null ? 'archived' : status);
 	// Issue #2659 (i18n F10): Aktionsliste je Sprache (wortgleich zum Trip-Hub, aktionen.*).
 	const hubAktionen = $derived.by(() => (void $locale, subscriptionActions('vergleich', lifecycle, 'hub')));
@@ -245,25 +250,42 @@
 
 	// Issue #528 — Status-abhängige Header-Primäraktion.
 	let isSending = $state(false);
+	let sendStatus = $state<'idle' | 'ok' | 'error'>('idle');
 	let sendMsg = $state<string | null>(null);
-	let sendKey = $state<MessageKey | null>(null);
-	/** Meldung unter dem Kopf: Server-Text (`text`) oder Katalogschluessel (`key`). */
+	let sendTimer: ReturnType<typeof setTimeout> | undefined = undefined;
+	// Meldung einer Lebenszyklus-Aktion unter dem Kopf: Server-Text (`text`) oder Katalogschluessel (`key`).
+	let aktionMsg = $state<string | null>(null);
+	let aktionKey = $state<MessageKey | null>(null);
 	function meldung(text: string | null, key: MessageKey | null): void {
-		sendMsg = text;
-		sendKey = text ? null : key;
+		aktionMsg = text;
+		aktionKey = text ? null : key;
 	}
 
-	async function handleTestSend() {
+	// #3440: Menü „Test schicken ▾“ wie im Trip-Hub — der Klick auf eine Kanalzeile ist die Auslösung.
+	async function handleTest(wahl: { kanal: TestKanal; berichtsart: Berichtsart }): Promise<void> {
+		clearTimeout(sendTimer);
 		isSending = true;
-		meldung(null, null);
+		sendStatus = 'idle';
 		try {
 			// Issue #2124/#2280: geteilter Laufzustand (compare:<id>) + Klassifikation,
-			// einheitlicher Ausloeser -> POST /api/briefings/{id}/send?kind=vergleich.
-			const o = await sendSubscription('vergleich', currentPreset.id);
-			meldung(o.message || null, o.kind === 'ok' ? 'vergleich.hub.test_gesendet' : null);
+			// einheitlicher Ausloeser -> POST /api/briefings/{id}/send?kind=vergleich[&channel=].
+			const o = await sendSubscription('vergleich', currentPreset.id, {
+				channel: wahl.kanal === 'alle' ? undefined : wahl.kanal
+			});
+			const r = testErgebnis({
+				context: 'vergleich',
+				wahl,
+				ergebnis: o,
+				profil: data.profile,
+				abo: aboKanaele('vergleich', currentPreset),
+				jetzt: new Date()
+			});
+			sendStatus = r.ok ? 'ok' : 'error';
+			sendMsg = r.text;
 		} finally {
 			isSending = false;
 		}
+		sendTimer = setTimeout(() => { sendStatus = 'idle'; }, RUECKMELDUNG_MS);
 	}
 
 	let isPausing = $state(false);
@@ -385,7 +407,8 @@
 		sendLabel={status === 'draft' ? $t('vergleich.hub.setup_abschliessen') : isSending ? $t('aktionen.wird_gesendet') : $t('aktionen.kopf.test_schicken')}
 		sendMode={status === 'draft' ? 'setup' : 'senden'}
 		onSetup={() => { window.location.href = `?tab=zustellung#versand`; }}
-		onSend={() => (sendDialogOpen = true)}
+		onTest={handleTest}
+		testProfil={data.profile}
 		sendDisabled={isSending || lifecycle === 'archived'}
 		actions={hubAktionen}
 		onSelect={handleAction}
@@ -405,8 +428,14 @@
 	>
 		{#snippet meldungen()}
 			<!-- #2837 S1: Meldungen wie beim Trip in jeder Breite (keine Whitelist-Ausnahme). -->
-			{#if sendMsg || sendKey}
-				<span style="font-size: 12px; color: var(--g-ink-3)">{sendKey ? $t(sendKey) : sendMsg}</span>
+			<!-- #3440: Rückmeldung wie im Trip-Hub (testids, 5 s, Fehler rot). -->
+			{#if sendStatus === 'ok'}
+				<span data-testid="test-schicken-ok" style="font-size: 12px; color: var(--g-success)">{sendMsg}</span>
+			{:else if sendStatus === 'error'}
+				<span data-testid="test-schicken-fehler" style="font-size: 12px; color: var(--g-bad)">{sendMsg}</span>
+			{/if}
+			{#if aktionMsg || aktionKey}
+				<span style="font-size: 12px; color: var(--g-ink-3)">{aktionKey ? $t(aktionKey) : aktionMsg}</span>
 			{/if}
 			{#if pauseError}
 				<span style="font-size: 12px; color: var(--g-bad)">{$t('listen.meldung.status_fehlgeschlagen')}</span>
@@ -440,17 +469,6 @@
 	surface="hub"
 	onAction={handleAction}
 	name={currentPreset.name}
-/>
-
-<!-- Issue #2278 AC-3: Senden erst nach Bestaetigung, Ziel aus dem Konto-Profil des angemeldeten Nutzers. -->
-<SendConfirmDialog
-	open={sendDialogOpen}
-	kind="vergleich"
-	profile={data.profile}
-	subscription={currentPreset}
-	running={isSending}
-	onConfirm={() => { sendDialogOpen = false; void handleTestSend(); }}
-	onCancel={() => (sendDialogOpen = false)}
 />
 
 <!-- Issue #2214: Loeschen erst nach Bestaetigung (Muster trips/[id]/+page.svelte). -->

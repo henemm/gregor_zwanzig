@@ -36,7 +36,7 @@ def test_forecast_502_ohne_ausnahmetext(monkeypatch, caplog):
 def test_handversand_vergleich_valueerror_ohne_ausnahmetext(monkeypatch, caplog):
     from api.routers import briefings_send
 
-    def _kaputt(user_id, entity_id):
+    def _kaputt(user_id, entity_id, *, restrict_to_channel=None):  # #3440: Kanalwahl
         raise ValueError(INTERNA)
 
     monkeypatch.setattr(briefings_send, "send_compare_preset", _kaputt)
