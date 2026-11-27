@@ -13,6 +13,8 @@ Getestete ACs:
   AC-7: docs-only scope → --check exit 0
 """
 
+import contextlib
+import importlib.util
 import json
 import os
 import shutil
@@ -51,25 +53,105 @@ def _head_sha() -> str:
     return result.stdout.strip()
 
 
+@contextlib.contextmanager
+def _telegram_nachweis_fuer_head():
+    """#1196 Klasse C Teil 4 / #2541: write_verdict() ruft IMMER das Telegram-
+    Live-Gate (#686) auf (GZ_SKIP_E2E_GATE wirkt hier nicht). Es prueft die
+    ECHTE Commit-Historie von REPO_DIR (HEAD~1..HEAD) und verlangt, falls
+    Telegram-Pfade beruehrt sind, einen commit-gebundenen Nachweis
+    ``.claude/e2e_telegram_live/<HEAD>.json`` (die Env-Variable
+    GZ_TELEGRAM_TEST_CHAT_ID genuegt seit #2541 nicht mehr). Diese Datei testet
+    nicht das Telegram-Gate selbst; ohne Nachweis waere das Ergebnis vom
+    zufaelligen Zustand der Projekthistorie abhaengig.
+
+    Fuer die Dauer des Aufrufs wird ein gueltiger Nachweis angelegt -- NUR wenn
+    keiner existiert (ein echter Nachweis wird nie ueberschrieben oder
+    geloescht). Prozessuebergreifend sicher (pytest-xdist): fcntl.flock auf eine
+    Sperrdatei, Referenzzaehler + Eigentumsvermerk in einer Zustandsdatei. Erst
+    der letzte Nutzer entfernt den selbst angelegten Nachweis (und den selbst
+    angelegten Ordner). Sperr- und Zustandsdatei liegen ausserhalb des Repos
+    (Temp-Verzeichnis, nach Repo+HEAD benannt), damit das Entfernen des
+    Nachweisordners nie unter einer wartenden Sperre passiert.
+    """
+    import fcntl
+    import hashlib
+    import tempfile
+
+    sha = _head_sha()
+    if not sha:
+        yield
+        return
+    ordner = REPO_DIR / ".claude" / "e2e_telegram_live"
+    datei = ordner / f"{sha}.json"
+    schluessel = hashlib.sha256(f"{REPO_DIR}:{sha}".encode()).hexdigest()[:16]
+    basis = Path(tempfile.gettempdir()) / f"gz_tg_nachweis_{schluessel}"
+    lock_pfad = Path(str(basis) + ".lock")
+    zustand = Path(str(basis) + ".state.json")
+
+    def _lesen() -> dict:
+        try:
+            return json.loads(zustand.read_text())
+        except (OSError, ValueError):
+            return {"count": 0, "owner": False, "ordner_neu": False}
+
+    with open(lock_pfad, "a+") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            st = _lesen()
+            if st["count"] <= 0:
+                st = {"count": 0, "owner": False, "ordner_neu": False}
+                if not datei.exists():
+                    spec = importlib.util.spec_from_file_location(
+                        "_e2e_telegram_live_2541_gate_test",
+                        _HOOKS_SRC / "e2e_telegram_live.py")
+                    mod = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(mod)
+                    soll = mod.SOLL_TESTS
+                    st["ordner_neu"] = not ordner.exists()
+                    ordner.mkdir(parents=True, exist_ok=True)
+                    datei.write_text(json.dumps({
+                        "commit": sha, "passed": len(soll), "skipped": 0,
+                        "failures": 0, "errors": 0, "tests": list(soll),
+                        "finished_at": datetime.now(timezone.utc).isoformat()}))
+                    st["owner"] = True
+            st["count"] += 1
+            zustand.write_text(json.dumps(st))
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)
+    try:
+        yield
+    finally:
+        with open(lock_pfad, "a+") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            try:
+                st = _lesen()
+                st["count"] -= 1
+                if st["count"] <= 0:
+                    if st.get("owner"):
+                        datei.unlink(missing_ok=True)
+                        if st.get("ordner_neu"):
+                            try:
+                                ordner.rmdir()
+                            except OSError:
+                                pass
+                    zustand.unlink(missing_ok=True)
+                else:
+                    zustand.write_text(json.dumps(st))
+            finally:
+                fcntl.flock(lock, fcntl.LOCK_UN)
+
+
 def _run_gate(args: list[str], env_extra: dict | None = None) -> tuple[int, str, str]:
     env = os.environ.copy()
     env["GZ_ACTIVE_WORKFLOW"] = "issue-521-staging-validator"
-    # #1196 Klasse C Teil 4: write_verdict() ruft IMMER (GZ_SKIP_E2E_GATE wirkt
-    # hier nicht, s. Kommentar oben Zeile 69) den Telegram-Live-Gate (#686) auf,
-    # der die ECHTE Commit-Historie von REPO_DIR (HEAD~1..HEAD) auf Telegram-
-    # Pfade prueft. Diese Datei testet nicht das Telegram-Gate selbst -- ohne
-    # Stub-Chat-ID waere das Ergebnis vom zufaelligen Zustand der echten
-    # Projekthistorie abhaengig (mal gruen, mal rot, je nachdem was der jeweils
-    # letzte reale Commit beruehrt). Herkunftssperre #1476-Muster: Stub-Wert
-    # bedienen, nicht umgehen.
-    env.setdefault("GZ_TELEGRAM_TEST_CHAT_ID", "12345")
     if env_extra:
         env.update(env_extra)
-    result = subprocess.run(
-        ["python3", str(STAGING_GATE)] + args,
-        capture_output=True, text=True,
-        cwd=str(REPO_DIR), env=env
-    )
+    with _telegram_nachweis_fuer_head():
+        result = subprocess.run(
+            ["python3", str(STAGING_GATE)] + args,
+            capture_output=True, text=True,
+            cwd=str(REPO_DIR), env=env
+        )
     return result.returncode, result.stdout, result.stderr
 
 

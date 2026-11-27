@@ -105,6 +105,28 @@ einen Vorgänger-Nachweis ohne das Feld („Nachweis ohne zweisprachigen Lauf").
 haben das Feld nicht und blocken bis zum nächsten `/e2e-verify`. `prod_selftest.py` bleibt deutsch
 und braucht keine `GZ_E2E_EN_*`.
 
+### Telegram-Live-Nachweis-Gate `e2e_telegram_live` (seit #2541)
+
+Berührt der committete Scope (HEAD~1..HEAD) Telegram, verlangt `staging_gate.py --write-verdict`
+über `e2e_telegram_live.gate()` einen **Nachweis** für genau den verifizierten Commit:
+`<Repo>/.claude/e2e_telegram_live/<sha>.json` mit `commit` = sha, `skipped`/`failures`/`errors` = 0,
+allen Soll-Live-Tests in `tests` und `finished_at`. Ein Nachweis für einen anderen Commit, mit
+skipped/failures/errors > 0 oder mit fehlendem Soll-Test genügt nicht; die bloße Anwesenheit von
+`GZ_TELEGRAM_TEST_CHAT_ID` im Environment auch nicht mehr (vor #2541 reichte sie). Ohne
+Telegram-Scope bleibt das Gate unverändert offen.
+
+Den Nachweis schreibt allein `python3 .claude/tools/staging_telegram_live.py` (Schritt 3c von
+`/e2e-verify`) bei Exit 0. Das Werkzeug läuft im Staging-Checkout, liest die Zugangsdaten selbst
+aus der Staging-`.env` (der Agent braucht keinen Lesezugriff), entfernt `GZ_TELEGRAM_*` des
+Aufrufers, gibt keine pytest-Rohausgabe weiter, maskiert bekannte Geheimnisse und das
+Telegram-Token-Muster und prüft per Fingerabdruck, dass ein zweiter Test-Nutzer unverändert
+bleibt. Exit 0 = bestanden, 1 = Befund, 2 = Umgebungsfehler. Der Ordner liegt bewusst neben
+`e2e_verified/`, damit `prune_old_attestations` ihn nicht aufräumt, und ist wie dieser in `.gitignore`.
+
+**Restrisiko:** die Nachweis-Datei ist wie jede Attestation handschreibbar; das Gate prüft
+Commit-Bindung, Zähler und Testnamen, nicht die Herkunft (keine HMAC-Härtung, bewusst außerhalb
+des Scopes von #2541). Der Staging-Checkout muss auf dem zu prüfenden Commit stehen.
+
 ## Renderer-Commit-Gate (#811)
 
 `renderer_mail_gate.py` blockiert jeden Commit, der eine Mail-Inhalts-Datei staged

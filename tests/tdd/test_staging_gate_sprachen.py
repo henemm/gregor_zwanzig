@@ -147,7 +147,15 @@ def test_cli_write_verdict_langs_flag(tmp_path):
     hooks.mkdir(parents=True)
     for name in ("staging_gate.py", "_e2e_paths.py", "e2e_telegram_live.py"):
         (hooks / name).write_text((HOOKS / name).read_text())
-    env = {**os.environ, "GZ_TELEGRAM_TEST_CHAT_ID": "12345", "OPENSPEC_ACTIVE_WORKFLOW": "t-2681"}
+    # #2541: Telegram-Gate verlangt einen commit-gebundenen Nachweis statt Chat-ID im Env.
+    soll = _load(HOOKS / "e2e_telegram_live.py", "e2e_telegram_live_sprachen_2541").SOLL_TESTS
+    nachweis = tmp_path / ".claude" / "e2e_telegram_live"
+    nachweis.mkdir(parents=True)
+    (nachweis / f"{sha}.json").write_text(json.dumps({
+        "commit": sha, "passed": len(soll), "skipped": 0, "failures": 0, "errors": 0,
+        "tests": list(soll), "finished_at": "2026-11-27T10:00:00+00:00"}))
+    env = {**os.environ, "OPENSPEC_ACTIVE_WORKFLOW": "t-2681"}
+    env.pop("GZ_TELEGRAM_TEST_CHAT_ID", None)
     ziel = tmp_path / "out.json"
     (tmp_path / "f.json").write_text("[]")
     basis = [sys.executable, str(hooks / "staging_gate.py"), "--write-verdict", "VERIFIED: ok",
