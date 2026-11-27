@@ -200,7 +200,9 @@ for (const kind of HUB_KINDS) {
 	// entfallen damit fuer beide Hubs.
 
 	// AC-5 (Entwurf): Aktivieren neben der Pill, Klick führt zum Ziel, Pill wechselt nach Aktivierung durch Daten.
-	test(`c2 ${kind}: AC-5 Entwurf bietet „Aktivieren“ an, Sprungziel stimmt, Pill wechselt auf aktiv`, async ({ page }) => {
+	// #3443 (feat_3443 AC-1/AC-3/AC-4, umgestellt): „Aktivieren“ ist ein Knopf (kein Link); der Klick nennt, was fehlt,
+	// und öffnet die Stelle — Trip Reiter Etappen, Vergleich Reiter Orte (vorher Zustellung#versand).
+	test(`c2 ${kind}: AC-5 Entwurf bietet „Aktivieren“ an, Hinweis und Sprungziel stimmen, Pill wechselt auf aktiv`, async ({ page }) => {
 		await page.setViewportSize(VIEWPORTS.desktop);
 		await sprache(page, 'de');
 		// Entwurf: Trip ohne datierte Etappen; Vergleich ohne Orte (deriveStatusFromPreset: location_ids leer).
@@ -210,11 +212,15 @@ for (const kind of HUB_KINDS) {
 		await expect(pille, 'AC-5: Pill zeigt Entwurf').toHaveAttribute('data-status', 'draft');
 		const aktivieren = sichtbar(sichtbar(page, HUB_KOPF_SEL.status), 'hub-kopf-aktivieren');
 		await expect(aktivieren, 'AC-5: „Aktivieren“ neben der Pill').toBeVisible();
+		expect(await aktivieren.evaluate((el) => el.tagName), '#3443 AC-1: Knopf, kein Link').toBe('BUTTON');
 		await aktivieren.click();
-		if (kind === 'route') await expect(page).toHaveURL(/[?&]tab=etappen/);
-		else {
-			await expect(page).toHaveURL(/[?&]tab=zustellung/);
-			await expect(page).toHaveURL(/#versand/);
+		const hinweis = page.locator('[data-testid="hub-aktion-meldung"]:visible');
+		if (kind === 'route') {
+			await expect(hinweis, '#3443 AC-3: Hinweis').toHaveText('Zum Aktivieren fehlt noch: Datum der Etappen.');
+			await expect(page).toHaveURL(/[?&]tab=etappen/);
+		} else {
+			await expect(hinweis, '#3443 AC-4: Hinweis').toHaveText('Zum Aktivieren fehlen noch: Orte.');
+			await expect(page).toHaveURL(/[?&]tab=orte/);
 		}
 
 		// Aktivieren durch Daten: Trip bekommt eine Etappe mit heutigem Datum (UTC wie deriveTripStatus) => aktiv;

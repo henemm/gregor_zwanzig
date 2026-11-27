@@ -24,12 +24,14 @@
 //                              ⇒ Morgen-Briefing morning_time, sonst evening_enabled ⇒ Abend-Briefing
 //                              evening_time, sonst Teil entfällt).
 //   hub-kopf-aktivieren — Btn im hub-kopf-status (Titelzeile), NUR im Zustand Entwurf (draft),
-//                       Text aktionen.kopf.aktivieren; beide Kontexte. HubKopf-Prop: `aktivierenHref?: string`
-//                       (Seite übergibt es nur im Entwurf; der Btn rendert als Link <a href>).
-//                       Ziel (Adversary F001, im Markup geprüft): Trip „?tab=etappen“ (Etappen datieren
-//                       macht den Trip aktiv), Vergleich „?tab=zustellung#versand“ (wie „Setup abschließen“).
+//                       Text aktionen.kopf.aktivieren; beide Kontexte.
+//                       #3443 (Spec feat_3443_entwurf_aktivieren.md AC-1): HubKopf-Prop `onAktivieren?: () => void`
+//                       ersetzt `aktivierenHref`; der Btn ist ein echter Knopf (<button>, KEIN href), Variante
+//                       accent (data-variant="accent"). Der Klick nennt, was fehlt, und öffnet die Stelle
+//                       (Modell shared/entwurfAktivieren.ts; Ziel prüfen entwurf_aktivieren.test.ts und die
+//                       Hub-Aktionstests, nicht mehr das Markup).
 //   HubKopf neue Props: `eyebrowText?: string`, `metaTeile?: string[]` (rendert die beiden testids oben),
-//                       `aktivierenHref?: string`. Snippets eyebrow/meta dürfen bleiben, die Seiten
+//                       `onAktivieren?: () => void` (#3443). Snippets eyebrow/meta dürfen bleiben, die Seiten
 //                       nutzen aber die neuen Props (genau ein Eyebrow, genau eine Meta-Zeile).
 //   Knopf `subscription-hub-send` (bleibt) — Beschriftung aktionen.kopf.test_schicken (nicht Entwurf).
 //   Brotkrumen: Trip-Elternteil listen.trips.titel → /trips, Vergleich-Elternteil
@@ -275,7 +277,6 @@ test('AC-4 Gegenprobe: vertauschte Leiste (Knopf vor Kebab) wird als falsche Rei
 
 // ═══ Status-Pill über fünf Zustände, Aktivieren im Entwurf (AC-5, AC-10) ═════════════
 
-const AKTIVIEREN_ZIEL: Record<Art, string> = { route: '?tab=etappen', vergleich: '?tab=zustellung#versand' };
 for (const art of ARTEN) {
 	for (const lang of SPRACHEN) {
 		for (const zustand of ZUSTAENDE) {
@@ -291,14 +292,23 @@ for (const art of ARTEN) {
 					assert.equal(akt.length, 1, `„Aktivieren“ ${akt.length}× im Entwurf (erwartet 1)`);
 					assert.equal(text(akt[0]), lang === 'de' ? 'Aktivieren' : 'Activate');
 					assert.ok(liegtIn(akt[0], einzig(w, 'hub-kopf-status')), '„Aktivieren“ steht nicht neben der Pill (Titelzeile)');
-					// F001: das Klickziel ist im Markup sichtbar (Link) und je Kontext festgelegt.
-					assert.equal(akt[0].tag, 'a', `„Aktivieren“ ist kein Link (<${akt[0].tag}>)`);
-					assert.equal(akt[0].attrs.href, AKTIVIEREN_ZIEL[art], `„Aktivieren“ führt nach „${akt[0].attrs.href}“`);
+					// #2913 F001 („ist ein Link mit href“) gilt seit #3443 nicht mehr: Element und Variante prüft der
+					// Test „#3443 AC-1 …“ unten (echter Knopf ohne href, Akzent).
 				} else {
 					assert.equal(akt.length, 0, `„Aktivieren“ im Zustand ${zustand}`);
 				}
 			});
 		}
+		// #3443 AC-1 (Spec feat_3443_entwurf_aktivieren.md): echter Knopf ohne href, Mockup `btn sm accent` (ADR-0118).
+		test(`#3443 AC-1 (${art}, ${lang}): „Aktivieren“ im Entwurf ist ein Knopf ohne href, Variante accent, Größe sm`, () => {
+			const daten = (art === 'route' ? TRIP_ZUSTAENDE : VERGLEICH_ZUSTAENDE).draft();
+			const akt = mitTestid(seite(art, lang, daten), 'hub-kopf-aktivieren');
+			assert.equal(akt.length, 1, `„Aktivieren“ ${akt.length}× im Entwurf`);
+			assert.equal(akt[0].tag, 'button', `„Aktivieren“ ist kein Knopf (<${akt[0].tag}>)`);
+			assert.equal(akt[0].attrs.href, undefined, `„Aktivieren“ trägt noch ein href („${akt[0].attrs.href}“)`);
+			assert.equal(akt[0].attrs['data-variant'], 'accent', `„Aktivieren“ hat Variante „${akt[0].attrs['data-variant']}“ statt accent`);
+			assert.equal(akt[0].attrs['data-size'], 'sm', `„Aktivieren“ hat Größe „${akt[0].attrs['data-size']}“ statt sm`);
+		});
 	}
 }
 

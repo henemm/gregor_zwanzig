@@ -49,15 +49,17 @@ const tick = async (u?: Record<string, any>) => {
 	await bis(() => (u ? ruhig(u)() : server.calls.every((c) => !Number.isNaN(c.finishedAt))), 'Ruhe nach der Aktion');
 };
 
-async function seite() {
-	const a = P.neuerAufbau();
+async function seite(trip: Record<string, unknown> = P.vollerTrip()) {
+	const a = P.neuerAufbau(trip);
 	const s = await P.tripSeite(a, server);
 	server.calls.length = 0;
 	const u = s.inst.u as Record<string, any>;
 	u.sendTimer = undefined; // `let sendTimer;` ohne Initialisierer legt die Umgebung nicht an
 	const gotos: string[] = [];
-	u.goto = (pfad: string) => void gotos.push(pfad); // $app/navigation ist unter node nicht ladbar
-	return { a, u, gotos, aktion: (id: string) => u.handleHubAction(id) };
+	const gotoArgs: unknown[][] = [];
+	// $app/navigation ist unter node nicht ladbar
+	u.goto = (pfad: string, ...rest: unknown[]) => void (gotos.push(pfad), gotoArgs.push([pfad, ...rest]));
+	return { a, u, gotos, gotoArgs, aktion: (id: string) => u.handleHubAction(id) };
 }
 
 describe('F006: Pausieren/Fortsetzen schreiben den richtigen Zielzustand', () => {
@@ -153,5 +155,51 @@ describe('F001/F017: Senden erst nach Bestaetigung, mit der gewaehlten Berichtsa
 		assert.equal(posts.length, 1);
 		assert.match(posts[0].path, /report_type=morning/);
 		assert.doesNotMatch(posts[0].path, /channel=/);
+	});
+});
+
+// #3443 (feat_3443 AC-3/AC-6/AC-10): „Aktivieren“ im Trip-Entwurf (keine Etappe mit Datum). Der Klick schreibt nichts,
+// nennt, was fehlt, und öffnet den Reiter Etappen — gleich, ob aus dem Kopf (handleAktivieren, Prop onAktivieren)
+// oder aus dem Kebab (handleHubAction('activate')).
+const ohneDatum = () => {
+	const t = P.vollerTrip() as Record<string, any>;
+	return { ...t, stages: t.stages.map((st: Record<string, unknown>) => ({ ...st, date: '' })) };
+};
+const SCHREIBEND = new Set(['PUT', 'PATCH', 'POST', 'DELETE']);
+
+describe('#3443: „Aktivieren“ im Trip-Entwurf nennt, was fehlt, und öffnet Etappen — ohne Schreibzugriff', () => {
+	test('Kebab „activate“ -> Meldung „Zum Aktivieren fehlt noch: Datum der Etappen.“, goto ?tab=etappen, kein Schreibaufruf', async () => {
+		const { aktion, u, gotos, gotoArgs } = await seite(ohneDatum());
+		assert.equal(u.lifecycle, 'draft', 'Messaufbau: Trip ohne Datum ist ein Entwurf');
+		aktion('activate');
+		await tick(u);
+		assert.ok(meldet(u, 'Zum Aktivieren fehlt noch: Datum der Etappen.'), 'Hinweis „Zum Aktivieren fehlt noch: Datum der Etappen.“ fehlt');
+		assert.equal(gotos.length, 1, `Navigation: ${JSON.stringify(gotos)}`);
+		assert.match(gotos[0], /[?&]tab=etappen(&|$)/, `Ziel ${gotos[0]}`);
+		assert.deepEqual(gotoArgs[0][1], { noScroll: true, keepFocus: true }, 'goto ohne noScroll/keepFocus (Seite springt)');
+		assert.deepEqual(server.calls.filter((c) => SCHREIBEND.has(c.method)).map((c) => `${c.method} ${c.path}`), [], 'Schreibaufruf beim Aktivieren-Klick');
+	});
+
+	test('Kopf-Knopf (handleAktivieren) und Kebab („activate“) wirken gleich (AC-6)', async () => {
+		const kopf = await seite(ohneDatum());
+		assert.equal(typeof kopf.u.handleAktivieren, 'function', 'Trip-Hub hat keine Seitenfunktion handleAktivieren (Kopf-Knopf)');
+		kopf.u.handleAktivieren();
+		await tick(kopf.u);
+		const kopfStand = { gotos: [...kopf.gotos], meldung: Object.values(kopf.u).filter((v) => typeof v === 'string' && v.startsWith('Zum Aktivieren')) };
+		const kebab = await seite(ohneDatum());
+		kebab.aktion('activate');
+		await tick(kebab.u);
+		const kebabStand = { gotos: [...kebab.gotos], meldung: Object.values(kebab.u).filter((v) => typeof v === 'string' && v.startsWith('Zum Aktivieren')) };
+		assert.ok(kopfStand.gotos.length === 1 && kopfStand.meldung.length >= 1, `Kopf wirkt nicht: ${JSON.stringify(kopfStand)}`);
+		assert.deepEqual(kebabStand, kopfStand);
+	});
+
+	test('aktiver Trip: „activate“ (Stand-Wettlauf) zeigt keinen Hinweis, navigiert nicht, schreibt nicht', async () => {
+		const { aktion, u, gotos } = await seite();
+		aktion('activate');
+		await tick(u);
+		assert.deepEqual(gotos, []);
+		assert.ok(!Object.values(u).some((v) => typeof v === 'string' && v.startsWith('Zum Aktivieren')), 'Hinweis bei vollständigem Trip');
+		assert.equal(server.calls.filter((c) => SCHREIBEND.has(c.method)).length, 0);
 	});
 });
