@@ -287,7 +287,8 @@ im Staging-Checkout und gibt nur Testnamen, Zähler und Fehlerklasse aus.
 
 - **Exit 0:** alle Soll-Live-Tests PASSED, nichts übersprungen, zweiter Test-Nutzer
   unverändert. Der Nachweis `.claude/e2e_telegram_live/<staging-HEAD>.json` liegt vor.
-- **Exit 1:** Befund (0 Tests, SKIPPED, Failure, Teardown-Error des Wächters #2226,
+- **Exit 1:** Befund (0 Tests bzw. pytest meldet `0 selected`, etwa weil `-m live` fehlt
+  (#2813), SKIPPED, Failure, Teardown-Error des Wächters #2226,
   fehlender Soll-Test oder veränderte Daten des zweiten Test-Nutzers). Kein Nachweis.
 - **Exit 2:** Umgebungsfehler (Checkout, `uv` oder `.env` fehlt, pytest startet nicht).
   Kein Nachweis.
