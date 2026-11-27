@@ -307,6 +307,22 @@ class NowcastResult:
     # keine Frames vorliegen (throttled/data_unavailable/echte
     # Providerluecke) -- ein durchgehend TROCKENES Fenster hat trotzdem eine
     # Reichweite (bis zu 180).
+    onset_at: Optional[datetime] = None
+    event_end_at: Optional[datetime] = None
+    source_reach_at: Optional[datetime] = None
+    # Issue #2063: die EXAKTEN Frame-Zeitpunkte (UTC) hinter onset_minutes,
+    # event_end_minutes und source_reach_minutes. Anzeige-Uhrzeiten lesen
+    # diese Felder statt `jetzt + gerundete Minuten` zurueckzurechnen (sonst
+    # "17:59" statt Frame 18:00). `None` (Replay, Vorschau, alte Daten) ->
+    # Verbraucher fallen auf `jetzt + Minuten` zurueck.
+
+
+def nowcast_moment(
+    exact: Optional[datetime], now: datetime, minutes: int,
+) -> datetime:
+    """Issue #2063: exakter Frame-Zeitpunkt, sonst Fallback `now + minutes`
+    (Replay, Vorschau, alte Daten ohne die exakten Felder)."""
+    return exact if exact is not None else now + timedelta(minutes=minutes)
 
 
 def _offline_fixture_active() -> bool:
@@ -890,7 +906,9 @@ class RadarNowcastService:
                 # zweite Ende-Weiche waere eine zweite Wahrheit.
                 satz = f"{result.intensity_label} läuft bereits"
             else:
-                time_str = _hhmm(now + timedelta(minutes=result.onset_minutes))
+                time_str = _hhmm(nowcast_moment(
+                    getattr(result, "onset_at", None), now, result.onset_minutes,
+                ))
                 satz = (
                     f"{result.intensity_label} ab ca. {time_str}"
                     f" (in ~{result.onset_minutes} Min)"
@@ -903,9 +921,10 @@ class RadarNowcastService:
             # Wortgleich mit `format_starkregen_hint` (dort dieselbe Weiche),
             # damit E-Mail und Kommando-Antwort keine zwei Dialekte sprechen.
             if result.event_end_minutes is not None:
-                _end_str = _hhmm(
-                    now + timedelta(minutes=result.event_end_minutes)
-                )
+                _end_str = _hhmm(nowcast_moment(
+                    getattr(result, "event_end_at", None), now,
+                    result.event_end_minutes,
+                ))
                 if result.event_ongoing_beyond_horizon:
                     satz += f", Regen mindestens bis {_end_str}"
                 else:
@@ -917,9 +936,10 @@ class RadarNowcastService:
                 result.source_reach_minutes is not None
                 and not result.event_ongoing_beyond_horizon
             ):
-                _reach_str = _hhmm(
-                    now + timedelta(minutes=result.source_reach_minutes)
-                )
+                _reach_str = _hhmm(nowcast_moment(
+                    getattr(result, "source_reach_at", None), now,
+                    result.source_reach_minutes,
+                ))
                 satz += f" · Radar reicht bis {_reach_str}"
             # Issue #2051 S3 (E4): Guete-Grenze -- ausgeloest, wenn Beginn
             # ODER Ende jenseits der Grenze liegen. Genannt wird die
@@ -956,8 +976,8 @@ class RadarNowcastService:
         now = datetime.now(tz=timezone.utc)
         label = _INTENSITY_EN.get(result.intensity_label, result.intensity_label)
 
-        def _hhmm(minuten: int) -> str:
-            moment = now + timedelta(minutes=minuten)
+        def _hhmm(minuten: int, exakt: Optional[datetime] = None) -> str:
+            moment = nowcast_moment(exakt, now, minuten)  # Issue #2063
             return (local_dt(moment, tz) if tz is not None else moment).strftime("%H:%M")
 
         lines: list[str] = []
@@ -971,10 +991,12 @@ class RadarNowcastService:
                           f"{_NOWCAST_HORIZON_MIN // 60} hours."]
         else:
             satz = (f"{label} ongoing" if laeuft else
-                    f"{label} from about {_hhmm(result.onset_minutes)} "
+                    f"{label} from about "
+                    f"{_hhmm(result.onset_minutes, getattr(result, 'onset_at', None))} "
                     f"(in {result.onset_minutes} min)")
             if result.event_end_minutes is not None:
-                ende = _hhmm(result.event_end_minutes)
+                ende = _hhmm(result.event_end_minutes,
+                             getattr(result, "event_end_at", None))
                 satz += (f", rain at least until {ende}"
                          if result.event_ongoing_beyond_horizon
                          else f", last rain around {ende}")
@@ -1433,11 +1455,13 @@ class RadarNowcastService:
         # DERSELBEN `frames`-Liste (kein zweiter Quellenabruf) -- der Nutzer
         # erfaehrt bisher nur, WANN es anfaengt. Ohne Beginn kein Ende.
         event_end_minutes: Optional[int] = None
+        event_end_at: Optional[datetime] = None  # Issue #2063
         event_ongoing_beyond_horizon = False
         if onset_ts is not None:
             _end_ts, event_ongoing_beyond_horizon = _derive_wet_block_end(
                 frames, all_ts_sorted, onset_ts, horizon,
             )
+            event_end_at = _end_ts
             event_end_minutes = max(
                 0, round((_end_ts - now).total_seconds() / 60.0)
             )
@@ -1455,8 +1479,9 @@ class RadarNowcastService:
             _end_ts, event_ongoing_beyond_horizon = _derive_wet_block_end(
                 frames, all_ts_sorted, _laufend[0], horizon,
             )
+            event_end_at = max(_end_ts, _laufend[3])
             event_end_minutes = max(
-                0, round((max(_end_ts, _laufend[3]) - now).total_seconds() / 60.0)
+                0, round((event_end_at - now).total_seconds() / 60.0)
             )
 
         # Issue #2020 Adversary-Fund F001: max_rate_mm_h fuer die
@@ -1481,6 +1506,7 @@ class RadarNowcastService:
         # den Horizont hinaus. `window` leer -> `None` (keine Beobachtung,
         # nicht "Reichweite null").
         source_reach_minutes: Optional[int] = None
+        _reach_end: Optional[datetime] = None  # Issue #2063
         if window:
             _last_reach_ts = max(f.timestamp for f in window)
             _next_idx = bisect.bisect_right(all_ts_sorted, _last_reach_ts)
@@ -1510,6 +1536,9 @@ class RadarNowcastService:
             event_end_minutes=event_end_minutes,  # Issue #2051 S1
             event_ongoing_beyond_horizon=event_ongoing_beyond_horizon,  # #2051 S1
             source_reach_minutes=source_reach_minutes,  # Issue #2051 S3
+            onset_at=onset_ts,  # Issue #2063
+            event_end_at=event_end_at,  # Issue #2063
+            source_reach_at=_reach_end,  # Issue #2063
         )
 
 

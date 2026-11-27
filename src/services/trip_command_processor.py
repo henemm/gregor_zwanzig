@@ -3463,6 +3463,23 @@ def _geprueft_spanne(
     return (min(kms), max(kms))
 
 
+def _strecke_zeitspanne(z, tz, now_utc: datetime) -> tuple[str, str]:
+    """Beginn/Ende einer Zone als HH:MM (Issue #2063): exakter Frame-Zeitpunkt
+    der Zone (`onset_at`/`event_end_at`), sonst `now_utc + Minuten`."""
+    from services.radar_service import nowcast_moment
+
+    beginn = local_fmt(
+        nowcast_moment(getattr(z, "onset_at", None), now_utc, z.onset_minutes), tz,
+    )
+    ende = (
+        local_fmt(nowcast_moment(
+            getattr(z, "event_end_at", None), now_utc, z.event_end_minutes,
+        ), tz)
+        if z.event_end_minutes is not None else "?"
+    )
+    return beginn, ende
+
+
 def _fmt_strecke_email(zonen: tuple, tz, now_utc: datetime, en: bool = False) -> str:
     """Tabellarische Zeile je Zone: km-Spanne, Zeitspanne, Intensitaet,
     Quelle (Issue #2051 S4, E3). `now_utc` ist der Abrufzeitpunkt, gegen den
@@ -3480,11 +3497,7 @@ def _fmt_strecke_email(zonen: tuple, tz, now_utc: datetime, en: bool = False) ->
     svc = RadarNowcastService()
     zeilen = []
     for z in zonen:
-        beginn = local_fmt(now_utc + timedelta(minutes=z.onset_minutes), tz)
-        ende = (
-            local_fmt(now_utc + timedelta(minutes=z.event_end_minutes), tz)
-            if z.event_end_minutes is not None else "?"
-        )
+        beginn, ende = _strecke_zeitspanne(z, tz, now_utc)  # Issue #2063
         zeilen.append(
             f"km {int(round(z.km_from))}-{int(round(z.km_to))}: "
             f"{beginn}-{ende}, "
@@ -3503,11 +3516,7 @@ def _fmt_strecke_telegram(zonen: tuple, tz, now_utc: datetime, en: bool = False)
 
     zeilen = []
     for z in zonen:
-        beginn = local_fmt(now_utc + timedelta(minutes=z.onset_minutes), tz)
-        ende = (
-            local_fmt(now_utc + timedelta(minutes=z.event_end_minutes), tz)
-            if z.event_end_minutes is not None else "?"
-        )
+        beginn, ende = _strecke_zeitspanne(z, tz, now_utc)  # Issue #2063
         zeilen.append(
             f"km {int(round(z.km_from))}-{int(round(z.km_to))}: "
             f"{beginn}-{ende}, "

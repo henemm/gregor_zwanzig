@@ -306,9 +306,13 @@ def nowcast_onset_at(nowcast, now_utc: datetime) -> datetime:
     das bei laufendem Regen auf den naechsten Frame-Zeitpunkt zeigt und
     sonst je Lauf wandert (Issue #2009, Nachmessung). Sonst gilt
     `now_utc + onset_minutes`; ohne Beginn (`None`) ebenfalls JETZT -- der
-    Beginn ist an diesem Zweig damit IMMER bestimmbar."""
+    Beginn ist an diesem Zweig damit IMMER bestimmbar. Issue #2063: liegt der
+    exakte Frame-Zeitpunkt `onset_at` vor, gilt er statt der Rueckrechnung."""
     if getattr(nowcast, "already_running", False):
         return now_utc
+    exakt = getattr(nowcast, "onset_at", None)
+    if exakt is not None:
+        return exakt
     return now_utc + timedelta(minutes=getattr(nowcast, "onset_minutes", None) or 0)
 
 
@@ -324,9 +328,13 @@ def nowcast_lead_time_minutes(nowcast) -> "int | None":
 
 def nowcast_event_end_at(nowcast, now_utc: datetime) -> "datetime | None":
     """Voraussichtliches Ereignisende desselben Nowcast-Ergebnisses, oder
-    ``None``, wenn keines bestimmbar ist (Issue #2050 S6, E-1)."""
+    ``None``, wenn keines bestimmbar ist (Issue #2050 S6, E-1). Issue #2063:
+    der exakte Frame-Zeitpunkt `event_end_at` hat Vorrang vor der Rueckrechnung."""
     ende_min = getattr(nowcast, "event_end_minutes", None)
-    return now_utc + timedelta(minutes=ende_min) if ende_min is not None else None
+    if ende_min is None:
+        return None
+    exakt = getattr(nowcast, "event_end_at", None)
+    return exakt if exakt is not None else now_utc + timedelta(minutes=ende_min)
 
 
 # Issue #2050 S6 (E-1): die sechs additiven Groessen und ihr erwarteter Typ.

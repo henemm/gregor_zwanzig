@@ -70,14 +70,18 @@ def event_end_display(
     if end_minutes is None:
         return None, 0, False, None
     ongoing = bool(getattr(nowcast, "event_ongoing_beyond_horizon", False))
-    end_dt = now_utc + timedelta(minutes=end_minutes)
+    from services.radar_service import nowcast_moment
+
+    end_dt = nowcast_moment(  # Issue #2063: exakte Frame-Zeit
+        getattr(nowcast, "event_end_at", None), now_utc, end_minutes,
+    )
     offset = day_offset(now_utc, end_dt, tz)
     weekday = _de_weekday_short(local_dt(end_dt, tz)) if offset else None
     return local_fmt(end_dt, tz), offset, ongoing, weekday
 
 
 def onset_display(
-    now_utc: datetime, onset_minutes: int, tz,
+    now_utc: datetime, onset_minutes: int, tz, onset_at: datetime | None = None,
 ) -> tuple[str, int, str | None]:
     """Anzeigefassung des Beginns (Issue #2219, B2-72 = #2085):
     `("HH:MM", Versatz, Wochentagskuerzel)`.
@@ -85,9 +89,12 @@ def onset_display(
     Dieselbe Regel wie `event_end_display`: der Versatz entscheidet, das
     Kuerzel steht nur bei Versatz != 0 und stammt aus der ORTSZEIT `tz`.
     Issue #2982: genutzt vom EINEN Baustein `onset_event_from_nowcast`
-    (Trip-Versand, Ortsvergleich, Replay).
+    (Trip-Versand, Ortsvergleich, Replay). Issue #2063: `onset_at` (exakter
+    Zeitpunkt) geht vor `now_utc + onset_minutes`.
     """
-    onset_dt = now_utc + timedelta(minutes=onset_minutes)
+    onset_dt = onset_at if onset_at is not None else (
+        now_utc + timedelta(minutes=onset_minutes)
+    )
     offset = day_offset(now_utc, onset_dt, tz)
     weekday = _de_weekday_short(local_dt(onset_dt, tz)) if offset else None
     return local_fmt(onset_dt, tz)[-5:], offset, weekday
@@ -109,7 +116,11 @@ def source_reach_display(now_utc: datetime, nowcast, tz) -> tuple[str | None, in
         return None, 0
     if bool(getattr(nowcast, "event_ongoing_beyond_horizon", False)):
         return None, 0
-    reach_dt = now_utc + timedelta(minutes=reach_minutes)
+    from services.radar_service import nowcast_moment
+
+    reach_dt = nowcast_moment(  # Issue #2063: exakte Frame-Zeit
+        getattr(nowcast, "source_reach_at", None), now_utc, reach_minutes,
+    )
     return local_fmt(reach_dt, tz), day_offset(now_utc, reach_dt, tz)
 
 
@@ -166,8 +177,11 @@ def onset_event_from_nowcast(
     """
     from services.alert_log import nowcast_onset_at
 
-    vorlauf = (nowcast_onset_at(nc, now_utc) - now_utc) // timedelta(minutes=1)
-    onset_time, onset_offset, onset_weekday = onset_display(now_utc, vorlauf, tz)
+    # Issue #2063: der exakte Beginn (Frame-Zeit) direkt, kein doppeltes
+    # Abschneiden des Vorlaufs.
+    onset_time, onset_offset, onset_weekday = onset_display(
+        now_utc, 0, tz, onset_at=nowcast_onset_at(nc, now_utc),
+    )
     end_time, end_offset, end_ongoing, end_weekday = event_end_display(now_utc, nc, tz)
     reach_time, reach_offset = source_reach_display(now_utc, nc, tz)
     sharp_time, sharp_offset = location_sharpness_display(
