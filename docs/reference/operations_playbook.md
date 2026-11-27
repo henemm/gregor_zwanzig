@@ -545,7 +545,7 @@ und durch `tests/test_wip_safety.py` gegen echte Wegwerf-Repos abgesichert.
 
 **Pre-Test-Validierung:** Vor jeder Testaufforderung an den User `python3 .claude/validate.py` (Syntax + Import geänderter Python-Dateien + Server-Startup); danach `--clear`. **NIEMALS „teste es" ohne vorherige Validierung.**
 
-**Session-Artefakte mit Tokens NIE weltlesbar nach /tmp** (Security #199): Cookiejars, `storageState`, Auth-Responses enthalten Session-Tokens. Verboten: `curl -c /tmp/xyz.txt` mit Default-Rechten. Stattdessen ins Session-Scratchpad (privat) schreiben ODER vorher `install -m 600 /dev/null <pfad>` bzw. `umask 077`. Playwright-`storageState` gehört nach `frontend/e2e/playwright/.auth/` (gitignored).
+**Session-Artefakte mit Tokens NIE weltlesbar nach /tmp** (Security #199): Cookiejars, `storageState`, Auth-Responses enthalten Session-Tokens. Verboten: `curl -c /tmp/xyz.txt` mit Default-Rechten. Stattdessen ins Session-Scratchpad (privat) schreiben ODER vorher `install -m 600 /dev/null <pfad>` bzw. `umask 077`. Playwright-`storageState` gehört nach `frontend/e2e/playwright/.auth/` (gitignored). Durchgesetzt für Bash-Schreibziele (`>`, `>>`, `tee`, `--output`) durch `.claude/hooks/tmp_redirect_gate.py` (#1688): Ziel in `/tmp`/`/var/tmp`/`/dev/shm` außerhalb `/tmp/claude-<uid>/` wird blockiert; Testausgaben gehören ins Scratchpad.
 
 ---
 
