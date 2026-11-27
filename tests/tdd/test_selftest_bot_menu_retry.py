@@ -61,16 +61,21 @@ class _Script:
       ("hang",)                 -> Antwort zurückhalten (Zeitüberschreitung)
       ("json", status, payload) -> HTTP-Status + JSON-Body
       ("raw", status, bytes)    -> HTTP-Status + roher Body
+      ("short",)                -> 200, Content-Length größer als der Body,
+                                   dann Verbindung zu (IncompleteRead, F001)
+    `times` hält je Anfrage time.monotonic() beim Eingang fest (F003).
     """
 
     def __init__(self, steps):
         self.steps = list(steps)
         self.count = 0
+        self.times: list[float] = []
         self.lock = threading.Lock()
         self.release = threading.Event()
 
     def next_step(self):
         with self.lock:
+            self.times.append(time.monotonic())
             idx = self.count
             self.count += 1
         return self.steps[min(idx, len(self.steps) - 1)]
@@ -84,6 +89,18 @@ def _make_handler(script: _Script):
             if kind == "hang":
                 script.release.wait(HANG_SECONDS)
                 return  # ohne Antwort schließen
+            if kind == "short":
+                try:
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Length", "1000")
+                    self.end_headers()
+                    self.wfile.write(b'{"ok": true, "res')
+                    self.wfile.flush()
+                except OSError:
+                    pass
+                self.close_connection = True
+                return
             status = step[1]
             if kind == "json":
                 body = json.dumps(step[2]).encode("utf-8")
@@ -150,7 +167,9 @@ def ps(monkeypatch):
 MAX_ALL_HANG = T_ATTEMPTS * T_TIMEOUT + T_PAUSE + 2 * T_PAUSE + 1.5
 
 
-def _run_selftest_with_menu(ps, monkeypatch, tmp_path, base, workflow):
+def _run_selftest_with_menu(
+    ps, monkeypatch, tmp_path, base, workflow, dead_trips_status="PASS"
+):
     """End-to-End-Lauf von `run_selftest`; die Menü-Prüfung ist die echte
     `check_bot_menu` gegen den lokalen Server. Ersetzt werden nur Health und
     Tote-Trips-Wächter (Umgebungsproben ohne Bezug zu #3219). Die Findings
@@ -162,7 +181,9 @@ def _run_selftest_with_menu(ps, monkeypatch, tmp_path, base, workflow):
     monkeypatch.setattr(
         ps,
         "check_dead_trips_guard",
-        lambda **kwargs: {"check": "dead_trips_guard", "status": "PASS", "detail": "ok"},
+        lambda **kwargs: {
+            "check": "dead_trips_guard", "status": dead_trips_status, "detail": "stub"
+        },
     )
     monkeypatch.setattr(
         ps, "_check_bot_menu_prod", lambda: ps.check_bot_menu("tok", EXPECTED, api_base=base)
@@ -382,3 +403,86 @@ def test_ac7_measured_duration_all_hang_within_bound(ps):
     assert elapsed >= T_ATTEMPTS * T_TIMEOUT + 3 * T_PAUSE - 0.05, (
         f"Dauer-Hänger zu schnell ({elapsed:.2f}s) — Zeitlimit/Pause nicht eingehalten"
     )
+
+
+# ---------------------------------------------------------------------------
+# Fix-Loop 1 (Adversary F001–F004)
+# ---------------------------------------------------------------------------
+
+def test_f001_incomplete_read_is_fail_without_retry_no_crash(ps):
+    """F001: 200 mit zu großem Content-Length, dann Verbindung zu. Das löst
+    beim read() `http.client.IncompleteRead` aus. Das ist eine
+    HTTPException, KEINE OSError-Unterklasse -> laut Spec keine
+    Wiederholung: FAIL, genau 1 Abruf, kein Absturz."""
+    import http.client
+
+    assert not issubclass(http.client.IncompleteRead, OSError)
+    with _menu_server([("short",)]) as (base, script):
+        finding = ps.check_bot_menu("tok", EXPECTED, api_base=base)
+
+    assert finding["status"] == "FAIL", finding
+    assert script.count == 1, f"IncompleteRead darf nicht wiederholt werden: {script.count}"
+
+
+@pytest.mark.parametrize(
+    "api_base", ["http://[::1", "http://127.0.0.1:abc"], ids=["ipv6-kaputt", "port-nicht-numerisch"]
+)
+def test_f001_invalid_url_is_fail_no_crash(ps, api_base):
+    """F001: ungültige URL (ValueError bzw. http.client.InvalidURL beim
+    Abruf, keine OSError) -> FAIL statt Absturz des Selbsttests.
+    (Port 99999 taugt nicht: das endet als Connection refused = OSError.)"""
+    finding = ps.check_bot_menu("tok", EXPECTED, api_base=api_base)
+    assert finding["status"] == "FAIL", finding
+    assert finding["check"] == "bot_menu"
+
+
+def test_f002_unreachable_menu_plus_other_fail_scopes_fazit_line(ps, monkeypatch, tmp_path):
+    """F002: Menü stumm UND Tote-Trips-Wächter FAIL -> Exit 1, Verdict FAIL;
+    das Fazit nennt die Regression UND die auf das Bot-Menü eingegrenzte
+    Nicht-erreichbar-Zeile (kein Widerspruch)."""
+    with _menu_server([("hang",)]) as (base, script):
+        rc, report = _run_selftest_with_menu(
+            ps, monkeypatch, tmp_path, base, "wf-3219-f002", dead_trips_status="FAIL"
+        )
+
+    assert rc == 1, rc
+    assert "**Verdict: FAIL**" in report, report
+    fazit = report.split("## Fazit", 1)[1]
+    assert "Regression in Produktion" in fazit, fazit
+    assert "Telegram nicht erreichbar" in fazit, fazit
+    assert "(betrifft nur das Bot-Menü)" in fazit, fazit
+    assert "Status: **UNREACHABLE**" in report
+    assert script.count == T_ATTEMPTS
+
+
+def test_f003_pause_schedule_measured_at_server(ps, monkeypatch):
+    """F003: ohne Spy, Zeitstempel am Server. Sofort-429, Pause 0,2 s:
+    erste Anfrage ohne Pause, Abstand 1->2 ≈ 0,2 s, 2->3 ≈ 0,4 s
+    (Verdopplung), nach der 3. Anfrage keine weitere Pause."""
+    monkeypatch.setattr(ps, "MENU_RETRY_PAUSE", 0.2)
+    monkeypatch.setattr(ps, "MENU_ATTEMPTS", 3)
+    with _menu_server([("json", 429, {"ok": False, "error_code": 429})]) as (base, script):
+        t0 = time.monotonic()
+        finding = ps.check_bot_menu("tok", EXPECTED, api_base=base)
+        t_end = time.monotonic()
+
+    assert finding["status"] == "UNREACHABLE", finding
+    assert script.count == 3
+    t1, t2, t3 = script.times
+    assert t1 - t0 < 0.15, f"Pause vor dem ersten Versuch: {t1 - t0:.3f}s"
+    assert abs((t2 - t1) - 0.2) <= 0.1, f"Abstand 1->2: {t2 - t1:.3f}s, erwartet 0,2"
+    assert abs((t3 - t2) - 0.4) <= 0.1, f"Abstand 2->3: {t3 - t2:.3f}s, erwartet 0,4"
+    assert t_end - t3 < 0.15, f"Pause nach dem letzten Versuch: {t_end - t3:.3f}s"
+
+
+def test_f004_detail_names_cause(ps):
+    """F004: Detail nennt bei 401 den HTTP-Status und bei ok:false den
+    Hinweis "nicht ok" (Wortlaut der Implementierung)."""
+    with _menu_server([("json", 401, {"ok": False, "error_code": 401})]) as (base, _s):
+        f401 = ps.check_bot_menu("tok", EXPECTED, api_base=base)
+    assert "HTTP 401" in f401["detail"], f401
+
+    with _menu_server([("json", 200, {"ok": False, "description": "x"})]) as (base, _s):
+        fnok = ps.check_bot_menu("tok", EXPECTED, api_base=base)
+    assert "nicht ok" in fnok["detail"], fnok
+    assert "'ok': False" in fnok["detail"], fnok

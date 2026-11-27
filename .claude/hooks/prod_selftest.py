@@ -561,15 +561,17 @@ def check_bot_menu(
     if not token:
         return {"check": "bot_menu", "status": "SKIPPED", "detail": "kein Token"}
 
-    fetched = _fetch_bot_menu(f"{api_base}/bot{token}/getMyCommands")
-    if isinstance(fetched, str):
-        detail = (
-            f"Telegram nicht erreichbar nach {MENU_ATTEMPTS} Versuchen "
-            f"(zuletzt: {fetched})"
-        )
-        return {"check": "bot_menu", "status": "UNREACHABLE", "detail": detail}
-    status, body = fetched
     try:
+        # #3219 F001: Nicht-OSError-Ausnahmen (IncompleteRead, InvalidURL,
+        # ValueError …) beim Abruf -> FAIL ohne Wiederholung, nie Absturz.
+        fetched = _fetch_bot_menu(f"{api_base}/bot{token}/getMyCommands")
+        if isinstance(fetched, str):
+            detail = (
+                f"Telegram nicht erreichbar nach {MENU_ATTEMPTS} Versuchen "
+                f"(zuletzt: {fetched})"
+            )
+            return {"check": "bot_menu", "status": "UNREACHABLE", "detail": detail}
+        status, body = fetched
         if status != 200:
             raise ValueError(f"HTTP {status}")
         payload = json.loads(body.decode("utf-8", errors="replace"))
@@ -869,7 +871,8 @@ def run_selftest(
     if menu_finding["status"] == "UNREACHABLE":
         menu_fazit = (
             f"\nTelegram nicht erreichbar (nach {MENU_ATTEMPTS} Versuchen) – "
-            "Bot-Menü nicht belegt, keine Regression belegt\n"
+            "Bot-Menü nicht belegt, keine Regression belegt "
+            "(betrifft nur das Bot-Menü)\n"
         )
 
     # Phase 5: Tote-Trips-Wächter (additiv, #1708 Scheibe C)
