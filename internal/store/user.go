@@ -207,24 +207,7 @@ func istSicherheitsSchluessel(key string) bool {
 // userJSONKeys liefert die JSON-Schlüssel aller Top-Level-Felder von
 // model.User ("-" wird ignoriert, Tag-Name vor dem Komma).
 func userJSONKeys() []string {
-	t := reflect.TypeOf(model.User{})
-	keys := make([]string, 0, t.NumField())
-	for i := 0; i < t.NumField(); i++ {
-		f := t.Field(i)
-		if !f.IsExported() {
-			continue
-		}
-		tag := f.Tag.Get("json")
-		if tag == "-" {
-			continue
-		}
-		name, _, _ := strings.Cut(tag, ",")
-		if name == "" {
-			name = f.Name
-		}
-		keys = append(keys, name)
-	}
-	return keys
+	return jsonKeysOf(reflect.TypeOf(model.User{}))
 }
 
 // SetUserTier setzt NUR "tier" in user.json (Merge auf Roh-Ebene, damit
