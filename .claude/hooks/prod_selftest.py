@@ -37,6 +37,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -59,6 +60,11 @@ REPO_DIR = Path("/home/hem/gregor_zwanzig")
 PROD_BASE = "https://gregor20.henemm.com"
 HEALTH_URL = f"{PROD_BASE}/api/health"
 PROBE_TIMEOUT = 8
+# #3219: Bot-Menü-Abruf bei Telegram mit eigenem Zeitlimit und Wiederholung
+# (Pausen 2 s, 4 s); Obergrenze 3 x 12 s + 6 s = 42 s. Zur Laufzeit gelesen.
+MENU_TIMEOUT = 12
+MENU_ATTEMPTS = 3
+MENU_RETRY_PAUSE = 2
 MAX_WORKERS = 5
 
 # Sentinel-URL-Werte (case-insensitive, getrimmt) für Findings ohne echte Prod-URL
@@ -162,8 +168,12 @@ def _staging_to_prod_url(staging_url: str) -> str:
     return f"{PROD_BASE}{path}{query}"
 
 
-def _http_get(url: str, follow_redirects: bool = False) -> tuple[int, bytes, str]:
+def _http_get(
+    url: str, follow_redirects: bool = False, timeout: float | None = None
+) -> tuple[int, bytes, str]:
     """HTTP-GET via stdlib. Returns (status_code, body, location).
+
+    timeout: None -> PROBE_TIMEOUT (zur Laufzeit gelesen, #3219).
 
     location: Redirect-Ziel bei 3xx (leer bei 2xx / kein Location-Header).
     follow_redirects=False: HTTPError(3xx) wird abgefangen → status_code aus dem Fehler.
@@ -176,7 +186,8 @@ def _http_get(url: str, follow_redirects: bool = False) -> tuple[int, bytes, str
     else:
         opener = urllib.request.build_opener()
     try:
-        with opener.open(req, timeout=PROBE_TIMEOUT) as resp:
+        effective = PROBE_TIMEOUT if timeout is None else timeout
+        with opener.open(req, timeout=effective) as resp:
             return resp.status, resp.read(), ""
     except urllib.error.HTTPError as exc:
         # 3xx und 4xx/5xx landen hier — body lesen, Status zurückgeben
@@ -544,18 +555,28 @@ def check_bot_menu(
 ) -> dict:
     """Prüft ob das Live-Bot-Menü mit `expected` übereinstimmt (AC-4).
 
-    Returns:
-        dict mit "check", "status" ("PASS" | "FAIL" | "SKIPPED"), "detail".
+    Returns: dict mit "check", "status" ("PASS" | "FAIL" | "SKIPPED" |
+    "UNREACHABLE", #3219: Telegram nach allen Versuchen stumm), "detail".
     """
     if not token:
         return {"check": "bot_menu", "status": "SKIPPED", "detail": "kein Token"}
 
-    url = f"{api_base}/bot{token}/getMyCommands"
     try:
-        status, body, _location = _normalize_http_get_result(
-            _http_get(url, follow_redirects=False)
-        )
+        # #3219 F001: Nicht-OSError-Ausnahmen (IncompleteRead, InvalidURL,
+        # ValueError …) beim Abruf -> FAIL ohne Wiederholung, nie Absturz.
+        fetched = _fetch_bot_menu(f"{api_base}/bot{token}/getMyCommands")
+        if isinstance(fetched, str):
+            detail = (
+                f"Telegram nicht erreichbar nach {MENU_ATTEMPTS} Versuchen "
+                f"(zuletzt: {fetched})"
+            )
+            return {"check": "bot_menu", "status": "UNREACHABLE", "detail": detail}
+        status, body = fetched
+        if status != 200:
+            raise ValueError(f"HTTP {status}")
         payload = json.loads(body.decode("utf-8", errors="replace"))
+        if not isinstance(payload, dict) or payload.get("ok") is False:
+            raise ValueError(f"Telegram-Antwort nicht ok: {payload!r}"[:200])
         result = payload.get("result", [])
         live_names = [c["command"] for c in result]
         expected_names = [c["command"] for c in expected]
@@ -576,6 +597,29 @@ def check_bot_menu(
             "status": "FAIL",
             "detail": f"Fehler beim Abrufen: {exc}",
         }
+
+
+def _fetch_bot_menu(url: str) -> tuple[int, bytes] | str:
+    """#3219: Abruf mit Wiederholung. Liefert (status, body) für jede
+    abschließende Antwort oder die letzte Ursache (str), wenn alle
+    MENU_ATTEMPTS Versuche an Netzfehler/Zeitüberschreitung/429/5xx
+    scheiterten. Pause vor Versuch n+1: MENU_RETRY_PAUSE * 2**(n-1)."""
+    last_cause = "unbekannt"
+    for attempt in range(1, MENU_ATTEMPTS + 1):
+        if attempt > 1:
+            time.sleep(MENU_RETRY_PAUSE * 2 ** (attempt - 2))
+        try:
+            status, body, _location = _normalize_http_get_result(
+                _http_get(url, follow_redirects=False, timeout=MENU_TIMEOUT)
+            )
+        except OSError as exc:
+            last_cause = f"{type(exc).__name__}: {exc}"
+            continue
+        if status == 429 or status >= 500:
+            last_cause = f"HTTP {status}"
+            continue
+        return status, body
+    return last_cause
 
 
 def _derive_verdict(probes: list[dict]) -> str:
@@ -822,6 +866,14 @@ def run_selftest(
     )
     if menu_finding["status"] == "FAIL":
         verdict = "FAIL"
+    # #3219: UNREACHABLE blockiert nicht, bekommt aber eine eigene Fazit-Zeile.
+    menu_fazit = ""
+    if menu_finding["status"] == "UNREACHABLE":
+        menu_fazit = (
+            f"\nTelegram nicht erreichbar (nach {MENU_ATTEMPTS} Versuchen) – "
+            "Bot-Menü nicht belegt, keine Regression belegt "
+            "(betrifft nur das Bot-Menü)\n"
+        )
 
     # Phase 5: Tote-Trips-Wächter (additiv, #1708 Scheibe C)
     dead_trips_finding = check_dead_trips_guard()
@@ -834,7 +886,7 @@ def run_selftest(
 
     report_content = _render_full_report(
         workflow, head, health_msg, verdict, probes, unusable_findings
-    ) + menu_line + dead_trips_line
+    ) + menu_fazit + menu_line + dead_trips_line
     _write_report(report_path, report_content)
 
     _log(f"Verdict={verdict} (Bericht: {report_path})")
