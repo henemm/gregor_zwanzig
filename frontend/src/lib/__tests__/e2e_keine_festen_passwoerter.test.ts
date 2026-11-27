@@ -117,6 +117,12 @@ const ERLAUBT: Array<Treffer & { grund: string }> = [
 		zeile: '',
 		wert,
 		grund: 'Sondenwerte der Aufloesungs-Tests (Umgebungsvariablen), kein Konto'
+	})),
+	...['pruef-pw', 'en-pw', 'pw-b', 'pw-p', 'pw-z', 'pw-d'].map((wert) => ({
+		datei: 'e2e/pruefkontoZugang.test.ts',
+		zeile: '',
+		wert,
+		grund: 'Sondenwerte der Pruefkonto-Zugangs-Tests (Umgebungsvariablen), kein Konto'
 	}))
 ];
 

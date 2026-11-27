@@ -69,8 +69,8 @@ test('AC-1: ohne GZ_PRUEFKONTO_* gilt GZ_AUTH_* (Server-Weg)', () => {
 });
 
 test('AC-1: leere Prüfkonto-Variablen zählen als nicht gesetzt', () => {
-	const env = { GZ_PRUEFKONTO_USER: '', GZ_PRUEFKONTO_PASS: '', GZ_AUTH_USER: 'a', GZ_AUTH_PASS: 'b' };
-	assert.deepEqual(pruefkontoZugang(env), { user: 'a', pass: 'b' });
+	const env = { GZ_PRUEFKONTO_USER: '', GZ_PRUEFKONTO_PASS: '', GZ_AUTH_USER: 'a', GZ_AUTH_PASS: 'pw-b' };
+	assert.deepEqual(pruefkontoZugang(env), { user: 'a', pass: 'pw-b' });
 });
 
 test('AC-1: fehlen beide Variablenpaare, bricht die Wahl mit klarer Meldung ab', () => {
@@ -78,8 +78,8 @@ test('AC-1: fehlen beide Variablenpaare, bricht die Wahl mit klarer Meldung ab',
 });
 
 test('AC-1: halb gesetztes GZ_PRUEFKONTO_*-Paar bricht ab statt still auf GZ_AUTH_* zu fallen', () => {
-	const nurUser = { GZ_PRUEFKONTO_USER: 'pruef', GZ_AUTH_USER: 'a', GZ_AUTH_PASS: 'b' };
-	const nurPass = { GZ_PRUEFKONTO_PASS: 'p', GZ_AUTH_USER: 'a', GZ_AUTH_PASS: 'b' };
+	const nurUser = { GZ_PRUEFKONTO_USER: 'pruef', GZ_AUTH_USER: 'a', GZ_AUTH_PASS: 'pw-b' };
+	const nurPass = { GZ_PRUEFKONTO_PASS: 'pw-p', GZ_AUTH_USER: 'a', GZ_AUTH_PASS: 'pw-b' };
 	assert.throws(() => pruefkontoZugang(nurUser), /GZ_PRUEFKONTO_PASS fehlt/);
 	assert.throws(() => pruefkontoZugang(nurPass), /GZ_PRUEFKONTO_USER fehlt/);
 	assert.throws(() => pruefkontoZugangFallsGesetzt(nurUser), /GZ_PRUEFKONTO_PASS fehlt/);
@@ -87,7 +87,7 @@ test('AC-1: halb gesetztes GZ_PRUEFKONTO_*-Paar bricht ab statt still auf GZ_AUT
 
 test('AC-1: ohne jedes Variablenpaar liefert pruefkontoZugangFallsGesetzt undefined (Login entfällt)', () => {
 	assert.equal(pruefkontoZugangFallsGesetzt({}), undefined);
-	assert.deepEqual(pruefkontoZugangFallsGesetzt({ GZ_AUTH_USER: 'a', GZ_AUTH_PASS: 'b' }), { user: 'a', pass: 'b' });
+	assert.deepEqual(pruefkontoZugangFallsGesetzt({ GZ_AUTH_USER: 'a', GZ_AUTH_PASS: 'pw-b' }), { user: 'a', pass: 'pw-b' });
 });
 
 // --- AC-2: Zweitkonto -----------------------------------------------------
@@ -95,39 +95,39 @@ test('AC-1: ohne jedes Variablenpaar liefert pruefkontoZugangFallsGesetzt undefi
 test('AC-2: GZ_ZWEITKONTO_* wird genommen, wenn gesetzt', () => {
 	const env = {
 		GZ_PRUEFKONTO_USER: 'pruef',
-		GZ_PRUEFKONTO_PASS: 'p',
+		GZ_PRUEFKONTO_PASS: 'pw-p',
 		GZ_ZWEITKONTO_USER: 'zweit',
-		GZ_ZWEITKONTO_PASS: 'z',
+		GZ_ZWEITKONTO_PASS: 'pw-z',
 		GZ_AUTH_USER: 'default',
-		GZ_AUTH_PASS: 'd'
+		GZ_AUTH_PASS: 'pw-d'
 	};
-	assert.deepEqual(zweitkontoZugang(env), { user: 'zweit', pass: 'z' });
+	assert.deepEqual(zweitkontoZugang(env), { user: 'zweit', pass: 'pw-z' });
 });
 
 test('AC-2: ohne GZ_ZWEITKONTO_* gilt GZ_AUTH_*, wenn es nicht das Prüfkonto ist (iMac-Weg)', () => {
-	const env = { GZ_PRUEFKONTO_USER: 'pruef', GZ_PRUEFKONTO_PASS: 'p', GZ_AUTH_USER: 'default', GZ_AUTH_PASS: 'd' };
-	assert.deepEqual(zweitkontoZugang(env), { user: 'default', pass: 'd' });
+	const env = { GZ_PRUEFKONTO_USER: 'pruef', GZ_PRUEFKONTO_PASS: 'pw-p', GZ_AUTH_USER: 'default', GZ_AUTH_PASS: 'pw-d' };
+	assert.deepEqual(zweitkontoZugang(env), { user: 'default', pass: 'pw-d' });
 });
 
 test('AC-2: ist GZ_AUTH_* das Prüfkonto, bricht die Zweitkonto-Wahl ab', () => {
-	const env = { GZ_PRUEFKONTO_USER: 'pruef', GZ_PRUEFKONTO_PASS: 'p', GZ_AUTH_USER: 'pruef', GZ_AUTH_PASS: 'p' };
+	const env = { GZ_PRUEFKONTO_USER: 'pruef', GZ_PRUEFKONTO_PASS: 'pw-p', GZ_AUTH_USER: 'pruef', GZ_AUTH_PASS: 'pw-p' };
 	assert.throws(() => zweitkontoZugang(env), /Zweitkonto/);
 });
 
 test('AC-2: auch GZ_ZWEITKONTO_* gleich dem Prüfkonto wird abgelehnt', () => {
-	const env = { GZ_PRUEFKONTO_USER: 'pruef', GZ_PRUEFKONTO_PASS: 'p', GZ_ZWEITKONTO_USER: 'pruef', GZ_ZWEITKONTO_PASS: 'p' };
+	const env = { GZ_PRUEFKONTO_USER: 'pruef', GZ_PRUEFKONTO_PASS: 'pw-p', GZ_ZWEITKONTO_USER: 'pruef', GZ_ZWEITKONTO_PASS: 'pw-p' };
 	assert.throws(() => zweitkontoZugang(env), /Zweitkonto/);
 });
 
 test('AC-2: Server-Weg ohne GZ_PRUEFKONTO_* und ohne GZ_ZWEITKONTO_* (GZ_AUTH_* = Prüfkonto) bricht ab', () => {
-	const env = { GZ_AUTH_USER: 'pruef', GZ_AUTH_PASS: 'p' };
+	const env = { GZ_AUTH_USER: 'pruef', GZ_AUTH_PASS: 'pw-p' };
 	assert.throws(() => zweitkontoZugang(env), /Zweitkonto/);
 });
 
 test('AC-2: halb gesetztes GZ_ZWEITKONTO_*-Paar bricht ab statt still auf GZ_AUTH_* zu fallen', () => {
-	const basis = { GZ_PRUEFKONTO_USER: 'pruef', GZ_PRUEFKONTO_PASS: 'p', GZ_AUTH_USER: 'default', GZ_AUTH_PASS: 'd' };
+	const basis = { GZ_PRUEFKONTO_USER: 'pruef', GZ_PRUEFKONTO_PASS: 'pw-p', GZ_AUTH_USER: 'default', GZ_AUTH_PASS: 'pw-d' };
 	assert.throws(() => zweitkontoZugang({ ...basis, GZ_ZWEITKONTO_USER: 'zweit' }), /GZ_ZWEITKONTO_PASS fehlt/);
-	assert.throws(() => zweitkontoZugang({ ...basis, GZ_ZWEITKONTO_PASS: 'z' }), /GZ_ZWEITKONTO_USER fehlt/);
+	assert.throws(() => zweitkontoZugang({ ...basis, GZ_ZWEITKONTO_PASS: 'pw-z' }), /GZ_ZWEITKONTO_USER fehlt/);
 });
 
 // --- AC-3 / AC-4: Vergleichs-Auswahl --------------------------------------
@@ -211,7 +211,7 @@ test('AC-3: Namenssuche ist exakt — „münsterland" (klein) gilt als nicht ge
 });
 
 test('AC-1: halb gesetztes Paar mit leerem Wert (GZ_PRUEFKONTO_USER="") bricht ab statt auf GZ_AUTH_* zu fallen', () => {
-	const env = { GZ_PRUEFKONTO_USER: '', GZ_PRUEFKONTO_PASS: 'x', GZ_AUTH_USER: 'a', GZ_AUTH_PASS: 'b' };
+	const env = { GZ_PRUEFKONTO_USER: '', GZ_PRUEFKONTO_PASS: 'x', GZ_AUTH_USER: 'a', GZ_AUTH_PASS: 'pw-b' };
 	assert.throws(() => pruefkontoZugang(env), /GZ_PRUEFKONTO_USER fehlt/);
 	assert.throws(() => pruefkontoZugangFallsGesetzt(env), /GZ_PRUEFKONTO_USER fehlt/);
 });
