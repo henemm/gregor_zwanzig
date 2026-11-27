@@ -80,8 +80,9 @@ function glossarZeilen(): [string, string][] {
 describe('AC-3: Produktbegriffe erscheinen im Englischen in der Glossar-Form', () => {
 	// Issue #2795 S3b Teilschritt 1b (AC-35): Bereich `zustellung` kommt hinzu -> 19.
 	// Issue #3319: Bereich `funktionen` (oeffentliche Funktionsseiten) kommt hinzu -> 20.
-	test('Messaufbau: alle 20 Bereiche, je de und en', () => {
-		assert.equal(BEREICHE.length, 20, BEREICHE.join(', '));
+	// Issue #3440: Bereich `test_schicken` (Menü „Test schicken ▾“) kommt hinzu -> 21.
+	test('Messaufbau: alle 21 Bereiche, je de und en', () => {
+		assert.equal(BEREICHE.length, 21, BEREICHE.join(', '));
 	});
 	test('jeder Katalogschluessel mit Produktbegriff im Deutschen traegt die Glossar-Form im Englischen', () => {
 		const alle: string[] = [];

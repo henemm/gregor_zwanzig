@@ -498,7 +498,7 @@ def test_ac10_erfolgsform_trip_traegt_report_type_und_keine_fehlenden_orte(lage,
     assert r.status_code == 200, r.text
     assert hv.body(r) == {
         "status": "ok", "kind": "route", "id": trip_id, "sent": True,
-        "report_type": "morning",
+        "report_type": "morning", "sent_channels": ["email"],  # #3440
     }, hv.body(r)
 
 
@@ -513,7 +513,7 @@ def test_ac10_erfolgsform_vergleich_traegt_fehlende_orte_und_keinen_report_type(
     assert r.status_code == 200, r.text
     assert hv.body(r) == {
         "status": "ok", "kind": "vergleich", "id": "vgl-teil", "sent": True,
-        "fehlende_orte": ["loc-geloescht"],
+        "sent_channels": ["email"], "fehlende_orte": ["loc-geloescht"],  # #3440
     }, hv.body(r)
 
 
@@ -524,7 +524,8 @@ def test_ac10_vergleich_ohne_fehlende_orte_hat_genau_die_grundform(lage, c):
     r = hv.neu_senden(c, "vgl-voll", uid, "vergleich")
 
     assert r.status_code == 200, r.text
-    assert hv.body(r) == {"status": "ok", "kind": "vergleich", "id": "vgl-voll", "sent": True}
+    assert hv.body(r) == {"status": "ok", "kind": "vergleich", "id": "vgl-voll", "sent": True,
+                          "sent_channels": ["email"]}  # #3440
 
 
 @pytest.mark.parametrize("kind", ["route", "vergleich"])
@@ -588,3 +589,323 @@ def test_ac13_report_type_default_alt_evening_neu_morning(lage, c):
         send_lock.release_send_lock(uid, "trip-default", "morning")
     assert neu.status_code == 409, f"Neuer Endpoint muss 'morning' als Default nehmen: {neu.text}"
     assert hv.body(neu).get("code") == "already_in_progress", hv.body(neu)
+
+
+# ===========================================================================
+# #3440 (S5a) — Kanalwahl ``channel`` am Handversand (Menü „Test schicken ▾“)
+# Spec: docs/specs/modules/feat_3440_test_schicken_menue.md
+# AC-5..AC-10, AC-13, AC-14, AC-21 (Python-Kern-Schicht, netzfrei)
+#
+# Naehte wie oben: Trip-Mail ueber ``lage.trip_mails``, alle anderen Kanaele
+# (und die Vergleichs-Mail) ueber den Transport-Aufzeichner ``lage.mit``.
+# Die Entscheidung, welcher Kanal bedient wird, faellt im Produktivcode.
+# ===========================================================================
+
+KANAELE_3440 = ("email", "telegram", "sms", "premium_sms")
+
+
+def _email_bestaetigen(uid: str) -> None:
+    """Echtes Profilfeld ``email_verified_at`` setzen (ADR-0092)."""
+    from app.loader import get_data_dir  # noqa: PLC0415
+
+    pfad = get_data_dir(uid) / "user.json"
+    daten = json.loads(pfad.read_text())
+    daten["email_verified_at"] = "2026-01-01T00:00:00Z"
+    pfad.write_text(json.dumps(daten))
+
+
+def _bediente_kanaele(lage: _Lage) -> list[str]:
+    """Was tatsaechlich hinausging: Trip-Mails zaehlen als ``email``."""
+    kanaele = list(lage.mit.kanaele)
+    if lage.trip_mails and "email" not in kanaele:
+        kanaele.insert(0, "email")
+    return kanaele
+
+
+def _ein_briefing(lage: _Lage, kanal: str) -> bool:
+    """Genau EIN Briefing auf ``kanal``: ein Trip-Briefing auf Telegram besteht
+    aus mehreren Nachrichten (Kurzuebersicht, Tabelle, Aktionen) -- alle unter
+    demselben Betreff an dasselbe Ziel. SMS/Premium-SMS/E-Mail: eine Sendung."""
+    s = lage.mit.sendungen(kanal)
+    if kanal != "telegram":
+        return len(s) == 1
+    return bool(s) and len({e["subject"] for e in s}) == 1 and len(
+        {e["empfaenger"] for e in s}) == 1
+
+
+def _nutzer_alle_kanaele(*, tier: str = "premium") -> str:
+    uid = nutzer_anlegen(tier=tier)
+    _email_bestaetigen(uid)
+    return uid
+
+
+@pytest.mark.parametrize("kanal", KANAELE_3440)
+def test_3440_ac6_trip_channel_bedient_nur_den_gewaehlten_kanal(lage, c, kanal):
+    """AC-6: Given ein Trip mit E-Mail, Telegram und SMS eingeschaltet, alle vier
+    Kanaele verbunden / When ``channel=<kanal>`` / Then geht genau ein Versand
+    an diesen Kanal, kein anderer erhaelt etwas, ``sent_channels == [kanal]``."""
+    uid = _nutzer_alle_kanaele()
+    hv.trip_anlegen(uid, "trip-kanal", email=True, telegram=True, sms=True)
+
+    r = hv.neu_senden(c, "trip-kanal", uid, "route", channel=kanal)
+
+    assert r.status_code == 200, f"{kanal}: {r.status_code} {r.text}"
+    assert hv.body(r).get("sent_channels") == [kanal], hv.body(r)
+    assert _bediente_kanaele(lage) == [kanal], f"{kanal}: falsche Kanaele bedient: {lage}"
+    if kanal == "email":
+        assert len(lage.trip_mails) == 1, lage
+    else:
+        assert _ein_briefing(lage, kanal), lage
+
+
+@pytest.mark.parametrize("kanal", KANAELE_3440)
+def test_3440_ac6_vergleich_channel_bedient_nur_den_gewaehlten_kanal(lage, c, kanal):
+    """AC-6 (Orte-Hub): derselbe Vertrag fuer ``kind=vergleich``."""
+    uid = _nutzer_alle_kanaele()
+    _vergleich_anlegen(uid, "vgl-kanal", telegram=True, sms=True)
+
+    r = hv.neu_senden(c, "vgl-kanal", uid, "vergleich", channel=kanal)
+
+    assert r.status_code == 200, f"{kanal}: {r.status_code} {r.text}"
+    assert hv.body(r).get("sent_channels") == [kanal], hv.body(r)
+    assert lage.mit.kanaele == [kanal], f"{kanal}: falsche Kanaele bedient: {lage}"
+
+
+@pytest.mark.parametrize("kind", ["route", "vergleich"])
+@pytest.mark.parametrize("falscher_kanal", ["signal", "EMAIL", "alle", "email,telegram"])
+def test_3440_ac7_unbekannter_kanal_400_invalid_channel_ohne_versand(lage, c, kind,
+                                                                    falscher_kanal):
+    """AC-7: Given Python wird direkt mit unbekanntem ``channel`` aufgerufen /
+    Then 400 ``invalid_channel`` mit anzeigbarem Text, und es geht nichts raus."""
+    uid, trip_id, vgl_id = _nutzer_mit_trip_und_vergleich()
+    entity_id = trip_id if kind == "route" else vgl_id
+
+    r = hv.neu_senden(c, entity_id, uid, kind, channel=falscher_kanal)
+
+    b = hv.body(r)
+    assert r.status_code == 400, f"Erwartet 400, bekommen {r.status_code}: {r.text}"
+    assert b.get("code") == "invalid_channel", b
+    assert isinstance(b.get("detail"), str) and len(b["detail"]) > 10, b
+    # Adversary F003: der fremde Wert wird nie im Fehlertext gespiegelt.
+    assert falscher_kanal not in b["detail"], f"Fremder Kanalwert im Fehlertext gespiegelt: {b}"
+    assert lage.nichts_versendet, f"Unbekannter Kanal darf nichts versenden: {lage}"
+
+
+@pytest.mark.parametrize("kind", ["route", "vergleich"])
+def test_3440_ac5_channel_email_bei_unbestaetigter_adresse_abgelehnt(lage, c, kind):
+    """AC-5 / ADR-0092: Given ``email_verified_at`` fehlt im Profil / When
+    ``channel=email`` / Then Ablehnung ``email_unverified`` (4xx), kein
+    Transportaufruf. Kontroll-Bein: nach Bestaetigung geht dieselbe Anfrage
+    raus (sonst waere die Ablehnung vakuum)."""
+    uid, trip_id, vgl_id = _nutzer_mit_trip_und_vergleich()  # Profil unbestaetigt
+    entity_id = trip_id if kind == "route" else vgl_id
+
+    r = hv.neu_senden(c, entity_id, uid, kind, channel="email")
+
+    b = hv.body(r)
+    assert 400 <= r.status_code < 500, f"Erwartet 4xx, bekommen {r.status_code}: {r.text}"
+    assert b.get("code") == "email_unverified", b
+    assert isinstance(b.get("detail"), str) and len(b["detail"]) > 10, b
+    assert lage.nichts_versendet, f"Unbestaetigte Adresse: nichts senden: {lage}"
+
+    _email_bestaetigen(uid)
+    kontrolle = hv.neu_senden(c, entity_id, uid, kind, channel="email")
+    assert kontrolle.status_code == 200, kontrolle.text
+    assert hv.body(kontrolle).get("sent_channels") == ["email"], hv.body(kontrolle)
+
+
+def test_3440_ac9_telegram_ohne_mail_to_scheitert_nicht_am_email_gate(lage, c):
+    """AC-9: Given Profil ohne ``mail_to``, Telegram verbunden / When
+    ``channel=telegram`` / Then 200 mit ``sent_channels == ["telegram"]``.
+    Ohne ``channel`` und bei ``channel=email`` bleibt das E-Mail-Gate wirksam."""
+    uid = nutzer_anlegen()
+    hv.trip_anlegen(uid, "trip-tg-only", email=True, telegram=True)
+    hv.profil_ohne_mail_to(uid)
+
+    ohne = hv.neu_senden(c, "trip-tg-only", uid, "route")
+    assert ohne.status_code == 422 and hv.body(ohne).get("code") == "smtp_not_configured", (
+        hv.body(ohne)
+    )
+    mail = hv.neu_senden(c, "trip-tg-only", uid, "route", channel="email")
+    assert hv.body(mail).get("code") in {"smtp_not_configured", "email_unverified"}, (
+        f"channel=email ohne mail_to muss am E-Mail-Gate scheitern: {hv.body(mail)}"
+    )
+    assert lage.nichts_versendet, lage
+
+    r = hv.neu_senden(c, "trip-tg-only", uid, "route", channel="telegram")
+
+    assert r.status_code == 200, f"Telegram-Test darf nicht am E-Mail-Gate scheitern: {r.text}"
+    assert hv.body(r).get("sent_channels") == ["telegram"], hv.body(r)
+    assert lage.mit.kanaele == ["telegram"] and not lage.trip_mails, lage
+
+
+@pytest.mark.parametrize("kind", ["route", "vergleich"])
+def test_3440_ac8_im_abo_ausgeschalteter_kanal_wird_bei_channel_bedient(lage, c, kind):
+    """AC-8: Given Telegram verbunden, aber im Abo ausgeschaltet / When
+    ``channel=telegram`` / Then geht der Test an Telegram (der Test prueft den
+    Kanal, nicht das Abo) und an nichts sonst."""
+    uid = _nutzer_alle_kanaele()
+    if kind == "route":
+        hv.trip_anlegen(uid, "abo-aus", email=True, telegram=False)
+    else:
+        _vergleich_anlegen(uid, "abo-aus", telegram=False)
+
+    r = hv.neu_senden(c, "abo-aus", uid, kind, channel="telegram")
+
+    assert r.status_code == 200, r.text
+    assert hv.body(r).get("sent_channels") == ["telegram"], hv.body(r)
+    assert _bediente_kanaele(lage) == ["telegram"], lage
+    assert set(lage.mit.empfaenger("telegram")) == {f"chat-{uid}"}, lage
+
+
+@pytest.mark.parametrize("kind", ["route", "vergleich"])
+@pytest.mark.parametrize("kanal", ["sms", "premium_sms"])
+def test_3440_ac8_tarif_gate_bleibt_channels_unreachable(lage, c, kind, kanal):
+    """AC-8: Given Tarif ``free`` (ohne SMS/Premium-SMS) / When ``channel=sms``
+    bzw. ``premium_sms`` / Then 422 ``channels_unreachable``, nichts versendet.
+    Kontroll-Bein: derselbe Nutzer kann per ``channel=telegram`` senden."""
+    uid = _nutzer_alle_kanaele(tier="free")
+    if kind == "route":
+        hv.trip_anlegen(uid, "tarif", email=True, telegram=True, sms=True)
+    else:
+        _vergleich_anlegen(uid, "tarif", telegram=True, sms=True)
+
+    r = hv.neu_senden(c, "tarif", uid, kind, channel=kanal)
+
+    assert r.status_code == 422, f"{kanal}: {r.status_code} {r.text}"
+    assert hv.body(r).get("code") == "channels_unreachable", hv.body(r)
+    assert lage.nichts_versendet, lage
+
+    kontrolle = hv.neu_senden(c, "tarif", uid, kind, channel="telegram")
+    assert hv.body(kontrolle).get("sent_channels") == ["telegram"], hv.body(kontrolle)
+
+
+@pytest.mark.parametrize("kind", ["route", "vergleich"])
+def test_3440_ac10_alle_kanaele_antwort_enthaelt_sent_channels(lage, c, kind):
+    """AC-10: Given E-Mail und Telegram im Abo eingeschaltet / When ohne
+    ``channel`` („Alle eingerichteten Kanäle“) / Then die Antwort nennt genau
+    die tatsaechlich bedienten Kanaele in ``sent_channels``."""
+    uid = _nutzer_alle_kanaele()
+    if kind == "route":
+        hv.trip_anlegen(uid, "alle", email=True, telegram=True)
+    else:
+        _vergleich_anlegen(uid, "alle", telegram=True)
+
+    r = hv.neu_senden(c, "alle", uid, kind)
+
+    assert r.status_code == 200, r.text
+    gesendet = hv.body(r).get("sent_channels")
+    assert isinstance(gesendet, list), f"sent_channels fehlt: {hv.body(r)}"
+    assert sorted(gesendet) == sorted(_bediente_kanaele(lage)) == ["email", "telegram"], (
+        f"sent_channels {gesendet} != bedient {lage}"
+    )
+
+
+@pytest.mark.parametrize("kind", ["route", "vergleich"])
+def test_3440_ac13_lock_gilt_je_abo_nicht_je_kanal(lage, c, kind):
+    """AC-13: Given ein Versand laeuft fuer das Abo (Lock gehalten) / When ein
+    zweiter Klick mit ANDEREM ``channel`` kommt / Then 409
+    ``already_in_progress``, kein zweiter Versand. Nach Freigabe bedient
+    derselbe Aufruf genau seinen Kanal."""
+    uid = _nutzer_alle_kanaele()
+    if kind == "route":
+        hv.trip_anlegen(uid, "lock-abo", email=True, telegram=True)
+        lock = (uid, "lock-abo", "morning")
+    else:
+        _vergleich_anlegen(uid, "lock-abo", telegram=True)
+        lock = ("compare", uid, "lock-abo")
+
+    for kanal in ("email", "telegram"):
+        assert send_lock.try_acquire_send_lock(*lock), "Vorbedingung: Lock frei"
+        try:
+            r = hv.neu_senden(c, "lock-abo", uid, kind, channel=kanal)
+        finally:
+            send_lock.release_send_lock(*lock)
+        assert r.status_code == 409, f"{kanal}: {r.status_code} {r.text}"
+        assert hv.body(r).get("code") == "already_in_progress", hv.body(r)
+    assert lage.nichts_versendet, lage
+
+    frei = hv.neu_senden(c, "lock-abo", uid, kind, channel="telegram")
+    assert hv.body(frei).get("sent_channels") == ["telegram"], hv.body(frei)
+
+
+@pytest.mark.parametrize("kind", ["route", "vergleich"])
+def test_3440_ac14_zwei_nutzer_channel_waehlt_nie_den_empfaenger(lage, c, kind):
+    """AC-14: Given A und B mit je eigener Adresse/eigenem Chat und gleich
+    benanntem Abo / When B ``channel=telegram`` sendet und im Koerper sowie im
+    Query fremde Werte (``user_id``/Empfaenger von A) mitschickt / Then geht
+    die Nachricht ausschliesslich an B's Chat; bei A entsteht nichts."""
+    a, b = _nutzer_alle_kanaele(), _nutzer_alle_kanaele()
+    for uid in (a, b):
+        if kind == "route":
+            hv.trip_anlegen(uid, "geteilt", email=True, telegram=True)
+        else:
+            _vergleich_anlegen(uid, "geteilt", telegram=True)
+
+    r = c.post(
+        hv.NEU.format(id="geteilt"),
+        params={"user_id": b, "kind": kind, "channel": "telegram",
+                "telegram_chat_id": f"chat-{a}", "to": f"{a}@example.invalid"},
+        json={"user_id": a, "telegram_chat_id": f"chat-{a}", "mail_to": f"{a}@example.invalid"},
+    )
+
+    assert r.status_code == 200, r.text
+    assert hv.body(r).get("sent_channels") == ["telegram"], hv.body(r)
+    assert set(lage.mit.empfaenger("telegram")) == {f"chat-{b}"}, f"Ziel muss B sein: {lage}"
+    assert not lage.trip_mails and not lage.mit.sendungen("email"), lage
+    if kind == "vergleich":
+        assert hv.letzter_versand(a, "geteilt") is None, "Bei A darf nichts entstehen"
+
+
+def test_3440_ac21_jeder_klick_bucht_manueller_abruf_auch_einzelkanal(lage, c):
+    """AC-21: Given ein Trip / When zweimal ``channel=telegram`` geklickt wird /
+    Then bucht jeder Klick ``user_manual`` (Zaehler steigt zweimal) und jeder
+    Klick bedient genau Telegram. Der geteilte Wetter-Cache wird zwischen den
+    Klicks geleert: Cache-Treffer werden laut ADR-0117 erstattet, ohne Leeren
+    waere die zweite Buchung strukturell 0 (gemessen: 0 -> 3 -> 3)."""
+    from services.forecast_budget import ForecastBudgetGate  # noqa: PLC0415
+    from services.weather_cache import reset_shared_weather_cache_for_tests  # noqa: PLC0415
+
+    uid = _nutzer_alle_kanaele()
+    hv.trip_anlegen(uid, "kontingent", email=True, telegram=True)
+    vorher = ForecastBudgetGate(uid).snapshot()["user_manual_calls_today"]
+
+    erst = hv.neu_senden(c, "kontingent", uid, "route", channel="telegram")
+    nach_eins = ForecastBudgetGate(uid).snapshot()["user_manual_calls_today"]
+    # Ein Trip-Briefing auf Telegram = mehrere Nachrichten; gezaehlt wird je Klick.
+    je_briefing = len(lage.mit.sendungen("telegram"))
+    assert je_briefing >= 1 and _ein_briefing(lage, "telegram"), lage
+    reset_shared_weather_cache_for_tests()
+    zweit = hv.neu_senden(c, "kontingent", uid, "route", channel="telegram")
+    nach_zwei = ForecastBudgetGate(uid).snapshot()["user_manual_calls_today"]
+
+    for r in (erst, zweit):
+        assert r.status_code == 200, r.text
+        assert hv.body(r).get("sent_channels") == ["telegram"], hv.body(r)
+    assert vorher < nach_eins < nach_zwei, (
+        f"Jeder Klick muss buchen: {vorher} -> {nach_eins} -> {nach_zwei}"
+    )
+    assert len(lage.mit.sendungen("telegram")) == 2 * je_briefing and not lage.trip_mails, lage
+
+
+@pytest.mark.parametrize("kanal", ["telegram", "email"])
+def test_3440_ac21_erschoepftes_kontingent_auch_bei_einzelkanal(lage, c, kanal):
+    """AC-21: Given ``user_manual`` des Nutzers erschoepft / When ein
+    Einzelkanal-Klick / Then 429 ``kontingent_erschoepft`` mit bestehendem
+    Text, kein Versand. Kontroll-Bein: ein zweiter Nutzer B sendet denselben
+    Einzelkanal erfolgreich."""
+    from tests.tdd.test_abruf_kontingent_manuell import _erschoepfe  # noqa: PLC0415
+
+    a, b = _nutzer_alle_kanaele(), _nutzer_alle_kanaele()
+    hv.trip_anlegen(a, "voll", email=True, telegram=True)
+    hv.trip_anlegen(b, "voll", email=True, telegram=True)
+    _erschoepfe(a, b)
+
+    r = hv.neu_senden(c, "voll", a, "route", channel=kanal)
+
+    assert r.status_code == 429, r.text
+    assert hv.body(r).get("code") == "kontingent_erschoepft", hv.body(r)
+    assert lage.nichts_versendet, lage
+
+    rb = hv.neu_senden(c, "voll", b, "route", channel=kanal)
+    assert hv.body(rb).get("sent_channels") == [kanal], hv.body(rb)

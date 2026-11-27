@@ -1,0 +1,14 @@
+{
+	"test_schicken.menue_aria": "Send test to",
+	"test_schicken.berichtsart_aria": "Briefing type",
+	"test_schicken.ziel.premium_sms": "inReach · via satellite",
+	"test_schicken.alle": "All set-up channels",
+	"test_schicken.grund.email_unbestaetigt": "Address not confirmed yet.",
+	"test_schicken.grund.im_briefing_aus": "off in this briefing",
+	"test_schicken.briefing": "Briefing",
+	"test_schicken.rueckmeldung.einzel": "{briefing} sent to {kanal} · {ziel} · {zeit}",
+	"test_schicken.rueckmeldung.alle": "{briefing} sent: {liste}",
+	"test_schicken.rueckmeldung.gesendet": "{kanal} ✓",
+	"test_schicken.rueckmeldung.uebersprungen": "{kanal} skipped ({grund})",
+	"test_schicken.rueckmeldung.fehlgeschlagen": "{kanal} failed"
+}

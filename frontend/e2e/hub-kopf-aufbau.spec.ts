@@ -358,9 +358,11 @@ for (const kind of HUB_KINDS) {
 			// #2837 S1: „Senden“ sitzt in der Leiste ganz oben (HubKopf), bei beiden Arten.
 			await expect(page.getByTestId(HUB_KOPF_SEL.leiste).locator('[data-testid="subscription-hub-send"]:visible')).toHaveCount(1);
 			await kopfSenden.click();
-			await expect(page.getByTestId('send-confirm-dialog')).toBeVisible();
-			expect(sende.length, 'das Öffnen des Dialogs sendet nichts').toBe(0);
-			await page.getByTestId('send-confirm-yes').click();
+			// #3440: der Knopf öffnet das Menü „Test schicken ▾“; gesendet wird mit „Alle eingerichteten Kanäle“.
+			const menue = page.locator('[data-abschnitt="test-menue"]:visible').first();
+			await expect(menue).toBeVisible();
+			expect(sende.length, 'das Öffnen des Menüs sendet nichts').toBe(0);
+			await menue.locator('[data-kanal="alle"]').click();
 
 			// Genau EIN Abruf: die Zahl bleibt 1,5 s lang stabil bei 1 (kein Schlaf).
 			let seit = 0;
@@ -421,9 +423,11 @@ for (const kind of HUB_KINDS) {
 			// #2837 S1: „Senden“ sitzt in der Leiste ganz oben (HubKopf), bei beiden Arten.
 			await expect(page.getByTestId(HUB_KOPF_SEL.leiste).locator('[data-testid="subscription-hub-send"]:visible')).toHaveCount(1);
 			await kopfSenden.click();
-			await expect(page.getByTestId('send-confirm-dialog')).toBeVisible();
-			expect(sende.length, 'das Öffnen des Dialogs sendet nichts').toBe(0);
-			await page.getByTestId('send-confirm-yes').click();
+			// #3440: der Knopf öffnet das Menü „Test schicken ▾“; gesendet wird mit „Alle eingerichteten Kanäle“.
+			const menue = page.locator('[data-abschnitt="test-menue"]:visible').first();
+			await expect(menue).toBeVisible();
+			expect(sende.length, 'das Öffnen des Menüs sendet nichts').toBe(0);
+			await menue.locator('[data-kanal="alle"]').click();
 
 			let seit = 0;
 			await expect

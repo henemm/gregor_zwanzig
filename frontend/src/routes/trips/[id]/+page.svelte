@@ -9,7 +9,13 @@
 	import { TripTabs } from '$lib/components/trip-detail';
 	import { TopoBg } from '$lib/components/atoms';
 	import { ConfirmDialog } from '$lib/components/molecules';
-	import SendConfirmDialog from '$lib/components/molecules/SendConfirmDialog.svelte';
+	import {
+		aboKanaele,
+		RUECKMELDUNG_MS,
+		testErgebnis,
+		type Berichtsart,
+		type TestKanal
+	} from '$lib/components/molecules/testSchickenModell';
 	import SubscriptionActionSheet from '$lib/components/mobile/SubscriptionActionSheet.svelte';
 	import { subscriptionActions, subscriptionLifecycle } from '$lib/components/shared/subscriptionActions';
 	import {
@@ -139,7 +145,6 @@
 	let errorMsg = $state<string | null>(null);
 	// i18n F9: eigene Fehlermeldungen als Schluessel (beim Rendern aufgeloest), Server-Detail als Text.
 	let errorKey = $state<MessageKey | null>(null);
-	let sendDialogOpen = $state(false);
 	let sendLoading = $state(false);
 	let sendStatus = $state<'idle' | 'ok' | 'error'>('idle');
 	let sendMessage = $state<string | null>(null);
@@ -270,26 +275,32 @@
 		trip = updated;
 	}
 
-	// Senden: erst nach Bestaetigung im Sende-Dialog (AC-3/AC-4); Berichtsart aus der Wahl.
-	async function handleSendConfirm(berichtsart: 'morning' | 'evening' | undefined): Promise<void> {
-		sendDialogOpen = false;
+	// #3440: Menü „Test schicken ▾“ — der Klick auf eine Kanalzeile ist die Auslösung (kein Dialog).
+	// Kanal = genau dieser Kanal, „alle“ = ohne channel; Rückmeldung 5 s, in Trip und Orte gleich.
+	async function handleTest(wahl: { kanal: TestKanal; berichtsart: Berichtsart }): Promise<void> {
 		clearTimeout(sendTimer);
 		sendLoading = true;
 		sendStatus = 'idle';
 		try {
 			// Issue #2124: geteilter Laufzustand (trip:<id>) + Klassifikation.
-			const o = await sendSubscription('trip', trip.id, { reportType: berichtsart });
-			if (o.kind === 'ok') {
-				sendStatus = 'ok';
-				sendMessage = null;
-			} else {
-				sendStatus = 'error';
-				sendMessage = o.message;
-			}
+			const o = await sendSubscription('trip', trip.id, {
+				reportType: wahl.berichtsart,
+				channel: wahl.kanal === 'alle' ? undefined : wahl.kanal
+			});
+			const r = testErgebnis({
+				context: 'route',
+				wahl,
+				ergebnis: o,
+				profil: data.profile,
+				abo: aboKanaele('route', trip),
+				jetzt: new Date()
+			});
+			sendStatus = r.ok ? 'ok' : 'error';
+			sendMessage = r.text;
 		} finally {
 			sendLoading = false;
 		}
-		sendTimer = setTimeout(() => { sendStatus = 'idle'; }, 4000);
+		sendTimer = setTimeout(() => { sendStatus = 'idle'; }, RUECKMELDUNG_MS);
 	}
 
 	// Lebenszyklus-Menue (Desktop-Dropdown und mobiles Blatt): Pausieren/Fortsetzen schreiben ueber den
@@ -307,7 +318,7 @@
 <main style="position: relative; overflow: hidden;">
 	<TopoBg opacity={0.14} />
 	<!-- #2837 S1 (ADR-0110): Leiste (Pfad, Senden, Kebab, Meldungen) und Titelblock liegen im
-	     geteilten HubKopf, den TripHeader einbettet. Senden oeffnet nur den Sende-Dialog (AC-12). -->
+	     geteilten HubKopf, den TripHeader einbettet. #3440: „Test schicken ▾“ öffnet das Menü am Knopf. -->
 	<TripHeader
 		{trip}
 		{now}
@@ -315,7 +326,8 @@
 		onTripUpdate={handleTripUpdate}
 		saveController={tripSaveCtl}
 		sendLabel={sendLoading ? $t('aktionen.wird_gesendet') : $t('aktionen.kopf.test_schicken')}
-		onSend={() => { sendDialogOpen = true; }}
+		onTest={handleTest}
+		testProfil={data.profile}
 		sendDisabled={sendLoading || lifecycle === 'archived' || lifecycle === 'draft'}
 		actions={hubAktionen}
 		onSelect={handleHubAction}
@@ -324,9 +336,9 @@
 	>
 		{#snippet meldungen()}
 			{#if sendStatus === 'ok'}
-				<span data-testid="test-briefing-success" style="font-size: 12px; color: var(--g-success, #2e7d32);">{$t('trip.hub.briefing_gesendet')}</span>
+				<span data-testid="test-schicken-ok" style="font-size: 12px; color: var(--g-success, #2e7d32);">{sendMessage}</span>
 			{:else if sendStatus === 'error'}
-				<span data-testid="test-briefing-error" style="font-size: 12px; color: var(--g-error, #c62828);">{sendMessage ?? $t('aktionen.fehler.senden')}</span>
+				<span data-testid="test-schicken-fehler" style="font-size: 12px; color: var(--g-error, #c62828);">{sendMessage ?? $t('aktionen.fehler.senden')}</span>
 			{/if}
 			{#if errorKey || errorMsg}
 				<span data-testid="trip-detail-action-error" style="font-size: 12px; color: var(--g-error, #c62828);">{errorKey ? $t(errorKey) : errorMsg}</span>
@@ -375,16 +387,6 @@
 	onConfirm={handleDeleteConfirm}
 	onCancel={handleDeleteCancel}
 	onOpenChange={handleDeleteDialogOpenChange}
-/>
-
-<SendConfirmDialog
-	open={sendDialogOpen}
-	kind="trip"
-	profile={data.profile}
-	subscription={trip}
-	running={sendLoading}
-	onConfirm={handleSendConfirm}
-	onCancel={() => { sendDialogOpen = false; }}
 />
 
 <SubscriptionActionSheet

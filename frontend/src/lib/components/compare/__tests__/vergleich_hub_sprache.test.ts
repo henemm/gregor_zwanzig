@@ -104,7 +104,7 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 	test('Messaufbau: jeder deutsche Anker-Text (Festteile) steht im Golden oder in der Funktionstabelle', () => {
 		const alle = leerraum([...Object.keys(FAELLE).map((f) => `${f}.de.html`), 'funktionen.de.txt'].map((f) => readFileSync(path.join(P.GOLDEN_DIR, f), 'utf-8')).join(' ')).replace(/&amp;/g, '&');
 		// Nicht im golden-de-Zustand erreichbar (nur Fehler-/Grenzfaelle), im Bestand je Datei nachgewiesen.
-		const UNERREICHT = new Set(['vergleich.relativ.diese_woche', 'vergleich.hub.archivieren_fehler', 'vergleich.hub.reaktivieren_fehler', 'vergleich.hub.delete_fehler', 'vergleich.hub.delete_titel', 'listen.dialog.unwiderruflich', 'vergleich.hub.nicht_gefunden', 'vergleich.orte.format_unbekannt', 'vergleich.orte.fehler_hinzufuegen', 'vergleich.gruppe.kein_profil','vergleich.neu.bereit_titel', 'vergleich.neu.bereit_zeile.one', 'vergleich.neu.bereit_zeile.other', 'vergleich.neu.bereit_text', 'vergleich.neu.alarme_zum_aktivieren_punkt', 'vergleich.neu.tab_gesperrt', 'vergleich.neu.ort_waehlen', 'vergleich.neu.kopie', 'vergleich.relativ.wochen.one', 'vergleich.orte.manuell', 'vergleich.orte.breitengrad', 'vergleich.orte.laengengrad', 'vergleich.orte.hinzufuegen', 'vergleich.hub.test_gesendet', 'aktionen.kopf.aktivieren', 'vergleich.orte.viel_kurz',
+		const UNERREICHT = new Set(['vergleich.relativ.diese_woche', 'vergleich.hub.archivieren_fehler', 'vergleich.hub.reaktivieren_fehler', 'vergleich.hub.delete_fehler', 'vergleich.hub.delete_titel', 'listen.dialog.unwiderruflich', 'vergleich.hub.nicht_gefunden', 'vergleich.orte.format_unbekannt', 'vergleich.orte.fehler_hinzufuegen', 'vergleich.gruppe.kein_profil','vergleich.neu.bereit_titel', 'vergleich.neu.bereit_zeile.one', 'vergleich.neu.bereit_zeile.other', 'vergleich.neu.bereit_text', 'vergleich.neu.alarme_zum_aktivieren_punkt', 'vergleich.neu.tab_gesperrt', 'vergleich.neu.ort_waehlen', 'vergleich.neu.kopie', 'vergleich.relativ.wochen.one', 'vergleich.orte.manuell', 'vergleich.orte.breitengrad', 'vergleich.orte.laengengrad', 'vergleich.orte.hinzufuegen', 'aktionen.kopf.aktivieren', 'vergleich.orte.viel_kurz',
 			// #2794 Fix-Loop B4: die Karte „Wetter" zählt erst mit im Browser geladenen Vorlagen;
 			// im SSR-Golden steht „—". Die Zahl prüft shared/__tests__/s3a2794_teil4b_befunde.test.ts.
 			'vergleich.hub.wertebereiche_kurz.one', 'vergleich.hub.wertebereiche_kurz.other',
@@ -150,7 +150,7 @@ describe('AC-1: Ortsvergleich-Hub englisch, Namen unveraendert, Aktionen wie im 
 		for (const t of ['Bearbeiten', 'Läuft', 'Kandidaten', 'Zuletzt raus', 'Wintersport', 'Allgemein', 'Sommer-Trekking']) hatNicht(s, t);
 		// Der Golden-Zustand „meldung" traegt `sendMsg` als Server-Text (Daten); der Schluessel-Fall
 		// steht im Test „Meldungen ohne Server-Text".
-		assert.deepEqual(deutscheReste(s, ['vergleich.hub.test_gesendet']), []);
+		assert.deepEqual(deutscheReste(s), []); // #3440: Schlüssel vergleich.hub.test_gesendet entfiel
 	});
 	test('Reiterleiste: Kennungen gleich, Namen englisch wie im Trip-Hub (aktionen.reiter.*)', () => {
 		const { en: e } = deDannEn(() => P.hubOrteRendern());
@@ -173,8 +173,9 @@ describe('AC-1: Ortsvergleich-Hub englisch, Namen unveraendert, Aktionen wie im 
 	});
 	test('Meldungen ohne Server-Text: Schluessel wird beim Rendern aufgeloest (Seite, Orte-Schritt, Neuer Ort)', () => {
 		const { de, en: e } = deDannEn(() => P.fehlerFlagsRendern().map(sichtbar));
-		const DE = ['Test-Briefing gesendet', 'Archivieren fehlgeschlagen.', 'Format nicht erkannt', 'Fehler beim Speichern'];
-		const EN = ['Test briefing sent', 'Archiving failed.', 'Format not recognised', 'Error while saving'];
+		// #3440: „Test-Briefing gesendet“ entfiel (Rückmeldung des Menüs); die Seite zeigt den Reaktivieren-Fehler.
+		const DE = ['Reaktivieren fehlgeschlagen.', 'Archivieren fehlgeschlagen.', 'Format nicht erkannt', 'Fehler beim Speichern'];
+		const EN = ['Reactivating failed.', 'Archiving failed.', 'Format not recognised', 'Error while saving'];
 		DE.forEach((s, i) => hat(de[i], s));
 		EN.forEach((s, i) => {
 			hat(e[i], s);

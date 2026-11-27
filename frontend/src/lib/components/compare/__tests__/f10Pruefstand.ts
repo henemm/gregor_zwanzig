@@ -203,6 +203,8 @@ const S = {
 	mobil: await seitenVariante([['let mobil = $state(false);', 'let mobil = $state(true);']]),
 	senden: await seitenVariante([['let isSending = $state(false);', 'let isSending = $state(true);']]),
 	meldung: await seitenVariante([
+		// #3440: die Rückmeldung steht nur bei sendStatus „ok“ (test-schicken-ok); Text = Daten.
+		["let sendStatus = $state<'idle' | 'ok' | 'error'>('idle');", "let sendStatus = $state<'idle' | 'ok' | 'error'>('ok');"],
 		['let sendMsg = $state<string | null>(null);', "let sendMsg = $state<string | null>('Test-Briefing gesendet');"],
 		// Bestand: pauseError trug den Text; seit F10 nur das Flag (Text beim Rendern).
 		['let pauseError = $state(false);', 'let pauseError = $state(true);']
@@ -292,8 +294,10 @@ export function anlegenToastRendern(): string {
 // ── Fehler-Flags (nur neuer Quelltext): ohne Server-Text halten die Bausteine nur ein
 // Flag bzw. einen Schluessel; die Meldung entsteht beim Rendern in der aktuellen Sprache.
 const FLAG = {
-	seite: await seitenVariante([['let sendKey = $state<MessageKey | null>(null);', "let sendKey = $state<MessageKey | null>('vergleich.hub.test_gesendet');"]]),
-	seiteFehler: await seitenVariante([['let sendKey = $state<MessageKey | null>(null);', "let sendKey = $state<MessageKey | null>('vergleich.hub.archivieren_fehler');"]]),
+	// #3440: Meldungen der Lebenszyklus-Aktionen tragen `aktionKey` (vorher `sendKey`); der Schlüssel
+	// „Test-Briefing gesendet“ entfiel mit dem Dialog (Rückmeldung jetzt aus testErgebnis).
+	seite: await seitenVariante([['let aktionKey = $state<MessageKey | null>(null);', "let aktionKey = $state<MessageKey | null>('vergleich.hub.reaktivieren_fehler');"]]),
+	seiteFehler: await seitenVariante([['let aktionKey = $state<MessageKey | null>(null);', "let aktionKey = $state<MessageKey | null>('vergleich.hub.archivieren_fehler');"]]),
 	orte: await variante(cmp('steps/Step2Orte.svelte'), [['let resolveErrorKey = $state<MessageKey | null>(null);', "let resolveErrorKey = $state<MessageKey | null>('vergleich.orte.format_unbekannt');"]]),
 	ortNeu: await variante(cmp('LocationNewModal.svelte'), [['let saveError: string | null = $state(null);', "let saveError: string | null = $state('');"]])
 };

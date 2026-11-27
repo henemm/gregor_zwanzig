@@ -1,0 +1,583 @@
+# TDD RED — Issue #3440 (feat-3440-test-schicken-menue) — 2026-11-27T06:06:42+00:00
+# Worktree-HEAD: 16df7864b
+
+================================================================
+## Schicht 1: Python (pytest) tests/tdd/test_briefings_send_endpoint.py
+================================================================
+### Bestandstests derselben Datei (muessen gruen bleiben): -k 'not 3440'
+================ 64 passed, 34 deselected, 8 warnings in 6.27s =================
+
+### Neue Tests #3440: -k 3440
+================ 34 failed, 64 deselected, 17 warnings in 5.06s ================
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF                                       [100%]
+=================================== FAILURES ===================================
+E   AssertionError: {'status': 'ok', 'kind': 'route', 'id': 'trip-kanal', 'sent': True, ...}
+    assert None == ['email']
+     +  where None = <built-in method get of dict object at 0x7b3d1e3d8700>('sent_channels')
+     +    where <built-in method get of dict object at 0x7b3d1e3d8700> = {'status': 'ok', 'kind': 'route', 'id': 'trip-kanal', 'sent': True, ...}.get
+     +      where {'status': 'ok', 'kind': 'route', 'id': 'trip-kanal', 'sent': True, ...} = <function body at 0x7b3d1fa5ea20>(<Response [200 OK]>)
+     +        where <function body at 0x7b3d1fa5ea20> = hv.body
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:620: AssertionError: {'status': 'ok', 'kind': 'route', 'id': 'trip-kanal', 'sent': True, ...}
+E   AssertionError: {'status': 'ok', 'kind': 'route', 'id': 'trip-kanal', 'sent': True, ...}
+    assert None == ['telegram']
+     +  where None = <built-in method get of dict object at 0x7b3d1e5db8c0>('sent_channels')
+     +    where <built-in method get of dict object at 0x7b3d1e5db8c0> = {'status': 'ok', 'kind': 'route', 'id': 'trip-kanal', 'sent': True, ...}.get
+     +      where {'status': 'ok', 'kind': 'route', 'id': 'trip-kanal', 'sent': True, ...} = <function body at 0x7b3d1fa5ea20>(<Response [200 OK]>)
+     +        where <function body at 0x7b3d1fa5ea20> = hv.body
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:620: AssertionError: {'status': 'ok', 'kind': 'route', 'id': 'trip-kanal', 'sent': True, ...}
+E   AssertionError: {'status': 'ok', 'kind': 'route', 'id': 'trip-kanal', 'sent': True, ...}
+    assert None == ['sms']
+     +  where None = <built-in method get of dict object at 0x7b3d20567200>('sent_channels')
+     +    where <built-in method get of dict object at 0x7b3d20567200> = {'status': 'ok', 'kind': 'route', 'id': 'trip-kanal', 'sent': True, ...}.get
+     +      where {'status': 'ok', 'kind': 'route', 'id': 'trip-kanal', 'sent': True, ...} = <function body at 0x7b3d1fa5ea20>(<Response [200 OK]>)
+     +        where <function body at 0x7b3d1fa5ea20> = hv.body
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:620: AssertionError: {'status': 'ok', 'kind': 'route', 'id': 'trip-kanal', 'sent': True, ...}
+E   AssertionError: {'status': 'ok', 'kind': 'route', 'id': 'trip-kanal', 'sent': True, ...}
+    assert None == ['premium_sms']
+     +  where None = <built-in method get of dict object at 0x7b3d00f8f6c0>('sent_channels')
+     +    where <built-in method get of dict object at 0x7b3d00f8f6c0> = {'status': 'ok', 'kind': 'route', 'id': 'trip-kanal', 'sent': True, ...}.get
+     +      where {'status': 'ok', 'kind': 'route', 'id': 'trip-kanal', 'sent': True, ...} = <function body at 0x7b3d1fa5ea20>(<Response [200 OK]>)
+     +        where <function body at 0x7b3d1fa5ea20> = hv.body
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:620: AssertionError: {'status': 'ok', 'kind': 'route', 'id': 'trip-kanal', 'sent': True, ...}
+E   AssertionError: {'status': 'ok', 'kind': 'vergleich', 'id': 'vgl-kanal', 'sent': True}
+    assert None == ['email']
+     +  where None = <built-in method get of dict object at 0x7b3cff235a40>('sent_channels')
+     +    where <built-in method get of dict object at 0x7b3cff235a40> = {'status': 'ok', 'kind': 'vergleich', 'id': 'vgl-kanal', 'sent': True}.get
+     +      where {'status': 'ok', 'kind': 'vergleich', 'id': 'vgl-kanal', 'sent': True} = <function body at 0x7b3d1fa5ea20>(<Response [200 OK]>)
+     +        where <function body at 0x7b3d1fa5ea20> = hv.body
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:637: AssertionError: {'status': 'ok', 'kind': 'vergleich', 'id': 'vgl-kanal', 'sent': True}
+E   AssertionError: {'status': 'ok', 'kind': 'vergleich', 'id': 'vgl-kanal', 'sent': True}
+    assert None == ['telegram']
+     +  where None = <built-in method get of dict object at 0x7b3cff376b40>('sent_channels')
+     +    where <built-in method get of dict object at 0x7b3cff376b40> = {'status': 'ok', 'kind': 'vergleich', 'id': 'vgl-kanal', 'sent': True}.get
+     +      where {'status': 'ok', 'kind': 'vergleich', 'id': 'vgl-kanal', 'sent': True} = <function body at 0x7b3d1fa5ea20>(<Response [200 OK]>)
+     +        where <function body at 0x7b3d1fa5ea20> = hv.body
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:637: AssertionError: {'status': 'ok', 'kind': 'vergleich', 'id': 'vgl-kanal', 'sent': True}
+E   AssertionError: {'status': 'ok', 'kind': 'vergleich', 'id': 'vgl-kanal', 'sent': True}
+    assert None == ['sms']
+     +  where None = <built-in method get of dict object at 0x7b3cff22f740>('sent_channels')
+     +    where <built-in method get of dict object at 0x7b3cff22f740> = {'status': 'ok', 'kind': 'vergleich', 'id': 'vgl-kanal', 'sent': True}.get
+     +      where {'status': 'ok', 'kind': 'vergleich', 'id': 'vgl-kanal', 'sent': True} = <function body at 0x7b3d1fa5ea20>(<Response [200 OK]>)
+     +        where <function body at 0x7b3d1fa5ea20> = hv.body
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:637: AssertionError: {'status': 'ok', 'kind': 'vergleich', 'id': 'vgl-kanal', 'sent': True}
+E   AssertionError: {'status': 'ok', 'kind': 'vergleich', 'id': 'vgl-kanal', 'sent': True}
+    assert None == ['premium_sms']
+     +  where None = <built-in method get of dict object at 0x7b3cff267540>('sent_channels')
+     +    where <built-in method get of dict object at 0x7b3cff267540> = {'status': 'ok', 'kind': 'vergleich', 'id': 'vgl-kanal', 'sent': True}.get
+     +      where {'status': 'ok', 'kind': 'vergleich', 'id': 'vgl-kanal', 'sent': True} = <function body at 0x7b3d1fa5ea20>(<Response [200 OK]>)
+     +        where <function body at 0x7b3d1fa5ea20> = hv.body
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:637: AssertionError: {'status': 'ok', 'kind': 'vergleich', 'id': 'vgl-kanal', 'sent': True}
+E   AssertionError: Erwartet 400, bekommen 200: {"status":"ok","kind":"route","id":"trip-hv","sent":true,"report_type":"morning"}
+    assert 200 == 400
+     +  where 200 = <Response [200 OK]>.status_code
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:653: AssertionError: Erwartet 400, bekommen 200: {"status":"ok","kind":"route","id":"trip-hv","sent":true,"report_type":"morning"}
+E   AssertionError: Erwartet 400, bekommen 200: {"status":"ok","kind":"vergleich","id":"vgl-hv","sent":true}
+    assert 200 == 400
+     +  where 200 = <Response [200 OK]>.status_code
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:653: AssertionError: Erwartet 400, bekommen 200: {"status":"ok","kind":"vergleich","id":"vgl-hv","sent":true}
+E   AssertionError: Erwartet 400, bekommen 200: {"status":"ok","kind":"route","id":"trip-hv","sent":true,"report_type":"morning"}
+    assert 200 == 400
+     +  where 200 = <Response [200 OK]>.status_code
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:653: AssertionError: Erwartet 400, bekommen 200: {"status":"ok","kind":"route","id":"trip-hv","sent":true,"report_type":"morning"}
+E   AssertionError: Erwartet 400, bekommen 200: {"status":"ok","kind":"vergleich","id":"vgl-hv","sent":true}
+    assert 200 == 400
+     +  where 200 = <Response [200 OK]>.status_code
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:653: AssertionError: Erwartet 400, bekommen 200: {"status":"ok","kind":"vergleich","id":"vgl-hv","sent":true}
+E   AssertionError: Erwartet 400, bekommen 200: {"status":"ok","kind":"route","id":"trip-hv","sent":true,"report_type":"morning"}
+    assert 200 == 400
+     +  where 200 = <Response [200 OK]>.status_code
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:653: AssertionError: Erwartet 400, bekommen 200: {"status":"ok","kind":"route","id":"trip-hv","sent":true,"report_type":"morning"}
+E   AssertionError: Erwartet 400, bekommen 200: {"status":"ok","kind":"vergleich","id":"vgl-hv","sent":true}
+    assert 200 == 400
+     +  where 200 = <Response [200 OK]>.status_code
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:653: AssertionError: Erwartet 400, bekommen 200: {"status":"ok","kind":"vergleich","id":"vgl-hv","sent":true}
+E   AssertionError: Erwartet 400, bekommen 200: {"status":"ok","kind":"route","id":"trip-hv","sent":true,"report_type":"morning"}
+    assert 200 == 400
+     +  where 200 = <Response [200 OK]>.status_code
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:653: AssertionError: Erwartet 400, bekommen 200: {"status":"ok","kind":"route","id":"trip-hv","sent":true,"report_type":"morning"}
+E   AssertionError: Erwartet 400, bekommen 200: {"status":"ok","kind":"vergleich","id":"vgl-hv","sent":true}
+    assert 200 == 400
+     +  where 200 = <Response [200 OK]>.status_code
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:653: AssertionError: Erwartet 400, bekommen 200: {"status":"ok","kind":"vergleich","id":"vgl-hv","sent":true}
+E   AssertionError: Erwartet 4xx, bekommen 200: {"status":"ok","kind":"route","id":"trip-hv","sent":true,"report_type":"morning"}
+    assert 400 <= 200
+     +  where 200 = <Response [200 OK]>.status_code
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:671: AssertionError: Erwartet 4xx, bekommen 200: {"status":"ok","kind":"route","id":"trip-hv","sent":true,"report_type":"morning"}
+E   AssertionError: Erwartet 4xx, bekommen 200: {"status":"ok","kind":"vergleich","id":"vgl-hv","sent":true}
+    assert 400 <= 200
+     +  where 200 = <Response [200 OK]>.status_code
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:671: AssertionError: Erwartet 4xx, bekommen 200: {"status":"ok","kind":"vergleich","id":"vgl-hv","sent":true}
+E   AssertionError: Telegram-Test darf nicht am E-Mail-Gate scheitern: {"detail":"E-Mail-Versand (SMTP) ist für diesen Nutzer nicht eingerichtet","code":"smtp_not_configured"}
+    assert 422 == 200
+     +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:702: AssertionError: Telegram-Test darf nicht am E-Mail-Gate scheitern: {"detail":"E-Mail-Versand (SMTP) ist für diesen Nutzer nicht eingerichtet","code":"smtp_not_configured"}
+E   AssertionError: {'status': 'ok', 'kind': 'route', 'id': 'abo-aus', 'sent': True, ...}
+    assert None == ['telegram']
+     +  where None = <built-in method get of dict object at 0x7b3cff0a2f00>('sent_channels')
+     +    where <built-in method get of dict object at 0x7b3cff0a2f00> = {'status': 'ok', 'kind': 'route', 'id': 'abo-aus', 'sent': True, ...}.get
+     +      where {'status': 'ok', 'kind': 'route', 'id': 'abo-aus', 'sent': True, ...} = <function body at 0x7b3d1fa5ea20>(<Response [200 OK]>)
+     +        where <function body at 0x7b3d1fa5ea20> = hv.body
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:721: AssertionError: {'status': 'ok', 'kind': 'route', 'id': 'abo-aus', 'sent': True, ...}
+E   AssertionError: {'status': 'ok', 'kind': 'vergleich', 'id': 'abo-aus', 'sent': True}
+    assert None == ['telegram']
+     +  where None = <built-in method get of dict object at 0x7b3cff0a1040>('sent_channels')
+     +    where <built-in method get of dict object at 0x7b3cff0a1040> = {'status': 'ok', 'kind': 'vergleich', 'id': 'abo-aus', 'sent': True}.get
+     +      where {'status': 'ok', 'kind': 'vergleich', 'id': 'abo-aus', 'sent': True} = <function body at 0x7b3d1fa5ea20>(<Response [200 OK]>)
+     +        where <function body at 0x7b3d1fa5ea20> = hv.body
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:721: AssertionError: {'status': 'ok', 'kind': 'vergleich', 'id': 'abo-aus', 'sent': True}
+E   AssertionError: sms: 200 {"status":"ok","kind":"route","id":"tarif","sent":true,"report_type":"morning"}
+    assert 200 == 422
+     +  where 200 = <Response [200 OK]>.status_code
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:740: AssertionError: sms: 200 {"status":"ok","kind":"route","id":"tarif","sent":true,"report_type":"morning"}
+E   AssertionError: sms: 200 {"status":"ok","kind":"vergleich","id":"tarif","sent":true}
+    assert 200 == 422
+     +  where 200 = <Response [200 OK]>.status_code
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:740: AssertionError: sms: 200 {"status":"ok","kind":"vergleich","id":"tarif","sent":true}
+E   AssertionError: premium_sms: 200 {"status":"ok","kind":"route","id":"tarif","sent":true,"report_type":"morning"}
+    assert 200 == 422
+     +  where 200 = <Response [200 OK]>.status_code
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:740: AssertionError: premium_sms: 200 {"status":"ok","kind":"route","id":"tarif","sent":true,"report_type":"morning"}
+E   AssertionError: premium_sms: 200 {"status":"ok","kind":"vergleich","id":"tarif","sent":true}
+    assert 200 == 422
+     +  where 200 = <Response [200 OK]>.status_code
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:740: AssertionError: premium_sms: 200 {"status":"ok","kind":"vergleich","id":"tarif","sent":true}
+E   AssertionError: sent_channels fehlt: {'status': 'ok', 'kind': 'route', 'id': 'alle', 'sent': True, 'report_type': 'morning'}
+    assert False
+     +  where False = isinstance(None, list)
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:763: AssertionError: sent_channels fehlt: {'status': 'ok', 'kind': 'route', 'id': 'alle', 'sent': True, 'report_type': 'morning'}
+E   AssertionError: sent_channels fehlt: {'status': 'ok', 'kind': 'vergleich', 'id': 'alle', 'sent': True}
+    assert False
+     +  where False = isinstance(None, list)
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:763: AssertionError: sent_channels fehlt: {'status': 'ok', 'kind': 'vergleich', 'id': 'alle', 'sent': True}
+E   AssertionError: {'status': 'ok', 'kind': 'route', 'id': 'lock-abo', 'sent': True, ...}
+    assert None == ['telegram']
+     +  where None = <built-in method get of dict object at 0x7b3cff234b80>('sent_channels')
+     +    where <built-in method get of dict object at 0x7b3cff234b80> = {'status': 'ok', 'kind': 'route', 'id': 'lock-abo', 'sent': True, ...}.get
+     +      where {'status': 'ok', 'kind': 'route', 'id': 'lock-abo', 'sent': True, ...} = <function body at 0x7b3d1fa5ea20>(<Response [200 OK]>)
+     +        where <function body at 0x7b3d1fa5ea20> = hv.body
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:794: AssertionError: {'status': 'ok', 'kind': 'route', 'id': 'lock-abo', 'sent': True, ...}
+E   AssertionError: {'status': 'ok', 'kind': 'vergleich', 'id': 'lock-abo', 'sent': True}
+    assert None == ['telegram']
+     +  where None = <built-in method get of dict object at 0x7b3cff237240>('sent_channels')
+     +    where <built-in method get of dict object at 0x7b3cff237240> = {'status': 'ok', 'kind': 'vergleich', 'id': 'lock-abo', 'sent': True}.get
+     +      where {'status': 'ok', 'kind': 'vergleich', 'id': 'lock-abo', 'sent': True} = <function body at 0x7b3d1fa5ea20>(<Response [200 OK]>)
+     +        where <function body at 0x7b3d1fa5ea20> = hv.body
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:794: AssertionError: {'status': 'ok', 'kind': 'vergleich', 'id': 'lock-abo', 'sent': True}
+E   AssertionError: {'status': 'ok', 'kind': 'route', 'id': 'geteilt', 'sent': True, ...}
+    assert None == ['telegram']
+     +  where None = <built-in method get of dict object at 0x7b3cff0cf540>('sent_channels')
+     +    where <built-in method get of dict object at 0x7b3cff0cf540> = {'status': 'ok', 'kind': 'route', 'id': 'geteilt', 'sent': True, ...}.get
+     +      where {'status': 'ok', 'kind': 'route', 'id': 'geteilt', 'sent': True, ...} = <function body at 0x7b3d1fa5ea20>(<Response [200 OK]>)
+     +        where <function body at 0x7b3d1fa5ea20> = hv.body
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:818: AssertionError: {'status': 'ok', 'kind': 'route', 'id': 'geteilt', 'sent': True, ...}
+E   AssertionError: {'status': 'ok', 'kind': 'vergleich', 'id': 'geteilt', 'sent': True}
+    assert None == ['telegram']
+     +  where None = <built-in method get of dict object at 0x7b3d00fe6780>('sent_channels')
+     +    where <built-in method get of dict object at 0x7b3d00fe6780> = {'status': 'ok', 'kind': 'vergleich', 'id': 'geteilt', 'sent': True}.get
+     +      where {'status': 'ok', 'kind': 'vergleich', 'id': 'geteilt', 'sent': True} = <function body at 0x7b3d1fa5ea20>(<Response [200 OK]>)
+     +        where <function body at 0x7b3d1fa5ea20> = hv.body
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:818: AssertionError: {'status': 'ok', 'kind': 'vergleich', 'id': 'geteilt', 'sent': True}
+E   AssertionError: {'status': 'ok', 'kind': 'route', 'id': 'kontingent', 'sent': True, ...}
+    assert None == ['telegram']
+     +  where None = <built-in method get of dict object at 0x7b3cff0e4340>('sent_channels')
+     +    where <built-in method get of dict object at 0x7b3cff0e4340> = {'status': 'ok', 'kind': 'route', 'id': 'kontingent', 'sent': True, ...}.get
+     +      where {'status': 'ok', 'kind': 'route', 'id': 'kontingent', 'sent': True, ...} = <function body at 0x7b3d1fa5ea20>(<Response [200 OK]>)
+     +        where <function body at 0x7b3d1fa5ea20> = hv.body
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:846: AssertionError: {'status': 'ok', 'kind': 'route', 'id': 'kontingent', 'sent': True, ...}
+E   AssertionError: {'status': 'ok', 'kind': 'route', 'id': 'voll', 'sent': True, ...}
+    assert None == ['telegram']
+     +  where None = <built-in method get of dict object at 0x7b3cff0a87c0>('sent_channels')
+     +    where <built-in method get of dict object at 0x7b3cff0a87c0> = {'status': 'ok', 'kind': 'route', 'id': 'voll', 'sent': True, ...}.get
+     +      where {'status': 'ok', 'kind': 'route', 'id': 'voll', 'sent': True, ...} = <function body at 0x7b3d1fa5ea20>(<Response [200 OK]>)
+     +        where <function body at 0x7b3d1fa5ea20> = hv.body
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:873: AssertionError: {'status': 'ok', 'kind': 'route', 'id': 'voll', 'sent': True, ...}
+E   AssertionError: {'status': 'ok', 'kind': 'route', 'id': 'voll', 'sent': True, ...}
+    assert None == ['email']
+     +  where None = <built-in method get of dict object at 0x7b3cff1f9280>('sent_channels')
+     +    where <built-in method get of dict object at 0x7b3cff1f9280> = {'status': 'ok', 'kind': 'route', 'id': 'voll', 'sent': True, ...}.get
+     +      where {'status': 'ok', 'kind': 'route', 'id': 'voll', 'sent': True, ...} = <function body at 0x7b3d1fa5ea20>(<Response [200 OK]>)
+     +        where <function body at 0x7b3d1fa5ea20> = hv.body
+----------------------------- Captured stderr call -----------------------------
+------------------------------ Captured log call -------------------------------
+/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/tests/tdd/test_briefings_send_endpoint.py:873: AssertionError: {'status': 'ok', 'kind': 'route', 'id': 'voll', 'sent': True, ...}
+=========================== short test summary info ============================
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac6_trip_channel_bedient_nur_den_gewaehlten_kanal[email]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac6_trip_channel_bedient_nur_den_gewaehlten_kanal[telegram]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac6_trip_channel_bedient_nur_den_gewaehlten_kanal[sms]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac6_trip_channel_bedient_nur_den_gewaehlten_kanal[premium_sms]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac6_vergleich_channel_bedient_nur_den_gewaehlten_kanal[email]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac6_vergleich_channel_bedient_nur_den_gewaehlten_kanal[telegram]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac6_vergleich_channel_bedient_nur_den_gewaehlten_kanal[sms]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac6_vergleich_channel_bedient_nur_den_gewaehlten_kanal[premium_sms]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac7_unbekannter_kanal_400_invalid_channel_ohne_versand[signal-route]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac7_unbekannter_kanal_400_invalid_channel_ohne_versand[signal-vergleich]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac7_unbekannter_kanal_400_invalid_channel_ohne_versand[EMAIL-route]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac7_unbekannter_kanal_400_invalid_channel_ohne_versand[EMAIL-vergleich]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac7_unbekannter_kanal_400_invalid_channel_ohne_versand[alle-route]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac7_unbekannter_kanal_400_invalid_channel_ohne_versand[alle-vergleich]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac7_unbekannter_kanal_400_invalid_channel_ohne_versand[email,telegram-route]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac7_unbekannter_kanal_400_invalid_channel_ohne_versand[email,telegram-vergleich]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac5_channel_email_bei_unbestaetigter_adresse_abgelehnt[route]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac5_channel_email_bei_unbestaetigter_adresse_abgelehnt[vergleich]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac9_telegram_ohne_mail_to_scheitert_nicht_am_email_gate
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac8_im_abo_ausgeschalteter_kanal_wird_bei_channel_bedient[route]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac8_im_abo_ausgeschalteter_kanal_wird_bei_channel_bedient[vergleich]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac8_tarif_gate_bleibt_channels_unreachable[sms-route]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac8_tarif_gate_bleibt_channels_unreachable[sms-vergleich]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac8_tarif_gate_bleibt_channels_unreachable[premium_sms-route]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac8_tarif_gate_bleibt_channels_unreachable[premium_sms-vergleich]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac10_alle_kanaele_antwort_enthaelt_sent_channels[route]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac10_alle_kanaele_antwort_enthaelt_sent_channels[vergleich]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac13_lock_gilt_je_abo_nicht_je_kanal[route]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac13_lock_gilt_je_abo_nicht_je_kanal[vergleich]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac14_zwei_nutzer_channel_waehlt_nie_den_empfaenger[route]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac14_zwei_nutzer_channel_waehlt_nie_den_empfaenger[vergleich]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac21_jeder_klick_bucht_manueller_abruf_auch_einzelkanal
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac21_erschoepftes_kontingent_auch_bei_einzelkanal[telegram]
+FAILED tests/tdd/test_briefings_send_endpoint.py::test_3440_ac21_erschoepftes_kontingent_auch_bei_einzelkanal[email]
+
+================================================================
+## Schicht 2: Go  go test ./internal/handler/ -run 'TestBriefingSend' -v
+================================================================
+--- PASS: TestBriefingSend_KindPflicht_400OhneUpstream (0.00s)
+    --- PASS: TestBriefingSend_KindPflicht_400OhneUpstream/kind_fehlt (0.00s)
+    --- PASS: TestBriefingSend_KindPflicht_400OhneUpstream/kind_leer (0.00s)
+    --- PASS: TestBriefingSend_KindPflicht_400OhneUpstream/kind_falsch_trip (0.00s)
+    --- PASS: TestBriefingSend_KindPflicht_400OhneUpstream/kind_falsch_compare (0.00s)
+    --- PASS: TestBriefingSend_KindPflicht_400OhneUpstream/kind_Grossschreibung (0.00s)
+    --- PASS: TestBriefingSend_KindPflicht_400OhneUpstream/Kontrolle_route (0.00s)
+    --- PASS: TestBriefingSend_KindPflicht_400OhneUpstream/Kontrolle_vergleich (0.00s)
+--- PASS: TestBriefingSend_UngueltigeID_400OhneUpstream (0.00s)
+    --- PASS: TestBriefingSend_UngueltigeID_400OhneUpstream/route/.hidden (0.00s)
+    --- PASS: TestBriefingSend_UngueltigeID_400OhneUpstream/vergleich/.hidden (0.00s)
+    --- PASS: TestBriefingSend_UngueltigeID_400OhneUpstream/route/.. (0.00s)
+    --- PASS: TestBriefingSend_UngueltigeID_400OhneUpstream/vergleich/.. (0.00s)
+    --- PASS: TestBriefingSend_UngueltigeID_400OhneUpstream/route/a%5Cb (0.00s)
+    --- PASS: TestBriefingSend_UngueltigeID_400OhneUpstream/vergleich/a%5Cb (0.00s)
+--- PASS: TestBriefingSend_ZweiNutzer_UserIDAusAuthKontext (0.01s)
+    --- PASS: TestBriefingSend_ZweiNutzer_UserIDAusAuthKontext/route (0.00s)
+    --- PASS: TestBriefingSend_ZweiNutzer_UserIDAusAuthKontext/vergleich (0.00s)
+--- PASS: TestBriefingSend_WeiterleitungUndDurchreichen (0.00s)
+    --- PASS: TestBriefingSend_WeiterleitungUndDurchreichen/route_Erfolg (0.00s)
+    --- PASS: TestBriefingSend_WeiterleitungUndDurchreichen/vergleich_Erfolg (0.00s)
+    --- PASS: TestBriefingSend_WeiterleitungUndDurchreichen/route_no_channels (0.00s)
+    --- PASS: TestBriefingSend_WeiterleitungUndDurchreichen/vergleich_channels_unreachable (0.00s)
+    --- PASS: TestBriefingSend_WeiterleitungUndDurchreichen/vergleich_not_found (0.00s)
+    --- PASS: TestBriefingSend_WeiterleitungUndDurchreichen/route_already_in_progress (0.00s)
+--- PASS: TestBriefingSend_ReportTypeNurBeiRoute (0.00s)
+    --- PASS: TestBriefingSend_ReportTypeNurBeiRoute/vergleich (0.00s)
+    --- PASS: TestBriefingSend_ReportTypeNurBeiRoute/route (0.00s)
+--- PASS: TestBriefingSend_ClientAbbruchBrichtUpstreamNichtAb (0.80s)
+    --- PASS: TestBriefingSend_ClientAbbruchBrichtUpstreamNichtAb/route (0.40s)
+    --- PASS: TestBriefingSend_ClientAbbruchBrichtUpstreamNichtAb/vergleich (0.40s)
+--- PASS: TestBriefingSend_AltRoutenDelegateGleichheit (0.02s)
+    --- PASS: TestBriefingSend_AltRoutenDelegateGleichheit/Trip/OK (0.00s)
+    --- PASS: TestBriefingSend_AltRoutenDelegateGleichheit/Trip/Unprocessable_Entity (0.00s)
+    --- PASS: TestBriefingSend_AltRoutenDelegateGleichheit/Trip/Unprocessable_Entity#01 (0.00s)
+    --- PASS: TestBriefingSend_AltRoutenDelegateGleichheit/Trip/Conflict (0.00s)
+    --- PASS: TestBriefingSend_AltRoutenDelegateGleichheit/Trip/Not_Found (0.00s)
+    --- PASS: TestBriefingSend_AltRoutenDelegateGleichheit/Ortsvergleich/OK (0.00s)
+    --- PASS: TestBriefingSend_AltRoutenDelegateGleichheit/Ortsvergleich/Unprocessable_Entity (0.00s)
+    --- PASS: TestBriefingSend_AltRoutenDelegateGleichheit/Ortsvergleich/Unprocessable_Entity#01 (0.00s)
+    --- PASS: TestBriefingSend_AltRoutenDelegateGleichheit/Ortsvergleich/Conflict (0.00s)
+    --- PASS: TestBriefingSend_AltRoutenDelegateGleichheit/Ortsvergleich/Not_Found (0.00s)
+--- PASS: TestBriefingSend_UpstreamUnerreichbar_502FormA (0.00s)
+    --- PASS: TestBriefingSend_UpstreamUnerreichbar_502FormA//api/briefings/t-2280/send?kind=route (0.00s)
+    --- PASS: TestBriefingSend_UpstreamUnerreichbar_502FormA//api/briefings/t-2280/send?kind=vergleich (0.00s)
+    --- PASS: TestBriefingSend_UpstreamUnerreichbar_502FormA//api/trips/t-2280/send (0.00s)
+    --- PASS: TestBriefingSend_UpstreamUnerreichbar_502FormA//api/compare/presets/t-2280/send (0.00s)
+--- PASS: TestBriefingSend_AltTripRouteReichtReportTypeDurch (0.00s)
+--- PASS: TestBriefingSend_AnfrageNichtBaubar_500ProxyError (0.00s)
+    --- PASS: TestBriefingSend_AnfrageNichtBaubar_500ProxyError//api/briefings/t-2280/send?kind=route (0.00s)
+    --- PASS: TestBriefingSend_AnfrageNichtBaubar_500ProxyError//api/briefings/t-2280/send?kind=vergleich (0.00s)
+    --- PASS: TestBriefingSend_AnfrageNichtBaubar_500ProxyError//api/trips/t-2280/send (0.00s)
+    --- PASS: TestBriefingSend_AnfrageNichtBaubar_500ProxyError//api/compare/presets/t-2280/send (0.00s)
+--- PASS: TestBriefingSend_KindRequiredTextGleichPythonFassung (0.00s)
+    briefing_send_test.go:574: Upstream-channel = [], erwartet genau [email] (Whitelist-Name durchreichen)
+    briefing_send_test.go:574: Upstream-channel = [], erwartet genau [telegram] (Whitelist-Name durchreichen)
+    briefing_send_test.go:574: Upstream-channel = [], erwartet genau [sms] (Whitelist-Name durchreichen)
+    briefing_send_test.go:574: Upstream-channel = [], erwartet genau [premium_sms] (Whitelist-Name durchreichen)
+    briefing_send_test.go:574: Upstream-channel = [], erwartet genau [email] (Whitelist-Name durchreichen)
+    briefing_send_test.go:574: Upstream-channel = [], erwartet genau [telegram] (Whitelist-Name durchreichen)
+    briefing_send_test.go:574: Upstream-channel = [], erwartet genau [sms] (Whitelist-Name durchreichen)
+    briefing_send_test.go:574: Upstream-channel = [], erwartet genau [premium_sms] (Whitelist-Name durchreichen)
+--- FAIL: TestBriefingSend3440_ChannelWhitelistWirdWeitergereicht (0.01s)
+    --- FAIL: TestBriefingSend3440_ChannelWhitelistWirdWeitergereicht/route/email (0.00s)
+    --- FAIL: TestBriefingSend3440_ChannelWhitelistWirdWeitergereicht/route/telegram (0.00s)
+    --- FAIL: TestBriefingSend3440_ChannelWhitelistWirdWeitergereicht/route/sms (0.00s)
+    --- FAIL: TestBriefingSend3440_ChannelWhitelistWirdWeitergereicht/route/premium_sms (0.00s)
+    --- FAIL: TestBriefingSend3440_ChannelWhitelistWirdWeitergereicht/vergleich/email (0.00s)
+    --- FAIL: TestBriefingSend3440_ChannelWhitelistWirdWeitergereicht/vergleich/telegram (0.00s)
+    --- FAIL: TestBriefingSend3440_ChannelWhitelistWirdWeitergereicht/vergleich/sms (0.00s)
+    --- FAIL: TestBriefingSend3440_ChannelWhitelistWirdWeitergereicht/vergleich/premium_sms (0.00s)
+    briefing_send_test.go:607: Status 200, erwartet 400 bei channel="signal" (body="{\"ok\":true}")
+    briefing_send_test.go:609: Fehler-Body ist kein JSON-Objekt aus Strings: json: cannot unmarshal bool into Go value of type string (body="{\"ok\":true}")
+    briefing_send_test.go:607: Status 200, erwartet 400 bei channel="EMAIL" (body="{\"ok\":true}")
+    briefing_send_test.go:609: Fehler-Body ist kein JSON-Objekt aus Strings: json: cannot unmarshal bool into Go value of type string (body="{\"ok\":true}")
+    briefing_send_test.go:607: Status 200, erwartet 400 bei channel="alle" (body="{\"ok\":true}")
+    briefing_send_test.go:609: Fehler-Body ist kein JSON-Objekt aus Strings: json: cannot unmarshal bool into Go value of type string (body="{\"ok\":true}")
+    briefing_send_test.go:607: Status 200, erwartet 400 bei channel="email,telegram" (body="{\"ok\":true}")
+    briefing_send_test.go:609: Fehler-Body ist kein JSON-Objekt aus Strings: json: cannot unmarshal bool into Go value of type string (body="{\"ok\":true}")
+    briefing_send_test.go:607: Status 200, erwartet 400 bei channel="push" (body="{\"ok\":true}")
+    briefing_send_test.go:609: Fehler-Body ist kein JSON-Objekt aus Strings: json: cannot unmarshal bool into Go value of type string (body="{\"ok\":true}")
+    briefing_send_test.go:607: Status 200, erwartet 400 bei channel="sms%20" (body="{\"ok\":true}")
+    briefing_send_test.go:609: Fehler-Body ist kein JSON-Objekt aus Strings: json: cannot unmarshal bool into Go value of type string (body="{\"ok\":true}")
+    briefing_send_test.go:607: Status 200, erwartet 400 bei channel="signal" (body="{\"ok\":true}")
+    briefing_send_test.go:609: Fehler-Body ist kein JSON-Objekt aus Strings: json: cannot unmarshal bool into Go value of type string (body="{\"ok\":true}")
+    briefing_send_test.go:607: Status 200, erwartet 400 bei channel="EMAIL" (body="{\"ok\":true}")
+    briefing_send_test.go:609: Fehler-Body ist kein JSON-Objekt aus Strings: json: cannot unmarshal bool into Go value of type string (body="{\"ok\":true}")
+    briefing_send_test.go:607: Status 200, erwartet 400 bei channel="alle" (body="{\"ok\":true}")
+    briefing_send_test.go:609: Fehler-Body ist kein JSON-Objekt aus Strings: json: cannot unmarshal bool into Go value of type string (body="{\"ok\":true}")
+    briefing_send_test.go:607: Status 200, erwartet 400 bei channel="email,telegram" (body="{\"ok\":true}")
+    briefing_send_test.go:609: Fehler-Body ist kein JSON-Objekt aus Strings: json: cannot unmarshal bool into Go value of type string (body="{\"ok\":true}")
+    briefing_send_test.go:607: Status 200, erwartet 400 bei channel="push" (body="{\"ok\":true}")
+    briefing_send_test.go:609: Fehler-Body ist kein JSON-Objekt aus Strings: json: cannot unmarshal bool into Go value of type string (body="{\"ok\":true}")
+    briefing_send_test.go:607: Status 200, erwartet 400 bei channel="sms%20" (body="{\"ok\":true}")
+    briefing_send_test.go:609: Fehler-Body ist kein JSON-Objekt aus Strings: json: cannot unmarshal bool into Go value of type string (body="{\"ok\":true}")
+    briefing_send_test.go:620: channel doppelt (email+signal): Status 200 / Upstream 1, erwartet 400 / 0
+--- FAIL: TestBriefingSend3440_UnbekannterChannel_400OhneUpstream (0.01s)
+    --- FAIL: TestBriefingSend3440_UnbekannterChannel_400OhneUpstream/route/signal (0.00s)
+    --- FAIL: TestBriefingSend3440_UnbekannterChannel_400OhneUpstream/route/EMAIL (0.00s)
+    --- FAIL: TestBriefingSend3440_UnbekannterChannel_400OhneUpstream/route/alle (0.00s)
+    --- FAIL: TestBriefingSend3440_UnbekannterChannel_400OhneUpstream/route/email,telegram (0.00s)
+    --- FAIL: TestBriefingSend3440_UnbekannterChannel_400OhneUpstream/route/push (0.00s)
+    --- FAIL: TestBriefingSend3440_UnbekannterChannel_400OhneUpstream/route/sms%20 (0.00s)
+    --- FAIL: TestBriefingSend3440_UnbekannterChannel_400OhneUpstream/vergleich/signal (0.00s)
+    --- FAIL: TestBriefingSend3440_UnbekannterChannel_400OhneUpstream/vergleich/EMAIL (0.00s)
+    --- FAIL: TestBriefingSend3440_UnbekannterChannel_400OhneUpstream/vergleich/alle (0.00s)
+    --- FAIL: TestBriefingSend3440_UnbekannterChannel_400OhneUpstream/vergleich/email,telegram (0.00s)
+    --- FAIL: TestBriefingSend3440_UnbekannterChannel_400OhneUpstream/vergleich/push (0.00s)
+    --- FAIL: TestBriefingSend3440_UnbekannterChannel_400OhneUpstream/vergleich/sms%20 (0.00s)
+    briefing_send_test.go:644: Upstream-channel = [], erwartet [telegram]
+    briefing_send_test.go:644: Upstream-channel = [], erwartet [telegram]
+--- FAIL: TestBriefingSend3440_ZweiNutzer_ChannelWaehltNieDenNutzer (0.00s)
+    --- FAIL: TestBriefingSend3440_ZweiNutzer_ChannelWaehltNieDenNutzer/route (0.00s)
+    --- FAIL: TestBriefingSend3440_ZweiNutzer_ChannelWaehltNieDenNutzer/vergleich (0.00s)
+FAIL
+FAIL	github.com/henemm/gregor-api/internal/handler	0.888s
+FAIL
+
+================================================================
+## Schicht 3: Frontend (node --test via npm test)
+================================================================
+# Subtest: \#3440 AC-3 — vier Kanalzeilen in fester Reihenfolge mit Zielen
+    not ok 1 - alle verbunden: E-Mail, Telegram, SMS, Premium-SMS mit gekürzten Zielen, alle bedienbar
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+    not ok 2 - Telegram-Ziel nennt nie Chat-ID oder Namen (\#3202), E-Mail nie die volle Adresse
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+    not ok 3 - EN: Kanalnamen und Ziele aus dem englischen Katalog, Premium-Ziel nicht deutsch
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+not ok 1 - \#3440 AC-3 — vier Kanalzeilen in fester Reihenfolge mit Zielen
+  error: '3 subtests failed'
+# Subtest: \#3440 AC-4 — gesperrte Kanäle: Grund und Konto-Verb aus kanalStatus
+    not ok 1 - Lücken (de): Telegram/SMS/Premium gesperrt, Grund + Verb + Text identisch zu kanalStatus
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+    not ok 2 - Lücken (en): Telegram/SMS/Premium gesperrt, Grund + Verb + Text identisch zu kanalStatus
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+    not ok 3 - DE-Wortlaut wie Mockup: „gesperrt: Telegram-Chat fehlt.“ / „Im Konto verbinden →“ usw.
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+    not ok 4 - Tarif ohne SMS/Premium: Sperre folgt kanalStatus (Verb „prüfen“), nicht eigener Logik
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+not ok 2 - \#3440 AC-4 — gesperrte Kanäle: Grund und Konto-Verb aus kanalStatus
+  error: '4 subtests failed'
+# Subtest: \#3440 AC-5 — E-Mail unbestätigt ist im Menü gesperrt (ADR-0092)
+    not ok 1 - email_verified=false: „gesperrt: Adresse noch nicht bestätigt.“ + „Im Konto bestätigen →“
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+    not ok 2 - ohne mail_to: E-Mail gesperrt mit dem Grund aus kanalStatus (Verb „verbinden“)
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+not ok 3 - \#3440 AC-5 — E-Mail unbestätigt ist im Menü gesperrt (ADR-0092)
+  error: '2 subtests failed'
+# Subtest: \#3440 AC-2 — Segment Morgen/Abend nur bei context="route"
+    not ok 1 - route: Segment mit Vorauswahl Morgen und zwei Optionen aus dem Katalog
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+    not ok 2 - vergleich: kein Segment, auch nicht bei übergebener Berichtsart
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+    not ok 3 - beide Kontexte: dieselben vier Zeilen (ein Baustein, ADR-0097)
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+not ok 4 - \#3440 AC-2 — Segment Morgen/Abend nur bei context="route"
+  error: '3 subtests failed'
+# Subtest: \#3440 AC-19 — Struktur mit Erweiterungs-Slot, kein „Test-Alarm“ in S5a
+    not ok 1 - route: „Alle eingerichteten Kanäle“ + leerer Erweiterungs-Slot, nirgends „Test-Alarm“
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+    not ok 2 - vergleich: „Alle eingerichteten Kanäle“ + leerer Erweiterungs-Slot, nirgends „Test-Alarm“
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+not ok 5 - \#3440 AC-19 — Struktur mit Erweiterungs-Slot, kein „Test-Alarm“ in S5a
+  error: '2 subtests failed'
+# Subtest: \#3440 AC-11 — Einzel-Rückmeldung „{Briefing} an {Kanal} geschickt · {Ziel} · {hh:mm}“
+    not ok 1 - Trip Morgen, E-Mail, Uhr 20:41
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+    not ok 2 - Trip Abend, Telegram, Uhr zweistellig aufgefüllt (07:05)
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+    not ok 3 - Orte: neutrales „Briefing“ (nicht „Orts-Briefing“), Berichtsart ohne Wirkung
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+    not ok 4 - Uhr ist injiziert: andere Zeit ⇒ anderer Text (keine eingebaute Systemuhr)
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+    not ok 5 - EN: Text aus dem englischen Katalog, kein deutsches „geschickt“
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+not ok 6 - \#3440 AC-11 — Einzel-Rückmeldung „{Briefing} an {Kanal} geschickt · {Ziel} · {hh:mm}“
+  error: '5 subtests failed'
+# Subtest: \#3440 AC-10 — „Alle“: ✓ / übersprungen ({Grund}) / fehlgeschlagen
+    not ok 1 - Lücken-Profil, gesendet nur E-Mail: Telegram/Premium übersprungen mit Grund aus kanalStatus
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+    not ok 2 - bedienbar, aber nicht gesendet ⇒ „fehlgeschlagen“; Orte mit neutralem „Briefing“
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+    not ok 3 - Abend-Briefing, alles gesendet ⇒ vier Haken
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+    not ok 4 - Reihenfolge folgt den Zeilen, nicht der Reihenfolge in sent_channels
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+    not ok 5 - EN: kein deutsches „übersprungen“/„fehlgeschlagen“
+      error: "TDD RED: molecules/testSchickenModell.ts fehlt oder lädt nicht (Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/testSchickenModell.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle/frontend/src/lib/components/molecules/__tests__/test_schicken_modell.test.ts)"
+not ok 7 - \#3440 AC-10 — „Alle“: ✓ / übersprungen ({Grund}) / fehlgeschlagen
+  error: '5 subtests failed'
+# Subtest: \#3440 AC-1 — beide Hubs nutzen denselben Baustein TestSchickenMenue
+    not ok 1 - Baustein existiert, trägt data-abschnitt="test-menue" und ruft keine API
+      error: 'TDD RED: Baustein fehlt: lib/components/molecules/TestSchickenMenue.svelte'
+    not ok 2 - Trip-Hub: TestSchickenMenue genau einmal in der Kette [id]/+page.svelte → trip-detail/TripHeader.svelte → hub-kopf/HubKopf.svelte
+    not ok 3 - Orte-Hub: TestSchickenMenue genau einmal in der Kette [id]/+page.svelte → hub-kopf/HubKopf.svelte
+    not ok 4 - Trip-Hub: kein SendConfirmDialog mehr im Hub (weder eingebunden noch importiert)
+    not ok 5 - Orte-Hub: kein SendConfirmDialog mehr im Hub (weder eingebunden noch importiert)
+not ok 8 - \#3440 AC-1 — beide Hubs nutzen denselben Baustein TestSchickenMenue
+  error: '5 subtests failed'
+# Subtest: \#3440 AC-15 / AC-20 — Kopf-Knopf öffnet das Menü (aria), bleibt gesperrt bzw. im Setup ohne Menü
+    not ok 1 - subscription-hub-send: Btn accent, aria-haspopup="menu", aria-expanded als Ausdruck, disabled = sendDisabled, kein onSend
+    not ok 2 - Menü steht (falls im HubKopf) nur außerhalb des Setup-Modus — im Entwurf öffnet sich nichts
+      error: 'TDD RED: TestSchickenMenue ist nirgends gebunden'
+    not ok 3 - Trip-Seite reicht onTest an TripHeader, TripHeader an HubKopf; Orte-Seite reicht onTest an HubKopf
+      error: 'Trip-Seite: TripHeader ohne onTest'
+not ok 9 - \#3440 AC-15 / AC-20 — Kopf-Knopf öffnet das Menü (aria), bleibt gesperrt bzw. im Setup ohne Menü
+  error: '3 subtests failed'
+# Subtest: \#3440 AC-11 / AC-12 — einheitliche Rückmeldung in beiden Hubs
+    not ok 1 - Trip-Hub: Rückmeldung mit testids test-schicken-ok und test-schicken-fehler
+    not ok 2 - Orte-Hub: Rückmeldung mit testids test-schicken-ok und test-schicken-fehler
+not ok 10 - \#3440 AC-11 / AC-12 — einheitliche Rückmeldung in beiden Hubs
+  error: '2 subtests failed'
+# Versand trip:t-422 fehlgeschlagen: HTTP 422
+# Versand trip:t-429 fehlgeschlagen: HTTP 429
+# Versand trip:t-422 fehlgeschlagen: HTTP 422
+# Versand trip:t-500 fehlgeschlagen: HTTP 500
+# Subtest: \#3440 AC-6 — briefingSendUrl mit channel
+    not ok 1 - route + email: kind, report_type und channel in der URL
+    not ok 2 - route + telegram: kind, report_type und channel in der URL
+    not ok 3 - route + sms: kind, report_type und channel in der URL
+    not ok 4 - route + premium_sms: kind, report_type und channel in der URL
+    not ok 5 - vergleich + telegram: channel, kein report_type
+not ok 11 - \#3440 AC-6 — briefingSendUrl mit channel
+  error: '5 subtests failed'
+# Subtest: \#3440 AC-6 — sendSubscription reicht channel durch und liefert sentChannels
+    not ok 1 - Trip, Abend, Telegram ⇒ genau ein POST mit channel=telegram; Ergebnis ok mit sentChannels
+    not ok 2 - Vergleich, E-Mail ⇒ channel=email, ohne report_type
+not ok 12 - \#3440 AC-6 — sendSubscription reicht channel durch und liefert sentChannels
+  error: '2 subtests failed'
+# Subtest: \#3440 AC-10 — „Alle eingerichteten Kanäle“: ohne channel, sentChannels aus der Antwort
+    not ok 1 - trip: kein channel-Parameter, sentChannels = sent_channels
+    not ok 2 - vergleich: kein channel-Parameter, sentChannels = sent_channels
+not ok 13 - \#3440 AC-10 — „Alle eingerichteten Kanäle“: ohne channel, sentChannels aus der Antwort
+  error: '2 subtests failed'
+# Subtest: \#3440 AC-12 — Fehlerfälle beim Einzelkanal: bestehende Texte, Request trägt channel
+    not ok 1 - Kanal nicht erreichbar (422)
+    not ok 2 - Kontingent erschöpft (429)
+    not ok 3 - E-Mail unbestätigt (422)
+    not ok 4 - läuft bereits (409)
+    not ok 5 - Serverfehler (500)
+not ok 14 - \#3440 AC-12 — Fehlerfälle beim Einzelkanal: bestehende Texte, Request trägt channel
+  error: '5 subtests failed'
+# tests 48
+# suites 14
+# pass 0
+# fail 48
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 766.315349
+
+================================================================
+## Playwright (nur Syntax/Liste, NICHT gegen Staging ausgefuehrt)
+================================================================
+Listing tests:
+  hub-send-menue.staging.spec.ts:126:2 › AC-1/AC-17 (route): Knopf öffnet das Menü am Knopf, kein Dialog „Briefing senden?“
+  hub-send-menue.staging.spec.ts:126:2 › AC-1/AC-17 (vergleich): Knopf öffnet das Menü am Knopf, kein Dialog „Briefing senden?“
+  hub-send-menue.staging.spec.ts:135:1 › AC-2 (Trip): Segment Morgen/Abend, Vorauswahl Morgen, Wechsel lässt das Menü offen
+  hub-send-menue.staging.spec.ts:147:1 › AC-2 (Orte): kein Segment im Menü
+  hub-send-menue.staging.spec.ts:157:2 › AC-3 (route): vier Kanalzeilen in Reihenfolge, Ziele gekürzt, Telegram nur „verbunden“
+  hub-send-menue.staging.spec.ts:157:2 › AC-3 (vergleich): vier Kanalzeilen in Reihenfolge, Ziele gekürzt, Telegram nur „verbunden“
+  hub-send-menue.staging.spec.ts:175:2 › AC-4 (route): Lücken — Telegram/SMS/Premium gesperrt mit Grund und Konto-Link, Klick sendet nichts
+  hub-send-menue.staging.spec.ts:175:2 › AC-4 (vergleich): Lücken — Telegram/SMS/Premium gesperrt mit Grund und Konto-Link, Klick sendet nichts
+  hub-send-menue.staging.spec.ts:215:3 › AC-6/AC-11 (route, email): genau ein Request mit channel, nur dieser Kanal bedient, Rückmeldung 5 s
+  hub-send-menue.staging.spec.ts:215:3 › AC-6/AC-11 (route, telegram): genau ein Request mit channel, nur dieser Kanal bedient, Rückmeldung 5 s
+  hub-send-menue.staging.spec.ts:215:3 › AC-6/AC-11 (vergleich, email): genau ein Request mit channel, nur dieser Kanal bedient, Rückmeldung 5 s
+  hub-send-menue.staging.spec.ts:215:3 › AC-6/AC-11 (vergleich, telegram): genau ein Request mit channel, nur dieser Kanal bedient, Rückmeldung 5 s
+  hub-send-menue.staging.spec.ts:235:1 › AC-11 (Orte, Handy 390 px): Rückmeldung sichtbar und gleich aufgebaut
+  hub-send-menue.staging.spec.ts:246:1 › AC-10 (Trip): „Alle eingerichteten Kanäle“ sendet ohne channel, Rückmeldung je Kanal
+  hub-send-menue.staging.spec.ts:266:2 › AC-12 (route): Fehlerantwort erscheint als test-schicken-fehler mit Server-Text
+  hub-send-menue.staging.spec.ts:266:2 › AC-12 (vergleich): Fehlerantwort erscheint als test-schicken-fehler mit Server-Text
+  hub-send-menue.staging.spec.ts:282:1 › AC-15 (Desktop): Escape und Außenklick schließen, Tastatur öffnet und bewegt den Fokus
+  hub-send-menue.staging.spec.ts:305:1 › AC-15 (Handy 390 px): Sheet statt Dropdown, Zeilen mindestens 44 px hoch
+  hub-send-menue.staging.spec.ts:319:2 › AC-18 (route): Liste zeigt weiter den Dialog „Briefing senden?“, Versand erst nach Bestätigen
+  hub-send-menue.staging.spec.ts:319:2 › AC-18 (vergleich): Liste zeigt weiter den Dialog „Briefing senden?“, Versand erst nach Bestätigen
+  hub-send-menue.staging.spec.ts:337:2 › AC-20 (route): archiviertes Abo — Knopf gesperrt, Menü öffnet sich nicht
+  hub-send-menue.staging.spec.ts:337:2 › AC-20 (vergleich): archiviertes Abo — Knopf gesperrt, Menü öffnet sich nicht
+Total: 22 tests in 1 file

@@ -456,6 +456,11 @@ export function bedienPlan(abschnitt: string, lage: BedienLage): BedienPlan {
 			schritte: [{ aktion: 'klick', testid: ALS_EIGENE }, { aktion: 'klick', testid: 'save-preset-submit' }, LESEN, { aktion: 'schliessen', testid: SPEICHERN_ABBRECHEN }]
 		};
 	}
+	// #3440 (AC-17): Menü „Test schicken ▾“ — Kopf-Knopf öffnet, lesen, Escape schließt. Kein Kanal wird
+	// geklickt, also geht nichts raus (Schreib-Tripwire bleibt scharf).
+	if (abschnitt === 'test-menue') {
+		return { art: 'plan', schritte: [{ aktion: 'klick', testid: 'subscription-hub-send' }, LESEN, { aktion: 'schliessen', taste: 'Escape' }] };
+	}
 	return { art: 'nicht_herstellbar', grund: `Script-Zustand „${abschnitt}“: kein Bedienplan im Abgleich hinterlegt` };
 }
 
@@ -1088,6 +1093,13 @@ export function leseFreigaben(text: string): Freigabe[] {
 	});
 }
 
+/** Schlüssel, über den eine Freigabe ein Element deckt: Katalogschlüssel, sonst „text:<Muster bzw. Text>“. */
+function freigabeSchluessel(e: ListenElement): string | null {
+	if (e.i18n_key) return e.i18n_key;
+	const text = e.muster ?? e.text_de;
+	return text ? `text:${text}` : null;
+}
+
 /**
  * Macht aus `abweichend` ein `freigegeben` (Grund + Spec), wenn eine Freigabe das Element deckt. Gefunden
  * bleibt gefunden (die Abweichung besteht nicht mehr), nicht_pruefbar bleibt nicht_pruefbar (nicht geprüft).
@@ -1096,8 +1108,11 @@ export function wendeFreigabenAn(elemente: ListenElement[], ergebnisse: Map<stri
 	const out = new Map(ergebnisse);
 	for (const e of elemente) {
 		const erg = out.get(e.id);
-		if (!erg || erg.status !== 'abweichend' || !e.i18n_key) continue;
-		const f = freigaben.find((x) => x.ctx === e.ctx && x.reiter === e.reiter && x.abschnitt === e.abschnitt && x.i18n_keys.includes(e.i18n_key as string));
+		// #3440 (AC-17): Mockup-Texte ohne Katalogschlüssel (z. B. „an 2 Empfänger“, „@henning“) deckt eine
+		// Freigabe über „text:<Muster bzw. Text>“ in i18n_keys.
+		const schluessel = freigabeSchluessel(e);
+		if (!erg || erg.status !== 'abweichend' || !schluessel) continue;
+		const f = freigaben.find((x) => x.ctx === e.ctx && x.reiter === e.reiter && x.abschnitt === e.abschnitt && x.i18n_keys.includes(schluessel));
 		if (f) out.set(e.id, { status: 'freigegeben', grund: `${f.grund} (${f.spec})`, ist: erg.ist ?? erg.grund });
 	}
 	return out;

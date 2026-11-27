@@ -145,6 +145,8 @@ class TestGoProxyRoute:
 class TestFrontendFeedback:
     """AC-6 — Svelte-Seite enthält Feedback-Spans mit data-testid.
 
+    #3440: Rückmeldung des Menüs „Test schicken ▾“ heißt test-schicken-ok / test-schicken-fehler (Spec AC).
+
     # doc-compliance-test
     """
 
@@ -164,20 +166,20 @@ class TestFrontendFeedback:
         """
         GIVEN: +page.svelte im Frontend
         WHEN: Quelltext lesen
-        THEN: data-testid="test-briefing-success" vorhanden
+        THEN: data-testid="test-schicken-ok" vorhanden
         """
         src = self._svelte_source()
-        assert 'data-testid="test-briefing-success"' in src, (
-            "Erwartet data-testid=\"test-briefing-success\" in +page.svelte"
+        assert 'data-testid="test-schicken-ok"' in src, (
+            "Erwartet data-testid=\"test-schicken-ok\" in +page.svelte"
         )
 
     def test_error_span_has_testid(self):
         """
         GIVEN: +page.svelte im Frontend
         WHEN: Quelltext lesen
-        THEN: data-testid="test-briefing-error" vorhanden
+        THEN: data-testid="test-schicken-fehler" vorhanden
         """
         src = self._svelte_source()
-        assert 'data-testid="test-briefing-error"' in src, (
-            "Erwartet data-testid=\"test-briefing-error\" in +page.svelte"
+        assert 'data-testid="test-schicken-fehler"' in src, (
+            "Erwartet data-testid=\"test-schicken-fehler\" in +page.svelte"
         )

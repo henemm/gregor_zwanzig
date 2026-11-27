@@ -777,6 +777,7 @@ def send_one_compare_preset(
     weather_failure_as_outcome: bool = False,
     restrict_to_channel: str | None = None,
     orte_ohne_wetter: list | None = None,
+    sent_channels_sink: list | None = None,
     report_type: str | None = None,
     slot_hour: int | None = None,
     slot_minute: int | None = None,
@@ -1050,6 +1051,8 @@ def send_one_compare_preset(
                                   slot_minute=slot_minute)
     if outcome != "sent":
         raise SendOutcomeError(outcome)
+    if sent_channels_sink is not None:  # Issue #3440: sent_channels der Antwort
+        sent_channels_sink.extend(send_result.sent_channels)
     if not on_demand:  # Issue #2587 AC-11/AC-9a
         _clear_compare_dispatch_error(user_id, preset_id, report_type, target_date)
 
@@ -1145,13 +1148,14 @@ def send_compare_preset(
     if not try_acquire_send_lock("compare", user_id, preset_id):
         return {"status": "already_in_progress"}
     ohne_wetter: list = []
+    gesendet: list = []
     try:
         settings = Settings().with_user_profile(user_id)
         send_one_compare_preset(
             preset, settings, user_id, data_root, on_demand=True,
             weather_failure_as_outcome=True, target_date=target_date,
             tage_ab_ortstag=tage_ab_ortstag, restrict_to_channel=restrict_to_channel,
-            orte_ohne_wetter=ohne_wetter,
+            orte_ohne_wetter=ohne_wetter, sent_channels_sink=gesendet,
         )
         outcome = "sent"
     except SendOutcomeError as e:
@@ -1166,6 +1170,7 @@ def send_compare_preset(
         load_all_locations(user_id=user_id), preset.get("location_ids") or []
     )
     return {"status": "ok" if outcome == "sent" else outcome,
+            "sent_channels": gesendet,
             **({"fehlende_orte": fehlende} if fehlende else {}),
             **({"orte_ohne_wetter": ohne_wetter} if ohne_wetter else {})}
 

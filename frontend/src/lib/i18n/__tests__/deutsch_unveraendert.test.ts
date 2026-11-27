@@ -22,6 +22,7 @@ import { F10_ANKER } from '../../components/compare/__tests__/f10KatalogAnker.ts
 import { F12_ANKER } from '../../components/__tests__/f12KatalogAnker.ts';
 import ZUSTELLUNG_DE from '../messages/de/zustellung.json' with { type: 'json' };
 import FUNKTIONEN_DE from '../messages/de/funktionen.json' with { type: 'json' };
+import TEST_SCHICKEN_DE from '../messages/de/test_schicken.json' with { type: 'json' };
 
 const GOLDEN = JSON.parse(
 	readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'de_katalog_vor_i18n.json'), 'utf-8')
@@ -690,6 +691,8 @@ const NEU_IN_FOLGEPAKETEN = [
 	'start.level.eyebrow', 'start.level.title', 'start.level.text', 'start.level.wechsel',
 	'start.level.details', 'start.level.mehr',
 	...Object.keys(FUNKTIONEN_DE),
+	// #3440: neuer Bereich test_schicken.json (Menü „Test schicken ▾“) — vollständig neu.
+	...Object.keys(TEST_SCHICKEN_DE),
 	// #3364: Zeilenmarke der Karte „Was steht wo“ fuer Groessen, die nur ein Briefing fuehrt.
 	'wetter.wsw.nur_briefing.morning', 'wetter.wsw.nur_briefing.evening'
 ];

@@ -1,4 +1,21 @@
 {
-"zweck": "Freigegebene Abweichungen vom Mockup für den Elementlisten-Abgleich (frontend/e2e/elementliste_abgleich_logik.ts, wendeFreigabenAn). Ein Element, das hier gedeckt ist und auf Staging fehlt, erscheint im Bericht als 'freigegeben' mit Grund und Spec-Verweis, eigener Zähler, nie als gefunden. Klein halten: jede Freigabe braucht eine Spec-Stelle.",
-"freigaben": []
+"zweck": "Freigegebene Abweichungen vom Mockup für den Elementlisten-Abgleich (frontend/e2e/elementliste_abgleich_logik.ts, wendeFreigabenAn). Ein Element, das hier gedeckt ist und auf Staging fehlt, erscheint im Bericht als 'freigegeben' mit Grund und Spec-Verweis, eigener Zähler, nie als gefunden. Klein halten: jede Freigabe braucht eine Spec-Stelle. Mockup-Texte ohne Katalogschlüssel deckt der Eintrag 'text:<Muster bzw. Text>' in i18n_keys (#3440).",
+"freigaben": [
+	{
+		"ctx": "trip",
+		"reiter": "wetter",
+		"abschnitt": "test-menue",
+		"i18n_keys": ["text:an {zahl} Empfänger", "text:@henning"],
+		"grund": "Ziele im Menü „Test schicken“: E-Mail zeigt die gekürzte Konto-Adresse statt einer Empfängerzahl, Telegram nur „verbunden“ statt eines Namens (PO-Entscheidungen 20./21.11.2026, #3202)",
+		"spec": "docs/specs/modules/feat_3440_test_schicken_menue.md AC-17"
+	},
+	{
+		"ctx": "orte",
+		"reiter": "wetter",
+		"abschnitt": "test-menue",
+		"i18n_keys": ["text:an {zahl} Empfänger", "text:@henning"],
+		"grund": "Ziele im Menü „Test schicken“: E-Mail zeigt die gekürzte Konto-Adresse statt einer Empfängerzahl, Telegram nur „verbunden“ statt eines Namens (PO-Entscheidungen 20./21.11.2026, #3202)",
+		"spec": "docs/specs/modules/feat_3440_test_schicken_menue.md AC-17"
+	}
+]
 }

@@ -1,0 +1,20 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/witty-percolating-eagle
+configfile: pyproject.toml
+plugins: xdist-3.8.0, timeout-2.4.0, anyio-4.14.2, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 171 items / 1 deselected / 170 selected
+
+tests/tdd/test_briefings_send_endpoint.py .............................. [ 17%]
+....................................................................     [ 57%]
+tests/tdd/test_api_fehlertexte_forecast_handversand.py ...               [ 59%]
+tests/tdd/test_send_idempotenz_lock.py ...........                       [ 65%]
+tests/tdd/test_report_kommando_meldet_echtes_ergebnis.py ............    [ 72%]
+tests/tdd/test_issue_695_test_briefing_send.py ...                       [ 74%]
+tests/test_versand_zweisprachig.py ..................................... [ 96%]
+......                                                                   [100%]
+
+====================== 170 passed, 1 deselected in 19.16s ======================

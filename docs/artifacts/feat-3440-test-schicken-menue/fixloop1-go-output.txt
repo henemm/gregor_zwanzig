@@ -1,0 +1,2 @@
+ok  	github.com/henemm/gregor-api/internal/handler	135.970s
+ok  	github.com/henemm/gregor-api/internal/i18n	0.160s

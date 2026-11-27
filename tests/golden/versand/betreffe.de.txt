@@ -48,6 +48,10 @@ Etappe 3: Refuge d'Ortu di u Piobbu nach Refuge de Carrozzu — Abend — Kälte
 500 send_failed Versand fehlgeschlagen — interner Fehler, bitte später erneut versuchen
 ----- fehler.kontingent_erschoepft -----
 429 kontingent_erschoepft Kein Briefing versendet — dein Tageskontingent für Abrufe ist aufgebraucht. Ab Mitternacht (UTC) geht es wieder; automatische Briefings und Alarme laufen weiter.
+----- fehler.invalid_channel -----
+400 invalid_channel Unbekannter Kanal (erlaubt: email, telegram, sms, premium_sms)
+----- fehler.email_unverified -----
+422 email_unverified Kein Briefing versendet — deine E-Mail-Adresse ist noch nicht bestätigt. Bestätige sie im Konto.
 ----- briefing.betreff -----
 [GR20] Etappe 3 — Morgen
 ----- briefing.header -----
