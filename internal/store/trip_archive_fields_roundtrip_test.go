@@ -13,9 +13,10 @@ import (
 //   1. Altdaten, die diese Felder noch enthalten, weiterhin fehlerfrei laden
 //      (unbekannte JSON-Felder werden ignoriert, kein Datenverlust bei
 //      restlichen Feldern).
-//   2. Ein Round-Trip die entfernten Felder NICHT wieder einschleift.
+//   2. Round-Trip über Go bewahrt die Altfelder unverändert in der Datei
+//      (ADR-0101, #3092), das geladene Modell enthält sie nicht.
 
-func TestTripRoundTrip_LegacyAnalyticsFieldsDropped(t *testing.T) {
+func TestTripRoundTrip_LegacyAnalyticsFieldsPreservedNotExposed(t *testing.T) {
 	tmpDir := t.TempDir()
 	s := New(tmpDir, "test")
 
@@ -61,9 +62,29 @@ func TestTripRoundTrip_LegacyAnalyticsFieldsDropped(t *testing.T) {
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	for _, f := range []string{"accuracy_pct", "headline", "briefings_count", "alerts_count"} {
-		if _, exists := got[f]; exists {
-			t.Errorf("removed field %q must not reappear after round-trip, got %v", f, got[f])
+	want := map[string]any{
+		"accuracy_pct":    float64(92),
+		"headline":        "Gewitter Tag 2",
+		"briefings_count": float64(5),
+		"alerts_count":    float64(2),
+	}
+	for f, w := range want {
+		if got[f] != w {
+			t.Errorf("legacy field %q must stay unchanged in file (ADR-0101), got %v, want %v", f, got[f], w)
+		}
+	}
+
+	exposed, err := json.Marshal(loaded)
+	if err != nil {
+		t.Fatalf("marshal loaded: %v", err)
+	}
+	var model map[string]any
+	if err := json.Unmarshal(exposed, &model); err != nil {
+		t.Fatalf("unmarshal loaded: %v", err)
+	}
+	for f := range want {
+		if _, exists := model[f]; exists {
+			t.Errorf("legacy field %q must not be exposed by the loaded model", f)
 		}
 	}
 }

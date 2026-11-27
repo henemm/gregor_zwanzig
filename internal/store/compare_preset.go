@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 
@@ -263,14 +264,16 @@ func (s *Store) SaveComparePreset(p model.ComparePreset) error {
 	// Empfaenger) — pro Preset nie als "null" persistieren.
 	NormalizeComparePreset(&p)
 
-	data, err := json.MarshalIndent(p, "", "  ")
+	// Issue #3092 (ADR-0101): unbekannte Top-Level-Felder bleiben erhalten.
+	path := filepath.Join(dir, p.ID+".json")
+	data, err := mergeUnknownTopLevel(path, p, jsonKeysOf(reflect.TypeOf(p)))
 	if err != nil {
 		return err
 	}
 	if err := pruefeEntityGroesse(data); err != nil {
 		return err
 	}
-	return writeFileLogged(filepath.Join(dir, p.ID+".json"), data)
+	return writeFileLogged(path, data)
 }
 
 // SaveComparePresets bleibt als DUENNER Kompat-Wrapper fuer die vielen

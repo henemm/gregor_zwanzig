@@ -1240,6 +1240,8 @@ bleiben erhalten (Feld-Level-Preserve, Fix-Loop F002); ein explizites `"sources"
 Liste bewusst. `enabled` ist innerhalb eines mitgeschickten `official_warnings`-Objekts immer
 Pflicht-Wert der Anfrage (kein separates Preserve für `enabled` selbst).
 
+**Unbekannte Top-Level-Felder (Issue #3092, ADR-0101):** `SaveTrip` (`internal/store/trip.go`) und `SaveComparePreset` (`internal/store/compare_preset.go`) schreiben per Roh-Merge (`internal/store/raw_merge.go`): Felder, die das Go-Modell nicht kennt, bleiben aus der vorhandenen Datei erhalten, unabhängig vom Schreibweg (PUT, PATCH, Migration). Bekannte Schlüssel kommen immer aus dem Modell, geleerte `omitempty`-Felder verschwinden also weiterhin. Fehlt die Altdatei oder ist sie kein JSON-Objekt, wird nur der Modellstand geschrieben.
+
 **Drei Zustände optionaler Felder (Issue #2211, `internal/handler/optional_field.go`,
 `internal/handler/trip.go`):** `PUT /api/trips/{id}` (und `PUT /api/briefings/{id}?kind=route`,
 das dorthin delegiert) unterscheidet bei acht optionalen Feldern: **Key fehlt** → Bestand bleibt
