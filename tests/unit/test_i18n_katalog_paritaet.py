@@ -14,7 +14,7 @@ from i18n.catalog import BEREICHE, parity_errors
 MESSAGES = Path(__file__).resolve().parents[2] / "src" / "i18n" / "messages"
 ERWARTETE_BEREICHE = (
     "allgemein", "mail", "vergleich", "alarm", "warnung",
-    "telegram", "sms", "versand", "inbound", "api",
+    "telegram", "sms", "versand", "inbound", "api", "geteilt",
 )
 
 

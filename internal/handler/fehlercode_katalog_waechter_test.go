@@ -25,7 +25,7 @@ import (
 )
 
 // fehlerPraefixe spiegelt die Suchkette von i18n.ErrorBody.
-var fehlerPraefixe = []string{"fehler.", "auth.fehler.", "konto.fehler.", "fach.fehler."}
+var fehlerPraefixe = []string{"fehler.", "auth.fehler.", "konto.fehler.", "fach.fehler.", "geteilt.fehler."}
 
 // fehlerSenken: Funktionsname -> Index des code-Arguments.
 func fehlerSenken() map[string]int {

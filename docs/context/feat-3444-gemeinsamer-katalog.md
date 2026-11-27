@@ -142,3 +142,12 @@ Schlüssel; Lookup-Reihenfolge in Go (`WriteError`-Suchkette) und Python; was pa
 ### Open Questions
 
 - Keine PO-Frage: Richtung „gemeinsamer Katalog" ist PO-entschieden, Wortlaute sind identisch, der Rest ist Technik.
+
+## TDD-RED: verbindliche API für die Implementierung
+
+- Go-Paket `github.com/henemm/gregor-api/src/i18n` in `src/i18n/embed.go`, `var Messages embed.FS` mit nur `messages/de/geteilt.json`, `messages/en/geteilt.json`.
+- `internal/i18n`: `func NewCatalogFrom(fsys ...fs.FS) (*Catalog, error)` (führt mehrere FS zusammen); Standardkatalog = `NewCatalogFrom(embedded, srci18n.Messages)`.
+- `internal/i18n`: `func CheckNoSharedAreaInternal(fsys fs.FS) error` — Fehler, wenn `messages/<lang>/geteilt.json` im FS liegt; Test ruft ihn mit `embedded` auf.
+- `"geteilt.fehler."` in `errorPrefixes` (`internal/i18n/errorbody.go`).
+- `internal/i18n/katalog_paritaet_test.go:44` bleibt unverändert (Liste der internen Bereiche; `geteilt` gehört dort gerade nicht hin).
+- RED-Tests: `tests/unit/test_3444_gemeinsamer_katalog.py`, `internal/i18n/geteilt_3444_test.go`; angepasst: `tests/test_versand_zweisprachig.py`, `tests/unit/test_i18n_katalog_paritaet.py`, `internal/i18n/uebersetzung_test.go`, `internal/handler/fehlercode_katalog_waechter_test.go`.

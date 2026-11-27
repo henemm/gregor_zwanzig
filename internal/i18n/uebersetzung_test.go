@@ -140,7 +140,7 @@ func TestStandardkatalogStartSchluessel(t *testing.T) {
 	if got := T(En, "fehler.unbekannt", Args{"code": "x_y"}); got != "Unknown error (x_y)." {
 		t.Errorf("T(En, fehler.unbekannt) = %q", got)
 	}
-	if !Has("fehler.kind_required") || Has("fehler.gibt_es_nicht") {
+	if !Has("geteilt.fehler.kind_required") || Has("fehler.gibt_es_nicht") {
 		t.Errorf("Has: kind_required muss vorhanden, gibt_es_nicht darf nicht vorhanden sein")
 	}
 	if got := Tn(De, "fehler.not_found", 1, nil); got == "" {

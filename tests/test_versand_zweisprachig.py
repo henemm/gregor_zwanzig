@@ -171,9 +171,9 @@ def test_ac5_router_antwortet_in_der_sprache_des_nutzers():
     nutzer_anlegen("router-de", "de")
     nutzer_anlegen("router-en", "en")
     assert _router_antwort("router-en") == {
-        "detail": _englisch("versand.ergebnis.kind_required"), "code": "kind_required"}
+        "detail": _englisch("geteilt.fehler.kind_required"), "code": "kind_required"}
     assert _router_antwort("router-de") == {
-        "detail": t("versand.ergebnis.kind_required", "de"), "code": "kind_required"}
+        "detail": t("geteilt.fehler.kind_required", "de"), "code": "kind_required"}
 
 
 def test_ac5_router_trip_nicht_gefunden_englisch():
