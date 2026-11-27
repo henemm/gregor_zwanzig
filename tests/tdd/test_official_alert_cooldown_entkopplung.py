@@ -301,29 +301,58 @@ def test_ac6_aenderungsalarm_drosselung_unveraendert(nutzer):
         "derselben Lage, die die beiden anderen Nutzer zustellen")
 
 
-# ══════ AC-10: ein pausierter Trip alarmiert weiterhin (Absicht #995) ══════
+# ══════ AC-10: ein pausierter Trip alarmiert amtlich nicht mehr (#3186) ══════
+#
+# ABGELOEST durch #3186. Bis dahin sicherte dieser Test das GEGENTEIL zu: ein
+# Trip mit gesetztem ``paused_at`` bekam seine amtliche Warnung trotzdem — die
+# Pause galt NUR fuer den Briefing-Versand, nicht fuer den Alarm-Dispatch
+# (Absicht seit #995, dort AC-9). Diese Festlegung faellt: die Pause stoppt
+# jetzt auch den amtlichen Trip-Alarm (Riegel ``trip_pausiert`` in
+# ``TripAlertService.check_all_trips``). Der Test bleibt deshalb an DERSELBEN
+# Flaeche stehen und prueft sie in der NEUEN Richtung, statt ersatzlos zu
+# verschwinden: sonst liesse sich die Abloesung spaeter nicht mehr von einem
+# stillen "Alarm verstummt" unterscheiden.
+#
+# SPEC: docs/specs/modules/fix_3186_trip_pause_alarme.md
 
 
-def test_ac10_pausierter_trip_alarmiert_amtlich_weiter(nutzer):
-    """AC-10 (Regressionswaechter): Ein Trip mit gesetztem ``paused_at`` bekommt
-    seine amtliche Warnung trotzdem.
+def test_ac10_pausierter_trip_alarmiert_amtlich_nicht_mehr(nutzer):
+    """AC-10, abgeloest durch #3186 (vormals Regressionswaechter #995).
 
-    Trips kennen den Stilllegungs-Riegel des Ortsvergleichs nicht — Absicht seit
-    #995 (``trip_report_scheduler.py:882-888``: die Pause gilt NUR fuer den
-    Briefing-Versand, nicht fuer den Alarm-Dispatch). Wuerde jemand
-    ``is_silenced`` beim Vereinheitlichen in den Baustein ziehen, verstummte der
-    Alarm dieser Trips still (Risiko R-C).
+    Ein Trip mit gesetztem ``paused_at`` bekommt KEINE amtliche Warnung mehr —
+    auch nicht die GELB→ORANGE-Eskalation, die ein aktiver Trip zugestellt
+    bekaeme (Gegenprobe direkt darunter).
     """
     uid = nutzer("ac10")
     _trip_schreiben(uid, paused_at="2026-08-01T00:00:00Z")
+    quelle = StufenWarnquelle()
+    assert gelb_ins_melde_gedaechtnis(uid, TRIP, quelle) == 1, (
+        "Aufbau-Nachweis: GELB muss im Melde-Gedaechtnis stehen, sonst gaebe "
+        "es gar keine Eskalation, die der Riegel unterdruecken koennte")
+
+    quelle.level = 3
+    gesendet, mails = trip_amtlicher_lauf(uid, quelle=quelle)
+    assert gesendet == 0 and mails == [], (
+        f"Ein pausierter Trip darf keinen amtlichen Alarm mehr zustellen "
+        f"(#3186): gesendet={gesendet}, Mails={mails!r}")
+
+
+def test_ac10_gegenprobe_aktiver_trip_alarmiert_amtlich(nutzer):
+    """AC-10 (Gegenprobe): Derselbe Ablauf OHNE ``paused_at`` stellt zu. Trennt
+    „Pause riegelt" von „Aufbau kaputt" — ohne diese Haelfte waere der Test
+    oben auch dann gruen, wenn Schnappschuss, Warnquelle oder Eskalation gar
+    nicht traegen.
+    """
+    uid = nutzer("ac10-aktiv")
+    _trip_schreiben(uid)
     quelle = StufenWarnquelle()
     assert gelb_ins_melde_gedaechtnis(uid, TRIP, quelle) == 1
 
     quelle.level = 3
     gesendet, mails = trip_amtlicher_lauf(uid, quelle=quelle)
     assert gesendet >= 1 and len(mails) >= 1, (
-        f"Ein pausierter Trip pausiert nur den Briefing-Versand, nicht den Alarm "
-        f"(#995): gesendet={gesendet}, Mails={len(mails)}")
+        f"Ohne Pause muss die amtliche Eskalation zugestellt werden: "
+        f"gesendet={gesendet}, Mails={len(mails)}")
 
 
 # ═══ AC-11: der amtliche Pfad protokolliert seinen Unterdrueckungsgrund ═══
