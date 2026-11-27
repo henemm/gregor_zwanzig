@@ -7,7 +7,6 @@
   "fehler.bad_request": "Die Anfrage ist ungültig.",
   "fehler.invalid_request": "Die Anfrage ist ungültig.",
   "fehler.internal_error": "Interner Fehler. Bitte versuche es später erneut.",
-  "fehler.kind_required": "Briefing-Art fehlt oder ist ungültig (erlaubt: route, vergleich)",
   "fehler.rate_limit_exceeded": "Zu viele Anfragen. Bitte versuche es später erneut.",
   "fehler.service_unavailable": "Der Dienst ist gerade nicht verfügbar.",
   "fehler.unbekannt": "Unbekannter Fehler ({code}).",

@@ -22,10 +22,11 @@ import (
 	"testing/fstest"
 
 	"github.com/henemm/gregor-api/internal/i18n"
+	srci18n "github.com/henemm/gregor-api/src/i18n"
 )
 
 // fehlerPraefixe spiegelt die Suchkette von i18n.ErrorBody.
-var fehlerPraefixe = []string{"fehler.", "auth.fehler.", "konto.fehler.", "fach.fehler."}
+var fehlerPraefixe = []string{"fehler.", "auth.fehler.", "konto.fehler.", "fach.fehler.", "geteilt.fehler."}
 
 // fehlerSenken: Funktionsname -> Index des code-Arguments.
 func fehlerSenken() map[string]int {
@@ -244,25 +245,30 @@ func sammleFehlercodes(t *testing.T) []codeFund {
 
 // englischerKatalog laedt nur die en-Dateien ueber i18n.NewCatalog; sie
 // werden zusaetzlich als de-Bereich eingehaengt, damit Has (prueft de) die
-// englischen Schluessel befragt.
+// englischen Schluessel befragt. Dazu der Bereich geteilt aus src (ADR-0130).
 func englischerKatalog(t *testing.T) *i18n.Catalog {
 	t.Helper()
-	wurzel := filepath.Join("..", "i18n", "messages", "en")
 	mfs := fstest.MapFS{}
-	err := fs.WalkDir(os.DirFS(wurzel), ".", func(p string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
-			return err
-		}
-		data, err := os.ReadFile(filepath.Join(wurzel, p))
+	wurzeln := []fs.FS{os.DirFS(filepath.Join("..", "i18n", "messages", "en"))}
+	if sub, err := fs.Sub(srci18n.Messages, "messages/en"); err == nil {
+		wurzeln = append(wurzeln, sub)
+	}
+	for _, wurzel := range wurzeln {
+		err := fs.WalkDir(wurzel, ".", func(p string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return err
+			}
+			data, err := fs.ReadFile(wurzel, p)
+			if err != nil {
+				return err
+			}
+			mfs["messages/de/"+p] = &fstest.MapFile{Data: data}
+			mfs["messages/en/"+p] = &fstest.MapFile{Data: data}
+			return nil
+		})
 		if err != nil {
-			return err
+			t.Fatal(err)
 		}
-		mfs["messages/de/"+p] = &fstest.MapFile{Data: data}
-		mfs["messages/en/"+p] = &fstest.MapFile{Data: data}
-		return nil
-	})
-	if err != nil {
-		t.Fatal(err)
 	}
 	c, err := i18n.NewCatalog(mfs)
 	if err != nil {

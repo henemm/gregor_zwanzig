@@ -17,7 +17,7 @@ MESSAGES_DIR: Path = Path(__file__).resolve().parent / "messages"
 SPRACHEN: tuple[str, ...] = ("de", "en")
 BEREICHE: tuple[str, ...] = (
     "allgemein", "mail", "vergleich", "alarm", "warnung",
-    "telegram", "sms", "versand", "inbound", "api",
+    "telegram", "sms", "versand", "inbound", "api", "geteilt",
 )
 PLATZHALTER_RE = re.compile(r"\{([a-z][a-z0-9_]*)\}")
 SCHLUESSEL_RE = re.compile(r"[a-z0-9_]+(\.[a-z0-9_]+){1,3}")

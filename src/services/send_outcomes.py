@@ -34,6 +34,8 @@ SEND_OUTCOMES: dict[str, tuple[int, str]] = {
         ("kontingent_erschoepft", 429),
     )
 }
+# ADR-0130 (#3444): Text gemeinsam mit der Go-API aus Bereich ``geteilt``.
+SEND_OUTCOMES["kind_required"] = (400, "geteilt.fehler.kind_required")
 
 
 class SendOutcomeError(ValueError):

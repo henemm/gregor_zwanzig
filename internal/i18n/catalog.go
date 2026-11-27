@@ -34,20 +34,41 @@ type Catalog struct {
 // NewCatalog laedt alle messages/<lang>/<bereich>.json aus fsys und prueft
 // jeden Schluessel (Zeichen, 2-4 Segmente, Praefix <bereich>.).
 func NewCatalog(fsys fs.FS) (*Catalog, error) {
+	return NewCatalogFrom(fsys)
+}
+
+// NewCatalogFrom laedt wie NewCatalog, aber aus mehreren FS nacheinander
+// (Standard: internal/i18n/messages plus Bereich geteilt aus src, ADR-0130).
+func NewCatalogFrom(fsyss ...fs.FS) (*Catalog, error) {
 	c := &Catalog{
 		texts: map[Lang]map[string]string{De: {}, En: {}},
 		areas: map[Lang]map[string][]string{De: {}, En: {}},
 	}
-	err := fs.WalkDir(fsys, "messages", func(p string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
-			return err
+	for _, fsys := range fsyss {
+		err := fs.WalkDir(fsys, "messages", func(p string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return err
+			}
+			return c.loadFile(fsys, p)
+		})
+		if err != nil {
+			return nil, err
 		}
-		return c.loadFile(fsys, p)
-	})
-	if err != nil {
-		return nil, err
 	}
 	return c, nil
+}
+
+// CheckNoSharedAreaInternal meldet einen Fehler, wenn fsys einen Bereich
+// geteilt enthaelt: der gemeinsame Bereich wird nur in src/i18n/messages
+// gepflegt (ADR-0130), nie unter internal/i18n/messages.
+func CheckNoSharedAreaInternal(fsys fs.FS) error {
+	for _, lang := range []Lang{De, En} {
+		p := "messages/" + string(lang) + "/geteilt.json"
+		if _, err := fs.Stat(fsys, p); err == nil {
+			return fmt.Errorf("i18n: %s: Bereich geteilt nur in src/i18n/messages pflegen (ADR-0130)", p)
+		}
+	}
+	return nil
 }
 
 func (c *Catalog) loadFile(fsys fs.FS, p string) error {

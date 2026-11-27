@@ -164,7 +164,7 @@ Fehlerantworten der Go-API, die über `handler.WriteError`/`WriteErrorWith` lauf
 ```
 
 - `code`: stabiler Fehlercode in snake_case. Das Frontend übersetzt bekannte Codes selbst, unbekannte zeigt es mit `message`.
-- `message`: Text in der Sprache der Anfrage aus `internal/i18n` (Suchkette `fehler.<code>` → `auth.fehler.<code>` → `konto.fehler.<code>` → `fach.fehler.<code>`, mit optionaler Variante zuerst; ohne Treffer `fehler.unbekannt`).
+- `message`: Text in der Sprache der Anfrage aus `internal/i18n` (Suchkette `fehler.<code>` → `auth.fehler.<code>` → `konto.fehler.<code>` → `fach.fehler.<code>` → `geteilt.fehler.<code>` (ADR-0130), mit optionaler Variante zuerst; ohne Treffer `fehler.unbekannt`).
 - Übergangsfelder: `error` (= `code`, bisherige Clients lesen `error`) und `detail` (= `message` bzw. ein technischer Zusatz).
 - Zusatzfelder je Endpunkt bleiben möglich (z. B. `resource`, `compare_presets`); Header wie `Retry-After` unverändert.
 - **Sprachauflösung** (Middleware `middleware.Lang` direkt nach `AuthMiddleware`): angemeldet gespeicherte Nutzersprache `language` > Cookie `gz_lang` (`de`|`en`, andere Werte ignoriert) > `Accept-Language` (nach `q`, `q=0` ignoriert) > `de`; öffentlich Cookie > `Accept-Language` > `de`.

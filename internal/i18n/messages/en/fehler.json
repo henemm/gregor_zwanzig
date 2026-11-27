@@ -7,7 +7,6 @@
   "fehler.bad_request": "The request is invalid.",
   "fehler.invalid_request": "The request is invalid.",
   "fehler.internal_error": "Internal error. Please try again later.",
-  "fehler.kind_required": "Briefing kind is missing or invalid (allowed: route, vergleich)",
   "fehler.rate_limit_exceeded": "Too many requests. Please try again later.",
   "fehler.service_unavailable": "The service is currently unavailable.",
   "fehler.unbekannt": "Unknown error ({code}).",

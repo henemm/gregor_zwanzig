@@ -6,6 +6,8 @@
 // (WithLang/FromContext) oder als Parameter.
 package i18n
 
+import srci18n "github.com/henemm/gregor-api/src/i18n"
+
 // Lang ist eine der zwei Sprachen der Anwendung.
 type Lang string
 
@@ -24,7 +26,10 @@ type Args map[string]any
 var Default *Catalog
 
 func init() {
-	c, err := NewCatalog(embedded)
+	if err := CheckNoSharedAreaInternal(embedded); err != nil {
+		panic(err)
+	}
+	c, err := NewCatalogFrom(embedded, srci18n.Messages)
 	if err != nil {
 		// Ein kaputter Einbettungs-Stand ist ein Programmierfehler.
 		panic(err)

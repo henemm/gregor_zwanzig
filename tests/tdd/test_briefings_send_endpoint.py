@@ -415,11 +415,12 @@ _PARITAET = (
 
 
 def test_ac2_kind_required_text_gleich_der_go_fassung(lage, c):
-    """F004 Paritaet Python <-> Go ohne Quelltext-Read: die geteilte Fixture
-    ``tests/fixtures/send_detail_parity/faelle.json`` haelt den Wortlaut, den
-    die Go-API vor Python selbst meldet (``briefing_send_test.go`` prueft die
-    Go-Seite gegen dieselbe Datei). Hier: der Python-Endpoint ohne ``kind``
-    liefert exakt diesen Text."""
+    """F004 Verhaltenswaechter ohne Quelltext-Read: die Fixture
+    ``tests/fixtures/send_detail_parity/faelle.json`` haelt den erwarteten
+    deutschen Wortlaut (``briefing_send_test.go`` prueft die Go-Seite gegen
+    dieselbe Datei). Der Text kommt seit #3444 (ADR-0130) in beiden Schichten
+    aus ``geteilt.json``. Hier: der Python-Endpoint ohne ``kind`` liefert
+    exakt diesen Text."""
     soll = json.loads(_PARITAET.read_text(encoding="utf-8"))
     assert soll.get("kind_required"), f"Fixture leer/fehlt: {_PARITAET}"
     uid = nutzer_anlegen()
@@ -428,6 +429,26 @@ def test_ac2_kind_required_text_gleich_der_go_fassung(lage, c):
 
     assert r.status_code == 400, hv.body(r)
     assert hv.body(r).get("detail") == soll["kind_required"], hv.body(r)
+
+
+def test_ac3_kind_required_englisch_gleich_fixture(lage, c):
+    """#3444 AC-3 (F001): Nutzer mit Sprache en, Python-Endpoint ohne ``kind``
+    -> 400 ``kind_required`` mit dem unveraenderten englischen Wortlaut aus der
+    Fixture (Literal, nicht aus dem Katalog gelesen)."""
+    from app.loader import get_data_dir
+
+    soll = json.loads(_PARITAET.read_text(encoding="utf-8"))
+    assert soll.get("kind_required_en"), f"Fixture ohne en-Wortlaut: {_PARITAET}"
+    uid = nutzer_anlegen()
+    pfad = get_data_dir(uid) / "user.json"
+    profil = json.loads(pfad.read_text(encoding="utf-8"))  # Read-Modify-Write
+    profil["language"] = "en"
+    pfad.write_text(json.dumps(profil), encoding="utf-8")
+
+    r = hv.neu_senden(c, "x-2280", uid, None)
+
+    assert r.status_code == 400, hv.body(r)
+    assert hv.body(r) == {"detail": soll["kind_required_en"], "code": "kind_required"}
 
 
 def _vokabular() -> dict:

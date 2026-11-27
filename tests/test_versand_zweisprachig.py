@@ -155,7 +155,10 @@ def test_ac5_no_weather_englisch_status_und_code_stabil():
 def test_ac5_jeder_code_englisch_mit_platzhaltern(code):
     werte = {"entity_id": "trip-42", "report_type": "morning", "reason": "R"}
     _status, body = error_body(code, lang="en", **werte)
-    assert body["detail"] == _englisch(f"versand.ergebnis.{code}", **werte)
+    # kind_required liegt seit #3444 (ADR-0130) im gemeinsamen Bereich geteilt.
+    key = ("geteilt.fehler.kind_required" if code == "kind_required"
+           else f"versand.ergebnis.{code}")
+    assert body["detail"] == _englisch(key, **werte)
     assert "{" not in body["detail"]
 
 
@@ -171,9 +174,9 @@ def test_ac5_router_antwortet_in_der_sprache_des_nutzers():
     nutzer_anlegen("router-de", "de")
     nutzer_anlegen("router-en", "en")
     assert _router_antwort("router-en") == {
-        "detail": _englisch("versand.ergebnis.kind_required"), "code": "kind_required"}
+        "detail": _englisch("geteilt.fehler.kind_required"), "code": "kind_required"}
     assert _router_antwort("router-de") == {
-        "detail": t("versand.ergebnis.kind_required", "de"), "code": "kind_required"}
+        "detail": t("geteilt.fehler.kind_required", "de"), "code": "kind_required"}
 
 
 def test_ac5_router_trip_nicht_gefunden_englisch():

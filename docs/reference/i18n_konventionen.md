@@ -46,10 +46,11 @@ Auftraggeber eines Batches.
 | Frontend | `frontend/src/lib/i18n/messages/{de,en}/<bereich>.json` | `start`, `auth`, `nav`, `home`, `listen`, `konto`, `admin`, `wertebereiche`, `versand`, `alarme`, `layout`, `trip`, `vergleich`, `aktionen`, `bausteine`, `fehler`, `hilfe`, `wetter`, `zustellung`, `funktionen` (öffentliche Funktionsübersicht `/funktionen`, #3319) |
 | Python | `src/i18n/messages/{de,en}/<bereich>.json` | `allgemein`, `mail`, `vergleich`, `alarm`, `warnung`, `telegram`, `sms`, `versand`, `inbound`, `api` |
 | Go | `internal/i18n/messages/{de,en}/<bereich>.json` | `fehler`, `auth`, `konto`, `fach`, `mail`, `alarm` (Radar-Intensitätstexte `alarm.radar.intensitaet.*` für den MCP-Nowcast, #3398), `mcp` (MCP-Konnektor, #3281) |
+| Go + Python (gemeinsam, ADR-0130) | `src/i18n/messages/{de,en}/geteilt.json` | `geteilt` (Texte, die Go-API und Python-Core wortgleich ausgeben; Schlüssel `geteilt.<gruppe>.<element>`, z. B. `geteilt.fehler.kind_required`). **Nur in `src/i18n/messages` pflegen**, nie unter `internal/i18n/messages`; Go bettet die Datei über `src/i18n/embed.go` ein, ein Go-Wächtertest (`CheckNoSharedAreaInternal`) verhindert eine Kopie unter `internal/` |
 
 Die Ladelisten (`frontend/src/lib/i18n/messages/de/index.ts`, Python-Loader, Go-`embed`) sind vollständig
 angelegt. Ein Paket ergänzt Schlüssel in einer fremden Bereichsdatei nur, wenn der Text dorthin gehört;
-Schlüssel werden nie umbenannt oder gelöscht.
+Schlüssel werden nie umbenannt oder gelöscht; Ausnahme: beim Umzug in den Bereich `geteilt` wird der alte Schlüssel im selben Commit gelöscht (ADR-0130).
 
 ## 3. Schnittstellen je Schicht (Ist-Stand)
 
@@ -90,7 +91,7 @@ func WriteError(w http.ResponseWriter, r *http.Request, status int, code string,
 ```
 
 - `T` und `Tn` sind Paketfunktionen und zugleich Methoden von `Catalog`. `ErrorBody` (`internal/i18n/errorbody.go`) baut das Fehlerobjekt.
-- Fehlerobjekt der Go-API: `{"code", "message", "error", "detail"}`. `code` ist stabil (snake_case), `message` ist der Text in der Anfragesprache, `error` (= `code`) und `detail` sind Übergangsfelder für bestehende Clients. Suchkette: `fehler.<code>` → `auth.fehler.<code>` → `konto.fehler.<code>` → `fach.fehler.<code>`, unbekannte Codes ergeben `fehler.unbekannt`. Liste der Codes: `docs/reference/api_contract.md`.
+- Fehlerobjekt der Go-API: `{"code", "message", "error", "detail"}`. `code` ist stabil (snake_case), `message` ist der Text in der Anfragesprache, `error` (= `code`) und `detail` sind Übergangsfelder für bestehende Clients. Suchkette: `fehler.<code>` → `auth.fehler.<code>` → `konto.fehler.<code>` → `fach.fehler.<code>` → `geteilt.fehler.<code>` (ADR-0130), unbekannte Codes ergeben `fehler.unbekannt`. Liste der Codes: `docs/reference/api_contract.md`.
 - Python-Core (FastAPI): Fehlerobjekt `{"detail", "code"}` (`api/fehler.py`), `detail` bleibt Zeichenkette, `code` kommt hinzu.
 - Mails: je Zeile ein Schlüssel (`mail.verify.betreff` usw.). Keine `text/template`-Datei je Sprache. Empfängersprache ist die Kontosprache. Admin-Mails an den Betreiber bleiben `de`.
 - Logs bleiben deutsch und tragen bei Umlauten den Marker `// i18n-log` (Go) bzw. `# i18n-log` (Python).
