@@ -81,6 +81,13 @@ Granularitätswechsel, Eskalation bei Stufenanstieg bleibt wirksam); bei einem �
 Kandidaten greift Containment nicht. Bei stiller Revision wird der Eintrag fortgeschrieben
 — der alte Schlüssel entfällt, `reported_at` bleibt das Datum der **tatsächlichen** Meldung.
 
+**Seit #3470 (2026-11-27):** Ein exakter Schlüsseltreffer im Gedächtnis entscheidet nur
+noch über die Eskalation; eine Nachbarperiode im Feed löst keine Vorverlegungs-Meldung
+mehr aus, wenn sie nur an der Kante berührt. Steht der Kandidat selbst noch im Feed
+(`feed_keys`), wird er nicht gelöscht (`stale_key=None`). Ziel: zwei gleichzeitig gültige
+Nachbarperioden erzeugen keinen Ping-Pong mehr. Details: `architecture.md` (Abschnitt
+Melde-Gedächtnis) und `docs/specs/modules/fix_3470_amtlich_nachbarperioden.md`.
+
 **Reset:** siehe Punkt 3 — er trifft **nur** den Δ-Raum, nicht die amtlichen Warnungen.
 
 ### 2. Read-Only Briefing-Snapshot

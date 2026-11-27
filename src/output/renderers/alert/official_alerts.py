@@ -587,8 +587,81 @@ def _identity_hazard_prefix(alert: "OfficialAlert") -> str:
     return f"official_alert:{ident}:{alert.hazard}:"
 
 
+def _revision_candidates(
+    state: dict, prefix: str, alert_vf: datetime, alert_vt: datetime,
+) -> list[tuple[str, dict, datetime, datetime]]:
+    """Bestandseintraege gleicher Identitaet+Gefahr, deren Fenster das neue
+    beruehrt oder ueberlappt (#1685/#1657). Fail-soft (F001): nicht parsebare
+    oder nicht vergleichbare Eintraege fallen heraus."""
+    from services.official_alerts.base import _as_aware_utc
+
+    candidates: list[tuple[str, dict, datetime, datetime]] = []
+    for cand_key, entry in state.items():
+        if not cand_key.startswith(prefix):
+            continue
+        vf_raw, vt_raw = entry.get("valid_from"), entry.get("valid_to")
+        if vf_raw is None or vt_raw is None:
+            continue
+        try:
+            cand_vf = _as_aware_utc(datetime.fromisoformat(vf_raw))
+            cand_vt = _as_aware_utc(datetime.fromisoformat(vt_raw))
+            # Issue #1657 AC-1: `<=` statt `<` -- Beruehrung zaehlt als
+            # Ueberlappung. Eine echte Luecke faellt weiterhin heraus (AC-2).
+            if alert_vf <= cand_vt and cand_vf <= alert_vt:
+                candidates.append((cand_key, entry, cand_vf, cand_vt))
+        except (TypeError, ValueError):
+            continue
+    return candidates
+
+
+def _kandidat_frisch(kandidat: dict, now: "datetime | None") -> bool:
+    """Issue #1657: 6h-Frische-Guard auf `reported_at`. Ein Eintrag ohne
+    verwertbaren `reported_at` gilt bewusst als NICHT frisch (im Zweifel
+    melden statt verschlucken). Geschuetzter Block (Adversary F001)."""
+    from services.official_alerts.base import _as_aware_utc
+
+    try:
+        ref_now = _as_aware_utc(now) if now is not None else datetime.now(timezone.utc)
+        reported_raw = kandidat.get("reported_at") or ""
+        kandidat_reported = _as_aware_utc(datetime.fromisoformat(reported_raw))
+        return (ref_now - kandidat_reported) <= timedelta(hours=6)
+    except (TypeError, ValueError):
+        return False
+
+
+def _nur_randberuehrung(
+    alert_vf: datetime, alert_vt: datetime, cand_vf: datetime, cand_vt: datetime,
+) -> bool:
+    """Issue #3470: die Fenster beruehren sich nur an der Kante (Ende des
+    einen == Beginn des anderen), ohne Innenueberlappung. Fail-soft: bei nicht
+    vergleichbaren Zeitpunkten ``False`` (bisheriges Verhalten)."""
+    try:
+        return alert_vt == cand_vf or cand_vt == alert_vf
+    except TypeError:
+        return False
+
+
+def _merged_revision_entry(alert: "OfficialAlert", kandidat: dict, kandidat_level: float) -> dict:
+    """Fortgeschriebener Gedaechtnis-Eintrag einer stillen Revision (#1685)."""
+    return {
+        # Issue #1441 S2: Herkunft, Ort und alte Stufe reisen mit -- sonst
+        # saehe jede fortgeschriebene Warnung wie ein Alt-Eintrag aus und
+        # bekaeme nie eine Entwarnung. `absent_since` faellt weg: die Warnung
+        # ist gerade wieder da.
+        **{f: v for f, v in kandidat.items() if f in ("source", "scope", "level")},
+        "last_reported_value": max(kandidat_level, float(_rank(alert))),
+        # Adversary F002/F007 (#1685): nie `None` ins Gedaechtnis schreiben und
+        # kein erfundenes "jetzt" -- `reported_at` ist das Tie-Break-Kriterium
+        # der Kandidatenwahl; `""` verliert dort statt zu gewinnen.
+        "reported_at": kandidat.get("reported_at") or "",
+        "valid_from": alert.valid_from.isoformat(),
+        "valid_to": alert.valid_to.isoformat(),
+    }
+
+
 def official_alert_revision_verdict(
     alert: "OfficialAlert", state: dict, now: "datetime | None" = None,
+    feed_keys: "frozenset[str] | None" = None,
 ) -> tuple[bool, Optional[str], Optional[dict]]:
     """Issue #1685: Melde-Entscheidung fuer eine amtliche Warnung, die eine
     reine Fenster-Revision einer bereits gemeldeten Warnung derselben
@@ -633,42 +706,29 @@ def official_alert_revision_verdict(
     den Briefing-Reset hinweg, #1614) eine echte neue Warnung verschluckt.
     Referenzzeit `now` ist injizierbar (Default `datetime.now(timezone.utc)`),
     damit die 6h-Grenze exakt und nicht gegen die Laufzeituhr geprueft wird --
-    beide Aufrufstellen bleiben dadurch unveraendert."""
+    beide Aufrufstellen bleiben dadurch unveraendert.
+
+    Issue #3470 (Nachbarperioden gleichzeitig im Feed): (1) steht der eigene
+    Schluessel exakt im State, entscheidet NUR die Eskalation, ohne
+    Kandidatensuche -- der Eintrag bleibt unveraendert. (2) `feed_keys`
+    (State-Schluessel aller Warnungen des aktuellen Laufs; `None` = altes
+    Verhalten): steht der gewaehlte Kandidat selbst noch im Feed, wird er
+    nicht verbraucht -- Rueckgabe `(False, None, merged_entry)`; der Aufrufer
+    entfernt nur, wenn `stale_key` gesetzt ist. (3) Eine Vorverlegung gegen
+    einen Kandidaten im Feed, der nur an der Kante beruehrt, meldet nicht."""
     from services.official_alerts.base import _as_aware_utc
 
     key = official_alert_state_key(alert)
     prev = state.get(key)
-
-    def _exact_match_verdict() -> tuple[bool, Optional[str], Optional[dict]]:
+    if prev is not None or alert.valid_from is None or alert.valid_to is None:
         should_report = prev is None or _rank(alert) > prev.get("last_reported_value", 0)
         return should_report, None, None
 
-    if alert.valid_from is None or alert.valid_to is None:
-        return _exact_match_verdict()
-
     alert_vf = _as_aware_utc(alert.valid_from)
     alert_vt = _as_aware_utc(alert.valid_to)
-
-    prefix = _identity_hazard_prefix(alert)
-    candidates: list[tuple[str, dict, datetime, datetime]] = []
-    for cand_key, entry in state.items():
-        if not cand_key.startswith(prefix):
-            continue
-        vf_raw, vt_raw = entry.get("valid_from"), entry.get("valid_to")
-        if vf_raw is None or vt_raw is None:
-            continue
-        try:
-            cand_vf = _as_aware_utc(datetime.fromisoformat(vf_raw))
-            cand_vt = _as_aware_utc(datetime.fromisoformat(vt_raw))
-            # Issue #1657 AC-1: `<=` statt `<` -- Beruehrung zaehlt als
-            # Ueberlappung. Eine echte Luecke faellt weiterhin heraus (AC-2).
-            if alert_vf <= cand_vt and cand_vf <= alert_vt:
-                candidates.append((cand_key, entry, cand_vf, cand_vt))
-        except (TypeError, ValueError):
-            continue
-
+    candidates = _revision_candidates(state, _identity_hazard_prefix(alert), alert_vf, alert_vt)
     if not candidates:
-        return _exact_match_verdict()
+        return True, None, None
 
     stale_key, kandidat, kandidat_vf, kandidat_vt = max(
         candidates,
@@ -680,20 +740,13 @@ def official_alert_revision_verdict(
     # Kandidaten vollstaendig. Dann ist der frueher liegende Beginn eine
     # Granularitaets-Aenderung, keine Vorverlegung. Der Guard laesst das nur
     # fuer einen FRISCHEN Kandidaten gelten; ein Eintrag ohne verwertbaren
-    # `reported_at` gilt bewusst als NICHT frisch, damit im Zweifel gemeldet
-    # statt verschluckt wird. Das Parsen steht im selben geschuetzten Block
-    # wie die Normalisierung (Adversary F001: naiv-vs-aware wirft sonst
-    # `TypeError`, den der Aufrufer nicht abfaengt).
+    # `reported_at` gilt bewusst als NICHT frisch (s. `_kandidat_frisch`).
     is_containment = alert_vf <= kandidat_vf and alert_vt >= kandidat_vt
-    kandidat_frisch = False
-    if is_containment:
-        try:
-            ref_now = _as_aware_utc(now) if now is not None else datetime.now(timezone.utc)
-            reported_raw = kandidat.get("reported_at") or ""
-            kandidat_reported = _as_aware_utc(datetime.fromisoformat(reported_raw))
-            kandidat_frisch = (ref_now - kandidat_reported) <= timedelta(hours=6)
-        except (TypeError, ValueError):
-            kandidat_frisch = False
+    kandidat_frisch = is_containment and _kandidat_frisch(kandidat, now)
+    # Issue #3470: Kandidat steht selbst noch im Feed -> Nachbarperiode, kein
+    # Ersatz. Nur-Randberuehrung ist dann keine Vorverlegung.
+    kandidat_im_feed = feed_keys is not None and stale_key in feed_keys
+    rand_nachbar = kandidat_im_feed and _nur_randberuehrung(alert_vf, alert_vt, kandidat_vf, kandidat_vt)
 
     # Der Guard unterdrueckt AUSSCHLIESSLICH die Containment-Ausnahme: nur ein
     # FRISCHES Containment entschaerft die Vorverlegung. Ein veralteter
@@ -705,35 +758,15 @@ def official_alert_revision_verdict(
     # Issue #1441: Originalstufe (4 -> 5 eskaliert, abgeleitetes level bliebe 4).
     escalated = _rank(alert) > kandidat_level
     containment_greift = is_containment and kandidat_frisch
-    vorverlegung = (not containment_greift) and (kandidat_vf - alert_vf) >= timedelta(hours=2)
+    vorverlegung = (
+        not containment_greift and not rand_nachbar
+        and (kandidat_vf - alert_vf) >= timedelta(hours=2)
+    )
     if escalated or vorverlegung:
         return True, None, None
 
-    merged_entry = {
-        # Issue #1441 S2: Herkunft, Ort und alte Stufe reisen mit -- sonst
-        # saehe jede fortgeschriebene Warnung wie ein Alt-Eintrag aus und
-        # bekaeme nie eine Entwarnung. `absent_since` faellt weg: die Warnung
-        # ist gerade wieder da.
-        **{f: kandidat[f] for f in ("source", "scope", "level") if f in kandidat},
-        "last_reported_value": max(kandidat_level, float(_rank(alert))),
-        # Adversary F002 (#1685 Fix-Loop, HIGH): `.get(..., "")` griff nur bei
-        # fehlendem Schluessel, nicht bei explizit gespeichertem `None` -- ein
-        # zweiter gleichrangiger Kandidat mit `reported_at: null` liess den
-        # Tie-Break oben `None` mit `str` vergleichen (TypeError). Ausserdem
-        # darf nie wieder ein `None` ins Melde-Gedaechtnis geschrieben werden.
-        # Adversary F007 (#1685 Fix-Loop Runde 2, MEDIUM): der Ersatzwert darf
-        # NICHT `datetime.now(...)` sein -- `reported_at` ist genau das
-        # Tie-Break-Kriterium oben (Zeile 519, "bei Gleichstand: spaetester
-        # reported_at gewinnt"). Ein erfundenes "jetzt" gewinnt damit
-        # systematisch gegen echte, aeltere Zeitstempel und verzerrt kuenftige
-        # Tie-Breaks. `""` ist konsistent mit der Lese-Normalisierung
-        # `.get("reported_at") or ""` in Zeile 519 und verliert -- statt zu
-        # gewinnen.
-        "reported_at": kandidat.get("reported_at") or "",
-        "valid_from": alert.valid_from.isoformat(),
-        "valid_to": alert.valid_to.isoformat(),
-    }
-    return False, stale_key, merged_entry
+    merged_entry = _merged_revision_entry(alert, kandidat, kandidat_level)
+    return False, (None if kandidat_im_feed else stale_key), merged_entry
 
 
 def official_alert_state_entry(
@@ -2688,14 +2721,43 @@ class OfficialAllClearNotice:
     source: str = ""
 
 
+def _dedupe_allclears(allclears: list, *, merge_scopes: bool) -> list:
+    """Issue #3470: Entwarnungen derselben Warnung (Identitaet+Gefahr, Quelle,
+    Art) zu einer zusammenfassen -- zwei Nachbarperioden im Gedaechtnis
+    ergeben sonst zwei gleiche Entwarnungen. Alte Stufe = Maximum, neue
+    Stufe = Minimum; Erstauftritts-Reihenfolge bleibt erhalten.
+
+    ``merge_scopes`` (Trip): die Segmente sind nur die Fundstellen EINER
+    Warnung auf derselben Route -- sie werden vereinigt (stabil, ohne
+    Duplikate), sonst ergaeben Perioden mit verschiedenen Segmenten zwei
+    Entwarnungen (Adversary F001). Ortsvergleich (``False``): jeder Ort hat
+    ein eigenes Gedaechtnis mit eigener alter Stufe; der Ort bleibt Teil des
+    Schluessels, damit Orte nicht mit falscher Stufe verschmelzen."""
+    from dataclasses import replace
+
+    merged: dict[tuple, object] = {}
+    for ac in allclears:
+        k = (_identity_hazard_prefix(ac.alert), ac.alert.source, ac.kind)
+        if not merge_scopes:
+            k += (tuple(ac.scope_ids),)
+        prev = merged.get(k)
+        merged[k] = ac if prev is None else replace(
+            prev, old_rank=max(prev.old_rank, ac.old_rank), new_rank=min(prev.new_rank, ac.new_rank),
+            old_level=max(prev.old_level, ac.old_level), new_level=min(prev.new_level, ac.new_level),
+            scope_ids=tuple(dict.fromkeys((*prev.scope_ids, *ac.scope_ids))),
+        )
+    return list(merged.values())
+
+
 def build_official_allclear_notices(
     allclears: list, id_to_name: dict | None = None, *, lang: Lang = "de",
 ) -> list[OfficialAllClearNotice]:
     """Trip (``id_to_name=None``): ``scope_ids`` sind Segment-IDs; Ortsvergleich:
     Orts-IDs, aufgeloest ueber ``id_to_name``. Issue #2668: Anzeige-Texte in
-    ``lang``, `sms_scope` in jeder Sprache wie bisher (PO-Korrektur 2026-10-31)."""
+    ``lang``, `sms_scope` in jeder Sprache wie bisher (PO-Korrektur 2026-10-31).
+    Issue #3470: eine Entwarnung je Warnung, nicht je Periode."""
     notices = []
-    for ac in allclears:
+    for ac in _dedupe_allclears(allclears, merge_scopes=id_to_name is None):
         ids = [str(i) for i in ac.scope_ids]
         if id_to_name is None:
             scope_label = format_segment_reference(ids, lang=lang) if ids else t("warnung.zeile.route", lang)

@@ -105,8 +105,12 @@ def _warnung(level: int = 2, source: str = "meteo_forets"):
 
 def _entwarnungen(*ziele: list[str]) -> list:
     """Je Ziel eine Entwarnung 3 -> 1 (Quelle mit sprachabhaengigem Namen)."""
-    return [SimpleNamespace(kind="lowered", alert=_warnung(1, "massif_closure"), scope_ids=z,
-                            old_rank=3, new_rank=1, old_level=3, new_level=1) for z in ziele]
+    # Echtes DTO statt SimpleNamespace: die Entdopplung (#3470) baut Entwarnungen
+    # derselben Warnung per dataclasses.replace zusammen.
+    from services.official_alert_allclear import OfficialAllClear
+
+    return [OfficialAllClear(key=f"k{i}", kind="lowered", alert=_warnung(1, "massif_closure"), scope_ids=tuple(z),
+                             old_rank=3, new_rank=1, old_level=3, new_level=1) for i, z in enumerate(ziele)]
 
 
 # ------------------------------------------------------------ Versandfaelle
