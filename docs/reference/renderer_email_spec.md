@@ -301,6 +301,8 @@ X-GZ-Lang:      de | en
 
 Die Stundenverlauf-Überschrift steht in Klartext und HTML nur, wenn mindestens ein Ort ohne Fehler Stundendaten hat; ohne solchen Ort entfällt der Block, der Ausblick bleibt (feat_3122 AC-10, seit 2026-11-27 in beiden Fassungen gleich, #3425).
 
+**Übersicht-Zellformate Klartext = HTML (seit 2026-11-27, #3431):** Die Übersicht je Ort hat im Klartext-Teil, im Telegram-Vergleich und in der Kompakt-Mail dasselbe Format wie im HTML-Teil, aus dem Format-Katalog (`metric_format.format_value`, Stil `plain`): Windrichtung `213 °`, Sonnenstunden `4.0 h`, Wolkenschichten gerundet `40%`. Fehlender Wert ist in allen Fassungen `–` (`NO_VALUE`, U+2013). SMS und Premium-SMS sind davon nicht betroffen.
+
 Die Tabelle „Übersicht“ steht auch bei genau einem Ort in der Mail. Der Befehlsblock nennt „Briefing für heute/morgen jetzt senden“ statt „Vergleich …“, der Hinweis auf gewählte Größen ohne Wert endet auf „in der Übersicht“, die leere Mail sagt „Keine Wetterdaten verfügbar.“
 
 **Acceptance Gating:** Nur Exit 0 der entsprechenden Validator erlaubt „E2E Test bestanden".

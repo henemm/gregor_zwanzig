@@ -531,7 +531,7 @@ def test_ac6_orte_ohne_format_angabe_bleibt_roh(mit):
                                          {"metric_id": "gust", "enabled": True}])})
     for _uid, snap in zwei_nutzer(mit, p):
         tg = text(snap, "telegram")
-        assert _orte_zellen(tg)[0].endswith(" 250°"), tg
+        assert _orte_zellen(tg)[0].endswith(" 250 °"), tg
 
 
 @pytest.mark.parametrize("reihenfolge", ["ab", "ba"])

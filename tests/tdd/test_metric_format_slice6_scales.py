@@ -133,7 +133,7 @@ class TestAC6SunshineCatalogAndMigration:
         """AC-6: GIVEN sunshine.decimals=1 im Katalog / WHEN der Klartext-Teil
         der Vergleichs-Mail gerendert wird / THEN traegt die Sonne-Zeile den
         ueber die zentrale Formatierung gebildeten Wert (4,7 Stunden erscheinen
-        als "4.7h", NICHT als handgerundetes "5h").
+        als "4.7 h", NICHT als handgerundetes "5 h").
 
         Issue #1359: vorher zaehlte dieser Test ``format_value(``-Vorkommen im
         Quelltext von ``render_comparison_text``. Zwei Gruende, warum das nicht
@@ -165,7 +165,7 @@ class TestAC6SunshineCatalogAndMigration:
             created_at=datetime(2026, 7, 12, 9, 0),
         )
         text = render_comparison_text(result, preset=None)
-        assert "   Sonnenstunden: 4.7h\n" in text, (
+        assert "   Sonnenstunden: 4.7 h\n" in text, (  # #3431: Katalogformat
             "AC-6: die Sonne-Zeile folgt nicht mehr der zentralen Formatierung "
             f"(sunshine.decimals=1).\nText:\n{text}"
         )

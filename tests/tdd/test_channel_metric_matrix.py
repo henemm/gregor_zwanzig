@@ -3488,7 +3488,8 @@ _S5_FEHLZEICHEN_FELDER = ("temp_max", "cloud_avg")
 def test_ac_s5_5_fehlzeichen_html_em_dash_klartext_hyphen(key):
     """AC-S5-5 (Charakterisierung, kein Fix -- PO-Entscheidung, s. Spec
     Purpose): fehlt der Wert einer generischen ``_fmt_metric``-Zeile, zeigt
-    HTML das EM DASH U+2014, Klartext den ASCII HYPHEN U+002D --
+    HTML das EM DASH U+2014, Klartext den ASCII HYPHEN U+002D (Issue #3431:
+    beide Teile jetzt U+2013 ``NO_VALUE``, s. unten) --
     bytegenauer Codepoint-Vergleich, keine 'sieht aus wie ein Strich'-
     Pruefung. Der dritte, im Modul existierende En-Dash-Zweig
     (``format_value``s ``_NO_VALUE``) ist hier NICHT Gegenstand (im
@@ -3517,10 +3518,11 @@ def test_ac_s5_5_fehlzeichen_html_em_dash_klartext_hyphen(key):
         "U+2013 EN DASH"
     )
     klartext_zelle = _s5_klartext_wert(text, label)
-    assert len(klartext_zelle) == 1 and ord(klartext_zelle) == 0x2D, (
+    # Issue #3431 (AC-4): Klartext nutzt denselben Platzhalter wie HTML.
+    assert len(klartext_zelle) == 1 and ord(klartext_zelle) == 0x2013, (
         f"AC-S5-5: KLARTEXT-Zeile {label!r} ({key}) ohne Wert zeigt "
         f"{klartext_zelle!r} (Codepoints {[hex(ord(c)) for c in klartext_zelle]}) "
-        "-- erwartet genau U+002D ASCII HYPHEN"
+        "-- erwartet genau U+2013 EN DASH"
     )
 
 

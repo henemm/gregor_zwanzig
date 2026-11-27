@@ -12,21 +12,21 @@ Innsbruck
    Precipitation: 2.4 mm
    Rain probability: 70%
    Thunderstorm: –
-   Sunshine hours: 4.0h
+   Sunshine hours: 4.0 h
    Cloud cover: 45%
    UV index: 4
    Visibility: 10.0 km
-   Snow depth: -
-   Fresh snow: -
+   Snow depth: –
+   Fresh snow: –
    Temperature Minimum: 2°C
    Wind gusts: 38 km/h
    Freezing level: 2400 m
-   Wind direction: -
-   Feels-like temperature Minimum: -
-   Feels-like temperature Maximum: -
-   Low clouds: -
-   Mid-level clouds: -
-   High clouds: -
+   Wind direction: –
+   Feels-like temperature Minimum: –
+   Feels-like temperature Maximum: –
+   Low clouds: –
+   Mid-level clouds: –
+   High clouds: –
    Humidity: 72%
    Dew point: 1°C
    Air pressure: 1012 hPa
@@ -39,21 +39,21 @@ Lienz
    Precipitation: 5.4 mm
    Rain probability: 70%
    Thunderstorm: medium · CAPE, Lightning density · Hail: yes
-   Sunshine hours: 5.0h
+   Sunshine hours: 5.0 h
    Cloud cover: 45%
    UV index: 4
    Visibility: 10.0 km
-   Snow depth: -
-   Fresh snow: -
+   Snow depth: –
+   Fresh snow: –
    Temperature Minimum: 3°C
    Wind gusts: 39 km/h
    Freezing level: 2450 m
-   Wind direction: -
-   Feels-like temperature Minimum: -
-   Feels-like temperature Maximum: -
-   Low clouds: -
-   Mid-level clouds: -
-   High clouds: -
+   Wind direction: –
+   Feels-like temperature Minimum: –
+   Feels-like temperature Maximum: –
+   Low clouds: –
+   Mid-level clouds: –
+   High clouds: –
    Humidity: 72%
    Dew point: 2°C
    Air pressure: 1013 hPa
@@ -66,21 +66,21 @@ Kufstein
    Precipitation: 8.4 mm
    Rain probability: 70%
    Thunderstorm: –
-   Sunshine hours: 6.0h
+   Sunshine hours: 6.0 h
    Cloud cover: 45%
    UV index: 4
    Visibility: 10.0 km
-   Snow depth: -
-   Fresh snow: -
+   Snow depth: –
+   Fresh snow: –
    Temperature Minimum: 4°C
    Wind gusts: 40 km/h
    Freezing level: 2500 m
-   Wind direction: -
-   Feels-like temperature Minimum: -
-   Feels-like temperature Maximum: -
-   Low clouds: -
-   Mid-level clouds: -
-   High clouds: -
+   Wind direction: –
+   Feels-like temperature Minimum: –
+   Feels-like temperature Maximum: –
+   Low clouds: –
+   Mid-level clouds: –
+   High clouds: –
    Humidity: 72%
    Dew point: 3°C
    Air pressure: 1014 hPa

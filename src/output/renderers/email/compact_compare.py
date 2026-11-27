@@ -117,7 +117,9 @@ def _ortszeile(loc_result: LocationResult, renderer_ids: list[str],
                 row[2], value, loc_result, lang=lang, metric_id=rid,
                 friendly=bool((metric_formats or {}).get(rid)), summary=summary,
             )
-        teile.append(f"{kuerzel[rid]} {zelle}")
+        # Issue #3431: Katalogformat `213 °` faltet zu `213 ` -- Zelle einzeln
+        # falten und trimmen, sonst Doppel-Leerzeichen in der Ortszeile.
+        teile.append(f"{kuerzel[rid]} {_ascii(zelle).strip()}")
     if verworfen:
         # Issue #3059: sichtbares Signal statt stiller Verwerfung (Muster der
         # Compare-Aufloeser, #1405).

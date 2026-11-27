@@ -360,7 +360,7 @@ def test_regression_original_six_metrics_values_unchanged():
     expected_values = [
         format_value("temperature", 16.4, style="plain"),
         format_value("wind", 12.0, style="plain"),
-        f"{format_value('sunshine', 5, style='bare')}h",
+        format_value("sunshine", 5, style="plain"),  # #3431
         format_value("cloud_total", 42, style="plain"),
         format_value("snow_depth", 30.0, style="plain"),
         "4 cm",
