@@ -52,6 +52,11 @@ Artefakt darf keinen Nachweis behaupten, den es nie gab.
 grünen Tests, Adversary VERIFIED, alle CI-Checks grün). (`ui_screenshot_gate.py`, früher hier zur
 Mitbewertung genannt, war nie verdrahtet und ist mit dem Gate-Rückbau Stufe 1 entfernt, #1197.)*
 
+**Scope-Diff-Basis (#1640, repariert):** `_scope_diff_base()` nimmt Preflight-Basis bzw. Marker-SHA nur noch,
+wenn sie **Vorfahre von HEAD** ist (`git merge-base --is-ancestor`), sonst `HEAD~1`. Vorher diffte ein Marker auf
+einem Nachfahren (Parallel-Merge mitten im Lauf) rückwärts und lieferte einen falschen Scope. Test:
+`tests/tdd/test_staging_gate_scope_basis.py`. *Regel-Budget: Prüfdatum 2027-02-25.*
+
 ## Zugangsdaten: DREI Quellen, nicht zwei (2026-08-08)
 
 Bei einer Blockade **zuerst hier** nachsehen, nicht in der `.env` des Arbeitsordners.

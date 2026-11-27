@@ -156,16 +156,24 @@ def _scope_diff_base(head: str | None = None) -> str:
     Backend-Commit fälschlich mit in den Diff zog). Es wird NUR die Basis
     übernommen, nie ein gecachter Scope-WERT — der Scope wird weiterhin immer
     frisch aus dem echten git-diff berechnet (F001 bleibt unberührt).
+
+    Issue #1640: jede Kandidaten-Basis (Preflight-Basis wie Marker) muss
+    Vorfahre von HEAD sein, sonst HEAD~1. Prüfdatum: 2027-02-25.
     """
     head = head if head is not None else _head_sha()
     preflight_base = _e2e_paths.read_preflight_base(_shared_repo_dir(), head)
     if preflight_base is not None and preflight_base != head:
-        if _e2e_paths.commit_exists(preflight_base, _verified_repo_dir()):
+        if (_e2e_paths.commit_exists(preflight_base, _verified_repo_dir())
+                and _e2e_paths.is_ancestor(preflight_base, head, _verified_repo_dir())):
             return preflight_base
 
     marker_sha = _e2e_paths.read_last_gate_scope(_shared_repo_dir())
     if marker_sha and marker_sha != head:
-        if _e2e_paths.commit_exists(marker_sha, _verified_repo_dir()):
+        # Issue #1640: nur ein VORFAHRE von HEAD ist eine gueltige Basis; ein
+        # Nachfahre (fremder Merge waehrend des Laufs) oder Fremd-Zweig-Commit
+        # wuerde rueckwaerts/seitwaerts diffen.
+        if (_e2e_paths.commit_exists(marker_sha, _verified_repo_dir())
+                and _e2e_paths.is_ancestor(marker_sha, head, _verified_repo_dir())):
             return marker_sha
     return "HEAD~1"
 

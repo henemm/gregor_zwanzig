@@ -260,6 +260,21 @@ def read_preflight_base(repo_dir, target_sha) -> "str | None":
     return base if base else None
 
 
+def is_ancestor(sha, head, repo_dir) -> bool:
+    """True, wenn `sha` ein Vorfahre von `head` ist (Issue #1640).
+
+    Eine Diff-Basis, die Nachfahre von HEAD ist (Parallel-Merge mitten im Lauf)
+    oder auf einem anderen Zweig liegt, liefert einen Rueckwaerts-/Fremd-Diff
+    und damit einen falschen Scope. Im Zweifel (git-Fehler) False => Aufrufer
+    nimmt HEAD~1 (fail-closed, nie still docs-only).
+    """
+    result = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", sha, head],
+        capture_output=True, text=True, cwd=str(repo_dir),
+    )
+    return result.returncode == 0
+
+
 def _git_diff_names(base, target, repo_dir) -> "list[str] | None":
     """git diff --name-only <base> <target> in repo_dir.
 
