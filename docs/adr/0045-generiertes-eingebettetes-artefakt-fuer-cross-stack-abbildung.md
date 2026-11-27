@@ -65,6 +65,12 @@ strukturell ähnliche Cross-Stack-Duplikate gedacht (z. B. das in
 `AlertableMetrics`-Vokabular selbst, oder der in Issue #1000 dokumentierte
 Fall) — dort jeweils neu zu entscheiden, ob dieses Muster passt.
 
+**Anwendung (Status-Hinweis, 2026-11-27, #2994):** Das `AlertableMetrics`-Vokabular
+wird seit #2994 nach demselben Mechanismus generiert: `scripts/generate_alert_metric_mapping.py`
+schreibt `internal/model/alertable_metrics.generated.json`, Go bindet es per `go:embed`
+ein, `tests/tdd/test_alert_metric_mapping_parity.py` prüft es mit. Die Entscheidung oben
+bleibt unverändert; es gibt dafür kein neues ADR.
+
 **Zwei physische generierte Dateien statt einer.** Go-Embed-Teilbaum-Regel und
 Vite-`server.fs.allow`-Sicherheitsgrenze verhindern einen einzelnen Dateiort für
 beide Toolchains. Mechanisch so dicht wie eine einzelne Datei (beide werden aus
