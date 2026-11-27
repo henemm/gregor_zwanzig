@@ -8,11 +8,13 @@ VERTRAG für den Developer:
         subscription = ``app.trip.Trip`` (kind route) oder Compare-Preset-Rohdict (kind vergleich).
         Je aktiver Regel bzw. Alarm-Metrik eine Änderung, S = Schwelle (#3462):
         Richtung je Summary-Feld aus dem Katalog (ein Kandidat mit cmp "unter" ⇒ fallend).
-        steigend: old = 0 bei Delta-Regeln, sonst 0.8×S; new = old + 1.2×S.
-        fallend:  new = 0.8×S; old = new + 1.2×S (= 2×S).
+        Betrag der Änderung immer 1.2×|S| (negative Schwellen, z. B. Kälte −25 °C).
+        steigend: old = 0 bei Delta-Regeln, sonst 0.8×S; new = old + 1.2×|S|.
+        fallend:  new = 0.8×S; old = new + 1.2×|S|.
         Gewitter ``thunder_level_max``: old = 0, new = min(3, max(2, ceil(1.2×S))).
         Einheit "%": new ≤ 100, old = max(0, new − 1.2×S).
-        Je Katalog-Metrik (``_resolve_metric_id``) höchstens eine Änderung, erste Regel gewinnt.
+        Je angezeigter Bezeichnung (``get_alert_label(_resolve_metric_id(…), "de")``) höchstens
+        eine Änderung, erste Regel gewinnt (Kälte/Hitze heißen beide „Temp“).
         Keine aktive ⇒ Fallback-Metrik (Böen, S = 50: 40 → 100).
 
 Kein Mock: echte Trip-/Vergleichsdateien im isolierten Datenbaum, echte Loader. Die Stundenreihe
@@ -59,24 +61,25 @@ def _faellt(feld: str) -> bool:
 def _regel_treu(changes) -> None:
     import math
 
-    from app.metric_catalog import get_metric
+    from app.metric_catalog import get_alert_label, get_metric
     from output.renderers.alert.project import _resolve_metric_id
 
     assert changes, "kein Beispiel erzeugt"
     metriken = [_resolve_metric_id(c.metric, c.direction) for c in changes]
-    assert len(metriken) == len(set(metriken)), f"Katalog-Metrik doppelt: {metriken}"
+    bezeichnungen = [get_alert_label(m, "de") for m in metriken]
+    assert len(bezeichnungen) == len(set(bezeichnungen)), f"Bezeichnung doppelt: {bezeichnungen}"
     for c, mid in zip(changes, metriken):
-        s = c.threshold
+        s, betrag = c.threshold, 1.2 * abs(c.threshold)
         if c.metric == "thunder_level_max":
             assert (c.old_value, c.new_value) == (0, min(3, max(2, math.ceil(1.2 * s)))), c
         elif get_metric(mid).unit == "%":
-            assert c.new_value <= 100 and c.old_value == pytest.approx(max(0.0, c.new_value - 1.2 * s)), c
+            assert c.new_value <= 100 and c.old_value == pytest.approx(max(0.0, c.new_value - betrag)), c
         elif _faellt(c.metric):
             assert c.direction == "decrease", c
-            assert c.new_value == pytest.approx(0.8 * s) and c.old_value == pytest.approx(2.0 * s), c
+            assert c.new_value == pytest.approx(0.8 * s) and c.old_value == pytest.approx(c.new_value + betrag), c
         else:
             assert c.direction == "increase", c
-            assert c.new_value - c.old_value == pytest.approx(1.2 * s), c
+            assert c.new_value - c.old_value == pytest.approx(betrag), c
             assert c.old_value in (pytest.approx(0.8 * s), 0), c
 
 

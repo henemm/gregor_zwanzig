@@ -5,11 +5,13 @@ Spec: docs/specs/modules/fix_3462_testalarm_beispielwerte.md (AC-1 bis AC-4; AC-
 VERTRAG für den Developer (``services.alert_test_service``):
     S = Schwelle der Regel. Richtung je Summary-Feld aus dem Katalog: hat ein Kandidat
     in ``_METRICS`` cmp "unter" ⇒ fallend ("decrease"), sonst steigend ("increase").
-    steigend: alt = 0 bei DELTA, sonst 0.8·S; neu = alt + 1.2·S.
-    fallend:  neu = 0.8·S; alt = neu + 1.2·S.
+    Betrag der Änderung immer 1.2·|S| (auch negative Schwellen, z. B. Kälte −25 °C).
+    steigend: alt = 0 bei DELTA, sonst 0.8·S; neu = alt + 1.2·|S|.
+    fallend:  neu = 0.8·S; alt = neu + 1.2·|S|.
     Gewitter (``thunder_level_max``): alt = 0, neu = min(3, max(2, ceil(1.2·S))).
     Einheit "%": neu ≤ 100, alt = max(0, neu - 1.2·S).
-    Dedupe je ``_resolve_metric_id(feld, richtung)``, erste Regel gewinnt.
+    Dedupe je angezeigter Bezeichnung ``get_alert_label(_resolve_metric_id(feld, richtung), "de")``,
+    erste Regel gewinnt (Kälte- und Hitzeseite heißen beide „Temp“ ⇒ Temperatur genau einmal).
 
 Kein Mock: echte Trip-/Vergleichsdateien im isolierten Datenbaum, echte Loader, echter
 Renderer (``over_thr``) und die echte Kette Endpoint -> Baustein -> ``NotificationService``
@@ -34,8 +36,9 @@ def _regel(metric: str, kind: str, threshold: float) -> dict:
             "severity": "warning", "enabled": True}
 
 
-#: Alle drei Regelarten; Temperatur-Minimum/-Änderung und Niederschlag-Summe/-Änderung
-#: fallen je auf DIESELBE Katalog-Metrik (Dedupe), Sicht und Nullgradgrenze sind fallend.
+#: Alle drei Regelarten; Temperatur-Änderung/-Maximum/-Minimum tragen dieselbe Bezeichnung
+#: „Temp“, Niederschlag-Summe/-Änderung dieselbe „Niedersch“ (Dedupe); Sicht und
+#: Nullgradgrenze sind fallend.
 TRIP_REGELN = [
     _regel("wind_gust", "absolute", 50.0),
     _regel("temperature_change", "delta", 6.0),
@@ -47,10 +50,10 @@ TRIP_REGELN = [
     _regel("precipitation_change", "delta", 7.0),
     _regel("freezing_level", "absolute", 400.0),
 ]
-#: Je Katalog-Metrik genau einmal (erste Regel gewinnt): Temperatur-Minimum fällt
-#: hinter Temperatur-Änderung, Niederschlag-Änderung hinter Niederschlag-Summe weg.
-TRIP_ERWARTETE_METRIKEN = ["gust", "temperature_cold", "visibility", "thunder", "temperature",
-                           "precipitation", "freezing_level"]
+#: Je Bezeichnung genau einmal (erste Regel gewinnt): Temperatur-Änderung (temp_min_c, fallend
+#: ⇒ Kälteseite) gewinnt vor Maximum und Minimum, Niederschlag-Summe vor -Änderung.
+TRIP_ERWARTETE_METRIKEN = ["gust", "temperature_cold", "visibility", "thunder", "precipitation",
+                           "freezing_level"]
 
 
 # --------------------------------------------------------------------------- Helfer
@@ -78,6 +81,12 @@ def _metrik(c) -> str:
     from output.renderers.alert.project import _resolve_metric_id
 
     return _resolve_metric_id(c.metric, c.direction)
+
+
+def _bezeichnung(c) -> str:
+    from app.metric_catalog import get_alert_label
+
+    return get_alert_label(_metrik(c), "de")
 
 
 def _ereignis(c):
@@ -160,12 +169,6 @@ def _ereigniszeilen(plain: str, lang: str) -> list[str]:
     return [z for z in plain.splitlines() if z.endswith(f" {ueber}") or f" · {unter_kurz}:" in z]
 
 
-def _pfeil(zeile: str) -> str:
-    """Richtung einer Datenzeile: Kälte- und Hitzeseite der Temperatur tragen dieselbe
-    Katalog-Kurzbezeichnung („Temp"), unterscheiden sich aber im Pfeil."""
-    return "↓" if "↓" in zeile else "↑" if "↑" in zeile else "→"
-
-
 # --------------------------------------------------------------------------- AC-1
 
 
@@ -198,6 +201,15 @@ def test_ac1_rueckfall_ohne_aktive_regel_boeen_40_auf_100_ueber_der_schwelle():
         ("gust_max_kmh", pytest.approx(40.0), pytest.approx(100.0), 50.0, "increase"),
     ], changes
     assert over_thr(_ereignis(changes[0])), changes[0]
+
+
+def test_ac1_negative_schwelle_kaelte_minus_25_betrag_1_2_mal_abs_s():
+    """Kälte-Regel mit negativer Schwelle: fallend, neu = 0.8·S = −20, alt = neu + 1.2·|S| = 10."""
+    changes = _trip_aenderungen(nutzer_anlegen(), [_regel("temperature_min", "absolute", -25.0)])
+
+    assert [(c.metric, c.old_value, c.new_value, c.direction) for c in changes] == [
+        ("temp_min_c", pytest.approx(10.0), pytest.approx(-20.0), "decrease"),
+    ], changes
 
 
 # --------------------------------------------------------------------------- AC-2
@@ -241,53 +253,54 @@ def test_ac2_einzel_ereignis_urteil_ueber_deiner_alarm_schwelle(mit, lang):
 # --------------------------------------------------------------------------- AC-3
 
 
-def test_ac3_trip_je_katalog_metrik_hoechstens_eine_aenderung():
+def test_ac3_trip_je_bezeichnung_hoechstens_eine_aenderung():
     changes = _trip_aenderungen(nutzer_anlegen(), TRIP_REGELN)
 
     assert [_metrik(c) for c in changes] == TRIP_ERWARTETE_METRIKEN, [
         (c.metric, c.direction, _metrik(c)) for c in changes]
+    zaehlung = Counter(_bezeichnung(c) for c in changes)
+    assert not {b: n for b, n in zaehlung.items() if n > 1}, zaehlung
 
 
-def test_ac3_vergleich_standard_je_katalog_metrik_hoechstens_eine_aenderung():
-    changes = _vergleich_aenderungen(nutzer_anlegen())
-
-    zaehlung = Counter(_metrik(c) for c in changes)
-    doppelt = {m: n for m, n in zaehlung.items() if n > 1}
-    assert not doppelt, f"Katalog-Metrik mehrfach: {doppelt} in {[(c.metric, c.direction) for c in changes]}"
-    assert zaehlung["temperature_cold"] == 1 and zaehlung["precipitation"] == 1, zaehlung
-
-
-def test_ac3_temp_min_kaelteseite_temp_max_hitzeseite():
-    from output.renderers.alert.project import _resolve_metric_id
+def test_ac3_vergleich_standard_je_bezeichnung_hoechstens_eine_aenderung():
+    from app.metric_catalog import get_alert_label
 
     changes = _vergleich_aenderungen(nutzer_anlegen())
 
-    richtung = {c.metric: c.direction for c in changes}
-    assert richtung.get("temp_min_c") == "decrease", richtung
-    assert richtung.get("temp_max_c") == "increase", richtung
-    assert _resolve_metric_id("temp_min_c", richtung["temp_min_c"]) == "temperature_cold"
-    assert _resolve_metric_id("temp_max_c", richtung["temp_max_c"]) == "temperature"
+    zaehlung = Counter(_bezeichnung(c) for c in changes)
+    doppelt = {b: n for b, n in zaehlung.items() if n > 1}
+    assert not doppelt, f"Bezeichnung mehrfach: {doppelt} in {[(c.metric, c.direction) for c in changes]}"
+    assert zaehlung[get_alert_label("temperature", "de")] == 1, zaehlung
+    assert zaehlung[get_alert_label("precipitation", "de")] == 1, zaehlung
+
+
+@pytest.mark.parametrize("kind", ["route", "vergleich"])
+def test_ac3_temperatur_minimum_beispiel_faellt(kind):
+    uid = nutzer_anlegen()
+    changes = _trip_aenderungen(uid, TRIP_REGELN) if kind == "route" else _vergleich_aenderungen(uid)
+
+    temp_min = [c for c in changes if c.metric == "temp_min_c"]
+    assert len(temp_min) == 1, [(c.metric, c.direction) for c in changes]
+    c = temp_min[0]
+    assert c.direction == "decrease" and c.new_value < c.old_value, c
+    assert _metrik(c) == "temperature_cold", c
 
 
 @pytest.mark.parametrize("lang", ["de", "en"])
 @pytest.mark.parametrize("kind", ["route", "vergleich"])
-def test_ac3_gerenderte_mail_je_block_jede_groesse_einmal_kaelte_und_hitze_unterscheidbar(mit, kind, lang):
-    """Je Block (Etappe bzw. Ort) erscheint jede Datenzeile (Block, Bezeichnung, Richtung) einmal;
-    die Temperatur-Zeilen von Kälte- und Hitzeseite unterscheiden sich (↓ bzw. ↑). Der Katalog
-    gibt beiden Seiten dieselbe Kurzbezeichnung „Temp“ und bleibt laut Spec unverändert."""
+def test_ac3_gerenderte_mail_je_block_jede_bezeichnung_hoechstens_einmal(mit, kind, lang):
+    """Je Block (Etappe bzw. Ort) erscheint jede Bezeichnung höchstens einmal, Temperatur genau
+    einmal (Kälte- und Hitzeseite tragen im Katalog dieselbe Kurzbezeichnung „Temp“)."""
     from app.metric_catalog import get_alert_label
 
     _test_alarm(kind, lang)
 
     zeilen = _ereigniszeilen(_texte(mit)["email"][0], lang)
-    schluessel = Counter((*z.split(" · ")[:2], _pfeil(z)) for z in zeilen)
+    schluessel = Counter(tuple(z.split(" · ")[:2]) for z in zeilen)
     assert not {k: n for k, n in schluessel.items() if n > 1}, zeilen
     temp = get_alert_label("temperature", lang)
-    temp_zeilen = [z for z in zeilen if temp in z.split(" · ")[:2]]
     bloecke = 1 if kind == "route" else 2
-    assert len(temp_zeilen) == 2 * bloecke, temp_zeilen
-    assert sum("↓" in z for z in temp_zeilen) == bloecke, temp_zeilen
-    assert sum("↑" in z for z in temp_zeilen) == bloecke, temp_zeilen
+    assert len([z for z in zeilen if temp in z.split(" · ")[:2]]) == bloecke, zeilen
 
 
 # --------------------------------------------------------------------------- AC-4

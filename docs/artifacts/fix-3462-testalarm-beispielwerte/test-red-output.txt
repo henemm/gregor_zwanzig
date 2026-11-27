@@ -1,124 +1,130 @@
-# RED #3462: uv run pytest tests/tdd/test_3462_testalarm_beispielwerte.py tests/tdd/test_alert_test_service.py -q --tb=line (24 FAILED, alle AssertionError gegen die alte Beispiel-Formel)
-FFFFFFFFFFFFFFFFFFFFFFFF.......                                          [100%]
+# RED #3462 (v2: Dedupe je Bezeichnung, Betrag 1.2*|S|): uv run pytest tests/tdd/test_3462_testalarm_beispielwerte.py tests/tdd/test_alert_test_service.py -q --tb=line (26 FAILED, alle AssertionError gegen die alte Beispiel-Formel)
+FFFFFFFFFFFFFFFFFFFFFFFFFF.......                                        [100%]
 =================================== FAILURES ===================================
 E   AssertionError: Renderer urteilt „unter“: [('gust_max_kmh', 40.0, 60.0, 50.0), ('visibility_min_m', 800.0, 1200.0, 1000.0), ('thunder_level_max', 0.8, 1.2, 1.0), ('temp_max_c', 24.0, 36.0, 30.0), ('temp_min_c', 4.0, 6.0, 5.0), ('precip_sum_mm', 8.0, 12.0, 10.0), ('freezing_level_m', 320.0, 480.0, 400.0)]
     assert [('gust_max_k...0, 10.0), ...] == []
       
       Left contains 7 more items, first extra item: ('gust_max_kmh', 40.0, 60.0, 50.0)
       Use -v to get more diff
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:179: AssertionError: Renderer urteilt „unter“: [('gust_max_kmh', 40.0, 60.0, 50.0), ('visibility_min_m', 800.0, 1200.0, 1000.0), ('thunder_level_max', 0.8, 1.2, 1.0), ('temp_max_c', 24.0, 36.0, 30.0), ('temp_min_c', 4.0, 6.0, 5.0), ('precip_sum_mm', 8.0, 12.0, 10.0), ('freezing_level_m', 320.0, 480.0, 400.0)]
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:182: AssertionError: Renderer urteilt „unter“: [('gust_max_kmh', 40.0, 60.0, 50.0), ('visibility_min_m', 800.0, 1200.0, 1000.0), ('thunder_level_max', 0.8, 1.2, 1.0), ('temp_max_c', 24.0, 36.0, 30.0), ('temp_min_c', 4.0, 6.0, 5.0), ('precip_sum_mm', 8.0, 12.0, 10.0), ('freezing_level_m', 320.0, 480.0, 400.0)]
 E   AssertionError: Renderer urteilt „unter“: [('visibility_min_m', 800.0, 1200.0, 1000.0)]
     assert [('visibility...00.0, 1000.0)] == []
       
       Left contains one more item: ('visibility_min_m', 800.0, 1200.0, 1000.0)
       Use -v to get more diff
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:189: AssertionError: Renderer urteilt „unter“: [('visibility_min_m', 800.0, 1200.0, 1000.0)]
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:192: AssertionError: Renderer urteilt „unter“: [('visibility_min_m', 800.0, 1200.0, 1000.0)]
 E   AssertionError: [WeatherChange(metric='gust_max_kmh', old_value=40.0, new_value=60.0, delta=20.0, threshold=50.0, severity=<ChangeSeve...ODERATE: 'moderate'>, direction='increase', segment_id='', occurred_at=None, stufe_von=None, stufe_bis=None, art=None)]
     assert [('gust_max_k..., 'increase')] == [('gust_max_k..., 'increase')]
       
       At index 0 diff: ('gust_max_kmh', 40.0, 60.0, 50.0, 'increase') != ('gust_max_kmh', 40.0 ± 4.0e-05, 100.0 ± 1.0e-04, 50.0, 'increase')
       Use -v to get more diff
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:197: AssertionError: [WeatherChange(metric='gust_max_kmh', old_value=40.0, new_value=60.0, delta=20.0, threshold=50.0, severity=<ChangeSeve...ODERATE: 'moderate'>, direction='increase', segment_id='', occurred_at=None, stufe_von=None, stufe_bis=None, art=None)]
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:200: AssertionError: [WeatherChange(metric='gust_max_kmh', old_value=40.0, new_value=60.0, delta=20.0, threshold=50.0, severity=<ChangeSeve...ODERATE: 'moderate'>, direction='increase', segment_id='', occurred_at=None, stufe_von=None, stufe_bis=None, art=None)]
+E   AssertionError: [WeatherChange(metric='temp_min_c', old_value=-20.0, new_value=-30.0, delta=-10.0, threshold=-25.0, severity=<ChangeSe...ODERATE: 'moderate'>, direction='decrease', segment_id='', occurred_at=None, stufe_von=None, stufe_bis=None, art=None)]
+    assert [('temp_min_c..., 'decrease')] == [('temp_min_c..., 'decrease')]
+      
+      At index 0 diff: ('temp_min_c', -20.0, -30.0, 'decrease') != ('temp_min_c', 10.0 ± 1.0e-05, -20.0 ± 2.0e-05, 'decrease')
+      Use -v to get more diff
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:210: AssertionError: [WeatherChange(metric='temp_min_c', old_value=-20.0, new_value=-30.0, delta=-10.0, threshold=-25.0, severity=<ChangeSe...ODERATE: 'moderate'>, direction='decrease', segment_id='', occurred_at=None, stufe_von=None, stufe_bis=None, art=None)]
 E   AssertionError: ('email', 'de', 'unter Schwelle', ['9 Werte über der Alarm-Schwelle
       
       ↑ 2 über Schwelle
       
       Niedersch · Segment 1 · Än... 14px;line-height:1.5;"><div>Abweichungs-Alarm</div><div style="color:#b5b1a6;">Open-Meteo</div></div></body></html>'])
     assert not ['9 Werte über der Alarm-Schwelle\n\n↑ 2 über Schwelle\n\nNiedersch · Segment 1 · Änderung 8,4 · Schwelle 7: 0 ↑ 8,4 m...x 14px;line-height:1.5;"><div>Abweichungs-Alarm</div><div style="color:#b5b1a6;">Open-Meteo</div></div></body></html>']
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:218: AssertionError: ('email', 'de', 'unter Schwelle', ['9 Werte über der Alarm-Schwelle
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:230: AssertionError: ('email', 'de', 'unter Schwelle', ['9 Werte über der Alarm-Schwelle
 E   AssertionError: ('email', 'en', 'below threshold', ['9 values above the alert threshold
       
       ↑ 2 over threshold
       
       Precip · Segment 1 · ...px 14px;line-height:1.5;"><div>Deviation alert</div><div style="color:#b5b1a6;">Open-Meteo</div></div></body></html>'])
     assert not ['9 values above the alert threshold\n\n↑ 2 over threshold\n\nPrecip · Segment 1 · Change 8.4 · Threshold 7: 0 ↑ 8.4 m...4px 14px;line-height:1.5;"><div>Deviation alert</div><div style="color:#b5b1a6;">Open-Meteo</div></div></body></html>']
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:218: AssertionError: ('email', 'en', 'below threshold', ['9 values above the alert threshold
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:230: AssertionError: ('email', 'en', 'below threshold', ['9 values above the alert threshold
 E   AssertionError: ('email', 'de', 'unter Schwelle', ['24 Werte über der Alarm-Schwelle
       
       ↑ 22 über Schwelle
       
       Innsbruck · Niedersch · ... 14px;line-height:1.5;"><div>Abweichungs-Alarm</div><div style="color:#b5b1a6;">Open-Meteo</div></div></body></html>'])
     assert not ['24 Werte über der Alarm-Schwelle\n\n↑ 22 über Schwelle\n\nInnsbruck · Niedersch · Änderung 8,4 · Schwelle 7: 0 ↑ 8,4...x 14px;line-height:1.5;"><div>Abweichungs-Alarm</div><div style="color:#b5b1a6;">Open-Meteo</div></div></body></html>']
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:218: AssertionError: ('email', 'de', 'unter Schwelle', ['24 Werte über der Alarm-Schwelle
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:230: AssertionError: ('email', 'de', 'unter Schwelle', ['24 Werte über der Alarm-Schwelle
 E   AssertionError: ('email', 'en', 'below threshold', ['24 values above the alert threshold
       
       ↑ 22 over threshold
       
       Innsbruck · Precip ...px 14px;line-height:1.5;"><div>Deviation alert</div><div style="color:#b5b1a6;">Open-Meteo</div></div></body></html>'])
     assert not ['24 values above the alert threshold\n\n↑ 22 over threshold\n\nInnsbruck · Precip · Change 8.4 · Threshold 7: 0 ↑ 8.4...4px 14px;line-height:1.5;"><div>Deviation alert</div><div style="color:#b5b1a6;">Open-Meteo</div></div></body></html>']
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:218: AssertionError: ('email', 'en', 'below threshold', ['24 values above the alert threshold
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:230: AssertionError: ('email', 'en', 'below threshold', ['24 values above the alert threshold
 E   AssertionError: ('email', 'de', 'Änderung unter deiner Alarm-Schwelle', ['Böen 40 km/h → 60 km/h seit dem Briefing
       
       ↑ Änderung unter... 14px;line-height:1.5;"><div>Abweichungs-Alarm</div><div style="color:#b5b1a6;">Open-Meteo</div></div></body></html>'])
     assert not ['Böen 40 km/h → 60 km/h seit dem Briefing\n\n↑ Änderung unter deiner Alarm-Schwelle (50 km/h)\n\nBöen · km/h: 40 km/h...x 14px;line-height:1.5;"><div>Abweichungs-Alarm</div><div style="color:#b5b1a6;">Open-Meteo</div></div></body></html>']
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:237: AssertionError: ('email', 'de', 'Änderung unter deiner Alarm-Schwelle', ['Böen 40 km/h → 60 km/h seit dem Briefing
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:249: AssertionError: ('email', 'de', 'Änderung unter deiner Alarm-Schwelle', ['Böen 40 km/h → 60 km/h seit dem Briefing
 E   AssertionError: ('email', 'en', 'Change below your alert threshold', ['Gusts 40 km/h → 60 km/h since the briefing
       
       ↑ Change below yo...px 14px;line-height:1.5;"><div>Deviation alert</div><div style="color:#b5b1a6;">Open-Meteo</div></div></body></html>'])
     assert not ['Gusts 40 km/h → 60 km/h since the briefing\n\n↑ Change below your alert threshold (50 km/h)\n\nGusts · km/h: 40 km/h...4px 14px;line-height:1.5;"><div>Deviation alert</div><div style="color:#b5b1a6;">Open-Meteo</div></div></body></html>']
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:237: AssertionError: ('email', 'en', 'Change below your alert threshold', ['Gusts 40 km/h → 60 km/h since the briefing
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:249: AssertionError: ('email', 'en', 'Change below your alert threshold', ['Gusts 40 km/h → 60 km/h since the briefing
 E   AssertionError: [('gust_max_kmh', 'increase', 'gust'), ('temp_min_c', 'increase', 'temperature'), ('visibility_min_m', 'increase', 'vi...ax', 'increase', 'thunder'), ('temp_max_c', 'increase', 'temperature'), ('temp_min_c', 'increase', 'temperature'), ...]
-    assert ['gust', 'tem...erature', ...] == ['gust', 'tem...itation', ...]
+    assert ['gust', 'tem...erature', ...] == ['gust', 'tem...eezing_level']
       
       At index 1 diff: 'temperature' != 'temperature_cold'
-      Left contains 2 more items, first extra item: 'precipitation'
+      Left contains 3 more items, first extra item: 'precipitation'
       Use -v to get more diff
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:247: AssertionError: [('gust_max_kmh', 'increase', 'gust'), ('temp_min_c', 'increase', 'temperature'), ('visibility_min_m', 'increase', 'vi...ax', 'increase', 'thunder'), ('temp_max_c', 'increase', 'temperature'), ('temp_min_c', 'increase', 'temperature'), ...]
-E   AssertionError: Katalog-Metrik mehrfach: {'precipitation': 2, 'temperature': 3} in [('gust_max_kmh', 'increase'), ('precip_sum_mm', 'increase'), ('thunder_level_max', 'increase'), ('freezing_level_m', 'increase'), ('temp_min_c', 'increase'), ('temp_max_c', 'increase'), ('temp_min_c', 'increase'), ('wind_max_kmh', 'increase'), ('precip_sum_mm', 'increase'), ('snow_new_sum_cm', 'increase'), ('cape_max_jkg', 'increase'), ('visibility_min_m', 'increase')]
-    assert not {'precipitation': 2, 'temperature': 3}
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:256: AssertionError: Katalog-Metrik mehrfach: {'precipitation': 2, 'temperature': 3} in [('gust_max_kmh', 'increase'), ('precip_sum_mm', 'increase'), ('thunder_level_max', 'increase'), ('freezing_level_m', 'increase'), ('temp_min_c', 'increase'), ('temp_max_c', 'increase'), ('temp_min_c', 'increase'), ('wind_max_kmh', 'increase'), ('precip_sum_mm', 'increase'), ('snow_new_sum_cm', 'increase'), ('cape_max_jkg', 'increase'), ('visibility_min_m', 'increase')]
-E   AssertionError: {'gust_max_kmh': 'increase', 'precip_sum_mm': 'increase', 'thunder_level_max': 'increase', 'freezing_level_m': 'increase', ...}
-    assert 'increase' == 'decrease'
-      
-      - decrease
-      ? ^^
-      + increase
-      ? ^^
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:266: AssertionError: {'gust_max_kmh': 'increase', 'precip_sum_mm': 'increase', 'thunder_level_max': 'increase', 'freezing_level_m': 'increase', ...}
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:259: AssertionError: [('gust_max_kmh', 'increase', 'gust'), ('temp_min_c', 'increase', 'temperature'), ('visibility_min_m', 'increase', 'vi...ax', 'increase', 'thunder'), ('temp_max_c', 'increase', 'temperature'), ('temp_min_c', 'increase', 'temperature'), ...]
+E   AssertionError: Bezeichnung mehrfach: {'Niedersch': 2, 'Temp': 3} in [('gust_max_kmh', 'increase'), ('precip_sum_mm', 'increase'), ('thunder_level_max', 'increase'), ('freezing_level_m', 'increase'), ('temp_min_c', 'increase'), ('temp_max_c', 'increase'), ('temp_min_c', 'increase'), ('wind_max_kmh', 'increase'), ('precip_sum_mm', 'increase'), ('snow_new_sum_cm', 'increase'), ('cape_max_jkg', 'increase'), ('visibility_min_m', 'increase')]
+    assert not {'Niedersch': 2, 'Temp': 3}
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:272: AssertionError: Bezeichnung mehrfach: {'Niedersch': 2, 'Temp': 3} in [('gust_max_kmh', 'increase'), ('precip_sum_mm', 'increase'), ('thunder_level_max', 'increase'), ('freezing_level_m', 'increase'), ('temp_min_c', 'increase'), ('temp_max_c', 'increase'), ('temp_min_c', 'increase'), ('wind_max_kmh', 'increase'), ('precip_sum_mm', 'increase'), ('snow_new_sum_cm', 'increase'), ('cape_max_jkg', 'increase'), ('visibility_min_m', 'increase')]
+E   AssertionError: [('gust_max_kmh', 'increase'), ('temp_min_c', 'increase'), ('visibility_min_m', 'increase'), ('thunder_level_max', 'increase'), ('temp_max_c', 'increase'), ('temp_min_c', 'increase'), ...]
+    assert 2 == 1
+     +  where 2 = len([WeatherChange(metric='temp_min_c', old_value=0, new_value=7.199999999999999, delta=7.199999999999999, threshold=6.0, ...ODERATE: 'moderate'>, direction='increase', segment_id='', occurred_at=None, stufe_von=None, stufe_bis=None, art=None)])
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:283: AssertionError: [('gust_max_kmh', 'increase'), ('temp_min_c', 'increase'), ('visibility_min_m', 'increase'), ('thunder_level_max', 'increase'), ('temp_max_c', 'increase'), ('temp_min_c', 'increase'), ...]
+E   AssertionError: [('gust_max_kmh', 'increase'), ('precip_sum_mm', 'increase'), ('thunder_level_max', 'increase'), ('freezing_level_m', 'increase'), ('temp_min_c', 'increase'), ('temp_max_c', 'increase'), ...]
+    assert 2 == 1
+     +  where 2 = len([WeatherChange(metric='temp_min_c', old_value=0, new_value=6.0, delta=6.0, threshold=5.0, severity=<ChangeSeverity.MOD...ODERATE: 'moderate'>, direction='increase', segment_id='', occurred_at=None, stufe_von=None, stufe_bis=None, art=None)])
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:283: AssertionError: [('gust_max_kmh', 'increase'), ('precip_sum_mm', 'increase'), ('thunder_level_max', 'increase'), ('freezing_level_m', 'increase'), ('temp_min_c', 'increase'), ('temp_max_c', 'increase'), ...]
 E   AssertionError: ['Niedersch · Segment 1 · Änderung 8,4 · Schwelle 7: 0 ↑ 8,4 mm über', 'Temp · Segment 1 · Änderung 7 · Schwelle 6: 0 ...e: 800 → 1.200 m', 'Temp · Segment 1 · unter Schwelle: 24 → 36 °C', 'Temp · Segment 1 · unter Schwelle: 4 → 6 °C', ...]
-    assert not {('Temp', 'Segment 1', '→'): 2}
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:284: AssertionError: ['Niedersch · Segment 1 · Änderung 8,4 · Schwelle 7: 0 ↑ 8,4 mm über', 'Temp · Segment 1 · Änderung 7 · Schwelle 6: 0 ...e: 800 → 1.200 m', 'Temp · Segment 1 · unter Schwelle: 24 → 36 °C', 'Temp · Segment 1 · unter Schwelle: 4 → 6 °C', ...]
+    assert not {('Niedersch', 'Segment 1'): 2, ('Temp', 'Segment 1'): 3}
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:300: AssertionError: ['Niedersch · Segment 1 · Änderung 8,4 · Schwelle 7: 0 ↑ 8,4 mm über', 'Temp · Segment 1 · Änderung 7 · Schwelle 6: 0 ...e: 800 → 1.200 m', 'Temp · Segment 1 · unter Schwelle: 24 → 36 °C', 'Temp · Segment 1 · unter Schwelle: 4 → 6 °C', ...]
 E   AssertionError: ['Precip · Segment 1 · Change 8.4 · Threshold 7: 0 ↑ 8.4 mm above', 'Temp · Segment 1 · Change 7 · Threshold 6: 0 ↑ 7 ... 800 → 1,200 m', 'Temp · Segment 1 · below threshold: 24 → 36 °C', 'Temp · Segment 1 · below threshold: 4 → 6 °C', ...]
-    assert not {('Temp', 'Segment 1', '→'): 2}
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:284: AssertionError: ['Precip · Segment 1 · Change 8.4 · Threshold 7: 0 ↑ 8.4 mm above', 'Temp · Segment 1 · Change 7 · Threshold 6: 0 ↑ 7 ... 800 → 1,200 m', 'Temp · Segment 1 · below threshold: 24 → 36 °C', 'Temp · Segment 1 · below threshold: 4 → 6 °C', ...]
+    assert not {('Precip', 'Segment 1'): 2, ('Temp', 'Segment 1'): 3}
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:300: AssertionError: ['Precip · Segment 1 · Change 8.4 · Threshold 7: 0 ↑ 8.4 mm above', 'Temp · Segment 1 · Change 7 · Threshold 6: 0 ↑ 7 ... 800 → 1,200 m', 'Temp · Segment 1 · below threshold: 24 → 36 °C', 'Temp · Segment 1 · below threshold: 4 → 6 °C', ...]
 E   AssertionError: ['Innsbruck · Niedersch · Änderung 8,4 · Schwelle 7: 0 ↑ 8,4 mm über', 'Bozen · Niedersch · Änderung 8,4 · Schwelle 7:... · Temp · Änderung 6 · Schwelle 5: 0 ↑ 6 °C über', 'Innsbruck · Temp · Änderung 12 · Schwelle 10: 0 ↑ 12 °C über', ...]
-    assert not {('Innsbruck', 'Niedersch', '↑'): 2, ('Bozen', 'Niedersch', '↑'): 2, ('Innsbruck', 'Temp', '↑'): 3, ('Bozen', 'Temp', '↑'): 3}
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:284: AssertionError: ['Innsbruck · Niedersch · Änderung 8,4 · Schwelle 7: 0 ↑ 8,4 mm über', 'Bozen · Niedersch · Änderung 8,4 · Schwelle 7:... · Temp · Änderung 6 · Schwelle 5: 0 ↑ 6 °C über', 'Innsbruck · Temp · Änderung 12 · Schwelle 10: 0 ↑ 12 °C über', ...]
+    assert not {('Innsbruck', 'Niedersch'): 2, ('Bozen', 'Niedersch'): 2, ('Innsbruck', 'Temp'): 3, ('Bozen', 'Temp'): 3}
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:300: AssertionError: ['Innsbruck · Niedersch · Änderung 8,4 · Schwelle 7: 0 ↑ 8,4 mm über', 'Bozen · Niedersch · Änderung 8,4 · Schwelle 7:... · Temp · Änderung 6 · Schwelle 5: 0 ↑ 6 °C über', 'Innsbruck · Temp · Änderung 12 · Schwelle 10: 0 ↑ 12 °C über', ...]
 E   AssertionError: ['Innsbruck · Precip · Change 8.4 · Threshold 7: 0 ↑ 8.4 mm above', 'Bozen · Precip · Change 8.4 · Threshold 7: 0 ↑ 8.... · Temp · Change 6 · Threshold 5: 0 ↑ 6 °C above', 'Innsbruck · Temp · Change 12 · Threshold 10: 0 ↑ 12 °C above', ...]
-    assert not {('Innsbruck', 'Precip', '↑'): 2, ('Bozen', 'Precip', '↑'): 2, ('Innsbruck', 'Temp', '↑'): 3, ('Bozen', 'Temp', '↑'): 3}
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:284: AssertionError: ['Innsbruck · Precip · Change 8.4 · Threshold 7: 0 ↑ 8.4 mm above', 'Bozen · Precip · Change 8.4 · Threshold 7: 0 ↑ 8.... · Temp · Change 6 · Threshold 5: 0 ↑ 6 °C above', 'Innsbruck · Temp · Change 12 · Threshold 10: 0 ↑ 12 °C above', ...]
+    assert not {('Innsbruck', 'Precip'): 2, ('Bozen', 'Precip'): 2, ('Innsbruck', 'Temp'): 3, ('Bozen', 'Temp'): 3}
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:300: AssertionError: ['Innsbruck · Precip · Change 8.4 · Threshold 7: 0 ↑ 8.4 mm above', 'Bozen · Precip · Change 8.4 · Threshold 7: 0 ↑ 8.... · Temp · Change 6 · Threshold 5: 0 ↑ 6 °C above', 'Innsbruck · Temp · Change 12 · Threshold 10: 0 ↑ 12 °C above', ...]
 E   AssertionError: WeatherChange(metric='thunder_level_max', old_value=0.8, new_value=1.2, delta=0.3999999999999999, threshold=1.0, sever...MODERATE: 'moderate'>, direction='increase', segment_id='', occurred_at=None, stufe_von=None, stufe_bis=None, art=None)
     assert (0.8 == 0)
      +  where 0.8 = WeatherChange(metric='thunder_level_max', old_value=0.8, new_value=1.2, delta=0.3999999999999999, threshold=1.0, sever...MODERATE: 'moderate'>, direction='increase', segment_id='', occurred_at=None, stufe_von=None, stufe_bis=None, art=None).old_value
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:307: AssertionError: WeatherChange(metric='thunder_level_max', old_value=0.8, new_value=1.2, delta=0.3999999999999999, threshold=1.0, sever...MODERATE: 'moderate'>, direction='increase', segment_id='', occurred_at=None, stufe_von=None, stufe_bis=None, art=None)
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:320: AssertionError: WeatherChange(metric='thunder_level_max', old_value=0.8, new_value=1.2, delta=0.3999999999999999, threshold=1.0, sever...MODERATE: 'moderate'>, direction='increase', segment_id='', occurred_at=None, stufe_von=None, stufe_bis=None, art=None)
 E   AssertionError: ('email', ['9 Werte über der Alarm-Schwelle
       
       ↑ 2 über Schwelle
       
       Niedersch · Segment 1 · Änderung 8,4 · Schwelle 7:... 14px;line-height:1.5;"><div>Abweichungs-Alarm</div><div style="color:#b5b1a6;">Open-Meteo</div></div></body></html>'])
     assert not ['9 Werte über der Alarm-Schwelle\n\n↑ 2 über Schwelle\n\nNiedersch · Segment 1 · Änderung 8,4 · Schwelle 7: 0 ↑ 8,4 m...x 14px;line-height:1.5;"><div>Abweichungs-Alarm</div><div style="color:#b5b1a6;">Open-Meteo</div></div></body></html>']
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:324: AssertionError: ('email', ['9 Werte über der Alarm-Schwelle
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:337: AssertionError: ('email', ['9 Werte über der Alarm-Schwelle
 E   AssertionError: ('email', ['9 values above the alert threshold
       
       ↑ 2 over threshold
       
       Precip · Segment 1 · Change 8.4 · Threshold 7:...px 14px;line-height:1.5;"><div>Deviation alert</div><div style="color:#b5b1a6;">Open-Meteo</div></div></body></html>'])
     assert not ['9 values above the alert threshold\n\n↑ 2 over threshold\n\nPrecip · Segment 1 · Change 8.4 · Threshold 7: 0 ↑ 8.4 m...4px 14px;line-height:1.5;"><div>Deviation alert</div><div style="color:#b5b1a6;">Open-Meteo</div></div></body></html>']
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:324: AssertionError: ('email', ['9 values above the alert threshold
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:337: AssertionError: ('email', ['9 values above the alert threshold
 E   AssertionError: ('email', ['24 Werte über der Alarm-Schwelle
       
       ↑ 22 über Schwelle
       
       Innsbruck · Niedersch · Änderung 8,4 · Schwelle ... 14px;line-height:1.5;"><div>Abweichungs-Alarm</div><div style="color:#b5b1a6;">Open-Meteo</div></div></body></html>'])
     assert not ['24 Werte über der Alarm-Schwelle\n\n↑ 22 über Schwelle\n\nInnsbruck · Niedersch · Änderung 8,4 · Schwelle 7: 0 ↑ 8,4...x 14px;line-height:1.5;"><div>Abweichungs-Alarm</div><div style="color:#b5b1a6;">Open-Meteo</div></div></body></html>']
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:324: AssertionError: ('email', ['24 Werte über der Alarm-Schwelle
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:337: AssertionError: ('email', ['24 Werte über der Alarm-Schwelle
 E   AssertionError: ('email', ['24 values above the alert threshold
       
       ↑ 22 over threshold
       
       Innsbruck · Precip · Change 8.4 · Threshold ...px 14px;line-height:1.5;"><div>Deviation alert</div><div style="color:#b5b1a6;">Open-Meteo</div></div></body></html>'])
     assert not ['24 values above the alert threshold\n\n↑ 22 over threshold\n\nInnsbruck · Precip · Change 8.4 · Threshold 7: 0 ↑ 8.4...4px 14px;line-height:1.5;"><div>Deviation alert</div><div style="color:#b5b1a6;">Open-Meteo</div></div></body></html>']
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:324: AssertionError: ('email', ['24 values above the alert threshold
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_3462_testalarm_beispielwerte.py:337: AssertionError: ('email', ['24 values above the alert threshold
 E   AssertionError: {'gust_max_kmh': (40.0, 60.0, 50.0), 'wind_max_kmh': (0, 24.0, 20.0)}
     assert {'gust_max_km..., 24.0, 20.0)} == {'gust_max_km....4e-05, 20.0)}
       
@@ -126,37 +132,39 @@ E   AssertionError: {'gust_max_kmh': (40.0, 60.0, 50.0), 'wind_max_kmh': (0, 24.
       Differing items:
       {'gust_max_kmh': (40.0, 60.0, 50.0)} != {'gust_max_kmh': (40.0 ± 4.0e-05, 100.0 ± 1.0e-04, 50.0)}
       Use -v to get more diff
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_alert_test_service.py:100: AssertionError: {'gust_max_kmh': (40.0, 60.0, 50.0), 'wind_max_kmh': (0, 24.0, 20.0)}
-E   AssertionError: Katalog-Metrik doppelt: ['gust', 'temperature', 'temperature', 'wind']
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_alert_test_service.py:103: AssertionError: {'gust_max_kmh': (40.0, 60.0, 50.0), 'wind_max_kmh': (0, 24.0, 20.0)}
+E   AssertionError: Bezeichnung doppelt: ['Böen', 'Temp', 'Temp', 'Wind']
     assert 4 == 3
-     +  where 4 = len(['gust', 'temperature', 'temperature', 'wind'])
-     +  and   3 = len({'gust', 'temperature', 'wind'})
-     +    where {'gust', 'temperature', 'wind'} = set(['gust', 'temperature', 'temperature', 'wind'])
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_alert_test_service.py:67: AssertionError: Katalog-Metrik doppelt: ['gust', 'temperature', 'temperature', 'wind']
+     +  where 4 = len(['Böen', 'Temp', 'Temp', 'Wind'])
+     +  and   3 = len({'Böen', 'Temp', 'Wind'})
+     +    where {'Böen', 'Temp', 'Wind'} = set(['Böen', 'Temp', 'Temp', 'Wind'])
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_alert_test_service.py:70: AssertionError: Bezeichnung doppelt: ['Böen', 'Temp', 'Temp', 'Wind']
 E   AssertionError: WeatherChange(metric='gust_max_kmh', old_value=40.0, new_value=60.0, delta=20.0, threshold=50.0, severity=<ChangeSever...MODERATE: 'moderate'>, direction='increase', segment_id='', occurred_at=None, stufe_von=None, stufe_bis=None, art=None)
     assert 20.0 == 60.0 ± 6.0e-05
       
       comparison failed
       Obtained: 20.0
       Expected: 60.0 ± 6.0e-05
-/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_alert_test_service.py:79: AssertionError: WeatherChange(metric='gust_max_kmh', old_value=40.0, new_value=60.0, delta=20.0, threshold=50.0, severity=<ChangeSever...MODERATE: 'moderate'>, direction='increase', segment_id='', occurred_at=None, stufe_von=None, stufe_bis=None, art=None)
+/home/hem/gregor_zwanzig/.claude/worktrees/robust-napping-starlight/tests/tdd/test_alert_test_service.py:82: AssertionError: WeatherChange(metric='gust_max_kmh', old_value=40.0, new_value=60.0, delta=20.0, threshold=50.0, severity=<ChangeSever...MODERATE: 'moderate'>, direction='increase', segment_id='', occurred_at=None, stufe_von=None, stufe_bis=None, art=None)
 =========================== short test summary info ============================
 FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac1_trip_alle_drei_regelarten_jede_beispiel_aenderung_ueber_der_schwelle
 FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac1_vergleich_standardmetriken_jede_beispiel_aenderung_ueber_der_schwelle
 FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac1_rueckfall_ohne_aktive_regel_boeen_40_auf_100_ueber_der_schwelle
+FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac1_negative_schwelle_kaelte_minus_25_betrag_1_2_mal_abs_s
 FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac2_vier_kanaele_nie_unter_urteil_alle_ereignisse_ueber[route-de]
 FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac2_vier_kanaele_nie_unter_urteil_alle_ereignisse_ueber[route-en]
 FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac2_vier_kanaele_nie_unter_urteil_alle_ereignisse_ueber[vergleich-de]
 FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac2_vier_kanaele_nie_unter_urteil_alle_ereignisse_ueber[vergleich-en]
 FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac2_einzel_ereignis_urteil_ueber_deiner_alarm_schwelle[de]
 FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac2_einzel_ereignis_urteil_ueber_deiner_alarm_schwelle[en]
-FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac3_trip_je_katalog_metrik_hoechstens_eine_aenderung
-FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac3_vergleich_standard_je_katalog_metrik_hoechstens_eine_aenderung
-FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac3_temp_min_kaelteseite_temp_max_hitzeseite
-FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac3_gerenderte_mail_je_block_jede_groesse_einmal_kaelte_und_hitze_unterscheidbar[route-de]
-FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac3_gerenderte_mail_je_block_jede_groesse_einmal_kaelte_und_hitze_unterscheidbar[route-en]
-FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac3_gerenderte_mail_je_block_jede_groesse_einmal_kaelte_und_hitze_unterscheidbar[vergleich-de]
-FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac3_gerenderte_mail_je_block_jede_groesse_einmal_kaelte_und_hitze_unterscheidbar[vergleich-en]
+FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac3_trip_je_bezeichnung_hoechstens_eine_aenderung
+FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac3_vergleich_standard_je_bezeichnung_hoechstens_eine_aenderung
+FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac3_temperatur_minimum_beispiel_faellt[route]
+FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac3_temperatur_minimum_beispiel_faellt[vergleich]
+FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac3_gerenderte_mail_je_block_jede_bezeichnung_hoechstens_einmal[route-de]
+FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac3_gerenderte_mail_je_block_jede_bezeichnung_hoechstens_einmal[route-en]
+FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac3_gerenderte_mail_je_block_jede_bezeichnung_hoechstens_einmal[vergleich-de]
+FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac3_gerenderte_mail_je_block_jede_bezeichnung_hoechstens_einmal[vergleich-en]
 FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac4_gewitter_mindestens_maessig_sicht_faellt_prozent_in_0_bis_100
 FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac4_gerendert_gewitter_bezeichnung_nie_luftmasse_sicht_faellt[route-de]
 FAILED tests/tdd/test_3462_testalarm_beispielwerte.py::test_ac4_gerendert_gewitter_bezeichnung_nie_luftmasse_sicht_faellt[route-en]
