@@ -543,3 +543,128 @@ func TestBriefingSend_KindRequiredTextGleichPythonFassung(t *testing.T) {
 		t.Errorf("Python-Core %d-mal erreicht, erwartet 0 (Go meldet kind_required selbst)", py.count())
 	}
 }
+
+// ===========================================================================
+// Issue #3440 (S5a): Kanalwahl `channel` am Handversand (Menue „Test schicken ▾“)
+// Spec: docs/specs/modules/feat_3440_test_schicken_menue.md (AC-7, AC-14)
+//
+// Go prueft `channel` gegen die vier Namen email|telegram|sms|premium_sms und
+// reicht ihn nur dann an Python weiter; jeder andere Wert ist 400 ohne
+// Weiterleitung (Fehlercode wie in Python: invalid_channel). Fehlt `channel`,
+// bleibt alles wie heute (kein channel-Parameter upstream).
+// ===========================================================================
+
+var bsKanaele3440 = []string{"email", "telegram", "sms", "premium_sms"}
+
+func TestBriefingSend3440_ChannelWhitelistWirdWeitergereicht(t *testing.T) {
+	py := newVBUpstream(t, nil)
+	env := newVBEnv(t, py.srv.URL, "alice")
+
+	for _, kind := range []string{"route", "vergleich"} {
+		for _, kanal := range bsKanaele3440 {
+			t.Run(kind+"/"+kanal, func(t *testing.T) {
+				py.reset()
+				w := env.do(t, "POST", bsPath+"t-3440/send?kind="+kind+"&channel="+kanal, "alice", "")
+				if w.Code != http.StatusOK {
+					t.Fatalf("Status %d, erwartet 200 (body=%q)", w.Code, w.Body.String())
+				}
+				call, ok := py.last()
+				if !ok {
+					t.Fatal("Python-Core nicht erreicht")
+				}
+				if got := call.Query["channel"]; len(got) != 1 || got[0] != kanal {
+					t.Errorf("Upstream-channel = %v, erwartet genau [%s] (Whitelist-Name durchreichen)", got, kanal)
+				}
+				if got := call.Query.Get("kind"); got != kind {
+					t.Errorf("Upstream-kind %q, erwartet %q", got, kind)
+				}
+				vbAssertSingleUserID(t, call, "alice")
+			})
+		}
+	}
+
+	// Ohne channel: heutiges Verhalten, kein channel-Parameter upstream.
+	py.reset()
+	if w := env.do(t, "POST", bsPath+"t-3440/send?kind=route", "alice", ""); w.Code != 200 {
+		t.Fatalf("ohne channel: Status %d, erwartet 200 (body=%q)", w.Code, w.Body.String())
+	}
+	if call, ok := py.last(); !ok {
+		t.Fatal("ohne channel: Python-Core nicht erreicht")
+	} else if _, da := call.Query["channel"]; da {
+		t.Errorf("ohne channel darf upstream kein channel ankommen, bekommen %v", call.Query["channel"])
+	}
+}
+
+func TestBriefingSend3440_UnbekannterChannel_400OhneUpstream(t *testing.T) {
+	py := newVBUpstream(t, nil)
+	env := newVBEnv(t, py.srv.URL, "alice")
+
+	falsch := []string{"signal", "EMAIL", "alle", "email,telegram", "push", "sms%20"}
+	for _, kind := range []string{"route", "vergleich"} {
+		for _, kanal := range falsch {
+			t.Run(kind+"/"+kanal, func(t *testing.T) {
+				py.reset()
+				w := env.do(t, "POST", bsPath+"t-3440/send?kind="+kind+"&channel="+kanal, "alice", "")
+				if w.Code != http.StatusBadRequest {
+					t.Errorf("Status %d, erwartet 400 bei channel=%q (body=%q)", w.Code, kanal, w.Body.String())
+				}
+				bsAssertSendError(t, w, "invalid_channel")
+				if got := py.count(); got != 0 {
+					t.Errorf("Python-Core %d-mal erreicht — unbekannter Kanal darf nicht weitergereicht werden", got)
+				}
+			})
+		}
+	}
+	// Doppelter Parameter: ein gueltiger und ein ungueltiger Wert ist ebenfalls 400.
+	py.reset()
+	w := env.do(t, "POST", bsPath+"t-3440/send?kind=route&channel=email&channel=signal", "alice", "")
+	if w.Code != http.StatusBadRequest || py.count() != 0 {
+		t.Errorf("channel doppelt (email+signal): Status %d / Upstream %d, erwartet 400 / 0", w.Code, py.count())
+	}
+}
+
+func TestBriefingSend3440_ZweiNutzer_ChannelWaehltNieDenNutzer(t *testing.T) {
+	py := newVBUpstream(t, nil)
+	env := newVBEnv(t, py.srv.URL, "alice", "bob")
+
+	for _, kind := range []string{"route", "vergleich"} {
+		t.Run(kind, func(t *testing.T) {
+			// Bob waehlt Telegram und schmuggelt user_id/Empfaenger von alice mit.
+			py.reset()
+			w := env.do(t, "POST",
+				bsPath+"t-3440/send?kind="+kind+"&channel=telegram&user_id=alice&telegram_chat_id=chat-alice&to=alice@example.invalid",
+				"bob", `{"user_id":"alice","telegram_chat_id":"chat-alice"}`)
+			if w.Code != http.StatusOK {
+				t.Fatalf("bob: Status %d, erwartet 200 (body=%q)", w.Code, w.Body.String())
+			}
+			call, ok := py.last()
+			if !ok {
+				t.Fatal("bob: Python-Core nicht erreicht")
+			}
+			vbAssertSingleUserID(t, call, "bob")
+			if got := call.Query["channel"]; len(got) != 1 || got[0] != "telegram" {
+				t.Errorf("Upstream-channel = %v, erwartet [telegram]", got)
+			}
+			for _, fremd := range []string{"telegram_chat_id", "to", "mail_to"} {
+				if v, da := call.Query[fremd]; da {
+					t.Errorf("Client-Feld %s=%v darf Python nie erreichen (Kanal waehlt nie den Empfaenger)", fremd, v)
+				}
+			}
+
+			// Alice bleibt unberuehrt: genau EIN Upstream-Aufruf, und der gehoert bob.
+			if py.count() != 1 {
+				t.Errorf("Python-Core %d-mal erreicht, erwartet genau 1 (nur bob)", py.count())
+			}
+
+			// Ohne Session: 401, kein Rueckfall auf einen Default-Nutzer.
+			py.reset()
+			anon := env.do(t, "POST", bsPath+"t-3440/send?kind="+kind+"&channel=telegram&user_id=alice", "", "")
+			if anon.Code != http.StatusUnauthorized {
+				t.Errorf("ohne Session: Status %d, erwartet 401 (body=%q)", anon.Code, anon.Body.String())
+			}
+			if py.count() != 0 {
+				t.Errorf("ohne Session: Python-Core %d-mal erreicht, erwartet 0", py.count())
+			}
+		})
+	}
+}
