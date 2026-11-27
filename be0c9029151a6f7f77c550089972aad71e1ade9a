@@ -1,0 +1,73 @@
+{
+  "verified_commit": "be0c9029151a6f7f77c550089972aad71e1ade9a",
+  "findings": [
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "/api/health",
+      "evidence": "Staging auf be0c9029 gestartet, health status ok und python_core ok. Die Go-API baut AlertableMetrics beim Init aus dem eingebetteten JSON; jeder Parse-Fehler wuerde den Start per Panic abbrechen.",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "mail-pruefen beide (de)",
+      "evidence": "Trip- und Compare-Mail ueber Staging echt zugestellt, briefing_mail_validator und email_spec_validator Exit 0 (Marker GZM 271025-228a91f4); der Trip-Anlegepfad laeuft ueber SyncAlertRules",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "mail-pruefen beide en",
+      "evidence": "Trip- und Compare-Mail auf Englisch zugestellt, beide Validatoren Exit 0 (Marker GZM 271026-87555c90)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "CI test",
+      "evidence": "Generator- und Ratchet-Tests in CI gruen (alle 6 Checks auf PR #3455); kein Staging-Laufzeitpfad",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "CI test",
+      "evidence": "check()-Abweichungsfaelle in CI gruen; reine Build-/Entwicklerpruefung",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "CI go-test",
+      "evidence": "mustParseAlertableMetrics-Panic-Tests in CI go-test gruen",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "CI test",
+      "evidence": "Paritaetstest ohne Handspiegel in CI gruen; Nutzerverhalten der Mailpfade auf Staging unveraendert (siehe Mail-Findings)",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-27T10:26:32.968105+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Staging be0c9029: Start mit eingebettetem Alarm-Vokabular ok, Trip+Compare-Mail de/en zugestellt und validiert",
+  "scope": "backend",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Staging be0c9029: Start mit eingebettetem Alarm-Vokabular ok, Trip+Compare-Mail de/en zugestellt und validiert",
+      "scope": "backend",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-27T10:26:32.968105+00:00"
+    }
+  }
+}
