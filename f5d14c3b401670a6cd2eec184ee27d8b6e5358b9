@@ -1,0 +1,138 @@
+{
+  "verified_commit": "f5d14c3b401670a6cd2eec184ee27d8b6e5358b9",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/trips/{id}, /compare/{id}",
+      "evidence": "Playwright Staging (Pr\u00fcfkonto, selbst angelegtes Abo): L\u00f6schen \u2026 zeigt R\u00fcckfrage im offenen Men\u00fc, kein DELETE-Request, kein Dialog (route+vergleich)",
+      "workflow": "feat-3442-kebab-rueckfragen"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "/trips, /compare",
+      "evidence": "Endg\u00fcltig l\u00f6schen: genau ein DELETE, Navigation zur Liste, Eintrag fehlt (route+vergleich)",
+      "workflow": "feat-3442-kebab-rueckfragen"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "/trips/{id}, /compare/{id}",
+      "evidence": "Archivieren \u2026 zeigt R\u00fcckfrage mit Namen, kein Request vor Best\u00e4tigung",
+      "workflow": "feat-3442-kebab-rueckfragen"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "/trips/{id}",
+      "evidence": "Best\u00e4tigen: bleibt auf Seite, Status archiviert, Meldung 'Archiviert. Im Archiv kannst du es reaktivieren.'",
+      "workflow": "feat-3442-kebab-rueckfragen"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "/compare/{id}",
+      "evidence": "URL bleibt /compare/{id}, kein Reload, kein Konflikt-Banner, Status archiviert, Meldung",
+      "workflow": "feat-3442-kebab-rueckfragen"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "/trips/{id}, /compare/{id}",
+      "evidence": "Abbrechen: Men\u00fcliste sichtbar, aria-expanded true, kein Request, keine Meldung",
+      "workflow": "feat-3442-kebab-rueckfragen"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "/trips/{id}, /compare/{id}",
+      "evidence": "Escape und Au\u00dfenklick getrennt: schlie\u00dft ohne Wirkung, Wieder\u00f6ffnen zeigt Liste",
+      "workflow": "feat-3442-kebab-rueckfragen"
+    },
+    {
+      "ac": "AC-8",
+      "status": "PASS",
+      "url": "/trips/{id}, /compare/{id}",
+      "evidence": "Tastaturdurchlauf bis Best\u00e4tigung, Fokus in R\u00fcckfrage, Gefahrknopf Kontrast >= 4.5:1",
+      "workflow": "feat-3442-kebab-rueckfragen"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "390px",
+      "evidence": "Aktionsblatt zeigt R\u00fcckfrage, Abbrechen zur\u00fcck, schlie\u00dft erst nach Best\u00e4tigung, Zeilen >= 44px (route+vergleich)",
+      "workflow": "feat-3442-kebab-rueckfragen"
+    },
+    {
+      "ac": "AC-10",
+      "status": "PASS",
+      "url": "/trips/{id}, /compare/{id}",
+      "evidence": "Reaktivieren ohne R\u00fcckfrage, Status aktiv ohne Neuladen, Meldung Reaktiviert.",
+      "workflow": "feat-3442-kebab-rueckfragen"
+    },
+    {
+      "ac": "AC-11",
+      "status": "PASS",
+      "url": "/trips/{id}, /compare/{id}",
+      "evidence": "Pausieren/Fortsetzen ohne R\u00fcckfrage mit Meldung",
+      "workflow": "feat-3442-kebab-rueckfragen"
+    },
+    {
+      "ac": "AC-12",
+      "status": "PASS",
+      "url": "/trips/{id}, /compare/{id}",
+      "evidence": "L\u00f6schen offline: Netzfehler-Meldung, Seite bleibt, Abo bleibt",
+      "workflow": "feat-3442-kebab-rueckfragen"
+    },
+    {
+      "ac": "AC-14",
+      "status": "PASS",
+      "url": "/trips/{id} (language=en)",
+      "evidence": "R\u00fcckfrage und Men\u00fclabels englisch aus dem Katalog; Profilsprache danach zur\u00fcckgesetzt",
+      "workflow": "feat-3442-kebab-rueckfragen"
+    },
+    {
+      "ac": "AC-13/15/16",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "Kern-Schicht node --test gr\u00fcn (12076 Tests, 0 rot); CI 6/6 gr\u00fcn",
+      "workflow": "feat-3442-kebab-rueckfragen"
+    }
+  ],
+  "verified_at": "2026-11-27T17:35:47.777044+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: 19/19 Staging-Playwright-Tests (Trip+Vergleich, Desktop+390px, DE+EN) gegen f5d14c3",
+  "scope": "full-stack",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "feat-3442-kebab-rueckfragen": {
+      "verdict": "VERIFIED: 19/19 Staging-Playwright-Tests (Trip+Vergleich, Desktop+390px, DE+EN) gegen f5d14c3",
+      "scope": "full-stack",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-27T17:35:47.777044+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
