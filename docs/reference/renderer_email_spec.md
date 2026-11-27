@@ -299,6 +299,8 @@ X-GZ-Lang:      de | en
 | Umfang einer amtlichen Warnung (`warnung.umfang.alle_orte`, Code `official_alerts.py`) | `alle Orte` (EN `all locations`) | der Ortsname selbst, nie „alle Orte“ (#3153 AC-2, Abo mit genau einem Ort) |
 | Knopf (`vergleich.fuss.app_oeffnen`) | `In der App öffnen →` (EN `Open in app →`) | dasselbe |
 
+Die Stundenverlauf-Überschrift steht in Klartext und HTML nur, wenn mindestens ein Ort ohne Fehler Stundendaten hat; ohne solchen Ort entfällt der Block, der Ausblick bleibt (feat_3122 AC-10, seit 2026-11-27 in beiden Fassungen gleich, #3425).
+
 Die Tabelle „Übersicht“ steht auch bei genau einem Ort in der Mail. Der Befehlsblock nennt „Briefing für heute/morgen jetzt senden“ statt „Vergleich …“, der Hinweis auf gewählte Größen ohne Wert endet auf „in der Übersicht“, die leere Mail sagt „Keine Wetterdaten verfügbar.“
 
 **Acceptance Gating:** Nur Exit 0 der entsprechenden Validator erlaubt „E2E Test bestanden".
