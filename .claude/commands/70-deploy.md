@@ -10,6 +10,24 @@ Issue-Close zieht **am Stück** durch, ohne auf ein `go` zu warten. Ein selbst f
 Freitextform. Einzige erlaubte Unterbrechung: ein echtes Hard Gate scheitert (Staging-Verdict
 BROKEN, Selftest-Exit ≠ 0) — dann eskalieren mit konkretem Befund statt weiterzumachen.
 
+## Setup
+
+```bash
+# Hook-Pfad: (1) CLAUDE_PLUGIN_ROOT (2) installed_plugins.json (3) .claude/hooks
+_H="${CLAUDE_PLUGIN_ROOT:+${CLAUDE_PLUGIN_ROOT}/core/hooks}"
+if [ -z "$_H" ]; then _p="$(python3 -c 'import json,os;d=json.load(open(os.path.expanduser("~/.claude/plugins/installed_plugins.json")));print(next((e["installPath"] for k,v in d.get("plugins",{}).items() if k.startswith("agent-os-openspec@") for e in [next((x for x in v if x.get("scope")=="user"),v[0])]),""))' 2>/dev/null)"; [ -n "$_p" ] && [ -d "$_p/core/hooks" ] && _H="$_p/core/hooks"; fi
+_H="${_H:-.claude/hooks}"
+wf() { python3 "$_H/workflow.py" "$@"; }
+```
+
+Jeder Bash-Aufruf ist eine neue Shell: diesen Block **jedem Bash-Aufruf voranstellen**, der
+`wf` nutzt (Funktion statt Variable, damit es in bash und zsh laeuft).
+
+Seitenleiste (#2873): Jeder Schritt setzt seinen Stand per `ship-status` (Push/Merge) bzw.
+`deploy-status` (Prod), **immer mit Issue-Nummer `<N>`**: `ship-status done <N>` archiviert
+den Workflow (Phase `phase8_complete`, Ausgabe `ARCHIVED=…`), ohne Nummer findet ein
+spaeterer Aufruf ihn nicht mehr.
+
 ## Voraussetzungen
 
 - `workflow.py status` ⇒ Phase `phase8_complete`, Adversary-Verdict VERIFIED (oder
@@ -19,11 +37,15 @@ BROKEN, Selftest-Exit ≠ 0) — dann eskalieren mit konkretem Befund statt weit
 ## Schritt 1 — Branch pushen, PR mergen (PO-go 2026-08-05: kein Direkt-Push auf main)
 
 ```bash
+wf ship-status running <N>
 git push -u origin HEAD:<themen-branch>
 gh pr create --fill
 # CI-Ampel abwarten: alle 6 Checks gruen auf dem letzten Stand, sonst erst fixen
 gh pr merge --merge --delete-branch
+wf ship-status done <N>   # archiviert den Workflow (ARCHIVED=…)
 ```
+
+CI bleibt rot oder Merge unmoeglich: `wf ship-status failed <N> --note "<Befund>"`, Befund ans Issue.
 
 ⚠️ Vorher `git fetch origin` und rebasen. **Nie `git stash`** (geteilter Stapel ueber alle
 Arbeitsordner) — externe Sicherung anlegen, `git -c rebase.autoStash=true rebase origin/main`,
@@ -48,13 +70,17 @@ Orchestrierer. Sobald du das Format einer Nachweis-Datei nachschlaegst, um sie s
 erzeugen: anhalten. Ein Format nachschlagen heisst, es gibt einen Erzeuger — und du bist es
 nicht.
 
+Verdict BROKEN: `wf deploy-status failed <N> --note "Staging BROKEN: <Befund>"`, dann eskalieren.
+
 **Ausnahme reine Doku-/Werkzeug-Aenderungen** (nur `.md`/`docs/`/`.claude/`/`.gitignore`, kein
 Code in `src/`/`api/`/`internal/`/`frontend/`/`cmd/`): Schritt 2+3 entfaellt, Schritt 4
-ebenfalls, solange der Drift-Monitor ruhig ist. Im Zweifel trotzdem ausliefern.
+ebenfalls, solange der Drift-Monitor ruhig ist. Im Zweifel trotzdem ausliefern. Dann
+`wf deploy-status done --note "nur Doku/Werkzeug, kein Prod-Deploy nötig" <N>`.
 
 ## Schritt 4 — Prod-Deploy
 
 ```bash
+wf deploy-status running <N>
 bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh
 ```
 
@@ -88,6 +114,7 @@ Nicht selbst deployen und keinen Selbsttest starten — das macht der Server-Tim
 auf den Commit-Status `deploy/prod` am Ziel-Commit (`origin/main` nach dem Merge) warten:
 
 ```bash
+wf deploy-status running <N>
 SHA=$(git rev-parse origin/main)
 gh api repos/henemm/gregor_zwanzig/commits/$SHA/status \
   --jq '.statuses[] | select(.context=="deploy/prod") | "\(.state) \(.description)"'
@@ -99,11 +126,13 @@ Mit Wecker (Hintergrund-`sleep`) alle paar Minuten selbst nachsehen; der Timer l
 - **kein Status:** der Server wartet noch (Nachweis fehlt oder Lauf steht aus). Pruefen, ob
   der Nachweis als Note auf `origin` liegt (`/e2e-verify` Schritt 5), dann weiter warten.
 - **`success`:** Stand ist live **und** der Selbsttest bestand mit Exit 0 (Beschreibung nennt
-  die Live-SHA). Erst jetzt Schritt 5 — Issue schließen (`gh issue close <N>`).
+  die Live-SHA). `wf deploy-status done <N>`, erst jetzt Schritt 5 — Issue schließen
+  (`gh issue close <N>`).
 - **`failure`:** Deploy oder Selbsttest ist gescheitert; der Server hat bereits einmal Alarm
   gesendet und versucht diese SHA nicht erneut. Befund ans Issue, Ursache beheben (neuer
   Stand auf `main` loest einen neuen Versuch aus); Issue bleibt offen. Ein bewusster
   Wiederholversuch derselben SHA geht nur auf dem Server mit `GZ_FORCE_REDEPLOY=1`.
+  `wf deploy-status failed <N> --note "deploy/prod failure: <Beschreibung>"`.
 
 Schritt 4b entfaellt hier (der Timer hat ihn gefahren, `success` ist sein Ergebnis).
 
@@ -113,7 +142,8 @@ Schritt 4b entfaellt hier (der Timer hat ihn gefahren, `success` ist sein Ergebn
 python3 .claude/hooks/prod_selftest.py
 ```
 
-**Nur Exit 0 faehrt weiter.**
+**Nur Exit 0 faehrt weiter.** Danach Exit 0: `wf deploy-status done <N>`. Exit ≠ 0:
+`wf deploy-status failed <N> --note "Selftest Exit <code>: <Befund>"`, dann eskalieren.
 
 ⚠️ Bekannte Blindstelle: Der Selbsttest misst `HEAD~1..HEAD`. Ist der letzte Commit auf
 `origin/main` eine Doku-Aenderung einer parallelen Sitzung, meldet er „docs-only —
@@ -124,7 +154,10 @@ ActiveEnterTimestamp`, `/api/health`.
 
 ## Schritt 5 — Abschluss
 
-1. `workflow.py write-log success`, dann `workflow.py finish`
+1. `deploy-status done`/`failed` ist gesetzt (4b bzw. Commit-Status), erst danach der
+   Abschluss: `ship-status done <N>` hat Log und Archiv bereits erledigt (`ARCHIVED=…`),
+   dann entfallen `write-log`/`finish`. Nur ohne `ARCHIVED=`: `wf write-log success`,
+   dann `wf finish`
 2. Ergebnis-Kommentar ans Issue: was live ist, was nachgewiesen wurde, **was offen blieb**,
    abgeleitete Meldungen
 3. `gh issue close <N>` — **nur** wenn 4b Exit 0 lieferte **und** wirklich alles erledigt ist.
