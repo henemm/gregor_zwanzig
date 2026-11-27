@@ -1,8 +1,9 @@
 // E2E (Staging) — Issue #3443 (S5d aus #2797, Epic #2791): Entwurf aktivieren über Knopf im Kopf und Kebab,
 // Trip-Hub und Orts-Vergleich-Hub. Spec: docs/specs/modules/feat_3443_entwurf_aktivieren.md —
 // AC-1 bis AC-4, AC-6, AC-7, AC-9, AC-10, AC-11, AC-12 (Browser-Anteil). AC-5 (nur Name fehlt) lässt sich über
-// die Oberfläche nicht anlegen und ist im Kern-Test belegt; AC-13 belegt der Elementlisten-Abgleich
-// (elementliste-abgleich.staging.spec.ts) mit einem selbst angelegten Entwurf.
+// die Oberfläche nicht anlegen und ist im Kern-Test belegt; AC-13 gleicht unten die Einträge der Elementliste
+// (docs/context/einstellungen_neu/elementliste.json: kopf und kebab-menue des Entwurfs) mit einem selbst
+// angelegten Entwurf gegen die Seite ab.
 //
 // Läuft NICHT im PR-CI, sondern in /e2e-verify bzw. /60-validate nach Push und Staging-Deploy.
 // Config legt der Developer an (Vorlage playwright.3442-kebab.staging.config.ts, testMatch
@@ -312,4 +313,61 @@ for (const lang of SPRACHEN) {
 			await hub.aufraeumen();
 		}
 	});
+}
+
+// ── AC-13: Elementliste (Soll aus dem Mockup) gegen die Seite mit einem selbst angelegten Entwurf ─────────────────
+// Die Elementliste führt den Entwurf nur im Orte-Kontext (Mockup-Zustand „normal“). Trip und Orte teilen HubKopf und
+// subscriptionActions (AC-12), deshalb gilt dasselbe Soll für beide Hubs.
+
+type ListenEintrag = { ctx: string; reiter: string; zustand: string; abschnitt: string; ordnung: number; rolle: string; text_de: string; text_en: string | null; i18n_key: string | null };
+const ELEMENTLISTE = (
+	JSON.parse(readFileSync(path.join(HIER, '..', '..', 'docs', 'context', 'einstellungen_neu', 'elementliste.json'), 'utf8')) as { elemente: ListenEintrag[] }
+).elemente;
+
+/** Soll des Entwurfs: Pill und Knopf im Kopf (Knopf direkt nach der Pill), erster Kebab-Eintrag. */
+function sollEntwurf(): { pill: ListenEintrag; knopf: ListenEintrag; kebab1: ListenEintrag } {
+	const bereich = ELEMENTLISTE.filter((e) => e.ctx === 'orte' && e.zustand === 'normal');
+	const reiter = bereich.find((e) => e.abschnitt === 'kopf' && e.i18n_key === 'aktionen.kopf.aktivieren')?.reiter;
+	const eintraege = bereich.filter((e) => e.reiter === reiter);
+	const kopf = eintraege.filter((e) => e.abschnitt === 'kopf').sort((a, b) => a.ordnung - b.ordnung);
+	const knopf = kopf.find((e) => e.i18n_key === 'aktionen.kopf.aktivieren');
+	const pill = kopf.find((e) => e.rolle === 'status');
+	const kebab1 = eintraege.find((e) => e.abschnitt === 'kebab-menue' && e.ordnung === 1);
+	expect(knopf && pill && kebab1, 'Elementliste: kopf (Pill, Knopf „Aktivieren“) und kebab-menue Ordnung 1 vorhanden').toBeTruthy();
+	expect(knopf!.rolle, 'Elementliste: „Aktivieren“ ist ein Knopf').toBe('knopf');
+	expect(knopf!.ordnung, 'Elementliste: Knopf steht direkt nach der Pill').toBe(pill!.ordnung + 1);
+	expect(kebab1!.i18n_key, 'Elementliste: Kebab Ordnung 1 ist „Aktivieren“').toBe('aktionen.kopf.aktivieren');
+	return { pill: pill!, knopf: knopf!, kebab1: kebab1! };
+}
+
+for (const kind of HUB_KINDS) {
+	for (const lang of SPRACHEN) {
+		test(`${kind} ${lang} desktop: AC-13 Elementliste — Kopf „Aktivieren“ neben der Pill, Kebab Ordnung 1 „Aktivieren“`, async ({ page }) => {
+			const soll = sollEntwurf();
+			const text = (e: ListenEintrag) => (lang === 'de' ? e.text_de : e.text_en);
+			await page.setViewportSize(VIEWPORTS.desktop);
+			await sprache(page, lang);
+			const hub = await entwurf(page, kind);
+			try {
+				await openHub(page, kind, hub.id);
+				const status = sichtbar(page, HUB_KOPF_SEL.status);
+				await expect(pille(page), 'AC-13: Pill des Entwurfs').toContainText(text(soll.pill) ?? '');
+				await expect(knopf(page), 'AC-13: Knopf „Aktivieren“ laut Elementliste').toHaveText(text(soll.knopf) ?? '');
+				expect(await knopf(page).evaluate((el) => el.tagName), 'AC-13: Rolle knopf').toBe('BUTTON');
+				// Reihenfolge im Kopf: Pill, direkt danach der Knopf (sichtbare Elemente der Status-Zeile).
+				const folge = await status.evaluate((el) =>
+					[...el.querySelectorAll('[data-testid="trip-detail-status-badge"], [data-testid="hub-kopf-aktivieren"]')]
+						.filter((x) => (x as HTMLElement).offsetParent !== null)
+						.map((x) => x.getAttribute('data-testid'))
+				);
+				expect(folge, 'AC-13: Knopf steht direkt nach der Pill').toEqual(['trip-detail-status-badge', 'hub-kopf-aktivieren']);
+				const menue = await oeffneMenue(page);
+				const liste = await eintraege(menue);
+				expect(liste[0], 'AC-13: Kebab-Eintrag Ordnung 1').toBe(text(soll.kebab1));
+				await page.keyboard.press('Escape');
+			} finally {
+				await hub.aufraeumen();
+			}
+		});
+	}
 }

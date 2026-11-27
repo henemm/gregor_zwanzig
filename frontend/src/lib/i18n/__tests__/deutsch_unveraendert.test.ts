@@ -696,7 +696,9 @@ const NEU_IN_FOLGEPAKETEN = [
 	// #3364: Zeilenmarke der Karte „Was steht wo“ fuer Groessen, die nur ein Briefing fuehrt.
 	'wetter.wsw.nur_briefing.morning', 'wetter.wsw.nur_briefing.evening',
 	// #3442: Rückfrage im Kebab-Menü (aktionen.kebab.*) — Wortlaut verankert in kebab_bestaetigung.test.ts.
-	...Object.keys(de).filter((k) => k.startsWith('aktionen.kebab.'))
+	...Object.keys(de).filter((k) => k.startsWith('aktionen.kebab.')),
+	// #3443: Hinweise und Meldungen „Aktivieren“ (aktionen.aktivieren.*) — Wortlaut verankert in entwurf_aktivieren.test.ts.
+	...Object.keys(de).filter((k) => k.startsWith('aktionen.aktivieren.'))
 ];
 
 test('AC-5: das Golden enthaelt die 112 Bestandsschluessel', () => {

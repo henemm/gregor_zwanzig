@@ -13,7 +13,7 @@
 	// #2913 Scheibe c2 (Spec docs/specs/modules/feat_2913_c2_seitenkopf.md): Kopf nach Mockup —
 	// Eyebrow („Trip · Region" / „Orte · Region") und Meta-Zeile kommen als reiner Text über
 	// `eyebrowText`/`metaTeile` (genau ein Eyebrow, genau eine Meta-Zeile, für beide Arten gleich);
-	// im Entwurf steht „Aktivieren" als Link (`aktivierenHref`, Ziel wählt die Seite) neben der Status-Pill.
+	// im Entwurf steht „Aktivieren" als Knopf (`onAktivieren`, #3443: nennt, was fehlt) neben der Status-Pill.
 	import type { Snippet } from 'svelte';
 	import { Btn, Eyebrow } from '$lib/components/atoms';
 	import SubscriptionKebab from '$lib/components/molecules/SubscriptionKebab.svelte';
@@ -70,8 +70,8 @@
 		eyebrowText?: string;
 		/** #2913 c2: Meta-Zeile unter dem Titel, Teile mit „ · " verbunden. */
 		metaTeile?: string[];
-		/** #2913 c2: nur im Entwurf übergeben — „Aktivieren" als Link neben der Status-Pill (Ziel im Markup prüfbar). */
-		aktivierenHref?: string;
+		/** #3443: nur im Entwurf übergeben — Knopf „Aktivieren" neben der Status-Pill (die Seite nennt, was fehlt). */
+		onAktivieren?: () => void;
 		meldungen?: Snippet;
 		/** Fachliches unter dem Titelblock (Whitelist: Trip-km/Hm und Mobil-Kacheln), über der Unterkante. */
 		unten?: Snippet;
@@ -82,7 +82,7 @@
 		actions = [], onSelect, mobil = false, onSheetOpen, leisteTestid,
 		name, region, profile, profileOptions = [], profileLabel = '', regionMaxLength = 60, testidPrefix,
 		titleTestid, titleSize = 38, saveController, onSaveField,
-		status, eyebrow, namePrefix, meta, eyebrowText, metaTeile, aktivierenHref, meldungen, unten
+		status, eyebrow, namePrefix, meta, eyebrowText, metaTeile, onAktivieren, meldungen, unten
 	}: Props = $props();
 
 	// SubscriptionHeader kennt die Arten als 'trip' | 'vergleich' — reine Datenmarke (Tabelle,
@@ -150,7 +150,7 @@
 			{#snippet badges()}
 				<span class="hub-kopf-status" data-testid="hub-kopf-status">
 					{#if status}{@render status()}{/if}
-					{#if aktivierenHref}<Btn variant="primary" size="sm" data-testid="hub-kopf-aktivieren" href={aktivierenHref}>{$t('aktionen.kopf.aktivieren')}</Btn>{/if}
+					{#if onAktivieren}<Btn variant="accent" size="sm" data-testid="hub-kopf-aktivieren" onclick={() => onAktivieren?.()}>{$t('aktionen.kopf.aktivieren')}</Btn>{/if}
 				</span>
 			{/snippet}
 		</SubscriptionHeader>

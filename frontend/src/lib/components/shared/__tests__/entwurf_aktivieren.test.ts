@@ -239,6 +239,30 @@ describe('AC-9: warAktivierung nur für draft → active', () => {
 	});
 });
 
+// ═══ aktivierungsUebernahme (Fix-Loop 1, F001/F003) ═════════════════════════════════
+
+describe('AC-7/AC-9: Orte-Hub übernimmt nach dem Speichern nur einen Stand, der den Entwurf aktiviert', () => {
+	test('außerhalb des Entwurfs ⇒ null (kein Abruf, keine Übernahme)', async () => {
+		const m = await modul();
+		for (const lc of ['active', 'paused', 'archived'] as const) assert.equal(m.aktivierungsUebernahme(lc), null, lc);
+	});
+	test('im Entwurf: Stand mit Name und Orten ⇒ übernehmen (aktiv wie pausiert)', async () => {
+		const m = await modul();
+		const pruefe = m.aktivierungsUebernahme('draft');
+		assert.equal(typeof pruefe, 'function');
+		assert.equal(pruefe(PRESETS.vollstaendig), true);
+		assert.equal(pruefe(PRESETS.pausiert), true);
+	});
+	test('im Entwurf: Stand bleibt Entwurf (Speichern ohne Aktivierung) ⇒ nicht übernehmen', async () => {
+		const m = await modul();
+		const pruefe = m.aktivierungsUebernahme('draft');
+		for (const was of ['ohne_orte', 'ohne_name', 'ohne_beides'] as const) {
+			assert.equal(deriveStatusFromPreset(PRESETS[was]), 'draft');
+			assert.equal(pruefe(PRESETS[was]), false, was);
+		}
+	});
+});
+
 // ═══ aktiviertText ══════════════════════════════════════════════════════════════════
 
 const NB = (extra: Record<string, unknown> = {}) => ({

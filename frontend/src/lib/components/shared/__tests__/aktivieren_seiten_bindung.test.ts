@@ -176,5 +176,66 @@ for (const s of SEITEN) {
 			assert.ok(q.includes(`id: ${s.id}`), `${s.name}: Quelle ${q}`);
 			assert.ok(q.includes('lifecycle: lifecycle'), `${s.name}: Quelle ${q}`);
 		});
+		// Fix-Loop 1 (F002): die Seite schließt Abruf und Meldung wirklich an (kein No-op, keine Null-Antwort).
+		test('holen ruft api.get mit dem übergebenen Pfad', () => {
+			const holen = aufrufe(s.ast.instance, 'erstelleAktivierungsWechsel')[0]?.arguments?.[1];
+			assert.equal(holen?.type, 'ArrowFunctionExpression', `${s.name}: holen ist keine Pfeilfunktion`);
+			assert.equal(holen.params.length, 1, `${s.name}: holen nimmt den Pfad nicht entgegen`);
+			const p = kurz(holen.params[0]);
+			assert.match(kurz(holen.body), new RegExp(`^(\\{ return )?api\\.get\\(${p}\\)( \\})?$`), `${s.name}: holen = ${kurz(holen)}`);
+		});
+		test(`beiMeldung leitet den Text an den Meldungsweg der Seite (${s.name === 'Trip-Hub' ? 'meldung = text' : 'meldung(text, true)'})`, () => {
+			const bei = aufrufe(s.ast.instance, 'erstelleAktivierungsWechsel')[0]?.arguments?.[2];
+			assert.equal(bei?.type, 'ArrowFunctionExpression', `${s.name}: beiMeldung ist keine Pfeilfunktion`);
+			assert.equal(bei.params.length, 1, `${s.name}: beiMeldung nimmt den Text nicht entgegen`);
+			const t = kurz(bei.params[0]);
+			if (s.name === 'Trip-Hub') {
+				const z = collect(bei.body, (n) => n.type === 'AssignmentExpression' && n.left?.name === 'meldung');
+				assert.deepEqual(z.map((n) => kurz(n.right)), [t], `${s.name}: beiMeldung = ${kurz(bei)}`);
+				assert.deepEqual(bedingungen(bei.body, z[0]), [], `${s.name}: Meldung steht unter einer Bedingung`);
+			} else {
+				const c = aufrufe(bei.body, 'meldung');
+				assert.deepEqual(c.map((n) => (n.arguments ?? []).map(kurz)), [[t, 'true']], `${s.name}: beiMeldung = ${kurz(bei)}`);
+				assert.deepEqual(bedingungen(bei.body, c[0]), [], `${s.name}: Meldung steht unter einer Bedingung`);
+			}
+		});
 	});
 }
+
+// Fix-Loop 1 (F001/F003): Orte-Reiter speichern am Seitenstand vorbei. Der Effekt prüft nach jedem
+// erfolgreichen Speichern über aktivierungsUebernahme (Verhalten: entwurf_aktivieren.test.ts), ob der
+// frische Stand den Entwurf aktiviert, und übernimmt nur dann.
+describe('Orte-Hub: Effekt nach dem Speichern bindet aktivierungsUebernahme (AC-7)', () => {
+	const effekte = () => aufrufe(CMP_HUB.instance, '$effect').filter((e) => ids(e).has('aktivierungsUebernahme'));
+	test('genau ein unbedingter $effect, ausgelöst von hubSaveCtl.savedAt, fragt aktivierungsUebernahme(lifecycle)', () => {
+		const imp = importe(CMP_HUB).find((i) => /shared\/entwurfAktivieren(\.(js|ts))?$/.test(i.quelle));
+		assert.ok(imp?.namen.includes('aktivierungsUebernahme'), 'Orte-Hub importiert aktivierungsUebernahme nicht');
+		const e = effekte();
+		assert.equal(e.length, 1, `Effekt mit aktivierungsUebernahme ${e.length}×`);
+		assert.deepEqual(bedingungen(CMP_HUB.instance, e[0]), [], 'Effekt steht unter einer Bedingung');
+		const frage = aufrufe(e[0], 'aktivierungsUebernahme');
+		assert.deepEqual(frage.map((c) => (c.arguments ?? []).map(kurz)), [['lifecycle']]);
+		assert.deepEqual(bedingungen(e[0], frage[0]), ['hubSaveCtl.savedAt'], 'Prüfung hängt nicht am Speicher-Stempel');
+	});
+	test('übernimmt nur mit der Prüfung: uebernehmeFrischenVergleich(pruefe) unter `pruefe`', () => {
+		const e = effekte()[0];
+		assert.ok(e, 'Effekt fehlt');
+		const decl = collect(e, (n) => n.type === 'VariableDeclarator' && n.init?.callee?.name === 'aktivierungsUebernahme');
+		assert.equal(decl.length, 1, 'Ergebnis von aktivierungsUebernahme wird nicht gebunden');
+		const v = decl[0].id.name as string;
+		const hol = aufrufe(e, 'uebernehmeFrischenVergleich');
+		assert.deepEqual(hol.map((c) => (c.arguments ?? []).map(kurz)), [[v]], 'uebernehmeFrischenVergleich ohne Prüfung');
+		assert.ok((bedingungen(e, hol[0]) ?? []).includes(v), `Abruf nicht nur im Entwurf: ${JSON.stringify(bedingungen(e, hol[0]))}`);
+	});
+	test('uebernehmeFrischenVergleich verwirft den frischen Stand, wenn die Prüfung ihn ablehnt — vor der Übernahme', () => {
+		const f = fn(CMP_HUB, 'uebernehmeFrischenVergleich', 'Orte-Hub');
+		assert.equal(f.params.length, 1, 'uebernehmeFrischenVergleich nimmt keine Prüfung entgegen');
+		const p0 = f.params[0];
+		const p = String((p0.type === 'AssignmentPattern' ? p0.left : p0).name);
+		const wache = collect(f, (n) => n.type === 'IfStatement' && kurz(n) === `if (${p} && !${p}(frisch.daten)) return false`);
+		assert.equal(wache.length, 1, `Prüfung ${p} wird nicht auf frisch.daten angewandt`);
+		const uebernahme = collect(f, (n) => n.type === 'AssignmentExpression' && n.left?.name === 'currentPreset');
+		assert.equal(uebernahme.length, 1);
+		assert.ok(wache[0].start < uebernahme[0].start, 'Prüfung kommt erst nach der Übernahme');
+	});
+});
