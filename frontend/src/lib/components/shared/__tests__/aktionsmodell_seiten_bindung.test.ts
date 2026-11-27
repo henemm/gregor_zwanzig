@@ -113,6 +113,19 @@ describe('F006: Dispatch der Listen — Aktion -> Zweig -> Wirkung', () => {
 		assert.ok(!del.bezeichner.has('deleteDialogOpen'), 'Compare-Hub „delete“ öffnet noch den Seitendialog');
 		assert.deepEqual(aufrufArgumente(del.knoten, 'deleteSubscription'), [['"vergleich"', 'currentPreset.id']]);
 	});
+	// #3443 (feat_3443 AC-2/AC-6, Fortschreibung feat_2278 AC-12): im Hub-Entwurf steht „Aktivieren“ zuerst im Kebab.
+	// Der Dispatch-Zweig `activate` führt in dieselbe Seitenfunktion wie der Kopf-Knopf (handleAktivieren) und
+	// erreicht keinen Schreibweg (der Klick nennt nur, was fehlt, und öffnet die Stelle).
+	for (const [name, ast, fn] of [['Trip-Hub', TRIP_HUB, 'handleHubAction'], ['Compare-Hub', CMP_HUB, 'handleAction']] as const) {
+		test(`${name}: „activate“ fällt in den eigenen Zweig handleAktivieren(), ohne Schreibweg und ohne Seitendialog (#3443)`, () => {
+			const r = zweigGraph(ast, funktion(ast, fn), 'activate');
+			assert.ok(r.namen.has('handleAktivieren'), `${name}: „activate“ erreicht handleAktivieren nicht`);
+			for (const w of ['setPaused', 'setArchived', 'deleteSubscription', 'sendSubscription', 'sendStateUpdate', 'togglePause', 'toggleActiveFromParent'])
+				assert.ok(!r.bezeichner.has(w), `${name}: „activate“ erreicht Schreibweg ${w}`);
+			for (const flag of ['archiveDialogOpen', 'deleteDialogOpen'])
+				assert.ok(!r.bezeichner.has(flag), `${name}: „activate“ öffnet einen Seitendialog (${flag})`);
+		});
+	}
 	test('die Adapter-Aufrufe geben den Zielzustand `paused` unveraendert weiter', () => {
 		assert.deepEqual(aufrufArgumente(funktion(TRIPS, 'togglePause'), 'setPaused'), [['"trip"', 'trip.id', 'paused']]);
 		assert.deepEqual(aufrufArgumente(funktion(CMP, 'togglePause'), 'setPaused'), [['"vergleich"', 'preset.id', 'paused']]);

@@ -1251,8 +1251,12 @@ Editor-Muster (PO-Invariante, CLAUDE.md „Trip/Ortsvergleich-Code-Teilung“):
   Mockup Fassung 3 (seit 2026-11-17 Fassung 4). Der Sende-Knopf heißt „Test schicken ▾“ (Beschriftung per Prop `sendLabel`; das
   Menü dazu seit #3440, siehe Aktionsmodell unten; Eintrag „Test-Alarm“ seit #3441: `POST /api/briefings/{id}/test-alert?kind=route|vergleich` schickt einen Beispiel-Alarm mit [TEST]-Kennung an alle bedienbaren Alarm-Kanäle, ohne Alarm-Zustand zu schreiben, Kontingent `manueller_abruf`, Spec `docs/specs/modules/feat_3441_test_alarm.md`). In der Leiste steht das Kebab „Weitere Aktionen“ links vom Knopf (Reihenfolge nach Mockup). Eyebrow „Trip · Region" bzw. „Orte · Region" und Meta-Zeile („Datum · N Etappen ·
   km · ↑m" bzw. „N Orte · Vergleichstabelle · Briefing HH:MM") sind reiner Text (Props `eyebrowText`,
-  `metaTeile`). Im Entwurf steht neben der Status-Pill „Aktivieren" als Link (`aktivierenHref`: Trip
-  zum Reiter Etappen, Vergleich zu Zustellung#versand). Reiter-Zähler „Etappen (N)" / „Orte (N)" über
+  `metaTeile`). Im Entwurf steht neben der Status-Pill ein Akzent-Knopf „Aktivieren" (`onAktivieren`, seit #3443,
+  2026-11-27; ein `<button>`, kein Link mehr). Der Klick schreibt nichts: Er nennt, was fehlt (Trip: Datum an den
+  Etappen; Vergleich: Name und/oder Orte), und öffnet die Stelle (Trip Reiter Etappen, Vergleich Reiter Orte; fehlt
+  nur der Name, keine Navigation). Wechselt der Entwurf danach auf aktiv, zeigt der Kopf „Aktiviert. Das erste
+  Briefing kommt {wann}." (Modell `shared/entwurfAktivieren.ts`, Wechsel `shared/aktivierungsWechsel.svelte.ts`;
+  Spec `docs/specs/modules/feat_3443_entwurf_aktivieren.md`). Reiter-Zähler „Etappen (N)" / „Orte (N)" über
   den Badge der `MTabBar`.
 - **Persistenz:** `/api/trips` bzw. `/api/compare/presets` (nicht
   `/api/subscriptions` — entfernt, 404).
@@ -1273,6 +1277,7 @@ Ein gemeinsames Aktionsmodell für Liste, Detail-Hub und Mobil (Spec: `docs/spec
 - **Senden in den Listen (`/trips`, `/compare`):** nur nach Bestätigung im `SendConfirmDialog`. Er zeigt das Versandziel, sperrt ohne zustellbaren Kanal; Morgen/Abend gibt es nur beim Trip (Default Morgen). Das Profil lädt `lib/server/profileLoader.ts` serverseitig aus der Session, ohne Default-Fallback.
 - **Senden im Hub (#3440, 2026-11-27):** „Test schicken ▾“ öffnet das Menü `molecules/TestSchickenMenue.svelte` (ein Baustein für Trip und Orte, `context="route"|"vergleich"`; Desktop Dropdown, ≤899 px Sheet). Der Dialog entfällt dort. Zeilen je Kanal (E-Mail, Telegram, SMS, Premium-SMS) mit Ziel bzw. Sperrgrund aus `kanalStatus` (Zeilenmodell `testSchickenModell.ts`), Trip zusätzlich Segment Morgen/Abend, unten „Alle eingerichteten Kanäle“. Ein Klick auf eine Kanalzeile sendet an genau diesen Kanal (`channel`-Parameter, siehe `api_contract.md` §10.1), ohne Bestätigungsschritt. Rückmeldung 5 s (`test-schicken-ok` / `test-schicken-fehler`) in beiden Hubs gleich. Spec: `docs/specs/modules/feat_3440_test_schicken_menue.md`; Fortschreibung der Dialog-ACs in `feat_2278_aktionsmodell.md`.
 - **Hub:** Lebenszyklus-Kebab (Pausieren/Fortsetzen, Archivieren/Reaktivieren, Löschen mit Bestätigung); „Senden" ist der Primärknopf (seit #2837/ADR-0110 in der obersten Leiste rechts, Ink).
+  Im Entwurf (#3443, 2026-11-27) steht „Aktivieren" als erster Eintrag vor „Löschen …" (Aktion `activate`, ohne Rückfrage); Kopf-Knopf und Kebab rufen dieselbe Seitenfunktion. Die Listen (`/trips`, `/compare`) behalten im Entwurf „Einrichtung fortsetzen" und „Löschen". Spec: `docs/specs/modules/feat_3443_entwurf_aktivieren.md`.
 - **Gemeinsame Bausteine:** `SubscriptionCard`, `SubscriptionActionSheet`, `SubscriptionKebab`, `StatusFilterPills`.
 - **Entfallen:** `CompareTile`, `MCompareActionSheet`, `ReportConfigDialog`, `TestReportDialog`, `tripListSend`. Alarme und Wetter-Metriken liegen auf den Editor-Reitern. Die Startseiten-Kachel hat nur „Bearbeiten"; archivierte Trips verschwinden aus der Liste.
 - **Wächter:** Ein Kern-Test übersetzt jede `.svelte`-Datei unter `frontend/src` mit dem Svelte-Compiler und parst das JS (fängt Build-Brüche, die `svelte-check` nicht sieht).

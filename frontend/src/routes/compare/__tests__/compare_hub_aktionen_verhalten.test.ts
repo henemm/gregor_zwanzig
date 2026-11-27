@@ -73,12 +73,15 @@ async function ruhe(): Promise<void> {
 	await bis(() => offen === 0, 'Ruhe nach der Aktion');
 }
 
-async function hub() {
-	const { u } = await umgebungFuer(SEITE, { data: { preset: { ...PRESET }, locations: [], profile: { mail_to: 'a@example.org' } } }, { jsAlsTs: true });
+async function hub(preset: Record<string, unknown> = PRESET) {
+	const { u } = await umgebungFuer(SEITE, { data: { preset: { ...preset }, locations: [], profile: { mail_to: 'a@example.org' } } }, { jsAlsTs: true });
 	const toggles: number[] = [];
 	let ergebnis = true;
 	u.compareDetailRef = { toggleActiveFromParent: async () => (toggles.push(1), ergebnis) };
-	return { u, toggles, kindScheitert: () => (ergebnis = false), aktion: (id: string) => u.handleAction(id) };
+	// #3443: $app/navigation ist unter node nicht ladbar — goto wird mitgeschrieben (Muster Trip-Hub-Test).
+	const gotos: unknown[][] = [];
+	u.goto = (...args: unknown[]) => void gotos.push(args);
+	return { u, toggles, gotos, kindScheitert: () => (ergebnis = false), aktion: (id: string) => u.handleAction(id) };
 }
 
 describe('F021: Pausieren/Fortsetzen erreichen den Schreibweg des Hubs', () => {
@@ -171,5 +174,70 @@ describe('F021/F024: Senden erst nach Bestaetigung', () => {
 		const { u } = await hub();
 		await u.handleTest({ kanal: 'email', berichtsart: 'morning' });
 		assert.deepEqual(nach('POST', '/send').map((a) => a.url), ['/api/briefings/c1/send?kind=vergleich&channel=email']);
+	});
+});
+
+// #3443 (feat_3443 AC-4/AC-5/AC-6/AC-10): „Aktivieren“ im Orts-Vergleich-Entwurf. Der Klick schreibt nichts (kein PUT,
+// kein Umschalten über das Kind), zeigt den Hinweis über den Meldungsweg der Seite (hub-aktion-meldung) und öffnet
+// den Reiter Orte; fehlt nur der Name, bleibt die Seite stehen (der Name wird im Kopf bearbeitet).
+const SCHREIBEND = new Set(['PUT', 'PATCH', 'POST', 'DELETE']);
+const schreibAufrufe = () => aufrufe.filter((a) => SCHREIBEND.has(a.method)).map((a) => `${a.method} ${a.url}`);
+const hinweise = (u: Record<string, any>) => Object.values(u).filter((v) => typeof v === 'string' && v.startsWith('Zum Aktivieren'));
+
+describe('#3443: „Aktivieren“ im Orts-Vergleich-Entwurf nennt, was fehlt, und öffnet die Stelle — ohne Schreibzugriff', () => {
+	test('ohne Orte: „activate“ -> „Zum Aktivieren fehlen noch: Orte.“ als Erfolgs-Meldung, goto ?tab=orte, nichts geschrieben', async () => {
+		const { aktion, u, gotos, toggles } = await hub({ ...PRESET, location_ids: [] });
+		assert.equal(u.lifecycle, 'draft', 'Messaufbau: Vergleich ohne Orte ist ein Entwurf');
+		aktion('activate');
+		await ruhe();
+		assert.ok(meldet(u, 'Zum Aktivieren fehlen noch: Orte.'), 'Hinweis „Zum Aktivieren fehlen noch: Orte.“ fehlt');
+		assert.equal(u.aktionOk, true, 'Hinweis läuft nicht über den Meldungsweg hub-aktion-meldung (aktionOk)');
+		assert.equal(gotos.length, 1, `Navigation: ${JSON.stringify(gotos)}`);
+		assert.match(String(gotos[0][0]), /[?&]tab=orte(&|$)/, `Ziel ${String(gotos[0][0])}`);
+		assert.deepEqual(gotos[0][1], { noScroll: true, keepFocus: true }, 'goto ohne noScroll/keepFocus');
+		assert.deepEqual(schreibAufrufe(), [], 'Schreibaufruf beim Aktivieren-Klick');
+		assert.deepEqual(toggles, [], 'Aktivieren schaltet über den Pausier-Weg um');
+		assert.equal(fenster.location.href, '', 'Aktivieren lädt eine andere Adresse');
+		assert.equal(fenster.location.reloads, 0, 'Aktivieren lädt die Seite neu');
+	});
+
+	test('nur der Name fehlt: „Zum Aktivieren fehlt noch: ein Name.“, keine Navigation (AC-5)', async () => {
+		const { aktion, u, gotos } = await hub({ ...PRESET, name: '' });
+		aktion('activate');
+		await ruhe();
+		assert.ok(meldet(u, 'Zum Aktivieren fehlt noch: ein Name.'), 'Hinweis „… ein Name.“ fehlt');
+		assert.deepEqual(gotos, [], 'bei nur fehlendem Namen darf nicht navigiert werden');
+		assert.deepEqual(schreibAufrufe(), []);
+	});
+
+	test('Name und Orte fehlen: „Zum Aktivieren fehlen noch: Name und Orte.“, goto ?tab=orte (AC-5)', async () => {
+		const { aktion, u, gotos } = await hub({ ...PRESET, name: '', location_ids: [] });
+		aktion('activate');
+		await ruhe();
+		assert.ok(meldet(u, 'Zum Aktivieren fehlen noch: Name und Orte.'), 'Hinweis „… Name und Orte.“ fehlt');
+		assert.equal(gotos.length, 1);
+		assert.match(String(gotos[0][0]), /[?&]tab=orte(&|$)/);
+		assert.deepEqual(schreibAufrufe(), []);
+	});
+
+	test('Kopf-Knopf (handleAktivieren) und Kebab („activate“) wirken gleich (AC-6)', async () => {
+		const kopf = await hub({ ...PRESET, location_ids: [] });
+		assert.equal(typeof kopf.u.handleAktivieren, 'function', 'Orte-Hub hat keine Seitenfunktion handleAktivieren (Kopf-Knopf)');
+		kopf.u.handleAktivieren();
+		await ruhe();
+		const kebab = await hub({ ...PRESET, location_ids: [] });
+		kebab.aktion('activate');
+		await ruhe();
+		assert.ok(kopf.gotos.length === 1 && hinweise(kopf.u).length >= 1, 'Kopf-Knopf wirkt nicht');
+		assert.deepEqual({ gotos: kebab.gotos, hinweise: hinweise(kebab.u) }, { gotos: kopf.gotos, hinweise: hinweise(kopf.u) });
+	});
+
+	test('vollständiger Vergleich (Stand-Wettlauf): „activate“ zeigt nichts, navigiert nicht, schreibt nicht', async () => {
+		const { aktion, u, gotos } = await hub();
+		aktion('activate');
+		await ruhe();
+		assert.deepEqual(hinweise(u), []);
+		assert.deepEqual(gotos, []);
+		assert.deepEqual(schreibAufrufe(), []);
 	});
 });
