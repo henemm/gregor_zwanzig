@@ -96,44 +96,37 @@ test('#478 AC-2: +page.svelte hat keinen direkten $lib/components/ui/-Import', (
 	);
 });
 
-// --- AC-2: +page.svelte importiert ConfirmDialog aus molecules ---
+// --- #3442 (feat_3442 AC-13/AC-16): im Trip-Hub ersetzt die Rückfrage im Kebab-Menü die Dialoge ---
+// Früher (#478 AC-2b/c/d) importierte der Trip-Hub ConfirmDialog für Archivieren/Löschen und trug die
+// Dialog-Testids. Seit #3442 fragt das Kebab-Menü selbst nach (KebabBestaetigungPanel); der Hub hat keinen
+// ConfirmDialog mehr. Die Listen behalten ihren ConfirmDialog unverändert (AC-16).
 
-test('#478 AC-2b: +page.svelte importiert ConfirmDialog aus molecules', () => {
+test('#478 AC-2b → #3442: Trip-Hub nutzt keinen ConfirmDialog mehr; die Listen behalten ihn', () => {
 	const src = read(PAGE_FILE);
-	assert.ok(
-		/\bConfirmDialog\b/.test(src) && /\$lib\/components\/molecules/.test(src),
-		'+page.svelte importiert ConfirmDialog nicht aus $lib/components/molecules'
-	);
-});
-
-// --- AC-2: data-testids bleiben erhalten ---
-
-test('#478 AC-2c: data-testids für Archive-Dialog bleiben erhalten', () => {
-	const src = read(PAGE_FILE);
-	const archiveTestids = [
-		'trip-detail-archive-confirm-dialog',
-		'trip-detail-archive-confirm-cancel',
-		'trip-detail-archive-confirm-yes',
-	];
-	for (const testid of archiveTestids) {
-		assert.ok(
-			src.includes(testid),
-			`+page.svelte: data-testid "${testid}" fehlt nach Migration`
-		);
+	assert.ok(!/\bConfirmDialog\b/.test(src), '+page.svelte (Trip-Hub) nutzt noch ConfirmDialog — die Rückfrage gehört ins Kebab-Menü');
+	for (const liste of ['src/routes/trips/+page.svelte', 'src/routes/compare/+page.svelte']) {
+		assert.ok(/<ConfirmDialog\b/.test(read(liste)), `${liste}: Listen-ConfirmDialog fehlt (AC-16: Listen unverändert)`);
 	}
 });
 
-test('#478 AC-2d: data-testids für Delete-Dialog bleiben erhalten', () => {
+test('#478 AC-2c → #3442: Archiv-Dialog-Testids sind aus dem Trip-Hub entfernt', () => {
 	const src = read(PAGE_FILE);
-	const deleteTestids = [
+	for (const testid of [
+		'trip-detail-archive-confirm-dialog',
+		'trip-detail-archive-confirm-cancel',
+		'trip-detail-archive-confirm-yes',
+	]) {
+		assert.ok(!src.includes(testid), `+page.svelte: alte Dialog-Testid "${testid}" steht noch im Trip-Hub`);
+	}
+});
+
+test('#478 AC-2d → #3442: Lösch-Dialog-Testids sind aus dem Trip-Hub entfernt', () => {
+	const src = read(PAGE_FILE);
+	for (const testid of [
 		'trip-detail-delete-confirm-dialog',
 		'trip-detail-delete-confirm-cancel',
 		'trip-detail-delete-confirm-yes',
-	];
-	for (const testid of deleteTestids) {
-		assert.ok(
-			src.includes(testid),
-			`+page.svelte: data-testid "${testid}" fehlt nach Migration`
-		);
+	]) {
+		assert.ok(!src.includes(testid), `+page.svelte: alte Dialog-Testid "${testid}" steht noch im Trip-Hub`);
 	}
 });

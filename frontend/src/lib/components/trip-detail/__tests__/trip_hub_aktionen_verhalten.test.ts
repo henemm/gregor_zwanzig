@@ -75,30 +75,53 @@ describe('F006: Pausieren/Fortsetzen schreiben den richtigen Zielzustand', () =>
 	});
 });
 
-describe('F008: Loeschen und Archivieren fragen erst zurueck', () => {
-	test('"delete" oeffnet nur den Dialog; erst die Bestaetigung loescht (DELETE auf den Trip)', async () => {
+// #3442 (feat_3442 AC-2/AC-4/AC-10/AC-11): die Rückfrage für Löschen/Archivieren sitzt im Kebab-Menü
+// (kebab_seiten_bindung.test.ts belegt: onSelect erreicht die Seite erst nach der Bestätigung). Der Dispatch
+// der Seite wirkt deshalb direkt — ohne eigenen Dialog — und meldet den Erfolg mit dem Text aus dem Modell.
+/** Steht der Meldungstext im Zustand der Seite (gleich welche Variable ihn trägt)? */
+const meldet = (u: Record<string, any>, text: string) => Object.values(u).some((v) => v === text);
+
+describe('F008 → #3442: nach der Rückfrage im Menü wirken Löschen und Archivieren direkt', () => {
+	test('"delete" (im Menü bestätigt) -> genau ein DELETE auf den Trip, danach /trips; kein Seitendialog', async () => {
 		const { aktion, u, gotos } = await seite();
 		aktion('delete');
+		await bis(() => nach('DELETE', P.TRIP_PFAD).length === 1 && gotos.length === 1, 'DELETE und Navigation nach "delete"');
 		await tick(u);
-		assert.equal(u.deleteDialogOpen, true);
-		assert.equal(nach('DELETE', P.TRIP_PFAD).length, 0, 'DELETE ohne Rueckfrage');
-		assert.deepEqual(gotos, []);
-		await u.handleDeleteConfirm();
 		assert.equal(nach('DELETE', P.TRIP_PFAD).length, 1);
-		assert.equal(u.deleteDialogOpen, false);
 		assert.deepEqual(gotos, ['/trips'], 'nach dem Loeschen landet der Nutzer in der Trip-Liste');
+		assert.notEqual(u.deleteDialogOpen, true, 'Seitendialog geöffnet statt gelöscht');
 	});
 
-	test('"archive" oeffnet nur den Dialog; erst die Bestaetigung schreibt {archived:true}', async () => {
-		const { aktion, u, a } = await seite();
+	test('"archive" (im Menü bestätigt) -> PATCH {archived:true}, bleibt auf der Seite, Meldung „Archiviert. …“', async () => {
+		const { aktion, u, a, gotos } = await seite();
 		aktion('archive');
-		await tick(u);
-		assert.equal(u.archiveDialogOpen, true);
-		assert.equal(nach('PATCH', '/state').length, 0, 'Archivieren ohne Rueckfrage');
-		u.handleArchiveConfirm();
-		await bis(() => nach('PATCH', '/state').length === 1 && ruhig(u)(), 'PATCH nach Archiv-Bestaetigung');
+		await bis(() => nach('PATCH', '/state').length === 1 && ruhig(u)(), 'PATCH nach "archive"');
 		a.ctl.cancel();
 		assert.deepEqual(nach('PATCH', '/state').map((c) => c.anfrage), [{ archived: true }]);
+		assert.deepEqual(gotos, [], 'Archivieren verlässt die Seite');
+		assert.notEqual(u.archiveDialogOpen, true, 'Seitendialog geöffnet statt archiviert');
+		assert.ok(meldet(u, 'Archiviert. Im Archiv kannst du es reaktivieren.'), 'Erfolgsmeldung „Archiviert. …“ fehlt');
+	});
+
+	test('"unarchive" -> PATCH {archived:false} ohne Rückfrage, Meldung „Reaktiviert.“ (AC-10)', async () => {
+		const { aktion, u, a, gotos } = await seite();
+		aktion('unarchive');
+		await bis(() => nach('PATCH', '/state').length === 1 && ruhig(u)(), 'PATCH nach "unarchive"');
+		a.ctl.cancel();
+		assert.deepEqual(nach('PATCH', '/state').map((c) => c.anfrage), [{ archived: false }]);
+		assert.deepEqual(gotos, []);
+		assert.ok(meldet(u, 'Reaktiviert.'), 'Erfolgsmeldung „Reaktiviert.“ fehlt');
+	});
+
+	test('"pause"/"resume" melden „Pausiert. …“ bzw. „Fortgesetzt. …“ (AC-11)', async () => {
+		const { aktion, u, a } = await seite();
+		aktion('pause');
+		await bis(() => nach('PATCH', '/state').length === 1 && ruhig(u)(), 'PATCH nach "pause"');
+		assert.ok(meldet(u, 'Pausiert. Bis ‚Fortsetzen‘ kommen keine Briefings und Alarme.'), 'Meldung „Pausiert. …“ fehlt');
+		aktion('resume');
+		await bis(() => nach('PATCH', '/state').length === 2 && ruhig(u)(), 'PATCH nach "resume"');
+		a.ctl.cancel();
+		assert.ok(meldet(u, 'Fortgesetzt. Das nächste Briefing kommt wie geplant.'), 'Meldung „Fortgesetzt. …“ fehlt');
 	});
 });
 

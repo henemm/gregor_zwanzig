@@ -28,6 +28,7 @@ import {
 	bedingungen,
 	aufrufe,
 	lokaleBindungen,
+	erreichbar,
 	kurz
 } from './aktionsmodellAst.ts';
 
@@ -42,6 +43,12 @@ const CMP_HUB = ladeSvelte(CMP_HUB_DATEI);
 
 const dlg = (ast: any) => komponenten(ast, 'SendConfirmDialog')[0];
 const sheet = (ast: any) => komponenten(ast, 'SubscriptionActionSheet')[0];
+/** Aufrufgraph des Dispatch-Zweigs `if (id === "<lit>")` (#3442): Knoten, Bezeichner, Literale. */
+const zweigGraph = (ast: any, f: any, lit: string) => {
+	const z = collect(f, (n) => n.type === 'IfStatement' && new RegExp(`\\bid === "${lit}"`).test(kurz(n.test)));
+	assert.equal(z.length, 1, `Dispatch-Zweig für „${lit}“ nicht genau einmal (gefunden ${z.length})`);
+	return erreichbar(ast, z[0].consequent);
+};
 
 describe('F006: Dispatch der Listen — Aktion -> Zweig -> Wirkung', () => {
 	const tabelle = (art: 'trips' | 'compare') => {
@@ -75,24 +82,36 @@ describe('F006: Dispatch der Listen — Aktion -> Zweig -> Wirkung', () => {
 			assert.deepEqual(zweig(funktion(ast, fn), 'key', 'preview'), [], `${name}: Vorschau-Zweig existiert noch`);
 		});
 	}
-	test('Trip-Hub: pausieren/fortsetzen schreiben den richtigen Zielzustand; Archivieren fragt, Loeschen fragt', () => {
+	// #3442 (feat_3442 AC-1/AC-3/AC-13): die Rückfrage für Archivieren/Löschen sitzt im Kebab bzw. Aktionsblatt
+	// (KebabBestaetigungPanel). onSelect/onAction der Seite kommt erst NACH der Bestätigung an — der Dispatch der
+	// Seite wirkt deshalb direkt und öffnet keinen eigenen Dialog mehr (kein ConfirmDialog, keine *DialogOpen-Flags).
+	test('Trip-Hub: pausieren/fortsetzen schreiben den Zielzustand; archive/unarchive/delete wirken direkt ohne Seitendialog (#3442)', () => {
 		const f = funktion(TRIP_HUB, 'handleHubAction');
 		assert.deepEqual(zweig(f, 'id', 'pause'), ['void sendStateUpdate(true, undefined)']);
 		assert.deepEqual(zweig(f, 'id', 'resume'), ['void sendStateUpdate(false, undefined)']);
-		assert.deepEqual(zweig(f, 'id', 'archive'), ['handleArchiveClick()']);
-		assert.deepEqual(zweig(f, 'id', 'unarchive'), ['handleArchiveClick()']);
-		assert.deepEqual(zweig(f, 'id', 'delete'), ['handleDeleteClick()']);
-		assert.equal(kurz(funktion(TRIP_HUB, 'handleArchiveClick').body), '{ archiveDialogOpen = true }');
+		for (const id of ['archive', 'unarchive', 'delete']) {
+			const r = zweigGraph(TRIP_HUB, f, id);
+			for (const flag of ['archiveDialogOpen', 'deleteDialogOpen'])
+				assert.ok(!r.bezeichner.has(flag), `Trip-Hub „${id}“ öffnet noch einen Seitendialog (${flag})`);
+		}
+		for (const id of ['archive', 'unarchive']) {
+			const r = zweigGraph(TRIP_HUB, f, id);
+			assert.ok(['sendStateUpdate', 'setArchived'].some((n) => r.bezeichner.has(n)), `Trip-Hub „${id}“ erreicht keinen Schreibweg`);
+			assert.deepEqual(aufrufArgumente(r.knoten, 'goto'), [], `Trip-Hub „${id}“ verlässt die Seite`);
+		}
+		const del = zweigGraph(TRIP_HUB, f, 'delete');
+		assert.deepEqual(aufrufArgumente(del.knoten, 'deleteSubscription'), [['"trip"', 'trip.id']]);
+		assert.deepEqual(aufrufArgumente(del.knoten, 'goto'), [['"/trips"']]);
 	});
-	test('Compare-Hub: archive/unarchive/delete in ihren eigenen Zweigen', () => {
+	test('Compare-Hub: archive/unarchive/delete in ihren eigenen Zweigen, direkt ohne Seitendialog (#3442)', () => {
 		const f = funktion(CMP_HUB, 'handleAction');
 		assert.deepEqual(zweig(f, 'id', 'pause'), ['{ void togglePause() }']);
 		assert.deepEqual(zweig(f, 'id', 'resume'), ['{ void togglePause() }']);
-		assert.deepEqual(zweig(f, 'id', 'archive'), ['{ void archivePreset() }']);
-		assert.deepEqual(zweig(f, 'id', 'unarchive'), ['{ void unarchivePreset() }']);
-		assert.deepEqual(zweig(f, 'id', 'delete'), ['{ deleteDialogOpen = true }']);
-		assert.deepEqual(aufrufArgumente(funktion(CMP_HUB, 'archivePreset'), 'setArchived'), [['"vergleich"', 'currentPreset.id', 'true']]);
-		assert.deepEqual(aufrufArgumente(funktion(CMP_HUB, 'unarchivePreset'), 'setArchived'), [['"vergleich"', 'currentPreset.id', 'false']]);
+		assert.deepEqual(aufrufArgumente(zweigGraph(CMP_HUB, f, 'archive').knoten, 'setArchived'), [['"vergleich"', 'currentPreset.id', 'true']]);
+		assert.deepEqual(aufrufArgumente(zweigGraph(CMP_HUB, f, 'unarchive').knoten, 'setArchived'), [['"vergleich"', 'currentPreset.id', 'false']]);
+		const del = zweigGraph(CMP_HUB, f, 'delete');
+		assert.ok(!del.bezeichner.has('deleteDialogOpen'), 'Compare-Hub „delete“ öffnet noch den Seitendialog');
+		assert.deepEqual(aufrufArgumente(del.knoten, 'deleteSubscription'), [['"vergleich"', 'currentPreset.id']]);
 	});
 	test('die Adapter-Aufrufe geben den Zielzustand `paused` unveraendert weiter', () => {
 		assert.deepEqual(aufrufArgumente(funktion(TRIPS, 'togglePause'), 'setPaused'), [['"trip"', 'trip.id', 'paused']]);
@@ -225,20 +244,20 @@ describe('F007 (AC-11/AC-2): Archiv-Ausblendung, Filter und Pillenzaehler', () =
 	});
 });
 
-describe('F008 (AC-5/AC-12): Trip-Hub Loeschdialog, Navigation, Menue-Flaeche', () => {
-	const bestaetigungen = () => komponenten(TRIP_HUB, 'ConfirmDialog');
-	test('Loeschdialog nennt trip.name; Bestaetigen loescht und navigiert auf /trips', () => {
-		const del = bestaetigungen().find((c) => attrKurz(c, 'confirmTestid') === '"trip-detail-delete-confirm-yes"')!;
-		// i18n F9 (#2658): der Text kommt aus dem Katalog, der Name als Platzhalter.
-		assert.match(attrKurz(del, 'description')!, /\$\{trip\.name\}|name: trip\.name/);
-		assert.equal(attrKurz(del, 'onConfirm'), 'handleDeleteConfirm');
-		assert.deepEqual(aufrufArgumente(funktion(TRIP_HUB, 'handleDeleteConfirm'), 'goto'), [['"/trips"']]);
-		assert.deepEqual(aufrufArgumente(funktion(TRIP_HUB, 'handleDeleteConfirm'), 'deleteSubscription'), [['"trip"', 'trip.id']]);
+// #3442 (feat_3442 AC-1/AC-2/AC-10/AC-13, Fortschreibung feat_2278 AC-5/AC-12): im Hub ersetzt die Rückfrage im
+// Kebab-Menü (Name im Panel, kebab_seiten_bindung.test.ts) die ConfirmDialogs für Archivieren, Reaktivieren und
+// Löschen. Löschen führt nach Erfolg weiter zur Liste /trips.
+describe('F008 (AC-5/AC-12, #3442): Trip-Hub ohne Loesch-/Archivdialog, Navigation, Menue-Flaeche', () => {
+	test('kein ConfirmDialog mehr im Trip-Hub; Loeschen (nach Rueckfrage im Menue) loescht und navigiert auf /trips', () => {
+		assert.equal(komponenten(TRIP_HUB, 'ConfirmDialog').length, 0, 'Trip-Hub bindet noch ConfirmDialog ein');
+		const del = zweigGraph(TRIP_HUB, funktion(TRIP_HUB, 'handleHubAction'), 'delete');
+		assert.deepEqual(aufrufArgumente(del.knoten, 'deleteSubscription'), [['"trip"', 'trip.id']]);
+		assert.deepEqual(aufrufArgumente(del.knoten, 'goto'), [['"/trips"']]);
 	});
-	test('Archivieren/Reaktivieren laeuft ueber die Rueckfrage und schreibt erst bei Bestaetigung', () => {
-		const arch = bestaetigungen().find((c) => attrKurz(c, 'confirmTestid') === '"trip-detail-archive-confirm-yes"')!;
-		assert.equal(attrKurz(arch, 'onConfirm'), 'handleArchiveConfirm');
-		assert.deepEqual(aufrufArgumente(funktion(TRIP_HUB, 'handleArchiveConfirm'), 'sendStateUpdate'), [['undefined', 'nextArchived']]);
+	test('Archivieren/Reaktivieren ohne Seitendialog: keine Dialog-Flags und Dialog-Handler mehr', () => {
+		const b = lokaleBindungen(TRIP_HUB);
+		for (const n of ['archiveDialogOpen', 'deleteDialogOpen', 'handleArchiveConfirm', 'handleArchiveCancel', 'handleDeleteCancel'])
+			assert.ok(!b.has(n), `Trip-Hub haelt noch ${n}`);
 	});
 	test('beide Huebs: Kebab und Blatt zeigen die Hub-Aktionen (Flaeche "hub")', () => {
 		// #2837 S1: der Kebab liegt im HubKopf; die Seiten reichen dieselben Werte an die
@@ -349,12 +368,10 @@ describe('F019/F015/F018: die Bindung steht UNTER DER ERWARTETEN Bedingung (kein
 			[CMP, 'confirmSend', 'sendSubscription'],
 			[CMP, 'confirmDelete', 'deleteSubscription'],
 			[TRIP_HUB, 'handleTest', 'sendSubscription'],
-			[TRIP_HUB, 'handleDeleteConfirm', 'deleteSubscription'],
 			[CMP_HUB, 'handleTest', 'sendSubscription'],
 			[CMP_HUB, 'deletePreset', 'deleteSubscription'],
 			[CMP_HUB, 'archivePreset', 'setArchived'],
 			[CMP_HUB, 'unarchivePreset', 'setArchived'],
-			[CMP_HUB, 'handleDeleteConfirm', 'deletePreset'],
 			[TRIPS, 'togglePause', 'refetchTrips'],
 			[CMP, 'togglePause', 'fetch']
 		] as const) {
