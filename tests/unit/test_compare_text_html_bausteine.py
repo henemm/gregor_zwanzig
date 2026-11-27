@@ -186,7 +186,7 @@ def test_ohne_stundendaten_keine_ueberschrift_ausblick_bleibt(lang):
     assert ausblick in plain, "Klartext verliert den Ausblick"
     assert _html.escape(ausblick) in html, "HTML verliert den Ausblick"
     # Ausblickwerte selbst (Tageszeile) stehen in beiden.
-    assert re.search(r"^\S{2}\s+Temp ", plain, re.M), "Klartext ohne Ausblickzeile"
+    assert re.search(r"^\S{2,3}\s+Temp ", plain, re.M), "Klartext ohne Ausblickzeile"
 
 
 # ---------------------------------------------------------------------------
@@ -219,6 +219,11 @@ def test_hourly_block_visible_ist_gemeinsames_praedikat():
     assert hourly_block_visible(voll.locations, False) is False
     nur_fehler = [lr for lr in voll.locations if lr.error]
     assert nur_fehler and hourly_block_visible(nur_fehler, True) is False
+    # Adversary F002: Fehler-Ort MIT Stundendaten zaehlt nicht (``error``-Zweig).
+    mit_daten = next(lr for lr in voll.locations if not lr.error and lr.hourly_data)
+    fehler_mit_daten = LocationResult(location=mit_daten.location, error="x",
+                                      hourly_data=list(mit_daten.hourly_data))
+    assert hourly_block_visible([fehler_mit_daten], True) is False
 
     for result in (leer, voll):
         for enabled in (True, False):

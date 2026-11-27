@@ -1166,6 +1166,47 @@ def _hour_einfach_text(
     return zelle.html if html else zelle.text
 
 
+def hour_cell_texts(
+    dp, visible: list[dict], merge_wind_dir: bool = False,
+    *, lang: Lang = "de", hourly_metric_formats: dict | None = None,
+    ampel: dict, html: bool,
+) -> list[tuple[str, str]]:
+    """Issue #3425: EINE Zellkette einer Stunde fuer HTML- und Klartext-
+    Stundenverlauf -- (Label, Text) je sichtbarer Spalte in deren Folge, ohne
+    Zeitlabel (je Medium: Klartext ``HH:MM``, HTML ``HH``). ``html`` waehlt nur
+    die Einfach-Form (Ampelpunkt gegen Wort/Symbol, #3097)."""
+    pairs = []
+    for m in visible:
+        value = getattr(dp, m["key"], None)
+        einfach = _hour_einfach_text(
+            m, value, hourly_metric_formats, lang, html=html, ampel=ampel)
+        # Issue #1475 Nachbesserung (AC-8): die Compare-Stundentabelle zeigt
+        # Gewitter als TEXT -- der Hagel-Zusatz haengt als Text an, NICHT als
+        # Doppelring (das ist ausschliesslich die Trip-Stundentabelle).
+        if einfach is not None:
+            text = einfach
+        elif m["fmt"] is _fmt_thunder:
+            # Issue #1680 S3 (Spec D4): die Herkunft der Stufe DIESER Stunde --
+            # `value` (`dp.thunder_level`) und `dp.thunder_level_signals`
+            # stammen aus DEMSELBEN Datenpunkt (AC-9). Die Uebergabe sitzt
+            # hier, NICHT im Rumpf von `_fmt_thunder()` -- der speist auch die
+            # Uebersichtszeile (AC-14). KANAL: die Compare-SMS erreicht diese
+            # Stelle nie (`_fmt_overview_cell(..., include_origin=False)`,
+            # seit #3172 Token-Zeile in `orte_sms.py`).
+            text = fmt_word_cell(m["fmt"], value, lang, getattr(dp, "hail_flag", None),
+                                 getattr(dp, "thunder_level_signals", None))
+        else:
+            text = fmt_word_cell(m["fmt"], value, lang)
+        # Issue #1335 Scheibe 1 (AC-3): Windrichtung als Kompass-Text an die
+        # Wind-Zelle angehaengt, analog Trip-Muster -- keine eigene Spalte.
+        if merge_wind_dir and m["key"] == "wind10m_kmh":
+            compass = degrees_to_compass(getattr(dp, "wind_direction_deg", None))
+            if compass:
+                text = f"{text} {compass}"
+        pairs.append((m["label"], text))
+    return pairs
+
+
 def _render_hour_row(
     dp, visible: list[dict], merge_wind_dir: bool = False,
     *, tz: ZoneInfo, lang: Lang = "de",
@@ -1180,42 +1221,11 @@ def _render_hour_row(
     # (`_render_hour_table`) loest ihn immer ueber `location_tz()` auf.
     hh = f"{local_hour(dp.ts, tz):02d}" if hasattr(dp.ts, "astimezone") else str(dp.ts)
     cells = _hour_td(hh, fg=G_INK_MUTED, align="left")
-    for m in visible:
+    texts = hour_cell_texts(dp, visible, merge_wind_dir, lang=lang, ampel=ampel,
+                            hourly_metric_formats=hourly_metric_formats, html=True)
+    for m, (_, text) in zip(visible, texts):
+        # Issue #3097: Zelltoenung (`sev`) unabhaengig von Einfach/Roh.
         value = getattr(dp, m["key"], None)
-        einfach = _hour_einfach_text(
-            m, value, hourly_metric_formats, lang, html=True, ampel=ampel)
-        # Issue #1475 Nachbesserung (Punkt 5b, Aufrufstelle 2 / AC-8): die
-        # Compare-Stundentabelle zeigt Gewitter als TEXT (kein Ampel-Kreis) --
-        # der Hagel-Zusatz haengt deshalb als Text an, NICHT als Doppelring
-        # (das ist ausschliesslich die Trip-Stundentabelle, Punkt 2). `dp` ist
-        # hier bereits im Scope, analog zum Windrichtungs-Muster unten.
-        if einfach is not None:
-            # Issue #3097: Einfach aus `hourly_metric_formats`; die
-            # Zelltoenung (`sev`) unten bleibt unveraendert.
-            text = einfach
-        elif m["fmt"] is _fmt_thunder:
-            # Issue #1680 S3 (Spec D4): die Herkunft der Stufe DIESER Stunde --
-            # `value` (`dp.thunder_level`) und `dp.thunder_level_signals`
-            # stammen aus DEMSELBEN Datenpunkt, kein zweiter Rechenweg (AC-9).
-            # Die Uebergabe sitzt hier an der Aufrufstelle, NICHT im Rumpf von
-            # `_fmt_thunder()` -- der speist auch die Uebersichtszeile, die
-            # zeichengleich bleiben muss (AC-14). `getattr`, weil Alt-Daten
-            # ohne das Feld die Zelle unveraendert lassen sollen.
-            # KANAL: die Compare-SMS baut ihre Zelle ueber
-            # `comparison._sms_metric_cell()` -> `_fmt_overview_cell(...,
-            # include_origin=False)` und erreicht diese Aufrufstelle nie
-            # (PO-Entscheidung, aktiv abgewaehlt -- s. dortigen Kommentar).
-            text = fmt_word_cell(m["fmt"], value, lang, getattr(dp, "hail_flag", None),
-                                 getattr(dp, "thunder_level_signals", None))
-        else:
-            text = fmt_word_cell(m["fmt"], value, lang)
-        # Issue #1335 Scheibe 1 (AC-3): Windrichtung als Kompass-Text an die
-        # Wind-Zelle angehaengt, analog Trip-Muster (helpers.py:648-651) --
-        # keine eigene Spalte.
-        if merge_wind_dir and m["key"] == "wind10m_kmh":
-            compass = degrees_to_compass(getattr(dp, "wind_direction_deg", None))
-            if compass:
-                text = f"{text} {compass}"
         sev_fn = m.get("sev")
         sev_level = sev_fn(value) if (sev_fn and value is not None) else None
         if merge_wind_dir and m["key"] == "wind10m_kmh":
@@ -1297,6 +1307,15 @@ def _location_heading(
     )
 
 
+def hourly_block_visible(locations: list[LocationResult], hourly_enabled: bool) -> bool:
+    """Issue #3425: EIN Praedikat fuer den Stundenverlauf in HTML und
+    Klartext -- wahr nur bei eingeschaltetem Stundenverlauf UND mindestens
+    einem Ort ohne Fehler mit Stundendaten (feat_3122 AC-10, #1366). Steuert
+    Ueberschrift und Ort-Abschnitte, NICHT den Ausblick (#1323)."""
+    return bool(hourly_enabled) and any(
+        loc.error is None and bool(loc.hourly_data) for loc in locations)
+
+
 def _render_location_section(
     loc: LocationResult, index: int, hourly_metrics: list[str],
     lang: Lang = "de",
@@ -1304,7 +1323,7 @@ def _render_location_section(
 ) -> str:
     """Ort-Kopf + Langform-Warn-Streifen + Stundentabelle. Entfaellt bei Fehler
     bzw. fehlenden Stundendaten (SPEC §4)."""
-    if loc.error is not None or not loc.hourly_data:
+    if not hourly_block_visible([loc], True):
         return ""
     header = _location_heading(loc, loc.hourly_data[0].ts)
     strip = ""
@@ -1668,6 +1687,13 @@ def _render_units_legend(
     return blocks
 
 
+def legend_visible(hourly_enabled: bool, outlook_enabled: bool) -> bool:
+    """Issue #3425: EINE Bedingung fuer Einheiten-/Spalten-Legende in HTML
+    und Klartext -- sichtbar, sobald Stundenverlauf ODER Ausblick sichtbar ist
+    (#2136/ADR-0068 AC-5)."""
+    return bool(hourly_enabled or outlook_enabled)
+
+
 def _render_legend(
     hourly_metrics: list[str], hourly_enabled: bool = True,
     outlook_metrics: list[dict] | None = None, outlook_enabled: bool = False,
@@ -1691,7 +1717,7 @@ def _render_legend(
     # sichtbar ist -- auch wenn die Stundentabelle abgeschaltet ist.
     units = (
         _render_units_legend(hourly_metrics, outlook_metrics, outlook_enabled, lang)
-        if hourly_enabled or outlook_enabled else ""
+        if legend_visible(hourly_enabled, outlook_enabled) else ""
     )
     return (
         f'<div style="background:{G_PAPER};border-top:1px solid #e6e1d3;padding:18px 24px;'
@@ -1968,7 +1994,7 @@ def render_compare_html(
     hourly_head_html = (
         f'<div style="padding:26px 24px 0;">'
         f'{_render_section_head(*hourly_head)}</div>'
-    ) if hourly_enabled else ""
+    ) if hourly_block_visible(locations, hourly_enabled) else ""
 
     # Issue #1323: der 3-Tage-Ausblick je Ort (Epic #1301 B4) steht direkt
     # unter dessen eigener Stundentabelle, statt als Sammelblock hinter

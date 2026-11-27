@@ -132,7 +132,27 @@ def test_validator_render_auswahl_ohne_sichtbare_spalte_schaltet_block_ab():
     html = render_compare_email_preview(_body(hourly_enabled=True,
                                               hourly_metrics=["wind_direction_deg"]))
     assert "STUNDEN" not in html
-    assert "STUNDEN" in render_compare_email_preview(_body(hourly_enabled=True))
+    # Issue #3425 (feat_3122 AC-10): der Platzhalter-Ort hat keine Stundendaten,
+    # daher entfaellt der Kopf auch bei der Vorgabe-Auswahl -- wie im Versand.
+    assert "STUNDEN" not in render_compare_email_preview(_body(hourly_enabled=True))
+
+
+def test_validator_render_hourly_enabled_wirkt_mit_stundendaten():
+    """#3425 (Adversary F001): der Platzhalter-Ort der Vorschau hat keine
+    Stundendaten -- damit die Wirkung von ``hourly_enabled`` auf dem
+    Vorschau-Pfad belegt bleibt, rendern die Vorschau-Argumente hier einen Ort
+    MIT Stundendaten: an zeigt den Stundenblock, aus nicht."""
+    from output.renderers.email.compare_html import render_compare_html
+    from services.validator_render_service import compare_preview_render_kwargs
+    from tests.helpers.vergleichs_mail_fixture import build_result
+
+    def _html(enabled: bool) -> str:
+        kwargs = compare_preview_render_kwargs(_body(hourly_enabled=enabled))
+        assert kwargs["hourly_enabled"] is enabled
+        return render_compare_html(build_result(mit_fehlerort=False), **kwargs)
+
+    assert "STUNDEN" in _html(True)
+    assert "STUNDEN" not in _html(False)
 
 
 def test_validator_render_stundenformate_kommen_durch_den_resolver():
