@@ -701,6 +701,29 @@ export const HUB_KOPF_SEL = {
 	titelRolle: { role: 'heading', level: 1 } as const
 } as const;
 
+/**
+ * #3440: „Test schicken ▾“ im Hub öffnet ein Menü (kein Sende-Dialog mehr). Öffnet es, wählt im
+ * Trip optional Morgen/Abend und klickt die Zeile `kanal` (Kanalname wie im Menü, z. B. „E-Mail“,
+ * oder 'alle' für „Alle eingerichteten Kanäle“). Gibt das Menü zurück; keine Assertions zum Ergebnis.
+ */
+export async function testSchicken(
+	page: Page,
+	opts: { kanal?: string | 'alle'; berichtsart?: 'morning' | 'evening' } = {}
+): Promise<Locator> {
+	const knopf = page.locator(`[data-testid="${HUB_KOPF_SEL.senden}"]:visible`).first();
+	await knopf.click();
+	const menue = page.locator('[data-abschnitt="test-menue"]:visible').first();
+	await menue.waitFor({ state: 'visible', timeout: 10_000 });
+	if (opts.berichtsart) await menue.getByTestId(`test-menue-berichtsart-${opts.berichtsart}`).click();
+	const kanal = opts.kanal ?? 'alle';
+	const zeile =
+		kanal === 'alle'
+			? menue.getByRole('menuitem', { name: /Alle eingerichteten Kanäle|All set-up channels/ })
+			: menue.getByRole('menuitem').filter({ hasText: new RegExp(`^\\s*${kanal}(?![-\\w])`) });
+	await zeile.first().click();
+	return menue;
+}
+
 /** Berechnete Token-Farben aus app.css (getComputedStyle-Form). */
 export const TOKEN_RGB = {
 	ink: 'rgb(26, 26, 24)',

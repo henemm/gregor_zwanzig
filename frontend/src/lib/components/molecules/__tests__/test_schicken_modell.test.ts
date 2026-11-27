@@ -89,6 +89,9 @@ function profilLuecken(): Json {
 
 const zeileVon = (m: Json, k: KanalId) => m.zeilen.find((z: Json) => z.kanal === k);
 
+/** Abo-Kanalstand „alle vier im Briefing an“ (Fix-Loop F001: alleRueckmeldung kennt den Abo-Stand). */
+const ALLE_AN = { email: true, telegram: true, sms: true, premium_sms: true } as const;
+
 // ── AC-3: vier Zeilen, Reihenfolge, Ziele ────────────────────────────────────
 
 describe('#3440 AC-3 — vier Kanalzeilen in fester Reihenfolge mit Zielen', () => {
@@ -290,7 +293,7 @@ describe('#3440 AC-11 — Einzel-Rückmeldung „{Briefing} an {Kanal} geschickt
 describe('#3440 AC-10 — „Alle“: ✓ / übersprungen ({Grund}) / fehlgeschlagen', () => {
 	test('Lücken-Profil, gesendet nur E-Mail: Telegram/Premium übersprungen mit Grund aus kanalStatus', async () => {
 		const { alleRueckmeldung } = await modul();
-		const s = alleRueckmeldung({ context: 'route', berichtsart: 'morning', sentChannels: ['email'], profil: profilLuecken() });
+		const s = alleRueckmeldung({ context: 'route', berichtsart: 'morning', sentChannels: ['email'], profil: profilLuecken(), abo: ALLE_AN });
 		assert.equal(
 			s,
 			'Morgen-Briefing geschickt: E-Mail ✓ · Telegram übersprungen (nicht verbunden) · SMS übersprungen (unbestätigt) · Premium-SMS übersprungen (Rückadresse verfallen)'
@@ -299,28 +302,163 @@ describe('#3440 AC-10 — „Alle“: ✓ / übersprungen ({Grund}) / fehlgeschl
 
 	test('bedienbar, aber nicht gesendet ⇒ „fehlgeschlagen“; Orte mit neutralem „Briefing“', async () => {
 		const { alleRueckmeldung } = await modul();
-		const s = alleRueckmeldung({ context: 'vergleich', berichtsart: 'morning', sentChannels: ['email', 'sms'], profil: profilNormal() });
+		const s = alleRueckmeldung({ context: 'vergleich', berichtsart: 'morning', sentChannels: ['email', 'sms'], profil: profilNormal(), abo: ALLE_AN });
 		assert.equal(s, 'Briefing geschickt: E-Mail ✓ · Telegram fehlgeschlagen · SMS ✓ · Premium-SMS fehlgeschlagen');
 	});
 
 	test('Abend-Briefing, alles gesendet ⇒ vier Haken', async () => {
 		const { alleRueckmeldung } = await modul();
-		const s = alleRueckmeldung({ context: 'route', berichtsart: 'evening', sentChannels: [...KANAELE], profil: profilNormal() });
+		const s = alleRueckmeldung({ context: 'route', berichtsart: 'evening', sentChannels: [...KANAELE], profil: profilNormal(), abo: ALLE_AN });
 		assert.equal(s, 'Abend-Briefing geschickt: E-Mail ✓ · Telegram ✓ · SMS ✓ · Premium-SMS ✓');
 	});
 
 	test('Reihenfolge folgt den Zeilen, nicht der Reihenfolge in sent_channels', async () => {
 		const { alleRueckmeldung } = await modul();
-		const s = alleRueckmeldung({ context: 'route', berichtsart: 'morning', sentChannels: ['premium_sms', 'telegram', 'email', 'sms'], profil: profilNormal() });
+		const s = alleRueckmeldung({ context: 'route', berichtsart: 'morning', sentChannels: ['premium_sms', 'telegram', 'email', 'sms'], profil: profilNormal(), abo: ALLE_AN });
 		assert.match(s, /^Morgen-Briefing geschickt: E-Mail ✓ · Telegram ✓ · SMS ✓ · Premium-SMS ✓$/);
 	});
 
 	test('EN: kein deutsches „übersprungen“/„fehlgeschlagen“', async () => {
 		locale.set('en');
 		const { alleRueckmeldung } = await modul();
-		const s = alleRueckmeldung({ context: 'route', berichtsart: 'morning', sentChannels: ['email'], profil: profilLuecken() });
+		const s = alleRueckmeldung({ context: 'route', berichtsart: 'morning', sentChannels: ['email'], profil: profilLuecken(), abo: ALLE_AN });
 		assert.match(s, /Email ✓/);
 		assert.match(s, /\(not connected\)/);
 		assert.ok(!/übersprungen|fehlgeschlagen|geschickt/.test(s), `deutscher Rest im EN-Text: ${s}`);
+	});
+});
+
+// ── AC-10 (Fix-Loop F001): im Abo ausgeschalteter Kanal ist „übersprungen (im Briefing aus)“ ──
+
+/** Orts-Briefing im Standard: E-Mail an (send_email fehlt), Telegram/SMS/Premium aus. Erfundene Daten. */
+function presetStandard(over: Json = {}): Json {
+	return { id: 'vg-3440', name: 'Hütten-Vergleich', locations: [], ...over };
+}
+
+/** Trip mit Briefing-Kanälen unter report_config (Form von GET /api/trips/{id}). Erfundene Daten. */
+function tripMit(reportConfig: Json): Json {
+	return { id: 'trip-3440', name: 'Testweg', stages: [], report_config: reportConfig };
+}
+
+describe('#3440 AC-10 — „Alle“: bedienbar, aber im Abo aus ⇒ übersprungen (im Briefing aus), nie fehlgeschlagen', () => {
+	test('aboKanaele liest den Abo-Stand aus derselben Quelle wie der Zustellung-Tab (Orte: Telegram standardmäßig aus)', async () => {
+		const { aboKanaele } = await modul();
+		assert.deepEqual(aboKanaele('vergleich', presetStandard()), { email: true, telegram: false, sms: false, premium_sms: false });
+		assert.deepEqual(aboKanaele('vergleich', presetStandard({ send_telegram: true, send_email: false })), {
+			email: false,
+			telegram: true,
+			sms: false,
+			premium_sms: false
+		});
+		assert.deepEqual(aboKanaele('route', tripMit({ send_email: true, send_telegram: true, send_sms: false })), {
+			email: true,
+			telegram: true,
+			sms: false,
+			premium_sms: false
+		});
+	});
+
+	test('Ortsvergleich, Telegram verbunden aber im Abo aus, gesendet nur E-Mail ⇒ Telegram übersprungen (im Briefing aus)', async () => {
+		const { alleRueckmeldung, aboKanaele } = await modul();
+		const s = alleRueckmeldung({
+			context: 'vergleich',
+			berichtsart: 'morning',
+			sentChannels: ['email'],
+			profil: profilNormal(),
+			abo: aboKanaele('vergleich', presetStandard())
+		});
+		assert.equal(
+			s,
+			'Briefing geschickt: E-Mail ✓ · Telegram übersprungen (im Briefing aus) · SMS übersprungen (im Briefing aus) · Premium-SMS übersprungen (im Briefing aus)'
+		);
+		assert.ok(!/fehlgeschlagen/.test(s), `im Abo ausgeschalteter Kanal als Fehler gemeldet: ${s}`);
+	});
+
+	test('im Abo an, bedienbar, nicht gesendet ⇒ fehlgeschlagen (Trip, gemischter Abo-Stand)', async () => {
+		const { alleRueckmeldung, aboKanaele } = await modul();
+		const abo = aboKanaele('route', tripMit({ send_email: true, send_telegram: true, send_sms: false, send_premium_sms: true }));
+		const s = alleRueckmeldung({ context: 'route', berichtsart: 'morning', sentChannels: ['email'], profil: profilNormal(), abo });
+		assert.equal(
+			s,
+			'Morgen-Briefing geschickt: E-Mail ✓ · Telegram fehlgeschlagen · SMS übersprungen (im Briefing aus) · Premium-SMS fehlgeschlagen'
+		);
+	});
+
+	test('gesperrt geht vor „im Briefing aus“: Grund aus kanalStatus, auch wenn der Kanal im Abo aus ist', async () => {
+		const { alleRueckmeldung } = await modul();
+		const aus = { email: true, telegram: false, sms: false, premium_sms: false };
+		const s = alleRueckmeldung({ context: 'route', berichtsart: 'morning', sentChannels: ['email'], profil: profilLuecken(), abo: aus });
+		assert.equal(
+			s,
+			'Morgen-Briefing geschickt: E-Mail ✓ · Telegram übersprungen (nicht verbunden) · SMS übersprungen (unbestätigt) · Premium-SMS übersprungen (Rückadresse verfallen)'
+		);
+	});
+
+	test('Tarif ohne SMS/Premium (gesperrt laut kanalStatus) ⇒ übersprungen mit Tarif-Grund, nicht fehlgeschlagen', async () => {
+		const { alleRueckmeldung } = await modul();
+		const profil = profilNormal({ tier: 'free', sms_allowed: false, premium_sms_allowed: false });
+		const status = kanalStatus(profil);
+		const s = alleRueckmeldung({ context: 'route', berichtsart: 'morning', sentChannels: ['email', 'telegram'], profil, abo: ALLE_AN });
+		for (const k of ['sms', 'premium_sms'] as const) {
+			const name = tr(k === 'sms' ? 'zustellung.kanal.sms' : 'zustellung.kanal.premium_sms');
+			if (status[k].briefingGesperrt) {
+				const grund = status[k].statusText.split(' · ').pop();
+				assert.ok(s.includes(`${name} übersprungen (${grund})`), `${k}: Tarif-Sperre nicht als übersprungen: ${s}`);
+			}
+		}
+		assert.ok(!/fehlgeschlagen/.test(s), `Tarif-Sperre als Fehler gemeldet: ${s}`);
+	});
+
+	test('gesendet geht vor Abo-Stand: im Abo aus, aber in sent_channels ⇒ ✓', async () => {
+		const { alleRueckmeldung } = await modul();
+		const aus = { email: false, telegram: false, sms: false, premium_sms: false };
+		const s = alleRueckmeldung({ context: 'vergleich', berichtsart: 'morning', sentChannels: ['telegram'], profil: profilNormal(), abo: aus });
+		assert.match(s, /Telegram ✓/);
+	});
+
+	test('EN: „skipped (off in this briefing)“, kein deutscher Rest', async () => {
+		locale.set('en');
+		const { alleRueckmeldung, aboKanaele } = await modul();
+		const s = alleRueckmeldung({
+			context: 'vergleich',
+			berichtsart: 'morning',
+			sentChannels: ['email'],
+			profil: profilNormal(),
+			abo: aboKanaele('vergleich', presetStandard())
+		});
+		assert.match(s, /Telegram skipped \(off in this briefing\)/);
+		assert.ok(!/übersprungen|im Briefing aus|failed/.test(s), `falscher Text im EN: ${s}`);
+	});
+
+	test('testErgebnis reicht den Abo-Stand an die „Alle“-Rückmeldung durch', async () => {
+		const { testErgebnis, aboKanaele } = await modul();
+		const r = testErgebnis({
+			context: 'vergleich',
+			wahl: { kanal: 'alle', berichtsart: 'morning' },
+			ergebnis: { kind: 'ok', message: '', sentChannels: ['email'] },
+			profil: profilNormal(),
+			abo: aboKanaele('vergleich', presetStandard()),
+			jetzt: new Date(2026, 10, 27, 9, 0)
+		});
+		assert.equal(r.ok, true);
+		assert.match(r.text, /Telegram übersprungen \(im Briefing aus\)/);
+		assert.ok(!/fehlgeschlagen/.test(r.text));
+	});
+});
+
+// ── AC-2 / AC-11 (Fix-Loop F002): Vorauswahl beim Öffnen und Rückmeldedauer als eine Quelle ──
+
+describe('#3440 AC-2 / AC-11 — Vorauswahl Morgen beim Öffnen, Rückmeldedauer 5 s', () => {
+	test('berichtsartBeiOffen: Öffnen setzt auf Morgen zurück, Schließen lässt die Wahl stehen', async () => {
+		const { berichtsartBeiOffen, BERICHTSART_START } = await modul();
+		assert.equal(BERICHTSART_START, 'morning');
+		assert.equal(berichtsartBeiOffen(true, 'evening'), 'morning');
+		assert.equal(berichtsartBeiOffen(true, 'morning'), 'morning');
+		assert.equal(berichtsartBeiOffen(false, 'evening'), 'evening');
+	});
+
+	test('RUECKMELDUNG_MS ist 5 Sekunden', async () => {
+		const { RUECKMELDUNG_MS } = await modul();
+		assert.equal(RUECKMELDUNG_MS, 5000);
 	});
 });

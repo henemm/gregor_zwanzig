@@ -103,7 +103,8 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 	test('Messaufbau: Golden enthaelt die deutschen Texte der Bausteine', () => {
 		const alle = Object.keys(FAELLE).map((f) => readFileSync(path.join(P.GOLDEN_DIR, `${f}.de.html`), 'utf-8')).join('');
 		// #2980 AC-19: 'Tag 2'/'START IN' (Kennzahlenzeile #416) stehen nicht mehr im Golden.
-		for (const s of ['Briefing gesendet!', 'Weitere Aktionen', '1 Größe unbekannt', '2 Größen unbekannt', 'Lückenlos neu datiert', 'Neuer Trip','Gesperrt — erst Trip-Name + Startdatum', 'Fertig', 'Archiviert', 'Versand-Historie', 'von Hand', 'Speichern fehlgeschlagen', 'Gespeichert', 'Karte &amp; Höhenprofil', 'Fehler beim Senden', 'Name bearbeiten', 'Tour-Detail', 'Trip-Start', '01.07.'])
+		// #3440: „Briefing gesendet!“ entfiel (Rückmeldung des Menüs „Test schicken“ entsteht beim Versand).
+		for (const s of ['Test schicken ▾', 'Weitere Aktionen', '1 Größe unbekannt', '2 Größen unbekannt', 'Lückenlos neu datiert', 'Neuer Trip','Gesperrt — erst Trip-Name + Startdatum', 'Fertig', 'Archiviert', 'Versand-Historie', 'von Hand', 'Speichern fehlgeschlagen', 'Gespeichert', 'Karte &amp; Höhenprofil', 'Fehler beim Senden', 'Name bearbeiten', 'Tour-Detail', 'Trip-Start', '01.07.'])
 			assert.ok(alle.includes(s), s);
 	});
 });
@@ -112,10 +113,10 @@ describe('AC-1: Trip-Hub englisch, Namen unveraendert', () => {
 	test('Reiterleiste und Seite: Reiter, Aktionen, Kopf, Erfolg/Fehler englisch (erst de, dann ohne Neuladen en)', () => {
 		const { de, en } = deDannEn(() => P.reiterRendern() + P.seiteRendern('gesendet') + P.seiteRendern('fehler'));
 		// #2794 S3a: Reiter Wetter/Zustellung. #2794 Fix-Loop B1: Reiter heißt kurz „Etappen"/„Stages".
-		for (const s of ['Übersicht', 'data-testid="trip-detail-tab-etappen">Etappen', 'Wetter', 'Zustellung', 'Briefing gesendet!', 'aria-label="Weitere Aktionen"']) hat(de, s);
-		for (const s of ['data-testid="trip-detail-tab-uebersicht">Overview', 'data-testid="trip-detail-tab-etappen">Stages', 'data-testid="trip-detail-tab-wetter">Weather', 'data-testid="trip-detail-tab-zustellung">Delivery', 'Briefing sent', 'Send', 'aria-label="More actions"', 'aria-label="Trip details"', 'Error while sending', 'aria-label="Edit name"', 'aria-label="Edit region"'])
+		for (const s of ['Übersicht', 'data-testid="trip-detail-tab-etappen">Etappen', 'Wetter', 'Zustellung', 'Test schicken ▾', 'data-testid="test-schicken-ok"', 'aria-label="Weitere Aktionen"']) hat(de, s);
+		for (const s of ['data-testid="trip-detail-tab-uebersicht">Overview', 'data-testid="trip-detail-tab-etappen">Stages', 'data-testid="trip-detail-tab-wetter">Weather', 'data-testid="trip-detail-tab-zustellung">Delivery', 'Send test ▾', 'data-testid="test-schicken-ok"', 'aria-label="More actions"', 'aria-label="Trip details"', 'Error while sending', 'aria-label="Edit name"', 'aria-label="Edit region"'])
 			hat(en, s);
-		hatNicht(en, 'Briefing gesendet');
+		hatNicht(en, 'Test schicken');
 		hatNicht(de, 'data-testid="trip-detail-tab-etappen">Etappen &amp; Wegpunkte');
 		hatNicht(en, 'data-testid="trip-detail-tab-etappen">Stages &amp; waypoints');
 		const sEn = sichtbar(en);
@@ -345,11 +346,11 @@ describe('AC-5: zwei Nutzer, zwei Sprachen, eigener Trip, sprachunabhaengige Nut
 		assert.equal(b.fremd?.body?.message, "Trip 'anna-gr20' nicht gefunden");
 		hat(a.seite, 'Anna GR20');
 		hat(a.seite, 'Overview');
-		hat(a.seite, 'Briefing sent');
+		hat(a.seite, 'Send test ▾'); // #3440: Kopf-Knopf statt „Briefing sent“
 		hatNicht(a.seite, 'Bert Haute Route');
 		hat(b.seite, 'Bert Haute Route');
 		hat(b.seite, 'Übersicht');
-		hat(b.seite, 'Briefing gesendet!');
+		hat(b.seite, 'Test schicken ▾');
 		hatNicht(b.seite, 'Anna GR20');
 		assert.deepEqual(a.rumpf, [{ name: 'Anna GR20 2' }]);
 		assert.deepEqual(b.rumpf, [{ name: 'Bert Haute Route 2' }]);

@@ -89,7 +89,6 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['trip.tempo.etappen_zurueckgesetzt.other', 'Fortbewegung gewechselt: das eigene Tempo von <count> Etappen wurde zurückgesetzt.', 'Mode of travel changed: the own pace of <count> stages was reset.'],
 
 	// ── trip.hub.* — Seite /trips/[id], Reiterleiste ──────────────────────────
-	['trip.hub.briefing_gesendet', 'Briefing gesendet!', 'Briefing sent'],
 	['trip.hub.loeschen_titel', 'Trip endgültig löschen?', 'Delete trip permanently?'],
 	['trip.hub.loeschen_text', '„<name>“ wird dauerhaft gelöscht. Dieser Schritt kann nicht rückgängig gemacht werden.', '“<name>” will be deleted permanently. This cannot be undone.'],
 	['trip.hub.reaktivieren_titel', 'Trip reaktivieren?', 'Reactivate trip?'],

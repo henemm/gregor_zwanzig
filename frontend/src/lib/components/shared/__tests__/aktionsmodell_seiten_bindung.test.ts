@@ -110,35 +110,46 @@ describe('F006: Dispatch der Listen — Aktion -> Zweig -> Wirkung', () => {
 // bisherigen Ausdrücke an die Kopf-Einbettung (die Komponente mit `onSend` — HubKopf
 // selbst oder die Trip-Hülle, die ihn einbettet), (2) HubKopf bindet seinen Senden-Btn
 // an genau diese Props (hub-kopf/__tests__/hub_kopf_seiten_bindung.test.ts).
+// #3440: die Kopf-Einbettung trägt `onTest` (Menü „Test schicken ▾“) statt `onSend` (Dialog).
 const kopfEinbettung = (ast: any, name: string) => {
-	const k = collect(ast.fragment, (n) => n.type === 'Component' && (n.attributes ?? []).some((a: any) => a.name === 'onSend'));
-	assert.equal(k.length, 1, `${name}: genau eine Kopf-Einbettung mit onSend erwartet (HubKopf), gefunden ${k.length}`);
+	const k = collect(ast.fragment, (n) => n.type === 'Component' && (n.attributes ?? []).some((a: any) => a.name === 'onTest'));
+	assert.equal(k.length, 1, `${name}: genau eine Kopf-Einbettung mit onTest erwartet (HubKopf), gefunden ${k.length}`);
 	return k[0];
 };
 const HUBKOPF_DATEI = path.join(SRC, 'lib/components/shared/hub-kopf/HubKopf.svelte');
 const hubKopf = () => ladeSvelte(HUBKOPF_DATEI);
 
-describe('F001: „Senden" oeffnet nur den Dialog; gesendet wird erst nach Bestaetigung', () => {
-	test('HubKopf: der Senden-Btn ruft nur onSend und ist an sendDisabled gesperrt', () => {
-		const btn = mitAttribut(hubKopf(), 'data-testid', 'subscription-hub-send')[0];
+// #3440 (feat_3440 AC-1/AC-6, Fortschreibung feat_2278 AC-3/AC-12): im Hub öffnet „Test schicken ▾“ das
+// Menü; gesendet wird erst beim Klick auf eine Kanalzeile (onTest). Die Listen behalten den Dialog (unten).
+describe('F001: „Test schicken" oeffnet nur das Menue; gesendet wird erst beim Klick auf eine Kanalzeile', () => {
+	test('HubKopf: der Knopf sendet nicht selbst, das Menue meldet die Wahl an onTest; gesperrt an sendDisabled', () => {
+		const hk = hubKopf();
+		const btn = mitAttribut(hk, 'data-testid', 'subscription-hub-send')[0];
 		assert.ok(btn, 'HubKopf hat keinen Senden-Knopf');
-		assert.ok(['onSend', '() => onSend()', '() => onSend?.()'].includes(attrKurz(btn, 'onclick') ?? ''), `onclick: ${attrKurz(btn, 'onclick')}`);
+		assert.equal(attrKurz(btn, 'onclick'), undefined, `Knopf hat eigenen Klick-Handler: ${attrKurz(btn, 'onclick')}`);
 		assert.equal(attrKurz(btn, 'disabled'), 'sendDisabled');
+		const menue = komponenten(hk, 'TestSchickenMenue');
+		assert.equal(menue.length, 1, 'HubKopf bindet das Menue nicht genau einmal');
+		assert.equal(attrKurz(menue[0], 'onTest'), 'onTest');
+		assert.equal(attrKurz(menue[0], 'disabled'), 'sendDisabled');
 	});
-	test('Trip-Hub: Primaerknopf setzt nur sendDialogOpen, Dialog-Bestaetigung ist handleSendConfirm', () => {
+	test('Trip-Hub: Kopf meldet die Menue-Wahl an handleTest; kein Sende-Dialog mehr', () => {
 		const kopf = kopfEinbettung(TRIP_HUB, 'Trip-Hub');
-		assert.equal(attrKurz(kopf, 'onSend'), '() => { sendDialogOpen = true }');
+		assert.equal(attrKurz(kopf, 'onTest'), 'handleTest');
+		assert.equal(attrKurz(kopf, 'onSend'), undefined, 'Trip-Hub bindet noch onSend');
 		assert.equal(attrKurz(kopf, 'sendDisabled'), 'sendLoading || lifecycle === "archived" || lifecycle === "draft"');
 		assert.ok([undefined, '"senden"'].includes(attrKurz(kopf, 'sendMode')), `Trip kennt keinen Setup-Modus: ${attrKurz(kopf, 'sendMode')}`);
-		assert.equal(attrKurz(dlg(TRIP_HUB), 'onConfirm'), 'handleSendConfirm');
-		assert.equal(attrKurz(dlg(TRIP_HUB), 'open'), 'sendDialogOpen');
+		assert.equal(dlg(TRIP_HUB), undefined, 'Trip-Hub bindet noch SendConfirmDialog');
 	});
-	test('Compare-Hub: Primaerknopf setzt nur sendDialogOpen, Bestaetigung schliesst und sendet', () => {
+	test('Compare-Hub: Kopf meldet die Menue-Wahl an handleTest; Kanal geht als channel in den Request', () => {
 		const kopf = kopfEinbettung(CMP_HUB, 'Compare-Hub');
-		assert.ok(['() => sendDialogOpen = true', '() => { sendDialogOpen = true }'].includes(attrKurz(kopf, 'onSend') ?? ''), `onSend: ${attrKurz(kopf, 'onSend')}`);
+		assert.equal(attrKurz(kopf, 'onTest'), 'handleTest');
+		assert.equal(attrKurz(kopf, 'onSend'), undefined, 'Compare-Hub bindet noch onSend');
 		assert.equal(attrKurz(kopf, 'sendDisabled'), 'isSending || lifecycle === "archived"');
-		assert.equal(attrKurz(dlg(CMP_HUB), 'onConfirm'), '() => { sendDialogOpen = false; void handleTestSend() }');
-		assert.deepEqual(aufrufArgumente(funktion(CMP_HUB, 'handleTestSend'), 'sendSubscription'), [['"vergleich"', 'currentPreset.id']]);
+		assert.equal(dlg(CMP_HUB), undefined, 'Compare-Hub bindet noch SendConfirmDialog');
+		assert.deepEqual(aufrufArgumente(funktion(CMP_HUB, 'handleTest'), 'sendSubscription'), [
+			['"vergleich"', 'currentPreset.id', '{ channel: wahl.kanal === "alle" ? undefined : wahl.kanal }']
+		]);
 	});
 	test('F022: der Zeilen-Primaerknopf „Briefing senden" ist an die Liste gebunden (Trip UND Compare)', () => {
 		const tabelle = (ast: any) => komponenten(ast, 'ListTable')[0];
@@ -154,28 +165,36 @@ describe('F001: „Senden" oeffnet nur den Dialog; gesendet wird erst nach Besta
 	});
 });
 
-describe('F002 (AC-10): jede Seite gibt dem Dialog das Profil des angemeldeten Nutzers', () => {
+describe('F002 (AC-10): jede Seite gibt Dialog bzw. Menue das Profil des angemeldeten Nutzers', () => {
 	for (const [name, ast, kind] of [
 		['Trip-Liste', TRIPS, '"trip"'],
-		['Trip-Hub', TRIP_HUB, '"trip"'],
-		['Compare-Liste', CMP, '"vergleich"'],
-		['Compare-Hub', CMP_HUB, '"vergleich"']
+		['Compare-Liste', CMP, '"vergleich"']
 	] as const) {
 		test(`${name}: profile = data.profile, kind = ${kind}`, () => {
 			assert.equal(attrKurz(dlg(ast), 'profile'), 'data.profile');
 			assert.equal(attrKurz(dlg(ast), 'kind'), kind);
 		});
 	}
+	// #3440: im Hub bekommt das Menü (über die Kopf-Einbettung) das Konto-Profil für Ziele und Sperren.
+	for (const [name, ast] of [['Trip-Hub', TRIP_HUB], ['Compare-Hub', CMP_HUB]] as const) {
+		test(`${name}: testProfil = data.profile; HubKopf reicht es als profil an das Menue`, () => {
+			assert.equal(attrKurz(kopfEinbettung(ast, name), 'testProfil'), 'data.profile');
+			assert.equal(attrKurz(komponenten(hubKopf(), 'TestSchickenMenue')[0], 'profil'), 'testProfil');
+		});
+	}
 });
 
 describe('F003 (AC-4): die gewaehlte Berichtsart erreicht den Request', () => {
-	test('Trip-Liste und Trip-Hub: erster Parameter der Bestaetigung geht als reportType in sendSubscription', () => {
+	test('Trip-Liste und Trip-Hub: die gewaehlte Berichtsart geht als reportType in sendSubscription', () => {
 		const liste = funktion(TRIPS, 'confirmSend');
-		const hub = funktion(TRIP_HUB, 'handleSendConfirm');
+		const hub = funktion(TRIP_HUB, 'handleTest');
 		assert.deepEqual(liste.params.map(kurz), ['berichtsart']);
-		assert.deepEqual(hub.params.map(kurz), ['berichtsart']);
+		assert.deepEqual(hub.params.map(kurz), ['wahl']);
 		assert.deepEqual(aufrufArgumente(liste, 'sendSubscription'), [['"trip"', 'target.id', '{ reportType: berichtsart }']]);
-		assert.deepEqual(aufrufArgumente(hub, 'sendSubscription'), [['"trip"', 'trip.id', '{ reportType: berichtsart }']]);
+		// #3440: Berichtsart aus dem Segment im Menü, dazu der gewählte Kanal (ohne bei „alle“).
+		assert.deepEqual(aufrufArgumente(hub, 'sendSubscription'), [
+			['"trip"', 'trip.id', '{ reportType: wahl.berichtsart, channel: wahl.kanal === "alle" ? undefined : wahl.kanal }']
+		]);
 	});
 	test('Compare-Liste sendet ohne Berichtsart', () => {
 		assert.deepEqual(aufrufArgumente(funktion(CMP, 'confirmSend'), 'sendSubscription'), [['"vergleich"', 'target.id']]);
@@ -276,19 +295,31 @@ describe('F011 (AC-17): Fehler und Erfolg des Versands/Pausierens werden angezei
 		assert.deepEqual(aufrufArgumente(c, 'deleteSubscription'), [['"vergleich"', 'target.id']]);
 		assert.deepEqual(zuweisungen(c, 'presets'), ['presets.filter((p) => p.id !== target.id)']);
 	});
-	test('Trip-Hub: ok-Zweig setzt sendStatus "ok" (gerendert als test-briefing-success), Fehler als "error"', () => {
-		assert.deepEqual(zuweisungen(funktion(TRIP_HUB, 'handleSendConfirm'), 'sendStatus'), ['"idle"', '"ok"', '"error"', '"idle"']);
-		assert.deepEqual(zuweisungen(funktion(TRIP_HUB, 'handleSendConfirm'), 'sendMessage'), ['null', 'o.message']);
-		const ok = collect(TRIP_HUB.fragment, (n) => n.type === 'IfBlock' && kurz(n.test) === 'sendStatus === "ok"');
-		assert.equal(mitAttribut({ fragment: ok[0].consequent }, 'data-testid', 'test-briefing-success').length, 1);
-	});
+	// #3440 (AC-11/AC-12): Rückmeldung in Trip und Orte gleich gebaut (testErgebnis), testids test-schicken-ok/-fehler.
+	// Fix-Loop F001: der Abo-Kanalstand kommt je Seite aus aboKanaele(context, Abo).
+	for (const [name, ast, text, ctx, abo] of [['Trip-Hub', TRIP_HUB, 'sendMessage', 'route', 'trip'], ['Compare-Hub', CMP_HUB, 'sendMsg', 'vergleich', 'currentPreset']] as const) {
+		test(`${name}: ok-Zweig setzt sendStatus "ok" (gerendert als test-schicken-ok), Fehler als "error" (test-schicken-fehler)`, () => {
+			const f = funktion(ast, 'handleTest');
+			assert.deepEqual(zuweisungen(f, 'sendStatus'), ['"idle"', 'r.ok ? "ok" : "error"', '"idle"']);
+			assert.deepEqual(zuweisungen(f, text), ['r.text']);
+			assert.deepEqual(aufrufArgumente(f, 'testErgebnis'), [
+				[`{ context: "${ctx}", wahl: wahl, ergebnis: o, profil: data.profile, abo: aboKanaele("${ctx}", ${abo}), jetzt: new Date() }`]
+			]);
+			const ok = collect(ast.fragment, (n) => n.type === 'IfBlock' && kurz(n.test) === 'sendStatus === "ok"');
+			assert.equal(mitAttribut({ fragment: ok[0].consequent }, 'data-testid', 'test-schicken-ok').length, 1);
+			const fehler = collect(ast.fragment, (n) => n.type === 'IfBlock' && kurz(n.test) === 'sendStatus === "error"');
+			assert.equal(mitAttribut({ fragment: fehler[0].consequent }, 'data-testid', 'test-schicken-fehler').length, 1);
+		});
+	}
 });
 
 describe('F019/F015/F018: die Bindung steht UNTER DER ERWARTETEN Bedingung (kein toter Zweig)', () => {
 	const unter = (ast: any, knoten: any) => bedingungen(ast.fragment, knoten);
-	test('Dialog und Aktionsblatt aller vier Seiten stehen unbedingt', () => {
-		for (const [name, ast] of [['Trip-Liste', TRIPS], ['Trip-Hub', TRIP_HUB], ['Compare-Liste', CMP], ['Compare-Hub', CMP_HUB]] as const) {
+	test('Dialog (Listen) und Aktionsblatt aller vier Seiten stehen unbedingt', () => {
+		for (const [name, ast] of [['Trip-Liste', TRIPS], ['Compare-Liste', CMP]] as const) {
 			assert.deepEqual(unter(ast, dlg(ast)), [], `${name}: SendConfirmDialog steht unter einer Bedingung`);
+		}
+		for (const [name, ast] of [['Trip-Liste', TRIPS], ['Trip-Hub', TRIP_HUB], ['Compare-Liste', CMP], ['Compare-Hub', CMP_HUB]] as const) {
 			assert.deepEqual(unter(ast, sheet(ast)), [], `${name}: SubscriptionActionSheet steht unter einer Bedingung`);
 		}
 	});
@@ -317,9 +348,9 @@ describe('F019/F015/F018: die Bindung steht UNTER DER ERWARTETEN Bedingung (kein
 			[CMP, 'togglePause', 'setPaused'],
 			[CMP, 'confirmSend', 'sendSubscription'],
 			[CMP, 'confirmDelete', 'deleteSubscription'],
-			[TRIP_HUB, 'handleSendConfirm', 'sendSubscription'],
+			[TRIP_HUB, 'handleTest', 'sendSubscription'],
 			[TRIP_HUB, 'handleDeleteConfirm', 'deleteSubscription'],
-			[CMP_HUB, 'handleTestSend', 'sendSubscription'],
+			[CMP_HUB, 'handleTest', 'sendSubscription'],
 			[CMP_HUB, 'deletePreset', 'deleteSubscription'],
 			[CMP_HUB, 'archivePreset', 'setArchived'],
 			[CMP_HUB, 'unarchivePreset', 'setArchived'],

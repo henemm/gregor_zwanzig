@@ -30,9 +30,13 @@ var (
 	sendVarianteVersand = i18n.Args{"variante": "versand"}
 )
 
-// POST /api/briefings/{id}/send?kind=route|vergleich[&report_type=]
+// sendKanaele: Issue #3440 — Whitelist des Query-Parameters channel (Menue
+// „Test schicken"). Der Kanal waehlt nur den Weg, nie den Empfaenger.
+var sendKanaele = map[string]bool{"email": true, "telegram": true, "sms": true, "premium_sms": true}
+
+// POST /api/briefings/{id}/send?kind=route|vergleich[&report_type=][&channel=]
 // Weiter an Python POST /api/briefings/{id}/send?kind=…&user_id=<auth>;
-// report_type geht nur bei kind=route mit.
+// report_type geht nur bei kind=route mit, channel nur nach Whitelist.
 func BriefingSendHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		kind := r.URL.Query().Get("kind")
@@ -49,6 +53,13 @@ func BriefingSendHandler(pythonURL string) http.HandlerFunc {
 		q.Set("kind", kind)
 		if rt := r.URL.Query().Get("report_type"); kind == briefingKindRoute && rt != "" {
 			q.Set("report_type", rt)
+		}
+		if kanaele, da := r.URL.Query()["channel"]; da {
+			if len(kanaele) != 1 || !sendKanaele[kanaele[0]] {
+				WriteError(w, r, http.StatusBadRequest, "invalid_channel", sendVarianteVersand)
+				return
+			}
+			q.Set("channel", kanaele[0])
 		}
 		forwardSend(w, r, pythonURL+"/api/briefings/"+url.PathEscape(id)+"/send", q.Encode())
 	}

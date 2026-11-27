@@ -7,7 +7,8 @@
 	// Breadcrumb (seit #2980 ohne Zurück-Pfeil), „Senden" (bzw. im Vergleich-Entwurf „Setup abschließen"
 	// auf demselben Platz), Kebab und Meldungen; darunter der geteilte `SubscriptionHeader`.
 	// Fachlich Verschiedenes kommt nur über Snippets (Whitelist, Spec Entscheidung 8).
-	// Der Baustein ruft keine API: „Senden" öffnet über `onSend` nur den Dialog der Seite (#2278).
+	// Der Baustein ruft keine API (#2278). Seit #3440 öffnet „Test schicken ▾“ das Menü
+	// `TestSchickenMenue` am Knopf; die Wahl geht über `onTest({kanal, berichtsart})` an die Seite.
 	//
 	// #2913 Scheibe c2 (Spec docs/specs/modules/feat_2913_c2_seitenkopf.md): Kopf nach Mockup —
 	// Eyebrow („Trip · Region" / „Orte · Region") und Meta-Zeile kommen als reiner Text über
@@ -16,6 +17,9 @@
 	import type { Snippet } from 'svelte';
 	import { Btn, Eyebrow } from '$lib/components/atoms';
 	import SubscriptionKebab from '$lib/components/molecules/SubscriptionKebab.svelte';
+	import TestSchickenMenue from '$lib/components/molecules/TestSchickenMenue.svelte';
+	import type { Berichtsart, TestKanal } from '$lib/components/molecules/testSchickenModell';
+	import type { ZustellungProfil } from '$lib/components/shared/zustellung-tab/zustellungModell';
 	import SubscriptionHeader from '$lib/components/shared/subscription-header/SubscriptionHeader.svelte';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { t } from '$lib/i18n';
@@ -29,7 +33,10 @@
 		/** Kind des Breadcrumbs: voller Name (#2980 AC-24, kein Kürzel) — kein Link. */
 		crumb: string;
 		sendLabel: string;
-		onSend?: () => void;
+		/** #3440: Wahl im Menü „Test schicken ▾“ (Kanal oder „alle“, beim Trip mit Berichtsart). */
+		onTest?: (wahl: { kanal: TestKanal; berichtsart: Berichtsart }) => void;
+		/** #3440: Konto-Profil (GET /api/auth/profile) für Ziele und Sperren der Kanalzeilen. */
+		testProfil?: ZustellungProfil | null;
 		sendDisabled?: boolean;
 		/** 'setup' nur im Vergleich-Entwurf: „Setup abschließen" (onSetup) auf dem Platz von „Senden". */
 		sendMode?: 'senden' | 'setup';
@@ -68,7 +75,7 @@
 	}
 
 	let {
-		context, parent, crumb, sendLabel, onSend, sendDisabled = false, sendMode = 'senden', onSetup,
+		context, parent, crumb, sendLabel, onTest, testProfil, sendDisabled = false, sendMode = 'senden', onSetup,
 		actions = [], onSelect, mobil = false, onSheetOpen, leisteTestid,
 		name, region, profile, profileOptions = [], profileLabel = '', regionMaxLength = 60, testidPrefix,
 		titleTestid, titleSize = 38, saveController, onSaveField,
@@ -78,6 +85,9 @@
 	// SubscriptionHeader kennt die Arten als 'trip' | 'vergleich' — reine Datenmarke (Tabelle,
 	// keine HERKUNFT-Verzweigung im Sinne von context_herkunft_zweige_eingefroren.test.ts).
 	const KIND = { route: 'trip', vergleich: 'vergleich' } as const;
+
+	// #3440 AC-15: Menüzustand für aria-expanded am Knopf.
+	let testOffen = $state(false);
 </script>
 
 {#snippet kopfEyebrow()}
@@ -103,9 +113,13 @@
 				{#if sendMode === 'setup'}
 					<Btn variant="primary" size="sm" onclick={() => onSetup?.()}>{sendLabel}</Btn>
 				{:else}
-					<!-- „Senden" öffnet nur den Sende-Dialog der Seite (#2278 AC-12).
+					<!-- #3440: „Test schicken ▾“ öffnet das Menü am Knopf (ADR-0109 Punkt 6), kein Dialog.
 					     #2980 AC-16 (ADR-0118): Akzent-Hauptaktion, Fläche --g-accent-deep (WCAG-AA statt Mockup-Orange). -->
-					<Btn variant="accent" size="sm" data-testid="subscription-hub-send" onclick={() => onSend?.()} disabled={sendDisabled}>{sendLabel}</Btn>
+					<TestSchickenMenue {context} profil={testProfil} {mobil} bind:offen={testOffen} disabled={sendDisabled} {onTest}>
+						{#snippet ausloeser({ props })}
+							<Btn {...props} variant="accent" size="sm" data-testid="subscription-hub-send" aria-haspopup="menu" aria-expanded={testOffen} disabled={sendDisabled}>{sendLabel}</Btn>
+						{/snippet}
+					</TestSchickenMenue>
 				{/if}
 				{#if meldungen}{@render meldungen()}{/if}
 			</div>

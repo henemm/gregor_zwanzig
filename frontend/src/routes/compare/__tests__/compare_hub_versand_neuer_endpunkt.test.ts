@@ -59,21 +59,31 @@ async function hub() {
 }
 
 const posts = () => aufrufe.filter((a) => a.method === 'POST');
+// #3440: der Hub sendet über das Menü „Test schicken ▾“; „Alle eingerichteten Kanäle“ = ohne channel.
+const ALLE = { kanal: 'alle', berichtsart: 'morning' } as const;
 
 describe('AC-15: Hub-Klick trifft den neuen Endpunkt', () => {
-	test('handleTestSend -> genau ein POST /api/briefings/c2280/send?kind=vergleich', async () => {
+	test('handleTest (Alle eingerichteten Kanäle) -> genau ein POST /api/briefings/c2280/send?kind=vergleich', async () => {
 		const u = await hub();
-		await u.handleTestSend();
+		await u.handleTest(ALLE);
 		assert.equal(posts().length, 1, `erwartet genau einen POST, war: ${JSON.stringify(posts())}`);
 		const url = new URL(posts()[0].url, 'http://gz.invalid');
 		assert.equal(url.pathname, '/api/briefings/c2280/send');
 		assert.equal(url.searchParams.get('kind'), 'vergleich');
+		assert.equal(url.searchParams.has('channel'), false, '„Alle“ darf keinen channel schicken');
 		assert.equal(u.isSending, false);
 	});
 
-	test('handleTestSend trifft NICHT den Alt-Pfad /api/compare/presets/{id}/send', async () => {
+	test('#3440: handleTest mit Einzelkanal -> genau ein POST mit channel', async () => {
 		const u = await hub();
-		await u.handleTestSend();
+		await u.handleTest({ kanal: 'telegram', berichtsart: 'morning' });
+		assert.equal(posts().length, 1);
+		assert.equal(new URL(posts()[0].url, 'http://gz.invalid').searchParams.get('channel'), 'telegram');
+	});
+
+	test('handleTest trifft NICHT den Alt-Pfad /api/compare/presets/{id}/send', async () => {
+		const u = await hub();
+		await u.handleTest(ALLE);
 		assert.deepEqual(
 			posts().filter((a) => a.url.includes('/api/compare/presets/')).map((a) => a.url),
 			[]
@@ -90,7 +100,7 @@ describe('AC-16: Hub zeigt den konkreten Grund', () => {
 		test(`422 ${code} am neuen Endpunkt -> sendMsg ist der detail-Text`, async () => {
 			antwort = { status: 422, body: { detail, code } };
 			const u = await hub();
-			await u.handleTestSend();
+			await u.handleTest(ALLE);
 			assert.ok(
 				posts().some((a) => a.url.startsWith('/api/briefings/c2280/send')),
 				`Versand ging nicht an den neuen Endpunkt: ${JSON.stringify(posts())}`
@@ -106,7 +116,7 @@ describe('AC-16: Hub zeigt den konkreten Grund', () => {
 			body: { status: 'ok', kind: 'vergleich', id: PRESET.id, sent: true, fehlende_orte: ['alt-ort-9'] }
 		};
 		const u = await hub();
-		await u.handleTestSend();
+		await u.handleTest(ALLE);
 		assert.ok(posts().some((a) => a.url.startsWith('/api/briefings/c2280/send')));
 		assert.match(String(u.sendMsg), /alt-ort-9/);
 	});

@@ -15,8 +15,9 @@
 //                        Desktop: Dropdown, Eintraege role=menuitem; Mobil: oeffnet das SubscriptionActionSheet
 //                        (surface='hub'), Eintraege `subscription-action-{actionId}`; Primaerknopf `subscription-hub-send`; Loesch-Dialog
 //                        `{trip|compare}-detail-delete-confirm-{dialog,cancel,yes}`
-//   Sende-Dialog       : `send-confirm-dialog`, `send-confirm-yes`, `send-confirm-cancel`; nur Trip:
-//                        `send-confirm-berichtsart-morning` / `-evening` (Morgen vorausgewaehlt)
+//   Sende-Dialog       : nur noch in den LISTEN: `send-confirm-dialog`, `send-confirm-yes`, `send-confirm-cancel`
+//   Hub-Menue (#3440)  : `subscription-hub-send` oeffnet `[data-abschnitt="test-menue"]`; Zeilen role=menuitem mit
+//                        `data-kanal`; nur Trip: `test-menue-berichtsart-morning` / `-evening` (Morgen vorausgewaehlt)
 //
 // RED heute: weder Aktionsquelle noch geteilte Bausteine existieren; Hub-Trip loescht nicht, mobiles
 // Trip-"Senden" oeffnet nur die Vorschau, Compare-Hub sendet ohne Rueckfrage.
@@ -216,7 +217,7 @@ for (const kind of ['trip', 'vergleich'] as const) {
 				await expect.poll(() => rec.loeschen.length).toBe(1);
 			});
 
-			test('Hub: Lebenszyklus-Menue, Senden als Primaerknopf mit Sende-Dialog, Loeschen mit Namen (AC-3, AC-4, AC-5, AC-12)', async ({ page }) => {
+			test('Hub: Lebenszyklus-Menue, Senden als Primaerknopf mit Menue „Test schicken“, Loeschen mit Namen (AC-3, AC-4, AC-5, AC-12; #3440)', async ({ page }) => {
 				const o = await legeAn(page, kind);
 				const rec = await aufzeichnen(page, kind);
 				await page.goto(o.pfad);
@@ -227,19 +228,20 @@ for (const kind of ['trip', 'vergleich'] as const) {
 				await page.keyboard.press('Escape');
 				if (viewport === 'mobil') await page.getByLabel('Schliessen').click().catch(() => {});
 
-				// Primaerknopf Senden -> Dialog (kein Versand vor Bestaetigung)
-				await page.getByTestId('subscription-hub-send').click();
-				const dialog = page.getByTestId('send-confirm-dialog');
-				await expect(dialog).toBeVisible();
+				// #3440: Primaerknopf oeffnet das Menue „Test schicken ▾“ (kein Versand vor der Wahl einer Zeile)
+				await page.locator('[data-testid="subscription-hub-send"]:visible').first().click();
+				const menue = page.locator('[data-abschnitt="test-menue"]:visible').first();
+				await expect(menue).toBeVisible();
+				await expect(page.getByTestId('send-confirm-dialog')).toHaveCount(0);
 				expect(rec.senden).toEqual([]);
 				if (kind === 'trip') {
 					// AC-4: Morgen/Abend, Vorauswahl Morgen; gesendet wird die gewaehlte Option
-					await expect(page.getByTestId('send-confirm-berichtsart-morning')).toBeChecked();
-					await page.getByTestId('send-confirm-berichtsart-evening').check();
+					await expect(menue.getByTestId('test-menue-berichtsart-morning')).toHaveAttribute('aria-checked', 'true');
+					await menue.getByTestId('test-menue-berichtsart-evening').click();
 				} else {
-					await expect(page.getByTestId('send-confirm-berichtsart-morning')).toHaveCount(0);
+					await expect(menue.getByTestId('test-menue-berichtsart-morning')).toHaveCount(0);
 				}
-				await page.getByTestId('send-confirm-yes').click();
+				await menue.locator('[data-kanal="alle"]').click();
 				await expect.poll(() => rec.senden.length).toBe(1);
 				if (kind === 'trip') expect(rec.senden[0]).toContain('report_type=evening');
 				else expect(rec.senden[0]).not.toContain('report_type');
@@ -272,7 +274,7 @@ test.describe('AC-2: mobile Vergleichs-Liste hat Filter-Pillen (wie beim Trip)',
 	});
 });
 
-test.describe('AC-10: Sende-Dialog nennt nur das Ziel des angemeldeten Nutzers', () => {
+test.describe('AC-10: Menue „Test schicken“ nennt nur das Ziel des angemeldeten Nutzers (#3440)', () => {
 	test('Nutzer B sieht in der Trip-Liste nur seine Adresse, nie die von A', async ({ page, browser }) => {
 		await login(page);
 		const username = `e2e-gz-b-${Date.now()}`;
@@ -298,11 +300,13 @@ test.describe('AC-10: Sende-Dialog nennt nur das Ziel des angemeldeten Nutzers',
 			expect(res.ok()).toBeTruthy();
 			const seite = await kontext.newPage();
 			await seite.goto(`/trips/e2e-gz-trip-${username}`);
+			// #3440: das Menue zeigt das Ziel gekuerzt („lokal@…“), nie die volle Adresse eines anderen Nutzers.
 			await seite.getByTestId('subscription-hub-send').click();
-			const dialog = seite.getByTestId('send-confirm-dialog');
-			await expect(dialog).toContainText(`${username}@example.com`);
+			const menue = seite.locator('[data-abschnitt="test-menue"]:visible').first();
+			await expect(menue.locator('[data-kanal="email"]')).toContainText(`${username}@…`);
 			const adminProfil = await (await page.request.get('/api/auth/profile')).json();
-			if (adminProfil?.mail_to) await expect(dialog).not.toContainText(adminProfil.mail_to);
+			const adminLokal = String(adminProfil?.mail_to ?? '').split('@')[0];
+			if (adminLokal && adminLokal !== username) await expect(menue).not.toContainText(`${adminLokal}@`);
 		} finally {
 			await gast.delete(`/api/trips/e2e-gz-trip-${username}`).catch(() => {});
 			await kontext.close();
@@ -315,8 +319,8 @@ test.describe('AC-10: Sende-Dialog nennt nur das Ziel des angemeldeten Nutzers',
 // => wirksame Adresse unveraendert, sofort geschrieben, auth.go "mail_to leeren"). Das Profil, das der
 // Dialog sieht, hat dann KEIN mail_to => sendTargetLabel sperrt. page.route auf das Profil geht nicht:
 // es wird serverseitig geladen (+page.server.ts -> loadProfile). Braucht GZ_ENV=staging wie AC-10.
-test.describe('AC-3: Sende-Dialog sperrt Bestaetigen, wenn kein Kanal liefern kann', () => {
-	test('Hub-Trip ohne mail_to: send-confirm-yes ist disabled, es geht nichts raus', async ({ page, browser }) => {
+test.describe('AC-3: Menue „Test schicken“ sperrt die E-Mail-Zeile, wenn keine Adresse liefern kann (#3440)', () => {
+	test('Hub-Trip ohne mail_to: E-Mail-Zeile gesperrt (aria-disabled), Klick schickt nichts', async ({ page, browser }) => {
 		await login(page);
 		const username = `e2e-gz-c-${Date.now()}`;
 		const kontext = await browser.newContext();
@@ -352,10 +356,13 @@ test.describe('AC-3: Sende-Dialog sperrt Bestaetigen, wenn kein Kanal liefern ka
 			});
 			await seite.goto(`/trips/${tripId}`);
 			await seite.getByTestId('subscription-hub-send').click();
-			await expect(seite.getByTestId('send-confirm-dialog')).toContainText('keine E-Mail-Adresse');
-			await expect(seite.getByTestId('send-confirm-yes')).toBeDisabled();
-			await seite.getByTestId('send-confirm-yes').click({ force: true }).catch(() => {});
-			expect(gesendet, 'gesperrter Knopf darf nichts senden').toEqual([]);
+			const email = seite.locator('[data-abschnitt="test-menue"]:visible [data-kanal="email"]').first();
+			await expect(email).toHaveAttribute('aria-disabled', 'true');
+			await expect(email).toContainText('gesperrt:');
+			await email.click({ force: true, position: { x: 8, y: 8 } }).catch(() => {});
+			// Gesperrte Zeile schließt das Menü nicht (kein Auswahl-Ereignis).
+			await expect(seite.locator('[data-abschnitt="test-menue"]:visible')).toHaveCount(1);
+			expect(gesendet, 'gesperrte Zeile darf nichts senden').toEqual([]);
 		} finally {
 			await gast.delete(`/api/trips/${tripId}`).catch(() => {});
 			await kontext.close();

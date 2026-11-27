@@ -498,7 +498,7 @@ def test_ac10_erfolgsform_trip_traegt_report_type_und_keine_fehlenden_orte(lage,
     assert r.status_code == 200, r.text
     assert hv.body(r) == {
         "status": "ok", "kind": "route", "id": trip_id, "sent": True,
-        "report_type": "morning",
+        "report_type": "morning", "sent_channels": ["email"],  # #3440
     }, hv.body(r)
 
 
@@ -513,7 +513,7 @@ def test_ac10_erfolgsform_vergleich_traegt_fehlende_orte_und_keinen_report_type(
     assert r.status_code == 200, r.text
     assert hv.body(r) == {
         "status": "ok", "kind": "vergleich", "id": "vgl-teil", "sent": True,
-        "fehlende_orte": ["loc-geloescht"],
+        "sent_channels": ["email"], "fehlende_orte": ["loc-geloescht"],  # #3440
     }, hv.body(r)
 
 
@@ -524,7 +524,8 @@ def test_ac10_vergleich_ohne_fehlende_orte_hat_genau_die_grundform(lage, c):
     r = hv.neu_senden(c, "vgl-voll", uid, "vergleich")
 
     assert r.status_code == 200, r.text
-    assert hv.body(r) == {"status": "ok", "kind": "vergleich", "id": "vgl-voll", "sent": True}
+    assert hv.body(r) == {"status": "ok", "kind": "vergleich", "id": "vgl-voll", "sent": True,
+                          "sent_channels": ["email"]}  # #3440
 
 
 @pytest.mark.parametrize("kind", ["route", "vergleich"])
@@ -621,6 +622,17 @@ def _bediente_kanaele(lage: _Lage) -> list[str]:
     return kanaele
 
 
+def _ein_briefing(lage: _Lage, kanal: str) -> bool:
+    """Genau EIN Briefing auf ``kanal``: ein Trip-Briefing auf Telegram besteht
+    aus mehreren Nachrichten (Kurzuebersicht, Tabelle, Aktionen) -- alle unter
+    demselben Betreff an dasselbe Ziel. SMS/Premium-SMS/E-Mail: eine Sendung."""
+    s = lage.mit.sendungen(kanal)
+    if kanal != "telegram":
+        return len(s) == 1
+    return bool(s) and len({e["subject"] for e in s}) == 1 and len(
+        {e["empfaenger"] for e in s}) == 1
+
+
 def _nutzer_alle_kanaele(*, tier: str = "premium") -> str:
     uid = nutzer_anlegen(tier=tier)
     _email_bestaetigen(uid)
@@ -643,7 +655,7 @@ def test_3440_ac6_trip_channel_bedient_nur_den_gewaehlten_kanal(lage, c, kanal):
     if kanal == "email":
         assert len(lage.trip_mails) == 1, lage
     else:
-        assert len(lage.mit.sendungen(kanal)) == 1, lage
+        assert _ein_briefing(lage, kanal), lage
 
 
 @pytest.mark.parametrize("kanal", KANAELE_3440)
@@ -674,6 +686,8 @@ def test_3440_ac7_unbekannter_kanal_400_invalid_channel_ohne_versand(lage, c, ki
     assert r.status_code == 400, f"Erwartet 400, bekommen {r.status_code}: {r.text}"
     assert b.get("code") == "invalid_channel", b
     assert isinstance(b.get("detail"), str) and len(b["detail"]) > 10, b
+    # Adversary F003: der fremde Wert wird nie im Fehlertext gespiegelt.
+    assert falscher_kanal not in b["detail"], f"Fremder Kanalwert im Fehlertext gespiegelt: {b}"
     assert lage.nichts_versendet, f"Unbekannter Kanal darf nichts versenden: {lage}"
 
 
@@ -741,7 +755,7 @@ def test_3440_ac8_im_abo_ausgeschalteter_kanal_wird_bei_channel_bedient(lage, c,
     assert r.status_code == 200, r.text
     assert hv.body(r).get("sent_channels") == ["telegram"], hv.body(r)
     assert _bediente_kanaele(lage) == ["telegram"], lage
-    assert lage.mit.empfaenger("telegram") == [f"chat-{uid}"], lage
+    assert set(lage.mit.empfaenger("telegram")) == {f"chat-{uid}"}, lage
 
 
 @pytest.mark.parametrize("kind", ["route", "vergleich"])
@@ -837,7 +851,7 @@ def test_3440_ac14_zwei_nutzer_channel_waehlt_nie_den_empfaenger(lage, c, kind):
 
     assert r.status_code == 200, r.text
     assert hv.body(r).get("sent_channels") == ["telegram"], hv.body(r)
-    assert lage.mit.empfaenger("telegram") == [f"chat-{b}"], f"Ziel muss B sein: {lage}"
+    assert set(lage.mit.empfaenger("telegram")) == {f"chat-{b}"}, f"Ziel muss B sein: {lage}"
     assert not lage.trip_mails and not lage.mit.sendungen("email"), lage
     if kind == "vergleich":
         assert hv.letzter_versand(a, "geteilt") is None, "Bei A darf nichts entstehen"
@@ -858,6 +872,9 @@ def test_3440_ac21_jeder_klick_bucht_manueller_abruf_auch_einzelkanal(lage, c):
 
     erst = hv.neu_senden(c, "kontingent", uid, "route", channel="telegram")
     nach_eins = ForecastBudgetGate(uid).snapshot()["user_manual_calls_today"]
+    # Ein Trip-Briefing auf Telegram = mehrere Nachrichten; gezaehlt wird je Klick.
+    je_briefing = len(lage.mit.sendungen("telegram"))
+    assert je_briefing >= 1 and _ein_briefing(lage, "telegram"), lage
     reset_shared_weather_cache_for_tests()
     zweit = hv.neu_senden(c, "kontingent", uid, "route", channel="telegram")
     nach_zwei = ForecastBudgetGate(uid).snapshot()["user_manual_calls_today"]
@@ -868,7 +885,7 @@ def test_3440_ac21_jeder_klick_bucht_manueller_abruf_auch_einzelkanal(lage, c):
     assert vorher < nach_eins < nach_zwei, (
         f"Jeder Klick muss buchen: {vorher} -> {nach_eins} -> {nach_zwei}"
     )
-    assert len(lage.mit.sendungen("telegram")) == 2 and not lage.trip_mails, lage
+    assert len(lage.mit.sendungen("telegram")) == 2 * je_briefing and not lage.trip_mails, lage
 
 
 @pytest.mark.parametrize("kanal", ["telegram", "email"])

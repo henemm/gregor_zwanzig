@@ -20,7 +20,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -32,8 +32,14 @@ import {
 	attribut,
 	bedingungen,
 	ids,
+	aufrufe,
+	aufrufArgumente,
+	funktion,
+	initialisierer,
+	kurz,
 	type Knoten
 } from '../../__tests__/aktionsmodellAst.ts';
+import { RUECKMELDUNG_MS } from '../../../molecules/testSchickenModell.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SRC = path.resolve(HERE, '../../../../..');
@@ -138,4 +144,65 @@ describe('#3440 AC-11 / AC-12 — einheitliche Rückmeldung in beiden Hubs', () 
 			assert.equal(mitAttribut(ast, 'data-testid', 'test-schicken-fehler').length, 1, `${name}: test-schicken-fehler fehlt`);
 		});
 	}
+});
+
+// ── Fix-Loop F001/F002: Abo-Stand und Rückmeldedauer aus EINER Quelle, Vorauswahl, 44-px-Zeilen ──
+
+const ABO_QUELLE = { 'Trip-Hub': 'aboKanaele("route", trip)', 'Orte-Hub': 'aboKanaele("vergleich", currentPreset)' } as const;
+
+describe('#3440 AC-10 / AC-11 — Seiten reichen Abo-Stand durch, Rückmeldedauer aus RUECKMELDUNG_MS', () => {
+	test('RUECKMELDUNG_MS ist 5000 ms (AC-11: Rückmeldung 5 s)', () => {
+		assert.equal(RUECKMELDUNG_MS, 5000);
+	});
+
+	for (const [name, { seite }] of Object.entries(KETTEN)) {
+		test(`${name}: handleTest übergibt testErgebnis den Abo-Stand aus aboKanaele und setzt den Timer mit RUECKMELDUNG_MS`, () => {
+			const ast = ladeSvelte(seite);
+			const h = funktion(ast, 'handleTest');
+			const ergebnisse = aufrufe(h, 'testErgebnis');
+			assert.equal(ergebnisse.length, 1, `${name}: testErgebnis genau einmal in handleTest`);
+			const arg = ergebnisse[0].arguments[0];
+			const abo = (arg?.properties ?? []).find((p: Knoten) => p.key?.name === 'abo');
+			assert.ok(abo, `${name}: testErgebnis ohne abo (Abo-Kanalstand) aufgerufen`);
+			assert.equal(kurz(abo.value), ABO_QUELLE[name as keyof typeof ABO_QUELLE], `${name}: Abo-Stand nicht aus aboKanaele`);
+			const timer = aufrufArgumente(h, 'setTimeout');
+			assert.equal(timer.length, 1, `${name}: genau ein setTimeout in handleTest`);
+			assert.equal(timer[0][1], 'RUECKMELDUNG_MS', `${name}: Rückmeldedauer nicht aus RUECKMELDUNG_MS: ${timer[0][1]}`);
+		});
+	}
+});
+
+describe('#3440 AC-2 / AC-15 — Menü: Vorauswahl Morgen bei jedem Öffnen, Zeilen mobil mindestens 44 px', () => {
+	test('Startwert der Berichtsart ist BERICHTSART_START; $effect setzt sie über berichtsartBeiOffen(offen, …) zurück', () => {
+		const ast = menue();
+		assert.equal(kurz(initialisierer(ast, 'berichtsart')), '$state(BERICHTSART_START)');
+		const effekte = aufrufe(ast.instance, '$effect').map((c) => kurz(c.arguments[0]));
+		assert.ok(
+			effekte.includes('() => { berichtsart = berichtsartBeiOffen(offen, untrack(() => berichtsart)) }'),
+			`kein Zurücksetzen der Berichtsart beim Öffnen: ${JSON.stringify(effekte)}`
+		);
+	});
+
+	test('CSS: in @media (max-width: 899px) trägt .zeile min-height: var(--g-tap-min), und --g-tap-min ist 44px', () => {
+		const ast = menue();
+		const quelle = readFileSync(MENUE_DATEI, 'utf-8');
+		const treffer: string[] = [];
+		const lauf = (kinder: Knoten[], media: string | null) => {
+			for (const n of kinder) {
+				if (n.type === 'Rule' && media && /max-width:\s*899px/.test(media)) {
+					const sel = quelle.slice(n.prelude.start, n.prelude.end);
+					if (!/\.zeile\b/.test(sel)) continue;
+					for (const d of n.block.children) {
+						if (d.type === 'Declaration' && d.property === 'min-height') treffer.push(String(d.value).trim());
+					}
+				} else if (n.type === 'Atrule' && n.block) {
+					lauf(n.block.children, `${n.name} ${n.prelude}`);
+				}
+			}
+		};
+		lauf(ast.css?.children ?? [], null);
+		assert.deepEqual(treffer, ['var(--g-tap-min)'], `mobile Menüzeilen ohne 44-px-Mindesthöhe: ${JSON.stringify(treffer)}`);
+		const appCss = readFileSync(path.join(SRC, 'app.css'), 'utf-8');
+		assert.match(appCss, /--g-tap-min:\s*44px;/, '--g-tap-min ist nicht 44px'); // doc-compliance-test: Token-Wert
+	});
 });

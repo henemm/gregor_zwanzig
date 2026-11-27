@@ -249,7 +249,7 @@ def test_ac3_router_mappt_already_in_progress_auf_409(monkeypatch):
     monkeypatch.setattr("app.config.Settings.can_send_email", lambda self: True)
     monkeypatch.setattr(
         "services.trip_report_scheduler.TripReportSchedulerService.send_test_report_outcome",
-        lambda self, trip, report_type: "already_in_progress",
+        lambda self, trip, report_type, **_kanal: "already_in_progress",  # #3440
     )
 
     resp = TestClient(app).post(

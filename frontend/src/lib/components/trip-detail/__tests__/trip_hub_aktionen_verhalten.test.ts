@@ -110,24 +110,25 @@ describe('F001/F017: Senden erst nach Bestaetigung, mit der gewaehlten Berichtsa
 		assert.equal(nach('POST', '/send').length, 0);
 	});
 
-	test('handleSendConfirm("evening") -> genau ein POST /send?report_type=evening, Erfolg wird gemeldet', async () => {
+	// #3440: der Hub sendet über das Menü „Test schicken ▾“ (handleTest); das Segment liefert die Berichtsart.
+	test('handleTest({telegram, evening}) -> genau ein POST /send?report_type=evening&channel=telegram, Erfolg wird gemeldet', async () => {
 		const { u } = await seite();
-		u.sendDialogOpen = true;
-		await u.handleSendConfirm('evening');
+		await u.handleTest({ kanal: 'telegram', berichtsart: 'evening' });
 		clearTimeout(u.sendTimer);
 		const posts = nach('POST', '/send');
 		assert.equal(posts.length, 1);
 		assert.match(posts[0].path, /report_type=evening/);
+		assert.match(posts[0].path, /channel=telegram/);
 		assert.equal(u.sendStatus, 'ok');
-		assert.equal(u.sendDialogOpen, false);
 	});
 
-	test('handleSendConfirm() ohne Wahl sendet den Morgen-Bericht', async () => {
+	test('handleTest({alle, morning}) sendet den Morgen-Bericht ohne channel', async () => {
 		const { u } = await seite();
-		await u.handleSendConfirm();
+		await u.handleTest({ kanal: 'alle', berichtsart: 'morning' });
 		clearTimeout(u.sendTimer);
 		const posts = nach('POST', '/send');
 		assert.equal(posts.length, 1);
 		assert.match(posts[0].path, /report_type=morning/);
+		assert.doesNotMatch(posts[0].path, /channel=/);
 	});
 });

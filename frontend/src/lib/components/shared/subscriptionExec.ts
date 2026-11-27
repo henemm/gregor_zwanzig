@@ -9,6 +9,7 @@ import type { ComparePreset } from '../../types.js';
 import { statusZielNutzlast } from '../compare/compareHubPersistenz.ts';
 import { readErrorDetail, sendBriefing, type SendRunResult } from '../../utils/sendOutcome.ts';
 import type { SubscriptionKind } from './subscriptionTabs.ts';
+import type { KanalId } from './zustellung-tab/zustellungModell.ts';
 
 const JSON_HEADER = { 'Content-Type': 'application/json' };
 const enc = encodeURIComponent;
@@ -90,15 +91,16 @@ export async function deleteSubscription(
 	await pruefe(await fetchFn(basis(kind, id), { method: 'DELETE' }), 'Löschen');
 }
 
-/** Senden mit In-Flight-Schutz (#2124) ueber POST /api/briefings/{id}/send (#2280); `reportType` gilt nur beim Trip (Default morning). */
+/** Senden mit In-Flight-Schutz (#2124) ueber POST /api/briefings/{id}/send (#2280); `reportType` gilt nur beim Trip (Default morning).
+ *  `channel` (#3440, Menü „Test schicken") waehlt genau einen Kanal; ohne ihn alle eingerichteten. */
 export function sendSubscription(
 	kind: SubscriptionKind,
 	id: string,
-	opts: { reportType?: 'morning' | 'evening' } = {},
+	opts: { reportType?: 'morning' | 'evening'; channel?: KanalId } = {},
 	fetchFn: typeof fetch = fetch
 ): Promise<SendRunResult> {
 	// #2280: Frontend-Wort `trip` heisst im Endpunkt `route`.
 	return kind === 'trip'
-		? sendBriefing('route', id, { reportType: opts.reportType ?? 'morning' }, fetchFn)
-		: sendBriefing('vergleich', id, {}, fetchFn);
+		? sendBriefing('route', id, { reportType: opts.reportType ?? 'morning', channel: opts.channel }, fetchFn)
+		: sendBriefing('vergleich', id, { channel: opts.channel }, fetchFn);
 }

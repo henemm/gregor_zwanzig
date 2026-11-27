@@ -45,8 +45,8 @@ function funktion(name: string): string {
 interface Zustand {
 	deleteDialogOpen: boolean;
 	isDeleting: boolean;
-	sendMsg: string | null;
-	sendKey: string | null;
+	aktionMsg: string | null;
+	aktionKey: string | null;
 }
 interface Aufruf {
 	url: string;
@@ -55,7 +55,7 @@ interface Aufruf {
 
 /** Baut die Seitenlogik (nur Loesch-Pfad) und laeuft gegen gestubbtes fetch/location. */
 function baue(deleteStatus: number) {
-	const z: Zustand = { deleteDialogOpen: false, isDeleting: false, sendMsg: null, sendKey: null };
+	const z: Zustand = { deleteDialogOpen: false, isDeleting: false, aktionMsg: null, aktionKey: null };
 	const aufrufe: Aufruf[] = [];
 	const location = { href: '/compare/cp-2214' };
 	const fetchStub = async (url: string, init?: { method?: string }) => {
@@ -71,8 +71,8 @@ function baue(deleteStatus: number) {
 		.join('\n')
 		.replace(/\bdeleteDialogOpen\b/g, 'z.deleteDialogOpen')
 		.replace(/\bisDeleting\b/g, 'z.isDeleting')
-		.replace(/\bsendMsg\b/g, 'z.sendMsg')
-		.replace(/\bsendKey\b/g, 'z.sendKey');
+		.replace(/\baktionMsg\b/g, 'z.aktionMsg')
+		.replace(/\baktionKey\b/g, 'z.aktionKey');
 	const fabrik = new Function(
 		'z',
 		'fetch',
@@ -168,8 +168,8 @@ describe('#2214 — Dialog-Verhalten', () => {
 		assert.equal(s.aufrufe.filter(loeschen).length, 1);
 		// Issue #2659 (i18n F10): ohne Server-Detail haelt die Seite den Schluessel; angezeigt
 		// wird „Löschen fehlgeschlagen." bzw. „Deleting failed." beim Rendern.
-		assert.equal(s.z.sendMsg, null);
-		assert.equal(s.z.sendKey, 'vergleich.hub.delete_fehler');
+		assert.equal(s.z.aktionMsg, null);
+		assert.equal(s.z.aktionKey, 'vergleich.hub.delete_fehler');
 		assert.equal(s.location.href, '/compare/cp-2214', 'keine Navigation bei Fehler');
 		assert.equal(s.z.deleteDialogOpen, false, 'Dialog wird bei Fehler geschlossen');
 		assert.equal(s.z.isDeleting, false);

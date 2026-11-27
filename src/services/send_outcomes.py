@@ -32,6 +32,10 @@ SEND_OUTCOMES: dict[str, tuple[int, str]] = {
         # Issue #2961 (ADR-0117 Nachtrag): Tageskontingent user_manual erschoepft,
         # VOR jeder Zustellung abgebrochen (keine Teil-Briefings).
         ("kontingent_erschoepft", 429),
+        # Issue #3440: Kanalwahl am Handversand -- unbekannter Kanalname bzw.
+        # Testmail an unbestaetigte Adresse (ADR-0092).
+        ("invalid_channel", 400),
+        ("email_unverified", 422),
     )
 }
 # ADR-0130 (#3444): Text gemeinsam mit der Go-API aus Bereich ``geteilt``.

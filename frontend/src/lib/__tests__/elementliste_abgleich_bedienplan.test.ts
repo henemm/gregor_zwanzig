@@ -120,8 +120,32 @@ describe('#2966 AC-6: bedienPlan — nie still übergangen', () => {
 			assert.deepEqual(plan(a, lage('trip')), { art: 'ohne_bedienung' }, a);
 		}
 	});
+	test('#3440 AC-17: test-menue ⇒ Kopf-Knopf öffnen · lesen · Escape schließt (kein Kanal geklickt)', () => {
+		for (const ctx of ['trip', 'orte']) {
+			const p = plan('test-menue', lage(ctx));
+			assert.ok(istPlan(p), `${ctx}: erwartet Plan, bekam ${JSON.stringify(p)}`);
+			assert.deepEqual(p.schritte, [
+				{ aktion: 'klick', testid: 'subscription-hub-send' },
+				{ aktion: 'lesen' },
+				{ aktion: 'schliessen', taste: 'Escape' }
+			]);
+		}
+	});
+	test('#3440 AC-17: echte Freigaben decken „an 2 Empfänger“ und „@henning“ im test-menue (Trip und Orte), sonst nichts', () => {
+		const freigaben = L.leseFreigaben(readFileSync(join(DOCS, 'elementliste_freigaben.json'), 'utf8'));
+		const menue = LISTE.filter((e) => e.abschnitt === 'test-menue');
+		const ziele = menue.filter((e) => e.text_de === 'an 2 Empfänger' || e.text_de === '@henning');
+		assert.ok(ziele.some((e) => e.ctx === 'trip') && ziele.some((e) => e.ctx === 'orte'), 'Messaufbau: Mockup-Ziele fehlen in der Elementliste');
+		const roh = new Map<string, L.Ergebnis>(menue.map((e) => [e.id, { status: 'abweichend', grund: 'Text nicht sichtbar', ist: 'fehlt' }]));
+		const r = L.wendeFreigabenAn(menue, roh, freigaben);
+		for (const e of menue) {
+			const soll = ziele.includes(e) ? 'freigegeben' : 'abweichend';
+			assert.equal(r.get(e.id)!.status, soll, `${e.ctx}/${e.zustand}/${e.text_de}`);
+		}
+		for (const e of ziele) assert.match((r.get(e.id) as { grund: string }).grund, /#3202.*feat_3440_test_schicken_menue\.md AC-17/);
+	});
 	test('unbekannter Script-Abschnitt ⇒ nicht_herstellbar mit Grund, nie ohne_bedienung', () => {
-		for (const a of ['kebab-etwas', 'test-menue', 'vorlage-speichern-unbekannt', 'grenzen-']) {
+		for (const a of ['kebab-etwas', 'test-menue-unbekannt', 'vorlage-speichern-unbekannt', 'grenzen-']) {
 			const p = plan(a, lage('trip'));
 			assert.equal(p.art, 'nicht_herstellbar', `${a}: ${JSON.stringify(p)}`);
 			assert.ok((p as { grund: string }).grund.trim().length > 0, `${a}: Grund leer`);
@@ -143,9 +167,8 @@ describe('#2966 AC-6: bedienPlan — nie still übergangen', () => {
 		}
 	});
 	test('mit allen Metriken im Briefing ist jeder Wetter-Script-Abschnitt herstellbar (Plan)', () => {
-		// Nur grenzen-* und vorlage-* (Umfang #2966). test-menue und kebab-* gehören #2797 und sind hier
-		// nicht_herstellbar; ohne diesen Filter widerspräche der Test „unbekannter Script-Abschnitt“
-		// (gleicher Aufruf plan('test-menue', lage('trip'))). Erwartet: 29 Paare (Trip 13+4, Orte 8+4).
+		// Nur grenzen-* und vorlage-* (Umfang #2966). test-menue hat seit #3440 einen eigenen Plan (Test oben),
+		// kebab-* gehört #2797 und ist hier nicht_herstellbar. Erwartet: 29 Paare (Trip 13+4, Orte 8+4).
 		const script = [...new Set(WETTER.filter((e) => L.SCRIPT_ABSCHNITT.test(e.abschnitt) && /^(grenzen-|vorlage-)/.test(e.abschnitt)).map((e) => `${e.ctx}\u0000${e.abschnitt}`))].map((s) => s.split('\u0000'));
 		assert.ok(script.length >= 25, `zu wenige Script-Abschnitte im Reiter Wetter: ${script.length}`);
 		for (const [ctx, a] of script) assert.equal(plan(a, lage(ctx)).art, 'plan', `${ctx}/${a}`);
@@ -247,14 +270,14 @@ describe('#2966 AC-6/AC-7: bedieneAbschnitt — Reload, Planreihenfolge, Schreib
 });
 
 describe('#2966: ordneAbschnitte — vorab mit allen Metriken des Prüf-Datensatzes', () => {
-	test('Trip/Orte Wetter: jeder grenzen-/vorlage-Abschnitt wird bedient, Kopf gelesen, test-menue nicht herstellbar', () => {
+	test('Trip/Orte Wetter: jeder grenzen-/vorlage-Abschnitt wird bedient, Kopf gelesen, test-menue bedient (#3440)', () => {
 		for (const ctx of ['trip', 'orte']) {
 			const abschnitte = [...new Set(WETTER.filter((e) => e.ctx === ctx).map((e) => e.abschnitt))];
 			const wege = L.ordneAbschnitte(abschnitte, { ...LAGE, ctx }, LISTE);
 			const weg = (a: string) => wege.find((w) => w.abschnitt === a)!;
 			for (const a of abschnitte.filter((x) => /^(grenzen-|vorlage-)/.test(x))) assert.equal(weg(a).weg, 'bedienen', `${ctx}/${a}`);
 			assert.equal(weg('abschnittskopf').weg, 'lesen');
-			assert.equal(weg('test-menue').weg, 'nicht_herstellbar');
+			assert.equal(weg('test-menue').weg, 'bedienen');
 			assert.ok(abschnitte.filter((x) => x.startsWith('grenzen-')).length >= 8, `${ctx}: zu wenige Grenzen-Abschnitte`);
 		}
 	});

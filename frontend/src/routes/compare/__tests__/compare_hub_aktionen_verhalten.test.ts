@@ -138,12 +138,18 @@ describe('F021/F024: Senden erst nach Bestaetigung', () => {
 		assert.equal(nach('POST', '/send').length, 0);
 	});
 
-	test('handleTestSend (Bestaetigung des Dialogs) -> genau ein POST /api/briefings/c1/send?kind=vergleich, Meldung gesetzt', async () => {
+	// #3440: Menü „Test schicken ▾“ — der Klick auf eine Zeile ist die Auslösung (handleTest).
+	test('handleTest (Alle eingerichteten Kanäle) -> genau ein POST /api/briefings/c1/send?kind=vergleich, Meldung gesetzt', async () => {
 		const { u } = await hub();
-		await u.handleTestSend();
+		await u.handleTest({ kanal: 'alle', berichtsart: 'morning' });
 		assert.deepEqual(nach('POST', '/send').map((a) => a.url), ['/api/briefings/c1/send?kind=vergleich']);
-		// Issue #2659 (i18n F10): Server-Text ODER Katalogschluessel (ohne Server-Meldung).
-		assert.ok(typeof u.sendMsg === 'string' || u.sendKey === 'vergleich.hub.test_gesendet');
+		assert.equal(u.sendStatus, 'ok');
+		assert.match(String(u.sendMsg), /^Briefing geschickt: /);
 		assert.equal(u.isSending, false);
+	});
+	test('handleTest (Einzelkanal E-Mail) -> genau ein POST mit channel=email', async () => {
+		const { u } = await hub();
+		await u.handleTest({ kanal: 'email', berichtsart: 'morning' });
+		assert.deepEqual(nach('POST', '/send').map((a) => a.url), ['/api/briefings/c1/send?kind=vergleich&channel=email']);
 	});
 });

@@ -10,7 +10,6 @@
 	// Inhalt + footer via Snippet. Unbekanntes snap -> full. Token-basiert.
 	//
 	// Spec: docs/specs/modules/issue_373_mobile.md (AC-4, AC-6)
-	import { browser } from '$app/environment';
 	import type { Snippet } from 'svelte';
 	import IconBtn from './IconBtn.svelte';
 	import { t } from '$lib/i18n';
@@ -46,6 +45,9 @@
 	// 84 %), fuer kurze Menues wie das Konto-Sheet statt einer festen Stufe.
 	const heights = { full: '84%', half: '55%', peek: '32%', collapsed: '56px', auto: 'auto' } as const;
 	const height = $derived(heights[snap] ?? heights.full);
+	// #3440: Browser-Pruefung ohne `$app/environment`, damit der HubKopf (bindet das Sheet über das Menü
+	// „Test schicken“) auch in den svelte/server-Komponententests renderbar bleibt. Gleiches Verhalten.
+	const browser = typeof window !== 'undefined';
 
 	$effect(() => {
 		if (!browser) return;

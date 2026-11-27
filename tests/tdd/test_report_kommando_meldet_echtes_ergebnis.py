@@ -84,7 +84,7 @@ def _ausloeser_installieren(monkeypatch, ergebnis_je_nutzer: dict[str, object]) 
             raise wert
         return wert
 
-    def _outcome(self, trip, report_type):
+    def _outcome(self, trip, report_type, **_kanal):  # #3440 Kanalwahl
         return _ergebnis(self, trip)
 
     def _bool(self, trip, report_type):
@@ -377,7 +377,7 @@ def _endpunkt(monkeypatch, user_ids, outcome: str):
     monkeypatch.setattr("app.config.Settings.can_send_email", lambda self: True)
     monkeypatch.setattr(
         TripReportSchedulerService, "send_test_report_outcome",
-        lambda self, trip, report_type: outcome,
+        lambda self, trip, report_type, **_kanal: outcome,  # #3440 Kanalwahl
     )
     return TestClient(app).post(
         f"/api/scheduler/trips/{nutzer.trip.id}/send",

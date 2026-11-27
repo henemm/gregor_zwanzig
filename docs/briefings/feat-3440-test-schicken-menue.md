@@ -1,7 +1,7 @@
 ---
 spec_file: docs/specs/modules/feat_3440_test_schicken_menue.md
-spec_sha256: be648ef98ea5f556e5618e075aa00b9d9efcc13cc28713536f65d92a690b643e
-spec_frozen_sha256: db03bda64cbf7f079b9a1a2cf7090dbc2109c457cec5b24f21b861f42ec59cdc
+spec_sha256: f898e07be76a34a5a4c58780599a7f765322a48a0fafddc1c2ea9c6f02b31aab
+spec_frozen_sha256: 6b8308c03bb4675ec94e541139e5d4024e98f2751b9f2d3798bf929aedc794f0
 ---
 
 # PO-Briefing: feat-3440-test-schicken-menue
@@ -12,20 +12,20 @@ spec_frozen_sha256: db03bda64cbf7f079b9a1a2cf7090dbc2109c457cec5b24f21b861f42ec5
 
 ## Was gebaut wird
 
-Der Knopf „Test schicken“ öffnet ein Menü, mit dem man ein Test-Briefing gezielt an einen Kanal oder alle schickt.
+„Test schicken“ öffnet in Trip und Orte ein Menü, mit dem man jeden Kanal einzeln oder alle testen kann.
 
 ## Definition of Done
 
-Trip- und Orte-Ansicht öffnen das Menü; ein Klick auf einen Kanal schickt dort genau ein Test-Briefing mit Rückmeldung.
+Im Trip- und Orte-Hub zeigt das Menü vier Kanäle mit Ziel oder Sperrgrund, ein Klick schickt nur an den gewählten Kanal.
 
 ## Wie geprüft wird
 
-Tests prüfen alle Anforderungen; echt versendet wird nur E-Mail und Telegram, SMS und Premium-SMS nur ohne Sendung.
+Automatische Tests und Staging-Durchläufe, echter Versand nur per E-Mail und Telegram; SMS und Premium-SMS nur als Anzeige und Schnittstellentest.
 
 ## Kritische Anmerkungen
 
-- Ziele weichen vom Ticket ab (Adresse statt Empfängerzahl, „verbunden“ statt Telegram-Name); durch PO-Entscheidung #3202 gedeckt.
-- Zusatz: unbestätigte E-Mail ist gesperrt, wie bisher im Dialog.
+- Abweichung vom Mockup: E-Mail zeigt gekürzte Adresse statt „an 2 Empfänger“, Telegram „verbunden“ statt „@henning“; beruft sich auf Ihre Entscheidungen in #3202, deren Wortlaut ich nicht prüfen konnte.
+- Zusatz: unbestätigte E-Mail-Adresse sperrt den E-Mail-Test; das gilt schon heute im Dialog.
 
 ## Freigabe-Frage
 

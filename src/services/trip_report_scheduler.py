@@ -1442,7 +1442,14 @@ class TripReportSchedulerService:
             trip, report_type, allow_test_fallback=True, angefordert=True,
         )
 
-    def send_test_report_outcome(self, trip: "Trip", report_type: str) -> str:
+    def send_test_report_outcome(
+        self,
+        trip: "Trip",
+        report_type: str,
+        *,
+        restrict_to_channel: str | None = None,
+        sent_channels_sink: list | None = None,
+    ) -> str:
         """
         Public outcome-returning variant of send_test_report() (Issue #1325).
 
@@ -1454,6 +1461,10 @@ class TripReportSchedulerService:
         Args:
             trip: Trip object
             report_type: "morning" or "evening"
+            restrict_to_channel: Issue #3440 — Menü „Test schicken": genau
+                dieser Kanal (Naht #2126); `None` = alle eingerichteten.
+            sent_channels_sink: Issue #3440 — erhält die tatsächlich
+                zugestellten Kanäle (für `sent_channels` der Antwort).
 
         Returns:
             Outcome string: "sent" | "no_stage" | "no_weather" | "no_channels" |
@@ -1465,16 +1476,27 @@ class TripReportSchedulerService:
         if report_type not in ("morning", "evening"):
             raise ValueError(f"Invalid report_type: {report_type}")
         # Issue #1756: Idempotenz-Lock gegen doppelten Versand bei erneutem Klick.
+        # Issue #3440: der Lock gilt je Abo, nicht je Kanal (AC-13).
         if not _try_acquire_send_lock(self._user_id, trip.id, report_type):
             return "already_in_progress"
+        self._zuletzt_gesendet: list[str] = []
         try:
+            if restrict_to_channel is not None and not any(
+                resolve_restricted_channel_flags(restrict_to_channel, self._user_id)
+            ):
+                # Issue #3440 (AC-8): gewaehlter Kanal per Tarif gesperrt — wie
+                # der Ortsvergleich (`send_one_compare_preset`) "nicht erreichbar".
+                return "channels_unreachable"
             # Issue #1725 (Adversary F006): `angefordert=True` — dieser Weg traegt
             # den Test-Versand-Knopf (`api/routers/scheduler.send_test_trip_report`).
             return self._send_trip_report_outcome(
                 trip, report_type, allow_test_fallback=True, angefordert=True,
+                restrict_to_channel=restrict_to_channel,
             )
         finally:
             _release_send_lock(self._user_id, trip.id, report_type)
+            if sent_channels_sink is not None:
+                sent_channels_sink.extend(self._zuletzt_gesendet)
 
     def send_on_demand_report(
         self,
@@ -1989,6 +2011,8 @@ class TripReportSchedulerService:
             # weiterhin als fehlgeschlagen und protokolliert ihn (AC-3).
             raise
         uhr.wechsel("rest")
+        # Issue #3440: zugestellte Kanaele fuer den Handversand (sent_channels).
+        self._zuletzt_gesendet = list(result.sent_channels) if result.sent else []
         errors = request.failed_segments
         # Issue #1405 S4b (B21): ein gescheiterter Begleit-Hinweis (Telegram
         # "unvollstaendig", Service-Fehlermail) bei ZUGESTELLTEM Briefing ist

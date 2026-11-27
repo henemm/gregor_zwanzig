@@ -53,7 +53,7 @@ def _vergleich_schaetzung(entity_id: str, user_id: str) -> int:
     return schaetzung_vergleich(len(getattr(preset, "location_ids", None) or []))
 
 
-def _send_trip(entity_id: str, user_id: str, report_type: str):
+def _send_trip(entity_id: str, user_id: str, report_type: str, channel: str | None = None):
     from app.config import Settings
     from app.loader import load_all_trips
     from services.trip_report_scheduler import TripReportSchedulerService
@@ -63,16 +63,18 @@ def _send_trip(entity_id: str, user_id: str, report_type: str):
         return _error("not_found", user_id, entity_id=entity_id)
     if not trip.stages:
         return _error("no_stage", user_id, report_type=report_type)
-    if not Settings().with_user_profile(user_id).can_send_email():
+    # Issue #3440 (AC-9): das E-Mail-Gate gilt nur, wenn E-Mail im Spiel ist.
+    if channel in (None, "email") and not Settings().with_user_profile(user_id).can_send_email():
         return _error("smtp_not_configured", user_id)
     from services.forecast_budget import manueller_abruf
     from services.manuelles_kontingent import schaetzung_trip
 
+    gesendet: list[str] = []
     try:
         # Issue #2961 (ADR-0117 Nachtrag): Handversand bucht user_manual.
         with manueller_abruf(user_id, schaetzung_trip(trip)) as kontingent:
             outcome = TripReportSchedulerService(user_id=user_id).send_test_report_outcome(
-                trip, report_type,
+                trip, report_type, restrict_to_channel=channel, sent_channels_sink=gesendet,
             )
     except ValueError:
         return _error("invalid_report_type", user_id, report_type=report_type)
@@ -83,17 +85,17 @@ def _send_trip(entity_id: str, user_id: str, report_type: str):
     return {
         "status": "ok" if outcome == "sent" else outcome,
         "kind": "route", "id": entity_id, "sent": outcome == "sent",
-        "report_type": report_type,
+        "report_type": report_type, "sent_channels": gesendet,
     }
 
 
-def _send_vergleich(entity_id: str, user_id: str):
+def _send_vergleich(entity_id: str, user_id: str, channel: str | None = None):
     from services.forecast_budget import manueller_abruf
 
     try:
         # Issue #2961 (ADR-0117 Nachtrag): Handversand bucht user_manual.
         with manueller_abruf(user_id, _vergleich_schaetzung(entity_id, user_id)):
-            result = send_compare_preset(user_id, entity_id)
+            result = send_compare_preset(user_id, entity_id, restrict_to_channel=channel)
     except InvalidUserIdError:
         # #2163 S2: VOR InvalidPresetError/ValueError (beide erben von
         # ValueError) -- sonst "invalid_preset" mit gespiegelter Kennung.
@@ -114,20 +116,38 @@ def _send_vergleich(entity_id: str, user_id: str):
     fehlende = result.get("fehlende_orte")
     return {
         "status": outcome, "kind": "vergleich", "id": entity_id, "sent": outcome == "ok",
+        "sent_channels": result.get("sent_channels", []),
         **({"fehlende_orte": fehlende} if fehlende else {}),
     }
 
 
-def send_briefing(kind: str, entity_id: str, user_id: str, report_type: str):
+def _email_unbestaetigt(user_id: str) -> bool:
+    """ADR-0092: Testmail nur an eine bestaetigte Profiladresse (#3440 AC-5)."""
+    from app.config import Settings
+
+    return not Settings().with_user_profile(user_id).email_verified_at
+
+
+def send_briefing(kind: str, entity_id: str, user_id: str, report_type: str,
+                  channel: str | None = None):
     """Handversand je ``kind``; Fehler als ``{"detail", "code"}`` (4xx/5xx).
     Jede unerwartete Ausnahme wird mit Traceback geloggt und als 500
-    ``send_failed`` aus dem Vokabular gemeldet (AC-9) — auch fuer die Alt-Routen."""
+    ``send_failed`` aus dem Vokabular gemeldet (AC-9) — auch fuer die Alt-Routen.
+
+    Issue #3440: ``channel`` waehlt genau einen Kanal (nie einen Empfaenger);
+    ``None`` = alle eingerichteten Kanaele wie bisher."""
     if kind not in _KINDS:
         return _error("kind_required", user_id)
+    from services.trip_report_scheduler import _BEKANNTE_KANAELE
+
+    if channel is not None and channel not in _BEKANNTE_KANAELE:
+        return _error("invalid_channel", user_id, channel=channel)
     try:
+        if channel == "email" and _email_unbestaetigt(user_id):
+            return _error("email_unverified", user_id)
         if kind == "route":
-            return _send_trip(entity_id, user_id, report_type)
-        return _send_vergleich(entity_id, user_id)
+            return _send_trip(entity_id, user_id, report_type, channel)
+        return _send_vergleich(entity_id, user_id, channel)
     except InvalidUserIdError:
         # #2163 S2 (Trip-Zweig): ungueltige Kennung ist "not_found", kein 500.
         logger.warning("Handversand %s/%s: ungueltige Nutzerkennung", kind, entity_id)
@@ -143,9 +163,10 @@ def send_briefing_endpoint(
     user_id: str = Query(...),
     kind: str | None = Query(None),
     report_type: str = "morning",
+    channel: str | None = Query(None),
 ):
     """Handversand fuer Trip (``kind=route``) und Ortsvergleich (``kind=vergleich``).
     ``user_id`` setzt der Go-Proxy aus der Anmeldung; ein Koerper wird ignoriert.
     Fehlendes ``kind`` ist 400 ``kind_required`` aus dem Vokabular (AC-2), nicht
-    FastAPIs 422-Validierungsfehler."""
-    return send_briefing(kind, entity_id, user_id, report_type)
+    FastAPIs 422-Validierungsfehler. ``channel`` (#3440) ist optional."""
+    return send_briefing(kind, entity_id, user_id, report_type, channel)

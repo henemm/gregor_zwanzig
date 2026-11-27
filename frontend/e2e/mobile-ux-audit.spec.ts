@@ -146,8 +146,8 @@ const OVERLAYS: { route: RegExp; view: string; open: string; wait: string }[] = 
 	{ route: /^\/$/, view: 'konto-sheet', open: '[data-testid="konto-kreis"]', wait: '[data-testid="konto-sheet"]' },
 	{ route: /^\/trips$/, view: 'karten-menue', open: '[data-testid^="subscription-card-menu-"]', wait: '[data-testid^="subscription-action-"]' },
 	{ route: /^\/compare$/, view: 'karten-menue', open: '[data-testid^="subscription-card-menu-"]', wait: '[data-testid^="subscription-action-"]' },
-	{ route: /^\/trips\/[^/]+$/, view: 'sende-dialog', open: '[data-testid="subscription-hub-send"]', wait: '[role="dialog"]' },
-	{ route: /^\/compare\/[^/]+$/, view: 'sende-dialog', open: '[data-testid="subscription-hub-send"]', wait: '[role="dialog"]' },
+	{ route: /^\/trips\/[^/]+$/, view: 'test-menue', open: '[data-testid="subscription-hub-send"]', wait: '[data-abschnitt="test-menue"]' }, // #3440: Menü statt Sende-Dialog
+	{ route: /^\/compare\/[^/]+$/, view: 'test-menue', open: '[data-testid="subscription-hub-send"]', wait: '[data-abschnitt="test-menue"]' },
 ];
 
 type Ctx = { page: Page; rep: Reporter; route: string; shot: (view: string) => string };

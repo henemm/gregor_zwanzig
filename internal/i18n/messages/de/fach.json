@@ -10,6 +10,7 @@
   "fach.fehler.quota_exceeded_locations": "Du hast bereits {current} von {limit} Orten in deinem Tarif. Lösche einen Ort, um einen neuen anzulegen.",
   "fach.fehler.validation_error_kennung": "Ungültige Briefing-Kennung",
   "fach.fehler.proxy_error_versand": "Versand konnte nicht gestartet werden — bitte später erneut versuchen",
+  "fach.fehler.invalid_channel_versand": "Unbekannter Kanal (erlaubt: email, telegram, sms, premium_sms)",
   "fach.fehler.upstream_unreachable_versand": "Versanddienst nicht erreichbar — bitte später erneut versuchen",
   "fach.fehler.bad_request_input": "Feld 'input' fehlt",
   "fach.fehler.upstream_unreachable": "Der Dienst ist nicht erreichbar.",

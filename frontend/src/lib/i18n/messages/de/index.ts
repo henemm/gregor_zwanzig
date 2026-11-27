@@ -22,6 +22,8 @@ import wetter from './wetter.json' with { type: 'json' };
 import zustellung from './zustellung.json' with { type: 'json' };
 // Issue #3319 / #3320: oeffentliche Funktionsuebersicht und Level-Tabelle (funktionen.*, level.*).
 import funktionen from './funktionen.json' with { type: 'json' };
+// Issue #3440: Menü „Test schicken ▾“ im Hub-Kopf (test_schicken.*).
+import test_schicken from './test_schicken.json' with { type: 'json' };
 
 export const de = {
 	...start,
@@ -43,5 +45,6 @@ export const de = {
 	...hilfe,
 	...wetter,
 	...zustellung,
-	...funktionen
+	...funktionen,
+	...test_schicken
 };

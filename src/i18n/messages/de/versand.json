@@ -32,6 +32,8 @@
   "versand.ergebnis.invalid_preset": "Orte-Abo nicht versendbar: {reason}",
   "versand.vorschau.entwurf_unlesbar":"Entwurf nicht lesbar — bitte die Angaben prüfen",
   "versand.ergebnis.send_failed": "Versand fehlgeschlagen — interner Fehler, bitte später erneut versuchen",
+  "versand.ergebnis.invalid_channel": "Unbekannter Kanal (erlaubt: email, telegram, sms, premium_sms)",
+  "versand.ergebnis.email_unverified": "Kein Briefing versendet — deine E-Mail-Adresse ist noch nicht bestätigt. Bestätige sie im Konto.",
   "versand.ergebnis.kontingent_erschoepft": "Kein Briefing versendet — dein Tageskontingent für Abrufe ist aufgebraucht. Ab Mitternacht (UTC) geht es wieder; automatische Briefings und Alarme laufen weiter.",
   "versand.scheduler.nachgeliefert": "Nachgeliefert — der Wetterdienst war um {stunde} nicht erreichbar",
   "versand.scheduler.aktualisiert_unvollstaendig": "Aktualisiert — weiterhin unvollständig, Details im Hinweis",
