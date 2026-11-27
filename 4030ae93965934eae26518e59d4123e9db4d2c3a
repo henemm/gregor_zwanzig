@@ -1,0 +1,59 @@
+{
+  "verified_commit": "4030ae93965934eae26518e59d4123e9db4d2c3a",
+  "findings": [
+    {
+      "ac": "AC-1..AC-10",
+      "status": "PASS",
+      "url": "core",
+      "evidence": "Mehrlauf-Simulation mit echtem Dateigedaechtnis (Trip + Vergleich, beide Feed-Reihenfolgen, Entwarnung, zwei Nutzer, naive Zeitstempel) in tests/tdd/test_fix_3470_amtlich_nachbarperioden.py gruen; CI 6/6 gruen; Adversary VERIFIED",
+      "workflow": "fix-3470-amtlich-pingpong"
+    },
+    {
+      "ac": "Warn-Mail DE",
+      "status": "PASS",
+      "url": "staging",
+      "evidence": "send_gate_test_mails --only official, Token 23237b5b, official_alert_mail_validator Exit 0",
+      "workflow": "fix-3470-amtlich-pingpong"
+    },
+    {
+      "ac": "Warn-Mail EN",
+      "status": "PASS",
+      "url": "staging",
+      "evidence": "send_gate_test_mails --lang en --only official, Token 461028c3, official_alert_mail_validator --to-contains +en@ Exit 0",
+      "workflow": "fix-3470-amtlich-pingpong"
+    },
+    {
+      "ac": "Regression Trip/Vergleich DE",
+      "status": "PASS",
+      "url": "staging",
+      "evidence": "staging_mail_pruefen --typ beide, GZM 271717-9dee8d0c, beide Validatoren Exit 0",
+      "workflow": "fix-3470-amtlich-pingpong"
+    },
+    {
+      "ac": "Regression Trip/Vergleich EN",
+      "status": "PASS",
+      "url": "staging",
+      "evidence": "staging_mail_pruefen --typ beide --lang en, GZM 271718-fed04c2f, beide Validatoren Exit 0",
+      "workflow": "fix-3470-amtlich-pingpong"
+    }
+  ],
+  "verified_at": "2026-11-27T17:18:23.908218+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Staging 4030ae9, amtliche Warn-Mail DE/EN und Trip/Vergleich DE/EN zugestellt und validiert",
+  "scope": "docs-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "fix-3470-amtlich-pingpong": {
+      "verdict": "VERIFIED: Staging 4030ae9, amtliche Warn-Mail DE/EN und Trip/Vergleich DE/EN zugestellt und validiert",
+      "scope": "docs-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-27T17:18:23.908218+00:00"
+    }
+  }
+}
