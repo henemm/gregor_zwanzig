@@ -21,7 +21,8 @@ export type SubscriptionActionId =
 	| 'archive'
 	| 'unarchive'
 	| 'delete'
-	| 'continue-setup';
+	| 'continue-setup'
+	| 'activate';
 
 export interface SubscriptionAction {
 	id: SubscriptionActionId;
@@ -43,7 +44,9 @@ const A: Record<SubscriptionActionId, Omit<SubscriptionAction, 'label'> & { key:
 	archive: { id: 'archive', key: 'aktionen.archive' },
 	unarchive: { id: 'unarchive', key: 'aktionen.unarchive' },
 	delete: { id: 'delete', key: 'aktionen.delete', danger: true },
-	'continue-setup': { id: 'continue-setup', key: 'aktionen.continue_setup' }
+	'continue-setup': { id: 'continue-setup', key: 'aktionen.continue_setup' },
+	// #3443: „Aktivieren“ im Hub-Entwurf — nennt, was fehlt (keine Gefahr, keine Rückfrage).
+	activate: { id: 'activate', key: 'aktionen.kopf.aktivieren' }
 };
 
 // #3442: im Hub fragen Archivieren und Löschen im Menü nach — Label mit Ellipse („Archivieren …“).
@@ -72,7 +75,7 @@ export function subscriptionActions(
 	const hub = surface === 'hub';
 	switch (status) {
 		case 'draft':
-			return hub ? ids(hub, 'delete') : ids(hub, 'continue-setup', 'delete');
+			return hub ? ids(hub, 'activate', 'delete') : ids(hub, 'continue-setup', 'delete');
 		case 'archived':
 			return ids(hub, 'unarchive', 'delete');
 		case 'paused':

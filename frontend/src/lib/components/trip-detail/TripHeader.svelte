@@ -42,11 +42,13 @@
 		mobil?: boolean;
 		onSheetOpen?: () => void;
 		meldungen?: Snippet;
+		/** #3443: Klick auf „Aktivieren" (nur im Entwurf an den HubKopf gereicht). */
+		onAktivieren?: () => void;
 	}
 
 	let {
 		trip, onTripUpdate, now = new Date(), saveController,
-		sendLabel, onTest, testProfil, onErweiterung, testAlarmLaeuft = false, sendDisabled = false, actions = [], onSelect, mobil = false, onSheetOpen, meldungen
+		sendLabel, onTest, testProfil, onErweiterung, testAlarmLaeuft = false, sendDisabled = false, actions = [], onSelect, mobil = false, onSheetOpen, meldungen, onAktivieren
 	}: Props = $props();
 
 	// Issue #2284 S2 — Name und Region speichert der geteilte Baustein
@@ -84,9 +86,6 @@
 	});
 	// #2837 S1b: Zustand für das geteilte StatusSchild.
 	const tripStatus = $derived(deriveTripStatus(trip, now));
-	// #2913 c2: „Aktivieren" im Entwurf — ein Trip wird aktiv, sobald seine Etappen Daten tragen,
-	// deshalb führt der Link in den Reiter Etappen (Muster „Setup abschließen" des Vergleichs).
-	const AKTIVIEREN_ZIEL = '?tab=etappen';
 
 	// #2980 AC-19 (PO-Entscheidung 13.11.2026, ADR-0118): die Handy-Kennzahlenzeile
 	// „Etappe · Briefing · Start in" (#416) entfällt ersatzlos; die Meta-Zeile bleibt.
@@ -119,7 +118,7 @@
 		{onSaveField}
 		{eyebrowText}
 		{metaTeile}
-		aktivierenHref={tripStatus === 'draft' ? AKTIVIEREN_ZIEL : undefined}
+		onAktivieren={tripStatus === 'draft' ? onAktivieren : undefined}
 	>
 		{#snippet namePrefix()}
 			{#if trip.shortcode}<span class="h1-shortcode">{trip.shortcode}</span> ·&nbsp;{/if}

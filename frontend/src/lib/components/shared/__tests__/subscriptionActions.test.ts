@@ -19,6 +19,8 @@
 //   - Status 'archived' auf Liste/Mobil: Reaktivieren · Loeschen (Liste blendet Archiviertes
 //     aus, die Zelle ist nur der Vollstaendigkeit der Tabelle wegen festgelegt)
 //   - Hub-Kebab 'draft': nur Loeschen; Hub-Kebab 'archived': Reaktivieren · Loeschen
+//     #3443 (Spec feat_3443_entwurf_aktivieren.md AC-2, umgestellt): Hub-Kebab 'draft' = Aktivieren · Loeschen
+//     („Aktivieren“ = aktionen.kopf.aktivieren, keine Gefahr, keine Rueckfrage); Liste/Mobil unveraendert.
 //
 // RED heute: das Modul `shared/subscriptionActions.ts` existiert nicht.
 //
@@ -55,7 +57,8 @@ const LABEL: Record<string, string> = {
 	archive: 'Archivieren',
 	unarchive: 'Reaktivieren',
 	delete: 'Löschen',
-	'continue-setup': 'Setup fortsetzen'
+	'continue-setup': 'Setup fortsetzen',
+	activate: 'Aktivieren' // #3443: Katalog aktionen.kopf.aktivieren (wie der Kopf-Knopf)
 };
 
 const LISTE_AKTIV = ['pause', 'send', 'alarms', 'weather', 'edit', 'delete'];
@@ -66,7 +69,7 @@ const ERWARTET: Record<Status, Record<Surface, string[]>> = {
 	draft: {
 		list: ['continue-setup', 'delete'],
 		mobile: ['continue-setup', 'delete'],
-		hub: ['delete']
+		hub: ['delete'] // Bestand; #3443 AC-2 ergänzt „Aktivieren“ davor — geprüft in ENTWURF_HUB_NEU unten
 	},
 	active: { list: LISTE_AKTIV, mobile: LISTE_AKTIV, hub: ['pause', 'archive', 'delete'] },
 	paused: { list: LISTE_PAUSIERT, mobile: LISTE_PAUSIERT, hub: ['resume', 'archive', 'delete'] },
@@ -83,7 +86,8 @@ describe('AC-6: subscriptionActions = EINE Tabelle fuer beide Arten', () => {
 			for (const kind of KINDS) {
 				test(`${kind} x ${status} x ${surface}: IDs, Beschriftung, Reihenfolge`, () => {
 					const { subscriptionActions } = braucheModul();
-					const ist = subscriptionActions(kind, status, surface);
+					// #3443: im Hub-Entwurf kommt „activate“ dazu (eigener Test unten); hier wird der Bestand geprüft.
+					const ist = subscriptionActions(kind, status, surface).filter((a: any) => !(status === 'draft' && surface === 'hub' && a.id === 'activate'));
 					const ids = ist.map((a: any) => a.id);
 					assert.deepEqual(ids, ERWARTET[status][surface], `IDs/Reihenfolge weichen ab (${kind}/${status}/${surface})`);
 					// #3442: im Hub fragen Archivieren/Löschen im Menü nach — Label mit Ellipse („Archivieren …“).
@@ -213,5 +217,37 @@ describe('Lebenszyklus-Schicht subscriptionLifecycle(kind, obj, now?)', () => {
 		assert.equal(subscriptionLifecycle('vergleich', preset({ schedule: 'manual' })), 'paused');
 		assert.equal(subscriptionLifecycle('vergleich', preset({ paused_at: '2026-10-01T00:00:00Z' })), 'paused');
 		assert.equal(subscriptionLifecycle('vergleich', preset({ archived_at: '2026-10-02T00:00:00Z' })), 'archived');
+	});
+});
+
+describe('#3443 AC-2: „Aktivieren“ nur im Hub-Entwurf, an erster Stelle', () => {
+	for (const kind of KINDS) {
+		test(`#3443 ${kind} x draft x hub: Aktivieren, dann Löschen …`, () => {
+			const { subscriptionActions } = braucheModul();
+			const ist = subscriptionActions(kind, 'draft', 'hub');
+			assert.deepEqual(ist.map((a: any) => a.id), ['activate', 'delete']);
+			assert.deepEqual(ist.map((a: any) => a.label), ['Aktivieren', 'Löschen …']);
+			assert.ok(!ist[0].danger, 'Aktivieren ist keine Gefahr-Aktion');
+		});
+	}
+	test('activate kommt in keiner anderen Zelle vor (andere Zustaende, Liste, Mobil)', () => {
+		const { subscriptionActions } = braucheModul();
+		for (const kind of KINDS)
+			for (const status of Object.keys(ERWARTET) as Status[])
+				for (const surface of ['list', 'hub', 'mobile'] as Surface[]) {
+					const ids = subscriptionActions(kind, status, surface).map((a: any) => a.id);
+					assert.equal(ids.includes('activate'), status === 'draft' && surface === 'hub', `${kind}/${status}/${surface}: ${ids.join(',')}`);
+				}
+	});
+	test('Hub-Entwurf EN: „Activate“, „Delete …“', async () => {
+		const { subscriptionActions } = braucheModul();
+		const { locale } = await import('../../../i18n/index.ts');
+		locale.set('en');
+		try {
+			for (const kind of KINDS)
+				assert.deepEqual(subscriptionActions(kind, 'draft', 'hub').map((a: any) => a.label), ['Activate', 'Delete …']);
+		} finally {
+			locale.set('de');
+		}
 	});
 });

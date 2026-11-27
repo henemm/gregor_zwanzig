@@ -19,6 +19,8 @@
 	import SubscriptionActionSheet from '$lib/components/mobile/SubscriptionActionSheet.svelte';
 	import { subscriptionActions, subscriptionLifecycle } from '$lib/components/shared/subscriptionActions';
 	import { erfolgsText, fehlerText } from '$lib/components/shared/kebabBestaetigung';
+	import { fehltFuerAktivierung, hinweisFuer, zielFuer } from '$lib/components/shared/entwurfAktivieren';
+	import { erstelleAktivierungsWechsel } from '$lib/components/shared/aktivierungsWechsel.svelte';
 	import {
 		deleteSubscription,
 		sendSubscription,
@@ -30,7 +32,7 @@
 	import { createSaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { sichereAusstehendeSpeicherung } from '$lib/stores/ausstehendeSpeicherungSichern';
 	import { adoptEtagBeiSeitenaufbau, adoptEtagFromPageLoad, istKonflikt } from '$lib/etagRegistry';
-	import { getMitFassung } from '$lib/api';
+	import { api, getMitFassung } from '$lib/api';
 	import { getContext, onMount } from 'svelte';
 	import { AKTIVE_SPEICHERUNG, type SpeicherAnmeldestelle } from '$lib/stores/aktiveSpeicherung';
 	import { starteNachladenNachEntladen, tripNachladeQuelle } from '$lib/stores/nachEntladenNachladen';
@@ -152,6 +154,12 @@
 	const lifecycle = $derived(subscriptionLifecycle('trip', trip, now));
 	// i18n F9: Aktionsnamen entstehen per tr() — `$locale` haelt das Menue reaktiv.
 	const hubAktionen = $derived.by(() => (void $locale, subscriptionActions('trip', lifecycle, 'hub')));
+	// #3443: Wechsel Entwurf → aktiv (nach dem Speichern der Etappen-Daten) meldet „Aktiviert …“ mit dem ersten Briefing.
+	erstelleAktivierungsWechsel(
+		() => ({ context: 'route', id: trip.id, lifecycle: lifecycle }),
+		(p) => api.get(p),
+		(text) => { errorMsg = null; meldung = text; }
+	);
 
 	/**
 	 * Issue #1433: nach PATCH /state (liefert keinen Stempel, S2 AC-15) wird der Trip
@@ -274,8 +282,20 @@
 	// Lebenszyklus-Menue (Desktop-Dropdown und mobiles Blatt): Pausieren/Fortsetzen schreiben ueber den
 	// Hub-Schreiber (flusht offene Speicherungen, ETag #1433). #3442: Archivieren/Loeschen kommen erst nach
 	// der Rueckfrage im Menue an; Reaktivieren ohne Rueckfrage.
+	// #3443: „Aktivieren“ (Kopf-Knopf und Kebab) schreibt nichts — nennt, was fehlt, und öffnet den Reiter Etappen.
+	function handleAktivieren(): void {
+		const teile = fehltFuerAktivierung('trip', trip);
+		const hinweis = hinweisFuer(teile);
+		if (!hinweis) return;
+		errorMsg = null;
+		meldung = hinweis;
+		const ziel = zielFuer('trip', teile);
+		if (ziel) void goto(ziel, { noScroll: true, keepFocus: true });
+	}
+
 	function handleHubAction(id: string): void {
-		if (id === 'pause') void sendStateUpdate(true, undefined);
+		if (id === 'activate') handleAktivieren();
+		else if (id === 'pause') void sendStateUpdate(true, undefined);
 		else if (id === 'resume') void sendStateUpdate(false, undefined);
 		else if (id === 'archive') void sendStateUpdate(undefined, true);
 		else if (id === 'unarchive') void sendStateUpdate(undefined, false);
@@ -303,6 +323,7 @@
 		sendDisabled={sendLoading || lifecycle === 'archived' || lifecycle === 'draft'}
 		actions={hubAktionen}
 		onSelect={handleHubAction}
+		onAktivieren={handleAktivieren}
 		{mobil}
 		onSheetOpen={() => { sheetOpen = true; }}
 	>
