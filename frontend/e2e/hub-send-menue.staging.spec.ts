@@ -16,7 +16,7 @@
 // Zustand „Lücken“ (AC-4): nur lesende Konto-Abrufe werden im Browser umgeschrieben (elementliste_abgleich_logik.ts
 // ersetzeKontoAntwort), das Konto selbst bleibt unverändert; Hub-Daten kommen dafür per Browser-Navigation.
 
-import { test, expect, type Page, type Locator, type Request } from '@playwright/test';
+import { test, expect, type Page, type Locator, type Request, type Cookie } from '@playwright/test';
 import { KONTO_ABRUF, ersetzeKontoAntwort } from './elementliste_abgleich_logik.ts';
 import { HUB_KINDS, HUB_SEL, createTestLocation, hubApiPath, seedHub, type HubKind } from './helpers';
 
@@ -37,12 +37,23 @@ interface Profil {
 }
 let profil: Profil = {};
 
-test.beforeEach(async ({ page }) => {
+// Ein Login je Lauf statt je Test: die Go-API bremst Logins auf 30 je IP und Stunde (internal/router/router.go),
+// 22 Tests mit je eigenem Login liefen bei Wiederholung in HTTP 429. Die Sitzungs-Cookies werden geteilt.
+let sitzung: Cookie[] = [];
+
+test.beforeAll(async ({ browser }) => {
 	const user = process.env.GZ_AUTH_USER;
 	const pass = process.env.GZ_AUTH_PASS;
 	expect(user && pass, 'Vorbedingung: GZ_AUTH_USER/GZ_AUTH_PASS (Prüfkonto) gesetzt').toBeTruthy();
-	const login = await page.request.post('/api/auth/login', { data: { username: user, password: pass } });
+	const ctx = await browser.newContext({ baseURL: test.info().project.use.baseURL, ignoreHTTPSErrors: true });
+	const login = await ctx.request.post('/api/auth/login', { data: { username: user, password: pass } });
 	expect(login.ok(), `Login HTTP ${login.status()}`).toBeTruthy();
+	sitzung = (await ctx.storageState()).cookies as Cookie[];
+	await ctx.close();
+});
+
+test.beforeEach(async ({ page }) => {
+	await page.context().addCookies(sitzung);
 	for (const kind of HUB_KINDS) expect(IDS[kind], `Vorbedingung: Seed-ID für ${kind} (ELEMENTLISTE_*_ID)`).not.toBe('');
 	const res = await page.request.get('/api/auth/profile');
 	expect(res.ok(), `GET /api/auth/profile HTTP ${res.status()}`).toBeTruthy();
@@ -51,8 +62,11 @@ test.beforeEach(async ({ page }) => {
 	expect(profil.telegram_chat_id, 'Vorbedingung: Prüfkonto mit verbundenem Telegram').toBeTruthy();
 });
 
-test.afterEach(async ({ page }) => {
-	await page.request.post('/api/auth/logout').catch(() => {});
+test.afterAll(async ({ browser }) => {
+	const ctx = await browser.newContext({ baseURL: test.info().project.use.baseURL, ignoreHTTPSErrors: true });
+	await ctx.addCookies(sitzung);
+	await ctx.request.post('/api/auth/logout').catch(() => {});
+	await ctx.close();
 });
 
 // ── Werkzeuge ────────────────────────────────────────────────────────────────
@@ -289,6 +303,9 @@ test('AC-15 (Desktop): Escape und Außenklick schließen, Tastatur öffnet und b
 	await expect(knopf).toHaveAttribute('aria-expanded', 'false');
 
 	await oeffneMenue(page);
+	// bits-ui wertet einen Außenklick erst kurz nach dem Öffnen aus (Schutz gegen den Öffnungsklick);
+	// ein Mensch klickt nie in derselben Millisekunde. Auf Staging gemessen: nach 600 ms schließt jeder Außenklick.
+	await page.waitForTimeout(600);
 	await page.mouse.click(5, 880);
 	await expect(menue(page)).toBeHidden();
 
