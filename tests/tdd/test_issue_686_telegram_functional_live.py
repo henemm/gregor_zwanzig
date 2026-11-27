@@ -323,21 +323,59 @@ def _load_e2e_hook():
     return mod
 
 
-def test_ac5_e2e_verify_blocks_on_skipped_telegram(monkeypatch):
+#: Soll-Live-Tests (#2541, Spec fix_2541_telegram_live_messskript) -- ein
+#: gueltiger Nachweis muss sie alle als passed fuehren.
+_SOLL_LIVE_TESTS = (
+    "test_ac3_all_seven_commands_produce_meaningful_content",
+    "test_ac4_live_delivery_and_cleanup",
+    "test_ac25_live_menu_entspricht_der_vollstaendigen_ac21_liste",
+    "test_ac24_hilfe_bei_trip_und_vergleich_antwortet_sofort_live",
+    "test_heute_ohne_namen_bei_trip_und_vergleich_fragt_live_zurueck",
+    "test_hilfe_englisch_dann_deutsch_live",
+)
+
+
+def _schreibe_telegram_nachweis(ordner: Path, sha: str) -> Path:
+    ordner.mkdir(parents=True, exist_ok=True)
+    pfad = ordner / f"{sha}.json"
+    pfad.write_text(json.dumps({
+        "commit": sha,
+        "passed": len(_SOLL_LIVE_TESTS),
+        "skipped": 0,
+        "failures": 0,
+        "errors": 0,
+        "tests": list(_SOLL_LIVE_TESTS),
+        "finished_at": "2026-11-27T10:00:00+00:00",
+    }))
+    return pfad
+
+
+def test_ac5_e2e_verify_blocks_on_skipped_telegram(tmp_path):
     """
-    GIVEN: ein Change, dessen Scope den Telegram-Pfad berührt, aber
-           GZ_TELEGRAM_TEST_CHAT_ID fehlt
+    GIVEN: ein Change, dessen Scope den Telegram-Pfad berührt, aber kein
+           Ergebnis-Nachweis des Live-Laufs für den verifizierten Commit
     WHEN: die /e2e-verify-Verankerung (e2e_telegram_live.gate) läuft
-    THEN: Exit ≠ 0 (Nicht-bestanden) — SKIPPED zählt nicht als grün.
-          Berührt der Scope Telegram NICHT, ist Exit 0 (sauberer Skip erlaubt).
+    THEN: Exit ≠ 0 (Nicht-bestanden) — SKIPPED zählt nicht als grün, und die
+          bloße Chat-ID im Environment ersetzt den Nachweis nicht (#2541).
+          Mit gültigem Nachweis Exit 0. Berührt der Scope Telegram NICHT,
+          ist Exit 0 (sauberer Skip erlaubt).
     """
     mod = _load_e2e_hook()
-    monkeypatch.delenv("GZ_TELEGRAM_TEST_CHAT_ID", raising=False)
+    sha = "c" * 40
+    ordner = tmp_path / "e2e_telegram_live"
+    ordner.mkdir()
+    nur_env = {"GZ_TELEGRAM_TEST_CHAT_ID": "8346977700"}
 
-    rc_touch = mod.gate(scope_touches_telegram=True, env=dict(os.environ))
-    assert rc_touch != 0, "Telegram-Scope ohne Test-Chat-ID muss Nicht-bestanden sein"
+    rc_touch = mod.gate(scope_touches_telegram=True, commit=sha, nachweis_dir=ordner,
+                        env=nur_env)
+    assert rc_touch != 0, "Telegram-Scope ohne Nachweis muss Nicht-bestanden sein"
 
-    rc_notouch = mod.gate(scope_touches_telegram=False, env=dict(os.environ))
+    _schreibe_telegram_nachweis(ordner, sha)
+    rc_ok = mod.gate(scope_touches_telegram=True, commit=sha, nachweis_dir=ordner, env={})
+    assert rc_ok == 0, "gültiger Nachweis für den Commit muss bestehen"
+
+    rc_notouch = mod.gate(scope_touches_telegram=False, commit=sha,
+                          nachweis_dir=tmp_path / "leer", env={})
     assert rc_notouch == 0, "Ohne Telegram-Scope ist ein Skip erlaubt"
 
 
@@ -367,15 +405,17 @@ def test_ac5_write_verdict_blocks_telegram_scope_without_chat_id(tmp_path, monke
            mit 'telegram' im Pfad ändert (= Telegram-Scope), und ein staging_gate,
            dessen REPO_DIR auf dieses Repo zeigt
     WHEN: write_verdict("VERIFIED: ...") aufgerufen wird
-    THEN: OHNE GZ_TELEGRAM_TEST_CHAT_ID → Rückgabe 1 UND es entsteht KEIN out.json
-          (Verdict verweigert — SKIPPED zählt nicht als grün).
-          MIT GZ_TELEGRAM_TEST_CHAT_ID → Rückgabe 0 UND out.json existiert.
+    THEN: OHNE Nachweis (auch MIT gesetzter GZ_TELEGRAM_TEST_CHAT_ID) → Rückgabe 1
+          UND es entsteht KEIN out.json (Verdict verweigert — SKIPPED zählt nicht
+          als grün, Env-Präsenz ist kein Ersatz, #2541).
+          MIT gültigem Nachweis <REPO_DIR>/.claude/e2e_telegram_live/<HEAD>.json
+          → Rückgabe 0 UND out.json existiert.
 
     Beweist, dass das echte Close-Gate (das deploy-gregor-prod.sh liest) bei
-    Telegram-Scope ohne Test-Chat-ID hart blockt — kein kosmetisches Gate.
+    Telegram-Scope ohne Ergebnis-Nachweis hart blockt — kein kosmetisches Gate.
 
     Seit #2681 ist langs=["de", "en"] Pflicht; beide Aufrufe tragen es, damit
-    der erste Aufruf allein an der fehlenden Test-Chat-ID scheitert.
+    der erste Aufruf allein am fehlenden Nachweis scheitert.
     """
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -402,18 +442,22 @@ def test_ac5_write_verdict_blocks_telegram_scope_without_chat_id(tmp_path, monke
     findings_path.write_text("[]")
     out_path = tmp_path / "out.json"
 
-    # OHNE Test-Chat-ID → Verdict verweigert, kein out.json
-    monkeypatch.delenv("GZ_TELEGRAM_TEST_CHAT_ID", raising=False)
+    # OHNE Nachweis, aber MIT Test-Chat-ID → Verdict verweigert, kein out.json
+    monkeypatch.setenv("GZ_TELEGRAM_TEST_CHAT_ID", "8346977700")
     rc_block = gate_mod.write_verdict("VERIFIED: test", findings_path, e2e_path=out_path,
                                       langs=["de", "en"])
-    assert rc_block == 1, "Telegram-Scope ohne Test-Chat-ID muss write_verdict blocken (rc=1)"
+    assert rc_block == 1, "Telegram-Scope ohne Nachweis muss write_verdict blocken (rc=1)"
     assert not out_path.exists(), "kein Verdict-Artefakt bei verweigertem Gate"
 
-    # MIT Test-Chat-ID → Verdict geschrieben
-    monkeypatch.setenv("GZ_TELEGRAM_TEST_CHAT_ID", "8346977700")
+    # MIT gültigem Nachweis für HEAD (ohne Chat-ID) → Verdict geschrieben
+    monkeypatch.delenv("GZ_TELEGRAM_TEST_CHAT_ID", raising=False)
+    import subprocess
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(repo), check=True,
+                          capture_output=True, text=True).stdout.strip()
+    _schreibe_telegram_nachweis(repo / ".claude" / "e2e_telegram_live", head)
     rc_pass = gate_mod.write_verdict("VERIFIED: test", findings_path, e2e_path=out_path,
                                      langs=["de", "en"])
-    assert rc_pass == 0, "mit gesetzter Test-Chat-ID muss das Verdict geschrieben werden (rc=0)"
+    assert rc_pass == 0, "mit gültigem Nachweis muss das Verdict geschrieben werden (rc=0)"
     assert out_path.exists(), "Verdict-Artefakt muss bei bestandenem Gate existieren"
 
 
