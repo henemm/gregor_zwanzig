@@ -1,0 +1,52 @@
+{
+  "verified_commit": "e762bb09a16abb4b744cbabb94e2b0ed96ccb207",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "mail:compare",
+      "evidence": "Echt zugestellte Staging-Vergleichsmail DE (GZM 270714-b7eaefb4) und EN (GZM 270715-ffea6eaa): email_spec_validator Exit 0, Stundenzellen in Klartext und HTML konsistent",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "mail:compare",
+      "evidence": "Normalfall mit Stundendaten: Stunden-Ueberschrift und Stundentabelle in DE und EN vorhanden, Validator Exit 0",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "mail:compare",
+      "evidence": "Zeitlabel HH:MM (Klartext) und HH (HTML) vom Validator in beiden Sprachen erkannt",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-2/AC-4/AC-6",
+      "status": "PASS",
+      "url": "local",
+      "evidence": "Randfaelle (keine Stundendaten, Legenden-Schalter, Byte-Gleichheit) auf Staging nicht herstellbar; per Kern-Tests und Golden-Snapshot belegt, CI 6/6 gruen",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-27T07:15:54.466743+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Vergleichsmail DE+EN auf Staging zugestellt, email_spec_validator Exit 0; Randfaelle per Kern-Tests belegt",
+  "scope": "backend",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Vergleichsmail DE+EN auf Staging zugestellt, email_spec_validator Exit 0; Randfaelle per Kern-Tests belegt",
+      "scope": "backend",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-27T07:15:54.466743+00:00"
+    }
+  }
+}
