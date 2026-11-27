@@ -62,37 +62,83 @@ def _telegram_nachweis_fuer_head():
     ``.claude/e2e_telegram_live/<HEAD>.json`` (die Env-Variable
     GZ_TELEGRAM_TEST_CHAT_ID genuegt seit #2541 nicht mehr). Diese Datei testet
     nicht das Telegram-Gate selbst; ohne Nachweis waere das Ergebnis vom
-    zufaelligen Zustand der Projekthistorie abhaengig. Daher: fuer die Dauer
-    des Aufrufs einen gueltigen Nachweis anlegen -- NUR wenn keiner existiert
-    (ein echter Nachweis wird nie ueberschrieben oder geloescht) -- und danach
-    wieder entfernen (samt zuvor nicht vorhandenem Ordner).
+    zufaelligen Zustand der Projekthistorie abhaengig.
+
+    Fuer die Dauer des Aufrufs wird ein gueltiger Nachweis angelegt -- NUR wenn
+    keiner existiert (ein echter Nachweis wird nie ueberschrieben oder
+    geloescht). Prozessuebergreifend sicher (pytest-xdist): fcntl.flock auf eine
+    Sperrdatei, Referenzzaehler + Eigentumsvermerk in einer Zustandsdatei. Erst
+    der letzte Nutzer entfernt den selbst angelegten Nachweis (und den selbst
+    angelegten Ordner). Sperr- und Zustandsdatei liegen ausserhalb des Repos
+    (Temp-Verzeichnis, nach Repo+HEAD benannt), damit das Entfernen des
+    Nachweisordners nie unter einer wartenden Sperre passiert.
     """
+    import fcntl
+    import hashlib
+    import tempfile
+
     sha = _head_sha()
-    ordner = REPO_DIR / ".claude" / "e2e_telegram_live"
-    datei = ordner / f"{sha}.json"
-    if not sha or datei.exists():
+    if not sha:
         yield
         return
-    spec = importlib.util.spec_from_file_location(
-        "_e2e_telegram_live_2541_gate_test", _HOOKS_SRC / "e2e_telegram_live.py")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    soll = mod.SOLL_TESTS
-    ordner_neu = not ordner.exists()
-    ordner.mkdir(parents=True, exist_ok=True)
-    datei.write_text(json.dumps({
-        "commit": sha, "passed": len(soll), "skipped": 0, "failures": 0,
-        "errors": 0, "tests": list(soll),
-        "finished_at": datetime.now(timezone.utc).isoformat()}))
+    ordner = REPO_DIR / ".claude" / "e2e_telegram_live"
+    datei = ordner / f"{sha}.json"
+    schluessel = hashlib.sha256(f"{REPO_DIR}:{sha}".encode()).hexdigest()[:16]
+    basis = Path(tempfile.gettempdir()) / f"gz_tg_nachweis_{schluessel}"
+    lock_pfad = Path(str(basis) + ".lock")
+    zustand = Path(str(basis) + ".state.json")
+
+    def _lesen() -> dict:
+        try:
+            return json.loads(zustand.read_text())
+        except (OSError, ValueError):
+            return {"count": 0, "owner": False, "ordner_neu": False}
+
+    with open(lock_pfad, "a+") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            st = _lesen()
+            if st["count"] <= 0:
+                st = {"count": 0, "owner": False, "ordner_neu": False}
+                if not datei.exists():
+                    spec = importlib.util.spec_from_file_location(
+                        "_e2e_telegram_live_2541_gate_test",
+                        _HOOKS_SRC / "e2e_telegram_live.py")
+                    mod = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(mod)
+                    soll = mod.SOLL_TESTS
+                    st["ordner_neu"] = not ordner.exists()
+                    ordner.mkdir(parents=True, exist_ok=True)
+                    datei.write_text(json.dumps({
+                        "commit": sha, "passed": len(soll), "skipped": 0,
+                        "failures": 0, "errors": 0, "tests": list(soll),
+                        "finished_at": datetime.now(timezone.utc).isoformat()}))
+                    st["owner"] = True
+            st["count"] += 1
+            zustand.write_text(json.dumps(st))
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)
     try:
         yield
     finally:
-        datei.unlink(missing_ok=True)
-        if ordner_neu:
+        with open(lock_pfad, "a+") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
             try:
-                ordner.rmdir()
-            except OSError:
-                pass
+                st = _lesen()
+                st["count"] -= 1
+                if st["count"] <= 0:
+                    if st.get("owner"):
+                        datei.unlink(missing_ok=True)
+                        if st.get("ordner_neu"):
+                            try:
+                                ordner.rmdir()
+                            except OSError:
+                                pass
+                    zustand.unlink(missing_ok=True)
+                else:
+                    zustand.write_text(json.dumps(st))
+            finally:
+                fcntl.flock(lock, fcntl.LOCK_UN)
 
 
 def _run_gate(args: list[str], env_extra: dict | None = None) -> tuple[int, str, str]:
