@@ -560,7 +560,7 @@ beschreibt die **Betriebs**-Sicherung der Produktivdaten fremder Nutzer.
 | Quelle | `/var/lib/gregor` (Prod) und `/var/lib/gregor-staging` — beide Datenwurzeln seit #1595 |
 | Wann | **täglich 3:00**, Cron des Users `hem`, `henemm-infra/scripts/backup.sh` |
 | Lokal | `/home/hem/backups/gregor-data_<datum>.tar.gz`, Retention 30 Tage |
-| Off-site | restic, verschlüsselt, auf den Heimserver über WireGuard (10.10.0.2), **append-only** |
+| Off-site | restic, verschlüsselt, auf den Heimserver über Tailscale (`100.109.86.22:8010`, seit henemm-infra#516/#517; WireGuard abgebaut), **append-only** |
 | Mitgesichert | Server-Config und alle `.env`-Dateien der Projekte |
 | Überwachung | BetterStack-Heartbeat 451531 „Backup (täglich)", Periode 24 h + 2 h Toleranz |
 
