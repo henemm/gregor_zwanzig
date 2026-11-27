@@ -1,12 +1,19 @@
 """#3441 (S5b): Beispiel-Alarm mit echten Werten (``services.alert_test_service``).
 
-Spec: docs/specs/modules/feat_3441_test_alarm.md (AC-9, AC-11, AC-12).
+Spec: docs/specs/modules/feat_3441_test_alarm.md (AC-9, AC-11, AC-12); Beispiel-Formel
+abgelöst durch docs/specs/modules/fix_3462_testalarm_beispielwerte.md (#3462).
 
 VERTRAG für den Developer:
     AlertTestService(user_id=<uid>).beispiel_aenderungen(subscription) -> list[WeatherChange]
         subscription = ``app.trip.Trip`` (kind route) oder Compare-Preset-Rohdict (kind vergleich).
-        Je aktiver Regel bzw. Alarm-Metrik eine Änderung: new = Schwelle×1.2, old = Schwelle×0.8,
-        bei Delta-Regeln old = 0 (Vorbild ``alertPreviewHelpers.ts``); keine aktive ⇒ Fallback-Metrik.
+        Je aktiver Regel bzw. Alarm-Metrik eine Änderung, S = Schwelle (#3462):
+        Richtung je Summary-Feld aus dem Katalog (ein Kandidat mit cmp "unter" ⇒ fallend).
+        steigend: old = 0 bei Delta-Regeln, sonst 0.8×S; new = old + 1.2×S.
+        fallend:  new = 0.8×S; old = new + 1.2×S (= 2×S).
+        Gewitter ``thunder_level_max``: old = 0, new = min(3, max(2, ceil(1.2×S))).
+        Einheit "%": new ≤ 100, old = max(0, new − 1.2×S).
+        Je Katalog-Metrik (``_resolve_metric_id``) höchstens eine Änderung, erste Regel gewinnt.
+        Keine aktive ⇒ Fallback-Metrik (Böen, S = 50: 40 → 100).
 
 Kein Mock: echte Trip-/Vergleichsdateien im isolierten Datenbaum, echte Loader. Die Stundenreihe
 entsteht wie in ``test_alert_hour_rows.py`` (Anker im Nutzerspeicher, Frisch-Abruf über die
@@ -42,11 +49,35 @@ def _werte(changes) -> dict:
     return {c.metric: (c.old_value, c.new_value, c.threshold) for c in changes}
 
 
+def _faellt(feld: str) -> bool:
+    """Spec #3462: ein Katalog-Kandidat des Felds mit cmp "unter" ⇒ fallend."""
+    from app.metric_catalog import _METRICS
+
+    return any(m.cmp == "unter" for m in _METRICS if feld in m.summary_fields.values())
+
+
 def _regel_treu(changes) -> None:
+    import math
+
+    from app.metric_catalog import get_metric
+    from output.renderers.alert.project import _resolve_metric_id
+
     assert changes, "kein Beispiel erzeugt"
-    for c in changes:
-        assert c.new_value == pytest.approx(c.threshold * 1.2), c
-        assert c.old_value in (pytest.approx(c.threshold * 0.8), 0), c
+    metriken = [_resolve_metric_id(c.metric, c.direction) for c in changes]
+    assert len(metriken) == len(set(metriken)), f"Katalog-Metrik doppelt: {metriken}"
+    for c, mid in zip(changes, metriken):
+        s = c.threshold
+        if c.metric == "thunder_level_max":
+            assert (c.old_value, c.new_value) == (0, min(3, max(2, math.ceil(1.2 * s)))), c
+        elif get_metric(mid).unit == "%":
+            assert c.new_value <= 100 and c.old_value == pytest.approx(max(0.0, c.new_value - 1.2 * s)), c
+        elif _faellt(c.metric):
+            assert c.direction == "decrease", c
+            assert c.new_value == pytest.approx(0.8 * s) and c.old_value == pytest.approx(2.0 * s), c
+        else:
+            assert c.direction == "increase", c
+            assert c.new_value - c.old_value == pytest.approx(1.2 * s), c
+            assert c.old_value in (pytest.approx(0.8 * s), 0), c
 
 
 @pytest.fixture
@@ -67,7 +98,7 @@ def test_ac11_trip_je_aktiver_regel_eine_beispiel_aenderung_exakt_aus_der_schwel
     werte = _werte(_service(uid).beispiel_aenderungen(_trip_laden(uid, tid)))
 
     assert werte == {
-        "gust_max_kmh": (pytest.approx(40.0), pytest.approx(60.0), 50.0),
+        "gust_max_kmh": (pytest.approx(40.0), pytest.approx(100.0), 50.0),
         "wind_max_kmh": (0, pytest.approx(24.0), 20.0),
     }, werte
 
