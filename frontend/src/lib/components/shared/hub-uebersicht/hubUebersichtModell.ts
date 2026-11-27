@@ -13,6 +13,7 @@
 import type { ComparePreset, Trip } from '../../../types.ts';
 import type { TripStatus } from '../../../utils/tripStatus.ts';
 import { reportSlotAktiv } from '../../../utils/reportSlotAktiv.ts';
+import { aktiveKanaele } from '../aktiveKanaele.ts';
 import type { BriefingHistoryEntry } from '../briefingHistory.ts';
 import { formatNextBriefing, type NextBriefing } from '../versand-tab/nextBriefingText.ts';
 import {
@@ -119,16 +120,13 @@ export function neuesterPlanmaessigerEintrag(eintraege: BriefingHistoryEntry[]):
 	return null;
 }
 
-/** Briefing-Kanäle eines Trips aus report_config (einzige Wahrheit); E-Mail gilt als aktiv,
- *  solange send_email !== false. */
+/** Briefing-Kanäle eines Trips aus report_config über den gemeinsamen Baustein `aktiveKanaele`
+ *  (#3413). Der Hub-Typ `Kanal` schreibt `premium_sms` (Schlüssel wie `alert_channels`); die
+ *  Übersetzung von `premium-sms` passiert genau hier. */
 export function tripBriefingKanaele(trip: Trip): Kanal[] {
-	const rc = trip.report_config ?? {};
-	const kanaele: Kanal[] = [];
-	if (rc.send_email !== false) kanaele.push('email');
-	if (rc.send_telegram === true) kanaele.push('telegram');
-	if (rc.send_sms === true) kanaele.push('sms');
-	if (rc.send_premium_sms === true) kanaele.push('premium_sms');
-	return kanaele;
+	return aktiveKanaele(trip.report_config as Record<string, unknown> | undefined).map((k) =>
+		k === 'premium-sms' ? 'premium_sms' : (k as Kanal)
+	);
 }
 
 /** Alert-Kanäle eines Trips: eigener Satz `alert_channels` (premium_sms fehlend = AUS, types.ts D4),
