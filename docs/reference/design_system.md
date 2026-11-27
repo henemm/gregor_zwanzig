@@ -229,7 +229,7 @@ verwendet einfache, leicht erhöhte Schatten.
 ### Button (`Btn`) — implementiert in `frontend/src/lib/components/ui/btn/Btn.svelte`
 - **Variants:** `primary` (default), `accent`, `outline`, `ghost`, `secondary`, `destructive`, `link`
 - **`destructive`-Fläche (#1831):** per `color-mix(in oklab, var(--g-danger) 10%/18%, transparent)` aus dem Token gemischt (kein Literal `rgba(179,58,42,…)`); im Dunkelmodus dadurch aus `#ee7a7a` getönt. `@property --color-destructive` initial-value `rgb(168, 50, 50)`.
-- **Akzent-Knopf (`variant="accent"`, ADR-0118):** Fläche `--g-accent-deep`, Schrift `--g-on-accent` (Regel in `app.css`, Abschnitt #2879). Das Mockup-Orange `--g-accent` wird als Fläche nicht verwendet (WCAG-AA). Einsatz: „Test schicken ▾“ im Hub-Kopf (Trip und Ortsvergleich), „Weiter“.
+- **Akzent-Knopf (`variant="accent"`, ADR-0118):** Fläche `--g-accent-deep`, Schrift `--g-on-accent` (Regel in `app.css`, Abschnitt #2879). Das Mockup-Orange `--g-accent` wird als Fläche nicht verwendet (WCAG-AA). Einsatz: „Test schicken ▾“ im Hub-Kopf (Trip und Ortsvergleich), „Aktivieren“ im Hub-Kopf eines Entwurfs (seit #3443, Trip und Ortsvergleich, `hub-kopf-aktivieren`), „Weiter“.
 - **Sizes:** `xs`, `sm`, `md` (default), `lg`, `icon`, `icon-xs`, `icon-sm`, `icon-lg`
 - **Tag-Switch:** Render als `<a>` wenn `href` gesetzt, sonst `<button>`
 - **Disabled-State:** ARIA-konform (`aria-disabled="true"`; bei Links zusätzlich `role="link"`, `tabindex={-1}`)
