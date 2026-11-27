@@ -52,6 +52,12 @@ Etappe 3: Refuge d'Ortu di u Piobbu nach Refuge de Carrozzu — Evening — Cold
 400 invalid_channel Unknown channel (allowed: email, telegram, sms, premium_sms)
 ----- fehler.email_unverified -----
 422 email_unverified No briefing sent — your email address is not confirmed yet. Confirm it in your account.
+----- fehler.keine_alarm_kanaele -----
+422 keine_alarm_kanaele No alert channel set up, the test alert went nowhere.
+----- fehler.trip_ohne_segmente -----
+422 trip_ohne_segmente No test alert sent — the trip has no stage with waypoints yet.
+----- fehler.vergleich_ohne_orte -----
+422 vergleich_ohne_orte No test alert sent — the places subscription has no places.
 ----- briefing.betreff -----
 [GR20] Etappe 3 — Morning
 ----- briefing.header -----
