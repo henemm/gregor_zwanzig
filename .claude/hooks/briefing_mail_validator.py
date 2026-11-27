@@ -1447,6 +1447,8 @@ def fetch_latest_message(
     to_contains: str | None = None,
     imap=None,
     vertrauen=None,
+    max_age_minutes: float | None = None,
+    ignore_mail_age_reason: str | None = None,
 ) -> Message:
     """Holt die passende Mail aus dem Test-Postfach als Message-Objekt.
 
@@ -1456,6 +1458,7 @@ def fetch_latest_message(
     #2961: nur Mails des Dienst-Absenders (``_mail_trust``); mit eigener
     Verbindung kommt ``vertrauen`` aus der Konfiguration.
     """
+    _mail_trust.alter_pruefen_argumente(max_age_minutes, ignore_mail_age_reason)  # #2035
     own_connection = imap is None
     if own_connection:
         imap = _open_test_imap()
@@ -1470,13 +1473,16 @@ def fetch_latest_message(
             raise ValueError("Keine E-Mails gefunden")
 
         for mid in reversed(all_ids[-max_scan:]):
-            _, hdr_data = imap.fetch(mid, "(BODY.PEEK[HEADER])")
+            _, hdr_data = imap.fetch(mid, _mail_trust.ALTER_FETCH)
             headers = email.message_from_bytes(hdr_data[0][1])
             if _message_matches(headers, mail_type, subject_contains, lang, to_contains):
                 grund = _mail_trust.fehler(headers, vertrauen) if vertrauen else None
                 if grund:
                     verworfen.append(grund)
                     continue
+                _mail_trust.alter_erzwingen(
+                    hdr_data, _e2e_paths.betreff_text(headers),
+                    max_age_minutes, ignore_mail_age_reason)
                 _, msg_data = imap.fetch(mid, "(RFC822)")
                 return email.message_from_bytes(msg_data[0][1])
 
@@ -1521,11 +1527,14 @@ def run_validation(
     to_contains: str | None = None,
     soll: dict | None = None,
     windrichtung: dict | None = None,
+    max_age_minutes: float | None = None,
+    ignore_mail_age_reason: str | None = None,
 ) -> tuple[bool, list[str]]:
     """Holt die (gefilterte) Mail und validiert sie (``soll``: #3047 --konfig)."""
     msg = fetch_latest_message(
         mail_type=mail_type, subject_contains=subject_contains, max_scan=max_scan,
         lang=lang, to_contains=to_contains,
+        max_age_minutes=max_age_minutes, ignore_mail_age_reason=ignore_mail_age_reason,
     )
     return validate_message(msg, max_bytes, warnungen=warnungen, soll=soll, windrichtung=windrichtung)
 
@@ -1599,6 +1608,7 @@ def main() -> None:
                         help="Rohwerte der Ampel-Groessen je Etappe und Stunde (Pruefdaten, "
                              "nur mit --konfig): Ampelpunkt ohne Zahl in Mail und Klartext (#3237)")
     _e2e_paths.sprach_argumente(parser)
+    _mail_trust.alter_argumente(parser)
     args = parser.parse_args()
 
     print("=" * 70)
@@ -1647,6 +1657,8 @@ def main() -> None:
                 to_contains=args.to_contains,
                 soll=soll,
                 windrichtung=windrichtung,
+                max_age_minutes=args.max_age_minutes,
+                ignore_mail_age_reason=args.ignore_mail_age,
             )
     except Exception as e:  # IMAP / technischer Fehler
         print(f"⚠️  TECHNISCHER FEHLER: Mail konnte nicht geladen werden: {e}")

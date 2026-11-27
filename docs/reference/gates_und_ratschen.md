@@ -114,6 +114,8 @@ frisch vorliegen: (1) `tests/tdd/test_issue_811_mode_matrix.py` grün, (2) erfol
 `briefing_mail_validator.py`-Lauf. Abhilfe bei Blockade: den Test ausführen, dann Validator grün
 bekommen.
 
+*Mail-Frische (#2035):* die drei Hook-Validatoren (Radar, Amtliche Warnung, Briefing) lehnen Mails über 60 Minuten Server-Alter ab (Details `docs/reference/mail_validators.md`); Prüfdatum 2027-02-25.
+
 **„Un-überspringbar" gilt erst seit #1431 (2026-08-04) wirklich.** Davor entschied dieses Gate — wie
 vier weitere — per Teilstring `"git commit"`, ob es überhaupt prüft; `git -C /pfad commit`,
 `git -c k=v commit` und `git --no-pager commit` umgingen es **still**. Seit #1431 entscheidet

@@ -10,6 +10,19 @@ falschen Validator auf einen Pfad anzuwenden ist ein Fehler — er kann struktur
 nie bestehen (Dauer-Exit-1) und führt zu falschem „Feature kaputt" oder
 Gate-Erosion.
 
+## Frische der geprüften Mail — `--max-age-minutes` / `--ignore-mail-age` (#2035)
+
+`radar_alert_mail_validator.py`, `official_alert_mail_validator.py` und
+`briefing_mail_validator.py` prüfen wie `email_spec_validator.py` (#1408), dass die
+gewählte Mail frisch ist. Gemessen wird die **serverseitige INTERNALDATE**
+(`_mail_trust.alter_erzwingen`), nie der absenderseitige `Date`-Kopf; liefert der
+Server keine, gibt es Exit 2 statt Rückfall. Standardgrenze **60 Minuten**,
+Obergrenze 1440; Abschalten nur mit `--ignore-mail-age "<Grund>"`. Eine ältere
+Treffer-Mail (z. B. tagealte Fremd-Mail aus einem anderen Test) endet mit Exit 2
+und der Meldung „bitte frische Mail auslösen". Test: `tests/tdd/test_mail_frische_2035.py`.
+Empfehlung weiter: `--subject-contains` auf den eigenen Betreff (Herkunftsbindung).
+*Regel-Budget: Prüfdatum 2027-02-25 (Gate-Audit #1197): bis dahin ein echter Fang oder Rückbau.*
+
 ## Zustellweg auf Staging und Subject-Filter (#2774)
 
 Die Validatoren prüfen eine **echt zugestellte** Staging-Mail. Zustellen und prüfen in einem

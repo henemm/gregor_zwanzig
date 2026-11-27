@@ -25,8 +25,11 @@ Warnungen gehen nach stderr. Absender ueberschreiben (kommagetrennt):
 from __future__ import annotations
 
 import email.utils
+import imaplib
+import math
 import os
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -157,3 +160,66 @@ def hinweis(gruende: list) -> str:
         return ""
     return (f" {len(gruende)} sonst passende Mail(s) wegen Absender/Authentisierung "
             f"verworfen, die neueste: {gruende[0]}")
+
+
+# --- Frische der Mail (#2035) -------------------------------------------------
+# Gleiche Regel wie ``email_spec_validator`` (#1408): Alter aus der
+# serverseitigen INTERNALDATE (kein Rueckfall auf den manipulierbaren
+# Date-Kopf), Standardgrenze 60 Minuten, Obergrenze 24 h, Abschalten nur mit
+# Begruendung. Ohne sie erfuellt jede Altmail im geteilten Postfach den
+# Validatorlauf (#2035: fuenf Tage alte Fremd-Mail als Nachweis).
+#
+# PRUEFDATUM (Regel-Budget, #1197): 2027-02-25. Bis dahin muss die Schranke
+# einen echten Fang vorweisen oder sie wird zurueckgebaut.
+DEFAULT_MAX_AGE_MINUTES = 60
+MAX_AGE_CEILING_MINUTES = 1440
+ALTER_FETCH = "(BODY.PEEK[HEADER] INTERNALDATE)"
+_IGNORE_HINT = 'bewusstes Abschalten nur ueber --ignore-mail-age "<Grund>"'
+
+
+def alter_argumente(parser) -> None:
+    parser.add_argument("--max-age-minutes", type=float, default=None,
+                        help=f"hoechstes Mail-Alter (Standard {DEFAULT_MAX_AGE_MINUTES}, "
+                             f"max {MAX_AGE_CEILING_MINUTES}) (#2035)")
+    parser.add_argument("--ignore-mail-age", metavar="GRUND", default=None,
+                        help="Altersschranke bewusst abschalten, Grund Pflicht (#2035)")
+
+
+def alter_pruefen_argumente(max_age_minutes, ignore_reason) -> None:
+    """Werte, die still "keine Pruefung" bedeuten koennten, werden abgelehnt."""
+    if ignore_reason is not None and not ignore_reason.strip():
+        raise ValueError("Die Altersschranke laesst sich nur mit nicht-leerem Grund "
+                         "abschalten (--ignore-mail-age \"<Grund>\").")
+    if max_age_minutes is not None and not math.isfinite(max_age_minutes):
+        raise ValueError(f"Altersgrenze muss endlich sein (bekommen: {max_age_minutes}); "
+                         f"{_IGNORE_HINT}.")
+    if max_age_minutes is not None and max_age_minutes > MAX_AGE_CEILING_MINUTES:
+        raise ValueError(f"Altersgrenze {max_age_minutes} Minuten ueberschreitet das Maximum "
+                         f"von {MAX_AGE_CEILING_MINUTES}; {_IGNORE_HINT}.")
+
+
+def _internaldate_zeile(fetch_data) -> bytes:
+    teile = []
+    for item in fetch_data or []:
+        if isinstance(item, tuple) and item:
+            teile.append(bytes(item[0]))
+        elif isinstance(item, (bytes, bytearray)):
+            teile.append(bytes(item))
+    return b" ".join(teile)
+
+
+def alter_erzwingen(fetch_data, betreff: str, max_age_minutes, ignore_reason) -> None:
+    """ValueError, wenn die gewaehlte Mail zu alt ist oder keine Server-Zeit hat."""
+    if ignore_reason is not None:
+        return
+    grenze = DEFAULT_MAX_AGE_MINUTES if max_age_minutes is None else max_age_minutes
+    geparst = imaplib.Internaldate2tuple(_internaldate_zeile(fetch_data))
+    if geparst is None:
+        raise ValueError(f"Kein auswertbarer Server-Zeitstempel (INTERNALDATE) fuer die Mail "
+                         f"{betreff!r}; kein Rueckfall auf den Date-Kopf. {_IGNORE_HINT}.")
+    alter = (time.time() - time.mktime(geparst)) / 60.0
+    if alter > grenze:
+        raise ValueError(f"Die gefundene Mail ({betreff!r}) ist {alter:.0f} Minuten alt, "
+                         f"zulaessig sind {grenze:g} (--max-age-minutes). Sie stammt nicht aus "
+                         f"diesem Lauf und taugt nicht als Nachweis: bitte frische Mail "
+                         f"ausloesen. {_IGNORE_HINT}.")
