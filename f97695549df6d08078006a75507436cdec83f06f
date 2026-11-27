@@ -1,0 +1,31 @@
+{
+  "verified_commit": "f97695549df6d08078006a75507436cdec83f06f",
+  "findings": [
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "https://staging.gregor20.henemm.com/api/briefings/{id}/test-alert",
+      "evidence": "Echt zugestellte Test-Alarm-Mails im Stalwart-Test-Postfach, DE und EN, je Trip (kind=route) und Ortsvergleich (kind=vergleich): Betreff beginnt mit [TEST], X-GZ-Mail-Type deviation-alert, Urteil ueber/above (DE: '\u00c4nderung \u00fcber deiner Alarm-Schwelle', '\u00fcber Alarm-Schwelle 50 km/h'; EN: 'above alert threshold 50 km/h'), kein unter/below-Urteil; Trip: eine Zeile (B\u00f6en/Gusts) je Block; Vergleich: je Ort jede Bezeichnung genau einmal (Gewitter, B\u00f6en, Niedersch, Nullgradgrenze, Temp, Wind, CAPE, Sicht, Neuschnee bzw. Thunder, Gusts, Precip, Freezing lvl, Temp, Wind, CAPE, Visib, Fresh snow). Standard-Mailpfade trip+compare DE und EN: Exit 0.",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-27T23:14:47.536214+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: #3462 AC-5 Test-Alarm-Mails DE/EN Trip+Vergleich auf Staging gemessen, Urteil ueber/above, keine Doppelungen; Standard-Mailpfade Exit 0",
+  "scope": "backend",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: #3462 AC-5 Test-Alarm-Mails DE/EN Trip+Vergleich auf Staging gemessen, Urteil ueber/above, keine Doppelungen; Standard-Mailpfade Exit 0",
+      "scope": "backend",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-27T23:14:47.536214+00:00"
+    }
+  }
+}
