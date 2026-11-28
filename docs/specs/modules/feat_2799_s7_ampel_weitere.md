@@ -215,6 +215,28 @@ Das Gate (`trip_alert.py:713-718`) und sein Spiegel (`hubUebersichtModell.ts:166
 - **AC-25:** Given die Teile S7f und S7c1 / When ein Prüfer die ADR-Lage vor S7c1 prüft / Then enthält ADR-0019 den Nachtrag „Schneefallgrenze ist eigenständige Alarm-Metrik (Spec feat_2799_s7_ampel_weitere)“, und das Glossar enthält Nullgradgrenze, „über höchster Stelle“ und „m rel.“ in DE und EN
   - Test: `tests/test_adr_index_drift.py` bleibt grün; Glossar-Test `# doc-compliance-test` auf die Begriffe.
 
+## Test Plan
+
+### Automated Tests (TDD RED)
+
+- [ ] **Kern Python (pytest, ohne Netz, ohne Mock-Theater):** Färbung je Metrik und Vorlage über die echten Renderer-Ausgaben aller vier Kanäle (E-Mail HTML/Klartext, Telegram, SMS, Premium-SMS) für Trip und Orte (AC-1 bis AC-8, AC-23); relative Bezugshöhe und Fall „keine Höhe“ (AC-9 bis AC-12); Alarm per Stufenwechsel über die echte Alarm-Engine, Kanaltexte, D4 nicht doppelt, Segment ohne Höhe (AC-13 bis AC-17, AC-19); Bestands-Trip-Gate (AC-20); Listen-Ratsche gegen Drift (AC-18, AC-22); Zwei-Nutzer-Test mit verschiedenen Etappenhöhen (AC-24).
+- [ ] **Kern Frontend (`node --test`):** Einheit „m rel.“ und Hinweis-Texte DE/EN im Wetter-Modell (AC-21).
+- [ ] **RED zuerst aus Nutzersicht:** Je Teil (S7a1 … S7e) werden die zugeordneten ACs vor der Umsetzung rot nachgewiesen und im Workflow registriert; S7a1 und S7b1 weisen „keine sichtbare Änderung“ byte-gleich nach.
+- [ ] **Mutations-Gegenprobe (Adversary):** mindestens Metrik fehlt in `AMPEL_LESER`, Bezugshöhe ignoriert (absolut statt relativ), Fallback-Farbe bei fehlender Höhe, Vorzeichen im SMS-Token entfernt, Vorbote alarmiert, D4-Pfad für die Nullgradgrenze wieder aktiv, Seite „beidseitig“ nur einseitig ausgewertet; jede Verfälschung muss einen Test rot machen. Mutationen nur per String-Ersetzung mit externer Sicherungskopie.
+
+### Live-E2E (nur `/e2e-verify` gegen Staging)
+
+- [ ] Echt zugestellte Staging-Mails: Trip-Briefing mit `briefing_mail_validator.py`, Orte mit `email_spec_validator.py`, Alarm-Mails mit den Alarm-Validatoren; Färbung und Anzeigewert der neuen Metriken geprüft.
+- [ ] Playwright Reiter Wetter (Trip und Orte, Desktop und Mobil) für AC-21.
+
+## Definition of Done
+
+- [ ] Alle ACs grün in ihrer Schicht, je Teil die zugeordneten ACs; Kern-Schicht 100 % grün, alle 6 CI-Checks grün.
+- [ ] Jeder Teil (S7a1 … S7f) einzeln ausgeliefert mit Teil-Spec bzw. Nachtrag, Adversary-Verdict VERIFIED inklusive Mutations-Gegenprobe.
+- [ ] ADR-0019-Nachtrag vor S7c1 angenommen; Glossar und Kanal-Format-Dokumente (`sms_format.md`, `premium_sms_format.md`, `telegram_format.md`, `renderer_email_spec.md`) nachgezogen.
+- [ ] Mail-Validatoren der berührten Pfade frisch grün gegen Staging; `/e2e-verify` grün, Prod-Deploy mit Selftest Exit 0 je Teil.
+- [ ] Issue #2799 erst nach dem letzten Teil geschlossen.
+
 ## Known Limitations
 
 - Mittlere Wolken bleiben Anzeige (E1); Wiedervorlage, falls ein Provider eine Wolkenuntergrenze liefert. Bezug der Open-Meteo-Bänder (Boden oder Meer) ist nicht dokumentiert, vermutlich über Meer (Schluss, nicht Quelle).
