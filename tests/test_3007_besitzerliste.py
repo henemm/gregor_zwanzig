@@ -70,12 +70,13 @@ def test_ac20_kopf_eintraege_nur_paarweise(besitzer):
     assert len(rest_e) == len(kopf), f"#2913-e: {len(rest_e)} Einträge, erwartet {len(kopf)} (nur Köpfe)"
 
 
-def test_ac20_tempo_abschnitt_bleibt_bei_2796(besitzer):
+def test_ac20_tempo_abschnitt_haengt_an_3436(besitzer):
+    # #3436 (fix_3436_tempo_abschnitt.md, AC-5): #2796 ist geschlossen, Besitzer jetzt #3436.
     tempo = [
         b for b in besitzer
         if b["art"] == "abschnitt" and b["ctx"] == "trip" and b["reiter"] == "etappen" and b["abschnitt"] == "tempo"
     ]
-    assert len(tempo) == 1 and tempo[0]["verweis"] == "#2796"
+    assert len(tempo) == 1 and tempo[0]["verweis"] == "#3436"
 
 
 def test_ac16_tempo_aendern_elemente_haengen_an_2796(besitzer, tempo_ids):

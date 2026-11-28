@@ -53,7 +53,9 @@ def test_ac12_kein_eintrag_mehr_mit_verweis_2913_c2(daten):
     assert rest == [], f"{len(rest)} Besitzer-Einträge tragen noch #2913-c2"
 
 
-def test_ac12_tempo_karte_haengt_an_2796(daten):
+def test_ac12_tempo_karte_haengt_an_3436(daten):
+    # #3436: #2796 ist geschlossen; die Tempo-Karte hängt jetzt am offenen #3436
+    # (Spec docs/specs/modules/fix_3436_tempo_abschnitt.md, AC-5).
     treffer = [
         b
         for b in daten["besitzer"]
@@ -63,8 +65,8 @@ def test_ac12_tempo_karte_haengt_an_2796(daten):
         and b.get("abschnitt") == "tempo"
     ]
     assert len(treffer) == 1, f"Tempo-Abschnitt {len(treffer)}× in der Besitzerliste (erwartet 1, nicht gelöscht)"
-    assert treffer[0]["verweis"] == "#2796", f"Tempo verweist auf {treffer[0]['verweis']}"
-    assert S4_GRUND in treffer[0]["grund"], f"Grund ohne „{S4_GRUND}“: {treffer[0]['grund']}"
+    assert treffer[0]["verweis"] == "#3436", f"Tempo verweist auf {treffer[0]['verweis']}"
+    assert "fix_3436_tempo_abschnitt.md" in treffer[0]["grund"], f"Grund ohne Spec-Verweis: {treffer[0]['grund']}"
 
 
 PROFIL_TEXTE = {

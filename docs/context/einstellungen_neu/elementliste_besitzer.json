@@ -334,8 +334,8 @@
 			"ctx": "trip",
 			"reiter": "etappen",
 			"abschnitt": "tempo",
-			"grund": "Tempo-Karte im Reiter Etappen (Fortbewegung, Tempo flach, Aufstieg, Gehzeit je Etappe) braucht persistente Tempo-Felder: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108), aus c2 umgehängt. Ursachen: Text nicht sichtbar, Abschnitt-Haken fehlt, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)",
-			"verweis": "#2796"
+			"grund": "Tempo-Karte im Reiter Etappen: Abschnitt-Haken und Freigabe der durch ADR-0108 Nr. 2 (Anpassung 2026-11-20, #3196/#3197) überholten Mockup-Elemente (Tempo flach, Aufstieg); Spec docs/specs/modules/fix_3436_tempo_abschnitt.md",
+			"verweis": "#3436"
 		},
 		{
 			"art": "abschnitt",
@@ -1378,6 +1378,34 @@
 		}
 	],
 	"ausnahmen": [
+		{
+			"ctx": "trip",
+			"reiter": "etappen",
+			"text": "Grundtempo (km/h)",
+			"grund": "Tempo-Karte im Reiter Etappen: Grundtempo statt „Tempo flach“ + „Aufstieg“ (ADR-0108 Nr. 2, Anpassung 2026-11-20; PO-Entscheidung #3196/#3197)",
+			"spec": "docs/specs/modules/fix_3436_tempo_abschnitt.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "etappen",
+			"text": "Base pace (km/h)",
+			"grund": "Tempo-Karte im Reiter Etappen: Grundtempo statt „Tempo flach“ + „Aufstieg“ (ADR-0108 Nr. 2, Anpassung 2026-11-20; PO-Entscheidung #3196/#3197)",
+			"spec": "docs/specs/modules/fix_3436_tempo_abschnitt.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "etappen",
+			"text": "Gilt für alle Etappen, je Etappe überschreibbar.",
+			"grund": "Tempo-Karte im Reiter Etappen: Hinweis zum Grundtempo, Pausentag ohne Tempo (ADR-0108 Nr. 2, Anpassung 2026-11-20; PO-Entscheidung #3196/#3197)",
+			"spec": "docs/specs/modules/fix_3436_tempo_abschnitt.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "etappen",
+			"text": "Applies to all stages, can be overridden per stage.",
+			"grund": "Tempo-Karte im Reiter Etappen: Hinweis zum Grundtempo, Pausentag ohne Tempo (ADR-0108 Nr. 2, Anpassung 2026-11-20; PO-Entscheidung #3196/#3197)",
+			"spec": "docs/specs/modules/fix_3436_tempo_abschnitt.md"
+		},
 		{
 			"ctx": "trip",
 			"reiter": "uebersicht",
