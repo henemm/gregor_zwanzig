@@ -1,0 +1,68 @@
+{
+  "verified_commit": "72ef0cf1259c4d1b0d80d329ccdaaee1af39bed6",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/trips/<pruefkonto-trip>?tab=etappen",
+      "evidence": "Staging-Abgleich --scope etappen --strict: Abschnitt tempo wird gefunden (20 Elemente gefunden, je 5 in normal/laedt/fehler/luecken), Haken data-abschnitt=tempo greift, DE und EN",
+      "workflow": "fix-3436-tempo-abschnitt"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "/trips/<pruefkonto-trip>?tab=etappen",
+      "evidence": "Tempo flach, 4,0 km/h, Aufstieg, 300 Hm/h, Mockup-Hinweis stehen in allen 4 Zust\u00e4nden auf freigegeben (20), auch im EN-Lauf, nicht_pruefbar 0",
+      "workflow": "fix-3436-tempo-abschnitt"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "/trips/<pruefkonto-trip>?tab=etappen",
+      "evidence": "Zusatztexte DE: Trips, /, Aktiv, Mallorca, Gespeichert; EN: Trips, /, Active, Mallorca, Saved (alle mit Besitzer #2913); kein Grundtempo/Base pace/Hinweistext als herrenloser Zusatztext",
+      "workflow": "fix-3436-tempo-abschnitt"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "/trips/<pruefkonto-trip>?tab=etappen",
+      "evidence": "Abschnitt tempo: 0 abweichend, 0 nicht_pruefbar in DE und EN, 4 Zust\u00e4nde. Gesamt-Exit 1 stammt allein aus Abschnitt liste (24 abweichend, Reihenfolge Tempo \u00e4ndern, au\u00dferhalb Scope, in #3439) und 5 Zusatztexten mit Besitzer #2913",
+      "workflow": "fix-3436-tempo-abschnitt"
+    }
+  ],
+  "verified_at": "2026-11-28T06:45:27.366341+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Abschnitt tempo im Reiter Etappen auf Staging DE+EN in 4 Zust\u00e4nden ohne Abweichung und ohne herrenlosen Zusatztext",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "fix-3436-tempo-abschnitt": {
+      "verdict": "VERIFIED: Abschnitt tempo im Reiter Etappen auf Staging DE+EN in 4 Zust\u00e4nden ohne Abweichung und ohne herrenlosen Zusatztext",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-28T06:45:27.366341+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
