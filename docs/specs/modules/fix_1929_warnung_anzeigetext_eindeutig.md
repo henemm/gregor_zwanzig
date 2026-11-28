@@ -182,7 +182,7 @@ nie stilles Bestehen.
   entfernt, nie als kollidierender Rest sichtbar.
 - **AC-6:** Given jedes der Szenarien aus AC-1, AC-2, AC-4 und AC-5 / When mit dem produktiven
   Default-Limit gerendert wird / Then überschreitet der zurückgegebene String niemals 140 Zeichen.
-- **AC-7:** Given ein Fenster ohne `valid_from`/`valid_to` (DPC-Fall) oder mit Sekundenanteil ≠ 0 /
+- **AC-7:** Given ein Fenster ohne `valid_from`/`valid_to` (Altfall vor #2221, seit dort trägt DPC ein Fenster) oder mit Sekundenanteil ≠ 0 /
   When `_tag_time` aufgerufen wird / Then bleibt das bestehende Verhalten unverändert (leerer String
   bzw. Sekunden werden weiterhin ignoriert).
 
@@ -232,3 +232,4 @@ Struktur drumherum um (Kopf ohne Trip-Name, Behörden-Stufe auf die Briefing-Stu
 - 2026-08-17: F002-Entscheid — Ganztags-Token trägt Tag **und** Monat; Begründung korrigiert (28-Tage-
   Kalendermathematik statt Provider-Horizont); Einzelgrenzen-Tests aus F001 ergänzt
 - 2026-08-17: Rekonstruktion nach Worktree-Verlust (siehe Hinweis am Dateikopf)
+- 2026-11-28: AC-7 Klammer präzisiert (DPC trägt seit #2221 ein Fenster; das Verhalten ohne Fenster gilt unverändert)

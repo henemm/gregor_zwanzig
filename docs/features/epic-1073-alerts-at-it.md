@@ -166,6 +166,7 @@ ergänzt den italienischen Zivilschutz (Dipartimento della Protezione Civile, DP
   auth-frei. Stufen aus italienischem Freitext `<Kritikalität> / ALLERTA <FARBE>`
   (GIALLA=2, ARANCIONE=3, ROSSA=4; `Temporali` kennt kein ROSSA). `Idrogeo`/`Idraulico`
   → `flood`, `Temporali` → `thunderstorm`.
+  Gültigkeitsfenster: ganzer Bezugstag, 00:00–23:59:59 Europe/Rome (ganztägig; seit 2026-11-28, #2221). Der Bezugstag ist der Rome-Kalendertag, nicht das UTC-Datum.
 - **Zonen-Geometrie:** 187 Zonen einmalig offline extrahiert und als
   `src/services/official_alerts/data/dpc_zones.json` eingecheckt (Muster
   `massif_polygons.json`), Punkt-in-Fläche über das vorhandene `geo_ray_cast`. **Keine
@@ -220,3 +221,4 @@ MeteoGate/MeteoAlarm-Account registrieren (für Slice 2) — analog zum Météo-
 | 2026-07-09 | Slice 5 (#1089) IT-Teil implementiert: Issue #1162 (Radar-DPC für Italien inkl. Korsika, PO-Entscheidung Korsika-Umstellung von AROME-FR). |
 | 2026-07-12 | Dokumentation aktualisiert (Issue #1232 Scheibe 1): die beiden Checkboxen „Amtliche Warnungen" und „Amtliche Warnungen lösen Alert aus" sind aus dem Alerts-Tab in den neuen Versand-Tab (`VersandTab.svelte`, context="route") umgezogen — Speicherpfad/Feldnamen unverändert. |
 | 2026-07-31 | Issue #1427 (S1+S2) implementiert: neue Gefahrenart `flood` (MeteoAlarm-Typen 11/12/13, Typ-12-Fehlabbildung auf `rain` korrigiert), neue additive IT-Warnquelle `DpcSource` (Zivilschutz/Protezione Civile) neben MeteoAlarm — Annahme „MeteoAlarm-IT = DPC-Zweitschrift" live widerlegt (unterschiedliche Herausgeber und Bewertungsmaßstab). Eigener Abschnitt „Fortsetzung: #1427" ergänzt, API-Landschaft-Tabelle um DPC-Bollettini als Warnquelle erweitert. |
+| 2026-11-28 | Issue #2221: DPC-Warnungen tragen jetzt das Gültigkeitsfenster des Bezugstags (ganzer Rome-Kalendertag, ganztägig). Folge: „Gültig"-Zeile mit Datum · ganztägig, SMS ohne Stundenteil, Melde-Gedächtnis trennt Bezugstage. |
