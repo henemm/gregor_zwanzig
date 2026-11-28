@@ -1,0 +1,52 @@
+{
+  "verified_commit": "b977ea29f0eca5a5b146dc4a0cdf08304e9870f0",
+  "findings": [
+    {
+      "ac": "SMOKE",
+      "status": "PASS",
+      "url": "/api/health",
+      "evidence": "Staging auf b977ea29f (Merge #3501), health ok, python_core ok",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "REGRESSION-MAIL-DE",
+      "status": "PASS",
+      "url": "mail-pruefen beide/trip de",
+      "evidence": "Trip- und Vergleichsmail echt zugestellt, briefing_mail_validator und email_spec_validator Exit 0",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "REGRESSION-MAIL-EN",
+      "status": "PASS",
+      "url": "mail-pruefen beide/trip en",
+      "evidence": "Trip- und Vergleichsmail Nutzer en echt zugestellt, Validatoren Exit 0",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-1..AC-7",
+      "status": "PASS",
+      "url": "core",
+      "evidence": "DPC-Gueltigkeitsfenster nicht auf Staging herstellbar (keine DPC-Warnung auf Abruf); belegt durch Kerntests mit echten Bulletin-Aufzeichnungen ueber fetch() bis Renderer/Schluessel/Filter, Adversary VERIFIED 7/8 Mutationen (1 aequivalent), CI 6/6 gruen",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-28T07:38:28.514157+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Staging b977ea29f: Smoke ok, Trip- und Vergleichsmail DE/EN echt zugestellt und validiert; DPC-Fenster per Kerntests mit echten Bulletins belegt",
+  "scope": "backend",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Staging b977ea29f: Smoke ok, Trip- und Vergleichsmail DE/EN echt zugestellt und validiert; DPC-Fenster per Kerntests mit echten Bulletins belegt",
+      "scope": "backend",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-28T07:38:28.514157+00:00"
+    }
+  }
+}
