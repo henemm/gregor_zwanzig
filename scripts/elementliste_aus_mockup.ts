@@ -426,6 +426,57 @@ export function listenzeileEn(reiter: string, abschnitt: string, textDe: string,
 }
 
 /**
+ * #3241 (Metrik-Zeile): Im Abschnitt `metriken` setzt die App die Zeile unter dem Metriknamen aus Einheit und
+ * Hinweis `wetter.hinweis.<id>` zusammen („mm · Summe“), den Grünbereich aus `wetter.gruen.*` mit leerer Einheit
+ * („· grün: bis 6“, MetrikZeile.svelte/ampelModell.ts). Der Hinweis enthält teils selbst „ · “ („Tageshöchst ·
+ * Tagestief“) und wird darum als Ganzes gegen den Katalog gelesen. Vorrang vor der Segmentregel nur hier;
+ * liefert die Regel denselben EN-Text wie der allgemeine Zuordner, bleibt dessen Ergebnis (keine Verschiebung
+ * bestehender Einträge). Fehlt DE oder EN eines Schlüssels: kein Treffer.
+ */
+const HINWEIS_PRAEFIX = 'wetter.hinweis.';
+const GRUEN_SCHLUESSEL = ['wetter.gruen.von_bis', 'wetter.gruen.ab', 'wetter.gruen.bis'];
+const OHNE_EINHEIT = ' {einheit}';
+
+function hinweisZeileEn(t: string, katalog: Katalog): EnErgebnis | null {
+	for (const key of Object.keys(katalog.de).filter((k) => k.startsWith(HINWEIS_PRAEFIX)).sort()) {
+		const de = katalog.de[key];
+		const en = katalog.en[key];
+		if (typeof de !== 'string' || !de.trim() || typeof en !== 'string' || !en.trim()) continue;
+		const ende = TRENNER + norm(de);
+		if (!t.endsWith(ende)) continue;
+		const einheit = t.slice(0, -ende.length);
+		if (!new RegExp(`^${EINHEIT}$`, 'u').test(einheit)) continue;
+		return { i18n_key: key, text_en: einheit + TRENNER + en, muster: null, luecke: false };
+	}
+	return null;
+}
+
+function gruenOhneEinheitEn(t: string, katalog: Katalog): EnErgebnis | null {
+	for (const key of GRUEN_SCHLUESSEL) {
+		const de = katalog.de[key];
+		const en = katalog.en[key];
+		if (typeof de !== 'string' || typeof en !== 'string' || !de.endsWith(OHNE_EINHEIT) || !en.endsWith(OHNE_EINHEIT)) continue;
+		const deMuster = '· ' + norm(de.slice(0, -OHNE_EINHEIT.length));
+		const enMuster = '· ' + norm(en.slice(0, -OHNE_EINHEIT.length));
+		const quelle = deMuster
+			.split(PLATZHALTER)
+			.filter((_, i) => i % 2 === 0)
+			.map((s) => s.replace(REGEX_ZEICHEN, '\\$&'))
+			.join(`(${ZAHL_WERT})`);
+		if (new RegExp('^' + quelle + '$', 'u').test(t)) return { i18n_key: key, text_en: enMuster, muster: deMuster, luecke: false };
+	}
+	return null;
+}
+
+export function metrikZeileEn(abschnitt: string, textDe: string, katalog: Katalog, allgemein: EnErgebnis): EnErgebnis {
+	if (abschnitt !== 'metriken') return allgemein;
+	const t = norm(textDe);
+	const r = hinweisZeileEn(t, katalog) ?? gruenOhneEinheitEn(t, katalog);
+	if (!r || (!allgemein.luecke && allgemein.text_en === r.text_en)) return allgemein;
+	return r;
+}
+
+/**
  * #3251 (Fix-Loop 1, F001): Im Mockup ist „▾ 1 Abweichung“ EIN Textknoten, live (VorlageKarte.svelte) sind
  * Auswahlpfeil „▾ “ und Stand („1 Abweichung“, Katalog wetter.vorlage.abweichungen.*) eigene Textblöcke. Der
  * Abschnitt vorlage-abweichung führt darum den Stand ohne Pfeil; der Pfeil ist live bereits als „zusätzlich“
@@ -637,7 +688,8 @@ export type Rohgruppe = { ctx: string; reiter: string; zustand: string; segment:
 
 /**
  * Roh-Gruppen (aus dem Browser) → Listeneinträge, ohne Browser (reine Funktion, #2968 F002 testbar):
- * EN je Element über `chipEn` (Chip-Rolle), sonst `ermittleEn` mit Sonderfall `listenzeileEn` (#3007).
+ * EN je Element über `chipEn` (Chip-Rolle), sonst `ermittleEn` mit Sonderfällen `listenzeileEn` (#3007)
+ * und `metrikZeileEn` (#3241).
  */
 export function baueElemente(gruppen: Rohgruppe[], katalog: Katalog): ListenEintrag[] {
 	const elemente: ListenEintrag[] = [];
@@ -669,7 +721,7 @@ export function baueElemente(gruppen: Rohgruppe[], katalog: Katalog): ListenEint
 					[g.ctx, g.reiter, g.zustand, g.segment ?? '-', abschnitt].join('.') +
 					'.' +
 					createHash('sha256').update(identitaet + '|' + nr).digest('hex').slice(0, 10);
-				const en = r.rolle === BEISPIEL ? beispielEn() : abweichungsZahlAlsMuster(abschnitt, chipEn(r.rolle, r.text, katalog) ?? legendeEn(r.rolle, r.text, katalog) ?? listenzeileEn(g.reiter, abschnitt, r.text, katalog, ermittleEn(r.text, katalog)), katalog);
+				const en = r.rolle === BEISPIEL ? beispielEn() : abweichungsZahlAlsMuster(abschnitt, chipEn(r.rolle, r.text, katalog) ?? legendeEn(r.rolle, r.text, katalog) ?? metrikZeileEn(abschnitt, r.text, katalog, listenzeileEn(g.reiter, abschnitt, r.text, katalog, ermittleEn(r.text, katalog))), katalog);
 				// Muster: aus dem Katalog (Platzhalter) oder, ohne Katalogtreffer, Zahlen als {zahl}.
 				// Ein exakter Katalogtreffer ist fester Text (z. B. „3-Tages-Ausblick“), kein Muster.
 				const zahlMuster = !en.i18n_key && /\d/.test(r.text) ? r.text.replace(ZAHL, '{zahl}') : null;

@@ -149,7 +149,10 @@ const ALT_ANZAHL = ALT_ANZAHL_3251 + 184 - 180 + 174;
 const ALT_ANZAHL_3419 = ALT_ANZAHL - 24 + 46 + 2 - 8;
 // #3441 (Test-Alarm): im Abschnitt test-menue tragen die 16 Zeilen „Test-Alarm“ und ihr Untertitel (alle Kontexte
 // und Zustände) jetzt i18n_key, text_en und luecke false. Keine ID neu oder entfallen, Anzahl gleich, sonst byte-gleich.
-const ALT_SHA = 'a227cb935f6563ac7990563d2de39e0ddbd83f7d47f4bd126925b7fe9a0d75c1';
+// #3241 (Metrik-Zeile EN, 28.11.; vorher a227cb93…0d75c1): im Abschnitt metriken tragen 12 Zeilen („mm · Summe“,
+// „m · Minimum“, „°C · Tageshöchst · Tagestief“, „· grün: bis 6“) jetzt wetter.hinweis.* bzw. wetter.gruen.bis mit
+// text_en; keine ID neu oder entfallen, Anzahl gleich, sonst byte-gleich (Diff je ID geprüft).
+const ALT_SHA = 'cc2a199914234e62eee9e2e4a347a116edac67aae669bec0e1648ac8748571fa';
 const MOCKUP_HASH = 'sha256:946e69c0f185fc66133b3b8c820d87b61ef3a3f52834f621c1c76505c7f81a0b';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {

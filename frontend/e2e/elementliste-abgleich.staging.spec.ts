@@ -504,7 +504,7 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 						for (const [i, e] of alleNichtPruefbar(liste, weg.grund)) ergebnisse.set(i, e);
 						continue;
 					}
-					for (const [i, e] of bewerteAbschnitt(liste, befund, plan.sprache, abschnitt)) ergebnisse.set(i, e);
+					for (const [i, e] of bewerteAbschnitt(liste, befund, plan.sprache, abschnitt, namenDeEn)) ergebnisse.set(i, e);
 				}
 				// Gegenrichtung: nur Zustand normal, ohne Segment, Desktop-Viewport (Config); erklärt wird gegen die
 				// ganze Liste (kopf/reiterleiste stehen unter Reiter wetter), unabhängig vom Scope.
@@ -532,7 +532,7 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 					} else if (lauf.art === 'nicht_pruefbar') {
 						for (const [i, e] of alleNichtPruefbar(liste, lauf.grund)) ergebnisse.set(i, e);
 					} else {
-						for (const [i, e] of bewerteAbschnitt(liste, lauf.befund, plan.sprache, abschnitt)) ergebnisse.set(i, e);
+						for (const [i, e] of bewerteAbschnitt(liste, lauf.befund, plan.sprache, abschnitt, namenDeEn)) ergebnisse.set(i, e);
 					}
 				}
 			}

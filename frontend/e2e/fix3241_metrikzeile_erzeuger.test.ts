@@ -94,3 +94,53 @@ describe('#3241 Test 4 / AC-4: erzeugte Liste', () => {
 		for (const e of m) assert.equal(e.text_en, 'km/h · mean wind');
 	});
 });
+
+// Fix-Loop 1 (F001): Reproduzierbarkeit. Der Erzeuger-Zusammenbau (baueElemente, ohne Browser) muss aus den
+// Roh-Texten der eingecheckten Liste exakt deren Einträge wieder ergeben. Die Roh-Gruppen werden aus der Liste
+// selbst rekonstruiert (ctx/reiter/zustand/segment, Abschnitt, Rolle, text_de in Listenreihenfolge); bei
+// zusammengefassten Werte-Varianten steht in der Liste die erste Variante, aus der auch der Erzeuger EN und
+// Muster bildet. Eine geänderte EN-Zuordnung (z. B. ohne die „allgemeines Ergebnis bleibt“-Regel in
+// metrikZeileEn) verschiebt Einträge und macht diesen Test rot, auch wenn die Datei nicht neu erzeugt wurde.
+describe('#3241 Fix-Loop 1 / AC-4: eingecheckte Liste ist aus dem Erzeuger reproduzierbar', () => {
+	type Voll = Eintrag & { id: string; ctx: string; reiter: string; zustand: string; segment: string | null; rolle: string };
+	const elemente = LISTE.elemente as Voll[];
+	const gruppen: E.Rohgruppe[] = [];
+	const index = new Map<string, E.Rohgruppe>();
+	for (const e of elemente) {
+		const k = [e.ctx, e.reiter, e.zustand, e.segment ?? '-'].join('|');
+		let g = index.get(k);
+		if (!g) {
+			g = { ctx: e.ctx, reiter: e.reiter, zustand: e.zustand, segment: e.segment, roh: [] };
+			index.set(k, g);
+			gruppen.push(g);
+		}
+		g.roh.push({ abschnitt: e.abschnitt, rolle: e.rolle, text: e.text_de });
+	}
+	const neu = E.baueElemente(gruppen, katalog);
+
+	test('gleiche Anzahl und gleiche IDs', () => {
+		assert.equal(neu.length, elemente.length);
+		assert.deepEqual(
+			neu.map((e) => e.id),
+			elemente.map((e) => e.id)
+		);
+	});
+	test('je ID gleiche text_de, text_en, i18n_key, muster, luecke, sprachneutral, Alternativen', () => {
+		const alt = new Map(elemente.map((e) => [e.id, e as unknown as Record<string, unknown>]));
+		const FELDER = ['text_de', 'text_en', 'i18n_key', 'muster', 'luecke', 'sprachneutral', 'text_en_alternativen', 'rolle', 'abschnitt', 'ordnung'];
+		const abweichungen: string[] = [];
+		for (const n of neu as unknown as Record<string, unknown>[]) {
+			const a = alt.get(n.id as string);
+			if (!a) {
+				abweichungen.push(`${n.id}: fehlt in der eingecheckten Liste`);
+				continue;
+			}
+			for (const f of FELDER) {
+				if (JSON.stringify(n[f] ?? null) !== JSON.stringify(a[f] ?? null)) {
+					abweichungen.push(`${n.id} ${f}: erzeugt ${JSON.stringify(n[f] ?? null)}, eingecheckt ${JSON.stringify(a[f] ?? null)}`);
+				}
+			}
+		}
+		assert.deepEqual(abweichungen.slice(0, 20), [], `${abweichungen.length} Abweichungen`);
+	});
+});
