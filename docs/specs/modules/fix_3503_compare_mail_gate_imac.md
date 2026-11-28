@@ -52,7 +52,7 @@ Schicht: reines Tooling (Hooks unter `.claude/hooks/`), kein Frontend, keine Go-
 |------|-------------|-------------|
 | `.claude/hooks/renderer_mail_gate.py` | MODIFY | Whitelist `quelle: imap`, `continue` statt Abbruch, Modus `record-compare-lokal`, Gate-Logik, Block-Meldung (~90 LoC) |
 | `.claude/hooks/email_spec_validator.py` | MODIFY | Log-Feld `quelle` (`imap`/`eml`) (~8 LoC) |
-| `tests/tdd/test_compare_mail_gate_nachweis.py` | CREATE | neue Tests mit echten Wegwerf-Git-Repos (~110 LoC) |
+| `tests/tdd/test_issue_3503_compare_nachweis.py` | CREATE | neue Tests mit echten Wegwerf-Git-Repos (~110 LoC) |
 | `tests/tdd/test_issue_811_renderer_gate.py`, `tests/tdd/test_renderer_gate_compare_dispatch.py` (ggf. weitere) | MODIFY | Fixture-Logs bekommen `quelle: imap` (~15 LoC) |
 | `docs/reference/gates_und_ratschen.md` | MODIFY | Abschnitt Renderer-Commit-Gate: neuer Nachweis, Restrisiko (~15 LoC) |
 
@@ -103,7 +103,7 @@ Schicht: reines Tooling (Hooks unter `.claude/hooks/`), kein Frontend, keine Go-
 
 ## Test Plan
 
-- `tests/tdd/test_compare_mail_gate_nachweis.py` (Kern-Schicht, ohne Netz): echte Wegwerf-Git-Repos (Vorbild `tests/tdd/test_issue_811_renderer_gate.py`), Gate und Recorder per Subprozess mit eigener Workflow-Variable, Validator `--eml` per Subprozess mit isoliertem Log-Ordner (AC-1 bis AC-8). Der IMAP-Zweig von AC-1 wird über `_write_validation_log(..., quelle="imap")` bzw. den Aufruf im IMAP-Zweig von `main()` belegt, ohne Netz.
+- `tests/tdd/test_issue_3503_compare_nachweis.py` (Kern-Schicht, ohne Netz): echte Wegwerf-Git-Repos (Vorbild `tests/tdd/test_issue_811_renderer_gate.py`), Gate und Recorder per Subprozess mit eigener Workflow-Variable, Validator `--eml` per Subprozess mit isoliertem Log-Ordner (AC-1 bis AC-8). Der IMAP-Zweig von AC-1 wird über `_write_validation_log(..., quelle="imap")` bzw. den Aufruf im IMAP-Zweig von `main()` belegt, ohne Netz.
 - AC-9: `tests/tdd/test_issue_811_renderer_gate.py`, `tests/tdd/test_renderer_gate_compare_dispatch.py` und die weiteren Testdateien mit Fixture-Logs laufen grün.
 - RED-Nachweis: vor der Änderung fehlt `quelle`, das Gate lässt ein `eml`-Log durch (AC-2 rot), `record-compare-lokal` existiert nicht (AC-5/6/8 rot).
 - Kein Mock-Theater: kein `patch()`/`Mock()`; Renderer und Validator laufen echt.
