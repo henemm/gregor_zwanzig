@@ -467,8 +467,17 @@ def _mit_ampel(zeilen: list[dict], *, ampel: dict) -> list[dict]:
 
 
 def build_cv2_metrics(*, ampel: dict) -> list[dict]:
-    """Uebersichts-Zeilen (``CV2_ZEILEN``) mit an ``ampel`` gebundener Farbe."""
-    return _mit_ampel(CV2_ZEILEN, ampel=ampel)
+    """Uebersichts-Zeilen (``CV2_ZEILEN``) mit an ``ampel`` gebundener Farbe.
+    Issue #2799 S7a1: Zeilen ohne eigene "sev" erhalten die generische Stufe,
+    wenn ``faerbt_an("orte_uebersicht", …)`` (zur Renderzeit gelesen)."""
+    from app.ampel import faerbt_an
+    zeilen = [
+        {**z, "sev": _make_hour_sev(z["metric_id"])}
+        if "sev" not in z and "sev_loc" not in z
+        and faerbt_an("orte_uebersicht", z.get("metric_id")) else z
+        for z in CV2_ZEILEN
+    ]
+    return _mit_ampel(zeilen, ampel=ampel)
 
 
 def build_hour_metrics(*, ampel: dict) -> list[dict]:

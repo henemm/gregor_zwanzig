@@ -306,6 +306,24 @@ def hat_ampel(metric_id: Optional[str]) -> bool:
     return metric_id in AMPEL_LESER
 
 
+# Issue #2799 S7a1 (Spec feat_2799_s7_ampel_weitere, Nachtrag S7a1): je Stelle
+# die Metriken, die trotz ``AMPEL_LESER`` bewusst NICHT gefaerbt werden
+# (Bestand vor S7). Gefaerbt ist je Stelle ``AMPEL_LESER`` minus Ausnahme.
+AMPEL_BESTANDSAUSNAHMEN: dict[str, frozenset] = {
+    "stundentabelle": frozenset({"wind_chill", "uv_index", "fresh_snow"}),
+    "orte_uebersicht": frozenset({"wind_chill", "fresh_snow"}),
+    "pille": frozenset(),
+    "sms": frozenset(),
+}
+
+
+def faerbt_an(stelle: str, metric_id: Optional[str]) -> bool:
+    """Faerbt die Stelle diese Metrik? ``hat_ampel`` minus Bestandsausnahme;
+    liest ``AMPEL_LESER`` beim Aufruf (Aktivierung nur ueber die Konstante).
+    Unbekannte Stelle -> ``KeyError``."""
+    return hat_ampel(metric_id) and metric_id not in AMPEL_BESTANDSAUSNAHMEN[stelle]
+
+
 def _pruefe_aufgeloest(ampel: Any) -> None:
     """EINE Pruefung fuer alle Ampel-Leser (Schwellen UND Gewitterfarbe):
     ``None``, ``{}``, ``{"metrics": {}}`` oder ein unaufgeloestes Abo-Ampel-

@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Iterable, Optional
 
-from app.ampel import ampel_schaerfe, ampel_stufe, gelb_oder_schlechter
+from app.ampel import ampel_schaerfe, ampel_stufe, faerbt_an, gelb_oder_schlechter
 from utils.ascii_fold import fold_ascii
 
 from output.tokens.dto import (
@@ -174,11 +174,15 @@ _POSITION_SORTABLE_CATEGORIES = {"forecast", "wintersport"}
 # Hervorhebungsschwellen (``DEFAULTS``) und ``MetricSpec.threshold`` wirken
 # nicht mehr. Hervorgehoben wird die erste Stunde, in der die Metrik nach der
 # Abo-Ampel gelb oder schlechter ist (beidseitig); Gewitter ab „leicht".
-#: Kuerzel -> Metrik der Profil-Ampel (nur Groessen mit Ampel-Leser).
-AMPEL_METRIK_JE_KUERZEL: dict[str, str] = {
-    "R": "precipitation", "PR": "rain_probability", "W": "wind", "G": "gust",
-    "UV": "uv_index",
-}
+def ampel_metrik_je_kuerzel(symbol: str) -> Optional[str]:
+    """Kuerzel -> Metrik der Profil-Ampel (Issue #2799 S7a1): Umkehrung der
+    Katalog-Zuordnung ``SMS_SYMBOL_BY_METRIC``, nur wenn
+    ``faerbt_an("sms", …)`` (liest ``AMPEL_LESER`` beim Aufruf); sonst ``None``."""
+    from app.metric_catalog import SMS_SYMBOL_BY_METRIC
+    metrik = next((m for m, s in SMS_SYMBOL_BY_METRIC.items() if s == symbol), None)
+    return metrik if faerbt_an("sms", metrik) else None
+
+
 #: Gewitter ist ordinal: „leicht" (Render-Wert 1) ist gelb oder schlechter (P2).
 _GEWITTER_AB_LEICHT = 1.0
 #: Issue #2792 S1c-4b (Spec §5 Punkt 5): Luftfeuchte hat keinen Ampel-Leser;
@@ -236,7 +240,7 @@ def _mk_metric(symbol: str, samples: tuple, spec: Optional[MetricSpec],
         # Issue #2792 S1c-4b: Hervorhebung nach der Abo-Ampel (gelb oder
         # schlechter, beidseitig) statt `DEFAULTS`/`spec.threshold` (E1);
         # Gewitter ab „leicht"; Groessen ohne Ampel-Leser zeigen ihre Spitze.
-        metrik = AMPEL_METRIK_JE_KUERZEL.get(symbol)
+        metrik = ampel_metrik_je_kuerzel(symbol)
         ampel_stufe_fn = (
             (lambda v, _m=metrik: ampel_stufe(ampel, _m, v)) if metrik else None
         )

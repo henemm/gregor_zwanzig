@@ -134,7 +134,7 @@
       "VERARBEITUNG_AUSSEN": 7
     },
     "src/output/renderers/email/html.py": {
-      "ID_SAMMLUNG": 4,
+      "ID_SAMMLUNG": 3,
       "ID_VERZWEIGUNG": 2,
       "SCHWELLE": 2,
       "VERARBEITUNG_AUSSEN": 1
@@ -164,7 +164,7 @@
       "ID_VERZWEIGUNG": 5
     },
     "src/output/tokens/builder.py": {
-      "ID_SAMMLUNG": 2
+      "ID_SAMMLUNG": 1
     },
     "src/output/tokens/metrics.py": {
       "SCHWELLE": 2
@@ -219,5 +219,5 @@
       "VERARBEITUNG_AUSSEN": 1
     }
   },
-  "hoechststand": 410
+  "hoechststand": 408
 }

@@ -136,7 +136,7 @@ def _meta():
                         grid_res_km=1.0, interp="point_grid")
 
 
-def _segment(**extra):
+def _segment(stunden=None, **extra):
     from app.models import (
         GPXPoint, NormalizedTimeseries, SegmentWeatherData, SegmentWeatherSummary,
         ThunderLevel, TripSegment,
@@ -149,7 +149,8 @@ def _segment(**extra):
         start_time=_utc(DAY, 8), end_time=_utc(DAY, 12),
         duration_hours=4.0, distance_km=12.0, ascent_m=900.0, descent_m=100.0,
     )
-    daten = [_punkt(DAY, h, **extra) for h in range(24)]
+    stunden = stunden or {}
+    daten = [_punkt(DAY, h, **{**extra, **stunden.get(h, {})}) for h in range(24)]
     return SegmentWeatherData(
         segment=seg, timeseries=NormalizedTimeseries(meta=_meta(), data=daten),
         aggregated=SegmentWeatherSummary(
@@ -161,11 +162,12 @@ def _segment(**extra):
     )
 
 
-def _nacht(**extra):
+def _nacht(stunden=None, **extra):
     from app.models import NormalizedTimeseries
 
-    pts = [_punkt(DAY, h, **extra) for h in range(12, 24)]
-    pts += [_punkt(DAY + 1, h, **extra) for h in range(0, 7)]
+    stunden = stunden or {}
+    pts = [_punkt(DAY, h, **{**extra, **stunden.get(h, {})}) for h in range(12, 24)]
+    pts += [_punkt(DAY + 1, h, **{**extra, **stunden.get(h, {})}) for h in range(0, 7)]
     return NormalizedTimeseries(meta=_meta(), data=pts)
 
 
@@ -189,8 +191,9 @@ def _trip_daten(vorlage: str = "allgemein") -> dict:
     )
 
 
-def _trip_senden(monkeypatch, daten: dict, **wetter) -> dict[str, str]:
-    """Ein Abend-Briefing ueber ``NotificationService``; je Kanal der Text."""
+def _trip_senden(monkeypatch, daten: dict, *, stunden=None, **wetter) -> dict[str, str]:
+    """Ein Abend-Briefing ueber ``NotificationService``; je Kanal der Text.
+    ``stunden``: {Ortsstunde: Werte} ueberschreibt ``wetter`` je Stunde."""
     from app.loader import load_trip
     from services.notification_service import NotificationService, TripReportRequest
     from tests.helpers.transport_mitschrift import aufzeichner_installieren
@@ -205,8 +208,8 @@ def _trip_senden(monkeypatch, daten: dict, **wetter) -> dict[str, str]:
         assert trip is not None, "Vorbedingung: Trip-JSON laedt"
         rc = trip.report_config
         anfrage = TripReportRequest(
-            trip=trip, report_type="evening", segment_weather=[_segment(**wetter)],
-            trip_tz=TZ, night_weather=_nacht(**wetter), stage_name="E1",
+            trip=trip, report_type="evening", segment_weather=[_segment(stunden, **wetter)],
+            trip_tz=TZ, night_weather=_nacht(stunden, **wetter), stage_name="E1",
             stage_stats={"distance_km": 12.0, "ascent_m": 900.0, "descent_m": 100.0,
                          "max_elevation_m": 1400},
             report_config=rc, display_config=trip.display_config,
@@ -229,7 +232,7 @@ def _trip_senden(monkeypatch, daten: dict, **wetter) -> dict[str, str]:
 # Orte: echte Renderer
 # ---------------------------------------------------------------------------
 
-def _orte_ergebnis():
+def _orte_ergebnis(**ort_extra):
     from app.user import ComparisonResult, LocationResult, SavedLocation
 
     orte = []
@@ -241,7 +244,7 @@ def _orte_ergebnis():
             location=ort, temp_max=15.0, temp_min=15.0, wind_max=35.0, gust_max=55.0,
             wind_chill_min=-3.0, wind_chill_max=13.0, sunny_hours=0.5, cloud_avg=70,
             cloud_low_avg=60, snow_depth_cm=25, snow_new_cm=6, hourly_data=stunden,
-            official_alerts=[],
+            official_alerts=[], **ort_extra,
         ))
     return ComparisonResult(locations=orte, time_window=(9, 16), target_date=date(YEAR, MONTH, DAY),
                             created_at=datetime(YEAR, MONTH, DAY, 4, 0))
@@ -617,3 +620,98 @@ def test_ratsche_stundentabelle_toenung_folgt_faerbt_an(monkeypatch):
     getoent = _getoente_stundenspalten(monkeypatch)
     soll = {m for m in FOLGE if faerbt_an("stundentabelle", m)}
     assert getoent == soll == HEUTE_GETOENT_STUNDENTABELLE, (getoent, soll)
+
+
+# ---------------------------------------------------------------------------
+# (d) Fix-Loop 1 (Adversary F001-F004): Zusicherungen dort pruefen, wo sie wirken
+# ---------------------------------------------------------------------------
+
+def test_naht_pille_taupunkt_faerbt_nach_schaerfstem_wert_zeigt_minimum(monkeypatch):
+    """F001: die Taupunkt-Pille ZEIGT das Tagesminimum, FAERBT aber nach dem
+    schaerfsten Tageswert (Spec Nachtrag S7a1, ``ampel_schaerfe``). Fixture:
+    5 °C in allen Stunden, nur 10 Uhr 19 °C -> allgemein oben 16/18/21 ->
+    orange; das Minimum 5 °C allein waere gruen."""
+    _aktiviert(monkeypatch)
+    aus = _trip_senden(monkeypatch, _trip_daten("allgemein"), dewpoint_c=5.0,
+                       stunden={10: {"dewpoint_c": 19.0}})
+    text, bg = _pille(aus["html"], "Taupunkt")
+    assert "5.0" in text and "19" not in text, (
+        f"Vorbedingung: die Pille zeigt das Minimum 5.0 °C, ist '{text}'")
+    assert bg == PILLE_BG["ampel_orange"], (
+        f"Kanal E-Mail (Pille '{text}'): Taupunkt-Spitze 19 °C um 10 Uhr ist orange "
+        f"(allgemein oben 18), die Pille muss nach dem schaerfsten Tageswert faerben, "
+        f"nicht nach dem angezeigten Minimum 5 °C (gruen); ist {bg}")
+
+
+def test_stundentabelle_altschluessel_vis_ist_sicht_und_getoent():
+    """F002: der Alt-Spaltenschluessel ``"vis"`` (#1927) fuehrt in der
+    Roh-Modus-Rueckfall-Toenung zur Sicht -- wie ``"visibility"`` -- und wird
+    getoent (Sicht steht in ``AMPEL_LESER`` und ist keine Bestandsausnahme).
+    ``"vis"`` kennt der Katalog nicht (``get_metric_by_col_key`` -> KeyError),
+    die Zuordnung haengt allein am Alias."""
+    from app.metric_catalog import get_metric_by_col_key
+    from output.renderers.email.html import _stundentabelle_metrik
+
+    with pytest.raises(KeyError):
+        get_metric_by_col_key("vis")
+    assert _stundentabelle_metrik("vis") == "visibility", (
+        f"Alt-Schluessel 'vis' muss zur Sicht fuehren, ist {_stundentabelle_metrik('vis')!r}")
+    assert _stundentabelle_metrik("vis") == _stundentabelle_metrik("visibility")
+    assert _stundentabelle_metrik("gibtsnicht") is None
+
+
+def test_ratsche_faerbt_an_unbekannte_stelle_keyerror():
+    """F003: eine unbekannte Stelle ist ein Programmierfehler und scheitert
+    laut (Docstring ``faerbt_an``), statt still "faerbt" zu melden. Gilt fuer
+    eine Metrik mit Ampel-Leser (fuer Metriken ohne Leser entscheidet
+    ``hat_ampel`` vorher: ``False``)."""
+    from app.ampel import faerbt_an
+
+    for metrik in ("wind", "visibility"):
+        with pytest.raises(KeyError):
+            faerbt_an("gibtsnicht", metrik)
+
+
+def _orte_html_mit_gewitter() -> str:
+    """Orte-Vergleichsmail (HTML) mit Gewitter-Zeile; Gewitter MITTEL je Ort."""
+    from app.models import ThunderLevel
+    from output.renderers.comparison import render_compare_email
+
+    with freeze_time(JETZT_UTC):
+        html, _plain = render_compare_email(
+            _orte_ergebnis(thunder_level_max=ThunderLevel.MED),
+            enabled_metrics=ORTE_ZEILEN + ["thunder_max", "wind_direction_avg"],
+            hourly_metrics=None, hourly_enabled=True, preset_name="S7a1-Vergleich",
+            preset=_orte_preset(),
+        )
+    return html
+
+
+def test_naht_orte_uebersicht_eigene_sev_wird_nicht_ueberschrieben(monkeypatch):
+    """F004: Zeilen mit eigener "sev"/"sev_loc" behalten sie auch, wenn ihre
+    Metrik in ``AMPEL_LESER`` steht. Beobachtbar ist das an der Gewitter-Zeile:
+    die eigene ``_sev_thunder`` faerbt "mittel" orange, die generische
+    ``severity_for("thunder", …)`` liefert ``None`` (keine Toenung). Zusaetzlich
+    muessen ALLE Zeilen mit eigener sev unter Aktivierung byte-gleich zum Stand
+    ohne Aktivierung bleiben."""
+    from output.renderers.email.compare_html import CV2_ZEILEN
+
+    vorher = _orte_uebersicht(_orte_html_mit_gewitter())
+    gewitter = [v for k, v in vorher.items() if k.startswith("Gewitter")]
+    assert gewitter == [[ZELLE_BG["orange"]] * 2], (
+        f"Vorbedingung: Gewitter mittel ist ohne Aktivierung orange: {gewitter} / {sorted(vorher)}")
+
+    eigene = {z["metric_id"] for z in CV2_ZEILEN if "sev" in z or "sev_loc" in z}
+    assert {"thunder", "wind_direction"} <= eigene, sorted(eigene)
+    _aktiviert(monkeypatch, S7A2_METRIKEN | eigene)
+    nachher = _orte_uebersicht(_orte_html_mit_gewitter())
+    gewitter_n = [v for k, v in nachher.items() if k.startswith("Gewitter")]
+    assert gewitter_n == gewitter, (
+        f"Kanal E-Mail Orte-Übersicht: Gewitter-Zeile hat eigene sev und darf durch die "
+        f"generische Stufe nicht ueberschrieben werden; vorher {gewitter}, nach "
+        f"Aufnahme in AMPEL_LESER {gewitter_n}")
+    s7_koepfe = ("Bewölkung", "Tiefe Wolken", "Taupunkt", "Sonnenstunden")
+    unveraendert = {k: v for k, v in vorher.items() if not k.startswith(s7_koepfe)}
+    assert {k: nachher.get(k) for k in unveraendert} == unveraendert, (
+        "Kanal E-Mail Orte-Übersicht: Zeilen mit eigener sev aendern sich durch die "
+        "Aktivierung (generische Stufe ueberschreibt eigene)")

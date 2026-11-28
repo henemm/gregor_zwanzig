@@ -298,6 +298,9 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     # Issue #2792 S1c-1: AMPEL_LESER = Metriken, die vor dem Umschalten eine
     # Ampelfarbe tragen (Katalog-Kennungen aus _METRICS).
     ("src/app/ampel.py", "AMPEL_LESER", "element"),
+    # Issue #2799 S7a1: benannte Bestandsausnahmen je Faerbe-Stelle.
+    ("src/app/ampel.py", "AMPEL_BESTANDSAUSNAHMEN['stundentabelle']", "element"),
+    ("src/app/ampel.py", "AMPEL_BESTANDSAUSNAHMEN['orte_uebersicht']", "element"),
     ("src/app/loader.py", "report_config.daily_summary_metrics", "element"),
     # #1728 S1/S3: je Regel-Zeile eine Fundstelle. Bis S3 trugen die vier
     # Tagesrichtungs-Zeilen ([2]..[5]) neben den Kennungen ein Auswertungswort
@@ -377,9 +380,9 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     (_R + "email/helpers.py", "_PILL_CLASS2", "element"),
     # Issue #2792 S1c-4b (E1): ``_id_to_sms_symbol`` diente nur dem
     # ``sms_threshold``-Nachschlag in ``format_trend_tokens`` und ist mit ihm
-    # entfallen; die Hervorhebung liest jetzt die Ampel ueber
-    # ``AMPEL_METRIK_JE_KUERZEL`` (Kuerzel -> Ampel-Metrik) im Token-Builder.
-    ("src/output/tokens/builder.py", "AMPEL_METRIK_JE_KUERZEL", "wert"),
+    # entfallen. Issue #2799 S7a1: ``AMPEL_METRIK_JE_KUERZEL`` ist kein
+    # Literal mehr, sondern ``ampel_metrik_je_kuerzel()`` (Umkehrung von
+    # ``SMS_SYMBOL_BY_METRIC`` ueber ``faerbt_an("sms", …)``) -- ausgetragen.
     # Nachtrag VS: Invers-Min-Kuerzel (VS/TF) -> Ampel-Metrik.
     ("src/output/tokens/builder.py", "INVERS_MIN_AMPEL_METRIK", "wert"),
     # Issue #2793 S2b: Ampel-Seite (Tageshoch/Tagestief) je Temperatur-Kennung
@@ -388,7 +391,9 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     (_R + "email/helpers.py", "_AGGREGATION_PILL_METRICS", "schluessel"),
     (_R + "email/helpers.py", "_DAY_WINDOW_PILL_IDS", "element"),
     (_R + "email/html.py", "_COL_KEY_TO_METRIC_ID", "wert"),
-    (_R + "email/html.py", "_FALLBACK_COL_KEY_TO_METRIC_ID", "wert"),
+    # Issue #2799 S7a1: ``_FALLBACK_COL_KEY_TO_METRIC_ID`` entfiel -- die
+    # Rueckfall-Toenung leitet aus Katalog-``col_key`` und
+    # ``faerbt_an("stundentabelle", …)`` ab (``_stundentabelle_metrik``).
     # Issue #1927 Wiedereroeffnung (v1.1, Spec fix_1927_risk_dot_kombi_regel.md):
     # drei neue Fundstellen. ``_PAIR_WATCH_ESCALATIONS`` ist eine 3-Tupel-Liste
     # von Metrik-Paaren; jedes Paar-Tupel qualifiziert einzeln als Sammlung
