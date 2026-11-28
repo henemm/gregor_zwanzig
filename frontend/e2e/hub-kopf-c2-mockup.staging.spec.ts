@@ -2,7 +2,8 @@
 // Spec: docs/specs/modules/feat_2913_c2_seitenkopf.md — AC-1 bis AC-6, AC-8 bis AC-11 (Browser-Anteil).
 // Soll: docs/context/einstellungen_neu/seiten/mockup-hub-fassung4.html.
 // Gebaut nach Fassung 3. Fassung 4 (ADR-0124 Nr. 10) nennt in der Meta-Zeile der Orte keine „Vergleichstabelle“ mehr;
-// App und diese Spec folgen mit dem Bau zu #3122.
+// #3438 (Spec fix_3438_wetter_ganzseite.md AC-3, AC-6): Meta ohne „Vergleichstabelle“, Region-Stift an der
+// Oberzeile (Eyebrow), keine eigene Regionszeile unter dem Titel.
 //
 // Nur in /e2e-verify gegen Staging, nie gegen Produktion, nicht in der CI-Positivliste.
 // Config (legt der Developer an, Phase 6 — Vorlage playwright.2913-metrikliste.staging.config.ts,
@@ -50,7 +51,8 @@ const SOLL = {
 	eyebrow: { route: { de: 'Trip · Mallorca', en: 'Trip · Mallorca' }, vergleich: { de: 'Orte · Münsterland', en: 'Locations · Münsterland' } },
 	meta: {
 		route: { de: /^.+ · 4 Etappen · \d+,\d km · ↑[\d.]+ m$/, en: /^.+ · 4 stages · \d+\.\d km · ↑[\d,]+ m$/ },
-		vergleich: { de: /^3 Orte · Vergleichstabelle · Morgen-Briefing 07:00$/, en: /^3 locations · Comparison table · Morning briefing 07:00$/ }
+		// #3438 AC-6: Meta-Zeile der Orte nach Mockup Fassung 4, ohne „Vergleichstabelle“.
+		vergleich: { de: /^3 Orte · Morgen-Briefing 07:00$/, en: /^3 locations · Morning briefing 07:00$/ }
 	},
 	knopf: { de: 'Test schicken ▾', en: 'Send test ▾' },
 	kebab: { de: 'Weitere Aktionen', en: 'More actions' },
@@ -132,6 +134,20 @@ for (const kind of HUB_KINDS) {
 				// AC-3/AC-4/AC-5: Kopf
 				await expect(sichtbar(page, 'hub-kopf-eyebrow'), 'AC-3/AC-4: Eyebrow').toHaveText(SOLL.eyebrow[kind][lang]);
 				await expect(sichtbar(page, 'hub-kopf-meta'), 'AC-3/AC-4: Meta-Zeile').toHaveText(SOLL.meta[kind][lang]);
+				// #3438 AC-3: Region-Stift an der Oberzeile (gleiche Zeile wie der Eyebrow, über dem Titel),
+				// keine eigene Regionszeile unter dem Titel.
+				{
+					const region = kind === 'route' ? 'Mallorca' : 'Münsterland';
+					const stift = sichtbar(page, `${HUB_SEL[kind].kopf}-region-edit-toggle`);
+					await expect(stift, '#3438 AC-3: Region-Stift sichtbar').toBeVisible();
+					expect((await stift.getAttribute('aria-label')) ?? '', '#3438 AC-3: Region-Stift mit aria-label').not.toBe('');
+					const sb = (await stift.boundingBox())!;
+					const eb = (await sichtbar(page, 'hub-kopf-eyebrow').boundingBox())!;
+					const tb = (await page.locator('h1:visible').first().boundingBox())!;
+					expect(Math.abs(sb.y + sb.height / 2 - (eb.y + eb.height / 2)), '#3438 AC-3: Region-Stift nicht in der Zeile des Eyebrows').toBeLessThanOrEqual(12);
+					expect(sb.y + sb.height / 2, '#3438 AC-3: Region-Stift steht nicht über dem Titel').toBeLessThan(tb.y);
+					await expect(page.locator(`.hub-kopf-titel :text-is("${region}"):visible`), '#3438 AC-3: eigene Regionszeile unter dem Titel').toHaveCount(0);
+				}
 				const status = sichtbar(page, HUB_KOPF_SEL.status);
 				await expect(status.locator('[data-testid="trip-detail-status-badge"]'), 'AC-5: Status-Pill in der Titelzeile').toBeVisible();
 

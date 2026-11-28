@@ -249,12 +249,13 @@ describe('#2837 S1 AC-6 — Trip: Status steht in der Titelzeile, die Region dar
 		assert.equal(mitTestid(w, 'trip-detail-status-supplement').length, 0, 'Zusatz „Tag x von y" steht noch neben der Pill');
 		assert.equal(alle(w, (n) => klassen(n).includes('status-line')).length, 0, 'es gibt noch eine eigene Statuszeile (.status-line)');
 	});
-	test('Reihenfolge: Überschrift → Status (Titelzeile) → Region-Zeile', () => {
+	// #3438 (Spec fix_3438_wetter_ganzseite.md AC-3): die Region-Zeile entfällt, der Region-Stift sitzt an der Oberzeile.
+	test('Reihenfolge: Region-Stift (Oberzeile) → Überschrift → Status (Titelzeile)', () => {
 		const w = seite('route');
 		const titel = ueberschrift(w);
 		const badge = einzig(w, 'trip-detail-status-badge');
 		const region = einzig(w, 'trip-region-edit-toggle');
-		assert.ok(titel.nr < badge.nr && badge.nr < region.nr, `Reihenfolge h1=${titel.nr}, Status=${badge.nr}, Region=${region.nr}`);
+		assert.ok(region.nr < titel.nr && titel.nr < badge.nr, `Reihenfolge Region=${region.nr}, h1=${titel.nr}, Status=${badge.nr}`);
 	});
 });
 

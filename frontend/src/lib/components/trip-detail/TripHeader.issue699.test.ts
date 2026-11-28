@@ -12,7 +12,7 @@
 //   Trips / KHW 403                    ← obere Breadcrumb (+page.svelte, nicht hier)
 //   10.–12. OKTOBER 2026                ← Eyebrow: nur Datumsbereich
 //   KHW · Karnischer Höhenweg 403  ✎    ← H1 (trip-detail-h1)
-//   Karnische Alpen ✎                   ← Region-Zeile
+//   Karnische Alpen ✎                   ← Region-Zeile (seit #3438 entfallen: Stift an der Oberzeile „Trip · Region ✎“)
 //
 // Früher Quelltext-Grep; jetzt VERHALTEN: die echte Komponente wird serverseitig
 // gerendert (svelte/server, Hooks frontend/test-svelte-ssr-hooks.mjs) und das
@@ -146,8 +146,8 @@ describe('#699 AC-3-follow-up / #2913 c2: Meta-Zeile zeigt Datum, Etappen, Strec
 	});
 });
 
-describe('#699 / #2913 c2 AC-3: Eyebrow „Trip · Region", Region bleibt in eigener (bearbeitbarer) Zeile', () => {
-	// Rest der #2284-S2-Aussage: die Region-Zeile mit Stift bleibt (AC-9, Name/Region inline bearbeitbar).
+describe('#699 / #2913 c2 AC-3 / #3438: Eyebrow „Trip · Region" mit Region-Stift, keine eigene Regionszeile', () => {
+	// Name/Region bleiben inline bearbeitbar (c2 AC-9); seit #3438 sitzt der Region-Stift an der Oberzeile.
 	test('Eyebrow (Text vor der Überschrift) ist „Trip · Region"', async () => {
 		assert.equal(vorH1(await html(trip())), 'Trip · Karnische Alpen');
 	});
@@ -161,15 +161,17 @@ describe('#699 / #2913 c2 AC-3: Eyebrow „Trip · Region", Region bleibt in eig
 	// Titelzeile (vor der Region). Anker ist deshalb nicht mehr die Statuszeile, sondern der
 	// Region-Stift; die Reihenfolge „Überschrift → Status → Region" prüft die Seiten-Ebene
 	// (shared/hub-kopf/__tests__/hub_kopf_seiten_paritaet.test.ts, „Reihenfolge …").
-	test('Region steht in eigener Zeile unter dem Namen (nach </h1>, bis zum Region-Stift)', async () => {
+	// #3438 (Spec fix_3438_wetter_ganzseite.md AC-3): die eigene Regionszeile unter dem Namen entfällt;
+	// der Region-Stift sitzt an der Oberzeile (vor </h1>), die Region steht nur noch im Eyebrow.
+	test('#3438: keine eigene Regionszeile — Region-Stift vor der Überschrift, Region nur im Eyebrow', async () => {
 		const b = await html(trip());
-		const nachH1 = b.split('</h1>')[1] ?? '';
-		const bisStift = nachH1.split('data-testid="trip-region-edit-toggle"')[0].replace(/<[^>]*$/, '');
-		assert.ok(nachH1.includes('data-testid="trip-region-edit-toggle"'), 'Region-Stift fehlt unter dem Namen');
-		assert.ok(text(bisStift).includes('Karnische Alpen'), `Region fehlt zwischen Name und Region-Stift: „${text(bisStift)}"`);
+		const [vorH1Roh, nachH1 = ''] = b.split('</h1>');
+		assert.ok(vorH1Roh.includes('data-testid="trip-region-edit-toggle"'), 'Region-Stift steht nicht an der Oberzeile (vor der Überschrift)');
+		assert.ok(!nachH1.includes('data-testid="trip-region-edit-toggle"'), 'Region-Stift steht noch unter dem Namen');
+		assert.ok(!text(nachH1).includes('Karnische Alpen'), `Region steht noch unter dem Namen: „${text(nachH1)}"`);
 		assert.ok(!b.includes('class="status-line'), 'die eigene Statuszeile (.status-line) steht noch im Kopf');
-		// #2913 c2: Eyebrow und Region-Zeile — sonst nirgends (z. B. nicht in der Meta-Zeile).
-		assert.equal(text(b).split('Karnische Alpen').length - 1, 2, 'Region steht nicht genau in Eyebrow und Region-Zeile');
+		// Nur im Eyebrow — sonst nirgends (nicht in einer Regionszeile, nicht in der Meta-Zeile).
+		assert.equal(text(b).split('Karnische Alpen').length - 1, 1, 'Region steht nicht genau einmal (im Eyebrow)');
 	});
 
 	test('Trip ohne Region: Eyebrow nur „Trip", kein verwaistes „·"', async () => {

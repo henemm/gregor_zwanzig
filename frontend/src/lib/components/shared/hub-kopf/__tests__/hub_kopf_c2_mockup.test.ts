@@ -3,7 +3,8 @@
 // Soll: docs/context/einstellungen_neu/seiten/mockup-hub-fassung4.html Z. 265–282 (Leiste),
 // 347–362 (CTX/PILL), 394–401 (renderHead/Reiter), 488–499 (Picker), 506–510 (Vorlage-Karte).
 // Gebaut nach Fassung 3. Fassung 4 (ADR-0124 Nr. 10) nennt in der Meta-Zeile der Orte keine „Vergleichstabelle“ mehr;
-// App und dieser Test folgen mit dem Bau zu #3122.
+// #3438 (Spec fix_3438_wetter_ganzseite.md AC-6): Meta-Zeile der Orte „N Orte · Morgen-Briefing HH:MM“, der
+// Katalogschlüssel aktionen.kopf.vergleichstabelle entfällt in DE und EN.
 //
 // Geprüft wird dort, wo es WIRKT: die echten Detailseiten /trips/[id] und /compare/[id]
 // (serverseitig gerendert über die Prüfstände f9Pruefstand.ts / f10Pruefstand.ts, feste Uhr,
@@ -19,7 +20,7 @@
 //                             (Datumsbereich = formatDateRange(trip); N aus listen.anzahl.etappen;
 //                              km 1 Nachkommastelle locale-formatiert DE „31,5“, EN „31.5“;
 //                              m gerundet mit Tausendertrennung DE „1.737“, EN „1,737“).
-//                       Orte  „<N Orte> · Vergleichstabelle · Morgen-Briefing HH:MM“
+//                       Orte  „<N Orte> · Morgen-Briefing HH:MM“ (#3438: ohne „Vergleichstabelle“)
 //                             (N aus listen.anzahl.orte = location_ids.length; Briefing: morning_enabled
 //                              ⇒ Morgen-Briefing morning_time, sonst evening_enabled ⇒ Abend-Briefing
 //                              evening_time, sonst Teil entfällt).
@@ -48,7 +49,7 @@
 //   aktionen.kopf.eltern_orte     „Orte“                   / „Locations“
 //   aktionen.kopf.eyebrow_trip    „Trip · {region}“        / „Trip · {region}“
 //   aktionen.kopf.eyebrow_orte    „Orte · {region}“        / „Locations · {region}“
-//   aktionen.kopf.vergleichstabelle „Vergleichstabelle“    / „Comparison table“
+//   (aktionen.kopf.vergleichstabelle entfällt mit #3438)
 //   aktionen.kopf.morgen_briefing „Morgen-Briefing {zeit}“ / „Morning briefing {zeit}“
 //   aktionen.kopf.abend_briefing  „Abend-Briefing {zeit}“  / „Evening briefing {zeit}“
 //   aktionen.kopf.aktivieren      „Aktivieren“             / „Activate“
@@ -174,15 +175,15 @@ for (const art of ARTEN) {
 				assert.ok(eb.nr < h1(w).nr, 'Eyebrow steht nicht über dem Titel');
 			});
 
-			test('AC-3/AC-4: Meta-Zeile nach Mockup, genau einmal, nach der Überschrift', () => {
+			test('AC-3/AC-4 (#3438 AC-6): Meta-Zeile nach Mockup Fassung 4, genau einmal, nach der Überschrift', () => {
 				const w = seite(art, lang);
 				const meta = einzig(w, 'hub-kopf-meta');
 				const soll =
 					art === 'route'
 						? tripMetaSoll(lang, tripMallorca())
 						: lang === 'de'
-							? '3 Orte · Vergleichstabelle · Morgen-Briefing 07:00'
-							: '3 locations · Comparison table · Morning briefing 07:00';
+							? '3 Orte · Morgen-Briefing 07:00'
+							: '3 locations · Morning briefing 07:00';
 				assert.equal(reinerText(meta, 'Meta'), soll);
 				assert.ok(meta.nr > h1(w).nr, 'Meta-Zeile steht nicht unter dem Titel');
 			});
@@ -197,13 +198,13 @@ describe('c2 Meta Zahlformat und Briefing-Wahl', () => {
 		assert.match(de, / · 4 Etappen · \d+,\d km · ↑[\d.]+ m$/);
 		assert.match(en, / · 4 stages · \d+\.\d km · ↑[\d,]+ m$/);
 	});
-	test('AC-4: nur Abend-Briefing konfiguriert ⇒ „Abend-Briefing 18:00“', () => {
+	test('AC-4 (#3438 AC-6): nur Abend-Briefing konfiguriert ⇒ „3 Orte · Abend-Briefing 18:00“', () => {
 		const w = seite('vergleich', 'de', C.vergleichAktiv({ morning_enabled: false }));
-		assert.equal(reinerText(einzig(w, 'hub-kopf-meta'), 'Meta'), '3 Orte · Vergleichstabelle · Abend-Briefing 18:00');
+		assert.equal(reinerText(einzig(w, 'hub-kopf-meta'), 'Meta'), '3 Orte · Abend-Briefing 18:00');
 	});
-	test('AC-4: Orte-Zähler folgt location_ids (2 Orte)', () => {
+	test('AC-4 (#3438 AC-6): Orte-Zähler folgt location_ids (2 Orte), danach direkt das Briefing', () => {
 		const w = seite('vergleich', 'de', C.vergleichAktiv({ location_ids: ['l-hx', 'l-ka'] }));
-		assert.match(reinerText(einzig(w, 'hub-kopf-meta'), 'Meta'), /^2 Orte · Vergleichstabelle · /);
+		assert.match(reinerText(einzig(w, 'hub-kopf-meta'), 'Meta'), /^2 Orte · (Morgen|Abend)-Briefing /);
 	});
 	test('AC-3: Etappen-Zähler in der Meta folgt den Daten (5 Etappen)', () => {
 		const fuenf = tripMallorca({ stages: [...VIER_ETAPPEN, { ...VIER_ETAPPEN[3], id: 'm5', date: '2026-07-05' }] });
@@ -426,7 +427,6 @@ const NEUE: Array<[string, string, string, string]> = [
 	['aktionen', 'aktionen.kopf.eltern_orte', 'Orte', 'Locations'],
 	['aktionen', 'aktionen.kopf.eyebrow_trip', 'Trip · {region}', 'Trip · {region}'],
 	['aktionen', 'aktionen.kopf.eyebrow_orte', 'Orte · {region}', 'Locations · {region}'],
-	['aktionen', 'aktionen.kopf.vergleichstabelle', 'Vergleichstabelle', 'Comparison table'],
 	['aktionen', 'aktionen.kopf.morgen_briefing', 'Morgen-Briefing {zeit}', 'Morning briefing {zeit}'],
 	['aktionen', 'aktionen.kopf.abend_briefing', 'Abend-Briefing {zeit}', 'Evening briefing {zeit}'],
 	['aktionen', 'aktionen.kopf.aktivieren', 'Aktivieren', 'Activate'],
@@ -439,4 +439,10 @@ describe('c2 Katalog: neue Schlüssel DE und EN vollständig', () => {
 			assert.equal(katalog('en', bereich)[schluessel], en, `EN ${schluessel}`);
 		});
 	}
+	// #3438 AC-6: „Vergleichstabelle“ steht nicht mehr in der Meta-Zeile; der Schlüssel hat keinen Verwender mehr.
+	test('#3438 AC-6: aktionen.kopf.vergleichstabelle existiert in DE und EN nicht mehr', () => {
+		for (const lang of SPRACHEN) {
+			assert.ok(!('aktionen.kopf.vergleichstabelle' in katalog(lang, 'aktionen')), `${lang}: Katalogschlüssel aktionen.kopf.vergleichstabelle steht noch im Katalog`);
+		}
+	});
 });

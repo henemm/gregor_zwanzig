@@ -1,0 +1,336 @@
+# TDD RED — fix-3438-wetter-ganzseite (Issue #3438), 2026-11-28T08:33:12Z
+# Lauf: cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test <datei>
+
+════ src/lib/components/shared/hub-kopf/__tests__/hub_kopf_region_oberzeile_3438.test.ts
+    not ok 1 - AC-3: Region-Stift sitzt in der Oberzeile (Eyebrow), nicht unter dem Titel
+      error: 'Region-Stift steht unter dem Titel (Stift nr 35, h1 nr 25) statt an der Oberzeile'
+    not ok 2 - AC-3: keine eigene Regionszeile unter dem Titel — Region „Mallorca“ steht nur im Eyebrow
+      error: |-
+        unter dem Titel steht noch eine eigene Regionszeile
+        +   '<span> „Mallorca“'
+    ok 3 - AC-5: Stift am Titel bleibt (Name-Stift neben der Überschrift)
+not ok 1 - \#3438 Kopf route de
+  error: '2 subtests failed'
+    not ok 1 - AC-3: Region-Stift sitzt in der Oberzeile (Eyebrow), nicht unter dem Titel
+      error: 'Region-Stift steht unter dem Titel (Stift nr 35, h1 nr 25) statt an der Oberzeile'
+    not ok 2 - AC-3: keine eigene Regionszeile unter dem Titel — Region „Mallorca“ steht nur im Eyebrow
+      error: |-
+        unter dem Titel steht noch eine eigene Regionszeile
+        +   '<span> „Mallorca“'
+    ok 3 - AC-5: Stift am Titel bleibt (Name-Stift neben der Überschrift)
+not ok 2 - \#3438 Kopf route en
+  error: '2 subtests failed'
+    not ok 1 - AC-3: Region-Stift sitzt in der Oberzeile (Eyebrow), nicht unter dem Titel
+      error: 'Region-Stift steht unter dem Titel (Stift nr 31, h1 nr 20) statt an der Oberzeile'
+    not ok 2 - AC-3: keine eigene Regionszeile unter dem Titel — Region „Tirol“ steht nur im Eyebrow
+      error: |-
+        unter dem Titel steht noch eine eigene Regionszeile
+        +   '<span> „Tirol“'
+    ok 3 - AC-5: Stift am Titel bleibt (Name-Stift neben der Überschrift)
+not ok 3 - \#3438 Kopf vergleich de
+  error: '2 subtests failed'
+    not ok 1 - AC-3: Region-Stift sitzt in der Oberzeile (Eyebrow), nicht unter dem Titel
+      error: 'Region-Stift steht unter dem Titel (Stift nr 31, h1 nr 20) statt an der Oberzeile'
+    not ok 2 - AC-3: keine eigene Regionszeile unter dem Titel — Region „Tirol“ steht nur im Eyebrow
+      error: |-
+        unter dem Titel steht noch eine eigene Regionszeile
+        +   '<span> „Tirol“'
+    ok 3 - AC-5: Stift am Titel bleibt (Name-Stift neben der Überschrift)
+not ok 4 - \#3438 Kopf vergleich en
+  error: '2 subtests failed'
+    not ok 1 - de: Oberzeile „Orte“ allein, Region-Stift trotzdem an der Oberzeile
+      error: 'Region-Stift steht unter dem Titel (Stift nr 31, h1 nr 20) statt an der Oberzeile'
+    not ok 2 - en: Oberzeile „Locations“ allein, Region-Stift trotzdem an der Oberzeile
+      error: 'Region-Stift steht unter dem Titel (Stift nr 31, h1 nr 20) statt an der Oberzeile'
+not ok 5 - \#3438 AC-7: Orts-Vergleich ohne Region
+  error: '2 subtests failed'
+# tests 14
+# pass 4
+# fail 10
+
+════ src/lib/components/shared/hub-kopf/__tests__/hub_kopf_c2_mockup.test.ts
+    ok 1 - AC-3/AC-4: Eyebrow „Trip · Mallorca“ genau einmal, vor der Überschrift
+    ok 2 - AC-3/AC-4 (\#3438 AC-6): Meta-Zeile nach Mockup Fassung 4, genau einmal, nach der Überschrift
+ok 1 - c2 Kopf route de
+    ok 1 - AC-3/AC-4: Eyebrow „Trip · Mallorca“ genau einmal, vor der Überschrift
+    ok 2 - AC-3/AC-4 (\#3438 AC-6): Meta-Zeile nach Mockup Fassung 4, genau einmal, nach der Überschrift
+ok 2 - c2 Kopf route en
+    ok 1 - AC-3/AC-4: Eyebrow „Orte · Tirol“ genau einmal, vor der Überschrift
+    not ok 2 - AC-3/AC-4 (\#3438 AC-6): Meta-Zeile nach Mockup Fassung 4, genau einmal, nach der Überschrift
+      error: |-
+        + '3 Orte · Vergleichstabelle · Morgen-Briefing 07:00'
+        - '3 Orte · Morgen-Briefing 07:00'
+not ok 3 - c2 Kopf vergleich de
+  error: '1 subtest failed'
+    ok 1 - AC-3/AC-4: Eyebrow „Locations · Tirol“ genau einmal, vor der Überschrift
+    not ok 2 - AC-3/AC-4 (\#3438 AC-6): Meta-Zeile nach Mockup Fassung 4, genau einmal, nach der Überschrift
+      error: |-
+        + '3 locations · Comparison table · Morning briefing 07:00'
+        - '3 locations · Morning briefing 07:00'
+not ok 4 - c2 Kopf vergleich en
+  error: '1 subtest failed'
+    ok 1 - AC-3: Trip-Meta DE mit Dezimalkomma und Tausenderpunkt, EN mit Punkt und Komma
+    not ok 2 - AC-4 (\#3438 AC-6): nur Abend-Briefing konfiguriert ⇒ „3 Orte · Abend-Briefing 18:00“
+      error: |-
+        + '3 Orte · Vergleichstabelle · Abend-Briefing 18:00'
+        - '3 Orte · Abend-Briefing 18:00'
+    not ok 3 - AC-4 (\#3438 AC-6): Orte-Zähler folgt location_ids (2 Orte), danach direkt das Briefing
+      error: |-
+    ok 4 - AC-3: Etappen-Zähler in der Meta folgt den Daten (5 Etappen)
+not ok 5 - c2 Meta Zahlformat und Briefing-Wahl
+  error: '2 subtests failed'
+    ok 1 - AC-1/AC-2: Brotkrumen „Trips / <Name>“ — Elternteil Link auf /trips, Name kein Link
+    ok 2 - AC-1/AC-2: Knopf „Test schicken ▾“ (testid subscription-hub-send) in der Leiste
+    ok 3 - AC-1/AC-2: Kebab „Weitere Aktionen“ in der Leiste
+    ok 4 - AC-4: Reihenfolge der Leiste: Kebab vor ‚Test schicken ▾‘
+ok 6 - c2 Leiste route de
+    ok 1 - AC-1/AC-2: Brotkrumen „Trips / <Name>“ — Elternteil Link auf /trips, Name kein Link
+    ok 2 - AC-1/AC-2: Knopf „Send test ▾“ (testid subscription-hub-send) in der Leiste
+    ok 3 - AC-1/AC-2: Kebab „More actions“ in der Leiste
+    ok 4 - AC-4: Reihenfolge der Leiste: Kebab vor ‚Send test ▾‘
+ok 7 - c2 Leiste route en
+    ok 1 - AC-1/AC-2: Brotkrumen „Orte / <Name>“ — Elternteil Link auf /compare, Name kein Link
+    ok 2 - AC-1/AC-2: Knopf „Test schicken ▾“ (testid subscription-hub-send) in der Leiste
+    ok 3 - AC-1/AC-2: Kebab „Weitere Aktionen“ in der Leiste
+    ok 4 - AC-4: Reihenfolge der Leiste: Kebab vor ‚Test schicken ▾‘
+ok 8 - c2 Leiste vergleich de
+    ok 1 - AC-1/AC-2: Brotkrumen „Locations / <Name>“ — Elternteil Link auf /compare, Name kein Link
+    ok 2 - AC-1/AC-2: Knopf „Send test ▾“ (testid subscription-hub-send) in der Leiste
+    ok 3 - AC-1/AC-2: Kebab „More actions“ in der Leiste
+    ok 4 - AC-4: Reihenfolge der Leiste: Kebab vor ‚Send test ▾‘
+ok 9 - c2 Leiste vergleich en
+ok 10 - AC-4 Gegenprobe: vertauschte Leiste (Knopf vor Kebab) wird als falsche Reihenfolge erkannt
+ok 11 - AC-5 (route, de): Zustand draft ⇒ Pill „Entwurf“ + Aktivieren
+ok 12 - AC-5 (route, de): Zustand active ⇒ Pill „Aktiv“, kein Aktivieren
+ok 13 - AC-5 (route, de): Zustand paused ⇒ Pill „Pausiert“, kein Aktivieren
+ok 14 - AC-5 (route, de): Zustand archived ⇒ Pill „Archiviert“, kein Aktivieren
+ok 15 - AC-5 (route, de): Zustand finished ⇒ Pill „Fertig“, kein Aktivieren
+ok 16 - \#3443 AC-1 (route, de): „Aktivieren“ im Entwurf ist ein Knopf ohne href, Variante accent, Größe sm
+ok 17 - AC-5 (route, en): Zustand draft ⇒ Pill „Draft“ + Aktivieren
+ok 18 - AC-5 (route, en): Zustand active ⇒ Pill „Active“, kein Aktivieren
+ok 19 - AC-5 (route, en): Zustand paused ⇒ Pill „Paused“, kein Aktivieren
+ok 20 - AC-5 (route, en): Zustand archived ⇒ Pill „Archived“, kein Aktivieren
+ok 21 - AC-5 (route, en): Zustand finished ⇒ Pill „Finished“, kein Aktivieren
+ok 22 - \#3443 AC-1 (route, en): „Aktivieren“ im Entwurf ist ein Knopf ohne href, Variante accent, Größe sm
+ok 23 - AC-5 (vergleich, de): Zustand draft ⇒ Pill „Entwurf“ + Aktivieren
+ok 24 - AC-5 (vergleich, de): Zustand active ⇒ Pill „Aktiv“, kein Aktivieren
+ok 25 - AC-5 (vergleich, de): Zustand paused ⇒ Pill „Pausiert“, kein Aktivieren
+ok 26 - AC-5 (vergleich, de): Zustand archived ⇒ Pill „Archiviert“, kein Aktivieren
+ok 27 - AC-5 (vergleich, de): Zustand finished ⇒ Pill „Fertig“, kein Aktivieren
+ok 28 - \#3443 AC-1 (vergleich, de): „Aktivieren“ im Entwurf ist ein Knopf ohne href, Variante accent, Größe sm
+ok 29 - AC-5 (vergleich, en): Zustand draft ⇒ Pill „Draft“ + Aktivieren
+ok 30 - AC-5 (vergleich, en): Zustand active ⇒ Pill „Active“, kein Aktivieren
+ok 31 - AC-5 (vergleich, en): Zustand paused ⇒ Pill „Paused“, kein Aktivieren
+ok 32 - AC-5 (vergleich, en): Zustand archived ⇒ Pill „Archived“, kein Aktivieren
+ok 33 - AC-5 (vergleich, en): Zustand finished ⇒ Pill „Finished“, kein Aktivieren
+ok 34 - \#3443 AC-1 (vergleich, en): „Aktivieren“ im Entwurf ist ein Knopf ohne href, Variante accent, Größe sm
+ok 35 - AC-9 (route): Stift für Name und Region nur als Icon mit aria-label, ohne sichtbaren Text
+ok 36 - AC-9 (vergleich): Stift für Name und Region nur als Icon mit aria-label, ohne sichtbaren Text
+    ok 1 - AC-6: Reiter „etappen“ trägt Badge 4
+    ok 2 - AC-6: aktiver Reiter aria-current="page", alle anderen nicht
+ok 37 - c2 Reiterleiste route
+    ok 1 - AC-6: Reiter „orte“ trägt Badge 3
+    ok 2 - AC-6: aktiver Reiter aria-current="page", alle anderen nicht
+ok 38 - c2 Reiterleiste vergleich
+ok 39 - AC-6/AC-7: Etappen-Badge folgt den Daten (5 statt 4)
+    ok 1 - AC-8: Überschrift, Gruppen Vorlagen/Eigene, Aktionen, kein Mail-Kopf-Satz
+    ok 2 - AC-8: Rücksetzen heißt Auf „Alpen-Trekking“ zurücksetzen (Mockup-Anführungszeichen)
+    ok 3 - AC-8: Zustand „unverändert“ bzw. „2 Abweichungen“; ohne Abweichung kein Rücksetzen
+ok 40 - c2 Vorlage-Karte route de
+    ok 1 - AC-8: Überschrift, Gruppen Vorlagen/Eigene, Aktionen, kein Mail-Kopf-Satz
+    ok 2 - AC-8: Rücksetzen heißt Reset to “Alpine trekking” (Mockup-Anführungszeichen)
+    ok 3 - AC-8: Zustand „unverändert“ bzw. „2 Abweichungen“; ohne Abweichung kein Rücksetzen
+ok 41 - c2 Vorlage-Karte route en
+    ok 1 - AC-8: Überschrift, Gruppen Vorlagen/Eigene, Aktionen, kein Mail-Kopf-Satz
+    ok 2 - AC-8: Rücksetzen heißt Auf „Alpen-Trekking“ zurücksetzen (Mockup-Anführungszeichen)
+    ok 3 - AC-8: Zustand „unverändert“ bzw. „2 Abweichungen“; ohne Abweichung kein Rücksetzen
+ok 42 - c2 Vorlage-Karte vergleich de
+    ok 1 - AC-8: Überschrift, Gruppen Vorlagen/Eigene, Aktionen, kein Mail-Kopf-Satz
+    ok 2 - AC-8: Rücksetzen heißt Reset to “Alpine trekking” (Mockup-Anführungszeichen)
+    ok 3 - AC-8: Zustand „unverändert“ bzw. „2 Abweichungen“; ohne Abweichung kein Rücksetzen
+ok 43 - c2 Vorlage-Karte vergleich en
+    ok 1 - AC-10: aktionen.kopf.test_schicken
+    ok 2 - AC-10: aktionen.kopf.eltern_orte
+    ok 3 - AC-10: aktionen.kopf.eyebrow_trip
+    ok 4 - AC-10: aktionen.kopf.eyebrow_orte
+    ok 5 - AC-10: aktionen.kopf.morgen_briefing
+    ok 6 - AC-10: aktionen.kopf.abend_briefing
+    ok 7 - AC-10: aktionen.kopf.aktivieren
+    ok 8 - AC-10: wetter.vorlage.zuruecksetzen
+    not ok 9 - \#3438 AC-6: aktionen.kopf.vergleichstabelle existiert in DE und EN nicht mehr
+      error: 'de: Katalogschlüssel aktionen.kopf.vergleichstabelle steht noch im Katalog'
+not ok 44 - c2 Katalog: neue Schlüssel DE und EN vollständig
+  error: '1 subtest failed'
+# tests 81
+# pass 76
+# fail 5
+
+════ src/lib/components/shared/hub-kopf/__tests__/hub_kopf_seiten_paritaet.test.ts
+    ok 1 - AC-11 (route): genau eine Hub-Kopf-Leiste, genau ein Breadcrumb, genau eine Überschrift; Leiste vor dem Titel
+    ok 2 - Entscheidung 1 (route): der Kopf trägt data-kind="route"
+    ok 3 - AC-1 (route): „Senden" ist genau einmal da, steht IN der Leiste und ist Btn accent (\#2980 AC-16, ADR-0118) — Mutation (a)
+    ok 4 - AC-4 (route): Breadcrumb „Trips / GR20 Nord 2026" — Elternteil Link auf /trips, Kind kein Link
+    ok 5 - AC-4 (route): im Kopf steht nirgends das Wort „Hub"
+    ok 6 - AC-6 (route): Status genau einmal, als Badge in der TITELZEILE (gleiches Elternelement wie h1) — Mutation (c)
+    ok 7 - AC-9 (route): Überschrift mit 38 px am Desktop (titleSize 38, beide Arten gleich)
+    ok 8 - AC-2 (route, neu \#2980 AC-24): kein Zurück-Link in der Leiste; der Elternteil führt zur Liste
+    ok 9 - AC-7 (route): der Kebab steht in der Leiste, genau einmal, Symbol vertikal
+ok 1 - \#2837 S1 Seite route — Hub-Kopf über den geteilten Baustein
+    ok 1 - AC-11 (vergleich): genau eine Hub-Kopf-Leiste, genau ein Breadcrumb, genau eine Überschrift; Leiste vor dem Titel
+    ok 2 - Entscheidung 1 (vergleich): der Kopf trägt data-kind="vergleich"
+    ok 3 - AC-1 (vergleich): „Senden" ist genau einmal da, steht IN der Leiste und ist Btn accent (\#2980 AC-16, ADR-0118) — Mutation (a)
+    ok 4 - AC-4 (vergleich): Breadcrumb „Orte / Skitouren Tirol" — Elternteil Link auf /compare, Kind kein Link
+    ok 5 - AC-4 (vergleich): im Kopf steht nirgends das Wort „Hub"
+    ok 6 - AC-6 (vergleich): Status genau einmal, als Badge in der TITELZEILE (gleiches Elternelement wie h1) — Mutation (c)
+    ok 7 - AC-9 (vergleich): Überschrift mit 38 px am Desktop (titleSize 38, beide Arten gleich)
+    ok 8 - AC-2 (vergleich, neu \#2980 AC-24): kein Zurück-Link in der Leiste; der Elternteil führt zur Liste
+    ok 9 - AC-7 (vergleich): der Kebab steht in der Leiste, genau einmal, Symbol vertikal
+ok 2 - \#2837 S1 Seite vergleich — Hub-Kopf über den geteilten Baustein
+    ok 1 - AC-1/AC-2: Senden sitzt bei beiden an derselben Stelle der Leiste
+    ok 2 - AC-15 (SSR-Anteil): das Leisten-Gerüst ist bei Trip und Vergleich identisch
+ok 3 - \#2837 S1 Parität — beide Seiten bauen die Leiste gleich
+    ok 1 - gleiche Badge-Attribute (ohne testid), kein Inline-Stil
+    ok 2 - die Reiterleisten tragen bei Trip und Vergleich dieselben Klassen (\#2845)
+ok 4 - \#2837 S1 AC-10 — Reiter-Zähler: Trip und Vergleich rendern dasselbe Badge (Mutation b, Seiten-Anteil)
+    ok 1 - Trip-Entwurf: Senden steht in der Leiste und ist disabled
+    ok 2 - Vergleich-Entwurf: kein Senden, „Setup abschließen" (Btn primary) an der Stelle, an der Trip-Senden sitzt
+ok 5 - \#2837 S1 AC-3 — Entwurf: Trip-Senden gesperrt, Vergleich „Setup abschließen" auf dem Senden-Platz
+    ok 1 - shortcode fehlt ⇒ Kind = Trip-Name, kein Link
+ok 6 - \#2837 S1 AC-5 — Trip ohne Kürzel: Breadcrumb zeigt den Namen
+    ok 1 - Status-Pill in der Titelzeile, kein Zusatz trip-detail-status-supplement; keine eigene Statuszeile
+    not ok 2 - Reihenfolge: Region-Stift (Oberzeile) → Überschrift → Status (Titelzeile)
+      error: 'Reihenfolge Region=36, h1=25, Status=32'
+not ok 7 - \#2837 S1 AC-6 — Trip: Status steht in der Titelzeile, die Region darunter (vormals .status-line)
+  error: '1 subtest failed'
+    ok 1 - route: Elternteil de → en aus dem Katalog; kein „Hub"-Text, keine Mobil-Eyebrow; neu \#2980 AC-16/AC-24: kein Zurück-Link, Senden accent
+    ok 2 - vergleich: Elternteil de → en aus dem Katalog; kein „Hub"-Text, keine Mobil-Eyebrow; neu \#2980 AC-16/AC-24: kein Zurück-Link, Senden accent
+ok 8 - \#2837 S1 AC-13 — Breadcrumb und Kopftexte folgen der Nutzersprache (de/en, ohne Neuladen)
+    ok 1 - route: kein Vorfahre der HubKopf-Wurzel trägt Rahmen/Abstand/Linie (Markup)
+    ok 2 - route: kein Stylesheet der Seite/Hülle gibt den Vorfahren des HubKopf Rahmen/Abstand/Linie
+    ok 3 - vergleich: kein Vorfahre der HubKopf-Wurzel trägt Rahmen/Abstand/Linie (Markup)
+    ok 4 - vergleich: kein Stylesheet der Seite/Hülle gibt den Vorfahren des HubKopf Rahmen/Abstand/Linie
+ok 9 - \#2837 S1 Parität — die Unterkante des Kopfs trägt nur der HubKopf (kein Seiten-Wrapper)
+    ok 1 - AC-1/AC-8/AC-11 (de, active): gleicher Text, gleiche Attribute (Pill, Tone, gefüllt ohne Rahmen \#2980, data-status), kein Inline-Stil
+    ok 2 - AC-1/AC-8/AC-11 (de, paused): gleicher Text, gleiche Attribute (Pill, Tone, gefüllt ohne Rahmen \#2980, data-status), kein Inline-Stil
+    ok 3 - AC-1/AC-8/AC-11 (de, draft): gleicher Text, gleiche Attribute (Pill, Tone, gefüllt ohne Rahmen \#2980, data-status), kein Inline-Stil
+    ok 4 - AC-1/AC-8/AC-11 (en, active): gleicher Text, gleiche Attribute (Pill, Tone, gefüllt ohne Rahmen \#2980, data-status), kein Inline-Stil
+    ok 5 - AC-1/AC-8/AC-11 (en, paused): gleicher Text, gleiche Attribute (Pill, Tone, gefüllt ohne Rahmen \#2980, data-status), kein Inline-Stil
+    ok 6 - AC-1/AC-8/AC-11 (en, draft): gleicher Text, gleiche Attribute (Pill, Tone, gefüllt ohne Rahmen \#2980, data-status), kein Inline-Stil
+    ok 7 - AC-3: Vergleich im Entwurf (de) — Schild „Entwurf", im Kopf nirgends „draft"
+    ok 8 - AC-10 (Wächter): Laufzeit-Hinweis steht weiterhin neben dem Schild in hub-kopf-status
+ok 10 - \#2837 S1b — Trip und Vergleich zeigen im selben Zustand dasselbe Status-Schild
+    ok 1 - \#3196 (de): Trip mit Aktivität trekking — kein Aktivitätsname hinter dem Region-Stift
+    ok 2 - \#3196 (en): Trip mit Aktivität trekking — kein Aktivitätsname hinter dem Region-Stift
+    ok 3 - \#2796 S4a AC-1: Vergleich mit profil „wintersport" — kein Profilname hinter dem Region-Stift
+    ok 4 - AC-7 (Wächter): Trip ohne Aktivität und Vergleich ohne Profil — kein Profil-Zusatz hinter dem Stift
+ok 11 - \#2837 S1b — Profil in der Zeile unter dem Titel bei beiden Arten (AC-6, AC-7)
+    ok 1 - de: Vergleich mit profil „wandern" — kein compare-hub-profil-* im Seitenkopf
+    ok 2 - en: Vergleich mit profil „wandern" — kein compare-hub-profil-* im Seitenkopf
+    ok 3 - Trip-Kopf ohne Aktivitäts-Kacheln, Knopf und Auswahl (\#3196)
+ok 12 - \#2796 S4a — Profil-Auswahl im Kopf: Orts-Vergleich ohne, Trip mit
+# tests 48
+# pass 47
+# fail 1
+
+════ src/lib/components/trip-detail/TripHeader.issue699.test.ts
+    ok 1 - gerenderter Kopf enthält kein „MEINE TRIPS"
+    ok 2 - gerenderter Kopf hat kein trip-detail-breadcrumb und kein <nav>
+ok 1 - \#699 AC-1: keine zweite Breadcrumb im Trip-Kopf
+    ok 1 - hub-kopf-meta zeigt Datumsbereich, Etappen, km und Hm
+    ok 2 - kein altes trip-detail-meta mehr (genau eine Meta-Zeile)
+ok 2 - \#699 AC-3-follow-up / \#2913 c2: Meta-Zeile zeigt Datum, Etappen, Strecke und Höhenmeter
+    ok 1 - Eyebrow (Text vor der Überschrift) ist „Trip · Region"
+    ok 2 - Eyebrow enthält keinen Datumsbereich mehr
+    not ok 3 - \#3438: keine eigene Regionszeile — Region-Stift vor der Überschrift, Region nur im Eyebrow
+      error: 'Region-Stift steht nicht an der Oberzeile (vor der Überschrift)'
+    ok 4 - Trip ohne Region: Eyebrow nur „Trip", kein verwaistes „·"
+    ok 5 - Trip ohne Etappendaten: Eyebrow unverändert „Trip · Region", kein Datum vor der Überschrift
+not ok 3 - \#699 / \#2913 c2 AC-3 / \#3438: Eyebrow „Trip · Region" mit Region-Stift, keine eigene Regionszeile
+  error: '1 subtest failed'
+# tests 9
+# pass 8
+# fail 1
+
+════ src/lib/components/shared/wetter-tab/__tests__/mockup_nicht_im_briefing_3438.test.ts
+    ok 1 - trip: briefingAngebot liefert 11 Chips (Staging-Messung 28.11.)
+    ok 2 - orte: briefingAngebot liefert 15 Chips (Staging-Messung 28.11.)
+ok 1 - \#3438 Vorbedingung: Produkt-Soll für das Prüfkonto
+    not ok 1 - AC-1 (trip): Elementliste zeigt dieselben 11 Chips in Produkt-Reihenfolge
+      error: |-
+        Mockup-Chips trip weichen vom Produkt-Angebot ab
+        -   'Luftfeuchte',
+        -   'Taupunkt',
+        -   'Niederschlagsart',
+        -   'Mittelhohe Wolken',
+        -   'Hohe Wolken',
+        -   'Luftdruck',
+        +   'Taupunkt',
+        +   'Luftfeuchte',
+        +   'Luftdruck'
+    not ok 2 - AC-2 (orte): Elementliste zeigt dieselben 15 Chips in Produkt-Reihenfolge
+      error: |-
+        Mockup-Chips orte weichen vom Produkt-Angebot ab
+        +   'Windrichtung',
+        +   'Sichtweite',
+        +   'UV-Index',
+        +   'Taupunkt',
+        -   'Taupunkt',
+        -   'Windrichtung',
+        -   'Niederschlagsart',
+        -   'Sichtweite',
+        -   'Mittelhohe Wolken',
+        -   'Hohe Wolken',
+        -   'UV-Index',
+        -   'Luftdruck',
+        -   'Schneefallgrenze',
+not ok 2 - \#3438 AC-1/AC-2: Mockup-Chips „Nicht im Briefing“ = Produkt-Angebot (Anzahl und Reihenfolge)
+  error: '2 subtests failed'
+# tests 4
+# pass 2
+# fail 2
+
+════ src/lib/__tests__/elementliste_ganzseite_wetter_3438.test.ts
+    ok 1 - Messaufbau: der Kopf-Knopf \#testBtn trägt den Text „Test schicken ▾“
+    not ok 2 - Fläche des Kopf-Knopfs ist var(--g-accent-deep) (WCAG-AA, Spec c2 AC-16, ADR-0118)
+      error: |-
+        Mockup-Knopf hat Fläche „var(--g-accent)“ aus Regel .btn.accent statt var(--g-accent-deep)
+        + 'var(--g-accent)'
+        - 'var(--g-accent-deep)'
+    not ok 3 - die Abgleich-Ausnahme „Knopf-Fläche“ für „Test schicken ▾“ ist entfallen (keine offene Abweichung)
+      error: |-
+        Ausnahme zur Knopf-Fläche steht noch in elementliste_besitzer.json
+        +   'Bewusste Abweichung der Knopf-Fläche (#2980 AC-16, ADR-0118): Akzent-Knopf mit F'
+not ok 1 - \#3438 AC-8: Knopf „Test schicken ▾“ im Mockup mit Fläche --g-accent-deep
+  error: '2 subtests failed'
+    not ok 1 - kein Besitzer-Eintrag nennt „Vergleichstabelle“ / „Comparison table“ (Rückbau-Vermerk \#3122 samt Eintrag weg)
+      error: |-
+        elementliste_besitzer.json führt noch Einträge zur „Vergleichstabelle“ in der Meta-Zeile
+        +   'orte.wetter.normal.-.kopf.0e2ce0d40d',
+        +   'orte.wetter.laedt.-.kopf.4614f543dc',
+        +   'orte.wetter.fehler.-.kopf.0625c47673',
+        +   'orte.wetter.luecken.-.kopf.0ff6feddaa',
+        +   '{orte} · Vergleichstabelle · Morgen-Briefing {zeit}',
+        +   '{orte} · Comparison table · Morning briefing {zeit}'
+    ok 2 - die Elementliste (Mockup) zeigt in der Meta-Zeile der Orte keine „Vergleichstabelle“
+not ok 2 - \#3438 AC-6: Besitzer-Einträge zu „Vergleichstabelle“ entfallen
+  error: '1 subtest failed'
+    ok 1 - jede Element-ID der Besitzerliste steht in der Elementliste (alle Verweise, nicht nur \#2913)
+    ok 2 - jede Freigabe nennt ein vorhandenes Tripel Kontext/Reiter/Abschnitt
+ok 3 - \#3438 AC-10: Besitzer und Freigaben verweisen nur auf vorhandene Elemente
+# tests 7
+# pass 4
+# fail 3
+
+════ Unbeteiligte Nachbar-Tests:
+src/lib/components/trip-detail/__tests__/trip_hub_sprache.test.ts: # pass 266 # fail 0 
+src/lib/i18n/__tests__/deutsch_unveraendert.test.ts: # pass 5 # fail 0 
+src/lib/components/compare/__tests__/vergleich_hub_sprache.test.ts: # pass 175 # fail 0 
+src/lib/__tests__/elementliste_besitzer_kern.test.ts: # pass 7 # fail 0 
+src/lib/__tests__/elementliste_aktuell.test.ts: # pass 19 # fail 0 
+src/lib/components/shared/wetter-tab/__tests__/nicht_im_briefing_kontextkatalog.test.ts: # pass 9 # fail 0 
+src/lib/components/trip-detail/__tests__/trip_header_status_profil.test.ts: # pass 6 # fail 0 
+src/lib/components/shared/__tests__/subscription_header_ohne_profil_2796.test.ts: # pass 4 # fail 0 
+src/lib/components/shared/__tests__/subscription_header_einmal_gerendert.test.ts: # pass 40 # fail 0 
+src/lib/components/shared/__tests__/subscription_header_kontextneutral.test.ts: # pass 36 # fail 0 
+src/lib/components/shared/hub-kopf/__tests__/hub_kopf_c2_bildabgleich.test.ts: # pass 85 # fail 0 
+src/lib/components/shared/hub-kopf/__tests__/hub_kopf_baustein.test.ts: # pass 29 # fail 0 
