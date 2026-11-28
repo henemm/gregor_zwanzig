@@ -1,0 +1,89 @@
+{
+  "verified_commit": "d48bf5c17c8f538c547eb8b51c2f9e2ef8c7306d",
+  "findings": [
+    {
+      "ac": "Mail-DE",
+      "status": "PASS",
+      "url": "staging_mail_pruefen.py --typ beide",
+      "evidence": "Exit 0. Wegwerf-Nutzer, Trip 'GZM 281121-354d056a' briefing_mail_validator Exit 0 (X-GZ-Lang de), Compare 'GZM 281121-354d056a Vergleich' email_spec_validator Exit 0; Nutzer geloescht.",
+      "workflow": "s9-2801-premium-sms-eigene-liste"
+    },
+    {
+      "ac": "Mail-EN",
+      "status": "PASS",
+      "url": "staging_mail_pruefen.py --typ beide --lang en",
+      "evidence": "Exit 0. Trip 'GZM 281126-7efbabdd' und Compare '... Vergleich' an +en@, Validatoren Exit 0. Vorher 3 Fehllaeufe: Konto en stand auf language=de (Testkonto-Drift, Header X-GZ-Lang de) plus IMAP-Ratenlimit; per scripts/staging_e2e_user_en.py korrigiert, keine Restobjekte.",
+      "workflow": "s9-2801-premium-sms-eigene-liste"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "/trips/new (Zustellung)",
+      "evidence": "playwright.1895.staging.config.ts 7/7 passed: Neuanlage E-Mail/Telegram LOW aria-checked, SMS nach Einschalten MODERATE aria-checked, LOW false.",
+      "workflow": "s9-2801-premium-sms-eigene-liste"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "/trips/<id> + /compare/<id> Zustellung, DE+EN",
+      "evidence": "Eigenes Playwright-Skript: Trip und Orts-Vergleich ohne alert_channel_thresholds ({}), alle vier Kanaele verbunden (Profil-Lesung im Browser): email/telegram LOW 'gering'/'low', sms MODERATE 'mittel'/'moderate', premium_sms HIGH 'hoch'/'high' jeweils aria-checked=true, andere false. 4/4 passed.",
+      "workflow": "s9-2801-premium-sms-eigene-liste"
+    },
+    {
+      "ac": "AC-8",
+      "status": "PASS",
+      "url": "Zustellung oeffnen ohne Geste",
+      "evidence": "Gespeicherte alert_channel_thresholds vor und nach Oeffnen beide {} (kein Schreiben ohne Geste), Trip und Vergleich, DE+EN.",
+      "workflow": "s9-2801-premium-sms-eigene-liste"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "Wetter-Reiter 'Was steht wo' + Zustellung-Legende, DE+EN",
+      "evidence": "Premium-Hinweis 'Die Premium-SMS bekommt denselben Inhalt wie die SMS.' / 'The Premium SMS gets the same content as the SMS.' sichtbar (Trip+Vergleich). Legende exakt Katalogtext DE und EN. 'eigene Auswahl kommt spaeter' nirgends. playwright.2795-s3b1b (kanaele+englisch) 12/12 passed.",
+      "workflow": "s9-2801-premium-sms-eigene-liste"
+    },
+    {
+      "ac": "Cleanup",
+      "status": "PASS",
+      "url": "Staging",
+      "evidence": "Keine GZM-/Test-Objekte bei Konto en und Helferkonto, Sprache Helferkonto de, Playwright-Login widerrufen (Profil 401) und Datei geloescht.",
+      "workflow": "s9-2801-premium-sms-eigene-liste"
+    }
+  ],
+  "verified_at": "2026-11-28T11:27:24.424067+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Mail DE+EN Exit 0, Zustellung-Vorbelegung (gering/gering/mittel/hoch), Legende und Premium-Hinweis DE+EN auf Staging d48bf5c gemessen",
+  "scope": "full-stack",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "s9-2801-premium-sms-eigene-liste": {
+      "verdict": "VERIFIED: Mail DE+EN Exit 0, Zustellung-Vorbelegung (gering/gering/mittel/hoch), Legende und Premium-Hinweis DE+EN auf Staging d48bf5c gemessen",
+      "scope": "full-stack",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-28T11:27:24.424067+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
