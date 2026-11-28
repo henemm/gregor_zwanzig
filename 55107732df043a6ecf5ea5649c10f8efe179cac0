@@ -1,0 +1,89 @@
+{
+  "verified_commit": "55107732df043a6ecf5ea5649c10f8efe179cac0",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/compare/<id> Reiter Wetter",
+      "evidence": "Abnahme-Abgleich wetter/laedt gegen Staging 5510773 mit Pr\u00fcfkonto: DE gefunden 65, EN gefunden 65, 0 ohne Besitzer, Exit 0 \u2014 Wetter-Reiter rendert ohne Hydrations-Gate",
+      "workflow": "fix-3022-zustellung-laedt"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "/compare/<id> Reiter Zustellung",
+      "evidence": "Abnahme-Abgleich zustellung/laedt DE/EN: gefunden 97; alle orte.*-Eintr\u00e4ge gefunden oder mit Besitzer (#2795/#3009); Zustellung-Reiter rendert",
+      "workflow": "fix-3022-zustellung-laedt"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "/compare/<id>",
+      "evidence": "Sperrkopf .hub-kopf-sperre nicht mehr vorhanden: kein Element ausserhalb der Liste (zusaetzlich 0) in beiden Zust\u00e4nden und Sprachen",
+      "workflow": "fix-3022-zustellung-laedt"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "elementliste",
+      "evidence": "62 #3022-Eintr\u00e4ge entfernt, #3022-Besitzerzahl 0; Abgleich orte zustellung/laedt 0 ohne Besitzer",
+      "workflow": "fix-3022-zustellung-laedt"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "/compare/<id>",
+      "evidence": "EN-Lauf identisch zu DE (nicht_pruefbar nur Kontodaten), keine orte-L\u00fccke ohne Besitzer",
+      "workflow": "fix-3022-zustellung-laedt"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "/api/compare-presets",
+      "evidence": "Zwei Konten: Pr\u00fcfkonto 1 Vergleich, Konto en 0, keine ID-\u00dcberschneidung, Konto en auf fremden Vergleich HTTP 404",
+      "workflow": "fix-3022-zustellung-laedt"
+    },
+    {
+      "ac": "VORBEFUND",
+      "status": "PASS",
+      "url": "/trips/<id> Zustellung",
+      "evidence": "10 trip.zustellung.laedt.-.kanaele.* ohne Besitzer bestehen unver\u00e4ndert seit vor #3022, geh\u00f6ren zu #3439 (dort kommentiert), nicht Teil dieses Fixes",
+      "workflow": "fix-3022-zustellung-laedt"
+    }
+  ],
+  "verified_at": "2026-11-28T05:41:32.010436+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Orte-Reiter Wetter und Zustellung rendern auf Staging 5510773 (Abnahme-Abgleich DE/EN), orte-L\u00fccken alle mit Besitzer, Zwei-Konten-Isolation 404",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "fix-3022-zustellung-laedt": {
+      "verdict": "VERIFIED: Orte-Reiter Wetter und Zustellung rendern auf Staging 5510773 (Abnahme-Abgleich DE/EN), orte-L\u00fccken alle mit Besitzer, Zwei-Konten-Isolation 404",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-28T05:41:32.010436+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
