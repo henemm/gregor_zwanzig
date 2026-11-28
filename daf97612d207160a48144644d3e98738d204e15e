@@ -1,0 +1,59 @@
+{
+  "verified_commit": "daf97612d207160a48144644d3e98738d204e15e",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/api/health",
+      "evidence": "Staging auf daf97612; echte Trip- und Vergleichsmail DE und EN ueber Staging zugestellt, briefing_mail_validator und email_spec_validator Exit 0 (keine sichtbare Aenderung, byte-gleich lokal per Golden belegt)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "Naht-Tests (Aufnahme in AMPEL_LESER schaltet Pille, Stundentabelle, Orte-Uebersicht, SMS, Telegram zugleich) in CI test-Check gruen; Vorbau ohne Live-Wirkung",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "Ratsche faerbt_an = AMPEL_LESER minus Bestandsausnahmen in CI gruen",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "Pille Taupunkt nach schaerfstem Wert gefaerbt, Kern-Test gruen; Staging-Mails validiert",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "Orte-Uebersicht Gewitter-sev erhalten, gefuehlte Temperatur/Neuschnee ungefaerbt; Vergleichsmail DE/EN auf Staging Validator Exit 0",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-28T09:43:11.367349+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: S7a1 Vorbau ohne sichtbare Aenderung: Staging auf daf97612, Trip- und Vergleichsmail DE und EN echt zugestellt, Validatoren Exit 0",
+  "scope": "backend",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: S7a1 Vorbau ohne sichtbare Aenderung: Staging auf daf97612, Trip- und Vergleichsmail DE und EN echt zugestellt, Validatoren Exit 0",
+      "scope": "backend",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-28T09:43:11.367349+00:00"
+    }
+  }
+}
