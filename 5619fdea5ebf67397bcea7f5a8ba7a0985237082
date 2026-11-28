@@ -1,0 +1,117 @@
+{
+  "verified_commit": "5619fdea5ebf67397bcea7f5a8ba7a0985237082",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "Reiter Orte (Pr\u00fcfkonto, Seed-Vergleich)",
+      "evidence": "Elementlisten-Abgleich --strict --scope orte DE: Abschnittskopf 'Schon ein einzelner Ort ergibt ein vollst\u00e4ndiges Briefing. \u2026' in den Zust\u00e4nden normal/l\u00e4dt/Fehler/L\u00fccken gefunden",
+      "workflow": "fix-3437-orte-erklaer-gesperrt"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "Reiter Orte EN",
+      "evidence": "Abgleich --sprache en --scope orte: alle 4 Abschnittskopf-Eintr\u00e4ge des Orte-Erkl\u00e4rtexts gefunden",
+      "workflow": "fix-3437-orte-erklaer-gesperrt"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "Trip Reiter Zustellung",
+      "evidence": "E2E s3b2795-zustellung-gesperrt (route) gr\u00fcn; Abgleich: Sperrzellen Telegram/SMS 'gesperrt' gefunden",
+      "workflow": "fix-3437-orte-erklaer-gesperrt"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "Orts-Vergleich Reiter Zustellung",
+      "evidence": "E2E s3b2795-zustellung-gesperrt (vergleich) gr\u00fcn; Abgleich orte.zustellung.luecken Sperrzellen gefunden",
+      "workflow": "fix-3437-orte-erklaer-gesperrt"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "Zustellung L\u00fccken",
+      "evidence": "Sperrzellen nackt 'gesperrt' im Abgleich gefunden (Trip+Orte); Modelltests je Sperrgrund gr\u00fcn",
+      "workflow": "fix-3437-orte-erklaer-gesperrt"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "Zustellung L\u00fccken",
+      "evidence": "'gesperrt: R\u00fcckadresse verfallen' im Abgleich gefunden (Trip+Orte)",
+      "workflow": "fix-3437-orte-erklaer-gesperrt"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "Zustellung L\u00fccken EN",
+      "evidence": "Abgleich --sprache en: Sperrzellen gefunden (locked / locked: reply address expired)",
+      "workflow": "fix-3437-orte-erklaer-gesperrt"
+    },
+    {
+      "ac": "AC-8",
+      "status": "PASS",
+      "url": "Zustellung",
+      "evidence": "E2E gesperrt: Dringlichkeit '\u2013', Schalter gesperrt; Modelltests Sperrverhalten gr\u00fcn",
+      "workflow": "fix-3437-orte-erklaer-gesperrt"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "testSchickenModell unver\u00e4ndert, Tests gr\u00fcn (CI frontend-test)",
+      "workflow": "fix-3437-orte-erklaer-gesperrt"
+    },
+    {
+      "ac": "AC-10",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "CI frontend-test und test gr\u00fcn; OFFEN_3122 und 8 Freigaben entfernt",
+      "workflow": "fix-3437-orte-erklaer-gesperrt"
+    },
+    {
+      "ac": "AC-11",
+      "status": "PASS",
+      "url": "Abgleich --strict DE/EN orte+zustellung",
+      "evidence": "Beide Cluster ohne Abweichung in DE und EN. Restabweichungen (Orte-Liste, Briefing-Zeiten, Stille Stunden, zus\u00e4tzliche Elemente) geh\u00f6ren zu #3439, nicht zu diesem Issue",
+      "workflow": "fix-3437-orte-erklaer-gesperrt"
+    }
+  ],
+  "verified_at": "2026-11-28T08:05:47.559896+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Orte-Erkl\u00e4rtext und Sperrzellen auf Staging DE/EN gemessen (Abgleich --strict je Cluster ohne Abweichung, E2E gesperrt 3/3 gr\u00fcn)",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "fix-3437-orte-erklaer-gesperrt": {
+      "verdict": "VERIFIED: Orte-Erkl\u00e4rtext und Sperrzellen auf Staging DE/EN gemessen (Abgleich --strict je Cluster ohne Abweichung, E2E gesperrt 3/3 gr\u00fcn)",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-28T08:05:47.559896+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
