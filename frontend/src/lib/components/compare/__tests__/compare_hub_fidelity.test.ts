@@ -124,7 +124,7 @@ describe('AC-9: Orte-Tab Section-Rahmen (jsx:197-216, CDM:110)', () => {
 	test('Bereichskopf „Orte" + Sortier-Hint vorhanden', () => {
 		const code = tabs();
 		assert.ok(code.includes('<Bereichskopf'), 'AC-9 FAIL: Bereichskopf im Orte-Reiter fehlt');
-		assert.ok(code.includes('Ein Ort ergibt ein Orts-Briefing.'), 'AC-9 FAIL: Erklärsatz des Orte-Kopfs fehlt');
+		assert.ok(code.includes('Schon ein einzelner Ort ergibt ein vollständiges Briefing.'), 'AC-9 FAIL: Erklärsatz des Orte-Kopfs fehlt');
 		assert.ok(code.includes('ziehen zum Sortieren'), 'AC-9 FAIL: Hint „… ziehen zum Sortieren" fehlt');
 	});
 });

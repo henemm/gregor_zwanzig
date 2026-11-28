@@ -87,18 +87,6 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.cc6ff9b965",
-			"grund": "Zeile „gesperrt“ der Kanalliste (Zustand Lücken) live nicht vorhanden (#3151-Abgleich 20.11.)",
-			"verweis": "#3122"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.bc74105dda",
-			"grund": "Zeile „gesperrt“ der Kanalliste (Zustand Lücken) live nicht vorhanden (#3151-Abgleich 20.11.)",
-			"verweis": "#3122"
-		},
-		{
-			"art": "element",
 			"id": "trip.zustellung.luecken.-.stille-stunden.a9424ed34b",
 			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
 			"verweis": "#2795"
@@ -192,18 +180,6 @@
 			"id": "orte.zustellung.luecken.-.briefing-zeiten.e65fc73f7d",
 			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
 			"verweis": "#2795"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.52b1cdb91b",
-			"grund": "Zeile „gesperrt“ der Kanalliste (Zustand Lücken) live nicht vorhanden (#3151-Abgleich 20.11.)",
-			"verweis": "#3122"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.262a0f67c0",
-			"grund": "Zeile „gesperrt“ der Kanalliste (Zustand Lücken) live nicht vorhanden (#3151-Abgleich 20.11.)",
-			"verweis": "#3122"
 		},
 		{
 			"art": "element",
@@ -344,30 +320,6 @@
 			"abschnitt": "test-menue",
 			"grund": "Menü „Test schicken ▾“ wird seit #3440 bedient; offene Restlücken (EN-Text fehlt, Mockup-Ziele) gehören zum Bau von „Test schicken“ (S5)",
 			"verweis": "#2797"
-		},
-		{
-			"art": "element",
-			"id": "orte.orte.normal.-.abschnittskopf.52b9404608",
-			"grund": "Name „Orte“ (ADR-0124 Nr. 10): neuer Erklärtext im Reiter Orte seit Mockup Fassung 4. Im Katalog steht noch der alte Text (vergleich.hub.kopf.orte_erklaer, „Ein Ort ergibt ein Orts-Briefing …“); Katalogtext DE und EN folgen mit dem Bau zu #3122.",
-			"verweis": "#3122"
-		},
-		{
-			"art": "element",
-			"id": "orte.orte.laedt.-.abschnittskopf.11a0d70022",
-			"grund": "Name „Orte“ (ADR-0124 Nr. 10): neuer Erklärtext im Reiter Orte seit Mockup Fassung 4. Im Katalog steht noch der alte Text (vergleich.hub.kopf.orte_erklaer, „Ein Ort ergibt ein Orts-Briefing …“); Katalogtext DE und EN folgen mit dem Bau zu #3122.",
-			"verweis": "#3122"
-		},
-		{
-			"art": "element",
-			"id": "orte.orte.fehler.-.abschnittskopf.ae19a719ba",
-			"grund": "Name „Orte“ (ADR-0124 Nr. 10): neuer Erklärtext im Reiter Orte seit Mockup Fassung 4. Im Katalog steht noch der alte Text (vergleich.hub.kopf.orte_erklaer, „Ein Ort ergibt ein Orts-Briefing …“); Katalogtext DE und EN folgen mit dem Bau zu #3122.",
-			"verweis": "#3122"
-		},
-		{
-			"art": "element",
-			"id": "orte.orte.luecken.-.abschnittskopf.3a5fd308ea",
-			"grund": "Name „Orte“ (ADR-0124 Nr. 10): neuer Erklärtext im Reiter Orte seit Mockup Fassung 4. Im Katalog steht noch der alte Text (vergleich.hub.kopf.orte_erklaer, „Ein Ort ergibt ein Orts-Briefing …“); Katalogtext DE und EN folgen mit dem Bau zu #3122.",
-			"verweis": "#3122"
 		},
 		{
 			"art": "abschnitt",

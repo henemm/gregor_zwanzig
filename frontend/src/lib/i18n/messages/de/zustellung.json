@@ -50,6 +50,7 @@
 	"zustellung.grund.sms_unbestaetigt": "Nummer noch nicht bestätigt.",
 	"zustellung.grund.sms_tarif": "SMS ab Level Standard",
 	"zustellung.gesperrt": "gesperrt: {grund}",
+	"zustellung.gesperrt_kurz": "gesperrt",
 	"zustellung.konto.verbinden": "Im Konto verbinden →",
 	"zustellung.konto.bestaetigen": "Im Konto bestätigen →",
 	"zustellung.konto.pruefen": "Im Konto prüfen →",

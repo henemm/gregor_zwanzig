@@ -194,9 +194,10 @@ def test_ac12_eintraege_anderer_scheiben_unveraendert(daten):
     # Orte-Ladezustand bekommen den Element-Besitzer ihrer Geschwister aus den übrigen Zuständen (#2795, a11y-Label): #2795 36 → 38.
     # Staging-Abnahme DE+EN (28.11.): im Orte-Ladezustand ebenso „von“/„bis“ der Stillen Stunden (#2795, 38 → 40) und die
     # Kanalzeile E-Mail mit Prüfkonto-Adresse (Kontodaten, #3009 11 → 12), gleich den Geschwister-Zuständen.
+    # #3437 (Spec fix_3437 AC-10): Orte-Erklärtext (4) und gesperrt (4) abgeräumt, 12 → 4, Rest Meta-Zeile Orte.
     soll = {
         "#2967": 0, "#2966": 0, "#2913-d": 0, "#2795": 40, "#2797": 10, "#2968": 0, "#3022": 0,
-        "#3111": 0, "#3194": 0, "#3241": 0, "#3009": 12, "#3151": 2, "#3122": 12, "#3202": 0, "#3203": 0, "#3204": 0,
+        "#3111": 0, "#3194": 0, "#3241": 0, "#3009": 12, "#3151": 2, "#3122": 4, "#3202": 0, "#3203": 0, "#3204": 0,
         "#3205": 0, "#3145": 0, "#3258": 4,
     }
     ist = _verweise(daten)

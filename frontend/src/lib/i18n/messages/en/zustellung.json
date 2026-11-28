@@ -50,6 +50,7 @@
 	"zustellung.grund.sms_unbestaetigt": "Number not confirmed yet.",
 	"zustellung.grund.sms_tarif": "SMS from the Standard level",
 	"zustellung.gesperrt": "locked: {grund}",
+	"zustellung.gesperrt_kurz": "locked",
 	"zustellung.konto.verbinden": "Connect in your account →",
 	"zustellung.konto.bestaetigen": "Confirm in your account →",
 	"zustellung.konto.pruefen": "Check in your account →",

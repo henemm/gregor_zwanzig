@@ -241,7 +241,7 @@ describe('AC-3: Orte-Reiter, Orte-Schritt, Neuer Ort englisch; Nutzlast nur Ort-
 		const s = sichtbar(e);
 		// #3006: Kopf ist der Bereichskopf „Locations“ mit Erklärsatz und „+ Add location“ (statt „Compared locations“).
 		// #3007: kein Reihenfolge-Hinweis mehr; Textknopf „remove“ statt ✕, Ziehgriff mit aria-label „drag to sort“.
-		for (const t of ['Locations', 'One location makes a location briefing.', '+ Add location', 'remove', 'No locations selected yet.', 'Other · 1', 'No other saved locations available.']) hat(s, t);
+		for (const t of ['Locations', 'Even a single location makes a complete briefing.', '+ Add location', 'remove', 'No locations selected yet.', 'Other · 1', 'No other saved locations available.']) hat(s, t);
 		hatNicht(s, 'Order = columns in the briefing');
 		for (const t of ['aria-label="drag to sort"', 'aria-label="Compared locations, order"']) hat(e, t);
 		const reihe = (h: string) => [...h.matchAll(/data-loc-id="([^"]+)"/g)].map((m) => m[1]);

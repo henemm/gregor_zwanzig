@@ -41,7 +41,7 @@ const kopfEintraege = (): Eintrag[] =>
 
 // Stand vor #3006 (IDs dürfen sich nicht ändern). Ausnahme #3122: Mockup Fassung 4 (ADR-0124 Nr. 10, der Bereich
 // heißt „Orte“) hat im Reiter Orte einen neuen Erklärtext; die vier Einträge dazu (je Zustand einer) tragen
-// deshalb neue IDs, siehe OFFEN_3122.
+// deshalb neue IDs (seit #3437 ohne Ausnahme im Katalog).
 const IDS = [
 	'trip.wetter.normal.-.abschnittskopf.6bcb913270', 'trip.wetter.normal.-.abschnittskopf.014cfaa802',
 	'trip.zustellung.normal.-.abschnittskopf.eb2de3f663', 'trip.zustellung.normal.-.abschnittskopf.4472458afb',
@@ -71,16 +71,8 @@ const IDS = [
 	'orte.orte.luecken.-.abschnittskopf.3a5fd308ea', 'orte.orte.luecken.-.abschnittskopf.9cd46dac74'
 ];
 
-// #3122: Der neue Erklärtext des Reiters Orte („Schon ein einzelner Ort ergibt ein vollständiges Briefing. …“)
-// steht noch nicht im Katalog (dort der alte Text, vergleich.hub.kopf.orte_erklaer). Genau diese vier Einträge
-// sind bis zum Bau zu #3122 eine Lücke. Der Test ist beidseitig streng: Kommt der Katalogtext und wird die
-// Elementliste neu erzeugt, wird er rot, dann muss diese Ausnahme entfallen.
-const OFFEN_3122 = [
-	'orte.orte.normal.-.abschnittskopf.52b9404608',
-	'orte.orte.laedt.-.abschnittskopf.11a0d70022',
-	'orte.orte.fehler.-.abschnittskopf.ae19a719ba',
-	'orte.orte.luecken.-.abschnittskopf.3a5fd308ea'
-];
+// #3437 (vormals Ausnahme OFFEN_3122): Der Erklärtext des Reiters Orte steht jetzt im Katalog
+// (vergleich.hub.kopf.orte_erklaer, Mockup Fassung 4); alle Kopf-Einträge sind ohne Ausnahme streng geprüft.
 
 test('AC-19: Kopf-Einträge — IDs unverändert', () => {
 	assert.deepEqual(kopfEintraege().map((e) => e.id).sort(), [...IDS].sort());
@@ -89,11 +81,6 @@ test('AC-19: Kopf-Einträge — IDs unverändert', () => {
 test('AC-19: Kopf-Einträge — keine Lücke, i18n_key/text_de/text_en gesetzt und gleich dem Katalog', () => {
 	const fehler: string[] = [];
 	for (const e of kopfEintraege()) {
-		if (OFFEN_3122.includes(e.id)) {
-			if (!e.luecke || e.i18n_key || e.text_en) fehler.push(`${e.id}: keine Lücke mehr — Ausnahme OFFEN_3122 entfernen`);
-			if (!e.text_de?.startsWith('Schon ein einzelner Ort')) fehler.push(`${e.id}: unerwarteter Text „${e.text_de}“`);
-			continue;
-		}
 		if (e.luecke) fehler.push(`${e.id}: luecke:true`);
 		if (!e.i18n_key) {
 			fehler.push(`${e.id}: i18n_key fehlt`);

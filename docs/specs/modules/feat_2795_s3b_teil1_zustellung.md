@@ -121,7 +121,7 @@ Jeder Abschnitt trägt den DOM-Marker `data-abschnitt` mit den Elementlisten-Nam
 ### 2 Kanal-Tabelle: Status, Sperren, Dringlichkeit
 
 - **Statuszeile je Kanal:** Punkt + Text „bestätigt / verbunden / unbestätigt / nicht verbunden“ + Ziel (E-Mail-Adresse, Chat, Nummer wie heute in `channelContactLabel`). Quelle: Profil + `channelConnectionStatus.ts`.
-- **Ohne Verbindung:** Hinweiszeile in der Kanalzeile mit Grund und Konto-Link „Im Konto {verbinden|bestätigen|prüfen} →“ (Telegram-Chat fehlt, Nummer noch nicht bestätigt, E-Mail-Adresse fehlt, „SMS ab Level Standard“). Der **Briefing-Schalter ist gesperrt** (`disabled`, aus), die **Alarm-Zelle** zeigt „gesperrt: {Grund}“ statt Schalter; Dringlichkeit zeigt „–“.
+- **Ohne Verbindung:** Hinweiszeile in der Kanalzeile mit Grund und Konto-Link „Im Konto {verbinden|bestätigen|prüfen} →“ (Telegram-Chat fehlt, Nummer noch nicht bestätigt, E-Mail-Adresse fehlt, „SMS ab Level Standard“). Der **Briefing-Schalter ist gesperrt** (`disabled`, aus), die **Alarm-Zelle** zeigt „gesperrt: {Grund}“ statt Schalter; Dringlichkeit zeigt „–“. *(Alarm-Zelle abgelöst durch `docs/specs/modules/fix_3437_orte_erklaer_gesperrt.md` (#3437): nur „gesperrt“, wenn der Grund schon in der Hinweiszeile steht.)*
 - **Dringlichkeit:** Segment gering · mittel · hoch (Datenwerte LOW | MODERATE | HIGH in `alert_channel_thresholds`, fehlend = LOW) nur bei eingeschaltetem Alarm der Zeile, sonst „–“. Die Anzeige ist lokalisiert, der Datenwert bleibt unübersetzt (ADR-0104).
 - **Premium-SMS (V5, sicherheitsrelevant):** Statuszeile „inReach · Rückadresse gelernt {Datum} · zuletzt gemeldet {Zeit}“; bei verfallener Rückadresse „Rückadresse verfallen“ + „Schick eine Nachricht vom Gerät, dann ist die Rückadresse wieder gültig.“ und **Alarm- und Briefing-Zelle gesperrt mit Grund** (die verfallene Adresse kann ein fremdes Gerät erreichen, daher kein Versand). Alarm-Sperrgründe aus `premiumSmsAlarmGate.ts` bleiben („Tarif wird geprüft …“, „ab Level Premium“).
 - Zähler n/m zählen nur Kanäle, die **an und verbunden** sind.
@@ -214,7 +214,7 @@ Alle neuen Nutzertexte nur über `frontend/src/lib/i18n/messages/{de,en}/zustell
 
 - **AC-14:** Given die Tabelle, When sie angezeigt wird, Then hat sie die Spalten Kanal, Briefing, Alarme, „Alarm schon ab Dringlichkeit“ und je eine Zeile für E-Mail, Telegram, SMS und Premium-SMS, jede mit Statuspunkt, Statustext (bestätigt / verbunden / unbestätigt / nicht verbunden) und Ziel.
 
-- **AC-15:** Given Telegram ist nicht verbunden, When die Tabelle angezeigt wird, Then ist der Briefing-Schalter der Telegram-Zeile gesperrt, die Alarm-Zelle zeigt „gesperrt: {Grund}“, die Zeile zeigt einen Hinweis mit dem Link „Im Konto verbinden →“, der in das Konto führt, und die Dringlichkeit zeigt „–“.
+- **AC-15:** Given Telegram ist nicht verbunden, When die Tabelle angezeigt wird, Then ist der Briefing-Schalter der Telegram-Zeile gesperrt, die Alarm-Zelle zeigt „gesperrt: {Grund}“, die Zeile zeigt einen Hinweis mit dem Link „Im Konto verbinden →“, der in das Konto führt, und die Dringlichkeit zeigt „–“. *(Alarm-Zelle abgelöst durch `docs/specs/modules/fix_3437_orte_erklaer_gesperrt.md` (#3437): nur „gesperrt“, wenn der Grund schon in der Hinweiszeile steht.)*
 
 - **AC-16:** Given eine SMS-Nummer ist unbestätigt, When die Tabelle angezeigt wird, Then trägt der Konto-Link „Im Konto bestätigen →“ und der Hinweistext benennt den Grund („Nummer noch nicht bestätigt“); bei fehlender E-Mail-Adresse heißt der Hinweis „E-Mail-Adresse fehlt“, bei zu niedrigem Tarif „SMS ab Level Standard“.
 
@@ -226,7 +226,7 @@ Alle neuen Nutzertexte nur über `frontend/src/lib/i18n/messages/{de,en}/zustell
 
 - **AC-20:** Given Premium-SMS mit verfallener Rückadresse, When die Tabelle angezeigt wird, Then steht in der Zeile „Rückadresse verfallen“ und „Schick eine Nachricht vom Gerät, dann ist die Rückadresse wieder gültig.“, **Alarm- und Briefing-Zelle sind gesperrt** mit Grund, und die Premium-SMS wird in diesem Zustand nicht als Alarm-Kanal mitgezählt. (Bestandsverhalten, keine neue Regel: Der heutige Versand-Reiter sperrt den Premium-SMS-Kanal bei verfallener Rückadresse bereits für Briefings, `premiumSmsChannelState.ts` Zweig `stale` → `disabled: true`. Grund ist die Sicherheit: eine verfallene Rückadresse kann ein fremdes Gerät erreichen; das gilt für Briefings genauso wie für Alarme.)
 
-- **AC-21:** Given Premium-SMS-Tarif „wird geprüft“ oder ein Tarif unter Premium, When die Tabelle angezeigt wird, Then zeigt die Alarm-Zelle „gesperrt: {Grund}“ mit dem bisherigen Gate-Text („Tarif wird geprüft …“ bzw. „ab Level Premium“).
+- **AC-21:** Given Premium-SMS-Tarif „wird geprüft“ oder ein Tarif unter Premium, When die Tabelle angezeigt wird, Then zeigt die Alarm-Zelle „gesperrt: {Grund}“ mit dem bisherigen Gate-Text („Tarif wird geprüft …“ bzw. „ab Level Premium“). *(Alarm-Zelle abgelöst durch `docs/specs/modules/fix_3437_orte_erklaer_gesperrt.md` (#3437): nur „gesperrt“, wenn der Grund schon in der Hinweiszeile steht.)*
 
 - **AC-22:** Given ein Orts-Briefing mit `send_email: false` im gespeicherten Preset, When ein Briefing fällig ist, Then wird keine Orts-Mail versandt und Telegram/SMS/Premium-SMS bleiben vom Schalter unberührt; Given `send_email: true` oder **fehlendes Feld** (Alt-Preset), Then wird die Orts-Mail wie bisher versandt.
 

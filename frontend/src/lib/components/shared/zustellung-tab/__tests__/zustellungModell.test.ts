@@ -28,7 +28,8 @@
 //     grund: string | null;        // Hinweiszeile („Telegram-Chat fehlt.“, „Nummer noch nicht bestätigt.“,
 //                                  // „E-Mail-Adresse fehlt“, „SMS ab Level Standard“,
 //                                  // Premium verfallen: „Schick eine Nachricht vom Gerät, …“); null = bedienbar
-//     alarmSperre: string | null;  // Text der Alarm-Zelle „gesperrt: {Grund}“; null = Schalter
+//     alarmSperre: string | null;  // Text der Alarm-Zelle: „gesperrt“ (#3437: Grund steht schon in der Hinweiszeile),
+//                                  // „gesperrt: {Grund}“ nur wenn der Grund dort nicht wortgleich steht; null = Schalter
 //     kontoLink: null | { verb: 'verbinden' | 'bestaetigen' | 'pruefen'; text: string } // „Im Konto … →“
 //   }
 //   kanalStatus(profil: ZustellungProfil | null | undefined): Record<KanalId, KanalStatus>
@@ -63,7 +64,7 @@
 
 import { test, describe, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { locale } from '../../../../i18n/index.ts';
+import { locale, trFor } from '../../../../i18n/index.ts';
 import {
 	KANAELE,
 	presetVoll,
@@ -121,7 +122,7 @@ describe('AC-14: je Kanal eine Zeile mit Statuspunkt, Statustext und Ziel', () =
 	});
 });
 
-describe('AC-15: Telegram nicht verbunden — Briefing gesperrt, Alarm-Zelle „gesperrt: {Grund}“, Konto-Link „verbinden“', () => {
+describe('AC-15 (#3437 AC-3/AC-4): Telegram nicht verbunden — Briefing gesperrt, Alarm-Zelle nur „gesperrt“, Konto-Link „verbinden“', () => {
 	test('ac15_telegram_ohne_chat_gesperrt_mit_grund_und_link', async () => {
 		const m = await zustellungModell();
 		const t = m.kanalStatus(profilMit({ telegram_chat_id: '' })).telegram;
@@ -131,7 +132,8 @@ describe('AC-15: Telegram nicht verbunden — Briefing gesperrt, Alarm-Zelle „
 		assert.equal(t.briefingGesperrt, true, 'Briefing-Schalter muss gesperrt sein');
 		assert.equal(t.alarmGesperrt, true, 'Alarm-Zelle muss gesperrt sein');
 		assert.match(t.grund ?? '', /^Telegram-Chat fehlt/, 'Hinweis benennt den Grund');
-		assert.match(t.alarmSperre ?? '', /^gesperrt: \S/, `Alarm-Zelle muss „gesperrt: {Grund}“ zeigen, ist „${t.alarmSperre}“`);
+		// #3437 (Mockup Fassung 4): der Grund steht schon in der Hinweiszeile darüber, die Zelle zeigt nur „gesperrt“.
+		assert.equal(t.alarmSperre, 'gesperrt', `Alarm-Zelle muss nur „gesperrt“ zeigen, ist „${t.alarmSperre}“`);
 		assert.equal(t.kontoLink?.verb, 'verbinden');
 		assert.equal(t.kontoLink?.text, 'Im Konto verbinden →');
 	});
@@ -156,6 +158,7 @@ describe('AC-16: Sperrgruende und Konto-Verb je Lage', () => {
 		assert.equal(s.kontoLink?.text, 'Im Konto bestätigen →');
 		assert.equal(s.briefingGesperrt, true);
 		assert.equal(s.alarmGesperrt, true);
+		assert.equal(s.alarmSperre, 'gesperrt', '#3437 AC-5: Grund steht in der Hinweiszeile, Zelle nur „gesperrt“');
 	});
 
 	test('ac16_email_adresse_fehlt', async () => {
@@ -167,6 +170,8 @@ describe('AC-16: Sperrgruende und Konto-Verb je Lage', () => {
 		assert.ok(e.kontoLink, 'Konto-Link fehlt');
 		assert.match(e.kontoLink!.text, /^Im Konto (verbinden|bestätigen|prüfen) →$/);
 		assert.equal(e.briefingGesperrt, true);
+		assert.equal(e.alarmGesperrt, true);
+		assert.equal(e.alarmSperre, 'gesperrt', '#3437 AC-5: Grund steht in der Hinweiszeile, Zelle nur „gesperrt“');
 	});
 
 	// #3020 R1 (Befund B7, #1510 AC-4): unbestätigte Adresse ⇒ Briefing-Kanal E-Mail nicht bedienbar, im Trip wie in
@@ -194,7 +199,7 @@ describe('AC-16: Sperrgruende und Konto-Verb je Lage', () => {
 		assert.match(s.grund ?? '', /SMS ab Level Standard/);
 		assert.equal(s.briefingGesperrt, true);
 		assert.equal(s.alarmGesperrt, true);
-		assert.match(s.alarmSperre ?? '', /^gesperrt: \S/);
+		assert.equal(s.alarmSperre, 'gesperrt', '#3437 AC-5: Tarifgrund steht in der Hinweiszeile, Zelle nur „gesperrt“');
 	});
 
 	test('ac16_jeder_gesperrte_kanal_hat_grund_und_link', async () => {
@@ -230,6 +235,7 @@ describe('AC-19/AC-20/AC-21: Premium-SMS (sicherheitsrelevant)', () => {
 		assert.equal(p.grund, 'Schick eine Nachricht vom Gerät, dann ist die Rückadresse wieder gültig.');
 		assert.equal(p.briefingGesperrt, true, 'Briefing-Zelle muss bei verfallener Rueckadresse gesperrt sein');
 		assert.equal(p.alarmGesperrt, true, 'Alarm-Zelle muss bei verfallener Rueckadresse gesperrt sein');
+		// #3437 AC-6: der Hinweis nennt einen anderen Text als die Sperre, daher bleibt der Grund in der Zelle.
 		assert.equal(p.alarmSperre, 'gesperrt: Rückadresse verfallen');
 		assert.equal(p.kontoLink?.verb, 'pruefen');
 	});
@@ -264,6 +270,7 @@ describe('AC-19/AC-20/AC-21: Premium-SMS (sicherheitsrelevant)', () => {
 		assert.equal(p.verbunden, false);
 		assert.equal(p.briefingGesperrt, true);
 		assert.equal(p.alarmGesperrt, true);
+		assert.equal(p.alarmSperre, 'gesperrt', '#3437 AC-5: „nie gemeldet“ steht in der Hinweiszeile, Zelle nur „gesperrt“');
 	});
 
 	test('ac21_tarif_wird_geprueft_profil_ohne_tarifauskunft', async () => {
@@ -271,7 +278,8 @@ describe('AC-19/AC-20/AC-21: Premium-SMS (sicherheitsrelevant)', () => {
 		for (const profil of [null, undefined, profilMit({ premium_sms_allowed: undefined })]) {
 			const p = m.kanalStatus(profil).premium_sms;
 			assert.equal(p.alarmGesperrt, true, 'ohne Tarifauskunft fail-closed');
-			assert.match(p.alarmSperre ?? '', /^gesperrt: Tarif wird geprüft/, `Sperrtext: „${p.alarmSperre}“`);
+			assert.match(p.grund ?? '', /^Tarif wird geprüft/, `Hinweiszeile: „${p.grund}“`);
+			assert.equal(p.alarmSperre, 'gesperrt', `#3437 AC-5: Sperrtext nur „gesperrt“, ist „${p.alarmSperre}“`);
 		}
 	});
 
@@ -279,7 +287,75 @@ describe('AC-19/AC-20/AC-21: Premium-SMS (sicherheitsrelevant)', () => {
 		const m = await zustellungModell();
 		const p = m.kanalStatus(profilMit({ tier: 'standard', premium_sms_allowed: false })).premium_sms;
 		assert.equal(p.alarmGesperrt, true);
-		assert.match(p.alarmSperre ?? '', /^gesperrt: .*ab Level Premium/, `Sperrtext: „${p.alarmSperre}“`);
+		assert.match(p.grund ?? '', /ab Level Premium/, `Hinweiszeile: „${p.grund}“`);
+		assert.equal(p.alarmSperre, 'gesperrt', `#3437 AC-5: Sperrtext nur „gesperrt“, ist „${p.alarmSperre}“`);
+	});
+});
+
+// ── #3437: Alarm-Zelle zeigt den Grund nur einmal (Mockup Fassung 4) ────────
+// Spec docs/specs/modules/fix_3437_orte_erklaer_gesperrt.md, AC-3 bis AC-8. EIN geteilter Code für Trip
+// (context="route") und Orte (context="vergleich"): das Sperrverhalten bleibt in beiden Kontexten bestehen.
+
+/** Je Sperrgrund ein Profil und der gesperrte Kanal (Grund steht wortgleich in der Hinweiszeile). */
+const NACKT_GESPERRT: [fall: string, kanal: string, profil: () => Json][] = [
+	['telegram_chat_fehlt', 'telegram', () => profilMit({ telegram_chat_id: '' })],
+	['sms_unbestaetigt', 'sms', () => profilMit({ sms_verified: false })],
+	['sms_fehlt', 'sms', () => profilMit({ sms_to: '', pending_sms_to: '' })],
+	['sms_tarif', 'sms', () => profilMit({ tier: 'free', sms_allowed: false })],
+	['email_fehlt', 'email', () => profilMit({ mail_to: '' })],
+	['premium_tarif_gate', 'premium_sms', () => profilMit({ tier: 'standard', premium_sms_allowed: false })],
+	['premium_nie_gemeldet', 'premium_sms', () => profilMit({ premium_sms_reply_state: 'none', premium_sms_reply_at: undefined })]
+];
+
+describe('#3437 AC-3/AC-4/AC-5/AC-7/AC-8: gesperrte Alarm-Zelle nur „gesperrt“ / „locked“', () => {
+	for (const context of ['route', 'vergleich'] as const) {
+		for (const [fall, kanal, profil] of NACKT_GESPERRT) {
+			test(`${fall} (${context}): DE „gesperrt“, EN „locked“, Sperre bleibt`, async () => {
+				const m = await zustellungModell();
+				const basis = context === 'route' ? m.standAusTrip(tripVoll()) : m.standAusPreset(presetVoll());
+				const stand = { ...basis, briefing: { ...basis.briefing, [kanal]: true }, alarme: { ...basis.alarme, [kanal]: true } };
+				for (const [lang, erwartet] of [['de', 'gesperrt'], ['en', 'locked']] as const) {
+					locale.set(lang);
+					const st = m.kanalStatus(profil());
+					const k = st[kanal];
+					assert.ok(k.grund && k.grund.length > 0, `${fall}/${lang}: Hinweiszeile nennt den Grund`);
+					assert.equal(k.alarmSperre, erwartet, `${fall}/${lang}: Alarm-Zelle „${k.alarmSperre}“`);
+					// AC-8 (Sicherheitsregel AC-20 #2795): verkürzte Anzeige ändert das Sperrverhalten nicht.
+					assert.equal(k.verbunden, false, `${fall}/${lang}: nicht sendebereit`);
+					assert.equal(k.briefingGesperrt, true, `${fall}/${lang}: Briefing-Schalter gesperrt`);
+					assert.equal(k.alarmGesperrt, true, `${fall}/${lang}: Alarm-Schalter gesperrt`);
+					assert.deepEqual(m.dringlichkeitZelle(kanal, stand, st), { art: 'strich' }, `${fall}/${lang}: Dringlichkeit „–“`);
+					const ohne = m.zaehler(stand, st);
+					const alleVerbunden = m.zaehler(stand, m.kanalStatus(profilAllesVerbunden()));
+					assert.equal(ohne.alarme, alleVerbunden.alarme - 1, `${fall}/${lang}: gesperrter Kanal zählt nicht als Alarm-Kanal`);
+				}
+			});
+		}
+	}
+
+	test('premium_verfallen: Grund bleibt in der Zelle, DE und EN (AC-6/AC-7)', async () => {
+		const m = await zustellungModell();
+		const profil = profilMit({ premium_sms_reply_state: 'stale' });
+		assert.equal(m.kanalStatus(profil).premium_sms.alarmSperre, 'gesperrt: Rückadresse verfallen');
+		locale.set('en');
+		assert.equal(m.kanalStatus(profil).premium_sms.alarmSperre, 'locked: reply address expired');
+	});
+
+	test('zustand_luecken: Telegram und SMS nackt, Premium mit Grund (Mockup Fassung 4, Z. 744)', async () => {
+		const m = await zustellungModell();
+		const st = m.kanalStatus(profilLuecken());
+		assert.equal(st.telegram.alarmSperre, 'gesperrt');
+		assert.equal(st.sms.alarmSperre, 'gesperrt');
+		assert.equal(st.premium_sms.alarmSperre, 'gesperrt: Rückadresse verfallen');
+		assert.equal(st.email.alarmSperre, null, 'E-Mail bleibt bedienbar');
+	});
+
+	test('katalog_zustellung_gesperrt_kurz_de_en (AC-7)', () => {
+		assert.equal(trFor('de', 'zustellung.gesperrt_kurz' as never), 'gesperrt');
+		assert.equal(trFor('en', 'zustellung.gesperrt_kurz' as never), 'locked');
+		// Das Test-Schicken-Menü (AC-9) nutzt weiter den Schlüssel mit Grund.
+		assert.equal(trFor('de', 'zustellung.gesperrt', { grund: 'X' }), 'gesperrt: X');
+		assert.equal(trFor('en', 'zustellung.gesperrt', { grund: 'X' }), 'locked: X');
 	});
 });
 
