@@ -1,18 +1,20 @@
-// Regressionswaechter — Issue #2794 S3a, Teil-PR 2 (Adversary-Finding F012).
-// Spec: docs/specs/modules/feat_2794_s3a_teil2_leiste.md (§3 Uebergangsreiter Zustellung)
+// Regressionswaechter — Issue #3022 (vormals #2794 S3a F012, umgekehrt).
+// Spec: docs/specs/modules/fix_3022_zustellung_laedt.md (AC-1, AC-3)
 //
-// Warum: der Reiter Zustellung im Vergleich-Hub (CompareTabs.svelte) bettet ZustellungTab ein,
-// der Metrik-Zustellungsbloecke, Versand-Abschnitt UND AlarmeTab traegt. Er darf erst mounten,
-// wenn ALLE drei Domaenen hydriert sind: Wetter-Metriken/Layout
-// (wetterMetrikenLayoutHydrationBereit), Versand (versandHydrated, #1743 AC-9) und Alarme
-// (alarmeHydrated, wie zuvor der Alarme-Reiter). Mountet er frueher, entstehen die Speicherer
-// gegen Platzhalterwerte (Baseline unvollstaendig, Gefahr des Ueberschreibens mit Leerstand).
-// Mutation (Adversary): `alarmeHydrated` aus der Mount-Bedingung entfernt -> blieb gruen.
+// Frueheres Soll (#2794 S3a F012, #1743 AC-9): ZustellungTab im Vergleich-Hub mountete erst nach
+// Metrik-, Versand- UND Alarm-Hydration, weil der Reiter damals `wizardState`-Felder bediente und
+// seine Speicherer sonst gegen Platzhalterwerte entstanden waeren.
+//
+// Neues Soll (#3022): der Reiter bedient keinen `wizardState` mehr. Sein Stand kommt direkt aus dem
+// Preset (`standAusPreset`), die Speicher-Basis ist `startStand` aus dem Preset; das Profil laedt
+// er selbst. Die Hydrations-Flags haengen am Metrik-Katalog — haengt der, blieb der Reiter leer
+// (nur Sperr-Kopf), der Trip zeigte sofort alles. Deshalb mountet ZustellungTab jetzt wie im Trip
+// (`trip-detail/TripTabs.svelte`) allein nach aktivem Reiter, bei JEDER Flag-Kombination.
 //
 // Messweise: AST der echten Komponente (svelte/compiler.parse, Helfer s3a2794Ast.ts). Die
 // Weichen, unter denen ZustellungTab steht, werden zur Gesamtbedingung verknuepft
 // ({#if}-Zweig = Bedingung, {:else}-Zweig = Negation) und fuer alle Kombinationen der drei
-// Hydrations-Flags ausgewertet (activeTab = 'zustellung'). Keine Textmuster-Suche.
+// Hydrations-Flags ausgewertet. Keine Textmuster-Suche.
 //
 // Ausfuehren (aus frontend/):
 //   npm test -- src/lib/components/shared/__tests__/s3a2794_zustellung_vergleich_mount_hydration.test.ts
@@ -39,38 +41,42 @@ function zustellungEinbettung() {
 	return z[0];
 }
 
-/** Ist ZustellungTab bei diesen Flag-Werten gemountet? (Gesamtbedingung aller Weichen) */
-function gemountet(flags: Record<string, boolean>): boolean {
+/** Ist ZustellungTab bei diesem Reiter und diesen Flag-Werten gemountet? (Gesamtbedingung aller Weichen) */
+function gemountet(activeTab: string, flags: Record<string, boolean>): boolean {
 	const z = zustellungEinbettung();
-	const u = { activeTab: 'zustellung', ...flags };
+	const u = { activeTab, ...flags };
 	return z.weichen.every((w) => {
 		const ergebnis = Boolean(werte(w.test, u));
 		return w.zweig === 'dann' ? ergebnis : !ergebnis;
 	});
 }
 
-describe('F012: ZustellungTab im Vergleich mountet erst nach Metrik-, Versand- UND Alarm-Hydration', () => {
-	test('s3a2794_f012_zustellung_vergleich_wartet_auf_alarme_hydration', () => {
+function alleKombinationen(): Record<string, boolean>[] {
+	const out: Record<string, boolean>[] = [];
+	for (let maske = 0; maske < 1 << FLAGS.length; maske++) out.push(Object.fromEntries(FLAGS.map((f, i) => [f, Boolean(maske & (1 << i))])));
+	return out;
+}
+
+describe('#3022: ZustellungTab im Vergleich mountet allein nach aktivem Reiter (wie im Trip)', () => {
+	test('i3022_zustellung_vergleich_mountet_bei_haengender_hydration', () => {
 		assert.equal(
-			gemountet({ wetterMetrikenLayoutHydrationBereit: true, versandHydrated: true, alarmeHydrated: false }),
-			false,
-			'F012: ZustellungTab mountet, obwohl die Alarme noch nicht hydriert sind (alarmeHydrated fehlt in der Mount-Bedingung)'
+			gemountet('zustellung', { wetterMetrikenLayoutHydrationBereit: false, versandHydrated: false, alarmeHydrated: false }),
+			true,
+			'#3022: ZustellungTab mountet nicht, solange die Hydration (Metrik-Katalog) haengt — der Reiter bleibt leer'
 		);
 	});
 
-	test('s3a2794_f012_zustellung_vergleich_wartet_auf_versand_hydration', () => {
-		assert.equal(
-			gemountet({ wetterMetrikenLayoutHydrationBereit: true, versandHydrated: false, alarmeHydrated: true }),
-			false,
-			'F012: ZustellungTab mountet, obwohl der Versand noch nicht hydriert ist (versandHydrated fehlt in der Mount-Bedingung)'
-		);
+	test('i3022_zustellung_vergleich_mountet_bei_jeder_flag_kombination', () => {
+		for (const flags of alleKombinationen()) {
+			assert.equal(gemountet('zustellung', flags), true, `#3022: ZustellungTab nicht gemountet bei ${JSON.stringify(flags)}`);
+		}
 	});
 
-	test('s3a2794_f012_zustellung_vergleich_mountet_genau_wenn_alle_drei_hydriert', () => {
-		for (let maske = 0; maske < 1 << FLAGS.length; maske++) {
-			const flags = Object.fromEntries(FLAGS.map((f, i) => [f, Boolean(maske & (1 << i))]));
-			const alle = FLAGS.every((f) => flags[f]);
-			assert.equal(gemountet(flags), alle, `F012: Mount-Zustand falsch bei ${JSON.stringify(flags)}`);
+	test('i3022_zustellung_vergleich_nicht_gemountet_in_anderem_reiter', () => {
+		for (const tab of ['uebersicht', 'orte', 'wetter']) {
+			for (const flags of alleKombinationen()) {
+				assert.equal(gemountet(tab, flags), false, `#3022: ZustellungTab gemountet im Reiter ${tab} bei ${JSON.stringify(flags)}`);
+			}
 		}
 	});
 });

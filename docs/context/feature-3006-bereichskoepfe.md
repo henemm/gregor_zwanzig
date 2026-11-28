@@ -24,7 +24,7 @@ Issue #3006 (Teil von Epic #2913): Jeder Reiter der Einstellungen (Trip und Orte
 | `frontend/src/lib/components/molecules/` + `index.ts` | Ablage für neuen Baustein (Molekül „Bereichskopf“) |
 | `frontend/src/lib/i18n/messages/{de,en}/*.json` | Katalog; vorhanden: `wetter.kopf.titel/erklaerung`, `zustellung.kopf.titel/erklaer`, `listen.orte.hinzufuegen`; fehlt: Etappen, Orte, Übersicht |
 | `docs/context/einstellungen_neu/elementliste.json` | `abschnittskopf`-Einträge für trip/wetter, trip/zustellung, trip/etappen, orte/orte (mit Knopf), orte/wetter, orte/zustellung; Übersicht fehlt; Titel auf `aktionen.reiter.*` gemappt; Etappen-Einträge `luecke:true` |
-| `docs/context/einstellungen_neu/elementliste_besitzer.json` | keine #3006-Einträge; #2968 (EN-Lücken Zustellung-Text), #3022 (orte.zustellung.laedt) |
+| `docs/context/einstellungen_neu/elementliste_besitzer.json` | keine #3006-Einträge; #2968 (EN-Lücken Zustellung-Text), #3022 (orte.zustellung.laedt; Stand 2026-11-28 durch #3022 entfernt) |
 | `frontend/e2e/elementliste_abgleich_logik.ts:602-603, 931, 946` | Abschnitt über `data-abschnitt` in `[data-seite="hub"]`, Reihenfolge-Prüfung |
 
 ## Existing Patterns

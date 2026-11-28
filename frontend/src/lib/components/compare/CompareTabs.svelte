@@ -772,62 +772,40 @@
 	{#if activeTab === 'wetter'}
 		<div data-testid="compare-detail-panel-wetter">
 			<!-- Issue #2794 S3a Teil-PR 3 (AC-38): genau EIN WetterTab, der Reiter speichert
-			     selbst (Hub-Schreibschlange mit ETag). Gemountet erst nach der Layout-Hydration
-			     (F012, AC-3 #2276 S4), damit der Zustellungs-Feldsatz nie hinterherhinkt. -->
-			{#if wetterMetrikenLayoutHydrationBereit}
-				<WetterTab
-					context="vergleich"
-					preset={currentPreset}
-					{saveController}
-					enqueueHubWrite={reiheHubSchreibvorgangEin}
-					onCompareUpdate={uebernehmeWetterAntwort}
-				/>
-			{:else}
-				<!-- #3006 (AC-15): während der Hydrations-Sperre steht der Kopf schon; nach dem Laden
-				     bringt ihn der Reiter selbst mit (genau ein Marker). -->
-				<div class="hub-kopf-sperre hub-kopf-sperre-wetter">
-					<Bereichskopf titel={$t('wetter.kopf.titel')} erklaerung={$t('wetter.kopf.erklaerung')} testid="wetter-tab" />
-				</div>
-			{/if}
+			     selbst (Hub-Schreibschlange mit ETag). #3022: mountet sofort, sobald der Reiter aktiv
+			     ist (wie TripTabs) — er liest seinen Stand aus dem Preset und zeigt beim Katalog-Laden
+			     seinen eigenen Ladezustand, kein Hydrations-Gate mehr. -->
+			<WetterTab
+				context="vergleich"
+				preset={currentPreset}
+				{saveController}
+				enqueueHubWrite={reiheHubSchreibvorgangEin}
+				onCompareUpdate={uebernehmeWetterAntwort}
+			/>
 		</div>
 	{/if}
 
 	{#if activeTab === 'zustellung'}
 		<div data-testid="compare-detail-panel-zustellung">
-			{#if wetterMetrikenLayoutHydrationBereit && versandHydrated && alarmeHydrated}
-				<!-- Issue #2276 S4: der Reiter speichert selbst (saveController,
-				     Hub-Queue, Basis-Rueckmeldung, EINE kombinierte Wetter-Metriken/
-				     Layout-Orchestrierung in WeatherMetricsTab.svelte (gelöscht, #3297)) — kein Wrapper
-				     und keine getrennten Commit-Funktionen mehr. Gemountet wird ERST,
-				     wenn BEIDE Domaenen hydriert sind (wetterMetrikenLayoutHydrationBereit,
-				     AC-3), damit die Orchestrierung gegen eine vollstaendige Baseline
-				     entsteht.
-				     Issue #1743: geteilter Baustein mit Versand-Abschnitt (#versand) samt
-				     Aktivierungs-Karte; er mountet zusaetzlich erst nach der Versand-
-				     Hydration (versandHydrated) — nie mit Platzhalterwerten (AC-9).
-				     Issue #2794 S3a §3: Uebergangsreiter Zustellung (bereich "zustellung" +
-				     Versand-Abschnitt + AlarmeTab); mountet zusaetzlich erst nach der
-				     Alarm-Hydration (alarmeHydrated, wie bisher der Alarme-Reiter). -->
-				<!-- Issue #2795 S3b Teilschritt 1b: der neue Reiter speichert Briefing und Alarme ueber
-				     EINEN Speicherer; die Aktivierungs-Karte steht als fester Abschnitt darin
-				     (Beispiel-Alarm entfernt, #3458) (kein AlarmeTab/VersandTab (gelöscht, #3297) mehr im Reiter).
-				     Issue #3154: ohne Metrik-Oberflaeche — Listen, Stundenverlauf und Ausblick bedient die
-				     Karte „Was steht wo“ im Reiter Wetter (kein Wizard-Buendel mehr hier). -->
-				<ZustellungTab
-					context="vergleich"
-					activation={hubActivationCard}
-					preset={currentPreset}
-					{saveController}
-					enqueueHubWrite={reiheHubSchreibvorgangEin}
-					onCompareUpdate={uebernehmeHubAntwort}
-					{versandSprung}
-				/>
-			{:else}
-				<!-- #3006 (AC-15): Kopf schon während der Hydrations-Sperre, danach aus dem Reiter. -->
-				<div class="hub-kopf-sperre hub-kopf-sperre-zustellung">
-					<Bereichskopf titel={$t('zustellung.kopf.titel')} erklaerung={$t('zustellung.kopf.erklaer')} testid="zustellung" />
-				</div>
-			{/if}
+			<!-- Issue #2276 S4: der Reiter speichert selbst (saveController, Hub-Queue,
+			     Basis-Rueckmeldung) — kein Wrapper und keine getrennten Commit-Funktionen.
+			     Issue #2795 S3b Teilschritt 1b: der Reiter speichert Briefing und Alarme ueber
+			     EINEN Speicherer; die Aktivierungs-Karte steht als fester Abschnitt darin
+			     (Beispiel-Alarm entfernt, #3458).
+			     Issue #3154: ohne Metrik-Oberflaeche — Listen, Stundenverlauf und Ausblick bedient die
+			     Karte „Was steht wo“ im Reiter Wetter.
+			     #3022: mountet sofort, sobald der Reiter aktiv ist (wie TripTabs) — der Reiter liest
+			     seinen Stand direkt aus dem Preset (Speicher-Basis startStand), kein Hydrations-Gate
+			     mehr auf Wetter-/Versand-/Alarm-Hydration. -->
+			<ZustellungTab
+				context="vergleich"
+				activation={hubActivationCard}
+				preset={currentPreset}
+				{saveController}
+				enqueueHubWrite={reiheHubSchreibvorgangEin}
+				onCompareUpdate={uebernehmeHubAntwort}
+				{versandSprung}
+			/>
 		</div>
 	{/if}
 
@@ -929,27 +907,6 @@
 	}
 	.hub-add-item:hover {
 		background: var(--g-accent-tint);
-	}
-
-	/* #3006 (AC-15): Kopf während der Hydrations-Sperre an derselben Stelle wie im Reiter
-	   (Rand von WetterTabInhalt `.wt` bzw. ZustellungTab `.zustellung-tab`). */
-	.hub-kopf-sperre {
-		box-sizing: border-box;
-		max-width: var(--g-size-1100px);
-	}
-	.hub-kopf-sperre-wetter {
-		padding: var(--g-size-28px) 0 0;
-	}
-	.hub-kopf-sperre-zustellung {
-		padding: var(--g-s-6) var(--g-s-10) 0;
-	}
-	@media (max-width: 899px) {
-		.hub-kopf-sperre-wetter {
-			padding: var(--g-s-4) 0 0;
-		}
-		.hub-kopf-sperre-zustellung {
-			padding: var(--g-s-5) var(--g-s-4) 0;
-		}
 	}
 
 	/* #3006: Abstand Kopf → Liste (vorher margin-bottom der SectionH). */
