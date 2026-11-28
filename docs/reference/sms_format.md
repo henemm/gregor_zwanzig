@@ -99,7 +99,7 @@ dieser Zweig hat heute aber keinen eingehenden Aufrufer.
 | Forecast (Gewitter Folge-Etappe) | `TH+:` | nur bei aktivierter Metrik „Gewitter“ — seit Fix #1482 (2026-08-04) synchron mit `TH:` über dieselbe Metrik-Bindung (vorher Ist-Abweichung, s. Hinweis unter §2) |
 | Forecast (14 erweiterte Metriken, Issue #1660 Scheibe B) | `HU DP WD: CP PT: CT CL CM CH VS SU UV HP FZ` (bis 2026-08-17 `NL`, Fix #1926) | Morgen + Abend, jeweils nur bei aktivierter Metrik — Details §3.2a. `WD:`/`PT:` tragen seit Issue #1824 den Grammatik-Doppelpunkt (Buchstaben-Wert, s. §3.2a) |
 | Risks (Vigilance) | `VR:VT:` (zusammenhängend, kein Leerzeichen zwischen den beiden) | nur bei FR-Provider |
-| Amtliche Warnungen | `!{Kürzel}:{Stufe}[@{h}]` … (Warn-Block, Marker `!` genau einmal) | nur bei aktiver amtlicher Warnung ab der wirksamen Kanal-Schwelle — Ortsvergleich weiterhin fest ab ORANGE, Trips seit Issue #1461 S3b-2a je Kanal einstellbar, Startwert bereits ab GELB (§3.4c) |
+| Amtliche Warnungen | `!{Kürzel}:{Stufe}[@{h}]` … (Warn-Block, Marker `!` genau einmal) | nur bei aktiver amtlicher Warnung ab der wirksamen Kanal-Schwelle — Ortsvergleich weiterhin fest ab ORANGE, Trips seit Issue #1461 S3b-2a je Kanal einstellbar, ohne gesetzten Wert Vorbelegung SMS „mittel“ = ab ORANGE (ADR-0131, #2801; vorher Startwert GELB) (§3.4c) |
 | Fire-Zonen | `Z: M:` | nur Korsika, weglassen wenn leer |
 | Wintersport | `SD NS24+ SL` | optional (Kürzel seit #1435 E3b aus dem Wetter-Register, vorher `SN SN24+ SFL`; `WC` mit Fix #1887 entfallen, verdoppelte `FK`; `AV` seit #1441 im Warn-Block, §3.4c) |
 | Nicht abrufbar | `X?` | nur wenn ≥1 abdeckende amtliche Warn-Quelle beim Fetch ausgefallen ist (§3.4d, Issue #1349; Kürzel seit Epic #1703 Scheibe 6 `X?`, vormals `W?` — Kollision mit dem Wind-Datenausfall-Marker) |
@@ -812,7 +812,7 @@ Ballone N9 D16 R- PR- W- G- TH:- TH+:-
 | `TH+` | Folgetag `thunder_level` | wie TH, aber +1 Tag | ✅ vorhanden |
 | `HR` (Vigilance) | Météo France `get_warning_full()` | offizielle Warnung | ⚠️ Provider TODO |
 | `TH` (Vigilance) | Météo France `get_warning_full()` | offizielle Warnung | ⚠️ Provider TODO |
-| `!`-Warn-Block (§3.4c) | `SegmentWeatherData.official_alerts` (`official_alerts`-Dienst, alle Provider, 9 hazards) | Dedup (`dedupe_official_alerts`) + Filter Stufe ≥ Startschwelle „gering" (seit #1461 S3b-2a/S3b-2b, s. §2), Kürzel aus `hazard_symbols.py` | ✅ vorhanden (Issue #1318) — **andere Quelle** als die beiden Vigilance-Zeilen darüber, die weiterhin am alten `get_warning_full()`-Pfad hängen |
+| `!`-Warn-Block (§3.4c) | `SegmentWeatherData.official_alerts` (`official_alerts`-Dienst, alle Provider, 9 hazards) | Dedup (`dedupe_official_alerts`) + Filter Stufe ≥ Startschwelle je Kanal (SMS ohne gesetzten Wert „mittel“, ADR-0131; seit #1461 S3b-2a/S3b-2b, s. §2), Kürzel aus `hazard_symbols.py` | ✅ vorhanden (Issue #1318) — **andere Quelle** als die beiden Vigilance-Zeilen darüber, die weiterhin am alten `get_warning_full()`-Pfad hängen |
 | `Z`/`M` | `risque-prevention-incendie.fr` | tagesaktueller JSON | ⚠️ Provider TODO |
 | `SD`/`NS24+`/`SL` | GeoSphere/SLF | siehe Wintersport-Spec | ⚠️ teilweise vorhanden |
 | `AV` | amtlicher Lagebericht `avalanche.report` (`avalanche_bulletin`, Warn-Block) | CAAML v6, EAWS 1-5 | ✅ seit #1441 (Tirol, Südtirol, Trentino, Kärnten) |
