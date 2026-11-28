@@ -49,8 +49,13 @@ def _write_validation_log(
     max_age_minutes: "int | None" = None,
     ignore_mail_age_reason: "str | None" = None,
     warnings: "list | None" = None,
+    quelle: "str | None" = None,
 ) -> None:
     """Issue #465 (B2): Strukturiertes Validator-Log YAML.
+
+    Issue #3503: ``quelle`` haelt die Herkunft der geprueften Mail fest
+    (``imap`` = echt zugestellt, ``eml`` = Datei/Fixture). Das Renderer-Gate
+    akzeptiert nur ``quelle: imap`` als Compare-Nachweis.
 
     Issue #2663: ``warnings`` (z. B. fehlender Kopf X-GZ-Lang) steht immer im
     Log, auch leer -- eine Warnung kippt den Exit-Code nicht.
@@ -114,6 +119,7 @@ def _write_validation_log(
             "max_age_minutes_default": _DEFAULT_MAX_AGE_MINUTES,
             "max_age_minutes_overridden": effective_max_age != _DEFAULT_MAX_AGE_MINUTES,
             "ignore_mail_age_reason": ignore_mail_age_reason,
+            "quelle": quelle,  # #3503: imap | eml
         }
 
         import tempfile
@@ -2099,6 +2105,7 @@ def main():
         max_age_minutes=args.max_age_minutes,
         ignore_mail_age_reason=args.ignore_mail_age,
         warnings=warnungen,
+        quelle="eml" if args.eml else "imap",  # #3503: Herkunft fuer das Gate
     )
 
     if success:

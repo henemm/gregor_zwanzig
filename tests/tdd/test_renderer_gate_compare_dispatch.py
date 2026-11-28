@@ -135,6 +135,7 @@ def _write_validation_yaml(repo: Path, name: str, kind: str, *,
         "passed": passed,
         "error_count": 0,
         "errors": [],
+        "quelle": "imap",  # #3503: nur IMAP-Logs zaehlen (Compare)
     }
     path.write_text(yaml.safe_dump(data, allow_unicode=True))
     return path

@@ -193,6 +193,7 @@ def _write_email_validation_log(
         f"workflow_id: {_WF_NAME}\n"
         f"passed: {str(passed).lower()}\n"
         "error_count: 0\n"
+        "quelle: imap\n"  # #3503: nur IMAP-Logs zaehlen
     )
     return p
 
