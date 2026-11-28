@@ -35,7 +35,7 @@
 	"vergleich.hub.setup_abschliessen": "Finish setup",
 	"vergleich.hub.nicht_gefunden": "Location comparison not found",
 	"vergleich.orte.weitere": "Other",
-	"vergleich.hub.kopf.orte_erklaer": "One location makes a location briefing. From two locations on, the comparison table is added, without ranking.",
+	"vergleich.hub.kopf.orte_erklaer": "Even a single location makes a complete briefing. From two locations on, the locations stand side by side in the overview, without ranking.",
 	"vergleich.hub.kopf.ort_hinzufuegen": "+ Add location",
 	"vergleich.hub.ort_name": "{name}",
 	"vergleich.hub.ort_gruppe_hoehe": "{gruppe} · {hoehe} m",

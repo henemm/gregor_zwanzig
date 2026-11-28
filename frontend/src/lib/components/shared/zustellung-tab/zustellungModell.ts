@@ -82,7 +82,10 @@ function bedienbar(kanal: KanalId, ton: 'ok' | 'warn', statusText: string, ziel:
 	return { kanal, verbunden: true, ton, statusText, ziel, briefingGesperrt: false, alarmGesperrt: false, grund: null, alarmSperre: null, kontoLink: null };
 }
 
-/** Gesperrter Kanal: Briefing-Schalter aus/disabled, Alarm-Zelle „gesperrt: {Grund}“, Hinweis + Konto-Link. */
+/**
+ * Gesperrter Kanal: Briefing-Schalter aus/disabled, Hinweis + Konto-Link. Alarm-Zelle nur „gesperrt“,
+ * wenn der Sperrgrund schon in der Hinweiszeile steht; sonst „gesperrt: {Grund}“ (#3437, Mockup Fassung 4).
+ */
 function gesperrt(
 	kanal: KanalId,
 	p: { ton: 'warn' | 'off'; statusText: string; ziel: string; grund: string; sperre: string; verb: KontoVerb }
@@ -96,7 +99,10 @@ function gesperrt(
 		briefingGesperrt: true,
 		alarmGesperrt: true,
 		grund: p.grund,
-		alarmSperre: tr('zustellung.gesperrt', { grund: p.sperre }),
+		alarmSperre:
+			ohnePunkt(p.sperre) !== ohnePunkt(p.grund)
+				? tr('zustellung.gesperrt', { grund: p.sperre })
+				: tr('zustellung.gesperrt_kurz'),
 		kontoLink: kontoLink(p.verb)
 	};
 }
