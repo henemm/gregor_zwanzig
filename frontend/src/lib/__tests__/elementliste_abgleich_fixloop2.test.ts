@@ -111,13 +111,15 @@ describe('C5: Kontodaten-Chips — Präfix + Vorhandensein, nicht Menge/Reihenfo
 		const r = bewerteAbschnitt(liste, { marker: false, texte: ['+ Taupunkt'] }, 'de', 'metriken');
 		assert.equal(r.get('c3')!.status, 'abweichend');
 	});
-	test('EN: Muster vorhanden ⇒ Chip-Zeile gefunden, Einzelchips nicht_pruefbar; Chips zählen nicht in die Reihenfolge', () => {
+	// #3241: EN prüft Einzelchips über die Namenspaare (vorher nur das Muster, Grund „nur das Muster“).
+	test('EN: Muster vorhanden ⇒ Chip-Zeile gefunden, nicht sichtbare Einzelchips nicht_pruefbar; Chips zählen nicht in die Reihenfolge', () => {
 		const en = [el('t', 1, 'Nicht im Briefing:', { text_en: 'Not in the briefing:' }), chip('c1', 2, 'Windrichtung'), chip('c2', 3, 'Sichtweite')];
-		const r = bewerteAbschnitt(en, { marker: true, texte: ['+ Dew point', 'Not in the briefing:'] }, 'en', 'metriken');
+		const paare = [{ de: 'Windrichtung', en: 'Wind direction' }, { de: 'Sichtweite', en: 'Visibility' }];
+		const r = bewerteAbschnitt(en, { marker: true, texte: ['+ Dew point', 'Not in the briefing:'] }, 'en', 'metriken', paare);
 		assert.equal(r.get('t')!.status, 'gefunden');
 		assert.equal(r.get('c1')!.status, 'gefunden');
 		assert.equal(r.get('c2')!.status, 'nicht_pruefbar');
-		assert.match(r.get('c2')!.grund ?? '', /nur das Muster/);
+		assert.match(r.get('c2')!.grund ?? '', /„\+ Visibility“ ist in diesem Konto kein Chip/);
 	});
 	test('istKontoChip nur für chip mit Platzhalter-Muster', () => {
 		assert.equal(istKontoChip(chip('c', 1, 'X')), true);

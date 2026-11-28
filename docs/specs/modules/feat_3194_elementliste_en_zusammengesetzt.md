@@ -127,3 +127,4 @@ Neue Datei `frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts
 
 - 2026-11-20: Initial spec created
 - 2026-11-20: Implementation Details präzisiert: `muster` nur bei Platzhalter-Folgen (B, C) gesetzt, bei A/D `null` (Erzeuger-Konvention, wie Regel b)
+- 2026-11-28: Die ausgeklammerte Folge „Einheit + `wetter.hinweis.*`“ („mm · Summe“) ist durch #3241 gelöst (Sonderfall `metrikZeileEn`, Spec `fix_3241_elementliste_en_metrikzeile_chips.md`). Regel g selbst unverändert.

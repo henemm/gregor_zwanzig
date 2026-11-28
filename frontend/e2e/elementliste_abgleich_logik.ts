@@ -1522,13 +1522,16 @@ export function istKontoChip(e: ListenElement): boolean {
  * werden nicht verglichen. Geprüft wird: Abschnitt-Haken da und mindestens ein sichtbarer Text passt auf
  * das Chip-Muster (sonst alle abweichend). Dann: das erste Chip-Element steht für die Chip-Zeile
  * (gefunden); jedes weitere ist gefunden, wenn genau sein DE-Text sichtbar ist, sonst nicht_pruefbar
- * mit Grund (in EN ist der Einzeltext nicht ableitbar, nur das Muster).
+ * mit Grund. #3241: im EN-Lauf gilt je Chip die Einzelerwartung „+ <EN-Name>“ (DE-Name aus `text_de` über
+ * das DE-Muster, EN-Name aus dem Namenspaar, eingesetzt in das EN-Muster); ohne Paar nicht_pruefbar
+ * „kein EN-Name für <DE-Name>“ (fail-closed, nie geraten). Der DE-Lauf ignoriert die Paare.
  */
 export function bewerteKontoChips(
 	chips: ListenElement[],
 	befund: { marker: boolean; texte: string[] },
 	sprache: Sprache,
-	abschnitt: string
+	abschnitt: string,
+	namenDeEn: NamensPaar[] = []
 ): Map<string, Ergebnis> {
 	const out = new Map<string, Ergebnis>();
 	const sortiert = [...chips].sort((a, b) => a.ordnung - b.ordnung);
@@ -1541,13 +1544,40 @@ export function bewerteKontoChips(
 		else if (!re) out.set(e.id, { status: 'nicht_pruefbar', grund: 'EN-Lücke: kein Katalogtext' });
 		else if (treffer.length === 0) out.set(e.id, { status: 'abweichend', grund: `kein Chip mit Muster „${muster}“ sichtbar`, ist: 'nicht gefunden' });
 		else if (sprache === 'de' && treffer.includes(normalisiere(e.text_de))) out.set(e.id, { status: 'gefunden' });
+		else if (sprache === 'en') out.set(e.id, enChip(e, i, treffer, muster ?? '', namenDeEn));
 		else if (i === 0) out.set(e.id, { status: 'gefunden', grund: `Chip-Zeile mit Muster „${muster}“ vorhanden (${treffer.length} Chips; Menge ist Kontodaten)` });
 		else {
-			const warum = sprache === 'en' ? 'in EN ist nur das Muster prüfbar' : `„${e.text_de}“ ist in diesem Konto kein Chip`;
+			const warum = `„${e.text_de}“ ist in diesem Konto kein Chip`;
 			out.set(e.id, { status: 'nicht_pruefbar', grund: `Chip-Menge ist Kontodaten: ${warum}`, ist: `${treffer.length} Chips mit Muster „${muster}“` });
 		}
 	});
 	return out;
+}
+
+/** #3241: Name im Chip-Text nach dem Muster (Präfix/Suffix um `{metrik}`); null = Text passt nicht. */
+function chipName(text: string, muster: string): string | null {
+	const t = normalisiere(text);
+	const m = normalisiere(muster);
+	const pos = m.indexOf('{metrik}');
+	if (pos < 0) return null;
+	const vor = m.slice(0, pos);
+	const nach = m.slice(pos + '{metrik}'.length);
+	if (!t.startsWith(vor) || !t.endsWith(nach) || t.length <= vor.length + nach.length) return null;
+	return t.slice(vor.length, t.length - nach.length);
+}
+
+/**
+ * #3241: EN-Bewertung eines Chips mit Einzelerwartung „+ <EN-Name>“. Ohne Namenspaar nicht_pruefbar (nie geraten);
+ * sichtbar gefunden; nicht sichtbar wie im DE-Lauf (erstes Element vertritt die Chip-Zeile).
+ */
+function enChip(e: ListenElement, i: number, treffer: string[], enMuster: string, namenDeEn: NamensPaar[]): Ergebnis {
+	const nameDe = e.muster ? chipName(e.text_de, e.muster) : null;
+	const paar = nameDe === null ? undefined : namenDeEn.find((p) => normalisiere(p.de ?? '') === nameDe && nichtLeer(p.en));
+	if (!paar) return { status: 'nicht_pruefbar', grund: `Chip-Menge ist Kontodaten: kein EN-Name für ${nameDe ?? normalisiere(e.text_de)}` };
+	const erwartet = normalisiere(enMuster.replace('{metrik}', normalisiere(paar.en)));
+	if (treffer.includes(erwartet)) return { status: 'gefunden' };
+	if (i === 0) return { status: 'gefunden', grund: `Chip-Zeile mit Muster „${enMuster}“ vorhanden (${treffer.length} Chips; Menge ist Kontodaten)` };
+	return { status: 'nicht_pruefbar', grund: `Chip-Menge ist Kontodaten: „${erwartet}“ ist in diesem Konto kein Chip`, ist: `${treffer.length} Chips mit Muster „${enMuster}“` };
 }
 
 /** #3154: Element ist ein Beispieltext (Muster mit `{wert}` in der Sprache des Laufs). */
@@ -1637,7 +1667,8 @@ export function bewerteAbschnitt(
 	liste: ListenElement[],
 	befund: { marker: boolean; texte: string[] },
 	sprache: Sprache,
-	abschnitt: string
+	abschnitt: string,
+	namenDeEn: NamensPaar[] = []
 ): Map<string, Ergebnis> {
 	const out = new Map<string, Ergebnis>();
 	if (!befund.marker && SCRIPT_ABSCHNITT.test(abschnitt)) {
@@ -1646,7 +1677,7 @@ export function bewerteAbschnitt(
 	}
 	const norm = befund.texte.map(normalisiere);
 	const chips = liste.filter(istKontoChip);
-	for (const [i, e] of bewerteKontoChips(chips, { marker: befund.marker, texte: norm }, sprache, abschnitt)) out.set(i, e);
+	for (const [i, e] of bewerteKontoChips(chips, { marker: befund.marker, texte: norm }, sprache, abschnitt, namenDeEn)) out.set(i, e);
 	const lauf: Lauf = { norm, marker: befund.marker, abschnitt, zuletzt: -1, zelle: null };
 	for (const e of liste.filter((x) => !istKontoChip(x)).sort((a, b) => a.ordnung - b.ordnung)) {
 		const re = erwartung(e, sprache);

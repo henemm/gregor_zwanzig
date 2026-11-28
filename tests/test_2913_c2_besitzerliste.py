@@ -184,9 +184,12 @@ def test_ac12_eintraege_anderer_scheiben_unveraendert(daten):
     # Zustellung (8 Texte, #2797 8 → 16); Kanalzeile E-Mail mit Prüfkonto-Adresse statt „henning@…“ ist
     # Kontodaten-Abhängigkeit (7 Elemente + 2 Zusatztexte → #3009, 2 → 11, #3202 ist geschlossen).
     # #3442 (27.11., Spec feat_3442_kebab_rueckfragen.md AC-15): die sechs Kebab-Abschnitte sind gebaut: #2797 16 → 10.
+    # #3241 (28.11., Spec fix_3241_elementliste_en_metrikzeile_chips.md AC-8): alle 61 Einträge abgeräumt. Erzeuger
+    # ordnet Metrik-Zeilen (Einheit + wetter.hinweis.*, Grünbereich ohne Einheit) zu, EN-Abgleich prüft Metrik-Chips
+    # einzeln über die Namenspaare; Elementliste neu erzeugt: #3241 61 → 0.
     soll = {
         "#2967": 0, "#2966": 0, "#2913-d": 0, "#2795": 36, "#2797": 10, "#2968": 0, "#3022": 62,
-        "#3111": 0, "#3194": 0, "#3241": 61, "#3009": 11, "#3151": 2, "#3122": 12, "#3202": 0, "#3203": 0, "#3204": 0,
+        "#3111": 0, "#3194": 0, "#3241": 0, "#3009": 11, "#3151": 2, "#3122": 12, "#3202": 0, "#3203": 0, "#3204": 0,
         "#3205": 0, "#3145": 0, "#3258": 4,
     }
     ist = _verweise(daten)

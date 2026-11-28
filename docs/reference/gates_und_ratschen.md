@@ -872,6 +872,8 @@ ist (`{vorlage}` = beliebiger Wert) und **jeder** Schlüssel DE und EN hat; `tex
 Fuge, Platzhalter bleiben stehen, `i18n_key` = erster Schlüssel, `muster` = DE-Gesamtmuster (nur mit Platzhalter).
 Neue Folgen nur als Tabellenzeile, nie als EN-Text.
 
+**Sonderfall Metrik-Zeile und Metrik-Chips (#3241, Spec `docs/specs/modules/fix_3241_elementliste_en_metrikzeile_chips.md`, Stand 2026-11-28):** Im Abschnitt `metriken` hat `metrikZeileEn` Vorrang vor Regel b. „<Einheit> · <Hinweis-Schlüssel>“ wird als Ganzes gegen `wetter.hinweis.*` gelesen, nicht gesplittet (der Hinweis enthält selbst „ · “, z. B. „°C · daily high · daily low“). Der Grünbereich ohne Einheit („· grün: bis {bis}“) nutzt `wetter.gruen.*` ohne Einheit. Fehlt DE oder EN, bleibt die Zeile Lücke. Im EN-Abgleich wird jeder Metrik-Chip einzeln als „+ <EN-Name>“ aus dem Namenspaar `daten/metrik_namen.json` erwartet; ohne Paar ist er `nicht_pruefbar` („kein EN-Name für <DE-Name>“, nie geraten). Der DE-Lauf bleibt unverändert.
+
 ## Ratsche „Ein Katalog, eine Verarbeitung“ (ADR-0127, #3260, seit 2026-11-21)
 
 Kern-Test `tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py`, Erkennung
