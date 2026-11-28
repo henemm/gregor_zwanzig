@@ -32,6 +32,8 @@ ADR-0049 (eigener Kanal), ADR-0095 (Kanal-Parität, Alarm-Kanal in Trip und Orts
 
 > **Hinweis (2026-11-17, [ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md) Nr. 8, Issue #3122):** „Unverändert der SMS-Text“ ist vom PO vorerst bestätigt: In der Tabelle „Was steht wo“ (Reiter Wetter) hat die Premium-SMS keine eigene Spalte, sie folgt der Spalte SMS. Eine eigene Auswahl für die Premium-SMS kommt erst mit S9 (#2801). Bis dahin gilt das hier Beschriebene.
 
+> **Endgültig (2026-11-28, [ADR-0131](../adr/0131-alarm-schwelle-vorbelegung-je-kanal.md), Issue #2801):** Die Premium-SMS bekommt endgültig denselben Inhalt wie die SMS, ohne eigene Auswahl und ohne eigene Spalte (von hinten auf 153 Zeichen gekürzt, amtliche Warnungen zuletzt). Bei Alarmen unterscheidet sie sich allein über die Dringlichkeits-Schwelle: ohne gesetzten Wert meldet die Premium-SMS nur bei „hoch“, die SMS ab „mittel“, E-Mail und Telegram ab „gering“. Ein gesetzter Wert gilt unverändert.
+
 **Hervorhebung (#2792 S1c-4b):** Da der Text der SMS entspricht, gilt auch hier die Profil-Ampel des Abos: Spitzenwerte `@{h}` ab gelb oder schlechter (beidseitig), Gewitter ab „leicht“, Temperatur mit Stunde nur ab Gelb. Die Regeln stehen in `sms_format.md` §3.2 und §3.2a; `sms_threshold` wirkt nicht mehr.
 
 ## 2. Unterschiede zur normalen SMS
@@ -52,7 +54,7 @@ ADR-0049 (eigener Kanal), ADR-0095 (Kanal-Parität, Alarm-Kanal in Trip und Orts
 |---|---|---|
 | Trip-Briefing | SMS-Briefingzeile | `Trip.report_config.send_premium_sms` |
 | Ortsvergleich-Briefing | Orte-SMS-Text (`render_compare_sms`), je Ort die Token-Zeile der Trip-SMS (`O1 D15/19 W30@10(43@16) O2 …`, `sms_format.md` §5b, ADR-0125 seit #3172); über 153 Zeichen mit Grenze 153 neu gekürzt (wie Trip, #3100) | `ComparePreset.send_premium_sms` (#2275) |
-| Alarme (Änderung, Radar/Regen, amtlich, Entwarnung) | SMS-Alarmtext | `alert_channels.premium_sms`, Trip **und** Ortsvergleich, geteilte Auflösung `services/alert_channels.py` (ADR-0095) |
+| Alarme (Änderung, Radar/Regen, amtlich, Entwarnung) | SMS-Alarmtext | `alert_channels.premium_sms`, Trip **und** Ortsvergleich, geteilte Auflösung `services/alert_channels.py` (ADR-0095); ohne gesetzte Schwelle nur Alarme der Dringlichkeit „hoch“ (Vorbelegung `HIGH`, ADR-0131) |
 | Befehlsantwort | `CommandResult.confirmation_body` | `send_command_reply_premium_sms` |
 
 **Änderungs-Alarm (#1737):** Der SMS-Alarmtext trägt am Ereignis-Token die Zeitspanne der betroffenen Stunden als `HH-HH` (ASCII-Bindestrich, GSM-7; Stufen-Tokens unverändert, ≤ 160 Zeichen). Stundenzeilen gibt es hier nicht; Vertrag in `sms_format.md` §3.4f.

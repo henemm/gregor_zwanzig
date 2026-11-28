@@ -64,17 +64,17 @@ def _trip(threshold: dict | None) -> Trip:
     )
 
 
-def test_trip_sms_zeigt_gelbe_warnung_bei_startwert_schwelle():
-    """Test 10 / AC-10.
+def test_trip_sms_zeigt_gelbe_warnung_bei_gesetzter_schwelle_gering():
+    """Test 10 / AC-10 (umgestellt durch #2801, ADR-0131).
 
-    GIVEN ein Trip hat fuer den SMS-Kanal keine eigene Schwelle gesetzt
-          (Startwert "gering")
+    GIVEN ein Trip hat fuer den SMS-Kanal die Schwelle ausdruecklich auf
+          "gering" gesetzt
     WHEN  die Trip-SMS fuer eine amtliche Warnung Stufe 2 (GELB) erzeugt wird
     THEN  enthaelt der SMS-Text die Warnung.
     """
     from output.renderers.trip_report import TripReportFormatter
 
-    trip = _trip(None)
+    trip = _trip({"sms": "LOW"})
     seg = _segment_with_alert(_gelb_alert())
 
     report = TripReportFormatter().format_email(
@@ -84,8 +84,27 @@ def test_trip_sms_zeigt_gelbe_warnung_bei_startwert_schwelle():
     # #2417 AC-27: Warn-Kuerzel "FL" (Hochwasser) -> "FO", weil "FL" mit der
     # Metrik `felt_day_low` kollidierte.
     assert "FO:" in report.sms_text, (
-        f"Die GELB-Warnung muss bei Startwert-Schwelle im SMS-Text erscheinen: "
-        f"{report.sms_text!r}"
+        f"Die GELB-Warnung muss bei gesetzter SMS-Schwelle 'gering' im "
+        f"SMS-Text erscheinen: {report.sms_text!r}"
+    )
+
+
+def test_trip_sms_verbirgt_gelbe_warnung_ohne_gesetzte_schwelle():
+    """Test 10b (#2801, ADR-0131, AC-11): ohne gesetzte SMS-Schwelle gilt die
+    Vorbelegung "mittel" (amtliche Stufe 3) -- die GELB-Warnung (Stufe 2)
+    fehlt im SMS-Text."""
+    from output.renderers.trip_report import TripReportFormatter
+
+    trip = _trip(None)
+    seg = _segment_with_alert(_gelb_alert())
+
+    report = TripReportFormatter().format_email(
+        segments=[seg], trip_name=trip.name, report_type="evening",
+        trip=trip, tz=ZoneInfo("UTC"),
+    )
+    assert "FO:" not in report.sms_text, (
+        "#2801: ohne gesetzte SMS-Schwelle gilt 'mittel' -- die GELB-Warnung "
+        f"darf nicht im SMS-Text erscheinen: {report.sms_text!r}"
     )
 
 

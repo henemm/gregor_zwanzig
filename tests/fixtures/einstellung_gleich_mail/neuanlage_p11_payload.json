@@ -34,8 +34,8 @@
     "alert_channel_thresholds": {
       "email": "LOW",
       "telegram": "LOW",
-      "sms": "LOW",
-      "premium_sms": "LOW"
+      "sms": "MODERATE",
+      "premium_sms": "HIGH"
     }
   },
   "vergleich": {

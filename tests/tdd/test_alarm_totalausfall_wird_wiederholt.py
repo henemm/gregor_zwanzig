@@ -497,6 +497,10 @@ class _TripRadar(_Pfad):
         config = TripReportConfig(trip_id=self.entity_id, alert_on_changes=True, send_email=True)
         trip = _trip_with_active_segment(self.entity_id, config)
         trip.alert_channels = kanal_auswahl(*self.kanaele)
+        # #2801 (ADR-0131): ohne Wert gelten SMS "mittel", Premium-SMS "hoch";
+        # der leichte Regen ist "gering". Gemessen wird die Sperre, nicht die
+        # Vorbelegung.
+        trip.alert_channel_thresholds = {"sms": "LOW", "premium_sms": "LOW"}
         save_trip(trip, user_id=self.uid)
         radar = _GuaranteedWetRadar(onset_minutes=12 if ereignis == "A" else 50)
         return TripAlertService(

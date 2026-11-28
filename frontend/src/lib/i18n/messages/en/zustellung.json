@@ -58,7 +58,7 @@
 	"zustellung.premium.status_verfallen": "inReach · reply address expired",
 	"zustellung.premium.verfallen": "reply address expired",
 	"zustellung.premium.verfallen_hinweis": "Send a message from the device, then the reply address is valid again.",
-	"zustellung.legende": "SMS is cheap and therefore already gets alerts from “moderate”. Premium SMS goes via satellite and only reports at “high”.",
+	"zustellung.legende": "Without your own choice, email and Telegram report from “low”, SMS from “moderate” and Premium SMS via satellite only at “high”. Your own choice applies at any time.",
 	"zustellung.stille.titel": "Quiet hours",
 	"zustellung.stille.unterzeile": "no alerts, they come with the next morning briefing",
 	"zustellung.stille.von": "Quiet hours from",

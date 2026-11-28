@@ -95,10 +95,10 @@ export function reconstructCompareAlertChannels(preset: {
 	};
 }
 
-/** Vollständige Kanal-Schwellen OHNE stillen Wertverlust: die Vorgabe „gering"
- *  füllt nur die Kanäle, für die noch nichts gespeichert ist — ein bereits
- *  gehaltener Wert überlebt unverändert (`resolveAlertChannelThresholds`
- *  allein würde jeden ihm unbekannten Wert auf „gering" zurückdrehen). */
+/** Vollständige Kanal-Schwellen OHNE stillen Wertverlust: die Vorbelegung je
+ *  Kanal (#2801) füllt nur die Kanäle, für die noch nichts gespeichert ist — ein
+ *  bereits gehaltener Wert überlebt unverändert (`resolveAlertChannelThresholds`
+ *  allein würde jeden ihm unbekannten Wert auf die Vorbelegung zurückdrehen). */
 function vollstaendigeSchwellen(bestand: Record<string, string>): AlertChannelThresholdState {
 	return { ...resolveAlertChannelThresholds(bestand), ...bestand } as AlertChannelThresholdState;
 }

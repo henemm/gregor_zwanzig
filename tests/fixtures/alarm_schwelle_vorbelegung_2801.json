@@ -1,0 +1,6 @@
+{
+  "email": "LOW",
+  "telegram": "LOW",
+  "sms": "MODERATE",
+  "premium_sms": "HIGH"
+}

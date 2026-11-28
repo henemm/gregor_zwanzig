@@ -39,6 +39,10 @@ from tests.helpers.briefing_zeiten import briefing_zeiten_iso
 from tests.helpers.compare_briefings import write_compare_briefings
 
 LEARNED_REPLY_TO = "+4915799912345"
+#: #2801 (ADR-0131): ohne gesetzten Wert gilt fuer Premium-SMS die Vorbelegung
+#: "hoch". Diese Datei prueft die Premium-Verdrahtung der drei Dispatcher, nicht
+#: die Vorbelegung -- daher ausdruecklich "gering" (ein gesetzter Wert bleibt).
+_PREMIUM_LOW = {"premium_sms": "LOW"}
 PREMIUM_SMS_SENDER = "4916092172595"
 LAT, LON = 47.07, 15.44
 
@@ -281,7 +285,7 @@ def test_compare_deviation_alert_reaches_premium_sms():
         )
         morgen, abend = _preset_briefing_zeiten()
         _write_presets(uid, [_compare_preset(
-            preset_id, [loc_id], send_premium_sms=True,
+            preset_id, [loc_id], send_premium_sms=True, alert_channel_thresholds=_PREMIUM_LOW,
             morning_time=morgen, evening_time=abend,
         )])
         CompareWeatherSnapshotService(user_id=uid).save(
@@ -334,7 +338,7 @@ def test_compare_radar_alert_reaches_premium_sms():
             user_id=uid,
         )
         _write_presets(uid, [_compare_preset(
-            preset_id, [loc_id], send_premium_sms=True, radar_alert_enabled=True,
+            preset_id, [loc_id], send_premium_sms=True, alert_channel_thresholds=_PREMIUM_LOW, radar_alert_enabled=True,
         )])
 
         stub = _SevenIoStub()
@@ -387,7 +391,7 @@ def test_compare_official_alert_reaches_premium_sms():
         )
         morgen, abend = _preset_briefing_zeiten()
         _write_presets(uid, [_compare_preset(
-            preset_id, [loc_id], send_premium_sms=True,
+            preset_id, [loc_id], send_premium_sms=True, alert_channel_thresholds=_PREMIUM_LOW,
             morning_time=morgen, evening_time=abend,
         )])
         register_official_alert_source(_FakeOfficialAlertSource(LAT, LON, [_official_alert()]))
@@ -441,9 +445,9 @@ def _run_three_compare_dispatchers(uid: str, reply_to: str, stub: "_SevenIoStub"
     preset_radar = f"cp-{uid}-radar"
     preset_off = f"cp-{uid}-off"
     _write_presets(uid, [
-        _compare_preset(preset_dev, [loc_dev], send_premium_sms=True),
-        _compare_preset(preset_radar, [loc_radar], send_premium_sms=True, radar_alert_enabled=True),
-        _compare_preset(preset_off, [loc_off], send_premium_sms=True),
+        _compare_preset(preset_dev, [loc_dev], send_premium_sms=True, alert_channel_thresholds=_PREMIUM_LOW),
+        _compare_preset(preset_radar, [loc_radar], send_premium_sms=True, alert_channel_thresholds=_PREMIUM_LOW, radar_alert_enabled=True),
+        _compare_preset(preset_off, [loc_off], send_premium_sms=True, alert_channel_thresholds=_PREMIUM_LOW),
     ])
     CompareWeatherSnapshotService(user_id=uid).save(
         preset_dev, loc_dev, _pwd(loc_dev, loc_dev, LAT, LON, 2.0),

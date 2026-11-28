@@ -83,8 +83,9 @@ const PFLICHT: Pflicht[] = [
 	GETEILT('AC-17', '^gering', '^mittel', '^hoch'),
 	ODER(
 		'AC-18',
-		['^Die SMS kostet wenig und bekommt deshalb schon Alarme ab „mittel“. Die Premium-SMS geht über Satellit und meldet sich nur bei „hoch“.'],
-		['^Die SMS kostet wenig und bekommt deshalb schon Alarme ab ‚mittel‘. Die Premium-SMS geht über Satellit und meldet sich nur bei ‚hoch‘.']
+		// #2801 (ADR-0131): Fusszeile nennt die Vorbelegung je Kanal und dass eine eigene Wahl gilt.
+		['^Ohne eigene Wahl melden E-Mail und Telegram ab „gering“, die SMS ab „mittel“ und die Premium-SMS über Satellit nur bei „hoch“. Deine eigene Wahl gilt jederzeit.'],
+		['^Ohne eigene Wahl melden E-Mail und Telegram ab ‚gering‘, die SMS ab ‚mittel‘ und die Premium-SMS über Satellit nur bei ‚hoch‘. Deine eigene Wahl gilt jederzeit.']
 	),
 	P('AC-19', '^inReach · Rückadresse gelernt {*} · zuletzt gemeldet {*}'),
 	P('AC-20', 'Rückadresse verfallen', '^Schick eine Nachricht vom Gerät, dann ist die Rückadresse wieder gültig.'),

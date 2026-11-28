@@ -640,6 +640,10 @@ def test_ac5_regenradar_erreicht_jetzt_auch_telegram_und_sms(monkeypatch):
         )
         preset["send_telegram"] = True
         preset["send_sms"] = True
+        # #2801 (ADR-0131): ohne Wert gilt SMS "mittel"; der leichte Regen ist
+        # "gering". AC-5 misst, dass der Radar-Pfad Telegram UND SMS ueberhaupt
+        # bedient -- daher SMS ausdruecklich "gering".
+        preset["alert_channel_thresholds"] = {"sms": "LOW"}
         _write_preset_file(uid, [preset])
 
         # Leichter, nicht-konvektiver Regen (0.6 mm/h) -> urgency_from_radar

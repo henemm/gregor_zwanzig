@@ -630,7 +630,7 @@ function kanalEinst(){
   const s=S().sw, r=[];
   r.push(`<div class="lrow"><div class="t"><b>E-Mail: Format</b><small>Ausführlich mit Tabellen und Farben, oder Kompakt als reiner Text für schwache Verbindungen.</small></div><div class="r">${seg('mailfmt',['Ausführlich (HTML)','Kompakt (Nur-Text)'],s.mailfmt)}</div></div>`);
   r.push(`<div class="lrow"><div class="t"><b>Telegram: Kurzstil</b><small>Telegram bekommt denselben kurzen Text wie die SMS, ohne Knöpfe. Gilt für Briefing und Alarme. Die Telegram-Spalte ruht dann, es gilt die SMS-Spalte.</small></div><div class="r">${sw('tgkurz',s.tgkurz,'Telegram im Kurzstil',!konto()['Telegram'].ok)}</div></div>`);
-  r.push(`<div class="lrow"><div class="t"><b>Premium-SMS</b><small>Bekommt vorerst denselben Text wie die SMS. Eine eigene Auswahl kommt später.</small></div></div>`);
+  r.push(`<div class="lrow"><div class="t"><b>Premium-SMS</b><small>Die Premium-SMS bekommt denselben Inhalt wie die SMS.</small></div></div>`);
   return r.join('');
 }
 function budgetZeile(sm){
@@ -770,7 +770,7 @@ function viewZustellung(){
     <div class="tblwrap"><table class="kt">
     <thead><tr><th>Kanal</th><th>Briefing</th><th>Alarme</th><th>Alarm schon ab Dringlichkeit</th></tr></thead>
     <tbody>${rows}</tbody></table></div>
-    <div class="legend">Die SMS kostet wenig und bekommt deshalb schon Alarme ab „mittel“. Die Premium-SMS geht über Satellit und meldet sich nur bei „hoch“. ${tg('N2')}</div>
+    <div class="legend">Ohne eigene Wahl melden E-Mail und Telegram ab „gering“, die SMS ab „mittel“ und die Premium-SMS über Satellit nur bei „hoch“. Deine eigene Wahl gilt jederzeit. ${tg('N2')}</div>
   </div>
   <div class="card"><div class="lrow" style="border-top:0"><div class="t"><b>Stille Stunden</b><small>keine Alarme, sie kommen mit dem nächsten Morgen-Briefing</small></div>
     <div class="r"><input class="input" value="22:00" aria-label="von"> – <input class="input" value="06:00" aria-label="bis">${sw('quiet',s.quiet,'Stille Stunden')}</div></div>

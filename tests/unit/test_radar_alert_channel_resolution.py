@@ -136,8 +136,13 @@ def _radar_trip(
     )
     if alert_channels is not None:
         trip.alert_channels = alert_channels
-    if thresholds is not None:
-        trip.alert_channel_thresholds = thresholds
+    # #2801 (ADR-0131): ohne gesetzten Wert gilt SMS "mittel" -- der leichte
+    # Regen dieser Datei ("gering") erreichte die SMS dann gar nicht mehr. Diese
+    # Datei prueft die Kanal-AUFLOESUNG, nicht die Vorbelegung: daher ohne
+    # eigenen Wert ausdruecklich "gering" fuer SMS und Premium-SMS.
+    trip.alert_channel_thresholds = (
+        thresholds if thresholds is not None else {"sms": "LOW", "premium_sms": "LOW"}
+    )
     if rules is not None:
         trip.alert_rules = list(rules)
     return trip

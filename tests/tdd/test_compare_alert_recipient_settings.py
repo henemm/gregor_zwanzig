@@ -574,7 +574,10 @@ def test_ac6_telegram_and_sms_still_use_settings_channels_unchanged():
             settings = _settings(all_channels=True)
             sent, recorded = _run_official_alert(
                 uid,
-                _preset("cp-1452-ac6", ["loc-a"], send_telegram=True, send_sms=True),
+                # #2801 (ADR-0131): ohne Wert gilt SMS "mittel" -- gemessen wird
+                # die Empfaenger-Herkunft, daher SMS ausdruecklich "gering".
+                _preset("cp-1452-ac6", ["loc-a"], send_telegram=True, send_sms=True)
+                | {"alert_channel_thresholds": {"sms": "LOW"}},
                 settings,
                 telegram_sink=lambda text: tg_calls.append(text),
                 sms_sink=lambda text: sms_calls.append(text),

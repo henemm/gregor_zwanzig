@@ -125,6 +125,10 @@ def _lege_trip_an(uid: str, *, tier: str = "premium", trip_id: str | None = None
                     },
                 ],
             }],
+            # #2801 (ADR-0131): ohne Wert gelten SMS "mittel", Premium-SMS
+            # "hoch" -- hier zaehlt der Inhalt auf allen vier Kanaelen, daher
+            # ausdruecklich "gering" (gleichwertig zum Stand vor #2801).
+            "alert_channel_thresholds": {"sms": "LOW", "premium_sms": "LOW"},
             "report_config": {
                 "trip_id": trip_id, "send_email": True, "send_telegram": True,
                 "send_sms": True, "send_premium_sms": True,

@@ -489,6 +489,9 @@ def _make_radar_trip(trip_id: str, send_sms: bool):
     trip.report_config = TripReportConfig(
         trip_id=trip_id, send_email=False, send_sms=send_sms, send_telegram=False,
     )
+    # #2801 (ADR-0131): ohne Wert gilt SMS "mittel"; der leichte Regen hier ist
+    # "gering". Gemessen wird das Tier-Gate, nicht die Vorbelegung.
+    trip.alert_channel_thresholds = {"sms": "LOW"}
     return trip
 
 

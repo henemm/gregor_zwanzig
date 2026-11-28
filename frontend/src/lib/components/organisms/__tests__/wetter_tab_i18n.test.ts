@@ -195,7 +195,9 @@ const GEAENDERT_FREIGEGEBEN: Record<string, Record<string, string>> = {
 		'wetter.grenzen.abweichend': 'Abweichend von der Vorlage „{vorlage}“.',
 		'wetter.dialog.beschreibung': 'Beschreibung (optional)',
 		// #3204 (Spec feat_3204_anzeige_metriken_mockup.md, AC-3): Erklärsatz wortgleich zum Mockup Fassung 4.
-		'wetter.erklaer.anzeige': 'Nur Anzeige: keine Ampel und kein Alarm. Roh oder Einfach stellst du unten unter „Was steht wo“ ein.'
+		'wetter.erklaer.anzeige': 'Nur Anzeige: keine Ampel und kein Alarm. Roh oder Einfach stellst du unten unter „Was steht wo“ ein.',
+		// #2801 (Spec feat_2801_alarm_schwelle_vorbelegung_je_kanal.md AC-9): Premium-SMS endgültig = SMS-Inhalt.
+		'wetter.wsw.kanal.premium_hinweis': 'Die Premium-SMS bekommt denselben Inhalt wie die SMS.'
 	},
 	en: {
 		'wetter.nicht_im_briefing.titel': 'Not in the briefing:',
@@ -210,7 +212,9 @@ const GEAENDERT_FREIGEGEBEN: Record<string, Record<string, string>> = {
 		'wetter.grenzen.abweichend': 'Changed from the template “{vorlage}”.',
 		'wetter.dialog.beschreibung': 'Description (optional)',
 		// #3204 (AC-3): Abschnittsname wetter.wsw.titel statt „for each list“.
-		'wetter.erklaer.anzeige': 'Display only: no traffic light and no alert. You set raw or simple below under ‘What goes where’.'
+		'wetter.erklaer.anzeige': 'Display only: no traffic light and no alert. You set raw or simple below under ‘What goes where’.',
+		// #2801 (AC-9): Premium SMS gets the SMS content for good.
+		'wetter.wsw.kanal.premium_hinweis': 'The Premium SMS gets the same content as the SMS.'
 	}
 };
 

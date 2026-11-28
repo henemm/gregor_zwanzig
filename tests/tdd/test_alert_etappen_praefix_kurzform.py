@@ -884,6 +884,9 @@ def test_f003_radar_alert_prefix_reaches_the_real_trigger_path():
         # -- Attribute direkt setzen statt `model_copy()`.
         trip.report_config.send_email = False
         trip.report_config.send_sms = True
+        # #2801 (ADR-0131): ohne Wert gilt SMS "mittel" -- gemessen wird hier
+        # das Etappen-Praefix, nicht die Vorbelegung.
+        trip.alert_channel_thresholds = {"sms": "LOW"}
         stub = _SevenIoStub()
         try:
             with frozen_active_window(hour_utc=12):
