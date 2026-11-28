@@ -1,0 +1,117 @@
+{
+  "verified_commit": "fcfb1289b402015456c36a4fe33f800d3a51942a",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "Trip-Hub Reiter Wetter",
+      "evidence": "Bildpr\u00fcfer: mockup/staging-trip-de-1280 \u2013 11 Chips 'Nicht im Briefing', gleiche Reihenfolge und Beschriftung; Elementlisten-Abgleich DE/EN ohne Abweichung bei den Chips",
+      "workflow": "fix-3438-wetter-ganzseite"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "Orts-Hub Reiter Wetter",
+      "evidence": "Bildpr\u00fcfer: orte-de-1280 \u2013 15 Chips, gleiche Reihenfolge; Abgleich DE/EN ohne Chip-Abweichung",
+      "workflow": "fix-3438-wetter-ganzseite"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "Trip-/Orts-Hub",
+      "evidence": "hub-kopf-region-zwei-nutzer-3438 (DE 7/7, EN Einzeltests 4/4 route+vergleich desktop+mobil): Region-Stift in der Oberzeile \u00fcber dem Titel, keine Regionszeile; Bildpr\u00fcfer E1/E2 gleich bei 1280 und 390",
+      "workflow": "fix-3438-wetter-ganzseite"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "Trip-/Orts-Hub",
+      "evidence": "Region \u00e4ndern, speichern, neu laden: Region in Oberzeile, Name in Brotkrumen/Titel und Profil unver\u00e4ndert, Merge ohne Feldverlust; zweiter Nutzer sieht/\u00e4ndert nicht (DE-Lauf gr\u00fcn; EN-Zwei-Nutzer-Teil scheiterte an Registrierungs-Ratenbegrenzung 429, Umgebungsgrenze)",
+      "workflow": "fix-3438-wetter-ganzseite"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "Hub-Kopf",
+      "evidence": "hub-kopf-c2-mockup.staging DE 21/21, EN 20/21 (1x 429 bei Registrierung); Name-Stift am Titel im Bild vorhanden",
+      "workflow": "fix-3438-wetter-ganzseite"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "Orts-Hub",
+      "evidence": "Meta '3 Orte \u00b7 Morgen-Briefing 07:00' ohne 'Vergleichstabelle' (Bildpr\u00fcfer E3, c2-Mockup-Spec DE/EN)",
+      "workflow": "fix-3438-wetter-ganzseite"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "Ein-Ort-Hub ohne Region",
+      "evidence": "staging-ort1-de-1280: Oberzeile nur 'ORTE' mit Stift; mit Region 'ORTE \u00b7 M\u00dcNSTERLAND'",
+      "workflow": "fix-3438-wetter-ganzseite"
+    },
+    {
+      "ac": "AC-8",
+      "status": "PASS",
+      "url": "Hub-Kopf",
+      "evidence": "Knopf 'Test schicken \u25be' braune Fl\u00e4che (accent-deep), heller Text, in Mockup und Staging gleich (Bildpr\u00fcfer E4)",
+      "workflow": "fix-3438-wetter-ganzseite"
+    },
+    {
+      "ac": "AC-9",
+      "status": "PASS",
+      "url": "Was steht wo",
+      "evidence": "Ziehgriffe in beiden vorhanden, gleicher Farbwert; Bildeindruck blasser -> Folge-Issue #3510",
+      "workflow": "fix-3438-wetter-ganzseite"
+    },
+    {
+      "ac": "AC-11",
+      "status": "PASS",
+      "url": "Elementlisten-Abgleich",
+      "evidence": "DE: 2873 gefunden, 81 abweichend; EN: 2884 gefunden, 80 abweichend; keine Abweichung zu Chips, Region-Stift, Meta, Knopf; Rest datenabh\u00e4ngig/Beispieldaten -> #3439",
+      "workflow": "fix-3438-wetter-ganzseite"
+    },
+    {
+      "ac": "AC-12",
+      "status": "PASS",
+      "url": "Ganzseitenbilder",
+      "evidence": "mockup-bildpruefer \u00fcber trip/orte/ort1 je 1280+390 DE, EN-390 Lesbarkeit: E1-E5 gleich; Zellumbruch 'Was steht wo' und Griff-Kontrast -> #3510; \u00fcbrige Unterschiede Beispieldaten/Mockup-Hilfen",
+      "workflow": "fix-3438-wetter-ganzseite"
+    }
+  ],
+  "verified_at": "2026-11-28T11:36:46.822846+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Region-Stift, Meta, Chips, Knopf auf Staging gemessen (Zwei-Nutzer-E2E, Elementlisten-Abgleich DE/EN, Bildpr\u00fcfer); Restbefunde in #3510/#3439",
+  "scope": "frontend-only",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "fix-3438-wetter-ganzseite": {
+      "verdict": "VERIFIED: Region-Stift, Meta, Chips, Knopf auf Staging gemessen (Zwei-Nutzer-E2E, Elementlisten-Abgleich DE/EN, Bildpr\u00fcfer); Restbefunde in #3510/#3439",
+      "scope": "frontend-only",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-28T11:36:46.822846+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
