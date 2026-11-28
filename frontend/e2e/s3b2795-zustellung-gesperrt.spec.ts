@@ -1,9 +1,11 @@
 // E2E — Issue #2795 S3b, Teilschritt 1b (Reiter Zustellung): gesperrte Kanaele mit Konto-Link.
 // Spec: docs/specs/modules/feat_2795_s3b_teil1_zustellung.md — AC-15, AC-16, AC-21, AC-13 (gesperrt zaehlt nicht)
+// #3437 (Spec fix_3437_orte_erklaer_gesperrt.md AC-3/AC-5): die Alarm-Zelle zeigt nur „gesperrt“, weil der Grund
+// schon in der Hinweiszeile darueber steht (Mockup Fassung 4).
 //
 // Ein frisch registrierter, bestaetigter Zweitnutzer (Tarif free, ohne Telegram, ohne SMS-Nummer, ohne Premium-SMS)
-// sieht im Reiter: Telegram gesperrt mit „Im Konto verbinden →“, SMS gesperrt, Premium-SMS-Alarm „gesperrt: … ab Level
-// Premium“. Derselbe Test-Code fuer Trip und Orts-Briefing.
+// sieht im Reiter: Telegram gesperrt mit „Im Konto verbinden →“, SMS gesperrt, Premium-SMS-Alarm „gesperrt“ (Hinweis
+// „… ab Level Premium“). Derselbe Test-Code fuer Trip und Orts-Briefing.
 //
 //   cd frontend && npx playwright test --config playwright.2795-s3b1b.staging.config.ts s3b2795-zustellung-gesperrt
 
@@ -39,16 +41,17 @@ for (const kind of HUB_KINDS) {
 			await expect(tg.getByTestId(ZT.briefing('telegram'))).toBeDisabled();
 			await expect(tg.getByTestId(ZT.briefing('telegram'))).toHaveAttribute('aria-checked', 'false');
 			await expect(tg.getByTestId(ZT.alarm('telegram')), 'gesperrt: kein Alarm-Schalter').toHaveCount(0);
-			await expect(tg.getByTestId(ZT.alarmGesperrt('telegram'))).toHaveText(/^gesperrt: \S/);
+			await expect(tg.getByTestId(ZT.alarmGesperrt('telegram'))).toHaveText(/^gesperrt$/);
 			await expect(tg.getByTestId(ZT.dringlichkeit('telegram'))).toHaveText('–');
 
 			const sms = reiter.getByTestId(ZT.zeile('sms'));
 			await expect(sms.getByTestId(ZT.briefing('sms'))).toBeDisabled();
-			await expect(sms.getByTestId(ZT.alarmGesperrt('sms'))).toHaveText(/^gesperrt: \S/);
+			await expect(sms.getByTestId(ZT.alarmGesperrt('sms'))).toHaveText(/^gesperrt$/);
 			await expect(sms.getByTestId(ZT.hinweis('sms'))).toHaveText(/SMS ab Level Standard|Nummer/);
 
 			const pr = reiter.getByTestId(ZT.zeile('premium_sms'));
-			await expect(pr.getByTestId(ZT.alarmGesperrt('premium_sms'))).toHaveText(/^gesperrt: .*ab Level Premium/);
+			await expect(pr.getByTestId(ZT.alarmGesperrt('premium_sms'))).toHaveText(/^gesperrt$/);
+			await expect(pr.getByTestId(ZT.hinweis('premium_sms'))).toContainText('ab Level Premium');
 			await expect(pr.getByTestId(ZT.briefing('premium_sms'))).toBeDisabled();
 
 			// Nur E-Mail ist an UND verbunden.

@@ -69,7 +69,7 @@ const SOLL = {
 	etappen: { titel: 'Etappen & Wegpunkte', satz: 'Das Tempo bestimmt die Gehzeiten und damit, welche Stunden je Wegpunkt bewertet werden.' },
 	wetter: { titel: DE['wetter.kopf.titel'], satz: DE['wetter.kopf.erklaerung'] },
 	zustellung: { titel: DE['zustellung.kopf.titel'], satz: DE['zustellung.kopf.erklaer'] },
-	orte: { titel: 'Orte', satz: 'Ein Ort ergibt ein Orts-Briefing. Ab zwei Orten kommt die Vergleichstabelle dazu, ohne Rangfolge.' }
+	orte: { titel: 'Orte', satz: 'Schon ein einzelner Ort ergibt ein vollständiges Briefing. Ab zwei Orten stehen die Orte in der Übersicht nebeneinander, ohne Rangfolge.' }
 } as const;
 const KNOPF_DE = '+ Ort hinzufügen';
 

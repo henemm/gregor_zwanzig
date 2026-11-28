@@ -58,7 +58,8 @@ export const F10_ANKER: [schluessel: string, de: string, en: string][] = [
 	['vergleich.hub.ziehen_sortieren', 'ziehen zum Sortieren', 'drag to sort'],
 	// vergleich.hub.reihenfolge_hinweis entfällt mit #3007 (Mockup Fassung 3: kein Reihenfolge-Hinweis).
 	// #3006: Bereichskopf des Reiters Orte (Mockup Fassung 3, Z. 590) mit Knopf rechts; Titel = aktionen.reiter.orte.
-	['vergleich.hub.kopf.orte_erklaer', 'Ein Ort ergibt ein Orts-Briefing. Ab zwei Orten kommt die Vergleichstabelle dazu, ohne Rangfolge.', 'One location makes a location briefing. From two locations on, the comparison table is added, without ranking.'],
+	// #3437: Wortlaut nach Mockup Fassung 4 (ADR-0124 Nr. 10, Spec fix_3437_orte_erklaer_gesperrt.md AC-1/AC-2).
+	['vergleich.hub.kopf.orte_erklaer', 'Schon ein einzelner Ort ergibt ein vollständiges Briefing. Ab zwei Orten stehen die Orte in der Übersicht nebeneinander, ohne Rangfolge.', 'Even a single location makes a complete briefing. From two locations on, the locations stand side by side in the overview, without ranking.'],
 	['vergleich.hub.kopf.ort_hinzufuegen', '+ Ort hinzufügen', '+ Add location'],
 	// #3007: Listenzeile des Reiters Orte (Mockup Fassung 3, Z. 591): Name, „Gruppe · Höhe m“, Textknopf.
 	['vergleich.hub.ort_name', '<name>', '<name>'],
