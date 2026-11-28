@@ -573,6 +573,12 @@ Test-Postfach (`mail.henemm.com`). `fetch_latest_email()` priorisiert seit #972
 verlässlich gegen das Test-Postfach geprüft wird. Credentials aus den Settings —
 niemals im Klartext. Kein Gmail.
 
+**Herkunft im Log (seit #3503):** das `*_email_validation.yaml` trägt `quelle: imap`
+(IMAP-Abruf) bzw. `quelle: eml` (`--eml`). Das Renderer-Mail-Gate zählt nur
+`quelle: imap`; ohne Test-Postfach (z. B. iMac) gilt alternativ der lokale
+Render-Nachweis `renderer_mail_gate.py record-compare-lokal` (Details:
+`docs/reference/gates_und_ratschen.md`).
+
 **Übergangs-Union der Übersichts-Beschriftungen (#1420, Prüfdatum 2026-10-27):**
 `_OVERVIEW_METRIC_CHECKS` kennt 46 statt 24 Beschriftungen — die heutigen
 deutschen **und** die englischen Kurzformen, auf die #1401 A2b umstellt (samt
