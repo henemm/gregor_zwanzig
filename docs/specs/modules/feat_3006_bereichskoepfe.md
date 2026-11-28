@@ -144,7 +144,7 @@ Fertig ist #3006, wenn alle acht Reiter (Trip und Orte je Übersicht, Etappen bz
 - **AC-8:** Given ein Orts-Briefing ist im Hub geöffnet / When der Reiter Übersicht geöffnet wird / Then steht oben derselbe Bereichskopf „Übersicht“ mit demselben Satz wie beim Trip, aus demselben geteilten Baustein.
   - Test: SSR-Render des Orte-Reiters in DE und EN; Gleichheit mit der Trip-Ausgabe.
 
-- **AC-9:** Given ein Orts-Briefing ist im Hub geöffnet / When der Reiter Orte geöffnet wird / Then steht oben der Bereichskopf „Orte“ mit dem Satz „Ein Ort ergibt ein Orts-Briefing. Ab zwei Orten kommt die Vergleichstabelle dazu, ohne Rangfolge.“ (DE) bzw. der englischen Entsprechung, rechts im Kopf der Knopf „+ Ort hinzufügen“ (EN-Entsprechung aus dem Katalog), und die frühere Überschrift „Verglichene Orte“ sowie der Knopf unten in der Card entfallen.
+- **AC-9:** Given ein Orts-Briefing ist im Hub geöffnet / When der Reiter Orte geöffnet wird / Then steht oben der Bereichskopf „Orte“ mit dem Satz „Ein Ort ergibt ein Orts-Briefing. Ab zwei Orten kommt die Vergleichstabelle dazu, ohne Rangfolge.“ (DE) bzw. der englischen Entsprechung, rechts im Kopf der Knopf „+ Ort hinzufügen“ (EN-Entsprechung aus dem Katalog), und die frühere Überschrift „Verglichene Orte“ sowie der Knopf unten in der Card entfallen. *(Erklärsatz abgelöst durch `docs/specs/modules/fix_3437_orte_erklaer_gesperrt.md` (#3437): „Schon ein einzelner Ort ergibt ein vollständiges Briefing. Ab zwei Orten stehen die Orte in der Übersicht nebeneinander, ohne Rangfolge.“)*
   - Test: SSR-Render in DE und EN; Reihenfolge Titel, Satz, Knopf im Kopf.
 
 - **AC-10:** Given der Reiter Orte mit dem Knopf im Kopf / When „+ Ort hinzufügen“ angeklickt wird / Then öffnet sich derselbe Aufklapp-Bereich zum Hinzufügen wie bisher (gleicher Handler), der Knopf trägt weiter die Testid `hub-orte-add`, und ein erneuter Klick schließt ihn wieder.
@@ -197,3 +197,4 @@ Fertig ist #3006, wenn alle acht Reiter (Trip und Orte je Übersicht, Etappen bz
 ## Changelog
 
 - 2026-11-17: Initial spec created
+- 2026-11-28: AC-9 Erklärsatz Reiter Orte abgelöst durch #3437 (Mockup Fassung 4), siehe `docs/specs/modules/fix_3437_orte_erklaer_gesperrt.md`
