@@ -97,3 +97,8 @@ deshalb passt der Mockup-Zusatz „(z.B. Ruhetag, Bergetappe)“ fachlich nicht.
 
 ### Open Questions
 - Keine Produktfrage offen (Entscheidung #3196 ist bindend).
+
+## Stand nach TDD RED (28.11.)
+- Spec + RED-Tests gesichert (Commit 4b6a0faa4). RED-Artefakt registriert: 14 von 24 rot (AC-1, AC-3, AC-4, AC-5), AC-2 grün.
+- RED-Befunde für GREEN: (1) `wendeFreigabenAn` (`frontend/e2e/elementliste_abgleich_logik.ts` ~Z.1131) muss gedeckte EN-Lücken (`nicht_pruefbar`, Grund „EN-Lücke: kein Katalogtext“) zu `freigegeben` machen — Spec Implementation Details 2a, neu freigegeben. (2) `tests/test_2913_c2_besitzerliste.py::test_ac12_tempo_karte_haengt_an_2796` pinnt #2796 → auf #3436 nachführen.
+- Nebenbefund Abschnitt `liste` (16 Besitzer „Tempo ändern“ auf #2796) an #3439 vermerkt.
