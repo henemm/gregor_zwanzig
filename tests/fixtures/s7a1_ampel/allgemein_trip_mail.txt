@@ -1,0 +1,72 @@
+◯ WETTER-BRIEFING
+Pruefkatalog 3047 - Abend-Briefing
+E1
+20.07.2026
+12.0 km | ↑900m | ↓100m | max. 1400m
+
+E1: 15°C, gef. -3 – 13°C, Wolken 57%, starker Regen, mäßiger Wind 35 km/h, Böen bis 55 km/h ab 4:00
+
+━━ Metriken-Überblick ━━
+  15°C · Max 08:00
+  gef. 13.0°C · Max 08:00
+  Wind >30 km/h ab 04:00 · max 35 (04:00)
+  Böen >30 km/h ab 04:00 · max 55 (04:00)
+  Regen ab 04:00 · 32 mm
+  Regen-W. >30% ab 04:00 · max 60% (04:00)
+  50–70% bewölkt · Max 10:00
+  Tiefe Wolken 40–60 %
+  Taupunkt min 19.0°C (08:00)
+  Sonne 0.5h
+  UV max 7.0 (08:00)
+  Sicht min 8.0 km (08:00)
+  0°-Linie 2.300 m · Max 08:00
+
+━━ Segment 1: km 0.0–12.0 | 08:00–12:00 | ↑500m → 1400m ━━
+  Zeit   Temp   Feels   Wind   Gust   Rain   Rain%   Cloud   CldLow   Dew    Sun     UV    Visib   0°Line   SnowH   NewSn 
+  -----  -----  ------  -----  -----  -----  ------  ------  -------  -----  ------  ----  ------  -------  ------  ------
+  08     15.0   13.0    35     55     2.0    60      50      40       19.0   0.0 h   7.0   8.0     2300     25      6     
+  09     15.0   13.0    35     55     2.0    60      65      55       19.0   0.0 h   7.0   8.0     2300     25      6     
+  10     15.0   13.0    35     55     2.0    60      70      60       19.0   0.5 h   7.0   8.0     2300     25      6     
+  11     15.0   13.0    35     55     2.0    60      65      55       19.0   0.0 h   7.0   8.0     2300     25      6     
+  12     15.0   13.0    35     55     2.0    60      50      40       19.0   0.0 h   7.0   8.0     2300     25      6     
+
+━━ Nacht am Ziel (1400m) ━━
+Ankunft 12:00 → Morgen 06:00
+  Zeit   Temp   Feels   Wind   Gust   Rain   Rain%   Cloud   CldLow   Dew    Sun     UV    Visib   0°Line   SnowH   NewSn 
+  -----  -----  ------  -----  -----  -----  ------  ------  -------  -----  ------  ----  ------  -------  ------  ------
+  12     15.0   13.0    35     55     4.0    60      50      40       19.0   0.0 h   7.0   8.0     2300     25      12    
+  14     15.0   13.0    35     55     4.0    60      50      40       19.0   0.0 h   7.0   8.0     2300     25      12    
+  16     15.0   13.0    35     55     4.0    60      50      40       19.0   0.0 h   7.0   8.0     2300     25      12    
+  18     15.0   13.0    35     55     4.0    60      50      40       19.0   0.0 h   7.0   8.0     2300     25      12    
+  20     15.0   13.0    35     55     4.0    60      50      40       19.0   0.0 h   7.0   8.0     2300     25      12    
+  22     15.0   13.0    35     55     4.0    60      50      40       19.0   0.0 h   7.0   8.0     2300     25      12    
+  00     15.0   13.0    35     55     4.0    60      50      40       19.0   0.0 h   7.0   8.0     2300     25      12    
+  02     15.0   13.0    35     55     4.0    60      50      40       19.0   0.0 h   7.0   8.0     2300     25      12    
+  04     15.0   13.0    35     55     4.0    60      50      40       19.0   0.0 h   7.0   8.0     2300     25      12    
+  06     15.0   -3.0    35     55     2.0    60      50      40       19.0   0.0 h   7.0   8.0     2300     25      6     
+  * Temperatur/Nullgradgrenze: Minimum im 2h-Block
+
+
+── Antwort-Kommandos ──
+  HEUTE                – Wetter der heutigen Etappe
+  MORGEN               – Wetter der morgigen Etappe
+  JETZT                – Nowcast Regen/Gewitter nächste ~2h (auch NOW)
+  GEWITTER             – Gewittergefahr heutige Etappe
+  STRECKE [km]         – Regen-Ereignisflächen entlang der Reststrecke
+  RUHETAG [N]          – Etappen um N Tage verschieben (Standard: 1)
+  STATUS               – Heute und kommende Etappen
+  PAUSE [2d / 12h]     – Briefings für Dauer unterbrechen
+  SKIP                 – Nächstes Briefing überspringen
+  STOP                 – Briefings dauerhaft deaktivieren (auch ABBRUCH)
+  WEITER               – Briefings reaktivieren
+  HILFE                – Diese Hilfe anzeigen (auch HELP)
+  KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)
+  STARTDATUM JJJJ-MM-TT – Startdatum des Trips setzen, alle Etappen verschieben
+  REPORT [morning / evening] – Briefing jetzt senden (Standard: morning)
+
+Einheiten: Temp, Feels, Dew °C · Wind, Gust km/h · Rain mm · Rain%, Cloud, CldLow % · Visib km · Sun h · 0°Line m · SnowH, NewSn cm
+Spalten: Temp = Temperatur · Feels = Gefühlte Temperatur · Dew = Taupunkt · Gust = Böen · Rain = Niederschlag · Rain% = Regenwahrscheinlichkeit · Cloud = Bewölkung · CldLow = Tiefe Wolken · Visib = Sichtweite · Sun = Sonnenstunden · UV = UV-Index · 0°Line = Nullgradgrenze · SnowH = Schneehöhe · NewSn = Neuschnee
+------------------------------------------------------------
+Generated: 2026-07-20 04:00 UTC
+Data: openmeteo (test)
+Etappen-Briefing · Vollversion · openmeteo

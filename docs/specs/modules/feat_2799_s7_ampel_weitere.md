@@ -128,6 +128,25 @@ Vorbau ohne sichtbare Änderung, dann Aktivierung in allen vier Kanälen gleichz
 
 Reihenfolge: S7a1, S7a2, S7a3, S7b1, S7b2, **S7f-ADR-Nachtrag vor S7c1**, S7c1, S7c2, S7d, S7e, S7f (Rest). Kippende Bestandstests (`tests/tdd/test_renderer_katalog_schwellen.py:299-312`, `tests/helpers/metrik_listen_scan.py`, Ratsche `test_ampel_vorlagen_gleich_einstellungen_doku.py`) werden in S7a2 mit umgestellt.
 
+### Nachtrag Teil S7a1 (2026-11-28, technisch, keine sichtbare Änderung)
+
+Befund der Kartierung: Die Kanäle fragen die Ampel heute über getrennte Listen bzw. feste Zweige ab, und sie färben bewusst nicht jede Metrik aus `AMPEL_LESER` (Stundentabelle: gefühlte Temperatur, UV, Neuschnee ungetönt; Orte-Übersicht: gefühlte Temperatur und Neuschnee ohne Stufe; Orte-Stunden: gefühlte Temperatur ausgenommen). `AMPEL_METRIC_IDS` (und die Aliasse `_AMPEL_CAPABLE_METRIC_IDS`, `_FRIENDLY_AMPEL_METRIC_IDS`, `placements`) ist keine Farb-, sondern eine **Form**-Entscheidung („Einfach = Ampelpunkt“); Telegram (`narrow.py`), Outlook (`_metric_column_bg`) und Orte-Stunden (`_hour_zeilen`) lesen bereits über `hat_ampel`/`severity_for`.
+
+Umsetzung S7a1 (≤5 Produktiv-Dateien):
+1. `src/app/ampel.py`: `faerbt_an(stelle, metric_id)` = `hat_ampel(metric_id)` und nicht in der benannten Bestandsausnahme der Stelle; Ausnahmen als eine Konstante je Stelle (`stundentabelle`: wind_chill, uv_index, fresh_snow; `orte_uebersicht`: wind_chill, fresh_snow; `pille`, `sms`: keine). Auswertung zur Laufzeit (liest `AMPEL_LESER` beim Aufruf).
+2. `email/helpers.py`: Pillen-Zweige Bewölkung, tiefe Wolken, Taupunkt, Sonnenstunden nehmen die Ampel-Stufe, wenn `faerbt_an("pille", …)`, sonst neutral wie heute.
+3. `email/html.py`: Rückfall-Tönung der Stundentabelle aus Katalog-Spaltenschlüssel und `faerbt_an("stundentabelle", …)` statt der festen Liste.
+4. `email/compare_html.py`: Orte-Übersicht-Zeilen ohne eigene `sev` erhalten eine generische Stufe, wenn `faerbt_an("orte_uebersicht", …)`.
+5. `tokens/builder.py`: `AMPEL_METRIK_JE_KUERZEL` aus der Kürzel-zu-Katalog-Zuordnung, gefiltert über `faerbt_an("sms", …)`.
+
+Nicht in S7a1: Form-Listen (`AMPEL_METRIC_IDS` und Aliasse) bleiben unverändert (eigene Frage der Darstellung, keine Farbe); `alert/hours._LEVEL_METRICS` folgt mit dem Alarm (S7c); die relativen Metriken Nullgrad-/Schneefallgrenze folgen mit S7b; die Validator-Spalten (`_AMPEL_SPALTEN`) werden in S7a2 zusammen mit den Validator-Fällen abgeleitet (Datei-Limit).
+
+Präzisierung Pillen-Stufe: Die Stufe der Pille kommt aus dem schärfsten Wert des Tages je Seite (wie `ampel_schaerfe`), nicht aus dem angezeigten Wert allein.
+
+Offener Punkt für S7a2 (vor dessen Spec zu klären): Werden `CT`/`CL` in die abgeleitete Kürzelkarte aufgenommen und aktiviert, gewinnt in `render_threshold_peak_value` die Ampel-Stufe vor der Einfach-Form; das SMS-Token wechselte dann von `CT:SCT@10` zu einer Zahlform. Das ist eine sichtbare Formatänderung in SMS und Premium-SMS und muss in S7a2 ausdrücklich entschieden werden (Einfach-Form behalten, nur Zeitpunkt der ersten gelben Stunde übernehmen ist die Vorgabe-Empfehlung).
+
+Tests S7a1: (a) Golden byte-gleich der heutigen Ausgaben aller Kanäle (AC-22); (b) Nahtstellen-Test: wird eine Metrik der Spec (z. B. Bewölkung) zur Laufzeit in `AMPEL_LESER` aufgenommen, tragen Pille, Stundentabelle, Orte-Übersicht und SMS-Kürzel ihre Stufe, Telegram ebenfalls (AC-18-Vorbau); (c) Ratsche: die je Stelle gefärbte Menge ist `AMPEL_LESER` minus benannter Bestandsausnahme (AC-18).
+
 ### Entscheidung zum Gate in S7d
 
 Das Gate (`trip_alert.py:713-718`) und sein Spiegel (`hubUebersichtModell.ts:166-187`) bleiben nur so weit bestehen, wie Bestands-Trips ohne Ampel-Alarmquelle sie brauchen; alles Übrige entfällt. Verbindlich ist das Verhalten aus AC-20: Ein Bestands-Trip mit `alert_on_changes=False` bekommt nach S7d weiter keinen Alarm, ein Trip mit Ampel-Alarmquelle alarmiert weiter.
