@@ -1,0 +1,38 @@
+{
+  "verified_commit": "3309b954a4aec1812d9e439ab92a7bada9cbd655",
+  "findings": [
+    {
+      "ac": "#2799-S7a1",
+      "status": "PASS",
+      "url": "/api/health",
+      "evidence": "Staging auf 3309b954 (enthaelt #2799 S7a1 daf97612 und #3503 Werkzeug); echte Trip- und Vergleichsmail DE und EN ueber Staging zugestellt, briefing_mail_validator und email_spec_validator Exit 0",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "#3503-Zuwachs",
+      "status": "PASS",
+      "url": "-",
+      "evidence": "Zuwachs gegenueber verifiziertem daf97612 nur Hooks, Test-Mail-Skript, Doku, Tests; kein Produktcode; Mailpfade auf Staging unveraendert gruen",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-28T10:20:35.319035+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Staging auf 3309b954: Trip- und Vergleichsmail DE und EN echt zugestellt, Validatoren Exit 0 (enthaelt #2799 S7a1 und #3503 Werkzeug)",
+  "scope": "backend",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Staging auf 3309b954: Trip- und Vergleichsmail DE und EN echt zugestellt, Validatoren Exit 0 (enthaelt #2799 S7a1 und #3503 Werkzeug)",
+      "scope": "backend",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-28T10:20:35.319035+00:00"
+    }
+  }
+}
