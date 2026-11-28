@@ -170,5 +170,6 @@ Alle Tests laufen gegen den echten Katalog (`ladeKatalog`), ohne Mocks.
 ## Changelog
 
 - 2026-11-19: Nach Umsetzungsmessung (540 Restlücken, davon 162 „Katalogwert + Zeichen“ und 54 mehrdeutiges EN): Regeln e/f und AC-11..AC-13 ergänzt, AC-8 auf festgeschriebene gemessene Zahl und Klassen statt 25 % umgestellt.
+- 2026-11-28: Regel b greift im Abschnitt `metriken` nicht mehr, dort hat der Sonderfall `metrikZeileEn` Vorrang (#3241, Spec `fix_3241_elementliste_en_metrikzeile_chips.md`). Regeln a–f sonst unverändert.
 
 - 2026-11-19: Initial spec created
