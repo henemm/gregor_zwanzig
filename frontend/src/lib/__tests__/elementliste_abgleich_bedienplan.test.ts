@@ -167,11 +167,73 @@ describe('#2966 AC-6: bedienPlan — nie still übergangen', () => {
 		}
 	});
 	test('mit allen Metriken im Briefing ist jeder Wetter-Script-Abschnitt herstellbar (Plan)', () => {
-		// Nur grenzen-* und vorlage-* (Umfang #2966). test-menue hat seit #3440 einen eigenen Plan (Test oben),
-		// kebab-* gehört #2797 und ist hier nicht_herstellbar. Erwartet: 29 Paare (Trip 13+4, Orte 8+4).
+		// Nur grenzen-* und vorlage-* (Umfang #2966). test-menue hat seit #3440, die drei kebab-Zustände seit
+		// #3435 einen eigenen Plan (Tests oben/unten). Erwartet: 29 Paare (Trip 13+4, Orte 8+4).
 		const script = [...new Set(WETTER.filter((e) => L.SCRIPT_ABSCHNITT.test(e.abschnitt) && /^(grenzen-|vorlage-)/.test(e.abschnitt)).map((e) => `${e.ctx}\u0000${e.abschnitt}`))].map((s) => s.split('\u0000'));
 		assert.ok(script.length >= 25, `zu wenige Script-Abschnitte im Reiter Wetter: ${script.length}`);
 		for (const [ctx, a] of script) assert.equal(plan(a, lage(ctx)).art, 'plan', `${ctx}/${a}`);
+	});
+});
+
+const KEBAB_RUECKFRAGEN = { 'kebab-bestaetigung-archivieren': 'archive', 'kebab-bestaetigung-loeschen': 'delete' } as const;
+
+describe('#3435 AC-1: bedienPlan — Kebab-Menü und Rückfragen', () => {
+	for (const ctx of ['trip', 'orte']) {
+		test(`${ctx}: kebab-menue ⇒ Kebab-Knopf öffnen · lesen · Escape schließt`, () => {
+			const p = plan('kebab-menue', lage(ctx));
+			assert.ok(istPlan(p), `erwartet Plan, bekam ${JSON.stringify(p)}`);
+			assert.deepEqual(p.schritte, [
+				{ aktion: 'klick', testid: 'subscription-kebab' },
+				{ aktion: 'lesen' },
+				{ aktion: 'schliessen', taste: 'Escape' }
+			]);
+		});
+		for (const [abschnitt, aktion] of Object.entries(KEBAB_RUECKFRAGEN)) {
+			test(`${ctx}: ${abschnitt} ⇒ Kebab · ${aktion} · lesen · Abbrechen · Escape (nie Bestätigen)`, () => {
+				const p = plan(abschnitt, lage(ctx));
+				assert.ok(istPlan(p), `erwartet Plan, bekam ${JSON.stringify(p)}`);
+				assert.deepEqual(p.schritte, [
+					{ aktion: 'klick', testid: 'subscription-kebab' },
+					{ aktion: 'klick', testid: `subscription-action-${aktion}` },
+					{ aktion: 'lesen' },
+					{ aktion: 'schliessen', testid: 'kebab-rueckfrage-abbrechen' },
+					{ aktion: 'schliessen', taste: 'Escape' }
+				]);
+			});
+		}
+	}
+});
+
+describe('#3435 AC-2: kein Bedienplan bestätigt, versendet, archiviert oder löscht', () => {
+	// Kanal-Zeilen im Menü „Test schicken“ tragen kein testid (nur data-kanal), sind also über einen Plan-
+	// Schritt gar nicht ansprechbar. Verboten sind trotzdem alle testids im Menü (`test-menue-*`) und die
+	// Versand-Rückmeldungen (`test-schicken-*`), damit ein künftiger Kanal-Haken nicht still geklickt wird.
+	const VERSAND = /^(test-menue-|test-schicken-)|kanal/;
+	const paare = [...new Set(LISTE.map((e) => `${e.ctx}\u0000${e.abschnitt}`))].map((s) => s.split('\u0000'));
+	test('Messaufbau: die Elementliste enthält die drei Kebab-Zustände für Trip und Orte', () => {
+		for (const ctx of ['trip', 'orte']) {
+			for (const a of ['kebab-menue', ...Object.keys(KEBAB_RUECKFRAGEN)]) {
+				assert.ok(paare.some(([c, x]) => c === ctx && x === a), `${ctx}/${a} fehlt in der Elementliste`);
+			}
+		}
+	});
+	test('alle (ctx, abschnitt)-Paare: nie Bestätigen, nie Versand, Kebab-Eintrag nur archive/delete und dann immer Abbrechen', () => {
+		let rueckfragen = 0;
+		for (const [ctx, a] of paare) {
+			const p = plan(a, lage(ctx));
+			if (!istPlan(p)) continue;
+			p.schritte.forEach((s, i) => {
+				const id = s.testid ?? '';
+				assert.notEqual(id, 'kebab-rueckfrage-bestaetigen', `${ctx}/${a}: Schritt ${i} bestätigt die Rückfrage`);
+				assert.ok(!VERSAND.test(id), `${ctx}/${a}: Schritt ${i} löst Versand aus (${id})`);
+				if (id.startsWith('subscription-action-')) {
+					assert.ok(['subscription-action-archive', 'subscription-action-delete'].includes(id), `${ctx}/${a}: Kebab-Eintrag ${id} ist nicht erlaubt`);
+					assert.ok(p.schritte.slice(i + 1).some((t) => t.testid === 'kebab-rueckfrage-abbrechen'), `${ctx}/${a}: Rückfrage nach ${id} wird nicht abgebrochen`);
+					rueckfragen++;
+				}
+			});
+		}
+		assert.ok(rueckfragen >= 4, `Messaufbau: erwartet mindestens 4 Rückfrage-Pläne (2 je Kontext), gefunden ${rueckfragen}`);
 	});
 });
 
@@ -278,6 +340,11 @@ describe('#2966: ordneAbschnitte — vorab mit allen Metriken des Prüf-Datensat
 			for (const a of abschnitte.filter((x) => /^(grenzen-|vorlage-)/.test(x))) assert.equal(weg(a).weg, 'bedienen', `${ctx}/${a}`);
 			assert.equal(weg('abschnittskopf').weg, 'lesen');
 			assert.equal(weg('test-menue').weg, 'bedienen');
+			// #3435 AC-3: die drei Kebab-Zustände werden bedient, nicht mehr „nicht herstellbar“.
+			for (const a of ['kebab-menue', 'kebab-bestaetigung-archivieren', 'kebab-bestaetigung-loeschen']) {
+				assert.ok(wege.find((w) => w.abschnitt === a), `${ctx}/${a} fehlt unter den Abschnitten`);
+				assert.equal(weg(a).weg, 'bedienen', `${ctx}/${a}`);
+			}
 			assert.ok(abschnitte.filter((x) => x.startsWith('grenzen-')).length >= 8, `${ctx}: zu wenige Grenzen-Abschnitte`);
 		}
 	});
