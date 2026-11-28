@@ -16,6 +16,14 @@
 		"i18n_keys": ["text:an {zahl} Empfänger", "text:@henning"],
 		"grund": "Ziele im Menü „Test schicken“: E-Mail zeigt die gekürzte Konto-Adresse statt einer Empfängerzahl, Telegram nur „verbunden“ statt eines Namens (PO-Entscheidungen 20./21.11.2026, #3202)",
 		"spec": "docs/specs/modules/feat_3440_test_schicken_menue.md AC-17"
+	},
+	{
+		"ctx": "trip",
+		"reiter": "etappen",
+		"abschnitt": "tempo",
+		"i18n_keys": ["text:Tempo flach", "text:{zahl} km/h", "trip.etappe.aufstieg", "text:{zahl} Hm/h", "text:Gilt für alle Etappen, je Etappe überschreibbar (z.B. Ruhetag, Bergetappe)."],
+		"grund": "Tempo-Karte im Reiter Etappen: Grundtempo statt „Tempo flach“ + „Aufstieg“, Pausentag ohne Tempo (ADR-0108 Nr. 2, Anpassung 2026-11-20; PO-Entscheidung #3196/#3197)",
+		"spec": "docs/specs/modules/fix_3436_tempo_abschnitt.md AC-3"
 	}
 ]
 }

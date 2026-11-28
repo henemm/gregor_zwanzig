@@ -1087,7 +1087,7 @@
 
 <!-- Issue #3196 (Soll-Bild viewEtappen): Tempo-Karte direkt unter dem Bereichskopf des Reiters. -->
 {#snippet tempoKarte()}
-	<div class="etappen-tempo"><TempoKarte tempo={tempoAktiv} onchange={tempoAendern} /></div>
+	<div class="etappen-tempo" data-abschnitt="tempo"><TempoKarte tempo={tempoAktiv} onchange={tempoAendern} /></div>
 	{#if zurueckgesetztAnzahl > 0}
 		<p class="etappen-tempo-hinweis" role="status" data-testid="etappen-tempo-zurueckgesetzt">{$tn('trip.tempo.etappen_zurueckgesetzt', zurueckgesetztAnzahl)}</p>
 	{/if}

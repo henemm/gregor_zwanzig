@@ -1127,6 +1127,8 @@ function freigabeSchluessel(e: ListenElement): string | null {
 /**
  * Macht aus `abweichend` ein `freigegeben` (Grund + Spec), wenn eine Freigabe das Element deckt. Gefunden
  * bleibt gefunden (die Abweichung besteht nicht mehr), nicht_pruefbar bleibt nicht_pruefbar (nicht geprüft).
+ * Ausnahme #3436: eine EN-Lücke („EN-Lücke: kein Katalogtext“) wird ebenfalls `freigegeben`, wenn eine Freigabe
+ * sie deckt — die Freigabe sagt, dass das Mockup-Element bewusst nicht gebaut ist, in jeder Sprache.
  */
 export function wendeFreigabenAn(elemente: ListenElement[], ergebnisse: Map<string, Ergebnis>, freigaben: Freigabe[]): Map<string, Ergebnis> {
 	const out = new Map(ergebnisse);
@@ -1135,7 +1137,8 @@ export function wendeFreigabenAn(elemente: ListenElement[], ergebnisse: Map<stri
 		// #3440 (AC-17): Mockup-Texte ohne Katalogschlüssel (z. B. „an 2 Empfänger“, „@henning“) deckt eine
 		// Freigabe über „text:<Muster bzw. Text>“ in i18n_keys.
 		const schluessel = freigabeSchluessel(e);
-		if (!erg || erg.status !== 'abweichend' || !schluessel) continue;
+		const enLuecke = erg?.status === 'nicht_pruefbar' && erg.grund === 'EN-Lücke: kein Katalogtext';
+		if (!erg || (erg.status !== 'abweichend' && !enLuecke) || !schluessel) continue;
 		const f = freigaben.find((x) => x.ctx === e.ctx && x.reiter === e.reiter && x.abschnitt === e.abschnitt && x.i18n_keys.includes(schluessel));
 		if (f) out.set(e.id, { status: 'freigegeben', grund: `${f.grund} (${f.spec})`, ist: erg.ist ?? erg.grund });
 	}
