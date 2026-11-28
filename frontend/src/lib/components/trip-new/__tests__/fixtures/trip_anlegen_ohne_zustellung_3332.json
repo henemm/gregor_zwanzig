@@ -40,8 +40,8 @@
   "alert_channel_thresholds": {
     "email": "LOW",
     "telegram": "LOW",
-    "sms": "LOW",
-    "premium_sms": "LOW"
+    "sms": "MODERATE",
+    "premium_sms": "HIGH"
   },
   "alert_quiet_from": null,
   "alert_quiet_to": null,

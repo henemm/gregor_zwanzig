@@ -194,7 +194,9 @@ describe('#3333 Test 4 (AC-5): Reiter nie bedient — POST bitgleich zu heute pl
 		for (const k of ['email', 'telegram', 'sms', 'premium_sms']) {
 			assert.equal(s.briefing[k], ref[`send_${k}`] === true, `Briefing-Kanal ${k}`);
 			assert.equal(s.alarme[k], ref.alert_channels[k], `Alarm-Kanal ${k}`);
-			assert.equal(s.dringlichkeit[k], 'LOW', `Dringlichkeit ${k}`);
+			// #2801 (ADR-0131): Vorbelegung je Kanal statt „alle LOW“.
+			const vorbelegung: Record<string, string> = { email: 'LOW', telegram: 'LOW', sms: 'MODERATE', premium_sms: 'HIGH' };
+			assert.equal(s.dringlichkeit[k], vorbelegung[k], `Dringlichkeit ${k}`);
 		}
 		assert.equal(s.stilleAn, false, 'Stille Stunden');
 		assert.equal(s.endDate, null, 'Laufzeit');

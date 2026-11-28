@@ -696,6 +696,10 @@ def test_ac1_ohne_gesetzte_schwelle_erreicht_die_meldung_alle_konfigurierten_kan
           Aenderung erreicht haette -- kein Kanal wird stiller. Startwert
           'gering' <= 'gering' (Dringlichkeit) -> beide konfigurierten
           Kanaele bleiben erreichbar.
+
+    #2801 (ADR-0131): gilt unveraendert fuer E-Mail und Telegram (Vorbelegung
+    'gering'); SMS und Premium-SMS haben ohne Wert die Vorbelegung 'mittel'
+    bzw. 'hoch' -- dafuer: tests/tdd/test_2801_alarm_schwelle_vorbelegung.py.
     """
     from services.trip_alert import TripAlertService
 
@@ -827,9 +831,12 @@ def test_ac11_ortsvergleich_alarm_unveraendert_trotz_trip_kanal_schwellen(monkey
     try:
         _write_user_tier(uid, "premium")
         save_location(_compare_location("loc-ac11", "Hermagor", LAT_A, LON_A), user_id=uid)
+        # #2801 (ADR-0131): ohne Wert gilt SMS "mittel", die gelbe Warnung ist
+        # "gering" -- der Ortsvergleich setzt SMS hier ausdruecklich "gering",
+        # gemessen wird die Trip/Vergleich-Isolation.
         _write_presets(uid, [_preset(
             "p-ac11", ["loc-ac11"], ["e@x.invalid"], send_telegram=True, send_sms=True,
-        )])
+        ) | {"alert_channel_thresholds": {"sms": "LOW"}}])
         register_official_alert_source(
             _FakeOfficialAlertSource(LAT_A, LON_A, [_compare_alert(level=2)])
         )

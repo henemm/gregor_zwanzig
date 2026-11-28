@@ -110,6 +110,11 @@ def _radar_trip(uid: str, trip_id: str, **flags) -> object:
     config = TripReportConfig(trip_id=trip_id, alert_on_changes=True, **flags)
     with freeze_time(_AT):
         trip = _trip_with_active_segment(trip_id, config)
+    # #2801 (ADR-0131): ohne gesetzten Wert gelten SMS "mittel" und Premium-SMS
+    # "hoch". Die Pruefstrecke misst Inhalt und Sperren auf allen vier Kanaelen,
+    # nicht die Vorbelegung -- daher ausdruecklich "gering" fuer beide
+    # (gleichwertig zum Stand vor #2801; ein gesetzter Wert bleibt).
+    trip.alert_channel_thresholds = {"sms": "LOW", "premium_sms": "LOW"}
     save_trip(trip, user_id=uid)
     return trip
 

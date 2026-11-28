@@ -138,6 +138,10 @@ def pruef_lauf(nutzer: str, at: datetime, trip: Trip, frame_source):
     from services.radar_service import RadarNowcastService
 
     _write_premium_profile(nutzer, at)
+    # #2801 (ADR-0131): ohne Wert gelten SMS "mittel", Premium-SMS "hoch" --
+    # diese Laeufe pruefen die Kanal-Paritaet, nicht die Vorbelegung.
+    if trip.alert_channel_thresholds is None:
+        trip.alert_channel_thresholds = {"sms": "LOW", "premium_sms": "LOW"}
     with freeze_time(at):
         save_trip(trip, user_id=nutzer)
     strecke = AlarmPruefstrecke(user_id=nutzer, settings=_settings_all_channels())

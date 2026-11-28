@@ -42,16 +42,18 @@ import { buildAlarmeDeliveryPayload } from './alarmeDeliveryPayload.ts';
 // dieser ihn erreicht" (Startwert 'gering', Bestand wird angezeigt).
 // ─────────────────────────────────────────────────────────────────────────
 describe('AC-10: resolveAlertChannelThresholds() zeigt den aktuellen Wert je Kanal', () => {
-	test('ohne Bestand: alle vier Kanaele zeigen den Startwert LOW (gering)', () => {
+	// Issue #2801 (ADR-0131): Vorbelegung je Kanal statt „alle LOW“ (PO 2026-11-28).
+	test('ohne Bestand: E-Mail/Telegram LOW (gering), SMS MODERATE (mittel), Premium-SMS HIGH (hoch)', () => {
 		const state = resolveAlertChannelThresholds(null);
-		assert.deepEqual(state, { telegram: 'LOW', sms: 'LOW', email: 'LOW', premium_sms: 'LOW' });
+		assert.deepEqual(state, { telegram: 'LOW', sms: 'MODERATE', email: 'LOW', premium_sms: 'HIGH' });
 	});
 
-	test('mit Bestand: der eingestellte Wert eines Kanals erscheint unveraendert, die anderen bleiben LOW', () => {
+	test('mit Bestand: der eingestellte Wert eines Kanals erscheint unveraendert, die anderen behalten ihre Vorbelegung', () => {
 		const state = resolveAlertChannelThresholds({ telegram: 'HIGH' });
 		assert.equal(state.telegram, 'HIGH', 'telegram muss den Bestandswert HIGH zeigen');
-		assert.equal(state.sms, 'LOW', 'sms ohne Bestand bleibt beim Startwert LOW');
+		assert.equal(state.sms, 'MODERATE', 'sms ohne Bestand: Vorbelegung MODERATE (#2801)');
 		assert.equal(state.email, 'LOW', 'email ohne Bestand bleibt beim Startwert LOW');
+		assert.equal(state.premium_sms, 'HIGH', 'premium_sms ohne Bestand: Vorbelegung HIGH (#2801)');
 	});
 
 	test('drei Stufen sind gering/mittel/hoch beschriftet', () => {

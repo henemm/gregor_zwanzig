@@ -89,7 +89,7 @@ Abhängigkeiten: B1 → B2 → B3 → B6 → B7. B4 und B5 laufen nach B1 parall
 ```
 
 - Die Reihenfolge ist die Listenposition. Sie gilt für alle Stellen.
-- Stellen: `email`, `telegram`, `sms`, `hourly` (nur Orte), `outlook`. `premium_sms` ist reserviert für S9 (#2801) und wird bis dahin nicht gelesen.
+- Stellen: `email`, `telegram`, `sms`, `hourly` (nur Orte), `outlook`. `premium_sms` ist reserviert für S9 (#2801) und wird bis dahin nicht gelesen. *(2026-11-28, ADR-0131: endgültig keine eigene Premium-Auswahl, die Premium-SMS bekommt denselben Inhalt wie die SMS.)*
 - `places.<stelle>` fehlt = angehakt. `false` = bewusst abgewählt. Damit ist „später eingeschaltet“ von „abgewählt“ unterscheidbar (#3082).
 - `formats.<stelle>` ∈ `raw | simplified`, nur für `email`, `telegram`, `hourly`, `outlook`. Fehlt der Wert, gilt der Katalog-Standard der Metrik, für Trip und Orte gleich.
 - `outlook_reports` ⊆ `["morning", "evening"]`: in welchem Briefing der 3-Tages-Ausblick steht. Fehlt der Schlüssel, gilt die Vorbelegung aus Nr. 6.
@@ -326,7 +326,7 @@ Die Tabelle „Übersicht“ steht auch bei genau einem Ort in der Mail (Soll-Bi
 
 ## Out of Scope
 
-- Eigene Auswahl der Premium-SMS: S9, #2801.
+- Eigene Auswahl der Premium-SMS: S9, #2801. *(Entfällt, ADR-0131: die Premium-SMS bekommt endgültig denselben Inhalt wie die SMS.)*
 - Tabelle schon beim Anlegen: #3041.
 - E-Mail-Format „Kompakt“ für Orte: gebaut mit #3059 (`feat_3059_orte_kompakt_mail.md`, ADR-0124 Nachtrag 2026-11-24); Vortag-Vergleich für Orte: #3342.
 - Reiter Orte, Anlegen mit einem Ort, Menü, Listen, Untergrenze des Validators: #2798.

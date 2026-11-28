@@ -145,6 +145,10 @@ def test_kanalmatrix_und_schwelle_konsistent_bis_zum_versand():
     vorhandene Altschlüssel (nur Telegram) hat keine Wirkung; SMS fällt an der
     Schwelle HIGH, E-Mail und Premium-SMS (Default LOW) kommen durch.
 
+    Issue #2801 (ADR-0131): Premium-SMS ohne gesetzten Wert hat die
+    Vorbelegung HIGH -- bei MODERATE faellt sie jetzt ebenfalls raus; nur
+    E-Mail kommt durch.
+
     Orakel (unabhängig von `resolve_alert_channels()`/`split_by_threshold()`
     von Hand nachgebildet, NICHT aus der Produktfunktion übernommen): einzige
     auslösende Metrik `precip_sum_mm` → Katalog-`metric_id` `precipitation` →
@@ -178,10 +182,11 @@ def test_kanalmatrix_und_schwelle_konsistent_bis_zum_versand():
             f"AC-1 Vorbedingung: der Regen-Sprung muss auslösen (war "
             f"{lauf.triggered_count})."
         )
-        assert _kanaele(lauf) == {"mail": 1, "telegram": 0, "sms": 0, "premium_sms": 1}, (
-            f"AC-1/#2795: E-Mail und Premium-SMS nach der Kanal-Tabelle, "
-            f"Altschlüssel (nur Telegram) ohne Wirkung, SMS fällt an der "
-            f"Schwelle raus: {_kanaele(lauf)!r}"
+        assert _kanaele(lauf) == {"mail": 1, "telegram": 0, "sms": 0, "premium_sms": 0}, (
+            f"AC-1/#2795/#2801: E-Mail nach der Kanal-Tabelle, Altschlüssel "
+            f"(nur Telegram) ohne Wirkung, SMS fällt an der gesetzten Schwelle "
+            f"HIGH raus, Premium-SMS (nicht gesetzt -> Vorbelegung HIGH, "
+            f"#2801) bei MODERATE ebenso: {_kanaele(lauf)!r}"
         )
     finally:
         _clean_user(uid)

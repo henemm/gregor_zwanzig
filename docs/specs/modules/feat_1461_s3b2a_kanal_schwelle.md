@@ -310,6 +310,9 @@ einzuplanen, nicht zu umgehen.
   Alarm-Meldung genauso verschickt wie vor dieser Änderung.
   - Test: Versandzähler und Protokolleintrag für diesen Alarm vor und nach dem Patch
     vergleichen.
+  - **Aufgehoben (2026-11-28, ADR-0131, Issue #2801):** Der Startwert „gering“ für alle Kanäle
+    (PO-Entscheidung 2026-08-05) gilt nicht mehr. Ohne gesetzten Wert gilt die Vorbelegung je
+    Kanal: E-Mail und Telegram „gering“, SMS „mittel“, Premium-SMS „hoch“. Gesetzte Werte bleiben.
 
 ## Known Limitations
 

@@ -125,23 +125,33 @@ export const CHANNEL_THRESHOLD_LABELS: Record<ChannelThreshold, string> = {
 	}
 };
 
-// PO-Entscheidung 2026-08-05: Startwert je Kanal ist 'LOW' — es wird
-// nirgends stiller, bis der Nutzer selbst eine Schwelle hochsetzt (rote
-// Linie #638).
-const DEFAULT_CHANNEL_THRESHOLD: ChannelThreshold = 'LOW';
+// Issue #2801 (ADR-0131, PO 2026-11-28; loest den Einzelwert 'LOW' aus
+// ADR-0046 ab): EINE Quelle der Vorbelegung je Kanal fuer das Frontend.
+// Gilt nur, wenn kein Wert gesetzt ist; ein gesetzter Wert (auch 'LOW')
+// bleibt. Python-Gegenstueck: src/services/alert_channel_threshold.py,
+// Gleichheit geprueft gegen tests/fixtures/alarm_schwelle_vorbelegung_2801.json.
+export const DEFAULT_CHANNEL_THRESHOLDS: Readonly<Record<ChannelKind, ChannelThreshold>> = {
+	email: 'LOW',
+	telegram: 'LOW',
+	sms: 'MODERATE',
+	premium_sms: 'HIGH'
+};
 
-function coerceThreshold(value: unknown): ChannelThreshold {
-	return value === 'MODERATE' || value === 'HIGH' ? value : DEFAULT_CHANNEL_THRESHOLD;
+/** Wirksame Stufe eines Kanals: gesetzter Wert, sonst Vorbelegung (leer/unbekannt = nicht gesetzt). */
+export function resolveChannelThreshold(value: unknown, kind: ChannelKind): ChannelThreshold {
+	return value === 'LOW' || value === 'MODERATE' || value === 'HIGH'
+		? value
+		: DEFAULT_CHANNEL_THRESHOLDS[kind];
 }
 
 export function resolveAlertChannelThresholds(
 	existing?: Partial<Record<ChannelKind, string | null>> | null
 ): AlertChannelThresholdState {
 	return {
-		telegram: coerceThreshold(existing?.telegram),
-		sms: coerceThreshold(existing?.sms),
-		email: coerceThreshold(existing?.email),
-		premium_sms: coerceThreshold(existing?.premium_sms)
+		telegram: resolveChannelThreshold(existing?.telegram, 'telegram'),
+		sms: resolveChannelThreshold(existing?.sms, 'sms'),
+		email: resolveChannelThreshold(existing?.email, 'email'),
+		premium_sms: resolveChannelThreshold(existing?.premium_sms, 'premium_sms')
 	};
 }
 

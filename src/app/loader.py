@@ -798,7 +798,8 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         # bleibt Legacy-Verhalten (s. Trip.alert_channels Docstring).
         alert_channels=data.get("alert_channels"),
         # Issue #1461 S3b-2a: explizit durchreichen (auch als None) -> None
-        # bleibt Startwert "LOW" je Kanal (s. Trip.alert_channel_thresholds).
+        # bleibt None; zur Laufzeit gilt die Vorbelegung je Kanal (#2801,
+        # services.alert_channel_threshold.default_threshold).
         alert_channel_thresholds=data.get("alert_channel_thresholds"),
         # Issue #1895 S1: explizit durchreichen (auch als None) -> None bleibt
         # "erbt den Abo-weiten Kanal-Satz" (s. Trip.alert_metric_channels).

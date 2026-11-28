@@ -241,6 +241,9 @@ def _preset(user_id: str, preset_id: str, orte: list[SavedLocation], *,
         "radar_alert_enabled": True,
         "alert_cooldown_minutes": 0,
         "display_config": {"telegram_style": style},
+        # #2801 (ADR-0131): ohne Wert gelten SMS "mittel", Premium-SMS "hoch";
+        # gemessen wird hier die Kurzform, nicht die Vorbelegung.
+        "alert_channel_thresholds": {"sms": "LOW", "premium_sms": "LOW"},
     }
     for ch in kanaele:
         preset[f"send_{ch}"] = True

@@ -186,7 +186,8 @@ const KARTE_EINMAL: Record<HubKind, Record<string, number>> = {
 	// #3059 (AC-13): der E-Mail-Format-Schalter steht auch bei Orten genau einmal in der Karte.
 	vergleich: { 'was-steht-wo-kurzstil': 1, 'was-steht-wo-email-format': 1, 'was-steht-wo-ausblick-morning': 1, 'was-steht-wo-ausblick-evening': 1, 'was-steht-wo-show_stage_stats': 0, 'was-steht-wo-show_yesterday_comparison': 0, 'was-steht-wo-show_night_block': 0, 'was-steht-wo-stundenverlauf': 1 }
 };
-const PREMIUM_HINWEIS = 'Bekommt vorerst denselben Text wie die SMS. Eine eigene Auswahl kommt später.';
+// #2801 (AC-9): Premium-SMS endgültig = SMS-Inhalt.
+const PREMIUM_HINWEIS = 'Die Premium-SMS bekommt denselben Inhalt wie die SMS.';
 
 /** Fremde Einstellungen je Kontext außerhalb von „Was steht wo“, die kein Speichern in Zustellung oder Karte
  *  überschreiben darf (Read-Modify-Write mit Merge). #3359: echte, gelesene Felder statt der seit #3277
