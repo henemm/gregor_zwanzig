@@ -23,7 +23,7 @@ Die Profil-Ampel aus der Vorlage (ADR-0106 Punkt 5 und 6) färbt bisher nur die 
 
 Dies ist die **Gesamt-Spec mit Lieferplan** nach Epic-Konvention (wie `feat_2794_s3a_reiter_wetter.md`). Jeder Teil-PR bekommt vor seiner Implementierung eine eigene Teil-Spec oder einen Nachtrag zu dieser Spec, der die hier zugeordneten ACs referenziert und konkretisiert.
 
-Entscheidungsgrundlage: ADR-0106 (P5, P6, D4), ADR-0010 (Vorboten), ADR-0019 (Nullgradgrenze als Alert-Metrik), ADR-0122 (Hochlage-Normalisierung tiefer Wolken), ADR-0095 (Kanal-Parität), ADR-0104 (zweisprachig), ADR-0042 (Kürzel unübersetzt), ADR-0101 (Read-Modify-Write). Analyse: `docs/context/feat-2799-ampel-weitere.md`; Konzept: `docs/context/einstellungen_neu.md` §4.2, §4.4.
+Entscheidungsgrundlage: ADR-0106 (P5, P6, D4), ADR-0010 (Vorboten), ADR-0019 (Nullgradgrenze als Alert-Metrik), ADR-0122 (Hochlage-Normalisierung tiefer Wolken), ADR-0095 (Kanal-Parität), ADR-0104 (zweisprachig), ADR-0042 (Kürzel unübersetzt), ADR-0101 (Read-Modify-Write), ADR-0126 (Windrichtung-Modi, bleibt unverändert). Analyse: `docs/context/feat-2799-ampel-weitere.md`; Konzept: `docs/context/einstellungen_neu.md` §4.2, §4.4.
 
 **PO-Entscheidungen 2026-11-28 (AskUserQuestion):**
 - **E1 Mittlere Wolken:** bleiben reine Anzeige (kein ADR-Nachtrag). Begründung: Die Open-Meteo-Bänder (tief bis 3 km, mittel 3 bis 8 km, hoch ab 8 km; ECMWF 700/500 hPa) beginnen für die meisten Routen oberhalb der Etappe; „Gipfel in Wolken“ trägt `cloud_low`. Wiedervorlage, falls ein Provider eine Wolkenuntergrenze liefert.
@@ -83,6 +83,7 @@ Entscheidungsgrundlage: ADR-0106 (P5, P6, D4), ADR-0010 (Vorboten), ADR-0019 (Nu
 | ADR-0010 | ADR | Vorboten ohne Alarm |
 | ADR-0019 | ADR | Nachtrag: Schneefallgrenze eigenständige Alarm-Metrik (S7f, vor S7c1) |
 | ADR-0122 | ADR | Hochlage-Normalisierung; nur Abgrenzung, keine Änderung |
+| ADR-0126 | ADR | Windrichtung-Modi gegenwind/sektoren; Färbung bleibt unverändert (Abgrenzung AC-8) |
 | ADR-0042 | ADR | Kürzel `FZ`/`SL` bleiben unübersetzt |
 | `tests/tdd/test_ampel_vorlagen_gleich_einstellungen_doku.py` | Ratsche | Vorlagenzahlen gegen Doku |
 | `briefing_mail_validator.py`, `email_spec_validator.py` | Validatoren | echte Staging-Mail je Mail-Teil |
