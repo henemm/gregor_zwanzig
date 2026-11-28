@@ -136,14 +136,30 @@ for (const [kind, datei, ctx] of [
 	});
 }
 
-describe('AC-38 / F012: Vergleich-Hub mountet WetterTab erst nach der Layout-Hydration', () => {
-	test('s3a2794_t3_vergleich_wettertab_unter_wetterMetrikenLayoutHydrationBereit', () => {
+// Issue #3022 (umgekehrt, vormals AC-38 / F012 „erst nach der Layout-Hydration“): WetterTab bedient keinen
+// `wizardState` mehr — WetterTabInhalt laedt selbst und zeigt einen eigenen Ladezustand („Lade Metriken …“).
+// Das Hydrations-Gate haengt am Metrik-Katalog; haengt der, blieb der Reiter leer (nur Sperr-Kopf). Soll wie
+// im Trip: WetterTab mountet allein nach aktivem Reiter, unabhaengig von wetterMetrikenLayoutHydrationBereit.
+// Spec: docs/specs/modules/fix_3022_zustellung_laedt.md (AC-2).
+describe('#3022: Vergleich-Hub mountet WetterTab ohne Hydrations-Gate (wie im Trip)', () => {
+	test('i3022_vergleich_wettertab_mountet_ohne_hydration', () => {
 		const { e, quelle } = wetterTabs(DATEI.vergleichHub);
-		assert.equal(e.length, 1, `TDD RED: erwartet genau einen WetterTab im Vergleich-Hub, gefunden ${e.length}`);
-		const w = e[0].weichen.find((x) => x.zweig === 'dann' && /\bwetterMetrikenLayoutHydrationBereit\b/.test(x.test));
-		assert.ok(w, `${beschreibe(e[0], quelle)}: steht nicht im dann-Zweig einer Weiche mit wetterMetrikenLayoutHydrationBereit`);
-		assert.equal(Boolean(werte(w!.test, { wetterMetrikenLayoutHydrationBereit: false, activeTab: 'wetter' })), false, 'mountet vor der Hydration');
-		assert.equal(Boolean(werte(w!.test, { wetterMetrikenLayoutHydrationBereit: true, activeTab: 'wetter' })), true, 'mountet nach der Hydration nicht');
+		assert.equal(e.length, 1, `Messaufbau: erwartet genau einen WetterTab im Vergleich-Hub, gefunden ${e.length}`);
+		const gemountet = (u: Record<string, unknown>) =>
+			e[0].weichen.every((w) => {
+				const r = Boolean(werte(w.test, u));
+				return w.zweig === 'dann' ? r : !r;
+			});
+		for (const bereit of [false, true]) {
+			assert.equal(
+				gemountet({ wetterMetrikenLayoutHydrationBereit: bereit, activeTab: 'wetter' }),
+				true,
+				`#3022: ${beschreibe(e[0], quelle)} mountet im Reiter wetter nicht bei wetterMetrikenLayoutHydrationBereit=${bereit}`
+			);
+			for (const tab of ['uebersicht', 'orte', 'zustellung']) {
+				assert.equal(gemountet({ wetterMetrikenLayoutHydrationBereit: bereit, activeTab: tab }), false, `#3022: WetterTab gemountet im Reiter ${tab}`);
+			}
+		}
 	});
 });
 

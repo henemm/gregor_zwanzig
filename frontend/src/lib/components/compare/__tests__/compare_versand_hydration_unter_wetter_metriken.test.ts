@@ -13,8 +13,8 @@
 // nicht ueber einen Variablennamen. Neu: Fall „Daten kommen spaet" (erst Standard lesen, dann
 // hydrieren; ein vorher gesetzter Nutzerwert in einem nicht hydrierten Feld bleibt).
 // Heute rot (nur die Faelle mit Feldsatz): der Hub instanziiert noch die Klasse (VERTRAG FEHLT).
-// Zusaetzlich (Template-AST): der Baustein im Panel `wetter-metriken` haengt am Flag
-// `versandHydrated` (umschliessender Block oder Prop) — er mountet also erst nach der Hydration.
+// Zusaetzlich (Template-AST, seit #3022 umgekehrt): der Baustein ZustellungTab haengt an KEINEM
+// Hydrations-Flag mehr — er mountet sofort mit dem aktiven Reiter (Stand aus dem Preset).
 //
 // Grenze: „kein PUT mit Platzhaltern" bei verzoegerter Hydration im Browser misst Playwright (/50);
 // der Speicherweg selbst ist in wetter_metriken_versand_panel_speicherung.test.ts bewacht.
@@ -179,21 +179,32 @@ function mitVorfahren(knoten: unknown, name: string): Array<{ k: Knoten; vorfahr
 }
 
 // #2794 S3a: der Versand-Abschnitt kommt im Hub ueber den geteilten ZustellungTab (Panel `zustellung`).
-describe('#1743 AC-9 (Template): der Zustellungs-Baustein haengt an versandHydrated', () => {
-	test('ZustellungTab steht unter einer Bedingung mit versandHydrated oder erhaelt das Flag als Prop', async () => {
+// Issue #3022 (umgekehrt, vormals #1743 AC-9 „haengt an versandHydrated“): ZustellungTab bedient keinen
+// `wizardState` mehr — sein Stand kommt direkt aus dem Preset (`standAusPreset`), die Speicher-Basis ist
+// `startStand` aus dem Preset, das Profil laedt er selbst. Das Gate schuetzte nichts mehr, hielt aber den
+// Reiter leer, solange der Metrik-Katalog hing. Soll wie im Trip: KEINE Bedingung und KEIN Prop mit
+// versandHydrated (oder einem anderen Hydrations-Flag) an der Einbettung; nur der aktive Reiter zaehlt.
+// Die Hydrations-Effekt-Tests oben in dieser Datei bleiben unveraendert (Effekte bleiben vorerst, #3495).
+// Spec: docs/specs/modules/fix_3022_zustellung_laedt.md (AC-1, AC-3).
+const HYDRATIONS_FLAGS = /\b(versandHydrated|alarmeHydrated|wetterMetrikenHydrated|layoutHydrated|wetterMetrikenLayoutHydrationBereit)\b/;
+describe('#3022 (Template): der Zustellungs-Baustein haengt an keinem Hydrations-Flag', () => {
+	test('ZustellungTab steht unter keiner Bedingung mit einem Hydrations-Flag und erhaelt keins als Prop', async () => {
 		const { ast, quelle } = await hubOeffnen('zustellung');
 		const treffer = mitVorfahren(ast.fragment, 'ZustellungTab');
 		assert.equal(treffer.length, 1, 'genau ein ZustellungTab im Vergleichs-Hub erwartet');
 		const { k, vorfahren } = treffer[0];
-		const imBlock = vorfahren.some(
-			(v) => v.type === 'IfBlock' && /\bversandHydrated\b/.test(quelle.slice(v.test.start, v.test.end))
-		);
-		const alsProp = ((k.attributes ?? []) as Knoten[]).some(
-			(a) =>
-				a.type === 'Attribute' &&
-				a.value?.type === 'ExpressionTag' &&
-				/\bversandHydrated\b/.test(quelle.slice(a.value.expression.start, a.value.expression.end))
-		);
-		assert.ok(imBlock || alsProp, 'der Versand-Abschnitt kann vor seiner Hydration mounten (Platzhalter-Risiko)');
+		const bloecke = vorfahren
+			.filter((v) => v.type === 'IfBlock' && HYDRATIONS_FLAGS.test(quelle.slice(v.test.start, v.test.end)))
+			.map((v) => quelle.slice(v.test.start, v.test.end));
+		const props = ((k.attributes ?? []) as Knoten[])
+			.filter(
+				(a) =>
+					a.type === 'Attribute' &&
+					a.value?.type === 'ExpressionTag' &&
+					HYDRATIONS_FLAGS.test(quelle.slice(a.value.expression.start, a.value.expression.end))
+			)
+			.map((a) => String(a.name));
+		assert.deepEqual(bloecke, [], '#3022: ZustellungTab mountet erst nach einer Hydration (Reiter bleibt leer, solange der Katalog haengt)');
+		assert.deepEqual(props, [], '#3022: ZustellungTab erhaelt ein Hydrations-Flag als Prop');
 	});
 });
