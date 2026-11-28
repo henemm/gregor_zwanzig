@@ -295,6 +295,7 @@ X-GZ-Lang:      de | en
 | Betreff (`versand.scheduler.vergleich_betreff`) | `Orte: {name} ({datum})` (EN `Locations: …`) | dasselbe |
 | Übersicht, Unterzeile (`vergleich.uebersicht.titel.one/.other`) | `Alle Orte · gewählte Metriken` | `Gewählte Metriken` |
 | Stundenverlauf, Titel (`vergleich.stunden.titel.one/.other`) | `Stundenverlauf · alle Orte` | `Stundenverlauf` |
+| Etikett vor dem Ortsnamen im Stundenverlauf (`vergleich.stunden.ort_eyebrow`, seit 2026-11-28, #2923) | `ORT` (EN `LOCATION`) | `ORT` (EN `LOCATION`) |
 | Fuß (`vergleich.fuss.abo_zeile.one/.other`) | `{n} Orte · Vorlage {vorlage}` | `1 Ort · Vorlage {vorlage}` |
 | Umfang einer amtlichen Warnung (`warnung.umfang.alle_orte`, Code `official_alerts.py`) | `alle Orte` (EN `all locations`) | der Ortsname selbst, nie „alle Orte“ (#3153 AC-2, Abo mit genau einem Ort) |
 | Knopf (`vergleich.fuss.app_oeffnen`) | `In der App öffnen →` (EN `Open in app →`) | dasselbe |

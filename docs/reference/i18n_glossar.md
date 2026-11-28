@@ -84,6 +84,7 @@
 | Schwelle | threshold | |
 | Aktivitätsprofil | activity profile | Werte: *general*, *hiking*, *mountaineering*, … (Register prüfen) |
 | Stundenverlauf | hourly view | Abschnitt im Ortsvergleich; Abschnittskopf „STUNDEN" = *HOURLY* (#2666). Ab #3122 auch Spalte der Tabelle „Was steht wo“ (nur Orte, nur E-Mail; ADR-0124 Nr. 2) |
+| Ort (Etikett im Stundenverlauf) | location | Kopf vor jedem Ortsnamen im Stundenverlauf der Orte-Mail, Katalog `vergleich.stunden.ort_eyebrow` (DE „ORT“, EN „LOCATION“; #2923). Nie fest auf Deutsch im Code |
 | Gehzeit | walking hours | Tageswerte „(Gehzeit)" = *(walking hours)*, wie `label_en` im Metrik-Register (#2751) |
 | Nachtfenster | night window | Nacht-Einzelwert = *single value for the night window* (#2751) |
 | Abo | subscription | „Dieses Abo" = *This subscription*, „Abo bearbeiten" = *Edit subscription* (#2666) |
