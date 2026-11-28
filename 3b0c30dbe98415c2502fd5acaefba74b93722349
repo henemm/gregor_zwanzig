@@ -1,0 +1,59 @@
+{
+  "verified_commit": "3b0c30dbe98415c2502fd5acaefba74b93722349",
+  "findings": [
+    {
+      "ac": "AC-1.5/AC-4",
+      "status": "PASS",
+      "url": "staging mail trip de+en",
+      "evidence": "Staging-Commit 3b0c30d; Trip-Briefing real zugestellt (GZM 280658-4014ad82 de, GZM 280658-b81f3fcd en), briefing_mail_validator Exit 0 je Sprache; Gewitter-Stufenwort per Kern-Tests (17 gruen) und Golden-Mails belegt",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-1.6/AC-5",
+      "status": "PASS",
+      "url": "staging mail trip de+en",
+      "evidence": "Kurz-Zusammenfassung in beiden Trip-Mails vom Validator akzeptiert; Windrichtung nach Auswahl durch Kern-Tests mit echtem CompactSummaryFormatter belegt",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "AC-1.7/AC-6",
+      "status": "PASS",
+      "url": "staging mail compare de+en",
+      "evidence": "Orts-Vergleich real zugestellt, email_spec_validator Exit 0 je Sprache; Orte-Telegram ohne Windrichtungs-Marke, zwei Nutzer isoliert, per Kern-Test mit echtem Renderer belegt",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "Smoke",
+      "status": "PASS",
+      "url": "/api/health",
+      "evidence": "HEALTH 200, commit 3b0c30dbe98415c2502fd5acaefba74b93722349; ROOT 401 (Staging hinter Zugangsschutz)",
+      "workflow": "unknown"
+    },
+    {
+      "ac": "Telegram-Live",
+      "status": "PASS",
+      "url": "staging telegram",
+      "evidence": "staging_telegram_live.py auf 3b0c30d: passed=10 skipped=0 failures=0, Nachweis e2e_telegram_live/3b0c30d.json",
+      "workflow": "unknown"
+    }
+  ],
+  "verified_at": "2026-11-28T07:25:00.303454+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Trip- und Vergleichs-Mail DE+EN auf Staging real zugestellt, Validatoren Exit 0; Telegram-Live 10/10 bestanden",
+  "scope": "backend",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "unknown": {
+      "verdict": "VERIFIED: Trip- und Vergleichs-Mail DE+EN auf Staging real zugestellt, Validatoren Exit 0; Telegram-Live 10/10 bestanden",
+      "scope": "backend",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-28T07:25:00.303454+00:00"
+    }
+  }
+}
