@@ -71,7 +71,7 @@ from app.models import (  # noqa: E402
 from app.profile import ActivityProfile  # noqa: E402
 from app.trip import Stage, Trip, Waypoint  # noqa: E402
 from app.user import ComparisonResult, LocationResult, SavedLocation  # noqa: E402
-from output.channels.email import EmailOutput  # noqa: E402
+from output.channels.email import EmailOutput, build_mime_message  # noqa: E402
 from output.renderers.alert.model import AlertMessage  # noqa: E402
 from output.renderers.alert.project import onset_event_from_fields  # noqa: E402
 from output.renderers.alert.render import render_email as render_alert_email  # noqa: E402
@@ -399,6 +399,17 @@ def compare_windrichtung_soll() -> dict:
     """Soll der Windrichtungs-Pruefung im Vergleichs-Validator (JSON):
     ``orte`` = Ortsname -> [Stufe Windrichtungs-Zeile, Stufe Wind je Stunde]."""
     return {"ampel": COMPARE_AMPEL, "orte": {n: list(s) for n, s in COMPARE_WIND_STUFEN.items()}}
+
+
+def build_compare_mime(token: str, lang: str = "de") -> bytes:
+    """#3503: Compare-Gate-Mail als fertige MIME-Bytes (fuer den lokalen
+    Render-Nachweis im renderer_mail_gate, ohne Produkt-Import im Hook)."""
+    subject, html, plain = build_compare_mail(token, lang=lang)
+    msg = build_mime_message(
+        subject, html, "gate@lokal.invalid", "gate@lokal.invalid", None, True,
+        plain, mail_type="compare", mail_format="full", lang=lang,
+    )
+    return msg.as_bytes()
 
 
 def build_compare_mail(token: str, lang: str = "de") -> tuple[str, str, str]:

@@ -421,17 +421,12 @@ def _render_compare_errors(repo: Path) -> list[str]:
     sys.path.insert(0, str(repo / "scripts"))
     sys.path.insert(0, str(repo / "src"))
     import send_gate_test_mails as fixtures  # lazy: Fixture, keine Kopie
-    from output.channels.email import build_mime_message
     import email_spec_validator as validator
 
     fehler: list[str] = []
     for lang in ("de", "en"):
-        subject, html, plain = fixtures.build_compare_mail("lokal", lang=lang)
-        msg = build_mime_message(
-            subject, html, "gate@lokal.invalid", "gate@lokal.invalid", None, True,
-            plain, mail_type="compare", mail_format="full", lang=lang,
-        )
-        ok, errs = validator.validate_message(_email.message_from_bytes(msg.as_bytes()))
+        mime = fixtures.build_compare_mime("lokal", lang)
+        ok, errs = validator.validate_message(_email.message_from_bytes(mime))
         if not ok:
             fehler.extend(f"[{lang}] {e}" for e in (errs or ["unbekannter Befund"]))
     return fehler
