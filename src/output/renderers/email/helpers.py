@@ -1748,6 +1748,17 @@ def _extreme_ampel_tone(metric_id: str, vals_ts: list, *, ampel: dict) -> str:
     return _AMPEL_STAGE_TONES[max(hi_idx, lo_idx)]
 
 
+def _pille_ampelton(metric_id: str, werte: list, *, ampel: dict) -> str:
+    """Issue #2799 S7a1: Pillen-Ton aus dem schaerfsten Tageswert (je Seite,
+    ``ampel_schaerfe``), wenn die Pille die Metrik faerbt; sonst neutral."""
+    from app.ampel import ampel_schaerfe, ampel_stufe, faerbt_an, schlimmster_index
+    if not werte or not faerbt_an("pille", metric_id):
+        return _PILL_NEUTRAL_TONE
+    i = schlimmster_index(werte, lambda v: ampel_schaerfe(ampel, metric_id, v))
+    stufe = ampel_stufe(ampel, metric_id, werte[i])
+    return f"ampel_{stufe}" if stufe else _PILL_NEUTRAL_TONE
+
+
 def _pill_for_metric(
     metric_id: str,
     sms_mention_thresholds: dict,
@@ -1817,7 +1828,7 @@ def _pill_for_metric(
         max_hh = local_hour(max_ts, tz)
         wert = f"{min_v}" if min_v == max_v else f"{min_v}–{max_v}"
         text = t("mail.pille.bewoelkt", lang, wert=wert, zeit=f"{max_hh:02d}:00")
-        return (text, _PILL_NEUTRAL_TONE)
+        return (text, _pille_ampelton("cloud_total", [v for v, _ in vals_ts], ampel=ampel))
 
     if metric_id == "cloud_low":
         vals = [dp.cloud_low_pct for dp in all_dps if dp.cloud_low_pct is not None]
@@ -1825,7 +1836,7 @@ def _pill_for_metric(
             return None
         return (_range_pill(t("mail.pille.tiefe_wolken", lang), "%",
                             int(min(vals)), int(max(vals))),
-                _PILL_NEUTRAL_TONE)
+                _pille_ampelton("cloud_low", vals, ampel=ampel))
 
     if metric_id == "freezing_level":
         # AC-9: "0°-Linie 2.310–2.550 m · Max 15:00" — Tausenderpunkt
@@ -1851,7 +1862,8 @@ def _pill_for_metric(
         min_val, min_ts = min(vals_ts, key=lambda x: x[0])
         min_hh = local_hour(min_ts, tz)
         return (t("mail.pille.taupunkt", lang, wert=f"{min_val:.1f}",
-                  zeit=f"{min_hh:02d}:00"), _PILL_NEUTRAL_TONE)
+                  zeit=f"{min_hh:02d}:00"),
+                _pille_ampelton("dewpoint", [v for v, _ in vals_ts], ampel=ampel))
 
     if metric_id == "uv_index":
         # AC-11: "UV max 2.4 (14:00)"
@@ -1880,7 +1892,7 @@ def _pill_for_metric(
             return None
         return (t("mail.pille.sonne", lang,
                   wert=format_value('sunshine', total, style='bare')),
-                _PILL_NEUTRAL_TONE)
+                _pille_ampelton("sunshine", [total], ampel=ampel))
 
     # ---- Klasse 1 — Ereignis-Metriken (mit Uhrzeit, Ampel-gefaerbt) ----
     if metric_id in ("wind", "gust"):

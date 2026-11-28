@@ -1,0 +1,80 @@
+ORTE
+========================
+Datum: Montag, 20.07.2026
+Erstellt: 20.07.2026 06:00 (CEST)
+
+--------------------------------------------------
+Kronplatz
+   Temperatur Maximum: 15°C
+   Temperatur Minimum: 15°C
+   Wind: 35 km/h
+   Böen: 55 km/h
+   Niederschlag: 18.0 mm
+   Regenwahrscheinlichkeit: 60%
+   Sonnenstunden: 0.5 h
+   Bewölkung: 70%
+   Tiefe Wolken: 60%
+   Taupunkt: 19°C
+   UV-Index: 7
+   Sichtweite: 8.0 km
+   Schneehöhe: 25 cm
+   Neuschnee: 6 cm
+   Nullgradgrenze: 2300 m
+   Gefühlte Temperatur: -3°C
+
+Sulden
+   Temperatur Maximum: 15°C
+   Temperatur Minimum: 15°C
+   Wind: 35 km/h
+   Böen: 55 km/h
+   Niederschlag: 18.0 mm
+   Regenwahrscheinlichkeit: 60%
+   Sonnenstunden: 0.5 h
+   Bewölkung: 70%
+   Tiefe Wolken: 60%
+   Taupunkt: 19°C
+   UV-Index: 7
+   Sichtweite: 8.0 km
+   Schneehöhe: 25 cm
+   Neuschnee: 6 cm
+   Nullgradgrenze: 2300 m
+   Gefühlte Temperatur: -3°C
+
+STUNDENVERLAUF
+---------------
+Kronplatz (CEST)
+   08:00  Temp 15°  Feels 13°  Wind 35  Gust 55  Rain 2.0  UV 7  Thdr –  Rain% 60%  Visib 8.0
+   09:00  Temp 15°  Feels 13°  Wind 35  Gust 55  Rain 2.0  UV 7  Thdr –  Rain% 60%  Visib 8.0
+   10:00  Temp 15°  Feels 13°  Wind 35  Gust 55  Rain 2.0  UV 7  Thdr –  Rain% 60%  Visib 8.0
+   11:00  Temp 15°  Feels 13°  Wind 35  Gust 55  Rain 2.0  UV 7  Thdr –  Rain% 60%  Visib 8.0
+   12:00  Temp 15°  Feels 13°  Wind 35  Gust 55  Rain 2.0  UV 7  Thdr –  Rain% 60%  Visib 8.0
+   13:00  Temp 15°  Feels 13°  Wind 35  Gust 55  Rain 2.0  UV 7  Thdr –  Rain% 60%  Visib 8.0
+   14:00  Temp 15°  Feels 13°  Wind 35  Gust 55  Rain 2.0  UV 7  Thdr –  Rain% 60%  Visib 8.0
+   15:00  Temp 15°  Feels 13°  Wind 35  Gust 55  Rain 2.0  UV 7  Thdr –  Rain% 60%  Visib 8.0
+   16:00  Temp 15°  Feels 13°  Wind 35  Gust 55  Rain 2.0  UV 7  Thdr –  Rain% 60%  Visib 8.0
+
+Sulden (CEST)
+   08:00  Temp 15°  Feels 13°  Wind 35  Gust 55  Rain 2.0  UV 7  Thdr –  Rain% 60%  Visib 8.0
+   09:00  Temp 15°  Feels 13°  Wind 35  Gust 55  Rain 2.0  UV 7  Thdr –  Rain% 60%  Visib 8.0
+   10:00  Temp 15°  Feels 13°  Wind 35  Gust 55  Rain 2.0  UV 7  Thdr –  Rain% 60%  Visib 8.0
+   11:00  Temp 15°  Feels 13°  Wind 35  Gust 55  Rain 2.0  UV 7  Thdr –  Rain% 60%  Visib 8.0
+   12:00  Temp 15°  Feels 13°  Wind 35  Gust 55  Rain 2.0  UV 7  Thdr –  Rain% 60%  Visib 8.0
+   13:00  Temp 15°  Feels 13°  Wind 35  Gust 55  Rain 2.0  UV 7  Thdr –  Rain% 60%  Visib 8.0
+   14:00  Temp 15°  Feels 13°  Wind 35  Gust 55  Rain 2.0  UV 7  Thdr –  Rain% 60%  Visib 8.0
+   15:00  Temp 15°  Feels 13°  Wind 35  Gust 55  Rain 2.0  UV 7  Thdr –  Rain% 60%  Visib 8.0
+   16:00  Temp 15°  Feels 13°  Wind 35  Gust 55  Rain 2.0  UV 7  Thdr –  Rain% 60%  Visib 8.0
+
+Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · Rain% % · Visib km
+Spalten: Temp = Temperatur · Feels = Gefühlte Temperatur · Gust = Böen · Rain = Niederschlag · UV = UV-Index · Thdr = Gewitter · Rain% = Regenwahrscheinlichkeit · Visib = Sichtweite
+
+── Antwort-Kommandos ──
+  HEUTE                – Briefing für heute jetzt senden
+  MORGEN               – Briefing für morgen jetzt senden
+  PAUSE                – Briefings für Dauer unterbrechen
+  WEITER               – Briefings reaktivieren
+  HILFE                – Diese Hilfe anzeigen (auch HELP)
+  KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)
+  REPORT               – Briefing jetzt an alle Kanäle senden
+
+---
+Gregor Zwanzig

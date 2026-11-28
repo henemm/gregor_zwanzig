@@ -1,0 +1,7 @@
+ORTE — S7a1-Vergleich
+Datum: 20.07.2026
+
+Kronplatz
+   Temp max 15°C · Wind 35 km/h · Regen 18.0 mm · Wolken 70% · Wolken tief 60% · Taupunkt Ø 19°C · Sonne 0.5 h
+Sulden
+   Temp max 15°C · Wind 35 km/h · Regen 18.0 mm · Wolken 70% · Wolken tief 60% · Taupunkt Ø 19°C · Sonne 0.5 h

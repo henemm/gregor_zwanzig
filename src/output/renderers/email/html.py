@@ -513,6 +513,19 @@ def build_trip_corridor_id_map() -> dict[str, str]:
     return id_map
 
 
+def _stundentabelle_metrik(key: str) -> Optional[str]:
+    """Issue #2799 S7a1: Katalog-Metrik einer Stundentabellen-Spalte fuer die
+    Roh-Modus-Rueckfall-Toenung, wenn ``faerbt_an("stundentabelle", …)``;
+    sonst ``None``. ``"vis"`` ist der Alt-Schluessel der Sicht (#1927)."""
+    from app.ampel import faerbt_an
+    from app.metric_catalog import get_metric_by_col_key
+    try:
+        mid = "visibility" if key == "vis" else get_metric_by_col_key(key).id
+    except KeyError:
+        return None
+    return mid if faerbt_an("stundentabelle", mid) else None
+
+
 def _render_html_table(
     rows: list[dict],
     *,
@@ -573,20 +586,6 @@ def _render_html_table(
         "precip": "precipitation",
         "pop": "rain_probability",
         "cape": "cape",
-    }
-
-    # Issue #1377 Scheibe B: Fallback-Mapping (Roh-Modus / nicht in
-    # indicator_keys) auf denselben Katalog wie oben — Gewitter bleibt
-    # ausdrücklich hartcodiert (kein `display_thresholds` im Katalog).
-    _FALLBACK_COL_KEY_TO_METRIC_ID = {
-        "wind": "wind",
-        "gust": "gust",
-        "precip": "precipitation",
-        "pop": "rain_probability",
-        "vis": "visibility",
-        "visibility": "visibility",
-        # Issue #2792 S1c-4b (AC-1/AC-4): Temperatur beidseitig nach Abo-Ampel.
-        "temp": "temperature",
     }
 
     _dcstyle_base = (
@@ -653,8 +652,8 @@ def _render_html_table(
             # Issue #2792 S1c-4b Fix-Loop 1 Nachtrag 2: die Zeilen tragen
             # Sicht in Metern (``_dp_to_row``), wie die Ampel-Schwellen; die
             # fruehere Vermutung „<= 100 heisst km" liess 80 m Nebel ungetoent.
-            elif key in _FALLBACK_COL_KEY_TO_METRIC_ID and numeric is not None:
-                metric_id = _FALLBACK_COL_KEY_TO_METRIC_ID[key]
+            elif numeric is not None and _stundentabelle_metrik(key):
+                metric_id = _stundentabelle_metrik(key)
                 level = severity_for(metric_id, numeric, ampel=ampel)
                 cell_bg = _ampel_cell_bg(level)
             # Issue #3228 (Roh-Modus): eigene WDir-Spalte nach dem abgeleiteten
