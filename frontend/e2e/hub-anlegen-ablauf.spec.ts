@@ -703,10 +703,12 @@ test.describe('Anlege-Ablauf (mobil 390)', () => {
 				await sel.abschluss(page, true).click();
 				const antwort = await antwortKommt;
 				expect([200, 201]).toContain(antwort.status());
+				// #2801 (ADR-0131): Startwert je Kanal ist die Vorbelegung, nicht pauschal „gering".
+				const vorbelegung: Record<string, string> = { email: 'LOW', telegram: 'LOW', sms: 'MODERATE', premium_sms: 'HIGH' };
 				const gesetzt = Object.entries(schwellen((antwort.request().postDataJSON() ?? {}) as Rumpf)).filter(
-					([, stufe]) => stufe !== 'LOW'
+					([kanal, stufe]) => stufe !== (vorbelegung[kanal] ?? 'LOW')
 				);
-				expect(gesetzt, 'AN-10: ohne Geste darf keine Kanal-Stufe vom Startwert abweichen').toEqual([]);
+				expect(gesetzt, 'AN-10: ohne Geste darf keine Kanal-Stufe von ihrer Vorbelegung abweichen').toEqual([]);
 			} finally {
 				await aufraeumen(page.request, kind, name, post.ids);
 			}

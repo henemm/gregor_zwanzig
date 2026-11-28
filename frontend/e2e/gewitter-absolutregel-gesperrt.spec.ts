@@ -129,7 +129,7 @@ test.describe('#2277 S1 / #3332: Alarm-Bedienung im Schritt Zustellung von /trip
 		await expect.soft(alarmSchalter(zustellung, 'email')).toHaveAttribute('aria-checked', 'true');
 	});
 
-	test('Kanal-Stufen: jede aktive Alarm-Zeile startet auf „gering" (LOW)', async ({ page }) => {
+	test('Kanal-Stufen: aktive Alarm-Zeilen starten auf ihrer Vorbelegung (E-Mail/Telegram gering, SMS mittel, #2801)', async ({ page }) => {
 		const { zustellung } = await openNewTripZustellung(page);
 
 		for (const kind of ['telegram', 'email']) {
@@ -137,10 +137,12 @@ test.describe('#2277 S1 / #3332: Alarm-Bedienung im Schritt Zustellung von /trip
 			await expect.soft(stufe(zustellung, kind, 'MODERATE')).toHaveAttribute('aria-checked', 'false');
 			await expect.soft(stufe(zustellung, kind, 'HIGH')).toHaveAttribute('aria-checked', 'false');
 		}
-		// SMS-Alarm aus: keine Stufe wählbar; nach dem Einschalten startet sie auf LOW.
+		// SMS-Alarm aus: keine Stufe wählbar; nach dem Einschalten startet sie auf der
+		// SMS-Vorbelegung „mittel" (ADR-0131, #2801).
 		await expect(stufe(zustellung, 'sms', 'LOW')).toHaveCount(0);
 		await alarmSchalter(zustellung, 'sms').click();
-		await expect(stufe(zustellung, 'sms', 'LOW')).toHaveAttribute('aria-checked', 'true');
+		await expect(stufe(zustellung, 'sms', 'MODERATE')).toHaveAttribute('aria-checked', 'true');
+		await expect(stufe(zustellung, 'sms', 'LOW')).toHaveAttribute('aria-checked', 'false');
 	});
 
 	test('Premium-SMS wird beim Anlegen angeboten — bedienbar nach Tarif (#2229)', async ({ page }) => {
