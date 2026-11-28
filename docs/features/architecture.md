@@ -1255,8 +1255,8 @@ Editor-Muster (PO-Invariante, CLAUDE.md „Trip/Ortsvergleich-Code-Teilung“):
   **Scheibe c2 (#2913, 2026-11-13, Spec `docs/specs/modules/feat_2913_c2_seitenkopf.md`):** Kopf nach
   Mockup Fassung 3 (seit 2026-11-17 Fassung 4). Der Sende-Knopf heißt „Test schicken ▾“ (Beschriftung per Prop `sendLabel`; das
   Menü dazu seit #3440, siehe Aktionsmodell unten; Eintrag „Test-Alarm“ seit #3441: `POST /api/briefings/{id}/test-alert?kind=route|vergleich` schickt einen Beispiel-Alarm mit [TEST]-Kennung an alle bedienbaren Alarm-Kanäle, ohne Alarm-Zustand zu schreiben, Kontingent `manueller_abruf`, Spec `docs/specs/modules/feat_3441_test_alarm.md`). In der Leiste steht das Kebab „Weitere Aktionen“ links vom Knopf (Reihenfolge nach Mockup). Eyebrow „Trip · Region" bzw. „Orte · Region" und Meta-Zeile („Datum · N Etappen ·
-  km · ↑m" bzw. „N Orte · Vergleichstabelle · Briefing HH:MM") sind reiner Text (Props `eyebrowText`,
-  `metaTeile`). Im Entwurf steht neben der Status-Pill ein Akzent-Knopf „Aktivieren" (`onAktivieren`, seit #3443,
+  km · ↑m" bzw. „N Orte · Briefing HH:MM", seit #3438 ohne „Vergleichstabelle") sind reiner Text (Props `eyebrowText`,
+  `metaTeile`). Seit #3438 (2026-11-28, Spec `docs/specs/modules/fix_3438_wetter_ganzseite.md`) gibt es keine eigene Regionszeile unter dem Titel mehr: Der Region-Stift sitzt an der Eyebrow-Zeile, der Name-Stift am Titel. Im Entwurf steht neben der Status-Pill ein Akzent-Knopf „Aktivieren" (`onAktivieren`, seit #3443,
   2026-11-27; ein `<button>`, kein Link mehr). Der Klick schreibt nichts: Er nennt, was fehlt (Trip: Datum an den
   Etappen; Vergleich: Name und/oder Orte), und öffnet die Stelle (Trip Reiter Etappen, Vergleich Reiter Orte; fehlt
   nur der Name, keine Navigation). Wechselt der Entwurf danach auf aktiv, zeigt der Kopf „Aktiviert. Das erste

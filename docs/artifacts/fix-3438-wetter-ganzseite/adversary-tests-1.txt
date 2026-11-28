@@ -1,0 +1,2683 @@
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/components/shared/hub-kopf/__tests__/hub_kopf_region_oberzeile_3438.test.ts src/lib/components/shared/wetter-tab/__tests__/mockup_nicht_im_briefing_3438.test.ts src/lib/__tests__/elementliste_ganzseite_wetter_3438.test.ts src/lib/components/shared/hub-kopf/__tests__/hub_kopf_c2_mockup.test.ts src/lib/components/shared/hub-kopf/__tests__/hub_kopf_seiten_paritaet.test.ts src/lib/__tests__/elementliste_uebersicht_2969.test.ts src/lib/components/compare/__tests__/vergleich_hub_sprache.test.ts src/lib/components/shared/__tests__/subscription_header_kontextneutral.test.ts src/lib/components/trip-detail/TripHeader.issue699.test.ts
+
+TAP version 13
+# Subtest: \#3438 AC-8: Knopf „Test schicken ▾“ im Mockup mit Fläche --g-accent-deep
+    # Subtest: Messaufbau: der Kopf-Knopf \#testBtn trägt den Text „Test schicken ▾“
+    ok 1 - Messaufbau: der Kopf-Knopf \#testBtn trägt den Text „Test schicken ▾“
+      ---
+      duration_ms: 6.7254
+      type: 'test'
+      ...
+    # Subtest: Fläche des Kopf-Knopfs ist var(--g-accent-deep) (WCAG-AA, Spec c2 AC-16, ADR-0118)
+    ok 2 - Fläche des Kopf-Knopfs ist var(--g-accent-deep) (WCAG-AA, Spec c2 AC-16, ADR-0118)
+      ---
+      duration_ms: 5.412228
+      type: 'test'
+      ...
+    # Subtest: die Abgleich-Ausnahme „Knopf-Fläche“ für „Test schicken ▾“ ist entfallen (keine offene Abweichung)
+    ok 3 - die Abgleich-Ausnahme „Knopf-Fläche“ für „Test schicken ▾“ ist entfallen (keine offene Abweichung)
+      ---
+      duration_ms: 0.629211
+      type: 'test'
+      ...
+    1..3
+ok 1 - \#3438 AC-8: Knopf „Test schicken ▾“ im Mockup mit Fläche --g-accent-deep
+  ---
+  duration_ms: 13.64766
+  type: 'suite'
+  ...
+# Subtest: \#3438 AC-6: Besitzer-Einträge zu „Vergleichstabelle“ entfallen
+    # Subtest: kein Besitzer-Eintrag nennt „Vergleichstabelle“ / „Comparison table“ (Rückbau-Vermerk \#3122 samt Eintrag weg)
+    ok 1 - kein Besitzer-Eintrag nennt „Vergleichstabelle“ / „Comparison table“ (Rückbau-Vermerk \#3122 samt Eintrag weg)
+      ---
+      duration_ms: 0.70935
+      type: 'test'
+      ...
+    # Subtest: die Elementliste (Mockup) zeigt in der Meta-Zeile der Orte keine „Vergleichstabelle“
+    ok 2 - die Elementliste (Mockup) zeigt in der Meta-Zeile der Orte keine „Vergleichstabelle“
+      ---
+      duration_ms: 0.488952
+      type: 'test'
+      ...
+    1..2
+ok 2 - \#3438 AC-6: Besitzer-Einträge zu „Vergleichstabelle“ entfallen
+  ---
+  duration_ms: 1.397102
+  type: 'suite'
+  ...
+# Subtest: \#3438 AC-10: Besitzer und Freigaben verweisen nur auf vorhandene Elemente
+    # Subtest: jede Element-ID der Besitzerliste steht in der Elementliste (alle Verweise, nicht nur \#2913)
+    ok 1 - jede Element-ID der Besitzerliste steht in der Elementliste (alle Verweise, nicht nur \#2913)
+      ---
+      duration_ms: 0.30322
+      type: 'test'
+      ...
+    # Subtest: jede Freigabe nennt ein vorhandenes Tripel Kontext/Reiter/Abschnitt
+    ok 2 - jede Freigabe nennt ein vorhandenes Tripel Kontext/Reiter/Abschnitt
+      ---
+      duration_ms: 0.22427
+      type: 'test'
+      ...
+    1..2
+ok 3 - \#3438 AC-10: Besitzer und Freigaben verweisen nur auf vorhandene Elemente
+  ---
+  duration_ms: 0.769262
+  type: 'suite'
+  ...
+# Subtest: AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog
+ok 4 - AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog
+  ---
+  duration_ms: 15.621183
+  type: 'test'
+  ...
+# Subtest: AC-2: Die Mockup-Notiz „Im Mockup nicht ausgearbeitet.“ ist kein Soll-Eintrag
+ok 5 - AC-2: Die Mockup-Notiz „Im Mockup nicht ausgearbeitet.“ ist kein Soll-Eintrag
+  ---
+  duration_ms: 39.194879
+  type: 'test'
+  ...
+# Subtest: AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert
+ok 6 - AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert
+  ---
+  duration_ms: 61.683673
+  type: 'test'
+  ...
+# Subtest: AC-4: Keine Pauschal-Ausnahme für die Übersicht; Einzel-Ausnahmen je ctx mit Grund und Spec
+ok 7 - AC-4: Keine Pauschal-Ausnahme für die Übersicht; Einzel-Ausnahmen je ctx mit Grund und Spec
+  ---
+  duration_ms: 1.036631
+  type: 'test'
+  ...
+# Subtest: AC-5: Gegenrichtung Übersicht — Kopf, Bereichskopf und bekannter Inhalt erklärt, unbekannter Text zusaetzlich
+ok 8 - AC-5: Gegenrichtung Übersicht — Kopf, Bereichskopf und bekannter Inhalt erklärt, unbekannter Text zusaetzlich
+  ---
+  duration_ms: 110.268016
+  type: 'test'
+  ...
+# (node:700036) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)
+    # Subtest: hub_uebersicht.de.html
+    ok 1 - hub_uebersicht.de.html
+      ---
+      duration_ms: 22.527185
+      type: 'test'
+      ...
+    # Subtest: hub_orte.de.html
+    ok 2 - hub_orte.de.html
+      ---
+      duration_ms: 10.033025
+      type: 'test'
+      ...
+    # Subtest: hub_seite.de.html
+    ok 3 - hub_seite.de.html
+      ---
+      duration_ms: 49.751765
+      type: 'test'
+      ...
+    # Subtest: bausteine.de.html
+    ok 4 - bausteine.de.html
+      ---
+      duration_ms: 0.660301
+      type: 'test'
+      ...
+    # Subtest: ort_neu.de.html
+    ok 5 - ort_neu.de.html
+      ---
+      duration_ms: 4.377417
+      type: 'test'
+      ...
+    # Subtest: orte_schritt.de.html
+    ok 6 - orte_schritt.de.html
+      ---
+      duration_ms: 39.99098
+      type: 'test'
+      ...
+    # Subtest: anlegen_vergleich.de.html
+    ok 7 - anlegen_vergleich.de.html
+      ---
+      duration_ms: 28.905403
+      type: 'test'
+      ...
+    # Subtest: anlegen_orte.de.html
+    ok 8 - anlegen_orte.de.html
+      ---
+      duration_ms: 17.006777
+      type: 'test'
+      ...
+    # Subtest: anlegen_weiter.de.html
+    ok 9 - anlegen_weiter.de.html
+      ---
+      duration_ms: 58.212768
+      type: 'test'
+      ...
+    # Subtest: anlegen_toast.de.html
+    ok 10 - anlegen_toast.de.html
+      ---
+      duration_ms: 7.459511
+      type: 'test'
+      ...
+    # Subtest: funktionen.de.txt: Helfer, Aktivierungs-Karte, Uebersicht-Modell unveraendert (byte-gleich)
+    ok 11 - funktionen.de.txt: Helfer, Aktivierungs-Karte, Uebersicht-Modell unveraendert (byte-gleich)
+      ---
+      duration_ms: 5.485778
+      type: 'test'
+      ...
+    # Subtest: Messaufbau: Golden enthaelt die deutschen Texte der Flaechen
+    ok 12 - Messaufbau: Golden enthaelt die deutschen Texte der Flaechen
+      ---
+      duration_ms: 7.208191
+      type: 'test'
+      ...
+    # Subtest: Messaufbau: jeder deutsche Anker-Text (Festteile) steht im Golden oder in der Funktionstabelle
+    ok 13 - Messaufbau: jeder deutsche Anker-Text (Festteile) steht im Golden oder in der Funktionstabelle
+      ---
+      duration_ms: 13.730871
+      type: 'test'
+      ...
+    1..13
+ok 9 - AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)
+  ---
+  duration_ms: 266.456891
+  type: 'suite'
+  ...
+# Subtest: AC-1: Ortsvergleich-Hub englisch, Namen unveraendert, Aktionen wie im Trip-Hub
+    # Subtest: Uebersicht und Seite: Kennzahlen, Karten, Kopf englisch (erst de, dann ohne Neuladen en)
+    ok 1 - Uebersicht und Seite: Kennzahlen, Karten, Kopf englisch (erst de, dann ohne Neuladen en)
+      ---
+      duration_ms: 53.528379
+      type: 'test'
+      ...
+    # Subtest: Reiterleiste: Kennungen gleich, Namen englisch wie im Trip-Hub (aktionen.reiter.*)
+    ok 2 - Reiterleiste: Kennungen gleich, Namen englisch wie im Trip-Hub (aktionen.reiter.*)
+      ---
+      duration_ms: 7.04282
+      type: 'test'
+      ...
+    # Subtest: Edit/Delete/Pause tragen im Vergleich denselben Text wie im Trip (gleicher Schluessel)
+    ok 3 - Edit/Delete/Pause tragen im Vergleich denselben Text wie im Trip (gleicher Schluessel)
+      ---
+      duration_ms: 0.317351
+      type: 'test'
+      ...
+    # Subtest: Fehler ohne Server-Text: Seite haelt nur Schluessel/Flag, Text entsteht beim Rendern
+    ok 4 - Fehler ohne Server-Text: Seite haelt nur Schluessel/Flag, Text entsteht beim Rendern
+      ---
+      duration_ms: 6.793291
+      type: 'test'
+      ...
+    # Subtest: Meldungen ohne Server-Text: Schluessel wird beim Rendern aufgeloest (Seite, Orte-Schritt, Neuer Ort)
+    ok 5 - Meldungen ohne Server-Text: Schluessel wird beim Rendern aufgeloest (Seite, Orte-Schritt, Neuer Ort)
+      ---
+      duration_ms: 23.722006
+      type: 'test'
+      ...
+    # Subtest: Anlegen-Toast (mobil): Sperr-Hinweis aus der Anlege-Kette, beim Rendern aufgeloest
+    ok 6 - Anlegen-Toast (mobil): Sperr-Hinweis aus der Anlege-Kette, beim Rendern aufgeloest
+      ---
+      duration_ms: 1.051122
+      type: 'test'
+      ...
+    1..6
+ok 10 - AC-1: Ortsvergleich-Hub englisch, Namen unveraendert, Aktionen wie im Trip-Hub
+  ---
+  duration_ms: 92.697669
+  type: 'suite'
+  ...
+# Subtest: AC-2: Compare-Helfer in Deutsch und Englisch (Eingabe -> Ausgabe)
+    # Subtest: presetScheduleLabel daily 7–9
+    ok 1 - presetScheduleLabel daily 7–9
+      ---
+      duration_ms: 0.27497
+      type: 'test'
+      ...
+    # Subtest: presetScheduleLabel weekly
+    ok 2 - presetScheduleLabel weekly
+      ---
+      duration_ms: 0.0941
+      type: 'test'
+      ...
+    # Subtest: presetScheduleLabel manual
+    ok 3 - presetScheduleLabel manual
+      ---
+      duration_ms: 0.131421
+      type: 'test'
+      ...
+    # Subtest: presetTileScheduleLabel daily
+    ok 4 - presetTileScheduleLabel daily
+      ---
+      duration_ms: 0.129341
+      type: 'test'
+      ...
+    # Subtest: presetTileScheduleLabel weekly Mo
+    ok 5 - presetTileScheduleLabel weekly Mo
+      ---
+      duration_ms: 0.104769
+      type: 'test'
+      ...
+    # Subtest: presetTileScheduleLabel weekly So
+    ok 6 - presetTileScheduleLabel weekly So
+      ---
+      duration_ms: 0.086721
+      type: 'test'
+      ...
+    # Subtest: presetTileScheduleLabel manual
+    ok 7 - presetTileScheduleLabel manual
+      ---
+      duration_ms: 0.09541
+      type: 'test'
+      ...
+    # Subtest: presetLocationsLabel 3
+    ok 8 - presetLocationsLabel 3
+      ---
+      duration_ms: 0.08746
+      type: 'test'
+      ...
+    # Subtest: presetLocationsLabel 1
+    ok 9 - presetLocationsLabel 1
+      ---
+      duration_ms: 0.15988
+      type: 'test'
+      ...
+    # Subtest: relativeLastSent heute
+    ok 10 - relativeLastSent heute
+      ---
+      duration_ms: 3.206115
+      type: 'test'
+      ...
+    # Subtest: relativeLastSent gestern
+    ok 11 - relativeLastSent gestern
+      ---
+      duration_ms: 0.1568
+      type: 'test'
+      ...
+    # Subtest: relativeLastSent Montag
+    ok 12 - relativeLastSent Montag
+      ---
+      duration_ms: 0.110991
+      type: 'test'
+      ...
+    # Subtest: relativeLastSent 1 Woche
+    ok 13 - relativeLastSent 1 Woche
+      ---
+      duration_ms: 0.1383
+      type: 'test'
+      ...
+    # Subtest: relativeLastSent 2 Wochen
+    ok 14 - relativeLastSent 2 Wochen
+      ---
+      duration_ms: 2.472474
+      type: 'test'
+      ...
+    # Subtest: formatLastSent leer
+    ok 15 - formatLastSent leer
+      ---
+      duration_ms: 0.115921
+      type: 'test'
+      ...
+    # Subtest: formatLastSent Datum
+    ok 16 - formatLastSent Datum
+      ---
+      duration_ms: 0.30509
+      type: 'test'
+      ...
+    # Subtest: formatNextSend null
+    ok 17 - formatNextSend null
+      ---
+      duration_ms: 0.11543
+      type: 'test'
+      ...
+    # Subtest: formatNextSend Datum
+    ok 18 - formatNextSend Datum
+      ---
+      duration_ms: 0.125299
+      type: 'test'
+      ...
+    # Subtest: presetProfileLabel wintersport
+    ok 19 - presetProfileLabel wintersport
+      ---
+      duration_ms: 0.092999
+      type: 'test'
+      ...
+    # Subtest: presetBriefingTimesLabel
+    ok 20 - presetBriefingTimesLabel
+      ---
+      duration_ms: 1.872464
+      type: 'test'
+      ...
+    # Subtest: Status-Pille und Aktivierungs-Karte je Sprache
+    ok 21 - Status-Pille und Aktivierungs-Karte je Sprache
+      ---
+      duration_ms: 0.521881
+      type: 'test'
+      ...
+    1..21
+ok 11 - AC-2: Compare-Helfer in Deutsch und Englisch (Eingabe -> Ausgabe)
+  ---
+  duration_ms: 10.853496
+  type: 'suite'
+  ...
+# Subtest: AC-3: Orte-Reiter, Orte-Schritt, Neuer Ort englisch; Nutzlast nur Ort-IDs
+    # Subtest: Orte-Reiter: Kopf, Zeilen, Leerfall, Hinzufuegen-Panel englisch; Reihenfolge der Orte gleich
+    ok 1 - Orte-Reiter: Kopf, Zeilen, Leerfall, Hinzufuegen-Panel englisch; Reihenfolge der Orte gleich
+      ---
+      duration_ms: 6.775141
+      type: 'test'
+      ...
+    # Subtest: Orte-Schritt und Neuer Ort: Hinweise, Platzhalter, Schaltflaechen englisch; Koordinaten gleich
+    ok 2 - Orte-Schritt und Neuer Ort: Hinweise, Platzhalter, Schaltflaechen englisch; Koordinaten gleich
+      ---
+      duration_ms: 13.988592
+      type: 'test'
+      ...
+    # Subtest: Hinzufuegen, Entfernen, Sortieren: PUT-Nutzlast nur `location_ids`, in en und de identisch
+    ok 3 - Hinzufuegen, Entfernen, Sortieren: PUT-Nutzlast nur `location_ids`, in en und de identisch
+      ---
+      duration_ms: 494.519014
+      type: 'test'
+      ...
+    1..3
+ok 12 - AC-3: Orte-Reiter, Orte-Schritt, Neuer Ort englisch; Nutzlast nur Ort-IDs
+  ---
+  duration_ms: 515.480636
+  type: 'suite'
+  ...
+# Subtest: AC-7: Groessennamen im Alarme-Reiter des Vergleichs (Register-Ergaenzung)
+    # Subtest: mitRegisterNamen + registerAusKatalog: unalertable Groessen englisch, ohne label_en deutsch
+    ok 1 - mitRegisterNamen + registerAusKatalog: unalertable Groessen englisch, ohne label_en deutsch
+      ---
+      duration_ms: 1.618903
+      type: 'test'
+      ...
+    # Subtest: Vorlage (?from=): Vorschlagsname in der Sprache des Nutzers
+    ok 2 - Vorlage (?from=): Vorschlagsname in der Sprache des Nutzers
+      ---
+      duration_ms: 3.787916
+      type: 'test'
+      ...
+    1..2
+ok 13 - AC-7: Groessennamen im Alarme-Reiter des Vergleichs (Register-Ergaenzung)
+  ---
+  duration_ms: 5.542128
+  type: 'suite'
+  ...
+# Subtest: AC-7: Anlege-Flaechen englisch
+    # Subtest: Anlegen: Texte englisch, ohne Profil-Kacheln (\#3198)
+    ok 1 - Anlegen: Texte englisch, ohne Profil-Kacheln (\#3198)
+      ---
+      duration_ms: 9.251214
+      type: 'test'
+      ...
+    # Subtest: Anlegen Orte/weiter: Reiter, Fortschritt, Schaltflaechen englisch; Plural exakt
+    ok 2 - Anlegen Orte/weiter: Reiter, Fortschritt, Schaltflaechen englisch; Plural exakt
+      ---
+      duration_ms: 55.554924
+      type: 'test'
+      ...
+    1..2
+ok 14 - AC-7: Anlege-Flaechen englisch
+  ---
+  duration_ms: 64.920007
+  type: 'suite'
+  ...
+# Subtest: AC-4: zwei Nutzer, zwei Sprachen, eigener Vergleich, sprachunabhaengige Nutzlast
+    # Subtest: A englisch, B deutsch; jeder nur eigener Vergleich (fremder 404 in eigener Sprache); Nutzlast ohne Anzeigetexte
+    ok 1 - A englisch, B deutsch; jeder nur eigener Vergleich (fremder 404 in eigener Sprache); Nutzlast ohne Anzeigetexte
+      ---
+      duration_ms: 239.16969
+      type: 'test'
+      ...
+    1..1
+ok 15 - AC-4: zwei Nutzer, zwei Sprachen, eigener Vergleich, sprachunabhaengige Nutzlast
+  ---
+  duration_ms: 239.342419
+  type: 'suite'
+  ...
+# Subtest: Anker: jeder F10-Katalogwert ist als festes de/en-Literal verankert
+    # Subtest: aktionen.uebersicht.status
+    ok 1 - aktionen.uebersicht.status
+      ---
+      duration_ms: 0.818452
+      type: 'test'
+      ...
+    # Subtest: aktionen.uebersicht.briefings
+    ok 2 - aktionen.uebersicht.briefings
+      ---
+      duration_ms: 0.061399
+      type: 'test'
+      ...
+    # Subtest: aktionen.uebersicht.zuletzt_raus
+    ok 3 - aktionen.uebersicht.zuletzt_raus
+      ---
+      duration_ms: 0.046159
+      type: 'test'
+      ...
+    # Subtest: aktionen.uebersicht.noch_nicht_geplant
+    ok 4 - aktionen.uebersicht.noch_nicht_geplant
+      ---
+      duration_ms: 0.0432
+      type: 'test'
+      ...
+    # Subtest: aktionen.uebersicht.nicht_geplant
+    ok 5 - aktionen.uebersicht.nicht_geplant
+      ---
+      duration_ms: 0.045749
+      type: 'test'
+      ...
+    # Subtest: aktionen.uebersicht.uhrzeiten_festlegen
+    ok 6 - aktionen.uebersicht.uhrzeiten_festlegen
+      ---
+      duration_ms: 0.058512
+      type: 'test'
+      ...
+    # Subtest: aktionen.uebersicht.aktivierung_offen
+    ok 7 - aktionen.uebersicht.aktivierung_offen
+      ---
+      duration_ms: 0.043509
+      type: 'test'
+      ...
+    # Subtest: aktionen.uebersicht.briefings_zeiten
+    ok 8 - aktionen.uebersicht.briefings_zeiten
+      ---
+      duration_ms: 0.09936
+      type: 'test'
+      ...
+    # Subtest: aktionen.uebersicht.briefings_naechster
+    ok 9 - aktionen.uebersicht.briefings_naechster
+      ---
+      duration_ms: 0.049691
+      type: 'test'
+      ...
+    # Subtest: vergleich.zeitplan.taeglich
+    ok 10 - vergleich.zeitplan.taeglich
+      ---
+      duration_ms: 0.11201
+      type: 'test'
+      ...
+    # Subtest: vergleich.zeitplan.woechentlich
+    ok 11 - vergleich.zeitplan.woechentlich
+      ---
+      duration_ms: 0.047231
+      type: 'test'
+      ...
+    # Subtest: vergleich.zeitplan.manuell
+    ok 12 - vergleich.zeitplan.manuell
+      ---
+      duration_ms: 0.040719
+      type: 'test'
+      ...
+    # Subtest: vergleich.zeitplan.kachel_taeglich
+    ok 13 - vergleich.zeitplan.kachel_taeglich
+      ---
+      duration_ms: 0.06425
+      type: 'test'
+      ...
+    # Subtest: vergleich.zeitplan.kachel_taeglich_kurz
+    ok 14 - vergleich.zeitplan.kachel_taeglich_kurz
+      ---
+      duration_ms: 0.04053
+      type: 'test'
+      ...
+    # Subtest: vergleich.zeitplan.kachel_woechentlich
+    ok 15 - vergleich.zeitplan.kachel_woechentlich
+      ---
+      duration_ms: 0.03766
+      type: 'test'
+      ...
+    # Subtest: vergleich.relativ.gestern
+    ok 16 - vergleich.relativ.gestern
+      ---
+      duration_ms: 0.036299
+      type: 'test'
+      ...
+    # Subtest: vergleich.relativ.diese_woche
+    ok 17 - vergleich.relativ.diese_woche
+      ---
+      duration_ms: 0.035911
+      type: 'test'
+      ...
+    # Subtest: vergleich.relativ.wochen.one
+    ok 18 - vergleich.relativ.wochen.one
+      ---
+      duration_ms: 0.047779
+      type: 'test'
+      ...
+    # Subtest: vergleich.relativ.wochen.other
+    ok 19 - vergleich.relativ.wochen.other
+      ---
+      duration_ms: 0.03881
+      type: 'test'
+      ...
+    # Subtest: vergleich.relativ.noch_kein_versand
+    ok 20 - vergleich.relativ.noch_kein_versand
+      ---
+      duration_ms: 0.034549
+      type: 'test'
+      ...
+    # Subtest: vergleich.aktivierung.aktiv_text
+    ok 21 - vergleich.aktivierung.aktiv_text
+      ---
+      duration_ms: 0.035641
+      type: 'test'
+      ...
+    # Subtest: vergleich.aktivierung.pausiert_text
+    ok 22 - vergleich.aktivierung.pausiert_text
+      ---
+      duration_ms: 0.03232
+      type: 'test'
+      ...
+    # Subtest: vergleich.aktivierung.entwurf_text
+    ok 23 - vergleich.aktivierung.entwurf_text
+      ---
+      duration_ms: 0.043259
+      type: 'test'
+      ...
+    # Subtest: aktionen.kopf.aktivieren
+    ok 24 - aktionen.kopf.aktivieren
+      ---
+      duration_ms: 0.03491
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.laeuft_autom
+    ok 25 - vergleich.hub.laeuft_autom
+      ---
+      duration_ms: 0.035121
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.laeuft_automatisch
+    ok 26 - vergleich.hub.laeuft_automatisch
+      ---
+      duration_ms: 0.034811
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.entwurf
+    ok 27 - vergleich.hub.entwurf
+      ---
+      duration_ms: 0.03491
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.kandidaten.one
+    ok 28 - vergleich.hub.kandidaten.one
+      ---
+      duration_ms: 0.03847
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.kandidaten.other
+    ok 29 - vergleich.hub.kandidaten.other
+      ---
+      duration_ms: 0.039659
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.weitere
+    ok 30 - vergleich.hub.weitere
+      ---
+      duration_ms: 0.04255
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.wertebereiche_kurz.one
+    ok 31 - vergleich.hub.wertebereiche_kurz.one
+      ---
+      duration_ms: 0.039099
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.wertebereiche_kurz.other
+    ok 32 - vergleich.hub.wertebereiche_kurz.other
+      ---
+      duration_ms: 0.03666
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.wertebereiche_lang.one
+    ok 33 - vergleich.hub.wertebereiche_lang.one
+      ---
+      duration_ms: 0.04689
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.wertebereiche_lang.other
+    ok 34 - vergleich.hub.wertebereiche_lang.other
+      ---
+      duration_ms: 0.039891
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.tabs_aria
+    ok 35 - vergleich.hub.tabs_aria
+      ---
+      duration_ms: 0.040609
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.verglichene_orte
+    ok 36 - vergleich.hub.verglichene_orte
+      ---
+      duration_ms: 0.03523
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.ziehen_sortieren
+    ok 37 - vergleich.hub.ziehen_sortieren
+      ---
+      duration_ms: 0.032569
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.kopf.orte_erklaer
+    ok 38 - vergleich.hub.kopf.orte_erklaer
+      ---
+      duration_ms: 0.039531
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.kopf.ort_hinzufuegen
+    ok 39 - vergleich.hub.kopf.ort_hinzufuegen
+      ---
+      duration_ms: 0.033771
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.ort_name
+    ok 40 - vergleich.hub.ort_name
+      ---
+      duration_ms: 0.03659
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.ort_gruppe_hoehe
+    ok 41 - vergleich.hub.ort_gruppe_hoehe
+      ---
+      duration_ms: 0.04461
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.ort_entfernen
+    ok 42 - vergleich.hub.ort_entfernen
+      ---
+      duration_ms: 0.037148
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.keine_orte
+    ok 43 - vergleich.hub.keine_orte
+      ---
+      duration_ms: 0.055671
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.keine_weiteren
+    ok 44 - vergleich.hub.keine_weiteren
+      ---
+      duration_ms: 0.04027
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.laufzeit_ueberschritten
+    ok 45 - vergleich.hub.laufzeit_ueberschritten
+      ---
+      duration_ms: 0.034311
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.setup_abschliessen
+    ok 46 - vergleich.hub.setup_abschliessen
+      ---
+      duration_ms: 0.033459
+      type: 'test'
+      ...
+    # Subtest: vergleich.hub.nicht_gefunden
+    ok 47 - vergleich.hub.nicht_gefunden
+      ---
+      duration_ms: 0.03288
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.weitere
+    ok 48 - vergleich.orte.weitere
+      ---
+      duration_ms: 0.030521
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.min_erforderlich
+    ok 49 - vergleich.orte.min_erforderlich
+      ---
+      duration_ms: 0.03402
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.passt
+    ok 50 - vergleich.orte.passt
+      ---
+      duration_ms: 0.035481
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.viel
+    ok 51 - vergleich.orte.viel
+      ---
+      duration_ms: 0.03295
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.min_kurz
+    ok 52 - vergleich.orte.min_kurz
+      ---
+      duration_ms: 0.032471
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.viel_kurz
+    ok 53 - vergleich.orte.viel_kurz
+      ---
+      duration_ms: 0.036591
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.format_unbekannt
+    ok 54 - vergleich.orte.format_unbekannt
+      ---
+      duration_ms: 0.044831
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.fehler_hinzufuegen
+    ok 55 - vergleich.orte.fehler_hinzufuegen
+      ---
+      duration_ms: 0.03427
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.neuen_ort
+    ok 56 - vergleich.orte.neuen_ort
+      ---
+      duration_ms: 0.032399
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.smart_import
+    ok 57 - vergleich.orte.smart_import
+      ---
+      duration_ms: 0.03369
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.import_platzhalter
+    ok 58 - vergleich.orte.import_platzhalter
+      ---
+      duration_ms: 0.03217
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.aufloesen
+    ok 59 - vergleich.orte.aufloesen
+      ---
+      duration_ms: 0.0316
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.manuell
+    ok 60 - vergleich.orte.manuell
+      ---
+      duration_ms: 0.03299
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.breitengrad
+    ok 61 - vergleich.orte.breitengrad
+      ---
+      duration_ms: 0.03177
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.laengengrad
+    ok 62 - vergleich.orte.laengengrad
+      ---
+      duration_ms: 0.037111
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.wird_hinzugefuegt
+    ok 63 - vergleich.orte.wird_hinzugefuegt
+      ---
+      duration_ms: 0.03342
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.hinzufuegen
+    ok 64 - vergleich.orte.hinzufuegen
+      ---
+      duration_ms: 0.032741
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.erkannt
+    ok 65 - vergleich.orte.erkannt
+      ---
+      duration_ms: 0.051261
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.name_platzhalter
+    ok 66 - vergleich.orte.name_platzhalter
+      ---
+      duration_ms: 0.035491
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.zum_vergleich
+    ok 67 - vergleich.orte.zum_vergleich
+      ---
+      duration_ms: 0.03251
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.im_vergleich
+    ok 68 - vergleich.orte.im_vergleich
+      ---
+      duration_ms: 0.040159
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.noch_keine
+    ok 69 - vergleich.orte.noch_keine
+      ---
+      duration_ms: 0.032861
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.links_oder_unten
+    ok 70 - vergleich.orte.links_oder_unten
+      ---
+      duration_ms: 0.031629
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.aus_gespeicherten
+    ok 71 - vergleich.orte.aus_gespeicherten
+      ---
+      duration_ms: 0.035441
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.keine_gespeichert
+    ok 72 - vergleich.orte.keine_gespeichert
+      ---
+      duration_ms: 0.032331
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.keine_gewaehlt
+    ok 73 - vergleich.orte.keine_gewaehlt
+      ---
+      duration_ms: 0.03034
+      type: 'test'
+      ...
+    # Subtest: vergleich.orte.aus_bibliothek
+    ok 74 - vergleich.orte.aus_bibliothek
+      ---
+      duration_ms: 0.03177
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.modul
+    ok 75 - vergleich.ort.modul
+      ---
+      duration_ms: 0.03032
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.import_hinweis
+    ok 76 - vergleich.ort.import_hinweis
+      ---
+      duration_ms: 0.03002
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.verortung
+    ok 77 - vergleich.ort.verortung
+      ---
+      duration_ms: 0.04331
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.import_platzhalter
+    ok 78 - vergleich.ort.import_platzhalter
+      ---
+      duration_ms: 0.036219
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.erkannt_quelle
+    ok 79 - vergleich.ort.erkannt_quelle
+      ---
+      duration_ms: 0.041821
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.format_komoot
+    ok 80 - vergleich.ort.format_komoot
+      ---
+      duration_ms: 0.035849
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.format_dms
+    ok 81 - vergleich.ort.format_dms
+      ---
+      duration_ms: 0.032291
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.format_dezimal
+    ok 82 - vergleich.ort.format_dezimal
+      ---
+      duration_ms: 0.02927
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.format_gpx
+    ok 83 - vergleich.ort.format_gpx
+      ---
+      duration_ms: 0.047231
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.format_gpx_beispiel
+    ok 84 - vergleich.ort.format_gpx_beispiel
+      ---
+      duration_ms: 0.03584
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.erkannt_vorschau
+    ok 85 - vergleich.ort.erkannt_vorschau
+      ---
+      duration_ms: 0.03088
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.quelle
+    ok 86 - vergleich.ort.quelle
+      ---
+      duration_ms: 0.030451
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.hoehe_dem
+    ok 87 - vergleich.ort.hoehe_dem
+      ---
+      duration_ms: 0.030219
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.hoehe_wert
+    ok 88 - vergleich.ort.hoehe_wert
+      ---
+      duration_ms: 0.045751
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.zeitzone
+    ok 89 - vergleich.ort.zeitzone
+      ---
+      duration_ms: 0.054139
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.land_region
+    ok 90 - vergleich.ort.land_region
+      ---
+      duration_ms: 0.033051
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.benennung
+    ok 91 - vergleich.ort.benennung
+      ---
+      duration_ms: 0.031369
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.eindeutiger_name
+    ok 92 - vergleich.ort.eindeutiger_name
+      ---
+      duration_ms: 0.030951
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.name_beispiel
+    ok 93 - vergleich.ort.name_beispiel
+      ---
+      duration_ms: 0.03076
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.gruppe_optional
+    ok 94 - vergleich.ort.gruppe_optional
+      ---
+      duration_ms: 0.03046
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.neue_gruppe_tippen
+    ok 95 - vergleich.ort.neue_gruppe_tippen
+      ---
+      duration_ms: 0.029251
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.brille
+    ok 96 - vergleich.ort.brille
+      ---
+      duration_ms: 0.030609
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.brille_frage
+    ok 97 - vergleich.ort.brille_frage
+      ---
+      duration_ms: 0.03361
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.kandidat_vormerken
+    ok 98 - vergleich.ort.kandidat_vormerken
+      ---
+      duration_ms: 0.156309
+      type: 'test'
+      ...
+    # Subtest: vergleich.ort.speichern
+    ok 99 - vergleich.ort.speichern
+      ---
+      duration_ms: 0.03512
+      type: 'test'
+      ...
+    # Subtest: vergleich.gruppe.kein_profil
+    ok 100 - vergleich.gruppe.kein_profil
+      ---
+      duration_ms: 0.029441
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.neuer_vergleich
+    ok 101 - vergleich.neu.neuer_vergleich
+      ---
+      duration_ms: 0.028579
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.bereit_titel
+    ok 102 - vergleich.neu.bereit_titel
+      ---
+      duration_ms: 0.029311
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.bereit_zeile.one
+    ok 103 - vergleich.neu.bereit_zeile.one
+      ---
+      duration_ms: 0.04487
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.bereit_zeile.other
+    ok 104 - vergleich.neu.bereit_zeile.other
+      ---
+      duration_ms: 0.03556
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.bereit_text
+    ok 105 - vergleich.neu.bereit_text
+      ---
+      duration_ms: 0.029971
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.alarme_zum_aktivieren_punkt
+    ok 106 - vergleich.neu.alarme_zum_aktivieren_punkt
+      ---
+      duration_ms: 0.034889
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.alarme_zum_aktivieren
+    ok 107 - vergleich.neu.alarme_zum_aktivieren
+      ---
+      duration_ms: 0.052011
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.aktivieren
+    ok 108 - vergleich.neu.aktivieren
+      ---
+      duration_ms: 0.032819
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.eckdaten
+    ok 109 - vergleich.neu.eckdaten
+      ---
+      duration_ms: 0.030491
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.name
+    ok 110 - vergleich.neu.name
+      ---
+      duration_ms: 0.03137
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.name_hinweis
+    ok 111 - vergleich.neu.name_hinweis
+      ---
+      duration_ms: 0.029371
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.name_beispiel
+    ok 112 - vergleich.neu.name_beispiel
+      ---
+      duration_ms: 0.02941
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.optional_max
+    ok 113 - vergleich.neu.optional_max
+      ---
+      duration_ms: 0.02847
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.region_beispiel
+    ok 114 - vergleich.neu.region_beispiel
+      ---
+      duration_ms: 0.028471
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.aktivitaetsprofil
+    ok 115 - vergleich.neu.aktivitaetsprofil
+      ---
+      duration_ms: 0.03393
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.name_fehlt
+    ok 116 - vergleich.neu.name_fehlt
+      ---
+      duration_ms: 0.065829
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.orte_hinzufuegen
+    ok 117 - vergleich.neu.orte_hinzufuegen
+      ---
+      duration_ms: 0.03473
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.min_orte
+    ok 118 - vergleich.neu.min_orte
+      ---
+      duration_ms: 0.03081
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.wetter_metriken
+    ok 119 - vergleich.neu.wetter_metriken
+      ---
+      duration_ms: 0.03436
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.tab_gesperrt
+    ok 120 - vergleich.neu.tab_gesperrt
+      ---
+      duration_ms: 0.029709
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.name_eingeben
+    ok 121 - vergleich.neu.name_eingeben
+      ---
+      duration_ms: 0.029161
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.noch_orte.one
+    ok 122 - vergleich.neu.noch_orte.one
+      ---
+      duration_ms: 0.034661
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.noch_orte.other
+    ok 123 - vergleich.neu.noch_orte.other
+      ---
+      duration_ms: 0.0366
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.ort_waehlen
+    ok 124 - vergleich.neu.ort_waehlen
+      ---
+      duration_ms: 0.043411
+      type: 'test'
+      ...
+    # Subtest: vergleich.neu.kopie
+    ok 125 - vergleich.neu.kopie
+      ---
+      duration_ms: 0.034299
+      type: 'test'
+      ...
+    # Subtest: statischer Gegencheck: vergleich.json = vergleich.anlegen.* (F9) + F10-Anker; aktionen.uebersicht.* verankert
+    ok 126 - statischer Gegencheck: vergleich.json = vergleich.anlegen.* (F9) + F10-Anker; aktionen.uebersicht.* verankert
+      ---
+      duration_ms: 0.659391
+      type: 'test'
+      ...
+    # Subtest: Plural exakt: Kandidaten, Wochen, fehlende Orte, Bereit-Zeile
+    ok 127 - Plural exakt: Kandidaten, Wochen, fehlende Orte, Bereit-Zeile
+      ---
+      duration_ms: 0.10929
+      type: 'test'
+      ...
+    1..127
+ok 16 - Anker: jeder F10-Katalogwert ist als festes de/en-Literal verankert
+  ---
+  duration_ms: 7.840071
+  type: 'suite'
+  ...
+# Subtest: \#2284 S1 AC-6 — ein Markup für Trip und Vergleich, Unterschiede nur über Props
+    # Subtest: Vergleich-Satz trägt nur compare-hub-testids und genau seine vier Optionen
+    ok 1 - Vergleich-Satz trägt nur compare-hub-testids und genau seine vier Optionen
+      ---
+      duration_ms: 757.593299
+      type: 'test'
+      ...
+    # Subtest: Trip-Satz trägt nur trip-testids und genau seine zwei Optionen
+    ok 2 - Trip-Satz trägt nur trip-testids und genau seine zwei Optionen
+      ---
+      duration_ms: 7.375751
+      type: 'test'
+      ...
+    # Subtest: gewählte Kachel kommt aus der Prop `profile` — genau eine mit data-selected="true"
+    ok 3 - gewählte Kachel kommt aus der Prop `profile` — genau eine mit data-selected="true"
+      ---
+      duration_ms: 3.028235
+      type: 'test'
+      ...
+    # Subtest: Name als einzige <h1>, Region als Text im Kopf
+    ok 4 - Name als einzige <h1>, Region als Text im Kopf
+      ---
+      duration_ms: 3.752735
+      type: 'test'
+      ...
+    # Subtest: beide Prop-Sätze ergeben dieselbe Gerüststruktur (keine Verzweigung nach kind)
+    ok 5 - beide Prop-Sätze ergeben dieselbe Gerüststruktur (keine Verzweigung nach kind)
+      ---
+      duration_ms: 5.755779
+      type: 'test'
+      ...
+    1..5
+ok 17 - \#2284 S1 AC-6 — ein Markup für Trip und Vergleich, Unterschiede nur über Props
+  ---
+  duration_ms: 778.53163
+  type: 'suite'
+  ...
+# Subtest: \#2284 S1 AC-7 — leere Slots hinterlassen keine Wrapper
+    # Subtest: ohne actions/meta/badges/eyebrow: kein leeres Element im Kopf
+    ok 1 - ohne actions/meta/badges/eyebrow: kein leeres Element im Kopf
+      ---
+      duration_ms: 1.317172
+      type: 'test'
+      ...
+    # Subtest: übergebene Snippets erscheinen je genau einmal
+    ok 2 - übergebene Snippets erscheinen je genau einmal
+      ---
+      duration_ms: 4.463207
+      type: 'test'
+      ...
+    # Subtest: profileLabel leer ⇒ kein führendes oder doppeltes „ · " in der Unterzeile
+    ok 3 - profileLabel leer ⇒ kein führendes oder doppeltes „ · " in der Unterzeile
+      ---
+      duration_ms: 6.130929
+      type: 'test'
+      ...
+    # Subtest: profileLabel leer MIT meta ⇒ „Ötztal · 3 Orte" ohne doppelten Trenner
+    ok 4 - profileLabel leer MIT meta ⇒ „Ötztal · 3 Orte" ohne doppelten Trenner
+      ---
+      duration_ms: 2.067212
+      type: 'test'
+      ...
+    # Subtest: profileLabel leer OHNE meta ⇒ kein hängender Trenner
+    ok 5 - profileLabel leer OHNE meta ⇒ kein hängender Trenner
+      ---
+      duration_ms: 0.624491
+      type: 'test'
+      ...
+    # Subtest: profileLabel gesetzt MIT meta ⇒ Label genau einmal, je ein Trenner
+    ok 6 - profileLabel gesetzt MIT meta ⇒ Label genau einmal, je ein Trenner
+      ---
+      duration_ms: 0.48737
+      type: 'test'
+      ...
+    1..6
+ok 18 - \#2284 S1 AC-7 — leere Slots hinterlassen keine Wrapper
+  ---
+  duration_ms: 15.438524
+  type: 'suite'
+  ...
+# (node:700063) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: \#2284 S2 AC-16 — titleTestid, namePrefix, saveController
+    # Subtest: Trip-Satz: die Überschrift trägt data-testid="trip-detail-h1" genau einmal
+    ok 1 - Trip-Satz: die Überschrift trägt data-testid="trip-detail-h1" genau einmal
+      ---
+      duration_ms: 102.478914
+      type: 'test'
+      ...
+    # Subtest: Vergleich-Satz (ohne titleTestid): keine testid an der Überschrift, kein trip-detail-h1
+    ok 2 - Vergleich-Satz (ohne titleTestid): keine testid an der Überschrift, kein trip-detail-h1
+      ---
+      duration_ms: 3.027004
+      type: 'test'
+      ...
+    # Subtest: namePrefix steht INNERHALB der Überschrift, vor dem Namen
+    ok 3 - namePrefix steht INNERHALB der Überschrift, vor dem Namen
+      ---
+      duration_ms: 0.952121
+      type: 'test'
+      ...
+    # Subtest: ohne namePrefix: die Überschrift ist genau der Name
+    ok 4 - ohne namePrefix: die Überschrift ist genau der Name
+      ---
+      duration_ms: 0.475681
+      type: 'test'
+      ...
+    # Subtest: mit saveController: save-indicator genau einmal
+    ok 5 - mit saveController: save-indicator genau einmal
+      ---
+      duration_ms: 3.537606
+      type: 'test'
+      ...
+    # Subtest: ohne saveController: kein save-indicator
+    ok 6 - ohne saveController: kein save-indicator
+      ---
+      duration_ms: 1.394862
+      type: 'test'
+      ...
+    # Subtest: Vergleich-Satz MIT saveController: Chip ebenfalls genau einmal (kein kind-Zweig)
+    ok 7 - Vergleich-Satz MIT saveController: Chip ebenfalls genau einmal (kein kind-Zweig)
+      ---
+      duration_ms: 0.832741
+      type: 'test'
+      ...
+    1..7
+ok 19 - \#2284 S2 AC-16 — titleTestid, namePrefix, saveController
+  ---
+  duration_ms: 113.000219
+  type: 'suite'
+  ...
+# Subtest: \#2284 S2 AC-16 — dieselbe Gerüststruktur, keine Markup-Verzweigung nach kind
+    # Subtest: voller Trip-Satz (titleTestid, namePrefix, saveController): kind="trip" ≡ kind="vergleich"
+    ok 1 - voller Trip-Satz (titleTestid, namePrefix, saveController): kind="trip" ≡ kind="vergleich"
+      ---
+      duration_ms: 7.966782
+      type: 'test'
+      ...
+    # Subtest: Vergleich-Satz ohne Zusatz-Props: kind="trip" ≡ kind="vergleich"
+    ok 2 - Vergleich-Satz ohne Zusatz-Props: kind="trip" ≡ kind="vergleich"
+      ---
+      duration_ms: 2.127663
+      type: 'test'
+      ...
+    # Subtest: beide Sätze teilen das Grundgerüst (Überschrift, Region-Zeile, Kachelreihe)
+    ok 3 - beide Sätze teilen das Grundgerüst (Überschrift, Region-Zeile, Kachelreihe)
+      ---
+      duration_ms: 4.544366
+      type: 'test'
+      ...
+    1..3
+ok 20 - \#2284 S2 AC-16 — dieselbe Gerüststruktur, keine Markup-Verzweigung nach kind
+  ---
+  duration_ms: 14.811912
+  type: 'suite'
+  ...
+# Subtest: \#2284 S2 AC-16 / AC-3 — Region-Platzhalter „—" (Normalisierung im Baustein)
+    # Subtest: Vergleich: region="" ⇒ „—"
+    ok 1 - Vergleich: region="" ⇒ „—"
+      ---
+      duration_ms: 2.489184
+      type: 'test'
+      ...
+    # Subtest: Trip: region="" ⇒ „—"
+    ok 2 - Trip: region="" ⇒ „—"
+      ---
+      duration_ms: 6.46282
+      type: 'test'
+      ...
+    # Subtest: Vergleich: region=undefined ⇒ „—"
+    ok 3 - Vergleich: region=undefined ⇒ „—"
+      ---
+      duration_ms: 0.754711
+      type: 'test'
+      ...
+    # Subtest: Trip: region=undefined ⇒ „—"
+    ok 4 - Trip: region=undefined ⇒ „—"
+      ---
+      duration_ms: 6.81549
+      type: 'test'
+      ...
+    # Subtest: Vergleich: region="Nord" ⇒ „Nord"
+    ok 5 - Vergleich: region="Nord" ⇒ „Nord"
+      ---
+      duration_ms: 0.976602
+      type: 'test'
+      ...
+    # Subtest: Trip: region="Nord" ⇒ „Nord"
+    ok 6 - Trip: region="Nord" ⇒ „Nord"
+      ---
+      duration_ms: 6.15878
+      type: 'test'
+      ...
+    1..6
+ok 21 - \#2284 S2 AC-16 / AC-3 — Region-Platzhalter „—" (Normalisierung im Baustein)
+  ---
+  duration_ms: 24.211467
+  type: 'suite'
+  ...
+# Subtest: \#2284 S2 v1.1 AC-16 — Kacheln UND Handy-Knopf im selben Markup
+    # Subtest: Trip: alle Kacheln und genau ein Knopf trip-profil-knopf
+    ok 1 - Trip: alle Kacheln und genau ein Knopf trip-profil-knopf
+      ---
+      duration_ms: 0.897791
+      type: 'test'
+      ...
+    # Subtest: Vergleich: alle Kacheln und genau ein Knopf compare-hub-profil-knopf
+    ok 2 - Vergleich: alle Kacheln und genau ein Knopf compare-hub-profil-knopf
+      ---
+      duration_ms: 7.339921
+      type: 'test'
+      ...
+    # Subtest: Trip: Knopftext ist das Label der gewählten Aktivität („Trekking"), data-selected-value="trekking"
+    ok 3 - Trip: Knopftext ist das Label der gewählten Aktivität („Trekking"), data-selected-value="trekking"
+      ---
+      duration_ms: 4.223847
+      type: 'test'
+      ...
+    # Subtest: Trip: gewählte Aktivität NICHT die erste Option ⇒ Knopftext folgt der Prop (Mutation i)
+    ok 4 - Trip: gewählte Aktivität NICHT die erste Option ⇒ Knopftext folgt der Prop (Mutation i)
+      ---
+      duration_ms: 1.137862
+      type: 'test'
+      ...
+    # Subtest: Trip ohne Aktivität: neutraler Knopftext „Aktivität wählen", data-selected-value leer
+    ok 5 - Trip ohne Aktivität: neutraler Knopftext „Aktivität wählen", data-selected-value leer
+      ---
+      duration_ms: 1.521632
+      type: 'test'
+      ...
+    # Subtest: Vergleich: Knopftext ist das Label des gewählten Profils („Wintersport", nicht die erste Option)
+    ok 6 - Vergleich: Knopftext ist das Label des gewählten Profils („Wintersport", nicht die erste Option)
+      ---
+      duration_ms: 0.59774
+      type: 'test'
+      ...
+    # Subtest: Vergleich ohne Profil: neutraler Knopftext
+    ok 7 - Vergleich ohne Profil: neutraler Knopftext
+      ---
+      duration_ms: 1.315402
+      type: 'test'
+      ...
+    # Subtest: ohne Wert: Trip und Vergleich zeigen denselben neutralen Knopftext, „Profil wählen" nirgends
+    ok 8 - ohne Wert: Trip und Vergleich zeigen denselben neutralen Knopftext, „Profil wählen" nirgends
+      ---
+      duration_ms: 8.857313
+      type: 'test'
+      ...
+    # Subtest: Gerüst beider Sätze enthält Knopf und Auswahl-Optionen (kein kind-Zweig)
+    ok 9 - Gerüst beider Sätze enthält Knopf und Auswahl-Optionen (kein kind-Zweig)
+      ---
+      duration_ms: 11.735308
+      type: 'test'
+      ...
+    1..9
+ok 22 - \#2284 S2 v1.1 AC-16 — Kacheln UND Handy-Knopf im selben Markup
+  ---
+  duration_ms: 37.962926
+  type: 'suite'
+  ...
+# (node:700096) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: c2 Kopf route de
+    # Subtest: AC-3/AC-4: Eyebrow „Trip · Mallorca“ genau einmal, vor der Überschrift
+    ok 1 - AC-3/AC-4: Eyebrow „Trip · Mallorca“ genau einmal, vor der Überschrift
+      ---
+      duration_ms: 59.951899
+      type: 'test'
+      ...
+    # Subtest: AC-3/AC-4 (\#3438 AC-6): Meta-Zeile nach Mockup Fassung 4, genau einmal, nach der Überschrift
+    ok 2 - AC-3/AC-4 (\#3438 AC-6): Meta-Zeile nach Mockup Fassung 4, genau einmal, nach der Überschrift
+      ---
+      duration_ms: 7.274861
+      type: 'test'
+      ...
+    1..2
+ok 23 - c2 Kopf route de
+  ---
+  duration_ms: 67.947861
+  type: 'suite'
+  ...
+# Subtest: c2 Kopf route en
+    # Subtest: AC-3/AC-4: Eyebrow „Trip · Mallorca“ genau einmal, vor der Überschrift
+    ok 1 - AC-3/AC-4: Eyebrow „Trip · Mallorca“ genau einmal, vor der Überschrift
+      ---
+      duration_ms: 6.27039
+      type: 'test'
+      ...
+    # Subtest: AC-3/AC-4 (\#3438 AC-6): Meta-Zeile nach Mockup Fassung 4, genau einmal, nach der Überschrift
+    ok 2 - AC-3/AC-4 (\#3438 AC-6): Meta-Zeile nach Mockup Fassung 4, genau einmal, nach der Überschrift
+      ---
+      duration_ms: 10.741197
+      type: 'test'
+      ...
+    1..2
+ok 24 - c2 Kopf route en
+  ---
+  duration_ms: 17.159635
+  type: 'suite'
+  ...
+# Subtest: c2 Kopf vergleich de
+    # Subtest: AC-3/AC-4: Eyebrow „Orte · Tirol“ genau einmal, vor der Überschrift
+    ok 1 - AC-3/AC-4: Eyebrow „Orte · Tirol“ genau einmal, vor der Überschrift
+      ---
+      duration_ms: 8.009283
+      type: 'test'
+      ...
+    # Subtest: AC-3/AC-4 (\#3438 AC-6): Meta-Zeile nach Mockup Fassung 4, genau einmal, nach der Überschrift
+    ok 2 - AC-3/AC-4 (\#3438 AC-6): Meta-Zeile nach Mockup Fassung 4, genau einmal, nach der Überschrift
+      ---
+      duration_ms: 4.175396
+      type: 'test'
+      ...
+    1..2
+ok 25 - c2 Kopf vergleich de
+  ---
+  duration_ms: 12.395329
+  type: 'suite'
+  ...
+# Subtest: c2 Kopf vergleich en
+    # Subtest: AC-3/AC-4: Eyebrow „Locations · Tirol“ genau einmal, vor der Überschrift
+    ok 1 - AC-3/AC-4: Eyebrow „Locations · Tirol“ genau einmal, vor der Überschrift
+      ---
+      duration_ms: 4.312257
+      type: 'test'
+      ...
+    # Subtest: AC-3/AC-4 (\#3438 AC-6): Meta-Zeile nach Mockup Fassung 4, genau einmal, nach der Überschrift
+    ok 2 - AC-3/AC-4 (\#3438 AC-6): Meta-Zeile nach Mockup Fassung 4, genau einmal, nach der Überschrift
+      ---
+      duration_ms: 5.539508
+      type: 'test'
+      ...
+    1..2
+ok 26 - c2 Kopf vergleich en
+  ---
+  duration_ms: 10.004266
+  type: 'suite'
+  ...
+# Subtest: c2 Meta Zahlformat und Briefing-Wahl
+    # Subtest: AC-3: Trip-Meta DE mit Dezimalkomma und Tausenderpunkt, EN mit Punkt und Komma
+    ok 1 - AC-3: Trip-Meta DE mit Dezimalkomma und Tausenderpunkt, EN mit Punkt und Komma
+      ---
+      duration_ms: 12.96371
+      type: 'test'
+      ...
+    # Subtest: AC-4 (\#3438 AC-6): nur Abend-Briefing konfiguriert ⇒ „3 Orte · Abend-Briefing 18:00“
+    ok 2 - AC-4 (\#3438 AC-6): nur Abend-Briefing konfiguriert ⇒ „3 Orte · Abend-Briefing 18:00“
+      ---
+      duration_ms: 4.698548
+      type: 'test'
+      ...
+    # Subtest: AC-4 (\#3438 AC-6): Orte-Zähler folgt location_ids (2 Orte), danach direkt das Briefing
+    ok 3 - AC-4 (\#3438 AC-6): Orte-Zähler folgt location_ids (2 Orte), danach direkt das Briefing
+      ---
+      duration_ms: 7.527241
+      type: 'test'
+      ...
+    # Subtest: AC-3: Etappen-Zähler in der Meta folgt den Daten (5 Etappen)
+    ok 4 - AC-3: Etappen-Zähler in der Meta folgt den Daten (5 Etappen)
+      ---
+      duration_ms: 9.344083
+      type: 'test'
+      ...
+    1..4
+ok 27 - c2 Meta Zahlformat und Briefing-Wahl
+  ---
+  duration_ms: 34.707943
+  type: 'suite'
+  ...
+# Subtest: c2 Leiste route de
+    # Subtest: AC-1/AC-2: Brotkrumen „Trips / <Name>“ — Elternteil Link auf /trips, Name kein Link
+    ok 1 - AC-1/AC-2: Brotkrumen „Trips / <Name>“ — Elternteil Link auf /trips, Name kein Link
+      ---
+      duration_ms: 20.238581
+      type: 'test'
+      ...
+    # Subtest: AC-1/AC-2: Knopf „Test schicken ▾“ (testid subscription-hub-send) in der Leiste
+    ok 2 - AC-1/AC-2: Knopf „Test schicken ▾“ (testid subscription-hub-send) in der Leiste
+      ---
+      duration_ms: 4.729977
+      type: 'test'
+      ...
+    # Subtest: AC-1/AC-2: Kebab „Weitere Aktionen“ in der Leiste
+    ok 3 - AC-1/AC-2: Kebab „Weitere Aktionen“ in der Leiste
+      ---
+      duration_ms: 10.936526
+      type: 'test'
+      ...
+    # Subtest: AC-4: Reihenfolge der Leiste: Kebab vor ‚Test schicken ▾‘
+    ok 4 - AC-4: Reihenfolge der Leiste: Kebab vor ‚Test schicken ▾‘
+      ---
+      duration_ms: 5.181437
+      type: 'test'
+      ...
+    1..4
+ok 28 - c2 Leiste route de
+  ---
+  duration_ms: 41.253742
+  type: 'suite'
+  ...
+# Subtest: c2 Leiste route en
+    # Subtest: AC-1/AC-2: Brotkrumen „Trips / <Name>“ — Elternteil Link auf /trips, Name kein Link
+    ok 1 - AC-1/AC-2: Brotkrumen „Trips / <Name>“ — Elternteil Link auf /trips, Name kein Link
+      ---
+      duration_ms: 3.040056
+      type: 'test'
+      ...
+    # Subtest: AC-1/AC-2: Knopf „Send test ▾“ (testid subscription-hub-send) in der Leiste
+    ok 2 - AC-1/AC-2: Knopf „Send test ▾“ (testid subscription-hub-send) in der Leiste
+      ---
+      duration_ms: 2.088353
+      type: 'test'
+      ...
+    # Subtest: AC-1/AC-2: Kebab „More actions“ in der Leiste
+    ok 3 - AC-1/AC-2: Kebab „More actions“ in der Leiste
+      ---
+      duration_ms: 2.589775
+      type: 'test'
+      ...
+    # Subtest: AC-4: Reihenfolge der Leiste: Kebab vor ‚Send test ▾‘
+    ok 4 - AC-4: Reihenfolge der Leiste: Kebab vor ‚Send test ▾‘
+      ---
+      duration_ms: 1.830934
+      type: 'test'
+      ...
+    1..4
+ok 29 - c2 Leiste route en
+  ---
+  duration_ms: 9.694124
+  type: 'suite'
+  ...
+# Subtest: c2 Leiste vergleich de
+    # Subtest: AC-1/AC-2: Brotkrumen „Orte / <Name>“ — Elternteil Link auf /compare, Name kein Link
+    ok 1 - AC-1/AC-2: Brotkrumen „Orte / <Name>“ — Elternteil Link auf /compare, Name kein Link
+      ---
+      duration_ms: 2.692045
+      type: 'test'
+      ...
+    # Subtest: AC-1/AC-2: Knopf „Test schicken ▾“ (testid subscription-hub-send) in der Leiste
+    ok 2 - AC-1/AC-2: Knopf „Test schicken ▾“ (testid subscription-hub-send) in der Leiste
+      ---
+      duration_ms: 5.735328
+      type: 'test'
+      ...
+    # Subtest: AC-1/AC-2: Kebab „Weitere Aktionen“ in der Leiste
+    ok 3 - AC-1/AC-2: Kebab „Weitere Aktionen“ in der Leiste
+      ---
+      duration_ms: 4.821017
+      type: 'test'
+      ...
+    # Subtest: AC-4: Reihenfolge der Leiste: Kebab vor ‚Test schicken ▾‘
+    ok 4 - AC-4: Reihenfolge der Leiste: Kebab vor ‚Test schicken ▾‘
+      ---
+      duration_ms: 1.750522
+      type: 'test'
+      ...
+    1..4
+ok 30 - c2 Leiste vergleich de
+  ---
+  duration_ms: 19.785839
+  type: 'suite'
+  ...
+# Subtest: c2 Leiste vergleich en
+    # Subtest: AC-1/AC-2: Brotkrumen „Locations / <Name>“ — Elternteil Link auf /compare, Name kein Link
+    ok 1 - AC-1/AC-2: Brotkrumen „Locations / <Name>“ — Elternteil Link auf /compare, Name kein Link
+      ---
+      duration_ms: 13.819031
+      type: 'test'
+      ...
+    # Subtest: AC-1/AC-2: Knopf „Send test ▾“ (testid subscription-hub-send) in der Leiste
+    ok 2 - AC-1/AC-2: Knopf „Send test ▾“ (testid subscription-hub-send) in der Leiste
+      ---
+      duration_ms: 3.991277
+      type: 'test'
+      ...
+    # Subtest: AC-1/AC-2: Kebab „More actions“ in der Leiste
+    ok 3 - AC-1/AC-2: Kebab „More actions“ in der Leiste
+      ---
+      duration_ms: 8.434073
+      type: 'test'
+      ...
+    # Subtest: AC-4: Reihenfolge der Leiste: Kebab vor ‚Send test ▾‘
+    ok 4 - AC-4: Reihenfolge der Leiste: Kebab vor ‚Send test ▾‘
+      ---
+      duration_ms: 4.818536
+      type: 'test'
+      ...
+    1..4
+ok 31 - c2 Leiste vergleich en
+  ---
+  duration_ms: 31.274138
+  type: 'suite'
+  ...
+# Subtest: AC-4 Gegenprobe: vertauschte Leiste (Knopf vor Kebab) wird als falsche Reihenfolge erkannt
+ok 32 - AC-4 Gegenprobe: vertauschte Leiste (Knopf vor Kebab) wird als falsche Reihenfolge erkannt
+  ---
+  duration_ms: 3.938845
+  type: 'test'
+  ...
+# Subtest: AC-5 (route, de): Zustand draft ⇒ Pill „Entwurf“ + Aktivieren
+ok 33 - AC-5 (route, de): Zustand draft ⇒ Pill „Entwurf“ + Aktivieren
+  ---
+  duration_ms: 4.427027
+  type: 'test'
+  ...
+# Subtest: AC-5 (route, de): Zustand active ⇒ Pill „Aktiv“, kein Aktivieren
+ok 34 - AC-5 (route, de): Zustand active ⇒ Pill „Aktiv“, kein Aktivieren
+  ---
+  duration_ms: 3.232104
+  type: 'test'
+  ...
+# Subtest: AC-5 (route, de): Zustand paused ⇒ Pill „Pausiert“, kein Aktivieren
+ok 35 - AC-5 (route, de): Zustand paused ⇒ Pill „Pausiert“, kein Aktivieren
+  ---
+  duration_ms: 2.798744
+  type: 'test'
+  ...
+# Subtest: AC-5 (route, de): Zustand archived ⇒ Pill „Archiviert“, kein Aktivieren
+ok 36 - AC-5 (route, de): Zustand archived ⇒ Pill „Archiviert“, kein Aktivieren
+  ---
+  duration_ms: 3.751105
+  type: 'test'
+  ...
+# Subtest: AC-5 (route, de): Zustand finished ⇒ Pill „Fertig“, kein Aktivieren
+ok 37 - AC-5 (route, de): Zustand finished ⇒ Pill „Fertig“, kein Aktivieren
+  ---
+  duration_ms: 1.684904
+  type: 'test'
+  ...
+# Subtest: \#3443 AC-1 (route, de): „Aktivieren“ im Entwurf ist ein Knopf ohne href, Variante accent, Größe sm
+ok 38 - \#3443 AC-1 (route, de): „Aktivieren“ im Entwurf ist ein Knopf ohne href, Variante accent, Größe sm
+  ---
+  duration_ms: 3.124065
+  type: 'test'
+  ...
+# Subtest: AC-5 (route, en): Zustand draft ⇒ Pill „Draft“ + Aktivieren
+ok 39 - AC-5 (route, en): Zustand draft ⇒ Pill „Draft“ + Aktivieren
+  ---
+  duration_ms: 2.294563
+  type: 'test'
+  ...
+# Subtest: AC-5 (route, en): Zustand active ⇒ Pill „Active“, kein Aktivieren
+ok 40 - AC-5 (route, en): Zustand active ⇒ Pill „Active“, kein Aktivieren
+  ---
+  duration_ms: 2.500185
+  type: 'test'
+  ...
+# Subtest: AC-5 (route, en): Zustand paused ⇒ Pill „Paused“, kein Aktivieren
+ok 41 - AC-5 (route, en): Zustand paused ⇒ Pill „Paused“, kein Aktivieren
+  ---
+  duration_ms: 1.563043
+  type: 'test'
+  ...
+# Subtest: AC-5 (route, en): Zustand archived ⇒ Pill „Archived“, kein Aktivieren
+ok 42 - AC-5 (route, en): Zustand archived ⇒ Pill „Archived“, kein Aktivieren
+  ---
+  duration_ms: 5.231248
+  type: 'test'
+  ...
+# Subtest: AC-5 (route, en): Zustand finished ⇒ Pill „Finished“, kein Aktivieren
+ok 43 - AC-5 (route, en): Zustand finished ⇒ Pill „Finished“, kein Aktivieren
+  ---
+  duration_ms: 4.726697
+  type: 'test'
+  ...
+# Subtest: \#3443 AC-1 (route, en): „Aktivieren“ im Entwurf ist ein Knopf ohne href, Variante accent, Größe sm
+ok 44 - \#3443 AC-1 (route, en): „Aktivieren“ im Entwurf ist ein Knopf ohne href, Variante accent, Größe sm
+  ---
+  duration_ms: 4.362137
+  type: 'test'
+  ...
+# Subtest: AC-5 (vergleich, de): Zustand draft ⇒ Pill „Entwurf“ + Aktivieren
+ok 45 - AC-5 (vergleich, de): Zustand draft ⇒ Pill „Entwurf“ + Aktivieren
+  ---
+  duration_ms: 5.696159
+  type: 'test'
+  ...
+# Subtest: AC-5 (vergleich, de): Zustand active ⇒ Pill „Aktiv“, kein Aktivieren
+ok 46 - AC-5 (vergleich, de): Zustand active ⇒ Pill „Aktiv“, kein Aktivieren
+  ---
+  duration_ms: 1.350182
+  type: 'test'
+  ...
+# Subtest: AC-5 (vergleich, de): Zustand paused ⇒ Pill „Pausiert“, kein Aktivieren
+ok 47 - AC-5 (vergleich, de): Zustand paused ⇒ Pill „Pausiert“, kein Aktivieren
+  ---
+  duration_ms: 3.030464
+  type: 'test'
+  ...
+# Subtest: AC-5 (vergleich, de): Zustand archived ⇒ Pill „Archiviert“, kein Aktivieren
+ok 48 - AC-5 (vergleich, de): Zustand archived ⇒ Pill „Archiviert“, kein Aktivieren
+  ---
+  duration_ms: 1.247831
+  type: 'test'
+  ...
+# Subtest: AC-5 (vergleich, de): Zustand finished ⇒ Pill „Fertig“, kein Aktivieren
+ok 49 - AC-5 (vergleich, de): Zustand finished ⇒ Pill „Fertig“, kein Aktivieren
+  ---
+  duration_ms: 1.241782
+  type: 'test'
+  ...
+# Subtest: \#3443 AC-1 (vergleich, de): „Aktivieren“ im Entwurf ist ein Knopf ohne href, Variante accent, Größe sm
+ok 50 - \#3443 AC-1 (vergleich, de): „Aktivieren“ im Entwurf ist ein Knopf ohne href, Variante accent, Größe sm
+  ---
+  duration_ms: 0.932641
+  type: 'test'
+  ...
+# Subtest: AC-5 (vergleich, en): Zustand draft ⇒ Pill „Draft“ + Aktivieren
+ok 51 - AC-5 (vergleich, en): Zustand draft ⇒ Pill „Draft“ + Aktivieren
+  ---
+  duration_ms: 4.110457
+  type: 'test'
+  ...
+# Subtest: AC-5 (vergleich, en): Zustand active ⇒ Pill „Active“, kein Aktivieren
+ok 52 - AC-5 (vergleich, en): Zustand active ⇒ Pill „Active“, kein Aktivieren
+  ---
+  duration_ms: 1.269583
+  type: 'test'
+  ...
+# Subtest: AC-5 (vergleich, en): Zustand paused ⇒ Pill „Paused“, kein Aktivieren
+ok 53 - AC-5 (vergleich, en): Zustand paused ⇒ Pill „Paused“, kein Aktivieren
+  ---
+  duration_ms: 2.988165
+  type: 'test'
+  ...
+# Subtest: AC-5 (vergleich, en): Zustand archived ⇒ Pill „Archived“, kein Aktivieren
+ok 54 - AC-5 (vergleich, en): Zustand archived ⇒ Pill „Archived“, kein Aktivieren
+  ---
+  duration_ms: 1.237183
+  type: 'test'
+  ...
+# Subtest: AC-5 (vergleich, en): Zustand finished ⇒ Pill „Finished“, kein Aktivieren
+ok 55 - AC-5 (vergleich, en): Zustand finished ⇒ Pill „Finished“, kein Aktivieren
+  ---
+  duration_ms: 1.152481
+  type: 'test'
+  ...
+# Subtest: \#3443 AC-1 (vergleich, en): „Aktivieren“ im Entwurf ist ein Knopf ohne href, Variante accent, Größe sm
+ok 56 - \#3443 AC-1 (vergleich, en): „Aktivieren“ im Entwurf ist ein Knopf ohne href, Variante accent, Größe sm
+  ---
+  duration_ms: 0.982112
+  type: 'test'
+  ...
+# Subtest: AC-9 (route): Stift für Name und Region nur als Icon mit aria-label, ohne sichtbaren Text
+ok 57 - AC-9 (route): Stift für Name und Region nur als Icon mit aria-label, ohne sichtbaren Text
+  ---
+  duration_ms: 1.808432
+  type: 'test'
+  ...
+# Subtest: AC-9 (vergleich): Stift für Name und Region nur als Icon mit aria-label, ohne sichtbaren Text
+ok 58 - AC-9 (vergleich): Stift für Name und Region nur als Icon mit aria-label, ohne sichtbaren Text
+  ---
+  duration_ms: 1.234111
+  type: 'test'
+  ...
+# Subtest: c2 Reiterleiste route
+    # Subtest: AC-6: Reiter „etappen“ trägt Badge 4
+    ok 1 - AC-6: Reiter „etappen“ trägt Badge 4
+      ---
+      duration_ms: 3.059325
+      type: 'test'
+      ...
+    # Subtest: AC-6: aktiver Reiter aria-current="page", alle anderen nicht
+    ok 2 - AC-6: aktiver Reiter aria-current="page", alle anderen nicht
+      ---
+      duration_ms: 20.344742
+      type: 'test'
+      ...
+    1..2
+ok 59 - c2 Reiterleiste route
+  ---
+  duration_ms: 23.525746
+  type: 'suite'
+  ...
+# Subtest: c2 Reiterleiste vergleich
+    # Subtest: AC-6: Reiter „orte“ trägt Badge 3
+    ok 1 - AC-6: Reiter „orte“ trägt Badge 3
+      ---
+      duration_ms: 4.054057
+      type: 'test'
+      ...
+    # Subtest: AC-6: aktiver Reiter aria-current="page", alle anderen nicht
+    ok 2 - AC-6: aktiver Reiter aria-current="page", alle anderen nicht
+      ---
+      duration_ms: 3.276664
+      type: 'test'
+      ...
+    1..2
+ok 60 - c2 Reiterleiste vergleich
+  ---
+  duration_ms: 7.426712
+  type: 'suite'
+  ...
+# Subtest: AC-6/AC-7: Etappen-Badge folgt den Daten (5 statt 4)
+ok 61 - AC-6/AC-7: Etappen-Badge folgt den Daten (5 statt 4)
+  ---
+  duration_ms: 4.631926
+  type: 'test'
+  ...
+# Subtest: c2 Vorlage-Karte route de
+    # Subtest: AC-8: Überschrift, Gruppen Vorlagen/Eigene, Aktionen, kein Mail-Kopf-Satz
+    ok 1 - AC-8: Überschrift, Gruppen Vorlagen/Eigene, Aktionen, kein Mail-Kopf-Satz
+      ---
+      duration_ms: 1.875914
+      type: 'test'
+      ...
+    # Subtest: AC-8: Rücksetzen heißt Auf „Alpen-Trekking“ zurücksetzen (Mockup-Anführungszeichen)
+    ok 2 - AC-8: Rücksetzen heißt Auf „Alpen-Trekking“ zurücksetzen (Mockup-Anführungszeichen)
+      ---
+      duration_ms: 4.106856
+      type: 'test'
+      ...
+    # Subtest: AC-8: Zustand „unverändert“ bzw. „2 Abweichungen“; ohne Abweichung kein Rücksetzen
+    ok 3 - AC-8: Zustand „unverändert“ bzw. „2 Abweichungen“; ohne Abweichung kein Rücksetzen
+      ---
+      duration_ms: 0.452201
+      type: 'test'
+      ...
+    1..3
+ok 62 - c2 Vorlage-Karte route de
+  ---
+  duration_ms: 6.59813
+  type: 'suite'
+  ...
+# Subtest: c2 Vorlage-Karte route en
+    # Subtest: AC-8: Überschrift, Gruppen Vorlagen/Eigene, Aktionen, kein Mail-Kopf-Satz
+    ok 1 - AC-8: Überschrift, Gruppen Vorlagen/Eigene, Aktionen, kein Mail-Kopf-Satz
+      ---
+      duration_ms: 3.534606
+      type: 'test'
+      ...
+    # Subtest: AC-8: Rücksetzen heißt Reset to “Alpine trekking” (Mockup-Anführungszeichen)
+    ok 2 - AC-8: Rücksetzen heißt Reset to “Alpine trekking” (Mockup-Anführungszeichen)
+      ---
+      duration_ms: 0.245861
+      type: 'test'
+      ...
+    # Subtest: AC-8: Zustand „unverändert“ bzw. „2 Abweichungen“; ohne Abweichung kein Rücksetzen
+    ok 3 - AC-8: Zustand „unverändert“ bzw. „2 Abweichungen“; ohne Abweichung kein Rücksetzen
+      ---
+      duration_ms: 0.19182
+      type: 'test'
+      ...
+    1..3
+ok 63 - c2 Vorlage-Karte route en
+  ---
+  duration_ms: 4.053296
+  type: 'suite'
+  ...
+# Subtest: c2 Vorlage-Karte vergleich de
+    # Subtest: AC-8: Überschrift, Gruppen Vorlagen/Eigene, Aktionen, kein Mail-Kopf-Satz
+    ok 1 - AC-8: Überschrift, Gruppen Vorlagen/Eigene, Aktionen, kein Mail-Kopf-Satz
+      ---
+      duration_ms: 0.466152
+      type: 'test'
+      ...
+    # Subtest: AC-8: Rücksetzen heißt Auf „Alpen-Trekking“ zurücksetzen (Mockup-Anführungszeichen)
+    ok 2 - AC-8: Rücksetzen heißt Auf „Alpen-Trekking“ zurücksetzen (Mockup-Anführungszeichen)
+      ---
+      duration_ms: 0.283059
+      type: 'test'
+      ...
+    # Subtest: AC-8: Zustand „unverändert“ bzw. „2 Abweichungen“; ohne Abweichung kein Rücksetzen
+    ok 3 - AC-8: Zustand „unverändert“ bzw. „2 Abweichungen“; ohne Abweichung kein Rücksetzen
+      ---
+      duration_ms: 0.32927
+      type: 'test'
+      ...
+    1..3
+ok 64 - c2 Vorlage-Karte vergleich de
+  ---
+  duration_ms: 1.155262
+  type: 'suite'
+  ...
+# Subtest: c2 Vorlage-Karte vergleich en
+    # Subtest: AC-8: Überschrift, Gruppen Vorlagen/Eigene, Aktionen, kein Mail-Kopf-Satz
+    ok 1 - AC-8: Überschrift, Gruppen Vorlagen/Eigene, Aktionen, kein Mail-Kopf-Satz
+      ---
+      duration_ms: 0.45661
+      type: 'test'
+      ...
+    # Subtest: AC-8: Rücksetzen heißt Reset to “Alpine trekking” (Mockup-Anführungszeichen)
+    ok 2 - AC-8: Rücksetzen heißt Reset to “Alpine trekking” (Mockup-Anführungszeichen)
+      ---
+      duration_ms: 0.321009
+      type: 'test'
+      ...
+    # Subtest: AC-8: Zustand „unverändert“ bzw. „2 Abweichungen“; ohne Abweichung kein Rücksetzen
+    ok 3 - AC-8: Zustand „unverändert“ bzw. „2 Abweichungen“; ohne Abweichung kein Rücksetzen
+      ---
+      duration_ms: 0.190421
+      type: 'test'
+      ...
+    1..3
+ok 65 - c2 Vorlage-Karte vergleich en
+  ---
+  duration_ms: 1.038771
+  type: 'suite'
+  ...
+# Subtest: c2 Katalog: neue Schlüssel DE und EN vollständig
+    # Subtest: AC-10: aktionen.kopf.test_schicken
+    ok 1 - AC-10: aktionen.kopf.test_schicken
+      ---
+      duration_ms: 0.279451
+      type: 'test'
+      ...
+    # Subtest: AC-10: aktionen.kopf.eltern_orte
+    ok 2 - AC-10: aktionen.kopf.eltern_orte
+      ---
+      duration_ms: 0.18559
+      type: 'test'
+      ...
+    # Subtest: AC-10: aktionen.kopf.eyebrow_trip
+    ok 3 - AC-10: aktionen.kopf.eyebrow_trip
+      ---
+      duration_ms: 0.10997
+      type: 'test'
+      ...
+    # Subtest: AC-10: aktionen.kopf.eyebrow_orte
+    ok 4 - AC-10: aktionen.kopf.eyebrow_orte
+      ---
+      duration_ms: 0.11559
+      type: 'test'
+      ...
+    # Subtest: AC-10: aktionen.kopf.morgen_briefing
+    ok 5 - AC-10: aktionen.kopf.morgen_briefing
+      ---
+      duration_ms: 0.10769
+      type: 'test'
+      ...
+    # Subtest: AC-10: aktionen.kopf.abend_briefing
+    ok 6 - AC-10: aktionen.kopf.abend_briefing
+      ---
+      duration_ms: 0.09508
+      type: 'test'
+      ...
+    # Subtest: AC-10: aktionen.kopf.aktivieren
+    ok 7 - AC-10: aktionen.kopf.aktivieren
+      ---
+      duration_ms: 0.0902
+      type: 'test'
+      ...
+    # Subtest: AC-10: wetter.vorlage.zuruecksetzen
+    ok 8 - AC-10: wetter.vorlage.zuruecksetzen
+      ---
+      duration_ms: 3.380335
+      type: 'test'
+      ...
+    # Subtest: \#3438 AC-6: aktionen.kopf.vergleichstabelle existiert in DE und EN nicht mehr
+    ok 9 - \#3438 AC-6: aktionen.kopf.vergleichstabelle existiert in DE und EN nicht mehr
+      ---
+      duration_ms: 0.26157
+      type: 'test'
+      ...
+    1..9
+ok 66 - c2 Katalog: neue Schlüssel DE und EN vollständig
+  ---
+  duration_ms: 4.775427
+  type: 'suite'
+  ...
+# (node:700140) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: \#3438 Kopf route de
+    # Subtest: AC-3: Region-Stift sitzt in der Oberzeile (Eyebrow), nicht unter dem Titel
+    ok 1 - AC-3: Region-Stift sitzt in der Oberzeile (Eyebrow), nicht unter dem Titel
+      ---
+      duration_ms: 52.823469
+      type: 'test'
+      ...
+    # Subtest: AC-3: keine eigene Regionszeile unter dem Titel — Region „Mallorca“ steht nur im Eyebrow
+    ok 2 - AC-3: keine eigene Regionszeile unter dem Titel — Region „Mallorca“ steht nur im Eyebrow
+      ---
+      duration_ms: 11.457137
+      type: 'test'
+      ...
+    # Subtest: AC-5: Stift am Titel bleibt (Name-Stift neben der Überschrift)
+    ok 3 - AC-5: Stift am Titel bleibt (Name-Stift neben der Überschrift)
+      ---
+      duration_ms: 9.185763
+      type: 'test'
+      ...
+    1..3
+ok 67 - \#3438 Kopf route de
+  ---
+  duration_ms: 74.286331
+  type: 'suite'
+  ...
+# Subtest: \#3438 Kopf route en
+    # Subtest: AC-3: Region-Stift sitzt in der Oberzeile (Eyebrow), nicht unter dem Titel
+    ok 1 - AC-3: Region-Stift sitzt in der Oberzeile (Eyebrow), nicht unter dem Titel
+      ---
+      duration_ms: 2.653014
+      type: 'test'
+      ...
+    # Subtest: AC-3: keine eigene Regionszeile unter dem Titel — Region „Mallorca“ steht nur im Eyebrow
+    ok 2 - AC-3: keine eigene Regionszeile unter dem Titel — Region „Mallorca“ steht nur im Eyebrow
+      ---
+      duration_ms: 6.173799
+      type: 'test'
+      ...
+    # Subtest: AC-5: Stift am Titel bleibt (Name-Stift neben der Überschrift)
+    ok 3 - AC-5: Stift am Titel bleibt (Name-Stift neben der Überschrift)
+      ---
+      duration_ms: 3.120154
+      type: 'test'
+      ...
+    1..3
+ok 68 - \#3438 Kopf route en
+  ---
+  duration_ms: 15.261733
+  type: 'suite'
+  ...
+# Subtest: \#3438 Kopf vergleich de
+    # Subtest: AC-3: Region-Stift sitzt in der Oberzeile (Eyebrow), nicht unter dem Titel
+    ok 1 - AC-3: Region-Stift sitzt in der Oberzeile (Eyebrow), nicht unter dem Titel
+      ---
+      duration_ms: 11.761828
+      type: 'test'
+      ...
+    # Subtest: AC-3: keine eigene Regionszeile unter dem Titel — Region „Tirol“ steht nur im Eyebrow
+    ok 2 - AC-3: keine eigene Regionszeile unter dem Titel — Region „Tirol“ steht nur im Eyebrow
+      ---
+      duration_ms: 2.364174
+      type: 'test'
+      ...
+    # Subtest: AC-5: Stift am Titel bleibt (Name-Stift neben der Überschrift)
+    ok 3 - AC-5: Stift am Titel bleibt (Name-Stift neben der Überschrift)
+      ---
+      duration_ms: 5.824368
+      type: 'test'
+      ...
+    1..3
+ok 69 - \#3438 Kopf vergleich de
+  ---
+  duration_ms: 20.19501
+  type: 'suite'
+  ...
+# Subtest: \#3438 Kopf vergleich en
+    # Subtest: AC-3: Region-Stift sitzt in der Oberzeile (Eyebrow), nicht unter dem Titel
+    ok 1 - AC-3: Region-Stift sitzt in der Oberzeile (Eyebrow), nicht unter dem Titel
+      ---
+      duration_ms: 7.75587
+      type: 'test'
+      ...
+    # Subtest: AC-3: keine eigene Regionszeile unter dem Titel — Region „Tirol“ steht nur im Eyebrow
+    ok 2 - AC-3: keine eigene Regionszeile unter dem Titel — Region „Tirol“ steht nur im Eyebrow
+      ---
+      duration_ms: 6.329389
+      type: 'test'
+      ...
+    # Subtest: AC-5: Stift am Titel bleibt (Name-Stift neben der Überschrift)
+    ok 3 - AC-5: Stift am Titel bleibt (Name-Stift neben der Überschrift)
+      ---
+      duration_ms: 6.448609
+      type: 'test'
+      ...
+    1..3
+ok 70 - \#3438 Kopf vergleich en
+  ---
+  duration_ms: 20.677001
+  type: 'suite'
+  ...
+# Subtest: \#3438 AC-7: Orts-Vergleich ohne Region
+    # Subtest: de: Oberzeile „Orte“ allein, Region-Stift trotzdem an der Oberzeile
+    ok 1 - de: Oberzeile „Orte“ allein, Region-Stift trotzdem an der Oberzeile
+      ---
+      duration_ms: 6.811631
+      type: 'test'
+      ...
+    # Subtest: en: Oberzeile „Locations“ allein, Region-Stift trotzdem an der Oberzeile
+    ok 2 - en: Oberzeile „Locations“ allein, Region-Stift trotzdem an der Oberzeile
+      ---
+      duration_ms: 4.592506
+      type: 'test'
+      ...
+    1..2
+ok 71 - \#3438 AC-7: Orts-Vergleich ohne Region
+  ---
+  duration_ms: 11.511467
+  type: 'suite'
+  ...
+# (node:700590) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: \#2837 S1 Seite route — Hub-Kopf über den geteilten Baustein
+    # Subtest: AC-11 (route): genau eine Hub-Kopf-Leiste, genau ein Breadcrumb, genau eine Überschrift; Leiste vor dem Titel
+    ok 1 - AC-11 (route): genau eine Hub-Kopf-Leiste, genau ein Breadcrumb, genau eine Überschrift; Leiste vor dem Titel
+      ---
+      duration_ms: 29.852426
+      type: 'test'
+      ...
+    # Subtest: Entscheidung 1 (route): der Kopf trägt data-kind="route"
+    ok 2 - Entscheidung 1 (route): der Kopf trägt data-kind="route"
+      ---
+      duration_ms: 3.448636
+      type: 'test'
+      ...
+    # Subtest: AC-1 (route): „Senden" ist genau einmal da, steht IN der Leiste und ist Btn accent (\#2980 AC-16, ADR-0118) — Mutation (a)
+    ok 3 - AC-1 (route): „Senden" ist genau einmal da, steht IN der Leiste und ist Btn accent (\#2980 AC-16, ADR-0118) — Mutation (a)
+      ---
+      duration_ms: 3.088215
+      type: 'test'
+      ...
+    # Subtest: AC-4 (route): Breadcrumb „Trips / GR20 Nord 2026" — Elternteil Link auf /trips, Kind kein Link
+    ok 4 - AC-4 (route): Breadcrumb „Trips / GR20 Nord 2026" — Elternteil Link auf /trips, Kind kein Link
+      ---
+      duration_ms: 2.693034
+      type: 'test'
+      ...
+    # Subtest: AC-4 (route): im Kopf steht nirgends das Wort „Hub"
+    ok 5 - AC-4 (route): im Kopf steht nirgends das Wort „Hub"
+      ---
+      duration_ms: 3.124305
+      type: 'test'
+      ...
+    # Subtest: AC-6 (route): Status genau einmal, als Badge in der TITELZEILE (gleiches Elternelement wie h1) — Mutation (c)
+    ok 6 - AC-6 (route): Status genau einmal, als Badge in der TITELZEILE (gleiches Elternelement wie h1) — Mutation (c)
+      ---
+      duration_ms: 4.580776
+      type: 'test'
+      ...
+    # Subtest: AC-9 (route): Überschrift mit 38 px am Desktop (titleSize 38, beide Arten gleich)
+    ok 7 - AC-9 (route): Überschrift mit 38 px am Desktop (titleSize 38, beide Arten gleich)
+      ---
+      duration_ms: 6.17906
+      type: 'test'
+      ...
+    # Subtest: AC-2 (route, neu \#2980 AC-24): kein Zurück-Link in der Leiste; der Elternteil führt zur Liste
+    ok 8 - AC-2 (route, neu \#2980 AC-24): kein Zurück-Link in der Leiste; der Elternteil führt zur Liste
+      ---
+      duration_ms: 4.562636
+      type: 'test'
+      ...
+    # Subtest: AC-7 (route): der Kebab steht in der Leiste, genau einmal, Symbol vertikal
+    ok 9 - AC-7 (route): der Kebab steht in der Leiste, genau einmal, Symbol vertikal
+      ---
+      duration_ms: 6.75863
+      type: 'test'
+      ...
+    1..9
+ok 72 - \#2837 S1 Seite route — Hub-Kopf über den geteilten Baustein
+  ---
+  duration_ms: 65.588548
+  type: 'suite'
+  ...
+# Subtest: \#2837 S1 Seite vergleich — Hub-Kopf über den geteilten Baustein
+    # Subtest: AC-11 (vergleich): genau eine Hub-Kopf-Leiste, genau ein Breadcrumb, genau eine Überschrift; Leiste vor dem Titel
+    ok 1 - AC-11 (vergleich): genau eine Hub-Kopf-Leiste, genau ein Breadcrumb, genau eine Überschrift; Leiste vor dem Titel
+      ---
+      duration_ms: 5.89999
+      type: 'test'
+      ...
+    # Subtest: Entscheidung 1 (vergleich): der Kopf trägt data-kind="vergleich"
+    ok 2 - Entscheidung 1 (vergleich): der Kopf trägt data-kind="vergleich"
+      ---
+      duration_ms: 3.766356
+      type: 'test'
+      ...
+    # Subtest: AC-1 (vergleich): „Senden" ist genau einmal da, steht IN der Leiste und ist Btn accent (\#2980 AC-16, ADR-0118) — Mutation (a)
+    ok 3 - AC-1 (vergleich): „Senden" ist genau einmal da, steht IN der Leiste und ist Btn accent (\#2980 AC-16, ADR-0118) — Mutation (a)
+      ---
+      duration_ms: 4.629816
+      type: 'test'
+      ...
+    # Subtest: AC-4 (vergleich): Breadcrumb „Orte / Skitouren Tirol" — Elternteil Link auf /compare, Kind kein Link
+    ok 4 - AC-4 (vergleich): Breadcrumb „Orte / Skitouren Tirol" — Elternteil Link auf /compare, Kind kein Link
+      ---
+      duration_ms: 4.530017
+      type: 'test'
+      ...
+    # Subtest: AC-4 (vergleich): im Kopf steht nirgends das Wort „Hub"
+    ok 5 - AC-4 (vergleich): im Kopf steht nirgends das Wort „Hub"
+      ---
+      duration_ms: 7.521661
+      type: 'test'
+      ...
+    # Subtest: AC-6 (vergleich): Status genau einmal, als Badge in der TITELZEILE (gleiches Elternelement wie h1) — Mutation (c)
+    ok 6 - AC-6 (vergleich): Status genau einmal, als Badge in der TITELZEILE (gleiches Elternelement wie h1) — Mutation (c)
+      ---
+      duration_ms: 3.025135
+      type: 'test'
+      ...
+    # Subtest: AC-9 (vergleich): Überschrift mit 38 px am Desktop (titleSize 38, beide Arten gleich)
+    ok 7 - AC-9 (vergleich): Überschrift mit 38 px am Desktop (titleSize 38, beide Arten gleich)
+      ---
+      duration_ms: 3.534765
+      type: 'test'
+      ...
+    # Subtest: AC-2 (vergleich, neu \#2980 AC-24): kein Zurück-Link in der Leiste; der Elternteil führt zur Liste
+    ok 8 - AC-2 (vergleich, neu \#2980 AC-24): kein Zurück-Link in der Leiste; der Elternteil führt zur Liste
+      ---
+      duration_ms: 1.311672
+      type: 'test'
+      ...
+    # Subtest: AC-7 (vergleich): der Kebab steht in der Leiste, genau einmal, Symbol vertikal
+    ok 9 - AC-7 (vergleich): der Kebab steht in der Leiste, genau einmal, Symbol vertikal
+      ---
+      duration_ms: 2.434624
+      type: 'test'
+      ...
+    1..9
+ok 73 - \#2837 S1 Seite vergleich — Hub-Kopf über den geteilten Baustein
+  ---
+  duration_ms: 36.990696
+  type: 'suite'
+  ...
+# Subtest: \#2837 S1 Parität — beide Seiten bauen die Leiste gleich
+    # Subtest: AC-1/AC-2: Senden sitzt bei beiden an derselben Stelle der Leiste
+    ok 1 - AC-1/AC-2: Senden sitzt bei beiden an derselben Stelle der Leiste
+      ---
+      duration_ms: 3.445265
+      type: 'test'
+      ...
+    # Subtest: AC-15 (SSR-Anteil): das Leisten-Gerüst ist bei Trip und Vergleich identisch
+    ok 2 - AC-15 (SSR-Anteil): das Leisten-Gerüst ist bei Trip und Vergleich identisch
+      ---
+      duration_ms: 4.711387
+      type: 'test'
+      ...
+    1..2
+ok 74 - \#2837 S1 Parität — beide Seiten bauen die Leiste gleich
+  ---
+  duration_ms: 8.244653
+  type: 'suite'
+  ...
+# Subtest: \#2837 S1 AC-10 — Reiter-Zähler: Trip und Vergleich rendern dasselbe Badge (Mutation b, Seiten-Anteil)
+    # Subtest: gleiche Badge-Attribute (ohne testid), kein Inline-Stil
+    ok 1 - gleiche Badge-Attribute (ohne testid), kein Inline-Stil
+      ---
+      duration_ms: 8.877254
+      type: 'test'
+      ...
+    # Subtest: die Reiterleisten tragen bei Trip und Vergleich dieselben Klassen (\#2845)
+    ok 2 - die Reiterleisten tragen bei Trip und Vergleich dieselben Klassen (\#2845)
+      ---
+      duration_ms: 5.316549
+      type: 'test'
+      ...
+    1..2
+ok 75 - \#2837 S1 AC-10 — Reiter-Zähler: Trip und Vergleich rendern dasselbe Badge (Mutation b, Seiten-Anteil)
+  ---
+  duration_ms: 14.29026
+  type: 'suite'
+  ...
+# Subtest: \#2837 S1 AC-3 — Entwurf: Trip-Senden gesperrt, Vergleich „Setup abschließen" auf dem Senden-Platz
+    # Subtest: Trip-Entwurf: Senden steht in der Leiste und ist disabled
+    ok 1 - Trip-Entwurf: Senden steht in der Leiste und ist disabled
+      ---
+      duration_ms: 6.226939
+      type: 'test'
+      ...
+    # Subtest: Vergleich-Entwurf: kein Senden, „Setup abschließen" (Btn primary) an der Stelle, an der Trip-Senden sitzt
+    ok 2 - Vergleich-Entwurf: kein Senden, „Setup abschließen" (Btn primary) an der Stelle, an der Trip-Senden sitzt
+      ---
+      duration_ms: 5.468989
+      type: 'test'
+      ...
+    1..2
+ok 76 - \#2837 S1 AC-3 — Entwurf: Trip-Senden gesperrt, Vergleich „Setup abschließen" auf dem Senden-Platz
+  ---
+  duration_ms: 11.780167
+  type: 'suite'
+  ...
+# Subtest: \#2837 S1 AC-5 — Trip ohne Kürzel: Breadcrumb zeigt den Namen
+    # Subtest: shortcode fehlt ⇒ Kind = Trip-Name, kein Link
+    ok 1 - shortcode fehlt ⇒ Kind = Trip-Name, kein Link
+      ---
+      duration_ms: 4.819888
+      type: 'test'
+      ...
+    1..1
+ok 77 - \#2837 S1 AC-5 — Trip ohne Kürzel: Breadcrumb zeigt den Namen
+  ---
+  duration_ms: 4.891557
+  type: 'suite'
+  ...
+# Subtest: \#2837 S1 AC-6 — Trip: Status steht in der Titelzeile, die Region darunter (vormals .status-line)
+    # Subtest: Status-Pill in der Titelzeile, kein Zusatz trip-detail-status-supplement; keine eigene Statuszeile
+    ok 1 - Status-Pill in der Titelzeile, kein Zusatz trip-detail-status-supplement; keine eigene Statuszeile
+      ---
+      duration_ms: 2.569244
+      type: 'test'
+      ...
+    # Subtest: Reihenfolge: Region-Stift (Oberzeile) → Überschrift → Status (Titelzeile)
+    ok 2 - Reihenfolge: Region-Stift (Oberzeile) → Überschrift → Status (Titelzeile)
+      ---
+      duration_ms: 2.429914
+      type: 'test'
+      ...
+    1..2
+ok 78 - \#2837 S1 AC-6 — Trip: Status steht in der Titelzeile, die Region darunter (vormals .status-line)
+  ---
+  duration_ms: 5.083538
+  type: 'suite'
+  ...
+# Subtest: \#2837 S1 AC-13 — Breadcrumb und Kopftexte folgen der Nutzersprache (de/en, ohne Neuladen)
+    # Subtest: route: Elternteil de → en aus dem Katalog; kein „Hub"-Text, keine Mobil-Eyebrow; neu \#2980 AC-16/AC-24: kein Zurück-Link, Senden accent
+    ok 1 - route: Elternteil de → en aus dem Katalog; kein „Hub"-Text, keine Mobil-Eyebrow; neu \#2980 AC-16/AC-24: kein Zurück-Link, Senden accent
+      ---
+      duration_ms: 3.151245
+      type: 'test'
+      ...
+    # Subtest: vergleich: Elternteil de → en aus dem Katalog; kein „Hub"-Text, keine Mobil-Eyebrow; neu \#2980 AC-16/AC-24: kein Zurück-Link, Senden accent
+    ok 2 - vergleich: Elternteil de → en aus dem Katalog; kein „Hub"-Text, keine Mobil-Eyebrow; neu \#2980 AC-16/AC-24: kein Zurück-Link, Senden accent
+      ---
+      duration_ms: 4.364236
+      type: 'test'
+      ...
+    1..2
+ok 79 - \#2837 S1 AC-13 — Breadcrumb und Kopftexte folgen der Nutzersprache (de/en, ohne Neuladen)
+  ---
+  duration_ms: 7.641462
+  type: 'suite'
+  ...
+# Subtest: \#2837 S1 Parität — die Unterkante des Kopfs trägt nur der HubKopf (kein Seiten-Wrapper)
+    # Subtest: route: kein Vorfahre der HubKopf-Wurzel trägt Rahmen/Abstand/Linie (Markup)
+    ok 1 - route: kein Vorfahre der HubKopf-Wurzel trägt Rahmen/Abstand/Linie (Markup)
+      ---
+      duration_ms: 1.874133
+      type: 'test'
+      ...
+    # Subtest: route: kein Stylesheet der Seite/Hülle gibt den Vorfahren des HubKopf Rahmen/Abstand/Linie
+    ok 2 - route: kein Stylesheet der Seite/Hülle gibt den Vorfahren des HubKopf Rahmen/Abstand/Linie
+      ---
+      duration_ms: 220.541042
+      type: 'test'
+      ...
+    # Subtest: vergleich: kein Vorfahre der HubKopf-Wurzel trägt Rahmen/Abstand/Linie (Markup)
+    ok 3 - vergleich: kein Vorfahre der HubKopf-Wurzel trägt Rahmen/Abstand/Linie (Markup)
+      ---
+      duration_ms: 1.51373
+      type: 'test'
+      ...
+    # Subtest: vergleich: kein Stylesheet der Seite/Hülle gibt den Vorfahren des HubKopf Rahmen/Abstand/Linie
+    ok 4 - vergleich: kein Stylesheet der Seite/Hülle gibt den Vorfahren des HubKopf Rahmen/Abstand/Linie
+      ---
+      duration_ms: 108.051492
+      type: 'test'
+      ...
+    1..4
+ok 80 - \#2837 S1 Parität — die Unterkante des Kopfs trägt nur der HubKopf (kein Seiten-Wrapper)
+  ---
+  duration_ms: 332.184908
+  type: 'suite'
+  ...
+# Subtest: \#2837 S1b — Trip und Vergleich zeigen im selben Zustand dasselbe Status-Schild
+    # Subtest: AC-1/AC-8/AC-11 (de, active): gleicher Text, gleiche Attribute (Pill, Tone, gefüllt ohne Rahmen \#2980, data-status), kein Inline-Stil
+    ok 1 - AC-1/AC-8/AC-11 (de, active): gleicher Text, gleiche Attribute (Pill, Tone, gefüllt ohne Rahmen \#2980, data-status), kein Inline-Stil
+      ---
+      duration_ms: 8.941013
+      type: 'test'
+      ...
+    # Subtest: AC-1/AC-8/AC-11 (de, paused): gleicher Text, gleiche Attribute (Pill, Tone, gefüllt ohne Rahmen \#2980, data-status), kein Inline-Stil
+    ok 2 - AC-1/AC-8/AC-11 (de, paused): gleicher Text, gleiche Attribute (Pill, Tone, gefüllt ohne Rahmen \#2980, data-status), kein Inline-Stil
+      ---
+      duration_ms: 8.878854
+      type: 'test'
+      ...
+    # Subtest: AC-1/AC-8/AC-11 (de, draft): gleicher Text, gleiche Attribute (Pill, Tone, gefüllt ohne Rahmen \#2980, data-status), kein Inline-Stil
+    ok 3 - AC-1/AC-8/AC-11 (de, draft): gleicher Text, gleiche Attribute (Pill, Tone, gefüllt ohne Rahmen \#2980, data-status), kein Inline-Stil
+      ---
+      duration_ms: 3.538135
+      type: 'test'
+      ...
+    # Subtest: AC-1/AC-8/AC-11 (en, active): gleicher Text, gleiche Attribute (Pill, Tone, gefüllt ohne Rahmen \#2980, data-status), kein Inline-Stil
+    ok 4 - AC-1/AC-8/AC-11 (en, active): gleicher Text, gleiche Attribute (Pill, Tone, gefüllt ohne Rahmen \#2980, data-status), kein Inline-Stil
+      ---
+      duration_ms: 15.682665
+      type: 'test'
+      ...
+    # Subtest: AC-1/AC-8/AC-11 (en, paused): gleicher Text, gleiche Attribute (Pill, Tone, gefüllt ohne Rahmen \#2980, data-status), kein Inline-Stil
+    ok 5 - AC-1/AC-8/AC-11 (en, paused): gleicher Text, gleiche Attribute (Pill, Tone, gefüllt ohne Rahmen \#2980, data-status), kein Inline-Stil
+      ---
+      duration_ms: 5.209079
+      type: 'test'
+      ...
+    # Subtest: AC-1/AC-8/AC-11 (en, draft): gleicher Text, gleiche Attribute (Pill, Tone, gefüllt ohne Rahmen \#2980, data-status), kein Inline-Stil
+    ok 6 - AC-1/AC-8/AC-11 (en, draft): gleicher Text, gleiche Attribute (Pill, Tone, gefüllt ohne Rahmen \#2980, data-status), kein Inline-Stil
+      ---
+      duration_ms: 5.533499
+      type: 'test'
+      ...
+    # Subtest: AC-3: Vergleich im Entwurf (de) — Schild „Entwurf", im Kopf nirgends „draft"
+    ok 7 - AC-3: Vergleich im Entwurf (de) — Schild „Entwurf", im Kopf nirgends „draft"
+      ---
+      duration_ms: 1.101272
+      type: 'test'
+      ...
+    # Subtest: AC-10 (Wächter): Laufzeit-Hinweis steht weiterhin neben dem Schild in hub-kopf-status
+    ok 8 - AC-10 (Wächter): Laufzeit-Hinweis steht weiterhin neben dem Schild in hub-kopf-status
+      ---
+      duration_ms: 2.145694
+      type: 'test'
+      ...
+    1..8
+ok 81 - \#2837 S1b — Trip und Vergleich zeigen im selben Zustand dasselbe Status-Schild
+  ---
+  duration_ms: 51.330737
+  type: 'suite'
+  ...
+# Subtest: \#2837 S1b — Profil in der Zeile unter dem Titel bei beiden Arten (AC-6, AC-7)
+    # Subtest: \#3196 (de): Trip mit Aktivität trekking — kein Aktivitätsname hinter dem Region-Stift
+    ok 1 - \#3196 (de): Trip mit Aktivität trekking — kein Aktivitätsname hinter dem Region-Stift
+      ---
+      duration_ms: 1.805863
+      type: 'test'
+      ...
+    # Subtest: \#3196 (en): Trip mit Aktivität trekking — kein Aktivitätsname hinter dem Region-Stift
+    ok 2 - \#3196 (en): Trip mit Aktivität trekking — kein Aktivitätsname hinter dem Region-Stift
+      ---
+      duration_ms: 1.601733
+      type: 'test'
+      ...
+    # Subtest: \#2796 S4a AC-1: Vergleich mit profil „wintersport" — kein Profilname hinter dem Region-Stift
+    ok 3 - \#2796 S4a AC-1: Vergleich mit profil „wintersport" — kein Profilname hinter dem Region-Stift
+      ---
+      duration_ms: 1.192072
+      type: 'test'
+      ...
+    # Subtest: AC-7 (Wächter): Trip ohne Aktivität und Vergleich ohne Profil — kein Profil-Zusatz hinter dem Stift
+    ok 4 - AC-7 (Wächter): Trip ohne Aktivität und Vergleich ohne Profil — kein Profil-Zusatz hinter dem Stift
+      ---
+      duration_ms: 4.146436
+      type: 'test'
+      ...
+    1..4
+ok 82 - \#2837 S1b — Profil in der Zeile unter dem Titel bei beiden Arten (AC-6, AC-7)
+  ---
+  duration_ms: 8.889364
+  type: 'suite'
+  ...
+# Subtest: \#2796 S4a — Profil-Auswahl im Kopf: Orts-Vergleich ohne, Trip mit
+    # Subtest: de: Vergleich mit profil „wandern" — kein compare-hub-profil-* im Seitenkopf
+    ok 1 - de: Vergleich mit profil „wandern" — kein compare-hub-profil-* im Seitenkopf
+      ---
+      duration_ms: 1.199822
+      type: 'test'
+      ...
+    # Subtest: en: Vergleich mit profil „wandern" — kein compare-hub-profil-* im Seitenkopf
+    ok 2 - en: Vergleich mit profil „wandern" — kein compare-hub-profil-* im Seitenkopf
+      ---
+      duration_ms: 1.032691
+      type: 'test'
+      ...
+    # Subtest: Trip-Kopf ohne Aktivitäts-Kacheln, Knopf und Auswahl (\#3196)
+    ok 3 - Trip-Kopf ohne Aktivitäts-Kacheln, Knopf und Auswahl (\#3196)
+      ---
+      duration_ms: 1.618973
+      type: 'test'
+      ...
+    1..3
+ok 83 - \#2796 S4a — Profil-Auswahl im Kopf: Orts-Vergleich ohne, Trip mit
+  ---
+  duration_ms: 3.951285
+  type: 'suite'
+  ...
+# Subtest: \#3438 Vorbedingung: Produkt-Soll für das Prüfkonto
+    # Subtest: trip: briefingAngebot liefert 11 Chips (Staging-Messung 28.11.)
+    ok 1 - trip: briefingAngebot liefert 11 Chips (Staging-Messung 28.11.)
+      ---
+      duration_ms: 812.978561
+      type: 'test'
+      ...
+    # Subtest: orte: briefingAngebot liefert 15 Chips (Staging-Messung 28.11.)
+    ok 2 - orte: briefingAngebot liefert 15 Chips (Staging-Messung 28.11.)
+      ---
+      duration_ms: 770.688437
+      type: 'test'
+      ...
+    1..2
+ok 84 - \#3438 Vorbedingung: Produkt-Soll für das Prüfkonto
+  ---
+  duration_ms: 1584.531208
+  type: 'suite'
+  ...
+# Subtest: \#3438 AC-1/AC-2: Mockup-Chips „Nicht im Briefing“ = Produkt-Angebot (Anzahl und Reihenfolge)
+    # Subtest: AC-1 (trip): Elementliste zeigt dieselben 11 Chips in Produkt-Reihenfolge
+    ok 1 - AC-1 (trip): Elementliste zeigt dieselben 11 Chips in Produkt-Reihenfolge
+      ---
+      duration_ms: 8.864883
+      type: 'test'
+      ...
+    # Subtest: AC-2 (orte): Elementliste zeigt dieselben 15 Chips in Produkt-Reihenfolge
+    ok 2 - AC-2 (orte): Elementliste zeigt dieselben 15 Chips in Produkt-Reihenfolge
+      ---
+      duration_ms: 0.731911
+      type: 'test'
+      ...
+    1..2
+ok 85 - \#3438 AC-1/AC-2: Mockup-Chips „Nicht im Briefing“ = Produkt-Angebot (Anzahl und Reihenfolge)
+  ---
+  duration_ms: 9.759754
+  type: 'suite'
+  ...
+# Subtest: \#699 AC-1: keine zweite Breadcrumb im Trip-Kopf
+    # Subtest: gerenderter Kopf enthält kein „MEINE TRIPS"
+    ok 1 - gerenderter Kopf enthält kein „MEINE TRIPS"
+      ---
+      duration_ms: 5461.494219
+      type: 'test'
+      ...
+    # Subtest: gerenderter Kopf hat kein trip-detail-breadcrumb und kein <nav>
+    ok 2 - gerenderter Kopf hat kein trip-detail-breadcrumb und kein <nav>
+      ---
+      duration_ms: 3.168924
+      type: 'test'
+      ...
+    1..2
+ok 86 - \#699 AC-1: keine zweite Breadcrumb im Trip-Kopf
+  ---
+  duration_ms: 5465.503736
+  type: 'suite'
+  ...
+# Subtest: \#699 AC-3-follow-up / \#2913 c2: Meta-Zeile zeigt Datum, Etappen, Strecke und Höhenmeter
+    # Subtest: hub-kopf-meta zeigt Datumsbereich, Etappen, km und Hm
+    ok 1 - hub-kopf-meta zeigt Datumsbereich, Etappen, km und Hm
+      ---
+      duration_ms: 5.665638
+      type: 'test'
+      ...
+    # Subtest: kein altes trip-detail-meta mehr (genau eine Meta-Zeile)
+    ok 2 - kein altes trip-detail-meta mehr (genau eine Meta-Zeile)
+      ---
+      duration_ms: 5.404147
+      type: 'test'
+      ...
+    1..2
+ok 87 - \#699 AC-3-follow-up / \#2913 c2: Meta-Zeile zeigt Datum, Etappen, Strecke und Höhenmeter
+  ---
+  duration_ms: 11.266797
+  type: 'suite'
+  ...
+# Subtest: \#699 / \#2913 c2 AC-3 / \#3438: Eyebrow „Trip · Region" mit Region-Stift, keine eigene Regionszeile
+    # Subtest: Eyebrow (Text vor der Überschrift) ist „Trip · Region"
+    ok 1 - Eyebrow (Text vor der Überschrift) ist „Trip · Region"
+      ---
+      duration_ms: 2.133244
+      type: 'test'
+      ...
+    # Subtest: Eyebrow enthält keinen Datumsbereich mehr
+    ok 2 - Eyebrow enthält keinen Datumsbereich mehr
+      ---
+      duration_ms: 5.778729
+      type: 'test'
+      ...
+    # Subtest: \#3438: keine eigene Regionszeile — Region-Stift vor der Überschrift, Region nur im Eyebrow
+    ok 3 - \#3438: keine eigene Regionszeile — Region-Stift vor der Überschrift, Region nur im Eyebrow
+      ---
+      duration_ms: 4.917377
+      type: 'test'
+      ...
+    # Subtest: Trip ohne Region: Eyebrow nur „Trip", kein verwaistes „·"
+    ok 4 - Trip ohne Region: Eyebrow nur „Trip", kein verwaistes „·"
+      ---
+      duration_ms: 6.84814
+      type: 'test'
+      ...
+    # Subtest: Trip ohne Etappendaten: Eyebrow unverändert „Trip · Region", kein Datum vor der Überschrift
+    ok 5 - Trip ohne Etappendaten: Eyebrow unverändert „Trip · Region", kein Datum vor der Überschrift
+      ---
+      duration_ms: 7.972891
+      type: 'test'
+      ...
+    1..5
+ok 88 - \#699 / \#2913 c2 AC-3 / \#3438: Eyebrow „Trip · Region" mit Region-Stift, keine eigene Regionszeile
+  ---
+  duration_ms: 28.174683
+  type: 'suite'
+  ...
+1..88
+# tests 379
+# suites 55
+# pass 379
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 25375.102612

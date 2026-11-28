@@ -92,19 +92,20 @@ function kopfIds(kind: HubKind): string[] {
 	return [`${kopf}-name-edit-toggle`, `${kopf}-region-edit-toggle`, ...PROFIL_WERTE[kind].map((v) => `${kopf}-profil-option-${v}`)];
 }
 
-/** Vergleich-Meta-Zeile seit #2913 c2 (AC-4): „2 Orte · Vergleichstabelle[ · Briefing HH:MM]“ (vorher „Wandern · 2 Orte“). */
+/** Vergleich-Meta-Zeile seit #2913 c2 (AC-4): „2 Orte[ · Briefing HH:MM]“ — seit #3438 ohne „Vergleichstabelle“. */
 function vergleichUnterzeile(page: Page) {
-	return page.getByText(/2 Orte\s*·\s*Vergleichstabelle|Wandern\s*·\s*2 Orte/).filter({ visible: true }).first();
+	return page.getByTestId('hub-kopf-meta').filter({ hasText: /^\s*2 Orte( · |\s*$)/ }).filter({ visible: true }).first();
 }
 
-/** Region-Text in der Region-Zeile (Elternelement des Stifts), für beide kinds. */
+/** Region im Kopf: seit #3438 (Spec fix_3438_wetter_ganzseite.md AC-3) nur in der Oberzeile („Trip · Region“
+ *  bzw. „Orte · Region“), keine eigene Regionszeile mehr; beim Bearbeiten ersetzt das Eingabefeld die Oberzeile. */
 function regionText(page: Page) {
-	return page.locator('span:visible', { hasText: new RegExp(`^\\s*${REGION}\\s*$`) });
+	return page.getByTestId('hub-kopf-eyebrow').filter({ hasText: new RegExp(`·\\s*${REGION}\\s*$`) }).filter({ visible: true });
 }
 
 /**
  * Orte-Anzahl des Vergleichs-Rahmens. #2913 c2 (Mockup): EINE Meta-Zeile `hub-kopf-meta`
- * „N Orte · Vergleichstabelle · …" für beide Breiten (Zähler = gespeicherte IDs); die früheren
+ * „N Orte · …" (seit #3438 ohne „Vergleichstabelle") für beide Breiten (Zähler = gespeicherte IDs); die früheren
  * Viewport-Spans existieren nicht mehr.
  * Compare-eigen (siehe Kopfkommentar) — wird nur im Zweig `vergleich` aufgerufen.
  */
@@ -114,7 +115,8 @@ async function pruefeOrteAnzahlSpans(page: Page, _viewport: 'desktop' | 'mobil')
 	const meta = page.getByTestId('hub-kopf-meta');
 	expect(await meta.count(), 'hub-kopf-meta: Anzahl im DOM').toBe(1);
 	await expect(meta).toBeVisible();
-	await expect(meta).toHaveText(/^\d+ Orte? · Vergleichstabelle\b/);
+	await expect(meta).toHaveText(/^\d+ Orte?( · |$)/);
+	await expect(meta).not.toContainText('Vergleichstabelle');
 }
 
 /** Bearbeiten-Modus: Eingabe und Speichern-Knopf ebenfalls genau einmal im DOM. */
@@ -301,18 +303,21 @@ for (const kind of HUB_KINDS) {
 			await expect(sicht(page, kind, 'region-edit')).toHaveValue(REGION);
 			await page.unroute(`**${pfad}`);
 
-			// Leere Region ⇒ Fallback-Text „—“ in der Region-Zeile, auch nach dem Neuladen.
+			// Leere Region ⇒ Oberzeile nur „Trip“ bzw. „Orte“ ohne verwaisten Trenner, Region-Stift bleibt
+			// (#3438 AC-7; vorher Platzhalter „—“ in der eigenen Regionszeile), auch nach dem Neuladen.
 			await sicht(page, kind, 'region-edit').fill('');
 			const antwort = page.waitForResponse(
 				(r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === pfad
 			);
 			await sicht(page, kind, 'region-save').click();
 			expect((await antwort).ok()).toBeTruthy();
-			const regionZeile = () => sicht(page, kind, 'region-edit-toggle').locator('xpath=..');
-			await expect(regionZeile().locator('span').first()).toHaveText('—', { timeout: 5_000 });
+			const oberzeile = () => page.getByTestId('hub-kopf-eyebrow').filter({ visible: true });
+			const allein = kind === 'route' ? 'Trip' : 'Orte';
+			await expect(oberzeile()).toHaveText(allein, { timeout: 5_000 });
+			await expect(sicht(page, kind, 'region-edit-toggle')).toBeVisible();
 			expect(regionAus(kind, await holeStand(page, kind, hub.id)) ?? '').toBe('');
 			await page.reload();
-			await expect(regionZeile().locator('span').first()).toHaveText('—', { timeout: 10_000 });
+			await expect(oberzeile()).toHaveText(allein, { timeout: 10_000 });
 		} finally {
 			await hub.aufraeumen();
 		}
@@ -583,7 +588,7 @@ test.describe('KA-6..KA-9 (vergleich, compare-eigen)', () => {
 				await openHub(page, kind, hub.id);
 				expect(await meta.count(), 'Meta-Zeile genau 1 im DOM').toBe(1);
 				await expect(meta).toBeVisible();
-				await expect(meta).toHaveText(/^2 Orte · Vergleichstabelle\b/);
+				await expect(meta).toHaveText(/^2 Orte( · |$)/);
 			}
 		} finally {
 			await hub?.aufraeumen();
@@ -597,7 +602,7 @@ test.describe('KA-6..KA-9 (vergleich, compare-eigen)', () => {
 			await openHub(page, kind, hub.id);
 			const sichtbar = page.getByTestId('hub-kopf-meta');
 			await expect(sichtbar).toBeVisible();
-			await expect(sichtbar).toHaveText(/^1 Ort · Vergleichstabelle\b/);
+			await expect(sichtbar).toHaveText(/^1 Ort( · |$)/);
 		} finally {
 			await hub.aufraeumen();
 		}

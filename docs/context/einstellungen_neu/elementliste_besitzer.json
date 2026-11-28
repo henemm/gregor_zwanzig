@@ -733,8 +733,8 @@
 		{
 			"art": "element",
 			"id": "orte.wetter.normal.-.kopf.0e2ce0d40d",
-			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts Seit Mockup Fassung 4 steht „Vergleichstabelle“ nicht mehr in der Zeile (ADR-0124 Nr. 10: der Bereich heißt „Orte“); die App nennt sie noch, Rückbau mit dem Bau zu #3122.",
-			"verweis": "#3122"
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts; App und Mockup Fassung 4 ohne Zusatz in der Zeile (#3438, ADR-0124 Nr. 10).",
+			"verweis": "#3438"
 		},
 		{
 			"art": "element",
@@ -787,8 +787,8 @@
 		{
 			"art": "element",
 			"id": "orte.wetter.laedt.-.kopf.4614f543dc",
-			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts Seit Mockup Fassung 4 steht „Vergleichstabelle“ nicht mehr in der Zeile (ADR-0124 Nr. 10: der Bereich heißt „Orte“); die App nennt sie noch, Rückbau mit dem Bau zu #3122.",
-			"verweis": "#3122"
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts; App und Mockup Fassung 4 ohne Zusatz in der Zeile (#3438, ADR-0124 Nr. 10).",
+			"verweis": "#3438"
 		},
 		{
 			"art": "element",
@@ -829,8 +829,8 @@
 		{
 			"art": "element",
 			"id": "orte.wetter.fehler.-.kopf.0625c47673",
-			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts Seit Mockup Fassung 4 steht „Vergleichstabelle“ nicht mehr in der Zeile (ADR-0124 Nr. 10: der Bereich heißt „Orte“); die App nennt sie noch, Rückbau mit dem Bau zu #3122.",
-			"verweis": "#3122"
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts; App und Mockup Fassung 4 ohne Zusatz in der Zeile (#3438, ADR-0124 Nr. 10).",
+			"verweis": "#3438"
 		},
 		{
 			"art": "element",
@@ -871,8 +871,8 @@
 		{
 			"art": "element",
 			"id": "orte.wetter.luecken.-.kopf.0ff6feddaa",
-			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts Seit Mockup Fassung 4 steht „Vergleichstabelle“ nicht mehr in der Zeile (ADR-0124 Nr. 10: der Bereich heißt „Orte“); die App nennt sie noch, Rückbau mit dem Bau zu #3122.",
-			"verweis": "#3122"
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts; App und Mockup Fassung 4 ohne Zusatz in der Zeile (#3438, ADR-0124 Nr. 10).",
+			"verweis": "#3438"
 		},
 		{
 			"art": "element",
@@ -946,34 +946,6 @@
 			"ctx": "trip",
 			"muster": "{datum} · {etappen} · {km} km · ↑{hm} m",
 			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile des Prüf-Trips (Datum, Etappenzahl, km, Höhenmeter); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
-			"verweis": "#2913"
-		},
-		{
-			"art": "zusaetzlich",
-			"ctx": "orte",
-			"muster": "{orte} · Vergleichstabelle · Morgen-Briefing {zeit}",
-			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile des Prüf-Vergleichs (Anzahl Orte, Briefing-Zeit); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
-			"verweis": "#2913"
-		},
-		{
-			"art": "zusaetzlich",
-			"ctx": "orte",
-			"muster": "{orte} · Comparison table · Morning briefing {zeit}",
-			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile des Prüf-Vergleichs (Anzahl Orte, Briefing-Zeit); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
-			"verweis": "#2913"
-		},
-		{
-			"art": "zusaetzlich",
-			"ctx": "trip",
-			"text": "Mallorca",
-			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Region des Prüf-Trips, inline bearbeitbar unter dem Titel (feat_1273_s2); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
-			"verweis": "#2913"
-		},
-		{
-			"art": "zusaetzlich",
-			"ctx": "orte",
-			"text": "Westfalen",
-			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Region des Prüf-Vergleichs, inline bearbeitbar unter dem Titel (feat_1273_s2); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
 			"verweis": "#2913"
 		},
 		{
@@ -2064,59 +2036,6 @@
 			"muster": "{wochentag} {tag} {monat} {stunde}:{minute} ({zone})",
 			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
 			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
-		},
-		{
-			"ctx": "trip",
-			"text": "Name bearbeiten",
-			"grund": "Name und Region bleiben am Hub inline bearbeitbar (Inventar §3.3 K1/K2, feat_1273_s2); Beschriftung des Stift-Symbols für Screenreader, im Mockup nicht vorgesehen",
-			"spec": "docs/specs/modules/feat_2913_c2_seitenkopf.md"
-		},
-		{
-			"ctx": "trip",
-			"text": "Region bearbeiten",
-			"grund": "Name und Region bleiben am Hub inline bearbeitbar (Inventar §3.3 K1/K2, feat_1273_s2); Beschriftung des Stift-Symbols für Screenreader, im Mockup nicht vorgesehen",
-			"spec": "docs/specs/modules/feat_2913_c2_seitenkopf.md"
-		},
-		{
-			"ctx": "trip",
-			"text": "Edit name",
-			"grund": "Name und Region bleiben am Hub inline bearbeitbar (Inventar §3.3 K1/K2, feat_1273_s2); Beschriftung des Stift-Symbols für Screenreader, im Mockup nicht vorgesehen",
-			"spec": "docs/specs/modules/feat_2913_c2_seitenkopf.md"
-		},
-		{
-			"ctx": "trip",
-			"text": "Edit region",
-			"grund": "Name und Region bleiben am Hub inline bearbeitbar (Inventar §3.3 K1/K2, feat_1273_s2); Beschriftung des Stift-Symbols für Screenreader, im Mockup nicht vorgesehen",
-			"spec": "docs/specs/modules/feat_2913_c2_seitenkopf.md"
-		},
-		{
-			"ctx": "orte",
-			"text": "Name bearbeiten",
-			"grund": "Name und Region bleiben am Hub inline bearbeitbar (Inventar §3.3 K1/K2, feat_1273_s2); Beschriftung des Stift-Symbols für Screenreader, im Mockup nicht vorgesehen",
-			"spec": "docs/specs/modules/feat_2913_c2_seitenkopf.md"
-		},
-		{
-			"ctx": "orte",
-			"text": "Region bearbeiten",
-			"grund": "Name und Region bleiben am Hub inline bearbeitbar (Inventar §3.3 K1/K2, feat_1273_s2); Beschriftung des Stift-Symbols für Screenreader, im Mockup nicht vorgesehen",
-			"spec": "docs/specs/modules/feat_2913_c2_seitenkopf.md"
-		},
-		{
-			"ctx": "orte",
-			"text": "Edit name",
-			"grund": "Name und Region bleiben am Hub inline bearbeitbar (Inventar §3.3 K1/K2, feat_1273_s2); Beschriftung des Stift-Symbols für Screenreader, im Mockup nicht vorgesehen",
-			"spec": "docs/specs/modules/feat_2913_c2_seitenkopf.md"
-		},
-		{
-			"ctx": "orte",
-			"text": "Edit region",
-			"grund": "Name und Region bleiben am Hub inline bearbeitbar (Inventar §3.3 K1/K2, feat_1273_s2); Beschriftung des Stift-Symbols für Screenreader, im Mockup nicht vorgesehen",
-			"spec": "docs/specs/modules/feat_2913_c2_seitenkopf.md"
-		},
-		{
-			"text": "Test schicken ▾",
-			"grund": "Bewusste Abweichung der Knopf-Fläche (#2980 AC-16, ADR-0118): Akzent-Knopf mit Fläche --g-accent-deep statt Mockup-Orange --g-accent, weil weiße Schrift auf --g-accent nur ca. 4,3:1 erreicht (WCAG-AA verlangt 4,5:1); der Text entspricht der Elementliste, abweichend ist nur die Farbe",
-			"spec": "docs/specs/modules/feat_2913_c2_seitenkopf.md"
 		},
 		{
 			"reiter": "wetter",

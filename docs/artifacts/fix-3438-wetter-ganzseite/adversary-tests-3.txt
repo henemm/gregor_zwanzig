@@ -1,0 +1,696 @@
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/components/shared/__tests__/subscription_header_bedienlogik.test.ts src/lib/components/shared/__tests__/subscription_header_einmal_gerendert.test.ts src/lib/components/shared/__tests__/subscription_header_ohne_profil_2796.test.ts src/lib/components/trip-detail/__tests__/trip_header_status_profil.test.ts src/lib/components/shared/hub-kopf/__tests__/hub_kopf_baustein.test.ts
+
+TAP version 13
+# Subtest: \#2284 S1 F004 — maxlength der Region-Eingabe kommt aus regionMaxLength
+    # Subtest: regionMaxLength=80 ⇒ maxlength 80
+    ok 1 - regionMaxLength=80 ⇒ maxlength 80
+      ---
+      duration_ms: 91.589875
+      type: 'test'
+      ...
+    # Subtest: regionMaxLength=60 ⇒ maxlength 60
+    ok 2 - regionMaxLength=60 ⇒ maxlength 60
+      ---
+      duration_ms: 62.042301
+      type: 'test'
+      ...
+    1..2
+ok 1 - \#2284 S1 F004 — maxlength der Region-Eingabe kommt aus regionMaxLength
+  ---
+  duration_ms: 154.491908
+  type: 'suite'
+  ...
+# Subtest: \#2284 S1 F003 — Profil-Kacheln während des Speicherns gesperrt
+    # Subtest: saving.profile ⇒ Kachel disabled; danach wieder frei
+    ok 1 - saving.profile ⇒ Kachel disabled; danach wieder frei
+      ---
+      duration_ms: 36.173574
+      type: 'test'
+      ...
+    # Subtest: save("profile") setzt saving.profile, solange der Aufruf läuft
+    ok 2 - save("profile") setzt saving.profile, solange der Aufruf läuft
+      ---
+      duration_ms: 34.485422
+      type: 'test'
+      ...
+    1..2
+ok 2 - \#2284 S1 F003 — Profil-Kacheln während des Speicherns gesperrt
+  ---
+  duration_ms: 70.913634
+  type: 'suite'
+  ...
+# Subtest: \#2284 S1 F002 — Fehlermeldung: Text aus error, sonst Fallback
+    # Subtest: Fehler MIT error ⇒ dieser Text
+    ok 1 - Fehler MIT error ⇒ dieser Text
+      ---
+      duration_ms: 18.226097
+      type: 'test'
+      ...
+    # Subtest: Fehler OHNE error (z. B. 500 mit leerem Rumpf) ⇒ „Speichern fehlgeschlagen"
+    ok 2 - Fehler OHNE error (z. B. 500 mit leerem Rumpf) ⇒ „Speichern fehlgeschlagen"
+      ---
+      duration_ms: 14.911842
+      type: 'test'
+      ...
+    1..2
+ok 3 - \#2284 S1 F002 — Fehlermeldung: Text aus error, sonst Fallback
+  ---
+  duration_ms: 33.47445
+  type: 'suite'
+  ...
+# Subtest: \#2284 S1 F003/F005 — Öffnen belegt vor, Abbrechen verwirft Fehler
+    # Subtest: Stift öffnen ⇒ Entwurf trägt den aktuellen Namen bzw. die Region
+    ok 1 - Stift öffnen ⇒ Entwurf trägt den aktuellen Namen bzw. die Region
+      ---
+      duration_ms: 11.897448
+      type: 'test'
+      ...
+    # Subtest: Fehler → Abbrechen ⇒ Feld zu, Fehler weg; erneut öffnen ⇒ kein Fehler
+    ok 2 - Fehler → Abbrechen ⇒ Feld zu, Fehler weg; erneut öffnen ⇒ kein Fehler
+      ---
+      duration_ms: 12.671809
+      type: 'test'
+      ...
+    1..2
+ok 4 - \#2284 S1 F003/F005 — Öffnen belegt vor, Abbrechen verwirft Fehler
+  ---
+  duration_ms: 24.737786
+  type: 'suite'
+  ...
+# Subtest: \#2284 S1 / \#1433 — drei Ausgänge des Speicherns: übernommen, Konflikt, Fehler
+    # Subtest: name: Seite ruft schliessen ⇒ Feld zu, kein Fehler
+    ok 1 - name: Seite ruft schliessen ⇒ Feld zu, kein Fehler
+      ---
+      duration_ms: 22.585193
+      type: 'test'
+      ...
+    # Subtest: name: Konflikt (erfüllt OHNE schliessen) ⇒ Feld bleibt offen, keine Meldung; späteres schliessen() ⇒ zu
+    ok 2 - name: Konflikt (erfüllt OHNE schliessen) ⇒ Feld bleibt offen, keine Meldung; späteres schliessen() ⇒ zu
+      ---
+      duration_ms: 15.480473
+      type: 'test'
+      ...
+    # Subtest: region: Seite ruft schliessen ⇒ Feld zu, kein Fehler
+    ok 3 - region: Seite ruft schliessen ⇒ Feld zu, kein Fehler
+      ---
+      duration_ms: 25.074627
+      type: 'test'
+      ...
+    # Subtest: region: Konflikt (erfüllt OHNE schliessen) ⇒ Feld bleibt offen, keine Meldung; späteres schliessen() ⇒ zu
+    ok 4 - region: Konflikt (erfüllt OHNE schliessen) ⇒ Feld bleibt offen, keine Meldung; späteres schliessen() ⇒ zu
+      ---
+      duration_ms: 13.73914
+      type: 'test'
+      ...
+    # Subtest: Fehler ⇒ Feld offen, Meldung am Feld, Speichern wieder frei
+    ok 5 - Fehler ⇒ Feld offen, Meldung am Feld, Speichern wieder frei
+      ---
+      duration_ms: 15.152741
+      type: 'test'
+      ...
+    1..5
+ok 5 - \#2284 S1 / \#1433 — drei Ausgänge des Speicherns: übernommen, Konflikt, Fehler
+  ---
+  duration_ms: 92.250016
+  type: 'suite'
+  ...
+# Subtest: \#2284 S1 AC-8 — jede Kopf-testid genau einmal im Baustein
+    # Subtest: compare-hub-name-edit-toggle kommt genau einmal vor
+    ok 1 - compare-hub-name-edit-toggle kommt genau einmal vor
+      ---
+      duration_ms: 642.513518
+      type: 'test'
+      ...
+    # Subtest: compare-hub-region-edit-toggle kommt genau einmal vor
+    ok 2 - compare-hub-region-edit-toggle kommt genau einmal vor
+      ---
+      duration_ms: 1.710752
+      type: 'test'
+      ...
+    # Subtest: compare-hub-profil-option-allgemein kommt genau einmal vor
+    ok 3 - compare-hub-profil-option-allgemein kommt genau einmal vor
+      ---
+      duration_ms: 3.552344
+      type: 'test'
+      ...
+    # Subtest: compare-hub-profil-option-wintersport kommt genau einmal vor
+    ok 4 - compare-hub-profil-option-wintersport kommt genau einmal vor
+      ---
+      duration_ms: 0.930871
+      type: 'test'
+      ...
+    # Subtest: compare-hub-profil-option-wandern kommt genau einmal vor
+    ok 5 - compare-hub-profil-option-wandern kommt genau einmal vor
+      ---
+      duration_ms: 2.317992
+      type: 'test'
+      ...
+    # Subtest: compare-hub-profil-option-summer_trekking kommt genau einmal vor
+    ok 6 - compare-hub-profil-option-summer_trekking kommt genau einmal vor
+      ---
+      duration_ms: 7.23466
+      type: 'test'
+      ...
+    # Subtest: Name steht genau einmal im Kopf (keine zweite, ausgeblendete Namenszeile)
+    ok 7 - Name steht genau einmal im Kopf (keine zweite, ausgeblendete Namenszeile)
+      ---
+      duration_ms: 1.145943
+      type: 'test'
+      ...
+    # Subtest: Region steht genau einmal im Kopf
+    ok 8 - Region steht genau einmal im Kopf
+      ---
+      duration_ms: 4.026036
+      type: 'test'
+      ...
+    1..8
+ok 6 - \#2284 S1 AC-8 — jede Kopf-testid genau einmal im Baustein
+  ---
+  duration_ms: 664.59203
+  type: 'suite'
+  ...
+# (node:722232) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: \#2284 S2 AC-10 — Baustein mit Trip-Satz: jede Kopf-testid und der Chip genau einmal
+    # Subtest: trip-detail-h1 kommt genau einmal vor
+    ok 1 - trip-detail-h1 kommt genau einmal vor
+      ---
+      duration_ms: 186.299275
+      type: 'test'
+      ...
+    # Subtest: trip-name-edit-toggle kommt genau einmal vor
+    ok 2 - trip-name-edit-toggle kommt genau einmal vor
+      ---
+      duration_ms: 4.458137
+      type: 'test'
+      ...
+    # Subtest: trip-region-edit-toggle kommt genau einmal vor
+    ok 3 - trip-region-edit-toggle kommt genau einmal vor
+      ---
+      duration_ms: 0.904171
+      type: 'test'
+      ...
+    # Subtest: trip-profil-option-trekking kommt genau einmal vor
+    ok 4 - trip-profil-option-trekking kommt genau einmal vor
+      ---
+      duration_ms: 4.293337
+      type: 'test'
+      ...
+    # Subtest: trip-profil-option-skitour kommt genau einmal vor
+    ok 5 - trip-profil-option-skitour kommt genau einmal vor
+      ---
+      duration_ms: 1.052351
+      type: 'test'
+      ...
+    # Subtest: trip-profil-option-hochtour kommt genau einmal vor
+    ok 6 - trip-profil-option-hochtour kommt genau einmal vor
+      ---
+      duration_ms: 0.82673
+      type: 'test'
+      ...
+    # Subtest: trip-profil-option-klettersteig kommt genau einmal vor
+    ok 7 - trip-profil-option-klettersteig kommt genau einmal vor
+      ---
+      duration_ms: 3.941677
+      type: 'test'
+      ...
+    # Subtest: trip-profil-option-mtb kommt genau einmal vor
+    ok 8 - trip-profil-option-mtb kommt genau einmal vor
+      ---
+      duration_ms: 4.897117
+      type: 'test'
+      ...
+    # Subtest: trip-profil-option-fahrrad_15 kommt genau einmal vor
+    ok 9 - trip-profil-option-fahrrad_15 kommt genau einmal vor
+      ---
+      duration_ms: 1.219081
+      type: 'test'
+      ...
+    # Subtest: trip-profil-option-fahrrad_20 kommt genau einmal vor
+    ok 10 - trip-profil-option-fahrrad_20 kommt genau einmal vor
+      ---
+      duration_ms: 3.481535
+      type: 'test'
+      ...
+    # Subtest: trip-profil-option-fahrrad_25 kommt genau einmal vor
+    ok 11 - trip-profil-option-fahrrad_25 kommt genau einmal vor
+      ---
+      duration_ms: 1.940493
+      type: 'test'
+      ...
+    # Subtest: trip-profil-knopf kommt genau einmal vor
+    ok 12 - trip-profil-knopf kommt genau einmal vor
+      ---
+      duration_ms: 1.749534
+      type: 'test'
+      ...
+    # Subtest: trip-profil-auswahl kommt genau einmal vor
+    ok 13 - trip-profil-auswahl kommt genau einmal vor
+      ---
+      duration_ms: 3.919555
+      type: 'test'
+      ...
+    # Subtest: trip-profil-auswahl-option-trekking kommt genau einmal vor
+    ok 14 - trip-profil-auswahl-option-trekking kommt genau einmal vor
+      ---
+      duration_ms: 3.008003
+      type: 'test'
+      ...
+    # Subtest: trip-profil-auswahl-option-skitour kommt genau einmal vor
+    ok 15 - trip-profil-auswahl-option-skitour kommt genau einmal vor
+      ---
+      duration_ms: 2.085194
+      type: 'test'
+      ...
+    # Subtest: trip-profil-auswahl-option-hochtour kommt genau einmal vor
+    ok 16 - trip-profil-auswahl-option-hochtour kommt genau einmal vor
+      ---
+      duration_ms: 4.143606
+      type: 'test'
+      ...
+    # Subtest: trip-profil-auswahl-option-klettersteig kommt genau einmal vor
+    ok 17 - trip-profil-auswahl-option-klettersteig kommt genau einmal vor
+      ---
+      duration_ms: 3.145355
+      type: 'test'
+      ...
+    # Subtest: trip-profil-auswahl-option-mtb kommt genau einmal vor
+    ok 18 - trip-profil-auswahl-option-mtb kommt genau einmal vor
+      ---
+      duration_ms: 2.421643
+      type: 'test'
+      ...
+    # Subtest: trip-profil-auswahl-option-fahrrad_15 kommt genau einmal vor
+    ok 19 - trip-profil-auswahl-option-fahrrad_15 kommt genau einmal vor
+      ---
+      duration_ms: 3.975255
+      type: 'test'
+      ...
+    # Subtest: trip-profil-auswahl-option-fahrrad_20 kommt genau einmal vor
+    ok 20 - trip-profil-auswahl-option-fahrrad_20 kommt genau einmal vor
+      ---
+      duration_ms: 0.75332
+      type: 'test'
+      ...
+    # Subtest: trip-profil-auswahl-option-fahrrad_25 kommt genau einmal vor
+    ok 21 - trip-profil-auswahl-option-fahrrad_25 kommt genau einmal vor
+      ---
+      duration_ms: 6.01852
+      type: 'test'
+      ...
+    # Subtest: save-indicator kommt genau einmal vor
+    ok 22 - save-indicator kommt genau einmal vor
+      ---
+      duration_ms: 7.507992
+      type: 'test'
+      ...
+    1..22
+ok 7 - \#2284 S2 AC-10 — Baustein mit Trip-Satz: jede Kopf-testid und der Chip genau einmal
+  ---
+  duration_ms: 252.937493
+  type: 'suite'
+  ...
+# Subtest: \#2284 S2 AC-10/AC-4 — TripHeader mountet den Baustein: alles genau einmal
+    # Subtest: trip-detail-h1 kommt im Trip-Kopf genau einmal vor
+    ok 1 - trip-detail-h1 kommt im Trip-Kopf genau einmal vor
+      ---
+      duration_ms: 5285.597545
+      type: 'test'
+      ...
+    # Subtest: trip-name-edit-toggle kommt im Trip-Kopf genau einmal vor
+    ok 2 - trip-name-edit-toggle kommt im Trip-Kopf genau einmal vor
+      ---
+      duration_ms: 5.734758
+      type: 'test'
+      ...
+    # Subtest: trip-region-edit-toggle kommt im Trip-Kopf genau einmal vor
+    ok 3 - trip-region-edit-toggle kommt im Trip-Kopf genau einmal vor
+      ---
+      duration_ms: 3.922415
+      type: 'test'
+      ...
+    # Subtest: save-indicator kommt im Trip-Kopf genau einmal vor
+    ok 4 - save-indicator kommt im Trip-Kopf genau einmal vor
+      ---
+      duration_ms: 4.317735
+      type: 'test'
+      ...
+    # Subtest: hub-kopf-eyebrow kommt im Trip-Kopf genau einmal vor
+    ok 5 - hub-kopf-eyebrow kommt im Trip-Kopf genau einmal vor
+      ---
+      duration_ms: 9.715405
+      type: 'test'
+      ...
+    # Subtest: hub-kopf-meta kommt im Trip-Kopf genau einmal vor
+    ok 6 - hub-kopf-meta kommt im Trip-Kopf genau einmal vor
+      ---
+      duration_ms: 3.712704
+      type: 'test'
+      ...
+    # Subtest: trip-header-mobile-metrics kommt im Trip-Kopf nicht mehr vor (\#2980 AC-19)
+    ok 7 - trip-header-mobile-metrics kommt im Trip-Kopf nicht mehr vor (\#2980 AC-19)
+      ---
+      duration_ms: 1.488492
+      type: 'test'
+      ...
+    # Subtest: genau ein <header class="trip-header"> (Anker der Ratschen-Specs 336/616)
+    ok 8 - genau ein <header class="trip-header"> (Anker der Ratschen-Specs 336/616)
+      ---
+      duration_ms: 3.658444
+      type: 'test'
+      ...
+    # Subtest: ohne saveController: kein Chip im Trip-Kopf
+    ok 9 - ohne saveController: kein Chip im Trip-Kopf
+      ---
+      duration_ms: 3.990066
+      type: 'test'
+      ...
+    # Subtest: \#3196: keine Aktivitäts-Kacheln, kein Handy-Knopf im Trip-Kopf (auch mit gespeicherter Aktivität)
+    ok 10 - \#3196: keine Aktivitäts-Kacheln, kein Handy-Knopf im Trip-Kopf (auch mit gespeicherter Aktivität)
+      ---
+      duration_ms: 17.174785
+      type: 'test'
+      ...
+    1..10
+ok 8 - \#2284 S2 AC-10/AC-4 — TripHeader mountet den Baustein: alles genau einmal
+  ---
+  duration_ms: 5339.828264
+  type: 'suite'
+  ...
+# Subtest: \#2796 AC-1/AC-2: Orts-Vergleich ohne Auswahlliste — kein Profil im Kopf
+    # Subtest: weder Kacheln noch Handy-Knopf noch Handy-Auswahl
+    ok 1 - weder Kacheln noch Handy-Knopf noch Handy-Auswahl
+      ---
+      duration_ms: 574.439538
+      type: 'test'
+      ...
+    # Subtest: leere Auswahlliste wirkt wie keine (auch mit Profil und Label)
+    ok 2 - leere Auswahlliste wirkt wie keine (auch mit Profil und Label)
+      ---
+      duration_ms: 2.590784
+      type: 'test'
+      ...
+    # Subtest: keine leeren Wrapper an Stelle der entfallenen Profil-Zeile
+    ok 3 - keine leeren Wrapper an Stelle der entfallenen Profil-Zeile
+      ---
+      duration_ms: 1.366574
+      type: 'test'
+      ...
+    1..3
+ok 9 - \#2796 AC-1/AC-2: Orts-Vergleich ohne Auswahlliste — kein Profil im Kopf
+  ---
+  duration_ms: 579.286174
+  type: 'suite'
+  ...
+# Subtest: \#2796 AC-3: Trip übergibt die Auswahlliste — Chips und Knopf bleiben
+    # Subtest: Kacheln, Handy-Knopf, Handy-Auswahl und Profilname hinter der Region
+    ok 1 - Kacheln, Handy-Knopf, Handy-Auswahl und Profilname hinter der Region
+      ---
+      duration_ms: 4.572747
+      type: 'test'
+      ...
+    1..1
+ok 10 - \#2796 AC-3: Trip übergibt die Auswahlliste — Chips und Knopf bleiben
+  ---
+  duration_ms: 4.702607
+  type: 'suite'
+  ...
+# Subtest: \#2837 S1 HubKopf (route) — Leiste, Breadcrumb, Senden
+    # Subtest: AC-11 (route): genau eine Leiste und genau eine Überschrift; Leiste steht VOR der Überschrift
+    ok 1 - AC-11 (route): genau eine Leiste und genau eine Überschrift; Leiste steht VOR der Überschrift
+      ---
+      duration_ms: 5474.690854
+      type: 'test'
+      ...
+    # Subtest: Entscheidung 1 (route): data-kind="route" am Baustein (Vorfahre der Leiste)
+    ok 2 - Entscheidung 1 (route): data-kind="route" am Baustein (Vorfahre der Leiste)
+      ---
+      duration_ms: 4.470147
+      type: 'test'
+      ...
+    # Subtest: AC-4 (route): Breadcrumb — Elternteil ist EIN Link auf die Liste mit Katalogtext, Kind ist kein Link
+    ok 3 - AC-4 (route): Breadcrumb — Elternteil ist EIN Link auf die Liste mit Katalogtext, Kind ist kein Link
+      ---
+      duration_ms: 1.580992
+      type: 'test'
+      ...
+    # Subtest: AC-4 (route): kein Krümel „Hub" in der Leiste
+    ok 4 - AC-4 (route): kein Krümel „Hub" in der Leiste
+      ---
+      duration_ms: 1.323212
+      type: 'test'
+      ...
+    # Subtest: AC-2 (route, neu \#2980 AC-24): kein Zurück-Link in der Leiste, einziger Link = Elternteil
+    ok 5 - AC-2 (route, neu \#2980 AC-24): kein Zurück-Link in der Leiste, einziger Link = Elternteil
+      ---
+      duration_ms: 3.812496
+      type: 'test'
+      ...
+    # Subtest: AC-1 (route): Senden ist Btn accent in der Leiste (testid subscription-hub-send, \#2980 AC-16), Text = sendLabel
+    ok 6 - AC-1 (route): Senden ist Btn accent in der Leiste (testid subscription-hub-send, \#2980 AC-16), Text = sendLabel
+      ---
+      duration_ms: 2.102462
+      type: 'test'
+      ...
+    # Subtest: AC-3 (route): sendDisabled ⇒ Senden sichtbar gesperrt (disabled), bleibt an seinem Platz
+    ok 7 - AC-3 (route): sendDisabled ⇒ Senden sichtbar gesperrt (disabled), bleibt an seinem Platz
+      ---
+      duration_ms: 6.001789
+      type: 'test'
+      ...
+    # Subtest: Entscheidung 6 (route): Kebab steht in der Leiste, Symbol vertikal (Desktop und mobil)
+    ok 8 - Entscheidung 6 (route): Kebab steht in der Leiste, Symbol vertikal (Desktop und mobil)
+      ---
+      duration_ms: 4.121466
+      type: 'test'
+      ...
+    # Subtest: AC-6 (route): status-Snippet landet genau einmal als Badge in der TITELZEILE (gleiches Elternelement wie die Überschrift)
+    ok 9 - AC-6 (route): status-Snippet landet genau einmal als Badge in der TITELZEILE (gleiches Elternelement wie die Überschrift)
+      ---
+      duration_ms: 1.374812
+      type: 'test'
+      ...
+    # Subtest: AC-9 (route): titleSize 38 wird an die Überschrift durchgereicht
+    ok 10 - AC-9 (route): titleSize 38 wird an die Überschrift durchgereicht
+      ---
+      duration_ms: 1.330912
+      type: 'test'
+      ...
+    1..10
+ok 11 - \#2837 S1 HubKopf (route) — Leiste, Breadcrumb, Senden
+  ---
+  duration_ms: 5501.997153
+  type: 'suite'
+  ...
+# Subtest: \#2837 S1 HubKopf (vergleich) — Leiste, Breadcrumb, Senden
+    # Subtest: AC-11 (vergleich): genau eine Leiste und genau eine Überschrift; Leiste steht VOR der Überschrift
+    ok 1 - AC-11 (vergleich): genau eine Leiste und genau eine Überschrift; Leiste steht VOR der Überschrift
+      ---
+      duration_ms: 1.241281
+      type: 'test'
+      ...
+    # Subtest: Entscheidung 1 (vergleich): data-kind="vergleich" am Baustein (Vorfahre der Leiste)
+    ok 2 - Entscheidung 1 (vergleich): data-kind="vergleich" am Baustein (Vorfahre der Leiste)
+      ---
+      duration_ms: 1.121971
+      type: 'test'
+      ...
+    # Subtest: AC-4 (vergleich): Breadcrumb — Elternteil ist EIN Link auf die Liste mit Katalogtext, Kind ist kein Link
+    ok 3 - AC-4 (vergleich): Breadcrumb — Elternteil ist EIN Link auf die Liste mit Katalogtext, Kind ist kein Link
+      ---
+      duration_ms: 0.974761
+      type: 'test'
+      ...
+    # Subtest: AC-4 (vergleich): kein Krümel „Hub" in der Leiste
+    ok 4 - AC-4 (vergleich): kein Krümel „Hub" in der Leiste
+      ---
+      duration_ms: 0.906021
+      type: 'test'
+      ...
+    # Subtest: AC-2 (vergleich, neu \#2980 AC-24): kein Zurück-Link in der Leiste, einziger Link = Elternteil
+    ok 5 - AC-2 (vergleich, neu \#2980 AC-24): kein Zurück-Link in der Leiste, einziger Link = Elternteil
+      ---
+      duration_ms: 23.580404
+      type: 'test'
+      ...
+    # Subtest: AC-1 (vergleich): Senden ist Btn accent in der Leiste (testid subscription-hub-send, \#2980 AC-16), Text = sendLabel
+    ok 6 - AC-1 (vergleich): Senden ist Btn accent in der Leiste (testid subscription-hub-send, \#2980 AC-16), Text = sendLabel
+      ---
+      duration_ms: 1.301493
+      type: 'test'
+      ...
+    # Subtest: AC-3 (vergleich): sendDisabled ⇒ Senden sichtbar gesperrt (disabled), bleibt an seinem Platz
+    ok 7 - AC-3 (vergleich): sendDisabled ⇒ Senden sichtbar gesperrt (disabled), bleibt an seinem Platz
+      ---
+      duration_ms: 11.421437
+      type: 'test'
+      ...
+    # Subtest: Entscheidung 6 (vergleich): Kebab steht in der Leiste, Symbol vertikal (Desktop und mobil)
+    ok 8 - Entscheidung 6 (vergleich): Kebab steht in der Leiste, Symbol vertikal (Desktop und mobil)
+      ---
+      duration_ms: 4.999788
+      type: 'test'
+      ...
+    # Subtest: AC-6 (vergleich): status-Snippet landet genau einmal als Badge in der TITELZEILE (gleiches Elternelement wie die Überschrift)
+    ok 9 - AC-6 (vergleich): status-Snippet landet genau einmal als Badge in der TITELZEILE (gleiches Elternelement wie die Überschrift)
+      ---
+      duration_ms: 3.779486
+      type: 'test'
+      ...
+    # Subtest: AC-9 (vergleich): titleSize 38 wird an die Überschrift durchgereicht
+    ok 10 - AC-9 (vergleich): titleSize 38 wird an die Überschrift durchgereicht
+      ---
+      duration_ms: 2.778984
+      type: 'test'
+      ...
+    1..10
+ok 12 - \#2837 S1 HubKopf (vergleich) — Leiste, Breadcrumb, Senden
+  ---
+  duration_ms: 55.012412
+  type: 'suite'
+  ...
+# Subtest: \#2837 S1 Entscheidung 3 — Vergleich-Entwurf: „Setup abschließen" auf dem Platz von Senden
+    # Subtest: sendMode="setup": kein subscription-hub-send, statt dessen Btn primary mit dem Setup-Text an derselben Stelle
+    ok 1 - sendMode="setup": kein subscription-hub-send, statt dessen Btn primary mit dem Setup-Text an derselben Stelle
+      ---
+      duration_ms: 4.735607
+      type: 'test'
+      ...
+    1..1
+ok 13 - \#2837 S1 Entscheidung 3 — Vergleich-Entwurf: „Setup abschließen" auf dem Platz von Senden
+  ---
+  duration_ms: 4.844117
+  type: 'suite'
+  ...
+# Subtest: \#2837 S1 Entscheidung 1 — ein Markup, context wählt nur Text und Datenmarke
+    # Subtest: route und vergleich rendern dasselbe Gerüst (gleiche Durchreich-Props)
+    ok 1 - route und vergleich rendern dasselbe Gerüst (gleiche Durchreich-Props)
+      ---
+      duration_ms: 8.105452
+      type: 'test'
+      ...
+    # Subtest: mobil: route und vergleich rendern dasselbe Gerüst
+    ok 2 - mobil: route und vergleich rendern dasselbe Gerüst
+      ---
+      duration_ms: 5.580098
+      type: 'test'
+      ...
+    # Subtest: der einzige Attribut-Unterschied ist data-kind (und die Eltern-Hrefs)
+    ok 3 - der einzige Attribut-Unterschied ist data-kind (und die Eltern-Hrefs)
+      ---
+      duration_ms: 8.769883
+      type: 'test'
+      ...
+    1..3
+ok 14 - \#2837 S1 Entscheidung 1 — ein Markup, context wählt nur Text und Datenmarke
+  ---
+  duration_ms: 22.671434
+  type: 'suite'
+  ...
+# Subtest: \#2837 S1 Entscheidung 1 / F006 — keine Optik nach Art
+    # Subtest: kompiliertes CSS des HubKopf: kein Selektor nach data-kind oder nach Art benannten Klassen
+    ok 1 - kompiliertes CSS des HubKopf: kein Selektor nach data-kind oder nach Art benannten Klassen
+      ---
+      duration_ms: 542.549751
+      type: 'test'
+      ...
+    # Subtest: class und style aller Elemente gleich für route und vergleich (mobil=false)
+    ok 2 - class und style aller Elemente gleich für route und vergleich (mobil=false)
+      ---
+      duration_ms: 6.31803
+      type: 'test'
+      ...
+    # Subtest: class und style aller Elemente gleich für route und vergleich (mobil=true)
+    ok 3 - class und style aller Elemente gleich für route und vergleich (mobil=true)
+      ---
+      duration_ms: 17.088066
+      type: 'test'
+      ...
+    1..3
+ok 15 - \#2837 S1 Entscheidung 1 / F006 — keine Optik nach Art
+  ---
+  duration_ms: 566.209205
+  type: 'suite'
+  ...
+# Subtest: \#2837 S1 AC-13 — Texte des Bausteins aus dem Katalog (de und en)
+    # Subtest: route: Aria-Text des Kebab folgt der Nutzersprache; kein Zurück-Link (\#2980 AC-24)
+    ok 1 - route: Aria-Text des Kebab folgt der Nutzersprache; kein Zurück-Link (\#2980 AC-24)
+      ---
+      duration_ms: 5.787449
+      type: 'test'
+      ...
+    # Subtest: vergleich: Aria-Text des Kebab folgt der Nutzersprache; kein Zurück-Link (\#2980 AC-24)
+    ok 2 - vergleich: Aria-Text des Kebab folgt der Nutzersprache; kein Zurück-Link (\#2980 AC-24)
+      ---
+      duration_ms: 4.153536
+      type: 'test'
+      ...
+    1..2
+ok 16 - \#2837 S1 AC-13 — Texte des Bausteins aus dem Katalog (de und en)
+  ---
+  duration_ms: 10.083055
+  type: 'suite'
+  ...
+# (node:722316) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: \#2837 S1b F002 — TripHeader leitet den Status aus der Prop now ab (AC-2, AC-8)
+    # Subtest: Messaufbau: die echte Uhr liegt nach den Etappen (sonst ist die Mutation unbeobachtbar)
+    ok 1 - Messaufbau: die echte Uhr liegt nach den Etappen (sonst ist die Mutation unbeobachtbar)
+      ---
+      duration_ms: 0.741381
+      type: 'test'
+      ...
+    # Subtest: now innerhalb der Etappen ⇒ data-status „active" und Text aus trip.status.active
+    ok 2 - now innerhalb der Etappen ⇒ data-status „active" und Text aus trip.status.active
+      ---
+      duration_ms: 14.643271
+      type: 'test'
+      ...
+    # Subtest: now vor den Etappen ⇒ data-status „planned" und Text aus trip.status.planned
+    ok 3 - now vor den Etappen ⇒ data-status „planned" und Text aus trip.status.planned
+      ---
+      duration_ms: 1.360771
+      type: 'test'
+      ...
+    1..3
+ok 17 - \#2837 S1b F002 — TripHeader leitet den Status aus der Prop now ab (AC-2, AC-8)
+  ---
+  duration_ms: 17.554765
+  type: 'suite'
+  ...
+# Subtest: \#3196 — kein Aktivitäts-Zusatz hinter dem Region-Stift
+    # Subtest: activity „trekking" ⇒ kein „·"-Zusatz, kein Aktivitätsname, kein Rohwert
+    ok 1 - activity „trekking" ⇒ kein „·"-Zusatz, kein Aktivitätsname, kein Rohwert
+      ---
+      duration_ms: 1.549571
+      type: 'test'
+      ...
+    # Subtest: activity „fahrrad_20" ⇒ kein „·"-Zusatz, kein Aktivitätsname, kein Rohwert
+    ok 2 - activity „fahrrad_20" ⇒ kein „·"-Zusatz, kein Aktivitätsname, kein Rohwert
+      ---
+      duration_ms: 1.187791
+      type: 'test'
+      ...
+    # Subtest: activity „unbekannt-xyz" ⇒ kein „·"-Zusatz, kein Aktivitätsname, kein Rohwert
+    ok 3 - activity „unbekannt-xyz" ⇒ kein „·"-Zusatz, kein Aktivitätsname, kein Rohwert
+      ---
+      duration_ms: 1.571892
+      type: 'test'
+      ...
+    1..3
+ok 18 - \#3196 — kein Aktivitäts-Zusatz hinter dem Region-Stift
+  ---
+  duration_ms: 4.512177
+  type: 'suite'
+  ...
+1..18
+# tests 92
+# suites 18
+# pass 92
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 10839.429124

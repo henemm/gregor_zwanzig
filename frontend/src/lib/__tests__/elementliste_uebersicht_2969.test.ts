@@ -146,7 +146,10 @@ const ALT_ANZAHL = ALT_ANZAHL_3251 + 184 - 180 + 174;
 // überspringt sie wie die Übersicht-Notiz). Sonst nur Katalogfelder: kebab-bestaetigung-* (32) bekommen
 // aktionen.kebab.* samt text_en/muster {name} statt Lücke, kebab-menue (16) aktionen.kebab.menue_*, test-menue (14)
 // schließt EN-Lücken aus test_schicken.* (#3440), kanaele (8) „Briefing“ → test_schicken.briefing (DE/EN gleich).
-const ALT_ANZAHL_3419 = ALT_ANZAHL - 24 + 46 + 2 - 8;
+// #3438 (Ganzseite Wetter, 28.11.; Mockup geändert): +32 IDs, keine entfallen, kein Inhalt geändert, 62 nur ordnung —
+// 16 Stift-Knöpfe im Kopf („Name bearbeiten“, „Region bearbeiten“, trip/orte × 4 Zustände) und 16 Chips „Nicht im
+// Briefing“ (trip +3, orte +5, je Zustand normal/luecken: Liste vollständig in Katalog-Reihenfolge). Diff je ID geprüft.
+const ALT_ANZAHL_3419 = ALT_ANZAHL - 24 + 46 + 2 - 8 + 32;
 // #3441 (Test-Alarm): im Abschnitt test-menue tragen die 16 Zeilen „Test-Alarm“ und ihr Untertitel (alle Kontexte
 // und Zustände) jetzt i18n_key, text_en und luecke false. Keine ID neu oder entfallen, Anzahl gleich, sonst byte-gleich.
 // #3241 (Metrik-Zeile EN, 28.11.; vorher a227cb93…0d75c1): im Abschnitt metriken tragen 12 Zeilen („mm · Summe“,
@@ -154,8 +157,9 @@ const ALT_ANZAHL_3419 = ALT_ANZAHL - 24 + 46 + 2 - 8;
 // text_en; keine ID neu oder entfallen, Anzahl gleich, sonst byte-gleich (Diff je ID geprüft).
 // #3437 (28.11.; vorher cc2a1999…8571fa): 4 Zeilen Orte-Erklärtext mit Schlüssel (vergleich.hub.kopf.orte_erklaer,
 // text_en, luecke false), keine ID neu oder entfallen.
-const ALT_SHA = 'a112fc13eba1e01bb2d191dd9706757170668c1591a6312771ec5f8bda91148f';
-const MOCKUP_HASH = 'sha256:946e69c0f185fc66133b3b8c820d87b61ef3a3f52834f621c1c76505c7f81a0b';
+// #3438 (28.11.; vorher a112fc13…91148f, Mockup-Hash vorher 946e69c0…7f81a0b): siehe ALT_ANZAHL_3419.
+const ALT_SHA = 'b5aa0fa5070dae88e66afb11852446d1bbe57e929537813db4d90977e9c1956a';
+const MOCKUP_HASH = 'sha256:ad2e02da1d8755e9c17356e15dfea677c76498df74c3fb17b533ab673c4ca427';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {
 	const e = uebersicht();
