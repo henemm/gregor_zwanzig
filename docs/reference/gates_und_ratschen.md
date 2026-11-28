@@ -136,6 +136,30 @@ frisch vorliegen: (1) `tests/tdd/test_issue_811_mode_matrix.py` grün, (2) erfol
 `briefing_mail_validator.py`-Lauf. Abhilfe bei Blockade: den Test ausführen, dann Validator grün
 bekommen.
 
+*Compare-Mail-Nachweis (#1282, Herkunft und lokaler Weg seit #3503):* ist `compare_html.py` oder ein
+geteilter Helfer (`helpers`, `design_tokens`, `profile_signature`) gestaged, verlangt das Gate einen
+von **zwei** Nachweisen:
+
+- **Server mit Test-Postfach:** frischer `email_spec_validator.py`-Lauf gegen die echt zugestellte
+  Compare-Mail. Das Log trägt `quelle: imap` (IMAP-Abruf) bzw. `quelle: eml` (`--eml`, Datei/Fixture).
+  Das Gate zählt nur `quelle: imap`; Logs mit anderer oder fehlender Herkunft werden übersprungen, ein
+  imap-Lauf mit `passed: false` blockt weiter, die Frische-Prüfung bleibt.
+- **Ohne Test-Postfach (z. B. iMac):** nach dem Stagen
+  `uv run python3 .claude/hooks/renderer_mail_gate.py record-compare-lokal`. Rendert die Gate-Fixture
+  `build_compare_mail` (aus `scripts/send_gate_test_mails.py`) für `de` und `en` mit dem aktuellen Code,
+  baut die Mail über `build_mime_message` und prüft sie mit `email_spec_validator.validate_message`.
+  Nur wenn beide Sprachen bestehen, schreibt es `gates.renderer_mail.compare_lokal`
+  (`passed`, `langs`, `mail_files_hash` wie `record-matrix`) in den Workflow-Zustand, sonst Exit 1 mit
+  Fehlerliste; ohne aktiven Workflow Exit 2; nichts nach `_log`. Das Gate akzeptiert den Eintrag nur,
+  solange der Hash zum gestagten Stand passt.
+
+*Restrisiko:* `compare_lokal` ist wie der Matrix-Nachweis von Hand in den Zustand schreibbar (Absicht,
+kein Versehen). `_staged_mail_hash` liest die Dateien aus dem Arbeitsverzeichnis, nicht aus dem Index:
+ein ungestagter Fix kann deshalb einen gestagten, kaputten Stand durchlassen (dasselbe Restrisiko wie bei
+`record-matrix`). Der lokale Weg prüft den Renderer mit Fixture-Daten, nicht den Transport; Zustellung
+und Live-Daten prüft `/e2e-verify` (`mail-pruefen compare de|en`) nach dem Deploy. Briefing-, Radar- und
+Official-Validator haben dieselbe `--eml`-Lücke noch (Folge-Issue).
+
 *Mail-Frische (#2035):* die drei Hook-Validatoren (Radar, Amtliche Warnung, Briefing) lehnen Mails über 60 Minuten Server-Alter ab (Details `docs/reference/mail_validators.md`); Prüfdatum 2027-02-25.
 
 **„Un-überspringbar" gilt erst seit #1431 (2026-08-04) wirklich.** Davor entschied dieses Gate — wie

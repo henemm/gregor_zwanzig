@@ -117,8 +117,8 @@ def _log_dir(repo: Path) -> Path:
 
 
 def _write_log(repo: Path, *, quelle: str | None, passed: bool, name: str,
-               mtime_offset: float = 0.0) -> Path:
-    vat = datetime.now(timezone.utc) + timedelta(seconds=5)
+               mtime_offset: float = 0.0, vat_offset: float = 5.0) -> Path:
+    vat = datetime.now(timezone.utc) + timedelta(seconds=vat_offset)
     zeilen = [
         "validator: email_spec_validator",
         f"validated_at: '{vat.isoformat()}'",
@@ -164,6 +164,16 @@ def _break_renderer(repo: Path, lang: str) -> None:
             if lang == {lang!r}:
                 return "<html><body><p>kaputt</p></body></html>", "kaputt"
             return html, plain
+    """))
+
+
+def _crash_renderer(repo: Path) -> None:
+    """Compare-Renderer wirft beim Rendern eine Exception (Wegwerf-Repo)."""
+    p = repo / _COMPARISON
+    p.write_text(p.read_text() + textwrap.dedent("""
+
+        def render_compare_email(result, *args, **kwargs):  # Test #3503 F001
+            raise RuntimeError("Renderer-Absturz #3503")
     """))
 
 
@@ -325,6 +335,20 @@ def test_ac8_recorder_kaputter_renderer_exit1_ohne_eintrag(repo, kaputt):
     assert _state(repo) == state_vorher, "AC-8: kein Eintrag bei Befund"
 
 
+def test_ac8_recorder_renderer_exception_exit1_ohne_eintrag(repo):
+    """AC-8 (F001): Renderer wirft beim Rendern → Exit 1, Fehler genannt,
+    kein compare_lokal-Eintrag (Absturz ist ein Befund, kein Nachweis)."""
+    _crash_renderer(repo)
+    _stage_compare(repo, "ac8c")
+    state_vorher = _state(repo)
+    r = _recorder(repo)
+    assert r.returncode == 1, (
+        f"AC-8: Renderer-Absturz muss Exit 1 liefern, war {r.returncode}\n"
+        f"{r.stdout}\n{r.stderr}")
+    assert "Renderer-Absturz #3503" in r.stderr, r.stderr
+    assert _state(repo) == state_vorher, "AC-8: kein Eintrag bei Absturz"
+
+
 def test_ac8_recorder_ohne_workflow_exit2(repo):
     """AC-8: ohne aktiven Workflow → Exit 2, kein Eintrag."""
     _stage_compare(repo, "ac8b")
@@ -338,12 +362,17 @@ def test_ac8_recorder_ohne_workflow_exit2(repo):
 # AC-6 / AC-7: Gate akzeptiert compare_lokal nur hash-gebunden
 # ---------------------------------------------------------------------------
 
-def _set_compare_lokal(repo: Path, mail_hash: str) -> None:
+_FEHLT = object()
+
+
+def _set_compare_lokal(repo: Path, mail_hash: str, *, langs=("de", "en"),
+                       passed=True) -> None:
+    eintrag = {"mail_files_hash": mail_hash, "langs": list(langs),
+               "recorded_at": datetime.now(timezone.utc).isoformat()}
+    if passed is not _FEHLT:
+        eintrag["passed"] = passed
     state = _state(repo)
-    state.setdefault("gates", {}).setdefault("renderer_mail", {})["compare_lokal"] = {
-        "passed": True, "mail_files_hash": mail_hash, "langs": ["de", "en"],
-        "recorded_at": datetime.now(timezone.utc).isoformat(),
-    }
+    state.setdefault("gates", {}).setdefault("renderer_mail", {})["compare_lokal"] = eintrag
     _write_state(repo, state)
 
 
@@ -366,3 +395,35 @@ def test_ac7_veralteter_compare_lokal_blockiert_und_nennt_beide_wege(repo):
     assert "email_spec_validator" in r.stderr, r.stderr
     assert "record-compare-lokal" in r.stderr, (
         f"AC-7: Meldung muss den lokalen Weg nennen:\n{r.stderr}")
+    assert "Ohne Test-Postfach" in r.stderr and "iMac" in r.stderr, (
+        f"AC-7: Meldung muss den Weg ohne Test-Postfach (iMac) nennen:\n{r.stderr}")
+    assert "Test-Postfach:" in r.stderr.replace("Ohne Test-Postfach", ""), (
+        f"AC-7: Meldung muss den Server-Weg mit Test-Postfach nennen:\n{r.stderr}")
+
+
+@pytest.mark.parametrize("langs", [["de"], ["en"], []], ids=["nur-de", "nur-en", "leer"])
+def test_ac6_compare_lokal_ohne_beide_sprachen_blockiert(repo, langs):
+    """AC-6 (F002): passender Hash, passed, aber nicht de UND en → Exit 2."""
+    _stage_compare(repo, "f002")
+    _set_compare_lokal(repo, _staged_hash(repo), langs=langs)
+    r = _gate_hook(repo)
+    assert r.returncode == 2, f"langs={langs} darf nicht genuegen.\n{r.stderr}"
+
+
+@pytest.mark.parametrize("passed", [_FEHLT, "true"], ids=["passed-fehlt", "passed-string"])
+def test_ac6_compare_lokal_ohne_passed_true_blockiert(repo, passed):
+    """AC-6 (F003): passender Hash, de+en, aber passed fehlt/ist kein True → Exit 2."""
+    _stage_compare(repo, "f003")
+    _set_compare_lokal(repo, _staged_hash(repo), passed=passed)
+    r = _gate_hook(repo)
+    assert r.returncode == 2, f"passed={passed!r} darf nicht genuegen.\n{r.stderr}"
+
+
+def test_ac4_veraltetes_imap_log_blockiert(repo):
+    """F004: imap-Log passed:true, validated_at aelter als die gestagte
+    Compare-Datei, kein compare_lokal → Exit 2 (Frische-Pruefung)."""
+    _stage_compare(repo, "f004")
+    _write_log(repo, quelle="imap", passed=True, name="20991231_000001",
+               vat_offset=-3600)
+    r = _gate_hook(repo)
+    assert r.returncode == 2, f"veraltetes imap-Log muss blocken.\n{r.stderr}"

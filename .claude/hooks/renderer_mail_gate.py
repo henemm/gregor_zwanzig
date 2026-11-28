@@ -17,6 +17,11 @@ Modi:
   (kein Argument)  Hook-Modus: stdin-JSON {"tool_input":{"command":"git commit ..."}}
   record-matrix    Recorder: berechnet sha256 der gestagten Mail-Dateien und
                    schreibt ihn nach state.gates.renderer_mail.matrix.
+  record-compare-lokal
+                   Recorder (#3503): rendert die Compare-Gate-Fixture (de+en)
+                   mit dem aktuellen Code, prueft sie mit email_spec_validator
+                   und schreibt bei Erfolg state.gates.renderer_mail.compare_lokal
+                   (hash-gebunden wie record-matrix). Weg ohne Test-Postfach.
 
 Exit-Codes: 0 = erlaubt/no-op, 2 = blockiert.
 
@@ -338,9 +343,13 @@ def _official_validator_log_ok(shared: Path, name: str, repo: Path, staged: list
 
 def _compare_validator_log_ok(shared: Path, name: str, repo: Path, staged: list[str]) -> bool:
     """Juengstes email_validation.yaml (email_spec_validator.py) mit
-    workflow_id == name, passed: true UND validated_at FRISCHER als die
-    mtime der gestagten Compare-/geteilten Dateien (Freshness analog
+    workflow_id == name, quelle: imap, passed: true UND validated_at FRISCHER
+    als die mtime der gestagten Compare-/geteilten Dateien (Freshness analog
     Briefing/Radar/Official, #1282).
+
+    #3503: nur Logs mit ``quelle: imap`` (echt zugestellte Mail) zaehlen;
+    Logs anderer/fehlender Herkunft werden uebersprungen, damit ein
+    Fixture-Lauf (``--eml``) einen echten Erfolg weder ersetzt noch verdeckt.
     """
     log_dir = shared / ".claude" / "workflows" / "_log"
     if not log_dir.exists():
@@ -365,6 +374,9 @@ def _compare_validator_log_ok(shared: Path, name: str, repo: Path, staged: list[
         wid = re.search(r"^workflow_id:\s*(\S+)", text, re.M)
         if not wid or wid.group(1).strip().strip("'\"") != name:
             continue
+        quelle = re.search(r"^quelle:\s*(\S+)", text, re.M)
+        if not quelle or quelle.group(1).strip().strip("'\"") != "imap":
+            continue  # #3503: nur echt zugestellte Mail zaehlt
         passed = re.search(r"^passed:\s*(\w+)", text, re.M)
         if not (passed and passed.group(1).strip().lower() == "true"):
             return False
@@ -383,6 +395,79 @@ def _compare_validator_log_ok(shared: Path, name: str, repo: Path, staged: list[
             return False
         return True
     return False
+
+
+def _compare_lokal_ok(state: dict, expected_hash: str) -> bool:
+    """#3503: lokaler Render-Nachweis (record-compare-lokal) passt zum
+    gestagten Stand: passed, de UND en, Hash == aktueller Mail-Hash."""
+    lokal = state.get("gates", {}).get("renderer_mail", {}).get("compare_lokal", {})
+    if not isinstance(lokal, dict):
+        return False
+    langs = lokal.get("langs") or []
+    return (
+        lokal.get("passed") is True
+        and isinstance(langs, list)
+        and {"de", "en"} <= set(langs)
+        and lokal.get("mail_files_hash") == expected_hash
+    )
+
+
+def _render_compare_errors(repo: Path) -> list[str]:
+    """#3503: Compare-Gate-Fixture in de+en mit dem aktuellen Code rendern,
+    als MIME-Mail bauen und mit email_spec_validator pruefen. Rueckgabe:
+    Fehlerliste (leer = beide Sprachen bestanden)."""
+    import email as _email
+
+    sys.path.insert(0, str(repo / "scripts"))
+    sys.path.insert(0, str(repo / "src"))
+    import send_gate_test_mails as fixtures  # lazy: Fixture, keine Kopie
+    from output.channels.email import build_mime_message
+    import email_spec_validator as validator
+
+    fehler: list[str] = []
+    for lang in ("de", "en"):
+        subject, html, plain = fixtures.build_compare_mail("lokal", lang=lang)
+        msg = build_mime_message(
+            subject, html, "gate@lokal.invalid", "gate@lokal.invalid", None, True,
+            plain, mail_type="compare", mail_format="full", lang=lang,
+        )
+        ok, errs = validator.validate_message(_email.message_from_bytes(msg.as_bytes()))
+        if not ok:
+            fehler.extend(f"[{lang}] {e}" for e in (errs or ["unbekannter Befund"]))
+    return fehler
+
+
+def _do_record_compare_lokal(repo: Path, shared: Path, name: str) -> None:
+    """record-compare-lokal (#3503): Nachweis nur, wenn de UND en bestehen.
+    Schreibt ausschliesslich den Workflow-Zustand, nichts nach _log."""
+    if not name:
+        print("record-compare-lokal: kein aktiver Workflow.", file=sys.stderr)
+        sys.exit(2)
+    path = _state_path(shared, name)
+    if not path.exists():
+        print(f"record-compare-lokal: Workflow-State fehlt: {path}", file=sys.stderr)
+        sys.exit(2)
+    try:
+        fehler = _render_compare_errors(repo)
+    except Exception as exc:  # Renderer-Absturz ist ein Befund, kein Nachweis
+        fehler = [f"Rendern fehlgeschlagen: {type(exc).__name__}: {exc}"]
+    if fehler:
+        print("record-compare-lokal: Compare-Mail verletzt die Spezifikation, "
+              "kein Nachweis geschrieben:", file=sys.stderr)
+        for f in fehler:
+            print(f"  - {f}", file=sys.stderr)
+        sys.exit(1)
+    mail_hash = _staged_mail_hash(repo, _staged_files(repo))
+    state = json.loads(path.read_text())
+    state.setdefault("gates", {}).setdefault("renderer_mail", {})["compare_lokal"] = {
+        "passed": True,
+        "mail_files_hash": mail_hash,
+        "langs": ["de", "en"],
+        "recorded_at": datetime.now(timezone.utc).isoformat(),
+    }
+    path.write_text(json.dumps(state, indent=2))
+    print("record-compare-lokal: de und en bestanden, Nachweis geschrieben.")
+    sys.exit(0)
 
 
 def _block(msg: str) -> None:
@@ -481,8 +566,10 @@ def _do_hook(repo: Path, shared: Path, name: str) -> None:
 
     # Compare-Validator (email_spec_validator.py) erforderlich wenn compare_html.py
     # ODER ein geteilter Renderer-Helfer staged ist (#1282 AC-1/AC-3).
+    # #3503: ODER lokaler, hash-gebundener Render-Nachweis (record-compare-lokal).
     compare_ok = (
         _compare_validator_log_ok(shared, name, repo, staged)
+        or _compare_lokal_ok(state, _staged_mail_hash(repo, staged))
         if (compare_staged or shared_staged) else True
     )
 
@@ -537,9 +624,12 @@ def _do_hook(repo: Path, shared: Path, name: str) -> None:
         )
     if not compare_ok:
         missing.append(
-            "  - email_spec_validator.py-Erfolgsnachweis (Compare-Mail) fehlt.\n"
-            "    Abhilfe: uv run python3 .claude/hooks/email_spec_validator.py "
-            "gegen die echt zugestellte Compare-Mail (Exit 0)."
+            "  - Compare-Mail-Nachweis fehlt/veraltet (#3503: einer von zwei Wegen).\n"
+            "    Server mit Test-Postfach: uv run python3 .claude/hooks/email_spec_validator.py "
+            "gegen die echt zugestellte Compare-Mail (Exit 0, quelle: imap).\n"
+            "    Ohne Test-Postfach (z. B. iMac): uv run python3 "
+            ".claude/hooks/renderer_mail_gate.py record-compare-lokal "
+            "(nach dem Stagen; bindet den Nachweis an den gestagten Stand)."
         )
     if not golden_ok:
         missing.append(
@@ -572,6 +662,8 @@ def main() -> None:
     name = hook_utils.get_active_workflow_name()
     if len(sys.argv) > 1 and sys.argv[1] == "record-matrix":
         _do_record(repo, shared, name)
+    elif len(sys.argv) > 1 and sys.argv[1] == "record-compare-lokal":
+        _do_record_compare_lokal(repo, shared, name)
     else:
         tool_input = _read_tool_input()
         command = tool_input.get("command", "")

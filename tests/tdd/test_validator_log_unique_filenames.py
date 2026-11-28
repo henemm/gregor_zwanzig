@@ -164,7 +164,8 @@ _GATE_CASES = [
     (
         "email_spec_validator.py", "email_validation",
         "_compare_validator_log_ok",
-        "src/output/renderers/email/compare_html.py", {"min_locations": 3},
+        "src/output/renderers/email/compare_html.py",
+        {"min_locations": 3, "quelle": "imap"},  # #3503: nur IMAP-Logs zaehlen
     ),
     (
         "radar_alert_mail_validator.py", "radar_alert_validation",
