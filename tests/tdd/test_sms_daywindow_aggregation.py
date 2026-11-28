@@ -350,7 +350,7 @@ class TestAC1MorningReportShowsArrivalThunder:
         report = _report(segments, night, report_type="morning")
         compact = _compact_line(report.email_plain)
 
-        assert "⚡" in compact and "14:00" in compact, (
+        assert "Gewitter hoch" in compact and "14:00" in compact, (
             f"Kurzzusammenfassung nennt kein Gewitter um 14:00, obwohl die "
             f"Detailtabelle 'Nacht am Ziel' es korrekt zeigt.\nKompakt: {compact!r}"
         )
@@ -394,7 +394,7 @@ class TestAC2EveningReportShowsArrivalThunder:
         telegram = _telegram_text(report)
 
         assert "TH:H@14" in report.sms_text, f"SMS: {report.sms_text}"
-        assert "⚡" in compact and "14:00" in compact, f"Kompakt: {compact!r}"
+        assert "Gewitter hoch" in compact and "14:00" in compact, f"Kompakt: {compact!r}"
         assert "Gewitter hoch ab 14:00 · stärkste 14:00" in report.email_plain
         assert "⚡ hoch" in telegram, f"Telegram:\n{telegram}"
 
@@ -537,7 +537,7 @@ class TestAC4AllFiveOutputsAgree:
         )
 
         assert "TH:H@14" in report.sms_text, f"SMS widerspricht der Tabelle.\nSMS: {report.sms_text}"
-        assert "⚡" in compact and "14:00" in compact, (
+        assert "Gewitter hoch" in compact and "14:00" in compact, (
             f"Kurzzusammenfassung widerspricht der Tabelle.\nKompakt: {compact!r}"
         )
         assert "Gewitter hoch ab 14:00 · stärkste 14:00" in report.email_plain, (
@@ -568,7 +568,7 @@ class TestAC5UpperBoundExclusion:
 
         assert "TH:-" in report.sms_text, f"SMS: {report.sms_text}"
         assert "TH:H@20" not in report.sms_text, f"SMS: {report.sms_text}"
-        assert "⚡" not in compact, f"Kompakt: {compact!r}"
+        assert "Gewitter" not in compact, f"Kompakt: {compact!r}"
         assert "Gewitter hoch ab 20:00" not in report.email_plain
         assert "kein Gewitter" in report.email_plain
         assert "⚡ kein" in telegram, f"Telegram:\n{telegram}"
@@ -587,7 +587,7 @@ class TestAC6UpperBoundInclusion:
         telegram = _telegram_text(report)
 
         assert "TH:H@18" in report.sms_text, f"SMS: {report.sms_text}"
-        assert "⚡" in compact and "18:00" in compact, f"Kompakt: {compact!r}"
+        assert "Gewitter hoch" in compact and "18:00" in compact, f"Kompakt: {compact!r}"
         assert "Gewitter hoch ab 18:00 · stärkste 18:00" in report.email_plain
         assert "⚡ hoch" in telegram, f"Telegram:\n{telegram}"
 
@@ -613,7 +613,7 @@ class TestAC7LowerBoundBeforeDeparture:
             f"innerhalb 04-19) — die erste-Segment-Fensteruntergrenze wurde "
             f"nicht auf 4 abgesenkt.\nSMS: {report.sms_text}"
         )
-        assert "⚡" in compact and "5:00" in compact, f"Kompakt: {compact!r}"
+        assert "Gewitter hoch" in compact and "5:00" in compact, f"Kompakt: {compact!r}"
         assert "Gewitter hoch ab 05:00 · stärkste 05:00" in report.email_plain
         assert "⚡ hoch" in telegram, f"Telegram:\n{telegram}"
 
@@ -656,7 +656,7 @@ class TestAC8WalkingWindowRegressionGuard:
         telegram = _telegram_text(report)
 
         assert "TH:H@9" in report.sms_text, f"SMS: {report.sms_text}"
-        assert "⚡" in compact and "9:00" in compact, f"Kompakt: {compact!r}"
+        assert "Gewitter hoch" in compact and "9:00" in compact, f"Kompakt: {compact!r}"
         assert "Gewitter hoch ab 09:00 · stärkste 09:00" in report.email_plain
         assert "⚡ hoch" in telegram, f"Telegram:\n{telegram}"
 

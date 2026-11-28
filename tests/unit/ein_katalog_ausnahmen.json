@@ -111,7 +111,7 @@
     },
     "src/output/renderers/compact_summary.py": {
       "SCHWELLE": 6,
-      "VERARBEITUNG_AUSSEN": 15
+      "VERARBEITUNG_AUSSEN": 14
     },
     "src/output/renderers/compare_hourly_metric_ids.py": {
       "ID_SAMMLUNG": 4
@@ -219,5 +219,5 @@
       "VERARBEITUNG_AUSSEN": 1
     }
   },
-  "hoechststand": 411
+  "hoechststand": 410
 }

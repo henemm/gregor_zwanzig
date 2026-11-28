@@ -214,7 +214,7 @@ def test_ac1_klartext_englisch_inhalt():
     ):
         assert erwartet in text, (erwartet, text)
     # Tagesueberblick (Zusammenfassung) und Stundentabelle: Gewitterstufe englisch.
-    assert "Thunderstorm possible" in text or "⚡ possible" in text, text
+    assert "Thunderstorm medium" in text or "Thunderstorm high" in text, text
 
 
 def test_ac1_klartext_zustand_englisch():

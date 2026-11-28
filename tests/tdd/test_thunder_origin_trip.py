@@ -159,9 +159,10 @@ def _kurzfassung(bericht) -> str:
 
 
 def _gewitter_teil(zeile: str) -> str:
-    """"...: 20–20°C, ..., Gewitter möglich 14:00–17:00 · CAPE" -> "14:00–17:00
-    · CAPE". Der Gewitter-Abschnitt steht immer am Ende des Satzes."""
-    for marker in ("Gewitter möglich ", "⚡ möglich "):
+    """"...: 20–20°C, ..., Gewitter hoch 14:00–17:00 · CAPE" -> "14:00–17:00
+    · CAPE". Der Gewitter-Abschnitt steht immer am Ende des Satzes (#3260 S1c:
+    Stufenwort statt „möglich“)."""
+    for marker in ("Gewitter mittel ", "Gewitter hoch "):
         if marker in zeile:
             return zeile.split(marker, 1)[1]
     return ""
@@ -230,7 +231,7 @@ def kommando():
 def test_ac1_kurzzusammenfassung_nennt_die_tragende_zutat():
     """AC-1: Given das Gewitterfenster kommt ausschliesslich ueber CAPE
     zustande, When die Trip-Mail gerendert wird, Then lautet der Satz
-    "Gewitter möglich 14:00–17:00 · CAPE" statt nur "... 14:00–17:00"."""
+    "Gewitter <Stufe> 14:00–17:00 · CAPE" statt nur "... 14:00–17:00"."""
     seg = _segment([_dp(h, cape=3000.0, cin=5.0) for h in (14, 15, 16)])
     zeile = _kurzfassung(_mail([seg]))
     assert _gewitter_teil(zeile) == "14:00–17:00 · CAPE", (
@@ -239,12 +240,12 @@ def test_ac1_kurzzusammenfassung_nennt_die_tragende_zutat():
 
 
 def test_ac1_auch_die_freundliche_schreibweise_traegt_die_herkunft():
-    """AC-1 (zweiter Zweig): ``_format_thunder()`` hat zwei Textvarianten.
-    Die Herkunft haengt an BEIDEN -- sonst zeigt jeder Trip mit der
-    Default-Einstellung (``use_friendly_format=True``) weiterhin nichts."""
+    """AC-1 (zweiter Zweig): auch bei der Default-Einstellung
+    (``use_friendly_format=True``) traegt der Satz die Herkunft. Seit #3260 S1c
+    gibt es nur noch EINEN Wortlaut (Stufenwort, unabhaengig vom Umschalter)."""
     seg = _segment([_dp(h, cape=3000.0, cin=5.0) for h in (14, 15, 16)])
     zeile = _kurzfassung(_mail([seg], friendly=True))
-    assert "⚡ möglich 14:00–17:00 · CAPE" in zeile, (
+    assert "Gewitter hoch 14:00–17:00 · CAPE" in zeile, (
         f"Auch die freundliche Schreibweise muss die Herkunft tragen: {zeile!r}")
 
 
@@ -427,7 +428,7 @@ def test_ac10_ohne_gewitter_bleiben_beide_ausgabeorte_zeichengleich(kommando):
                     tag=heute, start_h=6, end_h=16)
 
     ruhige_zeile = _kurzfassung(_mail([ruhig]))
-    assert "möglich" not in ruhige_zeile, (
+    assert "Gewitter" not in ruhige_zeile, (
         f"Ohne Gewitter bleibt die Kurzzusammenfassung ohne Gewitterteil "
         f"(und damit ohne Herkunft): {ruhige_zeile!r}")
     assert kommando.frage([ruhig]) == f"⛈ Gewitter heute ({heute:%d.%m}): kein", (

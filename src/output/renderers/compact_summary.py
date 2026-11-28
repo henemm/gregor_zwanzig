@@ -12,7 +12,6 @@ import re
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from utils.geo import degrees_to_compass
 from utils.timezone import local_hour, location_tz
 
 from app.models import (
@@ -242,18 +241,16 @@ class CompactSummaryFormatter:
 
         wind_enabled = "wind" in enabled or "gust" in enabled
         if wind_enabled:
-            friendly = enabled.get("wind", enabled.get("gust"))
             w = self._format_wind(
                 summary,
                 hourly,
-                friendly.use_friendly_format if friendly else True,
                 wind_dir_enabled="wind_direction" in enabled,
             )
             if w:
                 parts.append(w)
 
         if "thunder" in enabled:
-            th = self._format_thunder(hourly, enabled["thunder"].use_friendly_format)
+            th = self._format_thunder(hourly)
             if th:
                 parts.append(th)
 
@@ -525,7 +522,6 @@ class CompactSummaryFormatter:
         self,
         summary: Optional[SegmentWeatherSummary],
         hourly: list[ForecastDataPoint],
-        friendly: bool,
         wind_dir_enabled: bool = True,
     ) -> Optional[str]:
         if summary is None:
@@ -552,8 +548,14 @@ class CompactSummaryFormatter:
 
         # Direction
         compass = ""
-        if wind_dir_enabled and summary.wind_direction_avg_deg is not None and friendly:
-            compass = f" {degrees_to_compass(summary.wind_direction_avg_deg)}"
+        # #3260 S1c (AC-1.6/AC-5): Kompass haengt nur an der Auswahl, nicht am
+        # Wind-Umschalter; Form aus der EINEN Darstellung (ADR-0127).
+        if wind_dir_enabled and summary.wind_direction_avg_deg is not None:
+            from output.metric_format import darstellung
+            compass = " " + darstellung(
+                "wind_direction", summary.wind_direction_avg_deg, stelle="email",
+                ausgabeart="text", fmt="simplified", ampel=None,
+            ).text
 
         # Speed
         speed_str = f" {int(round(speed))} km/h" if speed is not None else ""
@@ -588,7 +590,6 @@ class CompactSummaryFormatter:
     def _format_thunder(
         self,
         hourly: list[ForecastDataPoint],
-        friendly: bool,
     ) -> Optional[str]:
         # ADR-0025 Entscheidung 1: kein ungefenstertes Aggregat als Tor für
         # nutzersichtbare Kanal-Aussagen. Die gefensterten Stundenwerte selbst
@@ -641,11 +642,15 @@ class CompactSummaryFormatter:
                 f"{thunder_low_statement_sentence('kurz', traeger_low, lang=lang)} "
                 f"{start_h}:00–{end_h}:00"
             )
-        elif friendly:
-            text = f"{t('mail.zusammenfassung.gewitter_symbol', lang)} {start_h}:00–{end_h}:00"
         else:
-            text = f"{t('mail.zusammenfassung.gewitter_moeglich', lang)} {start_h}:00–{end_h}:00"
-        # BEIDE Schreibweisen tragen die Herkunft: der Default aus
+            # #3260 S1c (AC-1.5/AC-4): Stufenwort aus der EINEN Darstellung,
+            # unabhaengig vom E-Mail-Umschalter.
+            from output.metric_format import darstellung
+            stufe = darstellung("thunder", max_lvl.value, stelle="email", ausgabeart="text",
+                                fmt=None, ampel=None, lang=lang).text
+            text = (f"{t('mail.zusammenfassung.gewitter_stufe', lang, stufe=stufe)} "
+                    f"{start_h}:00–{end_h}:00")
+        # Der Satz traegt die Herkunft: der Default aus
         # `build_default_display_config()` ist `use_friendly_format=True`, ein
         # Suffix nur am unfreundlichen Zweig bliebe fuer den Normalnutzer
         # unsichtbar. Reihenfolge (Spec D5): Zeitfenster · Herkunft · Hagel.

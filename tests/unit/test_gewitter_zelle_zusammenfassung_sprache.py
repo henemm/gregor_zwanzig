@@ -194,14 +194,14 @@ def test_zusammenfassung_englisch():
     satz = _satz("en", _stunden_mittel_hagel())
     assert satz == ("Lienz: 8–14°C, feels 5–9°C, Clouds 60%, heavy rain 9:00–12:00, "
                     "strong wind 40 km/h, gusts up to 70 km/h from 6:00, "
-                    "Thunderstorm possible 9:00–12:00 · CAPE · Hail: yes"), satz
+                    "Thunderstorm medium 9:00–12:00 · CAPE · Hail: yes"), satz
 
 
 def test_zusammenfassung_deutsch_unveraendert():
     satz = _satz(None, _stunden_mittel_hagel())
     assert satz == ("Lienz: 8–14°C, gef. 5–9°C, Wolken 60%, starker Regen 9:00–12:00, "
                     "starker Wind 40 km/h, Böen bis 70 km/h ab 6:00, "
-                    "Gewitter möglich 9:00–12:00 · CAPE · Hagel: ja"), satz
+                    "Gewitter mittel 9:00–12:00 · CAPE · Hagel: ja"), satz
     assert _satz("de", _stunden_mittel_hagel()) == satz
 
 
@@ -237,8 +237,8 @@ def test_zusammenfassung_herkunft_in_nutzersprache(lang, herkunft):
 
 
 @pytest.mark.parametrize("lang,erwartet", [
-    ("en", ("moderate rain", "storm gusts", "⚡ possible 9:00–10:00")),
-    ("de", ("mäßiger Regen", "Sturmböen", "⚡ möglich 9:00–10:00")),
+    ("en", ("moderate rain", "storm gusts", "Thunderstorm medium 9:00–10:00")),
+    ("de", ("mäßiger Regen", "Sturmböen", "Gewitter mittel 9:00–10:00")),
 ])
 def test_zusammenfassung_maessig_sturm_freundlich(lang, erwartet):
     stunden = ([_dp(h, regen=0.6 if h < 10 else 0.0, wind=70, boe=80,
@@ -259,9 +259,9 @@ def test_ortsvergleich_wrapper_ohne_lang_deutsch_mit_lang_englisch():
     )
     de = format_location_summary(ort)
     en = format_location_summary(ort, lang="en")
-    assert de.startswith("Lienz: ") and "starker Regen" in de and "⚡ möglich" in de
+    assert de.startswith("Lienz: ") and "starker Regen" in de and "Gewitter mittel" in de
     assert "Böen bis 70 km/h ab" in de and "Hagel: ja" in de
-    assert en.startswith("Lienz: ") and "heavy rain" in en and "⚡ possible" in en
+    assert en.startswith("Lienz: ") and "heavy rain" in en and "Thunderstorm medium" in en
     assert "gusts up to 70 km/h from" in en and "Hail: yes" in en
     for wort in ("Regen", "möglich", "Böen", "Hagel", "Wind "):
         assert wort not in en, (wort, en)
