@@ -47,6 +47,7 @@ from i18n import Lang
 from output.renderers.channel_layout import CHANNEL_LIMITS
 from output.renderers.day_window import display_end_time, resolve_configured_window
 import services.alert_urgency as alert_urgency
+from services.alert_channel_threshold import resolve_threshold
 from services.report_config_resolver import (
     ReportRenderOptions, resolve_report_render_options, resolve_trip_view,
 )
@@ -455,13 +456,12 @@ class TripReportFormatter:
         # gegen active_metric_ids prueft -- zwei parallele Gating-Mechanismen
         # fuer dieselbe Frage waeren der Fehler, den DEC-1 vermeidet.
         # Issue #1461 S3b-2a: SMS-Kanal-Schwelle des Trips -> niedrigste
-        # amtliche Warnstufe fuer den Kurznachrichten-Bericht (Startwert
-        # 'gering', s. SMSTripFormatter.format_sms Docstring).
-        _sms_threshold = (
-            (trip.alert_channel_thresholds or {}).get("sms") if trip else None
-        )
+        # amtliche Warnstufe fuer den Kurznachrichten-Bericht. Ohne gesetzten
+        # Wert gilt die SMS-Vorbelegung aus der einen Quelle (#2801: 'mittel').
         _sms_alert_min_level = alert_urgency.min_official_level_for_threshold(
-            _sms_threshold or "LOW"
+            resolve_threshold(
+                "sms", trip.alert_channel_thresholds if trip else None,
+            )
         )
         # Issue #868: SMS-Text immer erzeugen (max 160 Zeichen, Standard-SMS-Limit).
         _sms_kwargs = dict(

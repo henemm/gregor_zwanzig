@@ -250,6 +250,10 @@ def _base_trip(trip_id: str, *, alert_channels: dict | None = None,
     )
     trip.alert_cooldown_minutes = 0
     trip.official_alert_triggers_enabled = False
+    # #2801: ohne gesetzten Wert gilt SMS "mittel", Premium-SMS "hoch". Diese
+    # Datei prueft die Premium-Verdrahtung, nicht die Vorbelegung -- daher
+    # ausdruecklich "gering" fuer beide (ein gesetzter Wert bleibt, ADR-0131).
+    trip.alert_channel_thresholds = {"sms": "LOW", "premium_sms": "LOW"}
     if alert_channels is not None:
         trip.alert_channels = alert_channels
     return trip
@@ -271,6 +275,8 @@ def _radar_trip(trip_id: str, *, send_premium_sms: bool) -> Trip:
         send_premium_sms=send_premium_sms,
     )
     trip.alert_cooldown_minutes = 0
+    # #2801: Vorbelegung Premium "hoch" ausser Kraft -- hier zaehlt die Verdrahtung.
+    trip.alert_channel_thresholds = {"sms": "LOW", "premium_sms": "LOW"}
     return trip
 
 

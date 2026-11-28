@@ -14,7 +14,7 @@ import type { ComparePreset, Trip } from '../../../types.ts';
 import type { ConnectionProfile } from '../versand-tab/channelConnectionStatus.ts';
 import { derivePremiumSmsAlarmGate } from '../alarme-tab/premiumSmsAlarmGate.ts';
 import { reconstructTripAlertChannels } from '../alarme-tab/tripChannelReconstruction.ts';
-import { CHANNEL_THRESHOLD_KEYS } from '../alarme-tab/alertChannelState.ts';
+import { CHANNEL_THRESHOLD_KEYS, DEFAULT_CHANNEL_THRESHOLDS, resolveChannelThreshold } from '../alarme-tab/alertChannelState.ts';
 import { ABEND_STANDARD, MORGEN_STANDARD, hhmm, leseBriefingStartwerte } from '../briefingStartwerte.ts';
 import { formatDateRange } from '../../../utils/tripHero.ts';
 
@@ -233,10 +233,9 @@ export function kanalStatus(profil: ZustellungProfil | null | undefined): Record
 
 // ── Formularstand aus dem gespeicherten Abo ─────────────────────────────────
 
-/** Dringlichkeit eines Kanals; fehlend oder unbekannt = LOW (ADR-0046). */
+/** Dringlichkeit eines Kanals; fehlend oder unbekannt = Vorbelegung des Kanals (#2801, ADR-0131). */
 export function dringlichkeitVon(thresholds: Record<string, string | undefined> | null | undefined, kanal: KanalId): Dringlichkeit {
-	const w = thresholds?.[kanal];
-	return w === 'MODERATE' || w === 'HIGH' || w === 'LOW' ? w : 'LOW';
+	return resolveChannelThreshold(thresholds?.[kanal], kanal);
 }
 
 function dringlichkeiten(thresholds: Record<string, string | undefined> | null | undefined): Record<KanalId, Dringlichkeit> {
@@ -337,7 +336,7 @@ export function dringlichkeitZelle(kanal: KanalId, stand: ZustellungStand, statu
 	if (!status[kanal].verbunden || !stand.alarme[kanal]) return { art: 'strich' };
 	return {
 		art: 'segment',
-		wert: stand.dringlichkeit[kanal] ?? 'LOW',
+		wert: stand.dringlichkeit[kanal] ?? DEFAULT_CHANNEL_THRESHOLDS[kanal],
 		optionen: DRINGLICHKEITEN.map((wert) => ({ wert, text: tr(CHANNEL_THRESHOLD_KEYS[wert]) }))
 	};
 }

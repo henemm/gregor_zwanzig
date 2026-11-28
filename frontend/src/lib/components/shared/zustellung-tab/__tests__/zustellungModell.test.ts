@@ -438,13 +438,19 @@ describe('AC-17: Dringlichkeit „–“ bei Alarm aus, Segment gering · mittel
 		);
 	});
 
-	test('ac17_fehlender_oder_unbekannter_wert_gilt_als_gering', async () => {
+	// #2801 (ADR-0131): fehlend/unbekannt = Vorbelegung des Kanals (E-Mail/Telegram LOW, SMS MODERATE,
+	// Premium-SMS HIGH); ein gesetzter Wert, auch LOW, bleibt.
+	test('ac17_fehlender_oder_unbekannter_wert_gilt_als_vorbelegung_des_kanals', async () => {
 		const m = await zustellungModell();
 		assert.equal(m.dringlichkeitVon(undefined, 'email'), 'LOW');
 		assert.equal(m.dringlichkeitVon({}, 'telegram'), 'LOW');
+		assert.equal(m.dringlichkeitVon(undefined, 'sms'), 'MODERATE');
+		assert.equal(m.dringlichkeitVon({}, 'premium_sms'), 'HIGH');
+		assert.equal(m.dringlichkeitVon({ sms: 'LOW' }, 'sms'), 'LOW', 'gesetztes LOW bleibt');
 		assert.equal(m.dringlichkeitVon({ sms: 'MODERATE' }, 'sms'), 'MODERATE');
 		assert.equal(m.dringlichkeitVon({ premium_sms: 'HIGH' }, 'premium_sms'), 'HIGH');
-		assert.equal(m.dringlichkeitVon({ email: 'gering' }, 'email'), 'LOW', 'Altwert/Unbekanntes faellt auf LOW');
+		assert.equal(m.dringlichkeitVon({ email: 'gering' }, 'email'), 'LOW', 'Altwert/Unbekanntes faellt auf die Vorbelegung');
+		assert.equal(m.dringlichkeitVon({ sms: 'gering' }, 'sms'), 'MODERATE', 'Altwert/Unbekanntes faellt auf die Vorbelegung');
 	});
 
 	test('ac35_optionen_englisch_datenwert_unuebersetzt', async () => {
@@ -469,7 +475,8 @@ describe('Stand aus dem gespeicherten Abo (Trip und Orts-Briefing)', () => {
 		assert.equal(s.abendAn, true);
 		assert.deepEqual(s.briefing, { email: true, telegram: true, sms: false, premium_sms: false });
 		assert.deepEqual(s.alarme, { email: true, telegram: true, sms: true, premium_sms: false });
-		assert.deepEqual(s.dringlichkeit, { email: 'LOW', telegram: 'LOW', sms: 'MODERATE', premium_sms: 'LOW' });
+		// #2801: premium_sms fehlt im Abo -> Vorbelegung HIGH.
+		assert.deepEqual(s.dringlichkeit, { email: 'LOW', telegram: 'LOW', sms: 'MODERATE', premium_sms: 'HIGH' });
 		assert.equal(s.endDate, null, 'Trip hat keine eigene Laufzeit');
 	});
 
@@ -510,7 +517,8 @@ describe('Stand aus dem gespeicherten Abo (Trip und Orts-Briefing)', () => {
 		assert.equal(s.abendZeit, '18:00');
 		assert.deepEqual(s.briefing, { email: true, telegram: true, sms: false, premium_sms: false });
 		assert.deepEqual(s.alarme, { email: true, telegram: true, sms: false, premium_sms: false });
-		assert.deepEqual(s.dringlichkeit, { email: 'LOW', telegram: 'HIGH', sms: 'LOW', premium_sms: 'LOW' });
+		// #2801: sms und premium_sms fehlen im Abo -> Vorbelegung MODERATE bzw. HIGH.
+		assert.deepEqual(s.dringlichkeit, { email: 'LOW', telegram: 'HIGH', sms: 'MODERATE', premium_sms: 'HIGH' });
 		assert.equal(s.endDate, '2027-03-31');
 		assert.equal(m.standAusPreset(presetVoll({ end_date: undefined })).endDate, null);
 		assert.equal(m.standAusPreset(presetVoll({ end_date: '' })).endDate, null, 'leeres end_date = bis auf Weiteres');

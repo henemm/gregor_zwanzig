@@ -175,8 +175,8 @@ def test_premium_sms_suppressed_below_configured_threshold():
     """AC-8: Given ein Nutzer hat fuer Premium-SMS die Schwelle 'HIGH'
     eingestellt UND ein ausgeloester Alarm hat die Dringlichkeit 'LOW' /
     When der Alarm verarbeitet wird / Then bleibt die Premium-SMS aus --
-    UND die Gegenprobe OHNE gesetzte Schwelle (Startwert 'LOW') liefert
-    denselben Alarm regulaer zu. Nur das Paar beweist, dass die SCHWELLE
+    UND die Gegenprobe mit ausdruecklich gesetzter Schwelle 'LOW' liefert
+    denselben Alarm regulaer zu (#2801: ohne Wert gilt fuer Premium-SMS 'HIGH'). Nur das Paar beweist, dass die SCHWELLE
     entscheidet.
 
     Kontrollmessung (kein RED-Treiber, s. Moduldocstring): der reine
@@ -211,10 +211,12 @@ def test_premium_sms_suppressed_below_configured_threshold():
             f"Premium-SMS gehen, erhalten: {stub.to(LEARNED_REPLY_TO)!r}"
         )
 
-        # -- Gegenprobe: keine gesetzte Schwelle (Startwert 'LOW') -> liefert --
-        trip_low = _trip(f"trip-ac8-low-{uuid.uuid4().hex[:6]}", threshold=None)
-        assert trip_low.alert_channel_thresholds is None, (
-            "Voraussetzung der Gegenprobe: keine Schwelle gesetzt"
+        # -- Gegenprobe: ausdruecklich gesetzte Schwelle 'LOW' -> liefert --
+        # #2801 (ADR-0131): OHNE gesetzten Wert gilt fuer Premium-SMS die
+        # Vorbelegung 'HIGH'; die Gegenprobe braucht deshalb ein gesetztes 'LOW'.
+        trip_low = _trip(f"trip-ac8-low-{uuid.uuid4().hex[:6]}", threshold="LOW")
+        assert trip_low.alert_channel_thresholds == {"premium_sms": "LOW"}, (
+            "Voraussetzung der Gegenprobe: Schwelle ausdruecklich 'LOW'"
         )
         TripAlertService(
             settings=settings, user_id=uid, throttle_hours=0,
@@ -225,7 +227,7 @@ def test_premium_sms_suppressed_below_configured_threshold():
 
     hits = stub.to(LEARNED_REPLY_TO)
     assert len(hits) == 1, (
-        "AC-8 (Gegenprobe): OHNE gesetzte Schwelle (Startwert 'LOW') muss "
+        "AC-8 (Gegenprobe): mit gesetzter Schwelle 'LOW' muss "
         "eine gering-dringliche Meldung Premium-SMS erreichen -- sonst "
         "beweist der erste Teil dieses Tests nur, dass Premium-SMS ueberhaupt "
         f"nicht verdrahtet ist, nicht dass die SCHWELLE entscheidet. "

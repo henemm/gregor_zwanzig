@@ -158,8 +158,11 @@ const ALT_ANZAHL_3419 = ALT_ANZAHL - 24 + 46 + 2 - 8 + 32;
 // #3437 (28.11.; vorher cc2a1999…8571fa): 4 Zeilen Orte-Erklärtext mit Schlüssel (vergleich.hub.kopf.orte_erklaer,
 // text_en, luecke false), keine ID neu oder entfallen.
 // #3438 (28.11.; vorher a112fc13…91148f, Mockup-Hash vorher 946e69c0…7f81a0b): siehe ALT_ANZAHL_3419.
-const ALT_SHA = 'b5aa0fa5070dae88e66afb11852446d1bbe57e929537813db4d90977e9c1956a';
-const MOCKUP_HASH = 'sha256:ad2e02da1d8755e9c17356e15dfea677c76498df74c3fb17b533ab673c4ca427';
+// #2801 (Alarm-Vorbelegung je Kanal, 28.11.; vorher b5aa0fa5…c1956a, Mockup ad2e02da…4ca427): das Mockup trägt
+// den neuen Premium-Hinweis (wetter.wsw.kanal.premium_hinweis, 4 Zeilen) und die neue Fußzeile der Kanal-Tabelle
+// (zustellung.legende, 8 Zeilen); diese 12 IDs wechseln mit dem Text, Anzahl gleich, sonst byte-gleich.
+const ALT_SHA = '192bbff7cd1ee8e3bc0025cbf5adb0a578efc77725a06406915689b09a350a51';
+const MOCKUP_HASH = 'sha256:b459c4b5ea53803a86e33b0b910105ca71dfead51edff71eb341c2e173849f58';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {
 	const e = uebersicht();

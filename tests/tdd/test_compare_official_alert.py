@@ -248,9 +248,11 @@ def test_ac3_all_three_channels_dispatched_when_opted_in():
     try:
         _write_user_tier(uid, "premium")  # sms_allowed True
         save_location(_location("loc-a", "Hermagor", LAT_A, LON_A), user_id=uid)
+        # #2801 (ADR-0131): ohne Wert gilt SMS "mittel", die gelbe Warnung ist
+        # "gering" -- gemessen wird die Kanal-Zustellung, daher SMS "gering".
         _write_presets(uid, [_preset(
             "p1", ["loc-a"], ["e@x.invalid"], send_telegram=True, send_sms=True,
-        )])
+        ) | {"alert_channel_thresholds": {"sms": "LOW"}}])
         register_official_alert_source(_FakeOfficialAlertSource(LAT_A, LON_A, [_alert()]))
 
         mail_calls, sms_calls, tg_calls = [], [], []

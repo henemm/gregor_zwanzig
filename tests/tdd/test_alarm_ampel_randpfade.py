@@ -77,6 +77,9 @@ def _trip(trip_id: str, *, alarm_ab: dict[str, str] | None = None,
     )
     trip.alert_cooldown_minutes = 0
     trip.official_alert_triggers_enabled = False
+    # #2801 (ADR-0131): ohne Wert gelten SMS "mittel", Premium-SMS "hoch";
+    # hier zaehlt der Text je Kanal, nicht die Vorbelegung.
+    trip.alert_channel_thresholds = {"sms": "LOW", "premium_sms": "LOW"}
     return trip
 
 

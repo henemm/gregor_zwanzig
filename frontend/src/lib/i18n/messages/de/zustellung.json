@@ -58,7 +58,7 @@
 	"zustellung.premium.status_verfallen": "inReach · Rückadresse verfallen",
 	"zustellung.premium.verfallen": "Rückadresse verfallen",
 	"zustellung.premium.verfallen_hinweis": "Schick eine Nachricht vom Gerät, dann ist die Rückadresse wieder gültig.",
-	"zustellung.legende": "Die SMS kostet wenig und bekommt deshalb schon Alarme ab „mittel“. Die Premium-SMS geht über Satellit und meldet sich nur bei „hoch“.",
+	"zustellung.legende": "Ohne eigene Wahl melden E-Mail und Telegram ab „gering“, die SMS ab „mittel“ und die Premium-SMS über Satellit nur bei „hoch“. Deine eigene Wahl gilt jederzeit.",
 	"zustellung.stille.titel": "Stille Stunden",
 	"zustellung.stille.unterzeile": "keine Alarme, sie kommen mit dem nächsten Morgen-Briefing",
 	"zustellung.stille.von": "Stille Stunden von",

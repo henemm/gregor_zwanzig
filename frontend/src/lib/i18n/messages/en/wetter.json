@@ -215,7 +215,7 @@
 	"wetter.wsw.kanal.kurzstil_hinweis": "Telegram gets the same short text as the SMS, without buttons. Applies to briefing and alerts. The Telegram column then rests and the SMS column applies.",
 	"wetter.wsw.kanal.kurzstil_name": "Telegram in short style",
 	"wetter.wsw.kanal.premium": "Premium SMS",
-	"wetter.wsw.kanal.premium_hinweis": "Gets the same text as the SMS for now. A separate selection comes later.",
+	"wetter.wsw.kanal.premium_hinweis": "The Premium SMS gets the same content as the SMS.",
 	"wetter.wsw.laden": "Loading the table …",
 	"wetter.wsw.fehler": "The table could not be loaded.",
 	"wetter.wsw.leer": "The briefing contains no metrics. Add metrics above under “Not in the briefing”.",

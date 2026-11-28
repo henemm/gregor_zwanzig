@@ -57,7 +57,7 @@ for (const kind of HUB_KINDS) {
 			await expect(reiter.getByTestId(ZT.kanaeleKopf)).toHaveText(`Briefings über ${n} ${kn(n)} · Alarme über ${n} ${kn(n)}`);
 			await expect(reiter.getByTestId(ZT.kanaeleUnterzeile)).toHaveText('Ein Kanal ohne Verbindung ist gesperrt, bis du ihn im Konto einrichtest.');
 			await expect(reiter.getByTestId(ZT.legende)).toHaveText(
-				/^Die SMS kostet wenig und bekommt deshalb schon Alarme ab [„‚]mittel[“‘]\. Die Premium-SMS geht über Satellit und meldet sich nur bei [„‚]hoch[“‘]\.$/
+				/^Ohne eigene Wahl melden E-Mail und Telegram ab [„‚]gering[“‘], die SMS ab [„‚]mittel[“‘] und die Premium-SMS über Satellit nur bei [„‚]hoch[“‘]\. Deine eigene Wahl gilt jederzeit\.$/
 			);
 		} finally {
 			await hub.aufraeumen();

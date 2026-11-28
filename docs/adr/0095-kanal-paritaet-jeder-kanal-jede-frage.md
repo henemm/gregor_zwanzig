@@ -1,6 +1,6 @@
 # ADR-0095: Kanal-Parität: Jeder Kanal beantwortet jede Frage, und Alarme gibt es auf allen Kanälen
 
-- **Status:** Akzeptiert (rückwirkend dokumentiert 2026-10-21 — gelebter Stand seit PO-Korrektur der Empfangslage 2026-09-05, Commit `11eb37077`)
+- **Status:** Akzeptiert (rückwirkend dokumentiert 2026-10-21 — gelebter Stand seit PO-Korrektur der Empfangslage 2026-09-05, Commit `11eb37077`) — teilweise abgelöst durch [ADR-0131](0131-alarm-schwelle-vorbelegung-je-kanal.md): ohne gesetzten Wert gilt nicht mehr `LOW` für alle, sondern die Vorbelegung je Kanal (Nr. 4)
 - **Datum:** 2026-10-21
 - **Bezug:**
   - CLAUDE.md §Projekt-Überblick („Alle vier Kanäle sind gleichrangig relevant", „Premium-SMS-Reichweite")
@@ -60,7 +60,7 @@ Keines der beiden ADRs wurde fortgeschrieben (Doku-Audit 2026-10, Punkte 1c/1d).
      demselben Feld-Merge-Muster (`internal/model/trip.go:232-237`). Trip und Ortsvergleich
      teilen den Typ (`internal/model/compare_preset.go:115`).
    - `split_by_threshold()` (`src/services/alert_channel_threshold.py:20`) prüft jeden Kanal
-     des Opt-ins generisch. Ohne gesetzten Wert gilt der Startwert `LOW`.
+     des Opt-ins generisch. Ohne gesetzten Wert gilt der Startwert `LOW`. *(Abgelöst durch ADR-0131: Vorbelegung je Kanal, E-Mail/Telegram `LOW`, SMS `MODERATE`, Premium-SMS `HIGH`.)*
    - Angewendet wird sie an allen sechs Nahtstellen: Trip-Δ (`trip_alert.py:3060`), Trip-Radar
      (`:2757`), Trip-amtlich (`:3385`), Ortsvergleich-Δ (`compare_alert.py:387`),
      Ortsvergleich-amtlich (`compare_official_alert.py:326`) und Ortsvergleich-Radar

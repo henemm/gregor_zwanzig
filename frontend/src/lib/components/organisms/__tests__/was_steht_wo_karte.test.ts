@@ -351,7 +351,7 @@ describe('Blöcke und Einstellungen je Kanal (AC-29, AC-30, AC-37)', () => {
 		const s = text(t);
 		for (const w of ['Ganze Blöcke ein- und ausschalten', '3-Tages-Ausblick Tageswerte der nächsten drei Etappen, in E-Mail und Telegram. Vorbelegt: nur im Abend-Briefing.',
 			'Etappen-Kennzahlen', 'Vortag-Vergleich', 'Nacht-Stundentabelle', 'Einstellungen je Kanal', 'E-Mail: Format', 'Ausführlich (HTML)', 'Kompakt (Nur-Text)',
-			'Telegram: Kurzstil', 'Premium-SMS Bekommt vorerst denselben Text wie die SMS. Eine eigene Auswahl kommt später.'])
+			'Telegram: Kurzstil', 'Premium-SMS Die Premium-SMS bekommt denselben Inhalt wie die SMS.'])
 			assert.ok(s.includes(w), `fehlt: ${w}`);
 		assert.doesNotMatch(s, /Stunden-Tabelle/);
 		assert.equal(attr(eins(t, 'data-testid="was-steht-wo-ausblick-morning"').auf, 'aria-checked'), 'false');

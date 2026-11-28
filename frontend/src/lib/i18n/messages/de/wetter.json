@@ -215,7 +215,7 @@
 	"wetter.wsw.kanal.kurzstil_hinweis": "Telegram bekommt denselben kurzen Text wie die SMS, ohne Knöpfe. Gilt für Briefing und Alarme. Die Telegram-Spalte ruht dann, es gilt die SMS-Spalte.",
 	"wetter.wsw.kanal.kurzstil_name": "Telegram im Kurzstil",
 	"wetter.wsw.kanal.premium": "Premium-SMS",
-	"wetter.wsw.kanal.premium_hinweis": "Bekommt vorerst denselben Text wie die SMS. Eine eigene Auswahl kommt später.",
+	"wetter.wsw.kanal.premium_hinweis": "Die Premium-SMS bekommt denselben Inhalt wie die SMS.",
 	"wetter.wsw.laden": "Lade die Tabelle …",
 	"wetter.wsw.fehler": "Die Tabelle konnte nicht geladen werden.",
 	"wetter.wsw.leer": "Im Briefing steht keine Metrik. Nimm oben unter „Nicht im Briefing“ Metriken dazu.",

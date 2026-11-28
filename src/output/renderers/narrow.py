@@ -484,8 +484,12 @@ def _official_alert_bubble(
         render_official_alert_telegram,
     )
 
-    _threshold = (trip.alert_channel_thresholds or {}).get("telegram") if trip else None
-    _min_level = alert_urgency.min_official_level_for_threshold(_threshold or "LOW")
+    from services.alert_channel_threshold import resolve_threshold
+
+    # Issue #2801: Telegram-Schwelle aus der einen Quelle (Vorbelegung 'gering').
+    _min_level = alert_urgency.min_official_level_for_threshold(resolve_threshold(
+        "telegram", trip.alert_channel_thresholds if trip else None,
+    ))
 
     tagged = [
         (alert, [str(sd.segment.segment_id)])

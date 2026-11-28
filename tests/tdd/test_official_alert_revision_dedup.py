@@ -509,7 +509,10 @@ def test_f004_sinkende_stufe_bei_gesunder_meldender_quelle_ergibt_entwarnung_und
     mit = aufzeichner_installieren(monkeypatch)
     with feste_uhr():  # Aufbau UND Laeufe unter fester Uhr, nicht unter der Wanduhr
         t0 = basis_jetzt()
-        sz = Szenario("trip", monkeypatch, mit, t0, level=3, bis_stunden=7)
+        # #2801 (ADR-0131): ohne Wert meldet die Premium-SMS erst bei "hoch";
+        # Stufe 3 ist "mittel". Gemessen wird die Entwarnung, nicht die Vorbelegung.
+        sz = Szenario("trip", monkeypatch, mit, t0, level=3, bis_stunden=7,
+                      schwellen={"sms": "LOW", "premium_sms": "LOW"})
         with quellen(sz.x):
             lauf_erstwarnung(sz)
             sz.x.alerts = [sz.warnung(2, von=sz.von + timedelta(hours=4),

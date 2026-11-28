@@ -85,7 +85,7 @@ Schnitt 2a von Phase 2 (Epic #3047): kanonische Datenform (ADR-0121) und ein rei
 - **AC-4:** Given Zeilen mit dem Format als `format`, als `format_mode` oder als `use_friendly_format` (so schreibt es PR #3042) / When der Resolver sie liest / Then ergibt jede Schreibweise dieselbe Darstellung (Roh oder Einfach), fehlt die Angabe, gilt der heutige Flächen-Standard (Trip Katalog, Orte Roh), und die gespeicherten Daten bleiben unverändert.
   - Test: Drei Schreibweisen derselben Liste liefern identische Zeilen; Eingabe-Dict vor und nach dem Aufruf byte-gleich; Orte-Zeile ohne Format bleibt Roh.
 
-- **AC-5:** Given eine Konfiguration mit eigener `premium_sms`-Liste bzw. ohne diesen Schlüssel / When der Resolver aufgelöst wird / Then enthält `premium_sms` die eigene Liste, fehlt der Schlüssel, ist sie gleich der SMS-Liste, und der versendete Premium-SMS-Text bleibt wie bisher der SMS-Text.
+- **AC-5:** Given eine Konfiguration mit eigener `premium_sms`-Liste bzw. ohne diesen Schlüssel / When der Resolver aufgelöst wird / Then enthält `premium_sms` die eigene Liste, fehlt der Schlüssel, ist sie gleich der SMS-Liste, und der versendete Premium-SMS-Text bleibt wie bisher der SMS-Text. *(2026-11-28, ADR-0131: endgültig derselbe Inhalt wie die SMS, eine eigene Premium-Auswahl gibt es nicht.)*
   - Test: Resolver-Aufruf beider Varianten; bestehender Premium-SMS-Test (Orte und Trip) bleibt unverändert grün.
 
 - **AC-6:** Given ein Trip und ein Orts-Vergleich lösen amtliche Warnungen aus / When der Resolver aufgelöst wird / Then steht keine Warnung als speicherbare Zeile in einer Kanal-Liste, und eine ausdrücklich leere Liste bleibt leer, auch bei gesetzter Grundauswahl.

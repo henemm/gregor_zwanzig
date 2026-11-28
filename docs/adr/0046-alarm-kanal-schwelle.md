@@ -1,6 +1,6 @@
 # ADR-0046: Kanal-Schwelle regelt AUF WELCHEM WEG eine Meldung ankommt — nicht OB (ergänzt ADR-0043)
 
-- **Status:** Teilweise abgelöst durch [ADR-0095](0095-kanal-paritaet-jeder-kanal-jede-frage.md) — abgelöst ist nur die Kanalliste „E-Mail · Telegram · SMS“ (Zeile 46): die Schwelle gilt seit #1701 S2b für alle vier Kanäle inkl. Premium-SMS; das Prinzip „WEG, nicht OB“ und der #638-Schutz gelten unverändert (PO-„go" 2026-08-05)
+- **Status:** Teilweise abgelöst durch [ADR-0095](0095-kanal-paritaet-jeder-kanal-jede-frage.md) — abgelöst ist nur die Kanalliste „E-Mail · Telegram · SMS“ (Zeile 46): die Schwelle gilt seit #1701 S2b für alle vier Kanäle inkl. Premium-SMS; das Prinzip „WEG, nicht OB“ und der #638-Schutz gelten unverändert (PO-„go" 2026-08-05); teilweise abgelöst durch [ADR-0131](0131-alarm-schwelle-vorbelegung-je-kanal.md) — der Startwert `LOW` für alle Kanäle ist abgelöst durch die Vorbelegung je Kanal (E-Mail/Telegram `LOW`, SMS `MODERATE`, Premium-SMS `HIGH`; #2801)
 - **Datum:** 2026-08-05
 - **Bezug:** Issue #1461 (Epic #1458 Scheibe S3, Teilscheibe S3b-2a), Spec
   `docs/specs/modules/feat_1461_s3b2a_kanal_schwelle.md`; **ergänzt** ADR-0043
@@ -44,7 +44,7 @@ Regler auf einer anderen Entscheidungsebene:**
 | Kanal-Schwelle (dieses ADR) | **AUF WELCHEM WEG** eine bereits ausgelöste Meldung ankommt | Kanal-Auflösung je Alarm-Typ, VOR dem Versand |
 
 Konkret: je Alarm-Kanal (E-Mail · Telegram · SMS) stellt der Nutzer eine
-Dringlichkeits-Schwelle (`LOW`/`MODERATE`/`HIGH`, Startwert `LOW`) ein. Eine
+Dringlichkeits-Schwelle (`LOW`/`MODERATE`/`HIGH`, Startwert `LOW`; *abgelöst durch ADR-0131: Vorbelegung je Kanal*) ein. Eine
 ausgelöste Meldung erreicht einen Kanal nur, wenn ihre Dringlichkeit die dort
 eingestellte Schwelle erreicht oder übertrifft
 (`services.alert_channel_threshold.split_by_threshold()`, Rangvergleich über

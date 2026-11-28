@@ -88,7 +88,7 @@ Zusätzlich zwei Verhaltensänderungen: der Compare-Regenradar-Alarm ging bisher
 nur per E-Mail raus (unabhängig vom Telegram-/SMS-Opt-in) — jetzt über denselben Kanal-Resolver
 wie die anderen beiden Compare-Alarmwege. Und der `!`-Warn-Block-Filter des Compare-SMS-/
 Telegram-**Berichts** (nicht der Alarm-Versand) geht von der festen `MIN_SMS_LEVEL`-Schwelle auf
-die Startschwelle „gering" über (s. Abschnitt „alert_channel_thresholds" unten). Details ADR-0046,
+die Startschwelle über (Stand 2026-08-05: „gering“ für alle Kanäle; seit 2026-11-28 Vorbelegung je Kanal, SMS „mittel“, ADR-0131; s. Abschnitt „alert_channel_thresholds" unten). Details ADR-0046,
 Spec `docs/specs/modules/feat_1461_s3b2b_compare_kanal_schwelle.md`);
 2026-08-06 (Issue #923, `fix-923-sms-fidelity-backend` — neuer zustandsloser
 Endpoint `POST /api/_validator/sms-fidelity-preview` (Python-Core `api/routers/validator.py`)
@@ -101,7 +101,7 @@ TypeScript-Simulation (`SMS_TOK`/`smsRender`) ab, analog zur bereits umgesetzten
 Alert-Vorschau (#918, ADR-0011). Spec: `docs/specs/modules/fix_923_sms_fidelity_backend.md`); 2026-08-05 (Issue #1461
 Scheibe S3b-2a, `feat-1461-s3b2-kanal-schwelle` — neues
 additives Geschwisterfeld `alert_channel_thresholds` auf `Trip` (`AlertChannelThresholdsConfig`,
-je Kanal `"LOW"`/`"MODERATE"`/`"HIGH"`, Startwert `"LOW"`): stellt je Alarm-Kanal (E-Mail ·
+je Kanal `"LOW"`/`"MODERATE"`/`"HIGH"`, Startwert damals `"LOW"` für alle, heute Vorbelegung je Kanal, ADR-0131): stellt je Alarm-Kanal (E-Mail ·
 Telegram · SMS) ein, ab welcher Dringlichkeit eine ausgelöste Alarm-Meldung diesen Kanal
 erreicht. Bewusst **neben** `alert_channels`, nicht darin — Top-Level-`nil`-Erbe **und**
 Feld-Level-Merge innerhalb des Unterobjekts (fehlender Kanal-Key im PUT-Body bewahrt dessen
@@ -1143,7 +1143,7 @@ Additives Geschwisterfeld zu `alert_channels`/`send_telegram`+`send_sms`+`send_p
 
 | Feld | Typ | Semantik |
 |------|-----|----------|
-| `alert_channel_thresholds` | Objekt \| `null`/nicht gesetzt | **`null`/fehlend:** kein Kanal hat eine Schwelle gesetzt — Startwert `"LOW"` je Kanal (Python-Vorgabewert, nicht persistiert). **Gesetzt:** je Kanal maßgeblich für den Versand-Filter |
+| `alert_channel_thresholds` | Objekt \| `null`/nicht gesetzt | **`null`/fehlend:** kein Kanal hat eine Schwelle gesetzt — Vorbelegung je Kanal: `email`/`telegram` `"LOW"`, `sms` `"MODERATE"`, `premium_sms` `"HIGH"` (ADR-0131, #2801; Laufzeit-Vorgabewert in Python `default_threshold()` und Frontend `DEFAULT_CHANNEL_THRESHOLDS`, nicht persistiert, Go setzt keinen Default). Gilt genauso für einen einzelnen fehlenden oder leeren Kanal-Key. **Gesetzt:** je Kanal maßgeblich für den Versand-Filter |
 | `alert_channel_thresholds.email`/`.telegram`/`.sms`/`.premium_sms` | `"LOW"`\|`"MODERATE"`\|`"HIGH"` \| fehlend | fehlender Kanal-Key im PUT-Body → **Feld-Level-Merge** bewahrt den Bestandswert (AC-7 Trip / AC-10 Compare); ein GANZ fehlendes `alert_channel_thresholds` im Body bewahrt das ganze Unterobjekt (Top-Level-`nil`-Erbe, AC-6 Trip / AC-9 Compare) |
 
 Wirkung: eine ausgelöste Meldung erreicht einen eingeschalteten Kanal nur, wenn ihre Dringlichkeit (`services.alert_urgency`, `LOW`/`MODERATE`/`HIGH`) die dort eingestellte Schwelle erreicht oder übertrifft (`services.alert_channel_threshold.split_by_threshold()`). Das an das Alarm-Protokoll übergebene Kanal-Set bleibt dabei das **rohe**, unveränderte Opt-in — nur der tatsächliche Versand wird gefiltert (ADR-0046). Vollständig unterdrückte Meldungen erscheinen im nächsten Briefing im Block „ZURÜCKGEHALTEN — so hast du es eingestellt" mit dem Grund „unter deiner Schwelle" (`below_channel_threshold`, S3b-1-Sichtbarkeit). Die frühere Formulierung „als nicht zugestellt" steht seit #1750 nicht mehr in der Mail — sie behauptete für die planmäßigen Sperrgründe einen Fehler.

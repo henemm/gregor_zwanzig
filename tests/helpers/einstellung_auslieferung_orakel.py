@@ -980,6 +980,9 @@ def compare_vorbedingung_pruefen(mitschrift, kanaele: tuple[str, ...]) -> None:
 # --- Alarm-Kanaele des Ortsvergleichs (Block D) -----------------------------
 
 _STUFE_RANG = {"LOW": 0, "MODERATE": 1, "HIGH": 2}
+#: #2801 (ADR-0131): Vorbelegung je Kanal, wenn kein Wert gesetzt ist -- von
+#: Hand aus der Spec nachgebildet, NICHT aus der Produktquelle importiert.
+_VORBELEGUNG = {"email": "LOW", "telegram": "LOW", "sms": "MODERATE", "premium_sms": "HIGH"}
 
 
 def compare_alarm_kanaele(
@@ -996,7 +999,8 @@ def compare_alarm_kanaele(
        entfaellt und wird IGNORIERT -- auch beim Abweichungsalarm gilt allein die
        Basis aus Schritt 1; ``metric_id`` bleibt nur der Signatur wegen.
     3. Tarif: SMS nur standard/premium, Premium-SMS nur premium.
-    4. Schwelle je Kanal (Startwert LOW): der Kanal wird nur bedient, wenn die
+    4. Schwelle je Kanal (ohne gesetzten Wert die Vorbelegung #2801: E-Mail und
+       Telegram LOW, SMS MODERATE, Premium-SMS HIGH): der Kanal wird nur bedient, wenn die
        Dringlichkeit sie erreicht -- die Schwelle regelt das WIE, nie das OB des
        Eintrags im Protokoll.
     """
@@ -1013,7 +1017,7 @@ def compare_alarm_kanaele(
     zugestellt: set[str] = set()
     unterdrueckt: set[str] = set()
     for kanal in basis:
-        schwelle = schwellen.get(kanal) or "LOW"
+        schwelle = schwellen.get(kanal) or _VORBELEGUNG[kanal]
         if _STUFE_RANG[dringlichkeit] >= _STUFE_RANG.get(schwelle, 0):
             zugestellt.add(kanal)
         else:
