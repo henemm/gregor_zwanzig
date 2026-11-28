@@ -25,9 +25,10 @@ import logging
 import re
 import struct
 import zipfile
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Callable, Optional
+from zoneinfo import ZoneInfo
 
 import httpx
 
@@ -63,6 +64,7 @@ _ZONES_PATH = Path(__file__).resolve().parent / "data" / "dpc_zones.json"
 _FILENAME_RE = re.compile(r"(\d{8})_(\d{4})_(today|tomorrow)\.dbf$", re.IGNORECASE)
 _LEVEL_RE = re.compile(r"ALLERTA\s+(GIALLA|ARANCIONE|ROSSA)", re.IGNORECASE)
 _LEVEL_MAP = {"GIALLA": 2, "ARANCIONE": 3, "ROSSA": 4}
+_ROME = ZoneInfo("Europe/Rome")
 
 
 def _load_zones(path: Path = _ZONES_PATH) -> list[dict]:
@@ -169,16 +171,18 @@ def _get_cached_bulletin() -> Optional[dict]:
     )
 
 
-def _select_day_records(bulletin: dict) -> Optional[dict[str, dict]]:
+def _select_day_records(bulletin: dict) -> tuple[Optional[dict[str, dict]], Optional[date]]:
     """AC-3: Bezugstag aus dem Dateinamen-Zeitstempel ableiten, NIE blind
-    'today' als 'heute' interpretieren."""
-    now_date = _NOW_FN().date()
+    'today' als 'heute' interpretieren. "Heute" ist der italienische
+    Kalendertag (Europe/Rome), nicht das UTC-Datum (#2221). Liefert
+    (Datensaetze, Bezugstag)."""
+    now_date = _NOW_FN().astimezone(_ROME).date()
     bulletin_date = bulletin["bulletin_date"]
     if now_date == bulletin_date:
-        return bulletin["by_day"].get("today")
+        return bulletin["by_day"].get("today"), now_date
     if now_date == bulletin_date + timedelta(days=1):
-        return bulletin["by_day"].get("tomorrow")
-    return None  # Bulletin ist aelter als "gestern" -- kein gueltiger Bezugstag mehr
+        return bulletin["by_day"].get("tomorrow"), now_date
+    return None, None  # Bulletin ist aelter als "gestern" -- kein gueltiger Bezugstag mehr
 
 
 def _level_from_text(text: str) -> Optional[int]:
@@ -191,17 +195,21 @@ def _level_from_text(text: str) -> Optional[int]:
     return _LEVEL_MAP.get(match.group(1).upper())
 
 
-def _alerts_for_zone(row: dict) -> list[OfficialAlert]:
+def _alerts_for_zone(row: dict, ref_day: date) -> list[OfficialAlert]:
     """Temporali -> thunderstorm; Idrogeo UND Idraulico -> flood (hoehere der
-    beiden Stufen), Implementation Details Punkt 6/7."""
+    beiden Stufen), Implementation Details Punkt 6/7. Fenster = ganzer
+    Bezugstag Europe/Rome, gespeichert als aware UTC (#2221, Hausnorm #1345)."""
     alerts: list[OfficialAlert] = []
     zone_name = row.get("Nome_zona") or row.get("Zona_all", "")
+    valid_from = datetime.combine(ref_day, time(0, 0, 0), _ROME).astimezone(timezone.utc)
+    valid_to = datetime.combine(ref_day, time(23, 59, 59), _ROME).astimezone(timezone.utc)
 
     thunder_level = _level_from_text(row.get("Temporali", ""))
     if thunder_level:
         alerts.append(OfficialAlert(
             source="dpc", hazard="thunderstorm", level=thunder_level,
             label="Gewitter", region_label=zone_name,
+            valid_from=valid_from, valid_to=valid_to,
         ))
 
     flood_levels = [
@@ -214,6 +222,7 @@ def _alerts_for_zone(row: dict) -> list[OfficialAlert]:
         alerts.append(OfficialAlert(
             source="dpc", hazard="flood", level=max(flood_levels),
             label="Hochwasser/Erdrutsch", region_label=zone_name,
+            valid_from=valid_from, valid_to=valid_to,
         ))
     return alerts
 
@@ -242,7 +251,7 @@ class DpcSource:
         bulletin = _get_cached_bulletin()
         if bulletin is None:
             return []
-        day_records = _select_day_records(bulletin)
+        day_records, ref_day = _select_day_records(bulletin)
         if not day_records:
             return []
         row = day_records.get(zone_code)
@@ -263,4 +272,4 @@ class DpcSource:
             warn_egress.mark_fetch_incomplete()
             warn_egress.log_zone_drift("dpc", zone_code, True, "geometry_only")
             return []
-        return _alerts_for_zone(row)
+        return _alerts_for_zone(row, ref_day)
