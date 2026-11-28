@@ -414,6 +414,12 @@ const LESEN: BedienSchritt = { aktion: 'lesen' };
 const VORLAGE_PICKER = 'wetter-vorlage-picker';
 const ALS_EIGENE = 'wetter-vorlage-als-eigene';
 const SPEICHERN_ABBRECHEN = 'save-preset-cancel';
+const KEBAB = 'subscription-kebab';
+/** #3435: Rückfrage-Zustand → Kebab-Eintrag, der sie öffnet. */
+const KEBAB_RUECKFRAGE: Record<string, string | undefined> = {
+	'kebab-bestaetigung-archivieren': 'archive',
+	'kebab-bestaetigung-loeschen': 'delete'
+};
 
 /** Reine Funktion: wie der Abschnitt hergestellt wird. Script-Abschnitt ohne Plan ⇒ nie still, immer mit Grund. */
 export function bedienPlan(abschnitt: string, lage: BedienLage): BedienPlan {
@@ -460,6 +466,24 @@ export function bedienPlan(abschnitt: string, lage: BedienLage): BedienPlan {
 	// geklickt, also geht nichts raus (Schreib-Tripwire bleibt scharf).
 	if (abschnitt === 'test-menue') {
 		return { art: 'plan', schritte: [{ aktion: 'klick', testid: 'subscription-hub-send' }, LESEN, { aktion: 'schliessen', taste: 'Escape' }] };
+	}
+	// #3435: Kebab-Menü und seine Rückfragen. Kebab-Knopf öffnet, Archivieren/Löschen öffnen die Rückfrage,
+	// „Abbrechen“ führt ins Menü zurück, Escape schließt es. `kebab-rueckfrage-bestaetigen` wird nie geklickt.
+	if (abschnitt === 'kebab-menue') {
+		return { art: 'plan', schritte: [{ aktion: 'klick', testid: KEBAB }, LESEN, { aktion: 'schliessen', taste: 'Escape' }] };
+	}
+	const rueckfrage = KEBAB_RUECKFRAGE[abschnitt];
+	if (rueckfrage) {
+		return {
+			art: 'plan',
+			schritte: [
+				{ aktion: 'klick', testid: KEBAB },
+				{ aktion: 'klick', testid: `subscription-action-${rueckfrage}` },
+				LESEN,
+				{ aktion: 'schliessen', testid: 'kebab-rueckfrage-abbrechen' },
+				{ aktion: 'schliessen', taste: 'Escape' }
+			]
+		};
 	}
 	return { art: 'nicht_herstellbar', grund: `Script-Zustand „${abschnitt}“: kein Bedienplan im Abgleich hinterlegt` };
 }

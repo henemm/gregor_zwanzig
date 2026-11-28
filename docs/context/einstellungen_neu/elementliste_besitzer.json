@@ -552,7 +552,7 @@
 			"ctx": "trip",
 			"reiter": "wetter",
 			"abschnitt": "test-menue",
-			"grund": "Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"grund": "Menü „Test schicken ▾“ wird seit #3440 bedient; offene Restlücken (EN-Text fehlt, Mockup-Ziele) gehören zum Bau von „Test schicken“ (S5)",
 			"verweis": "#2797"
 		},
 		{
@@ -672,7 +672,7 @@
 			"ctx": "orte",
 			"reiter": "wetter",
 			"abschnitt": "test-menue",
-			"grund": "Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"grund": "Menü „Test schicken ▾“ wird seit #3440 bedient; offene Restlücken (EN-Text fehlt, Mockup-Ziele) gehören zum Bau von „Test schicken“ (S5)",
 			"verweis": "#2797"
 		},
 		{
@@ -2067,6 +2067,30 @@
 			"ctx": "orte",
 			"text": "Locations · Westfalen",
 			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Eyebrow des Hub-Kopfs mit der Region des Prüf-Vergleichs (aktionen.kopf.eyebrow_orte); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.kebab-menue.14ed10da31",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: „Aktivieren“ steht im Kebab-Menü nur beim Entwurf (#3443); der Prüf-Vergleich ist nicht im Entwurf, sein Menü zeigt Fortsetzen/Archivieren/Löschen; Bedienplan #3435",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.laedt.-.kebab-menue.44296f98c4",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: „Aktivieren“ steht im Kebab-Menü nur beim Entwurf (#3443); der Prüf-Vergleich ist nicht im Entwurf, sein Menü zeigt Fortsetzen/Archivieren/Löschen; Bedienplan #3435",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.fehler.-.kebab-menue.c91bcca8cf",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: „Aktivieren“ steht im Kebab-Menü nur beim Entwurf (#3443); der Prüf-Vergleich ist nicht im Entwurf, sein Menü zeigt Fortsetzen/Archivieren/Löschen; Bedienplan #3435",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.kebab-menue.dd68bfe160",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: „Aktivieren“ steht im Kebab-Menü nur beim Entwurf (#3443); der Prüf-Vergleich ist nicht im Entwurf, sein Menü zeigt Fortsetzen/Archivieren/Löschen; Bedienplan #3435",
 			"verweis": "#2913"
 		}
 	],
