@@ -11,7 +11,7 @@ Paket aus zwei kleinen Härtungen der Mockup-Abnahme (Epic #2913), beide aus off
 | `frontend/e2e/elementliste_abgleich_logik.ts` | `gegenMuster` (Z. ~548), `erwartungGegenrichtung` (~559), `findeZusaetzliche` (~687), `werteGegenrichtungAus` (~717), `leseBesitzer`/`pruefeBesitzer`/`ladeRegeln` (~745–815), `kontoPfade`/`ladeKontoTexte` (~820) |
 | `frontend/e2e/elementliste-abgleich.staging.spec.ts` | Staging-Lauf; ruft `ladeKontoTexte` (Z. 345) und `werteGegenrichtungAus` (Z. 429) — Verdrahtung neuer Metrik-Namen |
 | `docs/context/einstellungen_neu/elementliste.json` | 78 Einträge mit `{metrik}`: 36× `+ {metrik}` (chip, `wetter.nicht_im_briefing.hinzufuegen`), 42× `{metrik} aus dem Briefing nehmen` (knopf, `wetter.zeile.entfernen`); EN `Remove {metrik} from the briefing` |
-| `docs/context/einstellungen_neu/elementliste_besitzer.json` | `besitzer` (Verweise: #2968 446, #2795 314, #2967 247, #3111 156, #2913 82, #3022 62, #2796 38, #3122 10, #2797 8, #2913-e 2) + `ausnahmen` |
+| `docs/context/einstellungen_neu/elementliste_besitzer.json` | `besitzer` (Verweise: #2968 446, #2795 314, #2967 247, #3111 156, #2913 82, #3022 62 (Stand 2026-11-28 durch #3022 auf 0 entfernt), #2796 38, #3122 10, #2797 8, #2913-e 2) + `ausnahmen` |
 | `tests/test_2913_c2_besitzerliste.py`, `tests/test_3007_besitzerliste.py` | bestehende Python-Kern-Tests (doc-compliance) über die Besitzerliste — Muster für neuen Kern-Test |
 | `frontend/src/lib/__tests__/elementliste_abgleich_*.test.ts` | bestehende `node --test`-Kern-Tests der Abgleich-Logik (ganzseite, verdrahtung, bedienplan, fixloop2) |
 | `frontend/src/lib/components/shared/hub-kopf/HubKopf.svelte` Z. 100–110 | `.hub-actions`: `SubscriptionKebab` (testid `subscription-kebab`) vor `Btn` (testid `subscription-hub-send`) |

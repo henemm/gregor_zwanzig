@@ -53,7 +53,7 @@ Layout) — es gibt kein Wettlauf-Risiko zwischen zwei Hydrationen. `sendEmail`
 ist laut Kommentar (`compareHubWizardBridge.ts:296-298`) IMMER `true`
 (`ComparePreset` kennt kein `send_email`-Feld — vorbestehende, dokumentierte
 Luecke, nicht Teil dieser Scheibe). Render-Gate im Markup ist ein einzelnes
-`{#if versandHydrated}` (:1138) — unproblematisch.
+`{#if versandHydrated}` (:1138) — unproblematisch (Stand 2026-11-28: Render-Gate durch #3022 entfernt).
 
 ### 1.3 `compareHubWizardBridge.ts` — die Bruchstelle liegt in `buildHubPutPayload`
 
