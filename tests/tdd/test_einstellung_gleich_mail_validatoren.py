@@ -1635,11 +1635,11 @@ def _abschnitte_tauschen(h: str) -> str:
 @pytest.mark.parametrize("eyebrow", ["unveraendert", "uebersetzt"])
 def test_r7_orte_ortsabschnitte_html_vertauscht_scheitert(monkeypatch, tmp_path, lang, eyebrow):
     """Nur die HTML-Ortsabschnitte vertauscht (Uebersicht und Klartext richtig);
-    ``uebersetzt`` simuliert die Uebersetzung des Etiketts "ORT" (#3074)."""
+    ``uebersetzt`` simuliert die Uebersetzung des Etiketts "ORT" bzw. "LOCATION" (#3074, #2923)."""
     preset = _orte_preset()
     eml, konfig = _orte_eml(monkeypatch, preset, lang=lang), _orte_konfig(tmp_path, preset, "ab")
     if eyebrow == "uebersetzt":
-        eml = _aendere(eml, html=lambda h: h.replace(">ORT</span>", ">PLACE</span>"))
+        eml = _aendere(eml, html=lambda h: re.sub(r">(?:ORT|LOCATION)</span>", ">PLACE</span>", h))
     code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig)
     assert code == 0, aus
     code, aus = _lauf(tmp_path, ORTE, _aendere(eml, html=_abschnitte_tauschen), "--konfig", konfig)
