@@ -28,7 +28,6 @@ import zipfile
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Callable, Optional
-from zoneinfo import ZoneInfo
 
 import httpx
 
@@ -39,6 +38,7 @@ from services.radar_service import (
     _ITALY_RADAR_LAT_MAX, _ITALY_RADAR_LAT_MIN,
     _ITALY_RADAR_LON_MAX, _ITALY_RADAR_LON_MIN,
 )
+from utils.timezone import DPC_BULLETIN_TZ, local_dt, to_utc
 
 logger = logging.getLogger("dpc")
 
@@ -64,7 +64,6 @@ _ZONES_PATH = Path(__file__).resolve().parent / "data" / "dpc_zones.json"
 _FILENAME_RE = re.compile(r"(\d{8})_(\d{4})_(today|tomorrow)\.dbf$", re.IGNORECASE)
 _LEVEL_RE = re.compile(r"ALLERTA\s+(GIALLA|ARANCIONE|ROSSA)", re.IGNORECASE)
 _LEVEL_MAP = {"GIALLA": 2, "ARANCIONE": 3, "ROSSA": 4}
-_ROME = ZoneInfo("Europe/Rome")
 
 
 def _load_zones(path: Path = _ZONES_PATH) -> list[dict]:
@@ -176,7 +175,7 @@ def _select_day_records(bulletin: dict) -> tuple[Optional[dict[str, dict]], Opti
     'today' als 'heute' interpretieren. "Heute" ist der italienische
     Kalendertag (Europe/Rome), nicht das UTC-Datum (#2221). Liefert
     (Datensaetze, Bezugstag)."""
-    now_date = _NOW_FN().astimezone(_ROME).date()
+    now_date = local_dt(_NOW_FN(), DPC_BULLETIN_TZ).date()
     bulletin_date = bulletin["bulletin_date"]
     if now_date == bulletin_date:
         return bulletin["by_day"].get("today"), now_date
@@ -201,8 +200,8 @@ def _alerts_for_zone(row: dict, ref_day: date) -> list[OfficialAlert]:
     Bezugstag Europe/Rome, gespeichert als aware UTC (#2221, Hausnorm #1345)."""
     alerts: list[OfficialAlert] = []
     zone_name = row.get("Nome_zona") or row.get("Zona_all", "")
-    valid_from = datetime.combine(ref_day, time(0, 0, 0), _ROME).astimezone(timezone.utc)
-    valid_to = datetime.combine(ref_day, time(23, 59, 59), _ROME).astimezone(timezone.utc)
+    valid_from = to_utc(datetime.combine(ref_day, time(0, 0, 0), DPC_BULLETIN_TZ))
+    valid_to = to_utc(datetime.combine(ref_day, time(23, 59, 59), DPC_BULLETIN_TZ))
 
     thunder_level = _level_from_text(row.get("Temporali", ""))
     if thunder_level:

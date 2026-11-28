@@ -22,6 +22,10 @@ UTC = ZoneInfo("UTC")
 # Eigenschaft des Anbieters, keine Ausgabezone; #2327).
 SEVEN_IO_JOURNAL_TZ = ZoneInfo("Europe/Berlin")
 
+# DPC-Bulletins gelten fuer den italienischen Kalendertag (Eingangs-Eigenschaft
+# der Quelle, keine Ausgabezone; #2221).
+DPC_BULLETIN_TZ = ZoneInfo("Europe/Rome")
+
 _tf_instance = None
 _tf_lock = Lock()
 
