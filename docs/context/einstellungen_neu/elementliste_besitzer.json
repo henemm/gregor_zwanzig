@@ -123,6 +123,18 @@
 		},
 		{
 			"art": "element",
+			"id": "orte.zustellung.laedt.-.briefing-zeiten.84ea43d19c",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.briefing-zeiten.b169a32cfd",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
 			"id": "orte.zustellung.normal.-.stille-stunden.c59d70c661",
 			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
 			"verweis": "#2795"

@@ -188,9 +188,10 @@ def test_ac12_eintraege_anderer_scheiben_unveraendert(daten):
     # ordnet Metrik-Zeilen (Einheit + wetter.hinweis.*, Grünbereich ohne Einheit) zu, EN-Abgleich prüft Metrik-Chips
     # einzeln über die Namenspaare; Elementliste neu erzeugt: #3241 61 → 0.
     # #3022 (28.11., Spec fix_3022_zustellung_laedt.md AC-5): Reiter Zustellung/Wetter im Orts-Vergleich mounten
-    # ohne Hydrations-Gate (kein Sperr-Kopf mehr), alle 62 Ladezustand-Einträge abgeräumt: #3022 62 → 0.
+    # ohne Hydrations-Gate (kein Sperr-Kopf mehr), alle 62 Ladezustand-Einträge abgeräumt: #3022 62 → 0. Die zwei EN-Lücken „Uhrzeit Morgen/Abend“ im
+    # Orte-Ladezustand bekommen den Element-Besitzer ihrer Geschwister aus den übrigen Zuständen (#2795, a11y-Label): #2795 36 → 38.
     soll = {
-        "#2967": 0, "#2966": 0, "#2913-d": 0, "#2795": 36, "#2797": 10, "#2968": 0, "#3022": 0,
+        "#2967": 0, "#2966": 0, "#2913-d": 0, "#2795": 38, "#2797": 10, "#2968": 0, "#3022": 0,
         "#3111": 0, "#3194": 0, "#3241": 0, "#3009": 11, "#3151": 2, "#3122": 12, "#3202": 0, "#3203": 0, "#3204": 0,
         "#3205": 0, "#3145": 0, "#3258": 4,
     }
