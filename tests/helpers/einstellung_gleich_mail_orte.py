@@ -490,7 +490,13 @@ def katalogtext(schluessel: str, lang: str = "de") -> str:
 # ---------------------------------------------------------------------------
 
 _TABLE_RE = re.compile(r"<table[^>]*>(.*?)</table>", re.DOTALL)
-_ORT_RE = re.compile(r">ORT</span>\s*<span[^>]*>([^<]*)</span>")
+
+
+def _ort_re(lang: str = "de") -> "re.Pattern[str]":
+    """Orts-Kopf im Stundenblock: Etikett aus dem Katalog
+    (``vergleich.stunden.ort_eyebrow``, #2923) -- "ORT" bzw. "LOCATION"."""
+    etikett = re.escape(katalogtext("vergleich.stunden.ort_eyebrow", lang))
+    return re.compile(rf">{etikett}</span>\s*<span[^>]*>([^<]*)</span>")
 _AUSBLICK_ORT_RE = re.compile(r">AUSBLICK</span>\s*<span[^>]*>([^<]*?) · ")
 
 
@@ -540,16 +546,16 @@ def html_vergleichszellen(html: str) -> dict[str, list[tuple[str, str]]]:
     raise AssertionError("Vergleichstabelle (Kopf 'Metrik') nicht im HTML gefunden")
 
 
-def _ort_marken(html: str) -> list[tuple[int, str]]:
-    marken = [(m.start(), m.group(1).strip()) for m in _ORT_RE.finditer(html)]
+def _ort_marken(html: str, lang: str = "de") -> list[tuple[int, str]]:
+    marken = [(m.start(), m.group(1).strip()) for m in _ort_re(lang).finditer(html)]
     marken += [(m.start(), m.group(1).strip()) for m in _AUSBLICK_ORT_RE.finditer(html)]
     return sorted(marken)
 
 
-def _tabellen_je_ort(html: str, erste_zelle: str) -> dict[str, list[list[str]]]:
+def _tabellen_je_ort(html: str, erste_zelle: str, lang: str = "de") -> dict[str, list[list[str]]]:
     """{Ort: Zeilen} der Tabellen mit Kopf ``erste_zelle`` ("Zeit"/"Tag"),
     zugeordnet ueber die letzte Orts-Marke davor; Reihenfolge = Mail-Folge."""
-    marken = _ort_marken(html)
+    marken = _ort_marken(html, lang)
     aus: dict[str, list[list[str]]] = {}
     for pos, zeilen in _tabellen(html):
         if not (zeilen and zeilen[0] and zeilen[0][0] == erste_zelle):
@@ -564,14 +570,14 @@ def _tabellen_je_ort(html: str, erste_zelle: str) -> dict[str, list[list[str]]]:
 def html_stundenverlauf(html: str, lang: str = "de") -> dict[str, list[str]]:
     """{Ort: Spaltenkoepfe ohne "Zeit"/"Time"} in Mail-Folge der Orte."""
     zeit = katalogtext("vergleich.stunden.zeit", lang)
-    return {o: z[0][1:] for o, z in _tabellen_je_ort(html, zeit).items()}
+    return {o: z[0][1:] for o, z in _tabellen_je_ort(html, zeit, lang).items()}
 
 
 def html_ausblick(html: str, lang: str = "de") -> dict[str, list[tuple[str, str]]]:
     """{Ort: [(Spaltenkopf, Zelle der ersten Tageszeile)]} in Mail-Folge."""
     aus = {}
     tag = katalogtext("mail.ausblick.spalte_tag", lang)
-    for ort, zeilen in _tabellen_je_ort(html, tag).items():
+    for ort, zeilen in _tabellen_je_ort(html, tag, lang).items():
         kopf = zeilen[0][1:]
         erste = zeilen[1][1:] if len(zeilen) > 1 else [""] * len(kopf)
         aus[ort] = list(zip(kopf, erste))
