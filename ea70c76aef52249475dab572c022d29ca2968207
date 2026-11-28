@@ -1,0 +1,103 @@
+{
+  "verified_commit": "ea70c76aef52249475dab572c022d29ca2968207",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "/ (Reiter Wetter, Pr\u00fcfkonto, --sprache en)",
+      "evidence": "EN-Staging-Abgleich --abnahme --scope wetter: 'mm \u00b7 Summe' 4x und 'm \u00b7 Minimum' 2x gefunden (EN 'mm \u00b7 total'/'m \u00b7 minimum'); Bericht docs/artifacts/fix-3241-en-chips-abgleich/staging-en/bericht.json",
+      "workflow": "fix-3241-en-chips-abgleich"
+    },
+    {
+      "ac": "AC-2",
+      "status": "PASS",
+      "url": "/ (Wetter, en)",
+      "evidence": "'\u00b0C \u00b7 Tagesh\u00f6chst \u00b7 Tagestief' 4x gefunden (EN '\u00b0C \u00b7 daily high \u00b7 daily low')",
+      "workflow": "fix-3241-en-chips-abgleich"
+    },
+    {
+      "ac": "AC-3",
+      "status": "PASS",
+      "url": "/ (Wetter, en)",
+      "evidence": "'\u00b7 gr\u00fcn: bis 6' 2x gefunden (EN '\u00b7 green: up to 6'), nicht mehr zus\u00e4tzlich",
+      "workflow": "fix-3241-en-chips-abgleich"
+    },
+    {
+      "ac": "AC-4",
+      "status": "PASS",
+      "url": "lokal node --test",
+      "evidence": "Neu erzeugte Liste: genau 12 Eintr\u00e4ge ge\u00e4ndert, Reproduzierbarkeits-Test gr\u00fcn; CI 6/6 gr\u00fcn",
+      "workflow": "fix-3241-en-chips-abgleich"
+    },
+    {
+      "ac": "AC-5",
+      "status": "PASS",
+      "url": "/ (Wetter, en)",
+      "evidence": "36 Metrik-Chips im Abschnitt metriken gefunden (Einzelerwartung '+ <EN-Name>'); deckt F002-Verdrahtung namenDeEn an der Wirkstelle ab",
+      "workflow": "fix-3241-en-chips-abgleich"
+    },
+    {
+      "ac": "AC-6",
+      "status": "PASS",
+      "url": "lokal node --test",
+      "evidence": "Chip ohne Namenspaar -> nicht_pruefbar 'kein EN-Name f\u00fcr <DE>' (Test 7, Mutation rot)",
+      "workflow": "fix-3241-en-chips-abgleich"
+    },
+    {
+      "ac": "AC-7",
+      "status": "PASS",
+      "url": "/ (Wetter, de)",
+      "evidence": "DE-Staging-Abgleich --abnahme --scope wetter: gefunden 2305, nicht_pruefbar 0, abnahme 0 ohne Besitzer; Metrik-Zeilen gefunden",
+      "workflow": "fix-3241-en-chips-abgleich"
+    },
+    {
+      "ac": "AC-8",
+      "status": "PASS",
+      "url": "/ (Wetter, en)",
+      "evidence": "Besitzer #3241: 0; EN --abnahme: 0 ohne Besitzer, die vier EN-Texte nicht mehr unter zusaetzlich",
+      "workflow": "fix-3241-en-chips-abgleich"
+    },
+    {
+      "ac": "Mailweg",
+      "status": "PASS",
+      "url": "staging_mail_pruefen.py",
+      "evidence": "--typ beide DE und EN jeweils Exit 0 (Regressionsschutz, kein Mail-Code ge\u00e4ndert)",
+      "workflow": "fix-3241-en-chips-abgleich"
+    }
+  ],
+  "verified_at": "2026-11-28T02:46:46.346144+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: EN/DE-Elementlisten-Abgleich Wetter auf Staging (Metrik-Zeilen und 36 EN-Chips gefunden, 0 ohne Besitzer), Mailweg DE/EN Exit 0",
+  "scope": "full-stack",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "frontend_pages_checked": [
+    "/",
+    "/trips",
+    "/trips/new",
+    "/compare",
+    "/compare/new",
+    "/locations"
+  ],
+  "verdicts": {
+    "fix-3241-en-chips-abgleich": {
+      "verdict": "VERIFIED: EN/DE-Elementlisten-Abgleich Wetter auf Staging (Metrik-Zeilen und 36 EN-Chips gefunden, 0 ohne Besitzer), Mailweg DE/EN Exit 0",
+      "scope": "full-stack",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-28T02:46:46.346144+00:00",
+      "frontend_pages_checked": [
+        "/",
+        "/trips",
+        "/trips/new",
+        "/compare",
+        "/compare/new",
+        "/locations"
+      ]
+    }
+  }
+}
