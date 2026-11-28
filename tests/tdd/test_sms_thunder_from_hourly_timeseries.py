@@ -329,7 +329,8 @@ class TestEmailAndSmsAgree:
         compact = self._compact_line(report.email_plain)
 
         assert "TH:H@8" in report.sms_text, f"SMS: {report.sms_text}"
-        assert "⚡" in compact, (
+        # #3260 S1c (AC-4): die Zusammenfassung nennt das Stufenwort statt „⚡“.
+        assert "Gewitter hoch" in compact, (
             f"Die E-Mail-Kopfzeile verschweigt das Gewitter um 08:00, das die SMS "
             f"meldet.\nSMS: {report.sms_text}\nKopfzeile: {compact!r}"
         )

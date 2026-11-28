@@ -58,7 +58,7 @@ from utils.timezone import (
     local_dt, local_fmt, local_stamp, location_tz, tz_abbrev,
 )
 from output.renderers.email.outlook import render_outlook_plain
-from output.metric_format import NO_VALUE, format_value
+from output.metric_format import NO_VALUE, format_value, stunden_marke_erlaubt
 # Nicht-abrufbar-Marker der SMS (sms_format.md §3.4d, Issue #3047 B-L2).
 from output.tokens.builder import UNAVAILABLE_SYMBOL as _UNAVAILABLE_SYMBOL
 from output.renderers.alert.official_alerts import (
@@ -717,7 +717,10 @@ def _plain_metric_cell(
         fmt, value, loc_result, include_origin=True, lang=lang,
         metric_id=metric_id, friendly=friendly, summary=summary,
     )
-    marke = _ampel_stunde(loc_result, metric_id, value, ampel=ampel) if friendly else ""
+    # #3260 S1c (AC-1.7): die Marke folgt dem Katalog (``STUNDEN_MARKE``).
+    catalog_id = _CV2_BY_KEY.get(metric_id, {}).get("metric_id")
+    marke = (_ampel_stunde(loc_result, metric_id, value, ampel=ampel)
+             if friendly and stunden_marke_erlaubt(catalog_id) else "")
     return f"{t(label_key, lang)} {zelle}{marke}"
 
 

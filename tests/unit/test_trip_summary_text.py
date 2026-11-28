@@ -113,9 +113,10 @@ def test_trip_summary_text_unchanged_byte_identical():
     geteilten Formulierer selbst (Spec §Purpose).
     """
     hourly = _hourly()
+    # #3260 S1c (AC-4): Gewitter MED traegt jetzt das Stufenwort statt „⚡ möglich“.
     recorded = (
         "Sóller → Tossals Verds: 8–16°C, ⛅, mäßiger Regen 13:00–16:00, "
-        "mäßiger Wind 20 km/h, ⚡ möglich 13:00–15:00"
+        "mäßiger Wind 20 km/h, Gewitter mittel 13:00–15:00"
     )
     actual = _trip_sentence(
         hourly,

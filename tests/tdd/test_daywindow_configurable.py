@@ -321,7 +321,7 @@ class TestAC3ConfiguredWindowAppliesToAllFourChannelsAndGapCheck:
             f"Konfiguriertes Fenster beginnt bei 06:00 -- ein Ereignis um "
             f"05:00 darf nicht in der SMS erscheinen.\nSMS: {report.sms_text}"
         )
-        assert "⚡" not in compact, f"Kompakt-Zusammenfassung: {compact!r}"
+        assert "Gewitter" not in compact, f"Kompakt-Zusammenfassung: {compact!r}"
         assert "kein Gewitter" in report.email_plain, f"Plain:\n{report.email_plain}"
         assert "⚡ kein" in telegram, f"Telegram:\n{telegram}"
 
@@ -336,7 +336,7 @@ class TestAC3ConfiguredWindowAppliesToAllFourChannelsAndGapCheck:
             f"Konfiguriertes Fenster endet inklusive bei 16:00 -- ein "
             f"Ereignis um 16:00 muss in der SMS erscheinen.\nSMS: {report.sms_text}"
         )
-        assert "⚡" in compact and "16:00" in compact, f"Kompakt: {compact!r}"
+        assert "Gewitter hoch" in compact and "16:00" in compact, f"Kompakt: {compact!r}"
         # #1493: die Pille nennt die Stufe als Wort.
         assert "Gewitter hoch ab 16:00 · stärkste 16:00" in report.email_plain, (
             f"Plain:\n{report.email_plain}"

@@ -191,6 +191,11 @@ def _radtour_preset(mit_richtung: bool) -> dict:
     return p
 
 
+#: Telegram-Beschriftungen (DE, von Hand); Werte koennen mehrwortig sein
+#: („Böen sehr stark@16“), daher Trennung an der bekannten Beschriftung.
+_TG_ZELLE = re.compile(r"^(Temp max|Windrichtung|Wind|Böen) (.+)$")
+
+
 def _tg_zellen(tg: str) -> dict[str, dict[str, str]]:
     """Telegram -> {Ort: {Beschriftung: Wert}} (erste Zeile des Ortsblocks)."""
     aus: dict[str, dict[str, str]] = {}
@@ -200,8 +205,9 @@ def _tg_zellen(tg: str) -> dict[str, dict[str, str]]:
             aktuell = aus.setdefault(z, {})
         elif aktuell is not None and z.startswith("   ") and not aktuell:
             for zelle in z.strip().split(" · "):
-                name, _, wert = zelle.rpartition(" ")
-                aktuell[name] = wert
+                m = _TG_ZELLE.match(zelle)
+                if m:
+                    aktuell[m.group(1)] = m.group(2)
     return aus
 
 

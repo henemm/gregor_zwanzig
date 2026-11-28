@@ -59,10 +59,10 @@ def test_getippte_trip_id_tabelle_existiert_nicht_mehr():
 # AC-2 ---------------------------------------------------------------------
 
 _ALLES = ("Lienz: 11–16°C, ⛅, mäßiger Regen 10:00–13:00, starker Wind 37 km/h, "
-          "Böen bis 62 km/h ab 18:00, ⚡ möglich 15:00–16:00")
+          "Böen bis 62 km/h ab 18:00, Gewitter mittel 15:00–16:00")
 _TEMP_WIND = "Lienz: 11–16°C, starker Wind 37 km/h, Böen bis 62 km/h ab 18:00"
 _PLUS_REGEN_GEWITTER = ("Lienz: 11–16°C, mäßiger Regen 10:00–13:00, starker Wind 37 km/h, "
-                        "Böen bis 62 km/h ab 18:00, ⚡ möglich 15:00–16:00")
+                        "Böen bis 62 km/h ab 18:00, Gewitter mittel 15:00–16:00")
 
 
 @pytest.mark.parametrize("auswahl,erwartet", [
