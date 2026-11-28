@@ -1278,7 +1278,7 @@ def _render_hour_table(
 
 
 def _location_heading(
-    loc: LocationResult, ref_ts=None, *, eyebrow: str = "ORT",
+    loc: LocationResult, ref_ts=None, *, eyebrow: str,
     title: Optional[str] = None,
 ) -> str:
     """Ort-Kopf ("ORT <Name>") MIT angeschriebener Zeitbasis.
@@ -1286,7 +1286,8 @@ def _location_heading(
     ``eyebrow``/``title`` (#1368): derselbe Kopfbau traegt auch die eigene
     Ausblick-Ueberschrift ("AUSBLICK 3-Tages-Ausblick (CEST)") -- kein
     zweiter Kopfbau, damit die Zeitbasis-Anschrift aus #1378 an BEIDEN
-    Bloecken identisch entsteht. Defaults = Bestandsverhalten.
+    Bloecken identisch entsteht. ``eyebrow`` ist Pflicht (#2923): der Text
+    kommt immer aus dem Katalog in der Nutzersprache, kein deutscher Default.
 
     Issue #1378 (Adversary F002): die Zeitzonen-Kennzeichnung darf nicht nur
     an der zentralen "Erstellt"-Kopfzeile haengen — die nennt ausschliesslich
@@ -1334,7 +1335,10 @@ def _render_location_section(
     bzw. fehlenden Stundendaten (SPEC §4)."""
     if not hourly_block_visible([loc], True):
         return ""
-    header = _location_heading(loc, loc.hourly_data[0].ts)
+    header = _location_heading(
+        loc, loc.hourly_data[0].ts,
+        eyebrow=t("vergleich.stunden.ort_eyebrow", lang),
+    )
     strip = ""
     if loc.official_alerts:
         # F002 (Adversary Fix-Runde): kein Ortsnamen-Praefix im Compare-Streifen

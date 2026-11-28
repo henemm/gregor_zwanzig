@@ -55,14 +55,11 @@ def _de_fragmente() -> set[str]:
 
 
 def _ohne_ausnahmen(zeilen: list[str]) -> list[str]:
-    """Entfernt Daten und Texte anderer Pakete: Eyebrow ``ORT`` vor dem
-    Ortsnamen, Erkennungsmarke des Pflicht-Validators ``email_spec_validator.py``
-    (``>ORT</span>``), Aenderung dort = Blocker. Die Befehlszeilen sind seit
-    P10 (#2673) englisch und keine Ausnahme mehr."""
+    """Entfernt Daten. Das Orts-Etikett vor dem Ortsnamen ist seit #2923
+    uebersetzt ("LOCATION") und keine Ausnahme mehr; die Befehlszeilen sind
+    seit P10 (#2673) englisch."""
     out = []
     for z in zeilen:
-        if z == "ORT":
-            continue
         for d in _DATEN:
             z = z.replace(d, "")
         out.append(z)

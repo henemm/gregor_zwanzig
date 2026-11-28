@@ -675,6 +675,21 @@ def test_orte_koepfe_in_nutzersprache_en(fmt):
     assert soll_ausblick(mail.roh), "Vorbedingung: Ausblick an"
     pruefe_stundenverlauf(mail, fmt, "en")
     pruefe_ausblick(mail, fmt, lang="en")
+    if fmt == "html":
+        # #2923 AC-1: Orts-Kopf im Stundenblock mit EN-Katalogetikett, kein "ORT".
+        etikett = katalogtext("vergleich.stunden.ort_eyebrow", "en")
+        assert etikett == "LOCATION", etikett
+        assert mail.html.count(f">{etikett}</span>") == len(_orte(mail.roh)), "Orts-Koepfe EN"
+        assert ">ORT</span>" not in mail.html, "deutsches Etikett ORT in EN-Mail"
+
+
+def test_2923_orts_kopf_ohne_deutschen_default():
+    """#2923 AC-4: ``_location_heading`` hat keinen deutschen Default mehr --
+    ein Aufruf ohne ``eyebrow`` scheitert am Pflicht-Argument (TypeError),
+    bevor der Kopf gebaut wird."""
+    from src.output.renderers.email.compare_html import _location_heading
+    with pytest.raises(TypeError, match="eyebrow"):
+        _location_heading(None)
 
 
 # ---------------------------------------------------------------------------
