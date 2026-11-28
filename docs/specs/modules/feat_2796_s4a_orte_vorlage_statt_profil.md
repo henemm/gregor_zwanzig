@@ -143,3 +143,4 @@ Keine neue ADR: Umsetzung von ADR-0108 Punkt 3 (Orte-Teil). ADR-0108 bleibt „V
 
 - 2026-11-17: v1.1 Nachtrag Adversary F1 (allgemeine Vorlagen ohne Bewertungsvorgabe, Ortsprofil bleibt wirksam; präzisiert AC-6, Freigabe-Umfang unverändert).
 - 2026-11-17: Erstfassung v1.0 (Scheibe S4a, Orte), Anlass PO-Hinweis zu den Profil-Kacheln im Orte-Kopf.
+- 2026-11-28: Verweis: Die Meta-Zeile der Orte ist seit #3438 ohne „Vergleichstabelle“, und die Regionszeile unter dem Titel entfällt (Region-Stift an der Oberzeile). Maßgeblich: `docs/specs/modules/fix_3438_wetter_ganzseite.md` und `docs/specs/modules/feat_2913_c2_seitenkopf.md`.
