@@ -151,9 +151,10 @@ for (const kind of HUB_KINDS) {
 					const t = await box(titel(page), 'Überschrift');
 					const b = await box(status, 'Status');
 					// Gleiche Zeile wie die Überschrift; einzig erlaubter Umbruch: unmittelbar darunter
-					// (AC-8, langer Name mobil) — nie in eine eigene Zeile unter der Region.
-					const region = await box(page.getByTestId(`${HUB_SEL[kind].kopf}-region-edit-toggle`).filter({ visible: true }).first(), 'Region-Stift');
-					expect(mitteY(b), `HP-6 (${zustand}): Status steht unter der Region (eigene Statuszeile) — Mutation (c)`).toBeLessThan(region.y);
+					// (AC-8, langer Name mobil) — nie in eine eigene Zeile unter der Meta-Zeile. Seit #3438 sitzt der
+					// Region-Stift an der Oberzeile über dem Titel; Bezug ist darum die Meta-Zeile unter dem Titel.
+					const meta = await box(page.getByTestId('hub-kopf-meta').filter({ visible: true }).first(), 'Meta-Zeile');
+					expect(mitteY(b), `HP-6 (${zustand}): Status steht unter der Meta-Zeile (eigene Statuszeile) — Mutation (c)`).toBeLessThan(meta.y);
 					if (w === DESKTOP.width) {
 						expect(mitteY(b), `HP-6 (${zustand}): Status nicht in der Titelzeile`).toBeGreaterThanOrEqual(t.y);
 						expect(mitteY(b)).toBeLessThanOrEqual(t.y + t.height);
@@ -167,14 +168,16 @@ for (const kind of HUB_KINDS) {
 			}
 		});
 
-		test(`HP-9/HP-10 (${kind}, ${w} px): Titelblock gleich aufgebaut — Region „—", h1 38 px (Desktop), Zähler neutral`, async ({ page }) => {
+		test(`HP-9/HP-10 (${kind}, ${w} px): Titelblock gleich aufgebaut — Oberzeile ohne Region, h1 38 px (Desktop), Zähler neutral`, async ({ page }) => {
 			await page.setViewportSize(vp);
 			const ohneRegion = kind === 'route' ? { region: '' } : { display_config: { region: '' } };
 			const hub = await seed(page.request, kind, 'aktiv', ohneRegion);
 			try {
 				await openHub(page, kind, hub.id);
+				// #3438 AC-7: ohne Region steht die Oberzeile allein („Trip“ bzw. „Orte“), der Region-Stift direkt dahinter
+				// (vorher Platzhalter „—“ in einer eigenen Regionszeile).
 				const region = page.getByTestId(`${HUB_SEL[kind].kopf}-region-edit-toggle`).filter({ visible: true }).first();
-				await expect(region.locator('xpath=preceding-sibling::span[1]'), 'HP-9: Region-Platzhalter').toHaveText('—');
+				await expect(region.locator('xpath=preceding-sibling::*[1]'), 'HP-9: Oberzeile ohne Region').toHaveText(kind === 'route' ? 'Trip' : 'Orte');
 				if (w === DESKTOP.width) {
 					expect((await stil(titel(page))).groesse, 'HP-9: h1 nicht 38 px').toBe('38px');
 				}
@@ -554,7 +557,8 @@ test.describe('HS S1b — Profil in der Zeile unter dem Titel bei beiden Arten',
 				try {
 					await openHub(page, kind, hub.id);
 					const stift = page.getByTestId(`${HUB_SEL[kind].kopf}-region-edit-toggle`).filter({ visible: true }).first();
-					await expect(stift.locator('xpath=preceding-sibling::span[1]'), 'Region-Platzhalter').toHaveText('—');
+					// #3438 AC-7: Oberzeile ohne Region „Trip“ bzw. „Orte“ vor dem Stift (vorher Platzhalter „—“).
+					await expect(stift.locator('xpath=preceding-sibling::*[1]'), 'Oberzeile ohne Region').toHaveText(kind === 'route' ? 'Trip' : 'Orte');
 					// #2796 S4a (ADR-0108 P3): beim Orts-Vergleich steht kein Profilname mehr hinter der Region;
 					// #3196 AC-1: auch im Trip-Kopf keine Aktivität mehr (Tempo lebt im Reiter Etappen).
 					const n = hinterStift(page, kind);

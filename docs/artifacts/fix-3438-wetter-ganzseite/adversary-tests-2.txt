@@ -1,0 +1,240 @@
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/__tests__/elementliste_aktuell.test.ts src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts
+
+TAP version 13
+# Subtest: AC-12: Hash-Check Mockup ↔ elementliste.json (ohne Browser)
+    # Subtest: Hash in der JSON entspricht dem SHA-256 der Mockup-Datei
+    ok 1 - Hash in der JSON entspricht dem SHA-256 der Mockup-Datei
+      ---
+      duration_ms: 9.124783
+      type: 'test'
+      ...
+    # Subtest: pruefeHashAktuell: Original grün, veränderte Kopie rot
+    ok 2 - pruefeHashAktuell: Original grün, veränderte Kopie rot
+      ---
+      duration_ms: 14.069161
+      type: 'test'
+      ...
+    1..2
+ok 1 - AC-12: Hash-Check Mockup ↔ elementliste.json (ohne Browser)
+  ---
+  duration_ms: 24.016516
+  type: 'suite'
+  ...
+# Subtest: AC-9: alle Kombinationen Kontext × Zustand × Reiter, Tabelle „Was steht wo“, ohne Mockup-Rahmen
+    # Subtest: jede Soll-Kombination hat mindestens ein Element
+    ok 1 - jede Soll-Kombination hat mindestens ein Element
+      ---
+      duration_ms: 9.541935
+      type: 'test'
+      ...
+    # Subtest: kein Eintrag trägt ein Kanal-Segment, die ersetzte Karte „Inhalt je Kanal und Fläche“ ist weg (ADR-0124)
+    ok 2 - kein Eintrag trägt ein Kanal-Segment, die ersetzte Karte „Inhalt je Kanal und Fläche“ ist weg (ADR-0124)
+      ---
+      duration_ms: 8.116273
+      type: 'test'
+      ...
+    # Subtest: Tabelle „Was steht wo“: nur im Wetter-Reiter, nur normal und Konto mit Lücken, für Trip und Orte
+    ok 3 - Tabelle „Was steht wo“: nur im Wetter-Reiter, nur normal und Konto mit Lücken, für Trip und Orte
+      ---
+      duration_ms: 9.303284
+      type: 'test'
+      ...
+    # Subtest: Stellen der Tabelle: E-Mail, Telegram, SMS und 3-Tages-Ausblick überall; Stundenverlauf nur bei Orte
+    ok 4 - Stellen der Tabelle: E-Mail, Telegram, SMS und 3-Tages-Ausblick überall; Stundenverlauf nur bei Orte
+      ---
+      duration_ms: 9.671314
+      type: 'test'
+      ...
+    # Subtest: keine Texte aus .frame, data-fb oder .tag
+    ok 5 - keine Texte aus .frame, data-fb oder .tag
+      ---
+      duration_ms: 13.31613
+      type: 'test'
+      ...
+    # Subtest: beide Kontexte und alle vier Kanäle sind vertreten (Kanal-Tabelle im Reiter Zustellung)
+    ok 6 - beide Kontexte und alle vier Kanäle sind vertreten (Kanal-Tabelle im Reiter Zustellung)
+      ---
+      duration_ms: 10.246575
+      type: 'test'
+      ...
+    1..6
+ok 2 - AC-9: alle Kombinationen Kontext × Zustand × Reiter, Tabelle „Was steht wo“, ohne Mockup-Rahmen
+  ---
+  duration_ms: 60.607881
+  type: 'suite'
+  ...
+# Subtest: AC-10: Schema je Eintrag, eindeutige IDs, dynamische Texte als ein Element mit Muster
+    # Subtest: jeder Eintrag hat alle Felder mit passenden Typen
+    ok 1 - jeder Eintrag hat alle Felder mit passenden Typen
+      ---
+      duration_ms: 25.429448
+      type: 'test'
+      ...
+    # Subtest: IDs sind eindeutig
+    ok 2 - IDs sind eindeutig
+      ---
+      duration_ms: 7.699631
+      type: 'test'
+      ...
+    # Subtest: Reihenfolge: ordnung ist je Kombination und Abschnitt eindeutig
+    ok 3 - Reihenfolge: ordnung ist je Kombination und Abschnitt eindeutig
+      ---
+      duration_ms: 10.567246
+      type: 'test'
+      ...
+    # Subtest: dynamische Texte: je Kombination und Abschnitt kein Text doppelt, der sich nur in Zahlen unterscheidet
+    ok 4 - dynamische Texte: je Kombination und Abschnitt kein Text doppelt, der sich nur in Zahlen unterscheidet
+      ---
+      duration_ms: 11.695709
+      type: 'test'
+      ...
+    # Subtest: es gibt Elemente mit Muster, und jedes Muster enthält einen Platzhalter
+    ok 5 - es gibt Elemente mit Muster, und jedes Muster enthält einen Platzhalter
+      ---
+      duration_ms: 7.803732
+      type: 'test'
+      ...
+    1..5
+ok 3 - AC-10: Schema je Eintrag, eindeutige IDs, dynamische Texte als ein Element mit Muster
+  ---
+  duration_ms: 63.450324
+  type: 'suite'
+  ...
+# Subtest: AC-11: EN aus dem Katalog — exakter Treffer, Muster, sonst Lücke (nie erfunden)
+    # Subtest: Katalog ist flach und zweisprachig geladen
+    ok 1 - Katalog ist flach und zweisprachig geladen
+      ---
+      duration_ms: 0.158
+      type: 'test'
+      ...
+    # Subtest: exakter Treffer: EN-Wert desselben Schlüssels
+    ok 2 - exakter Treffer: EN-Wert desselben Schlüssels
+      ---
+      duration_ms: 8.431612
+      type: 'test'
+      ...
+    # Subtest: Musterabgleich: Platzhalter-Text aus dem Katalog liefert das EN-Muster (Platzhalter bleiben, \#2913 C5)
+    ok 3 - Musterabgleich: Platzhalter-Text aus dem Katalog liefert das EN-Muster (Platzhalter bleiben, \#2913 C5)
+      ---
+      duration_ms: 3.134114
+      type: 'test'
+      ...
+    # Subtest: kein Treffer: luecke = true, kein erfundenes EN
+    ok 4 - kein Treffer: luecke = true, kein erfundenes EN
+      ---
+      duration_ms: 6.265239
+      type: 'test'
+      ...
+    # Subtest: in der erzeugten Liste: Lücke ⇔ kein EN; Treffer ⇔ Schlüssel im Katalog
+    ok 5 - in der erzeugten Liste: Lücke ⇔ kein EN; Treffer ⇔ Schlüssel im Katalog
+      ---
+      duration_ms: 10.711147
+      type: 'test'
+      ...
+    # Subtest: der Reitername „Zustellung“ ist in der Liste kein Lückenposten
+    ok 6 - der Reitername „Zustellung“ ist in der Liste kein Lückenposten
+      ---
+      duration_ms: 9.502974
+      type: 'test'
+      ...
+    1..6
+ok 4 - AC-11: EN aus dem Katalog — exakter Treffer, Muster, sonst Lücke (nie erfunden)
+  ---
+  duration_ms: 38.455167
+  type: 'suite'
+  ...
+# Subtest: \#3194 AC-1 A1: „obenzu viel“ ⇒ EN = oben_1 + oben_2 ohne Fuge (aus dem Katalog)
+ok 5 - \#3194 AC-1 A1: „obenzu viel“ ⇒ EN = oben_1 + oben_2 ohne Fuge (aus dem Katalog)
+  ---
+  duration_ms: 10.729685
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-1 A2: „untenzu wenig“ ⇒ EN = unten_1 + unten_2 ohne Fuge (aus dem Katalog)
+ok 6 - \#3194 AC-1 A2: „untenzu wenig“ ⇒ EN = unten_1 + unten_2 ohne Fuge (aus dem Katalog)
+  ---
+  duration_ms: 1.797633
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-1 B: Grünhinweis + „Abweichend von der Vorlage „Allgemein““ ⇒ EN-Hinweis + EN-abweichend
+ok 7 - \#3194 AC-1 B: Grünhinweis + „Abweichend von der Vorlage „Allgemein““ ⇒ EN-Hinweis + EN-abweichend
+  ---
+  duration_ms: 4.644447
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-1 C: „keins“-Hinweis + „Abweichend …“ ⇒ EN keins_gruen + EN-abweichend
+ok 8 - \#3194 AC-1 C: „keins“-Hinweis + „Abweichend …“ ⇒ EN keins_gruen + EN-abweichend
+  ---
+  duration_ms: 0.38451
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-1 D1: Bestätigungs-Rumpf Trip ⇒ ersetzt_route + bleibt
+ok 9 - \#3194 AC-1 D1: Bestätigungs-Rumpf Trip ⇒ ersetzt_route + bleibt
+  ---
+  duration_ms: 0.286121
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-1 D2: Bestätigungs-Rumpf Orte ⇒ ersetzt_vergleich + bleibt, keine Vermischung mit Trip
+ok 10 - \#3194 AC-1 D2: Bestätigungs-Rumpf Orte ⇒ ersetzt_vergleich + bleibt, keine Vermischung mit Trip
+  ---
+  duration_ms: 0.29613
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-1: Reihenfolge bleibt — EN beginnt mit dem EN des ersten Schlüssels
+ok 11 - \#3194 AC-1: Reihenfolge bleibt — EN beginnt mit dem EN des ersten Schlüssels
+  ---
+  duration_ms: 0.25611
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-2: zwei Vorlagennamen treffen dasselbe EN-Muster, der Name wird nicht ins EN kopiert
+ok 12 - \#3194 AC-2: zwei Vorlagennamen treffen dasselbe EN-Muster, der Name wird nicht ins EN kopiert
+  ---
+  duration_ms: 0.689982
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-3: falsche Fuge, fehlender Teil, fremder Zusatz, vertauschte oder gemischte Folge ⇒ Lücke
+ok 13 - \#3194 AC-3: falsche Fuge, fehlender Teil, fremder Zusatz, vertauschte oder gemischte Folge ⇒ Lücke
+  ---
+  duration_ms: 2.026113
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-3: Schlüssel ohne EN-Wert ⇒ Lücke, kein EN ohne Katalogquelle
+ok 14 - \#3194 AC-3: Schlüssel ohne EN-Wert ⇒ Lücke, kein EN ohne Katalogquelle
+  ---
+  duration_ms: 31.198897
+  type: 'test'
+  ...
+# Subtest: \#3194: Tabelle ZUSAMMENGESETZT ist exportiert und deklarativ (mind. A1, A2, B, C, D1, D2)
+ok 15 - \#3194: Tabelle ZUSAMMENGESETZT ist exportiert und deklarativ (mind. A1, A2, B, C, D1, D2)
+  ---
+  duration_ms: 0.12167
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-4: Regeln a–f bleiben — Einzelschlüssel weiter exakt, „gelb >“ weiter Regel e
+ok 16 - \#3194 AC-4: Regeln a–f bleiben — Einzelschlüssel weiter exakt, „gelb >“ weiter Regel e
+  ---
+  duration_ms: 0.27916
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-7: baueElemente zweimal ⇒ byte-identische Ausgabe, zusammengesetzte Texte keine Lücke
+ok 17 - \#3194 AC-7: baueElemente zweimal ⇒ byte-identische Ausgabe, zusammengesetzte Texte keine Lücke
+  ---
+  duration_ms: 12.272887
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-4/5: erzeugte elementliste.json trägt für A–D keine Lücke mehr, EN aus dem Katalog
+ok 18 - \#3194 AC-4/5: erzeugte elementliste.json trägt für A–D keine Lücke mehr, EN aus dem Katalog
+  ---
+  duration_ms: 16.926454
+  type: 'test'
+  ...
+1..18
+# tests 33
+# suites 4
+# pass 33
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 534.59495

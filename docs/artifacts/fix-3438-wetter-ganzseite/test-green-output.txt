@@ -1,0 +1,26 @@
+# fix-3438-wetter-ganzseite GREEN — 2026-11-28
+
+## Frontend-Kernsuite (npm test, node --test, Worktree issue-3438)
+# tests 12226
+# suites 2258
+# pass 12214
+# fail 0
+# cancelled 0
+# skipped 2
+# todo 10
+EXIT 0
+
+## RED-Artefakte (einzeln, node --test)
+hub_kopf_region_oberzeile_3438.test.ts      # pass 14 # fail 0
+mockup_nicht_im_briefing_3438.test.ts       # pass 4  # fail 0
+elementliste_ganzseite_wetter_3438.test.ts  # pass 7  # fail 0
+hub_kopf_c2_mockup.test.ts                  # pass 81 # fail 0
+hub_kopf_seiten_paritaet.test.ts            # pass 48 # fail 0
+TripHeader.issue699.test.ts                 # pass 9  # fail 0
+
+## Python, benannte Dateien (Besitzerliste, i18n-Glossar, ADR-Index, CLAUDE.md-Budget)
+uv run pytest -p no:warnings -rA tests/test_2913_c2_besitzerliste.py tests/test_3007_besitzerliste.py tests/tdd/test_2955_wetter_metrik_inhalte.py tests/tdd/test_besitzerliste_orte_laedt_ohne_sperrkopf.py tests/tdd/test_staging_pruefkonto_tabelle.py tests/test_i18n_glossar_und_vertrag.py tests/test_i18n_doku_vollstaendig.py tests/tdd/test_befehle_beide_sprachen_erkannt.py tests/test_adr_index_drift.py tests/test_claude_md_budget.py
+226 passed in 3.78s
+
+## svelte-check
+29 ERRORS 69 WARNINGS — keine in geänderten Dateien (gleich der Baseline aus feat-3440: 29 ERRORS)

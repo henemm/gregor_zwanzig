@@ -133,7 +133,8 @@ async function openTripHub(page: Page, id: string, tab?: string): Promise<void> 
 	await expect(page.getByTestId('trip-detail-h1')).toBeVisible({ timeout: 15_000 });
 }
 
-/** Region-Zeile = Elternelement des Region-Stifts (eigene Zeile unter dem Namen). */
+/** Oberzeile = Elternelement des Region-Stifts. Seit #3438 (Spec fix_3438_wetter_ganzseite.md AC-3) über dem
+ *  Namen: Eyebrow „Trip · Region“ bzw. „Orte · Region“ plus Stift, keine eigene Regionszeile unter dem Namen. */
 function regionLine(page: Page, prefix: 'trip' | 'compare-hub') {
 	return page.getByTestId(`${prefix}-region-edit-toggle`).locator('xpath=..');
 }
@@ -262,8 +263,9 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 
 	// ─── AC-2 ────────────────────────────────────────────────────────────────
 	// #2913 c2 (Spec feat_2913_c2_seitenkopf.md AC-3/AC-9): Eyebrow „Trip · Region" nach Mockup —
-	// die Region steht seither in der Eyebrow UND in der (bearbeitbaren) Region-Zeile.
-	test('AC-2: Region per Stift aendern → eigene Zeile unter dem Namen, persistent, Eyebrow „Trip · Region“', async ({
+	// #3438 (Spec fix_3438_wetter_ganzseite.md AC-3): die Region steht nur noch in der Eyebrow, der Stift sitzt dort
+	// (Oberzeile über dem Namen); die eigene Region-Zeile unter dem Namen entfällt.
+	test('AC-2: Region per Stift aendern → Oberzeile über dem Namen, persistent, Eyebrow „Trip · Region“', async ({
 		page
 	}) => {
 		await page.setViewportSize(DESKTOP);
@@ -282,18 +284,15 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 			const pruefeKopf = async () => {
 				await expect(regionLine(page, 'trip')).toContainText('Alpen Nord');
 				await expect(page.getByTestId('trip-detail-h1')).not.toContainText('Alpen Nord');
-				// #2913 c2: Region genau zweimal im Kopf — Eyebrow „Trip · Region" und Region-Zeile.
+				// #3438: Region genau einmal im Kopf — in der Eyebrow „Trip · Region".
 				await expect(page.getByTestId('hub-kopf-eyebrow')).toHaveText('Trip · Alpen Nord');
 				const kopfText = (await page.locator('header.trip-header').textContent()) ?? '';
-				expect(
-					kopfText.split('Alpen Nord').length - 1,
-					'AC-2: die Region steht nicht genau in Eyebrow und Region-Zeile'
-				).toBe(2);
-				// Region-Zeile liegt unter der Ueberschrift.
+				expect(kopfText.split('Alpen Nord').length - 1, 'AC-2: die Region steht nicht genau einmal (Eyebrow)').toBe(1);
+				// Oberzeile mit Stift liegt über der Ueberschrift.
 				const h1Box = await page.getByTestId('trip-detail-h1').boundingBox();
 				const regionBox = await regionLine(page, 'trip').boundingBox();
-				expect(h1Box && regionBox, 'Ueberschrift und Region-Zeile muessen sichtbar sein').toBeTruthy();
-				expect(regionBox!.y).toBeGreaterThanOrEqual(h1Box!.y + h1Box!.height - 1);
+				expect(h1Box && regionBox, 'Ueberschrift und Oberzeile muessen sichtbar sein').toBeTruthy();
+				expect(regionBox!.y + regionBox!.height).toBeLessThanOrEqual(h1Box!.y + 1);
 			};
 			await pruefeKopf();
 
@@ -307,7 +306,8 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 	});
 
 	// ─── AC-3 (Trip) ─────────────────────────────────────────────────────────
-	test('AC-3 (Trip): Region leeren → „—" im Kopf, nach Reload „—", Trip-Liste blendet Region aus, Feld leer', async ({
+	// #3438 AC-7: ohne Region steht die Oberzeile allein („Trip“), vorher Platzhalter „—“ in der Region-Zeile.
+	test('AC-3 (Trip): Region leeren → Oberzeile „Trip“ ohne Trenner, nach Reload ebenso, Trip-Liste blendet Region aus, Feld leer', async ({
 		page
 	}) => {
 		await page.setViewportSize(DESKTOP);
@@ -319,13 +319,14 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 			await page.getByTestId('trip-region-save').click();
 			await expect(page.getByTestId('trip-region-edit')).toBeHidden({ timeout: 8_000 });
 
+			// textContent statt innerText: die Eyebrow ist per CSS großgeschrieben.
 			const zeileBeginntMitPlatzhalter = async () => {
 				await expect
-					.poll(async () => ((await regionLine(page, 'trip').innerText()) ?? '').trim(), {
-						message: 'AC-3: die Region-Zeile muss nach dem Leeren „—" zeigen, keine leere Zeile',
+					.poll(async () => ((await regionLine(page, 'trip').textContent()) ?? '').trim(), {
+						message: 'AC-3: die Oberzeile muss nach dem Leeren „Trip" allein zeigen, ohne verwaisten Trenner',
 						timeout: 5_000
 					})
-					.toMatch(/^—/);
+					.toBe('Trip');
 			};
 			await zeileBeginntMitPlatzhalter();
 			const gespeichert = await getTrip(page, id);
@@ -367,7 +368,7 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 	});
 
 	// ─── AC-3 (Vergleich) ────────────────────────────────────────────────────
-	test('AC-3 (Vergleich): Region leeren → derselbe Platzhalter „—" im Vergleich-Kopf, Feld leer', async ({
+	test('AC-3 (Vergleich): Region leeren → Oberzeile „Orte“ allein im Vergleich-Kopf (#3438 AC-7), Feld leer', async ({
 		page
 	}) => {
 		await page.setViewportSize(DESKTOP);
@@ -381,11 +382,11 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 
 			const platzhalter = async () => {
 				await expect
-					.poll(async () => ((await regionLine(page, 'compare-hub').innerText()) ?? '').trim(), {
-						message: 'AC-3: auch der Vergleich-Kopf zeigt nach dem Leeren „—"',
+					.poll(async () => ((await regionLine(page, 'compare-hub').textContent()) ?? '').trim(), {
+						message: 'AC-3: auch der Vergleich-Kopf zeigt nach dem Leeren die Oberzeile „Orte" allein',
 						timeout: 5_000
 					})
-					.toMatch(/^—/);
+					.toBe('Orte');
 			};
 			await platzhalter();
 			await page.reload();

@@ -240,12 +240,12 @@ describe('#2284 S1 AC-7 — leere Slots hinterlassen keine Wrapper', () => {
 	// erst MIT meta-Snippet (Seite: „ · 3 Orte") — ohne Guard entstünde dort
 	// „Ötztal · · 3 Orte" bzw. ohne meta ein hängendes „Ötztal · ".
 	const metaOrte = createRawSnippet(() => ({ render: () => `<span>${' · '}3 Orte</span>` }));
-	// Unterzeile = Text nach der Region bis zum ersten Aktivitäts-Bedienelement
-	// (Kachel ODER, seit #2284 S2 v1.1, Handy-Knopf — der kann vor den Kacheln stehen).
+	// Unterzeile = Text nach der Region bis zur Überschrift: seit #3438 (Spec fix_3438_wetter_ganzseite.md
+	// AC-3) steht die Region samt Profil-Label und Meta in der Oberzeile über dem Titel.
 	async function unterzeile(profileLabel: string, meta?: unknown): Promise<string> {
 		const roh = await html(vergleichProps(meta ? { profileLabel, meta } : { profileLabel }));
-		const bisProfil = roh.split(/<[a-z]+[^>]*data-testid="compare-hub-profil-/)[0];
-		return bisProfil
+		const bisTitel = roh.split(/<h1[\s>]/)[0];
+		return bisTitel
 			.replace(/<!--[\s\S]*?-->/g, '')
 			.replace(/<[^>]+>/g, ' ')
 			.replace(/\s+/g, ' ')
@@ -306,13 +306,10 @@ async function tripSatz(extra: Record<string, unknown> = {}): Promise<Record<str
 
 const zaehle = (body: string, id: string): number => body.split(`data-testid="${id}"`).length - 1;
 
-/** Der sichtbare Region-Text: zwischen dem Namens-Stift und dem Region-Stift
- *  (dort steht nur die Region — badges/actions sind leer). Kommentare und Tags weg. */
+/** Der sichtbare Region-Text: seit #3438 (Spec fix_3438_wetter_ganzseite.md AC-3) in der Oberzeile vor
+ *  dem Region-Stift (ohne Eyebrow-Snippet steht dort nur die Region). Kommentare und Tags weg. */
 function regionText(body: string, prefix: string): string {
-	const nachName = body.split(`data-testid="${prefix}-name-edit-toggle"`)[1] ?? '';
-	const bisRegion = nachName.split(`data-testid="${prefix}-region-edit-toggle"`)[0] ?? '';
-	// ab dem Ende des Namens-Stifts
-	const ab = bisRegion.slice(bisRegion.indexOf('</button>') + '</button>'.length);
+	const ab = body.split(`data-testid="${prefix}-region-edit-toggle"`)[0] ?? '';
 	return ab
 		.replace(/<!--[\s\S]*?-->/g, '')
 		.replace(/<button[^>]*$/, '')

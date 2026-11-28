@@ -40,7 +40,7 @@
 		namePrefix?: Snippet;
 		badges?: Snippet;
 		meta?: Snippet;
-		/** #2913 c2: Zeile direkt unter dem Titel (Meta-Zeile des Mockups), vor der Region-Zeile. */
+		/** #2913 c2: Zeile direkt unter dem Titel (Meta-Zeile des Mockups); die Region steht seit #3438 in der Oberzeile. */
 		unterTitel?: Snippet;
 		actions?: Snippet;
 	}
@@ -120,7 +120,24 @@
 {/snippet}
 
 <div data-kind={kind} class="min-w-0 flex-1 flex flex-col gap-2 desktop:block">
-	{#if eyebrow}{@render eyebrow()}{/if}
+	<!-- #3438 (Spec fix_3438_wetter_ganzseite.md AC-3): Oberzeile = Eyebrow („Trip · Region") plus Region-Stift;
+	     die eigene Regionszeile unter dem Titel entfällt. Ohne Eyebrow-Snippet steht die Region selbst hier.
+	     Beim Bearbeiten ersetzt das Eingabefeld die Zeile (wie vorher den Region-Text).
+	     items-start: der Rand unter dem Eyebrow verschiebt den Stift nicht. -->
+	<div class="text-sm flex items-start gap-2 flex-wrap" style="color: var(--g-ink-3)">
+		{#if open.region}
+			<input type="text" data-testid={`${p}-region-edit`} bind:value={draft.region} aria-label={$t('aktionen.kopf.region_bearbeiten')} maxlength={regionMaxLength} class="min-w-0 flex-1 desktop:flex-none px-2 py-1 rounded-md text-sm" style="border: 1px solid var(--g-rule); background: var(--g-card)" />
+			{@render editButtons('region', $t('aktionen.speichern'))}
+		{:else}
+			{#if eyebrow}{@render eyebrow()}{:else}<span>{region || '—'}</span>{/if}
+			<!-- Mobil 44×44-Tippfläche ohne Layout-Höhe (negativer Rand), Desktop unverändert (#2284 S2 AC-13). -->
+			<button type="button" data-testid={`${p}-region-edit-toggle`} aria-label={$t('aktionen.kopf.region_bearbeiten')} onclick={() => start('region')} class="inline-flex items-center justify-center min-h-[44px] min-w-[44px] -my-3 -mx-2 desktop:min-h-0 desktop:min-w-0 desktop:m-0 p-0.5 cursor-pointer" style="color: var(--g-ink-3)"><PencilIcon size={13} /></button>
+			<!-- {' · '} statt " · ": Svelte trimmt sonst das Leerzeichen vor {/if} weg. -->
+			{#if mitProfil && profileLabel}<span>{' · '}{profileLabel}</span>{/if}
+			{#if meta}{@render meta()}{/if}
+		{/if}
+	</div>
+	{@render fieldError('region', 'order-1')}
 	<!-- #2878: Titelzeile bricht um — reicht der Platz nicht, rutschen Status und Tageszahl unter den
 	     Titel; der Titel selbst bricht um statt gekürzt zu werden (Handy wie Computer). -->
 	<div class="flex flex-wrap items-center gap-2 desktop:gap-3 min-h-[44px] desktop:min-h-0">
@@ -139,20 +156,6 @@
 	</div>
 	{@render fieldError('name', 'order-1')}
 	{#if unterTitel}{@render unterTitel()}{/if}
-	<div class="text-sm flex items-center gap-2 flex-wrap desktop:mt-2 desktop:mb-2.5" style="color: var(--g-ink-3)">
-		{#if open.region}
-			<input type="text" data-testid={`${p}-region-edit`} bind:value={draft.region} aria-label={$t('aktionen.kopf.region_bearbeiten')} maxlength={regionMaxLength} class="min-w-0 flex-1 desktop:flex-none px-2 py-1 rounded-md text-sm" style="border: 1px solid var(--g-rule); background: var(--g-card)" />
-			{@render editButtons('region', $t('aktionen.speichern'))}
-		{:else}
-			<span>{region || '—'}</span>
-			<!-- Mobil 44×44-Tippfläche ohne Layout-Höhe (negativer Rand), Desktop unverändert (#2284 S2 AC-13). -->
-			<button type="button" data-testid={`${p}-region-edit-toggle`} aria-label={$t('aktionen.kopf.region_bearbeiten')} onclick={() => start('region')} class="inline-flex items-center justify-center min-h-[44px] min-w-[44px] -my-3 -mx-2 desktop:min-h-0 desktop:min-w-0 desktop:m-0 p-0.5 cursor-pointer" style="color: var(--g-ink-3)"><PencilIcon size={13} /></button>
-			<!-- {' · '} statt " · ": Svelte trimmt sonst das Leerzeichen vor {/if} weg. -->
-			{#if mitProfil && profileLabel}<span>{' · '}{profileLabel}</span>{/if}
-			{#if meta}{@render meta()}{/if}
-		{/if}
-	</div>
-	{@render fieldError('region', 'order-1')}
 	<!-- #2284 S2 (Entscheidung 14): Kacheln nur am Desktop, Knopf nur mobil — Umschaltung allein per CSS. -->
 	{#if mitProfil}
 	<div class="order-2 hidden desktop:flex gap-2 flex-wrap desktop:mb-[18px]">

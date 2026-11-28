@@ -87,7 +87,7 @@
 | Gehzeit | walking hours | Tageswerte „(Gehzeit)" = *(walking hours)*, wie `label_en` im Metrik-Register (#2751) |
 | Nachtfenster | night window | Nacht-Einzelwert = *single value for the night window* (#2751) |
 | Abo | subscription | „Dieses Abo" = *This subscription*, „Abo bearbeiten" = *Edit subscription* (#2666) |
-| Übersicht | overview | Abschnittskopf „ÜBERSICHT" = *OVERVIEW* (#2666). Ab #3122 der Name der E-Mail-Tabelle der Orte (Tageswerte je Ort) und der E-Mail-Spalte bei Orten in „Was steht wo“ (ADR-0124 Nr. 2, 10); „Vergleichstabelle“ bleibt bis zum Bau im Bestand |
+| Übersicht | overview | Abschnittskopf „ÜBERSICHT" = *OVERVIEW* (#2666). Ab #3122 der Name der E-Mail-Tabelle der Orte (Tageswerte je Ort) und der E-Mail-Spalte bei Orten in „Was steht wo“ (ADR-0124 Nr. 2, 10). Die Meta-Zeile im Orte-Hub nennt seit #3438 keine „Vergleichstabelle“ (*Comparison table*) mehr: „3 Orte · Morgen-Briefing 07:00“ = *3 locations · Morning briefing 07:00*, Schlüssel `aktionen.kopf.vergleichstabelle` entfallen |
 
 ## Wettergrößen (volle Form, ADR-0042 Klasse 2 „voll")
 

@@ -45,9 +45,8 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['aktionen.kopf.eltern_orte', 'Orte', 'Locations'],
 	['aktionen.kopf.eyebrow_trip', 'Trip · <region>', 'Trip · <region>'],
 	['aktionen.kopf.eyebrow_orte', 'Orte · <region>', 'Locations · <region>'],
-	// #3438 (Spec fix_3438_wetter_ganzseite.md AC-6): Anker und Katalogschlüssel entfallen ZUSAMMEN in Phase 6
-	// (Meta-Zeile Orte nach Mockup Fassung 4, ADR-0124 Nr. 10); der RED-Test steht in hub_kopf_c2_mockup.test.ts.
-	['aktionen.kopf.vergleichstabelle', 'Vergleichstabelle', 'Comparison table'],
+	// #3438 (Spec fix_3438_wetter_ganzseite.md AC-6): aktionen.kopf.vergleichstabelle entfällt samt Katalogschlüssel
+	// (Meta-Zeile Orte nach Mockup Fassung 4, ADR-0124 Nr. 10); der Test steht in hub_kopf_c2_mockup.test.ts.
 	['aktionen.kopf.morgen_briefing', 'Morgen-Briefing <zeit>', 'Morning briefing <zeit>'],
 	['aktionen.kopf.abend_briefing', 'Abend-Briefing <zeit>', 'Evening briefing <zeit>'],
 	['aktionen.historie.titel', 'Versand-Historie', 'Delivery history'],

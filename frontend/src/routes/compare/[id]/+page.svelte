@@ -193,13 +193,13 @@
 				? 'finished'
 				: status
 	);
-	// #2913 c2 (AC-4): Eyebrow „Orte · Region", Meta „N Orte · Vergleichstabelle · Briefing HH:MM".
-	// Ohne Region nur „Orte" (kein verwaister Trenner, wie beim Trip).
+	// #2913 c2 (AC-4): Eyebrow „Orte · Region", Meta „N Orte · Briefing HH:MM" (#3438: ohne
+	// „Vergleichstabelle", Mockup Fassung 4, ADR-0124 Nr. 10). Ohne Region nur „Orte" (wie beim Trip).
 	const kopfRegion = $derived((currentPreset.display_config?.region as string | undefined) || '');
 	const kopfEyebrow = $derived(kopfRegion ? $t('aktionen.kopf.eyebrow_orte', { region: kopfRegion }) : $t('aktionen.kopf.eltern_orte'));
 	const metaTeile = $derived.by(() => {
 		const p = currentPreset;
-		const teile = [$tn('listen.anzahl.orte', p.location_ids.length), $t('aktionen.kopf.vergleichstabelle')];
+		const teile = [$tn('listen.anzahl.orte', p.location_ids.length)];
 		if (p.morning_enabled && p.morning_time) teile.push($t('aktionen.kopf.morgen_briefing', { zeit: p.morning_time.slice(0, 5) }));
 		else if (p.evening_enabled && p.evening_time) teile.push($t('aktionen.kopf.abend_briefing', { zeit: p.evening_time.slice(0, 5) }));
 		return teile;

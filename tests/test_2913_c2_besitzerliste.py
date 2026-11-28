@@ -16,10 +16,11 @@ Vertrag für den Developer:
   - die 8 #2797-Einträge („Test schicken“-Menü, Kebab) bleiben unverändert;
   - Einträge anderer Scheiben (#2967, #2966, #2913-d, #2913-e, #2795) bleiben
     unverändert (Anzahl je Verweis gleich);
-  - Ausnahmen: die bisherigen zwei bleiben; neu je Kontext (trip, orte) eine
+  - Ausnahmen: die bisherigen zwei bleiben; (bis #3438) je Kontext (trip, orte) eine
     Ausnahme für die Bearbeiten-Texte von Name/Region („Name bearbeiten“,
     „Region bearbeiten“, „Edit name“, „Edit region“) mit
-    spec = docs/specs/modules/feat_2913_c2_seitenkopf.md.
+    spec = docs/specs/modules/feat_2913_c2_seitenkopf.md. Seit #3438 zeichnet das
+    Mockup die Stifte; die Texte stehen im Soll und die Ausnahmen entfallen.
 
 Ausführen: uv run pytest tests/test_2913_c2_besitzerliste.py -v
 """
@@ -195,9 +196,11 @@ def test_ac12_eintraege_anderer_scheiben_unveraendert(daten):
     # Staging-Abnahme DE+EN (28.11.): im Orte-Ladezustand ebenso „von“/„bis“ der Stillen Stunden (#2795, 38 → 40) und die
     # Kanalzeile E-Mail mit Prüfkonto-Adresse (Kontodaten, #3009 11 → 12), gleich den Geschwister-Zuständen.
     # #3437 (Spec fix_3437 AC-10): Orte-Erklärtext (4) und gesperrt (4) abgeräumt, 12 → 4, Rest Meta-Zeile Orte.
+    # #3438 (Spec fix_3438 AC-6): Meta-Zeile Orte ohne „Vergleichstabelle“ in App und Mockup, der Rückbau-Vermerk
+    # #3122 entfällt; die 4 Einträge (Mockup-Beispieldaten) hängen an #3438, #3122 4 → 0.
     soll = {
         "#2967": 0, "#2966": 0, "#2913-d": 0, "#2795": 40, "#2797": 10, "#2968": 0, "#3022": 0,
-        "#3111": 0, "#3194": 0, "#3241": 0, "#3009": 12, "#3151": 2, "#3122": 4, "#3202": 0, "#3203": 0, "#3204": 0,
+        "#3111": 0, "#3194": 0, "#3241": 0, "#3009": 12, "#3151": 2, "#3122": 0, "#3202": 0, "#3203": 0, "#3204": 0,
         "#3205": 0, "#3145": 0, "#3258": 4,
     }
     ist = _verweise(daten)
@@ -229,17 +232,22 @@ def _trifft(ausnahme: dict, ctx: str, text: str) -> bool:
 
 
 BEARBEITEN_TEXTE = ["Name bearbeiten", "Region bearbeiten", "Edit name", "Edit region"]
+ELEMENTLISTE = ROOT / "docs" / "context" / "einstellungen_neu" / "elementliste.json"
 
 
 @pytest.mark.parametrize("ctx,text", [(c, t) for c in ("trip", "orte") for t in BEARBEITEN_TEXTE])
-def test_ac12_ausnahme_name_region_bearbeiten_mit_spec_verweis(daten, ctx, text):
-    passend = [
-        a for a in daten["ausnahmen"]
-        if a.get("spec") == C2_SPEC and a.get("reiter") is None and _trifft(a, ctx, text)
+def test_ac12_name_region_bearbeiten_im_soll_statt_ausnahme(daten, ctx, text):
+    # #3438 (Spec fix_3438_wetter_ganzseite.md AC-3/AC-10): das Mockup zeichnet den Stift am Titel und an der
+    # Oberzeile; die Stift-Beschriftungen stehen damit als Knopf im Soll (Elementliste, DE und EN) und brauchen
+    # keine Ausnahme mehr (vorher: Ausnahme mit spec=feat_2913_c2_seitenkopf.md, „im Mockup nicht vorgesehen“).
+    elemente = json.loads(ELEMENTLISTE.read_text(encoding="utf-8"))["elemente"]
+    im_soll = [
+        e for e in elemente
+        if e["ctx"] == ctx and e["abschnitt"] == "kopf" and e["rolle"] == "knopf" and text in (e["text_de"], e["text_en"])
     ]
-    assert passend, f"keine Ausnahme mit spec={C2_SPEC} für „{text}“ ({ctx})"
-    for a in passend:
-        assert a.get("grund", "").strip(), "Ausnahme ohne Grund"
+    assert im_soll, f"„{text}“ ({ctx}) steht nicht als Kopf-Knopf in der Elementliste"
+    rest = [a for a in daten["ausnahmen"] if a.get("reiter") is None and _trifft(a, ctx, text)]
+    assert rest == [], f"überflüssige Ausnahme für „{text}“ ({ctx}): {rest}"
 
 
 def test_ac12_bisherige_ausnahmen_bleiben(daten):

@@ -126,14 +126,16 @@ describe('AC-1: Ortsvergleich-Hub englisch, Namen unveraendert, Aktionen wie im 
 		const { de, en: e } = deDannEn(() => P.hubUebersichtRendern() + P.hubSeiteRendern());
 		// #2913 c2 (Mockup): Brotkrumen-Elternteil „Orte", Eyebrow „Orte · Region", Meta-Zeile.
 		// Die mobile Orte-Anzahl („1 location" = aufgelöste Orte) entfällt: eine Meta-Zeile, Zähler = location_ids.
-		for (const s of ['Läuft automatisch', 'Nächster Versand', 'Zuletzt raus', 'Orte · Tirol', 'Vergleichstabelle · Morgen-Briefing 07:00']) hat(sichtbar(de), s);
+		// #3438 (Spec fix_3438_wetter_ganzseite.md AC-6): Meta „3 Orte · Morgen-Briefing 07:00“ ohne „Vergleichstabelle“.
+		for (const s of ['Läuft automatisch', 'Nächster Versand', 'Zuletzt raus', 'Orte · Tirol', '3 Orte · Morgen-Briefing 07:00']) hat(sichtbar(de), s);
+		hatNicht(sichtbar(de), 'Vergleichstabelle');
 		// #2837 S1 (ADR-0110): Breadcrumb aus dem geteilten HubKopf — Elternteil im Katalog-Wortlaut,
 		// kein Krümel „Hub“, keine Mobil-Eyebrow „Orts-Vergleich · Hub“.
 		for (const alt of ['ORTS-VERGLEICHE', 'Orts-Vergleich · Hub']) hatNicht(sichtbar(de), alt);
 		const s = sichtbar(e);
 		// #3399 S3a: der Vorlagenname der Karte „Wetter" kommt erst im Browser (POST /api/ampel/aufloesung),
 		// im SSR steht „—". Den englischen Namen prueft hub_uebersicht_vorlagenrang_2988.test.ts (echtes Python).
-		for (const t of ['Runs automatically', 'Runs auto.', 'Draft · not active', 'Next delivery', 'Last sent', 'Channels', 'Email · Telegram', 'Morning 07:00 · Evening 18:00', '3 candidates', '1 candidate', 'Edit →', 'Delivery', 'Not scheduled yet', 'Locations · Tirol', 'Comparison table · Morning briefing 07:00', 'End date passed', 'Finish setup', 'Send test ▾', 'Sending…', 'Status change failed. Please try again.', '3 locations', '27 Oct 2026', 'No delivery yet', 'Active', 'Paused'])
+		for (const t of ['Runs automatically', 'Runs auto.', 'Draft · not active', 'Next delivery', 'Last sent', 'Channels', 'Email · Telegram', 'Morning 07:00 · Evening 18:00', '3 candidates', '1 candidate', 'Edit →', 'Delivery', 'Not scheduled yet', 'Locations · Tirol', '3 locations · Morning briefing 07:00', 'End date passed', 'Finish setup', 'Send test ▾', 'Sending…', 'Status change failed. Please try again.', '3 locations', '27 Oct 2026', 'No delivery yet', 'Active', 'Paused'])
 			hat(s, t);
 		// #2980 AC-24 (ADR-0118): der Zurück-Pfeil („Back to overview") entfällt.
 		hat(e, 'aria-label="More actions"');
